@@ -1,0 +1,26 @@
+# Copyright [2010] [Anso Labs, LLC]
+# 
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+# 
+#        http://www.apache.org/licenses/LICENSE-2.0
+# 
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+NOVA_KEY_DIR=$(pushd $(dirname $BASH_SOURCE)>/dev/null; pwd; popd>/dev/null)
+export EC2_ACCESS_KEY="%(access)s"
+export EC2_SECRET_KEY="%(secret)s"
+export EC2_URL="%(ec2)s"
+export S3_URL="%(s3)s"
+export EC2_USER_ID=42 # nova does not use user id, but bundling requires it
+export EC2_PRIVATE_KEY=${NOVA_KEY_DIR}/%(key)s
+export EC2_CERT=${NOVA_KEY_DIR}/%(cert)s
+export NOVA_CERT=${NOVA_KEY_DIR}/%(nova)s
+export EUCALYPTUS_CERT=${NOVA_CERT} # euca-bundle-image seems to require this set
+alias ec2-bundle-image="ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user 42 --ec2cert ${NOVA_CERT}"
+alias ec2-upload-bundle="ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${NOVA_CERT}"

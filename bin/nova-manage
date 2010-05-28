@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright [2010] [Anso Labs, LLC]
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+"""
+  CLI interface for nova management.
+  Connects to the running ADMIN api in the api daemon.
+"""
+
+import sys
+
+from nova import flags
+from nova import utils
+from nova.auth import users
+from nova.compute import model
+from nova.endpoint import cloud
+import time
+
+FLAGS = flags.FLAGS
+
+
+class UserCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+
+    def __print_export(self, user):
+        print 'export EC2_ACCESS_KEY=%s' % user.access
+        print 'export EC2_SECRET_KEY=%s' % user.secret
+
+    def admin(self, name, access=None, secret=None):
+        """creates a new admin and prints exports
+        arguments: name [access] [secret]"""
+        user = self.manager.create_user(name, access, secret, True)
+        self.__print_export(user)
+
+    def create(self, name, access=None, secret=None):
+        """creates a new user and prints exports
+        arguments: name [access] [secret]"""
+        user = self.manager.create_user(name, access, secret, False)
+        self.__print_export(user)
+
+    def delete(self, name):
+        """deletes an existing user
+        arguments: name"""
+        self.manager.delete_user(name)
+
+    def exports(self, name):
+        """prints access and secrets for user in export format
+        arguments: name"""
+        user = self.manager.get_user(name)
+        if user:
+            self.__print_export(user)
+        else:
+            print "User %s doesn't exist" % name
+
+    def list(self):
+        """lists all users
+        arguments: <none>"""
+        for user in self.manager.get_users():
+            print user.name
+
+    def zip(self, name, filename='nova.zip'):
+        """exports credentials for user to a zip file
+        arguments: name [filename='nova.zip]"""
+        user = self.manager.get_user(name)
+        if user:
+            with open(filename, 'w') as f:
+                f.write(user.get_credentials())
+        else:
+            print "User %s doesn't exist" % name
+
+
+def usage(script_name):
+    print script_name + " category action [<args>]"
+
+
+categories = [
+    ('user', UserCommands),
+]
+
+
+def lazy_match(name, key_value_tuples):
+    """finds all objects that have a key that case insensitively contains [name]
+    key_value_tuples is a list of tuples of the form (key, value)
+    returns a list of tuples of the form (key, value)"""
+    return [(k, v) for (k, v) in key_value_tuples if k.lower().find(name.lower()) == 0]
+
+
+def methods_of(obj):
+    """get all callable methods of an object that don't start with underscore
+    returns a list of tuples of the form (method_name, method)"""
+    return [(i, getattr(obj, i)) for i in dir(obj) if callable(getattr(obj, i)) and not i.startswith('_')]
+
+
+if __name__ == '__main__':
+    utils.default_flagfile()
+    argv = FLAGS(sys.argv)
+    script_name = argv.pop(0)
+    if len(argv) < 1:
+        usage(script_name)
+        print "Available categories:"
+        for k, v in categories:
+            print "\t%s" % k
+        sys.exit(2)
+    category = argv.pop(0)
+    matches = lazy_match(category, categories)
+    if len(matches) == 0:
+        print "%s does not match any categories:" % category
+        for k, v in categories:
+            print "\t%s" % k
+        sys.exit(2)
+    if len(matches) > 1:
+        print "%s matched multiple categories:" % category
+        for k, v in matches:
+            print "\t%s" % k
+        sys.exit(2)
+    # instantiate the command group object
+    category, fn = matches[0]
+    command_object = fn()
+    actions = methods_of(command_object)
+    if len(argv) < 1:
+        usage(script_name)
+        print "Available actions for %s category:" % category
+        for k, v in actions:
+            print "\t%s" % k
+        sys.exit(2)
+    action = argv.pop(0)
+    matches = lazy_match(action, actions)
+    if len(matches) == 0:
+        print "%s does not match any actions" % action
+        for k, v in actions:
+            print "\t%s" % k
+        sys.exit(2)
+    if len(matches) > 1:
+        print "%s matched multiple actions:" % action
+        for k, v in matches:
+            print "\t%s" % k
+        sys.exit(2)
+    action, fn = matches[0]
+    # call the action with the remaining arguments
+    try:
+        fn(*argv)
+    except TypeError:
+        print "Wrong number of arguments supplied"
+        print "%s %s: %s" % (category, action, fn.__doc__)
+

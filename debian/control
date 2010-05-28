@@ -1,0 +1,40 @@
+Source: nova
+Section: net
+Priority: extra
+Maintainer: Jesse Andrews <jesse@ansolabs.com>
+Build-Depends: debhelper (>= 7)
+Build-Depends-Indep: python-support
+Standards-Version: 3.8.4
+XS-Python-Version: 2.6
+
+Package: nova-common
+Architecture: all
+Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted, python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
+Provides: ${python:Provides}
+Conflicts: nova
+Description: Nova is a cloud
+
+Package: nova-compute
+Architecture: all
+Depends: nova-common (= ${binary:Version}), kpartx, kvm, python-libvirt, libvirt-bin (>= 0.8.1), ${python:Depends}, ${misc:Depends}
+Description: Nova compute
+
+Package: nova-volume
+Architecture: all
+Depends: nova-common (= ${binary:Version}), vblade, vblade-persist, ${python:Depends}, ${misc:Depends}
+Description: Nova volume
+
+Package: nova-api
+Architecture: all
+Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
+Description: Nova api
+
+Package: nova-objectstore
+Architecture: all
+Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
+Description: Nova object store
+
+Package: nova-tools
+Architecture: all
+Depends: python-boto, ${python:Depends}, ${misc:Depends}
+Description: CLI tools to access nova

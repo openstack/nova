@@ -1,0 +1,37 @@
+Metadata-Version: 1.0
+Name: python-daemon
+Version: 1.5.5
+Summary: Library to implement a well-behaved Unix daemon process.
+Home-page: http://pypi.python.org/pypi/python-daemon/
+Author: Ben Finney
+Author-email: ben+python@benfinney.id.au
+License: PSF-2+
+Description: This library implements the well-behaved daemon specification of
+        :pep:`3143`, "Standard daemon process library".
+        
+        A well-behaved Unix daemon process is tricky to get right, but the
+        required steps are much the same for every daemon program. A
+        `DaemonContext` instance holds the behaviour and configured
+        process environment for the program; use the instance as a context
+        manager to enter a daemon state.
+        
+        Simple example of usage::
+        
+        import daemon
+        
+        from spam import do_main_program
+        
+        with daemon.DaemonContext():
+        do_main_program()
+        
+        Customisation of the steps to become a daemon is available by
+        setting options on the `DaemonContext` instance; see the
+        documentation for that class for each option.
+Keywords: daemon,fork,unix
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: License :: OSI Approved :: Python Software Foundation License
+Classifier: Operating System :: POSIX
+Classifier: Programming Language :: Python
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules

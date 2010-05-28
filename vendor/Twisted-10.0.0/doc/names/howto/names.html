@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html  PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'  'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+<title>Twisted Documentation: Creating and working with a names (DNS) server</title>
+<link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+  </head>
+
+  <body bgcolor="white">
+    <h1 class="title">Creating and working with a names (DNS) server</h1>
+    <div class="toc"><ol><li><a href="#auto0">Creating a non-authoritative server</a></li><li><a href="#auto1">Creating an authoritative server</a></li></ol></div>
+    <div class="content">
+<span/>
+
+<p>A Names server can be perform three basic operations:</p>
+
+<ul>
+<li>act as a recursive server, forwarding queries to other servers</li>
+<li>perform local caching of recursively discovered records</li>
+<li>act as the authoritative server for a domain</li>
+</ul>
+
+<h2>Creating a non-authoritative server<a name="auto0"/></h2>
+
+<p>
+The first two of these are easy, and you can create a server that performs them
+with the command <code class="shell">twistd -n dns --recursive --cache</code>.
+You may wish to run this as root since it will try to bind to UDP port 53.  Try
+performing a lookup with it, <code class="shell">dig twistedmatrix.com
+@127.0.0.1</code>.
+</p>
+
+<h2>Creating an authoritative server<a name="auto1"/></h2>
+
+<p>To act as the authority for a domain, two things are necessary: the address
+of the machine on which the domain name server will run must be registered
+as a nameserver for the domain; and the domain name server must be
+configured to act as the authority.  The first requirement is beyond the
+scope of this howto and will not be covered.
+</p>
+
+<p>To configure Names to act as the authority for
+<code>example-domain.com</code>, we first create a
+zone file for this domain.</p>
+
+<div class="py-listing"><pre><p class="py-linenumber"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+</p><span class="py-src-variable">zone</span> = [
+    <span class="py-src-variable">SOA</span>(
+        <span class="py-src-comment"># For whom we are the authority</span>
+        <span class="py-src-string">'example-domain.com'</span>,
+
+        <span class="py-src-comment"># This nameserver's name</span>
+        <span class="py-src-variable">mname</span> = <span class="py-src-string">&quot;ns1.example-domain.com&quot;</span>,
+
+        <span class="py-src-comment"># Mailbox of individual who handles this</span>
+        <span class="py-src-variable">rname</span> = <span class="py-src-string">&quot;root.example-domain.com&quot;</span>,
+
+        <span class="py-src-comment"># Unique serial identifying this SOA data</span>
+        <span class="py-src-variable">serial</span> = <span class="py-src-number">2003010601</span>,
+
+        <span class="py-src-comment"># Time interval before zone should be refreshed</span>
+        <span class="py-src-variable">refresh</span> = <span class="py-src-string">&quot;1H&quot;</span>,
+
+        <span class="py-src-comment"># Interval before failed refresh should be retried</span>
+        <span class="py-src-variable">retry</span> = <span class="py-src-string">&quot;1H&quot;</span>,
+
+        <span class="py-src-comment"># Upper limit on time interval before expiry</span>
+        <span class="py-src-variable">expire</span> = <span class="py-src-string">&quot;1H&quot;</span>,
+
+        <span class="py-src-comment"># Minimum TTL</span>
+        <span class="py-src-variable">minimum</span> = <span class="py-src-string">&quot;1H&quot;</span>
+    ),
+
+    <span class="py-src-variable">A</span>(<span class="py-src-string">'example-domain.com'</span>, <span class="py-src-string">'127.0.0.1'</span>),
+    <span class="py-src-variable">NS</span>(<span class="py-src-string">'example-domain.com'</span>, <span class="py-src-string">'ns1.example-domain.com'</span>),
+
+    <span class="py-src-variable">CNAME</span>(<span class="py-src-string">'www.example-domain.com'</span>, <span class="py-src-string">'example-domain.com'</span>),
+    <span class="py-src-variable">CNAME</span>(<span class="py-src-string">'ftp.example-domain.com'</span>, <span class="py-src-string">'example-domain.com'</span>),
+
+    <span class="py-src-variable">MX</span>(<span class="py-src-string">'example-domain.com'</span>, <span class="py-src-number">0</span>, <span class="py-src-string">'mail.example-domain.com'</span>),
+    <span class="py-src-variable">A</span>(<span class="py-src-string">'mail.example-domain.com'</span>, <span class="py-src-string">'123.0.16.43'</span>)
+]
+</pre><div class="caption">Zone file - <a href="listings/names/example-domain.com"><span class="filename">listings/names/example-domain.com</span></a></div></div>
+
+<p>Next, run the command <code class="shell">twistd -n dns --pyzone
+example-domain.com</code>.  Now try querying the domain locally (again, with
+dig): <code class="shell">dig -t any example-domain.com @127.0.0.1</code>.
+</p>
+
+<p>Names can also read a traditional, BIND-syntax zone file.  Specify these
+with the <code>--bindzone</code> parameter.  The $GENERATE and $INCLUDE
+directives are not yet supported.
+</p>
+
+</div>
+
+    <p><a href="index.html">Index</a></p>
+    <span class="version">Version: 10.0.0</span>
+  </body>
+</html>

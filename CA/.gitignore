@@ -1,0 +1,11 @@
+index.txt
+index.txt.old
+index.txt.attr
+index.txt.attr.old
+cacert.pem
+serial
+serial.old
+openssl.cnf
+private/*
+newcerts/*
+

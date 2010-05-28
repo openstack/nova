@@ -1,0 +1,5 @@
+Mon Jan  4 18:46:29 2010  Tim 'mithro' Ansell  <mithro@mithis.com>
+
+	* python-gflags: version 1.3
+	* Fork from the C++ package (google-gflags 1.3)
+	* Add debian packaging

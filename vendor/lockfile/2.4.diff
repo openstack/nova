@@ -1,0 +1,99 @@
+Index: lockfile/sqlitelockfile.py
+===================================================================
+--- lockfile/sqlitelockfile.py	(revision 93)
++++ lockfile/sqlitelockfile.py	(working copy)
+@@ -1,9 +1,7 @@
+-from __future__ import absolute_import, division
+-
+ import time
+ import os
+ 
+-from . import LockBase, NotLocked, NotMyLock, LockTimeout, AlreadyLocked
++from lockfile import LockBase, NotLocked, NotMyLock, LockTimeout, AlreadyLocked
+ 
+ class SQLiteLockFile(LockBase):
+     "Demonstrate SQL-based locking."
+Index: lockfile/__init__.py
+===================================================================
+--- lockfile/__init__.py	(revision 93)
++++ lockfile/__init__.py	(working copy)
+@@ -24,16 +24,14 @@
+ >>> lock = LockFile('somefile')
+ >>> print lock.is_locked()
+ False
+->>> with lock:
+-...    print lock.is_locked()
+-True
+->>> print lock.is_locked()
+-False
+ 
+ >>> lock = LockFile('somefile')
+ >>> # It is okay to lock twice from the same thread...
+->>> with lock:
+-...     lock.acquire()
++>>> lock.acquire()
++>>> try:
++...   lock.acquire()
++... finally:
++...   lock.release()
+ ...
+ >>> # Though no counter is kept, so you can't unlock multiple times...
+ >>> print lock.is_locked()
+Index: lockfile/mkdirlockfile.py
+===================================================================
+--- lockfile/mkdirlockfile.py	(revision 93)
++++ lockfile/mkdirlockfile.py	(working copy)
+@@ -1,12 +1,10 @@
+-from __future__ import absolute_import, division
+-
+ import time
+ import os
+ import sys
+ import errno
+ 
+-from . import (LockBase, LockFailed, NotLocked, NotMyLock, LockTimeout,
+-               AlreadyLocked)
++from lockfile import (LockBase, LockFailed, NotLocked, NotMyLock, LockTimeout,
++                      AlreadyLocked)
+ 
+ class MkdirLockFile(LockBase):
+     """Lock file by creating a directory."""
+Index: lockfile/pidlockfile.py
+===================================================================
+--- lockfile/pidlockfile.py	(revision 96)
++++ lockfile/pidlockfile.py	(working copy)
+@@ -12,15 +12,13 @@
+ """ Lockfile behaviour implemented via Unix PID files.
+     """
+ 
+-from __future__ import absolute_import
+-
+ import os
+ import sys
+ import errno
+ import time
+ 
+-from . import (LockBase, AlreadyLocked, LockFailed, NotLocked, NotMyLock,
+-               LockTimeout)
++from lockfile import (LockBase, AlreadyLocked, LockFailed, NotLocked,
++                      NotMyLock, LockTimeout)
+ 
+ 
+ class PIDLockFile(LockBase):
+Index: lockfile/linklockfile.py
+===================================================================
+--- lockfile/linklockfile.py	(revision 93)
++++ lockfile/linklockfile.py	(working copy)
+@@ -1,10 +1,8 @@
+-from __future__ import absolute_import
+-
+ import time
+ import os
+ 
+-from . import (LockBase, LockFailed, NotLocked, NotMyLock, LockTimeout,
+-               AlreadyLocked)
++from lockfile import (LockBase, LockFailed, NotLocked, NotMyLock, LockTimeout,
++                      AlreadyLocked)
+ 
+ class LinkLockFile(LockBase):
+     """Lock access to a file using atomic property of link(2).

@@ -1,0 +1,187 @@
+2010-03-02  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5.5 released.
+
+    * Stop using ‘pkg_resources’ and revert to pre-1.5.3 version-string
+      handling, until a better way that doesn't break everyone else's
+      installation can be found.
+
+2010-02-27  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5.4 released.
+
+    * MANIFEST.in: Explicitly include version data file, otherwise
+      everything breaks for users of the sdist.
+
+2010-02-26  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5.3 released.
+
+    * daemon/daemon.py: Invoke the pidfile context manager's ‘__exit__’
+      method with the correct arguments (as per
+      <URL:http://docs.python.org/library/stdtypes.html#typecontextmanager>).
+      Thanks to Ludvig Ericson for the bug report.
+    * version: New plain-text data file to store project version string.
+    * setup.py: Read version string from data file.
+    * daemon/version/__init__.py: Query version string with ‘pkg_resources’.
+
+2010-01-20  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Add ‘pylint’ configuration for this project.
+    * Update copyright notices.
+
+2009-10-24  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5.2 released.
+
+2009-10-19  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Ensure we only prevent core dumps if ‘prevent_core’ is true.
+      Thanks to Denis Bilenko for reporting the lacking implementation of
+      this documented option.
+
+2009-09-28  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Add initial Frequently Asked Questions document.
+
+2009-09-26  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5.1 released.
+
+    * Make a separate collection of DaemonRunner test scenarios.
+    * Handle a start request with a timeout on the PID file lock acquire.
+
+2009-09-24  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Implement ‘TimeoutPIDLockFile’ to specify a timeout in advance of
+      lock acquisition.
+    * Use lock with timeout for ‘DaemonRunner’.
+
+2009-09-24  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.5 released.
+
+    * Make a separate collection of PIDLockFile test scenarios.
+
+2009-09-23  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Raise specific errors on ‘DaemonRunner’ failures.
+    * Distinguish different conditions on reading and parsing PID file.
+    * Refactor code to ‘_terminate_daemon_process’ method.
+    * Improve explanations in comments and docstrings.
+    * Don't set pidfile at all if no path specified to constructor.
+    * Write the PID file using correct OS locking and permissions.
+    * Close the PID file after writing.
+    * Implement ‘PIDLockFile’ as subclass of ‘lockfile.LinkFileLock’.
+    * Remove redundant checks for file existence.
+
+2009-09-18  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Manage the excluded file descriptors as a set (not a list).
+    * Only inspect the file descriptor of streams if they actually have
+      one (via a ‘fileno’ method) when determining which file descriptors
+      to close. Thanks to Ask Solem for revealing this bug.
+
+2009-09-17  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.8 released.
+
+    * Remove child-exit signal (‘SIGCLD’, ‘SIGCHLD’) from default signal
+      map. Thanks to Joel Martin for pinpointing this issue.
+    * Document requirement for ensuring any operating-system specific
+      signal handlers are considered.
+    * Refactor ‘fork_then_exit_parent’ functionality to avoid duplicate
+      code.
+    * Remove redundant imports.
+    * Remove unused code from unit test suite scaffold.
+    * Add specific license terms for unit test suite scaffold.
+
+2009-09-03  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.7 released.
+
+2009-09-02  Ben Finney  <ben+python@benfinney.id.au>
+
+    * Fix keywords argument for distribution setup.
+    * Exclude ‘test’ package from distribution installation.
+
+2009-06-21  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.6 released.
+
+    * Update documentation for changes from latest PEP 3143 revision.
+    * Implement DaemonContext.is_open method.
+
+2009-05-17  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.5 released.
+
+    * Register DaemonContext.close method for atexit processing.
+    * Move PID file cleanup to close method.
+    * Improve docstrings by reference to, and copy from, PEP 3143.
+    * Use mock checking capabilities of newer ‘MiniMock’ library.
+    * Automate building a versioned distribution tarball.
+    * Include developer documentation files in source distribution.
+
+2009-03-26  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.4 released.
+
+    * Conform to current PEP version, now released as PEP 3143 “Standard
+      daemon process library”.
+    * Ensure UID and GID are set in correct order.
+    * Delay closing all open files until just before re-binding standard
+      streams.
+    * Redirect standard streams to null device by default.
+
+2009-03-19  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.3 released.
+
+    * Close the PID file context on exit.
+
+2009-03-18  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.2 released.
+
+    * Context manager methods for DaemonContext.
+
+2009-03-18  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4.1 released.
+
+    * Improvements to docstrings.
+    * Further conformance with draft PEP.
+
+2009-03-17  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.4 released.
+
+    * Implement the interface from a draft PEP for process daemonisation.
+    * Complete statement coverage from unit test suite.
+
+2009-03-12  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.3 released.
+
+    * Separate controller (now ‘DaemonRunner’) from daemon process
+      context (now ‘DaemonContext’).
+    * Fix many corner cases and bugs.
+    * Huge increase in unit test suite.
+
+2009-01-27  Ben Finney  <ben+python@benfinney.id.au>
+
+    Version 1.2 released.
+
+    * Initial release of this project forked from ‘bda.daemon’. Thanks,
+      Robert Niederreiter.
+    * Refactor some functionality out to helper functions.
+    * Begin unit test suite.
+
+
+Local variables:
+mode: change-log
+coding: utf-8
+left-margin: 4
+indent-tabs-mode: nil
+End:

@@ -1,0 +1,2 @@
+setuptools
+lockfile >=0.7
