@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,21 +21,21 @@ cat >/etc/ldap/schema/openssh-lpk_openldap.schema <<LPK_SCHEMA_EOF
 #
 # LDAP Public Key Patch schema for use with openssh-ldappubkey
 # Author: Eric AUGE <eau@phear.org>
-# 
+#
 # Based on the proposal of : Mark Ruijter
 #
 
 
 # octetString SYNTAX
-attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13 NAME 'sshPublicKey' 
-	DESC 'MANDATORY: OpenSSH Public key' 
+attributetype ( 1.3.6.1.4.1.24552.500.1.1.1.13 NAME 'sshPublicKey'
+	DESC 'MANDATORY: OpenSSH Public key'
 	EQUALITY octetStringMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.40 )
 
 # printableString SYNTAX yes|no
 objectclass ( 1.3.6.1.4.1.24552.500.1.1.2.0 NAME 'ldapPublicKey' SUP top AUXILIARY
 	DESC 'MANDATORY: OpenSSH LPK objectclass'
-	MAY ( sshPublicKey $ uid ) 
+	MAY ( sshPublicKey $ uid )
 	)
 LPK_SCHEMA_EOF
 
@@ -44,7 +44,7 @@ cat >/etc/ldap/schema/nova.schema <<NOVA_SCHEMA_EOF
 # Person object for Nova
 # inetorgperson with extra attributes
 # Author: Vishvananda Ishaya <vishvananda@yahoo.com>
-# 
+#
 #
 
 # using internet experimental oid arc as per BP64 3.1
@@ -54,32 +54,32 @@ objectidentifier novaOCs novaSchema:4
 
 attributetype (
     novaAttrs:1
-	NAME 'accessKey'
-	DESC 'Key for accessing data'
-	EQUALITY caseIgnoreMatch
-	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
-	SINGLE-VALUE
+    NAME 'accessKey'
+    DESC 'Key for accessing data'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
     )
 
 attributetype (
     novaAttrs:2
-	NAME 'secretKey'
-	DESC 'Secret key'
-	EQUALITY caseIgnoreMatch
-	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
-	SINGLE-VALUE
+    NAME 'secretKey'
+    DESC 'Secret key'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
     )
 
 attributetype (
     novaAttrs:3
-	NAME 'keyFingerprint'
-	DESC 'Fingerprint of private key'
-	EQUALITY caseIgnoreMatch
-	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
-	SINGLE-VALUE
+    NAME 'keyFingerprint'
+    DESC 'Fingerprint of private key'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
     )
 
 attributetype (
@@ -96,7 +96,7 @@ attributetype (
     NAME 'projectManager'
     DESC 'Project Managers of a project'
     SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
-    ) 
+    )
 
 objectClass (
     novaOCs:1
@@ -120,7 +120,7 @@ objectClass (
     novaOCs:3
     NAME 'novaProject'
     DESC 'Container for project'
-    SUP groupofnames
+    SUP groupOfNames
     STRUCTURAL
     MUST ( cn $ projectManager )
     )

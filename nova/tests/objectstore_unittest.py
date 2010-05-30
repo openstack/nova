@@ -56,8 +56,6 @@ class ObjectStoreTestCase(test.BaseTestCase):
         logging.getLogger().setLevel(logging.DEBUG)
 
         self.um = users.UserManager.instance()
-
-    def test_buckets(self):
         try:
             self.um.create_user('user1')
         except: pass
@@ -67,18 +65,41 @@ class ObjectStoreTestCase(test.BaseTestCase):
         try:
             self.um.create_user('admin_user', admin=True)
         except: pass
+        try:
+            self.um.create_project('proj1', 'user1', 'a proj', ['user1'])
+        except: pass
+        try:
+            self.um.create_project('proj2', 'user2', 'a proj', ['user2'])
+        except: pass
+        class Context(object): pass
+        self.context = Context()
 
-        objectstore.bucket.Bucket.create('new_bucket', self.um.get_user('user1'))
+    def tearDown(self):
+        self.um.delete_project('proj1')
+        self.um.delete_project('proj2')
+        self.um.delete_user('user1')
+        self.um.delete_user('user2')
+        self.um.delete_user('admin_user')
+        super(ObjectStoreTestCase, self).tearDown()
+
+    def test_buckets(self):
+        self.context.user = self.um.get_user('user1')
+        self.context.project = self.um.get_project('proj1')
+        objectstore.bucket.Bucket.create('new_bucket', self.context)
         bucket = objectstore.bucket.Bucket('new_bucket')
 
         # creator is authorized to use bucket
-        self.assert_(bucket.is_authorized(self.um.get_user('user1')))
+        self.assert_(bucket.is_authorized(self.context))
 
         # another user is not authorized
-        self.assert_(bucket.is_authorized(self.um.get_user('user2')) == False)
+        self.context.user = self.um.get_user('user2')
+        self.context.project = self.um.get_project('proj2')
+        self.assert_(bucket.is_authorized(self.context) == False)
 
         # admin is authorized to use bucket
-        self.assert_(bucket.is_authorized(self.um.get_user('admin_user')))
+        self.context.user = self.um.get_user('admin_user')
+        self.context.project = None
+        self.assert_(bucket.is_authorized(self.context))
 
         # new buckets are empty
         self.assert_(bucket.list_keys()['Contents'] == [])
@@ -116,18 +137,13 @@ class ObjectStoreTestCase(test.BaseTestCase):
             exception = True
 
         self.assert_(exception)
-        self.um.delete_user('user1')
-        self.um.delete_user('user2')
-        self.um.delete_user('admin_user')
 
     def test_images(self):
-        try:
-            self.um.create_user('image_creator')
-        except: pass
-        image_user = self.um.get_user('image_creator')
+        self.context.user = self.um.get_user('user1')
+        self.context.project = self.um.get_project('proj1')
 
         # create a bucket for our bundle
-        objectstore.bucket.Bucket.create('image_bucket', image_user)
+        objectstore.bucket.Bucket.create('image_bucket', self.context)
         bucket = objectstore.bucket.Bucket('image_bucket')
 
         # upload an image manifest/parts
@@ -136,7 +152,7 @@ class ObjectStoreTestCase(test.BaseTestCase):
             bucket[os.path.basename(path)] = open(path, 'rb').read()
 
         # register an image
-        objectstore.image.Image.create('i-testing', 'image_bucket/1mb.manifest.xml', image_user)
+        objectstore.image.Image.create('i-testing', 'image_bucket/1mb.manifest.xml', self.context)
 
         # verify image
         my_img = objectstore.image.Image('i-testing')
@@ -147,14 +163,9 @@ class ObjectStoreTestCase(test.BaseTestCase):
         self.assertEqual(sha, '3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3')
 
         # verify image permissions
-        try:
-            self.um.create_user('new_user')
-        except: pass
-        new_user = self.um.get_user('new_user')
-        self.assert_(my_img.is_authorized(new_user) == False)
-
-        self.um.delete_user('new_user')
-        self.um.delete_user('image_creator')
+        self.context.user = self.um.get_user('user2')
+        self.context.project = self.um.get_project('proj2')
+        self.assert_(my_img.is_authorized(self.context) == False)
 
 # class ApiObjectStoreTestCase(test.BaseTestCase):
 #     def setUp(self):

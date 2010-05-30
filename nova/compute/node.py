@@ -57,8 +57,6 @@ flags.DEFINE_bool('use_s3', True,
                       'whether to get images from s3 or use local copy')
 flags.DEFINE_string('instances_path', utils.abspath('../instances'),
                         'where instances are stored on disk')
-flags.DEFINE_string('instances_prefix', 'compute-',
-                    'prefix for keepers for instances')
 
 INSTANCE_TYPES = {}
 INSTANCE_TYPES['m1.tiny'] = {'memory_mb': 512, 'vcpus': 1, 'local_gb': 0}
@@ -72,7 +70,6 @@ INSTANCE_TYPES['c1.medium'] = {'memory_mb': 2048, 'vcpus': 4, 'local_gb': 10}
 # TODO(termie): this should probably be a flag and the pool should probably
 #               be a singleton
 PROCESS_POOL_SIZE = 4
-
 
 class Node(object, service.Service):
     """
@@ -240,7 +237,6 @@ def _create_image(data, libvirt_xml):
 
     def image_url(path):
         return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
-
     logging.info(basepath('disk'))
     try:
         os.makedirs(data['basepath'])
@@ -309,15 +305,17 @@ class Instance(object):
         return (self.state == Instance.RUNNING or self.state == 'running')
 
     def __init__(self, conn, pool, name, data):
-    # TODO(termie): pool should probably be a singleton instead of being passed
-    #               here and in the classmethods
         """ spawn an instance with a given name """
         # TODO(termie): pool should probably be a singleton instead of being passed
         #               here and in the classmethods
         self._pool = pool
         self._conn = conn
+        # TODO(vish): this can be removed after data has been updated
+        # data doesn't seem to have a working iterator so in doesn't work
+        if not data.get('owner_id', None) is None:
+            data['user_id'] = data['owner_id']
+            data['project_id'] = data['owner_id']
         self.datamodel = data
-        print data
 
         # NOTE(termie): to be passed to multiprocess self._s must be
         #               pickle-able by cPickle
@@ -344,7 +342,8 @@ class Instance(object):
         self._s['image_id'] = data.get('image_id', FLAGS.default_image)
         self._s['kernel_id'] = data.get('kernel_id', FLAGS.default_kernel)
         self._s['ramdisk_id'] = data.get('ramdisk_id', FLAGS.default_ramdisk)
-        self._s['owner_id'] = data.get('owner_id', '')
+        self._s['user_id'] = data.get('user_id', None)
+        self._s['project_id'] = data.get('project_id', self._s['user_id'])
         self._s['node_name'] = data.get('node_name', '')
         self._s['user_data'] = data.get('user_data', '')
         self._s['ami_launch_index'] = data.get('ami_launch_index', None)
@@ -352,7 +351,6 @@ class Instance(object):
         self._s['reservation_id'] = data.get('reservation_id', None)
         # self._s['state'] = Instance.NOSTATE
         self._s['state'] = data.get('state', Instance.NOSTATE)
-
         self._s['key_data'] = data.get('key_data', None)
 
         # TODO: we may not need to save the next few
@@ -415,7 +413,6 @@ class Instance(object):
 
     def update_state(self):
         info = self.info()
-        self._s['state'] = info['state']
         self.datamodel['state'] = info['state']
         self.datamodel['node_name'] = FLAGS.node_name
         self.datamodel.save()
@@ -427,7 +424,6 @@ class Instance(object):
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % self.name)
 
-        self._s['state'] = Instance.SHUTDOWN
         self.datamodel['state'] = 'shutting_down'
         self.datamodel.save()
         try:

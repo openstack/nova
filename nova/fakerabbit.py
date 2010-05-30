@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,7 @@ class Exchange(object):
             for f in self._routes[routing_key]:
                 logging.debug('Publishing to route %s', f)
                 f(message, routing_key=routing_key)
-    
+
     def bind(self, callback, routing_key):
         self._routes.setdefault(routing_key, [])
         self._routes[routing_key].append(callback)
@@ -52,7 +52,7 @@ class Queue(object):
 
     def __repr__(self):
         return '<Queue: %s>' % self.name
-    
+
     def push(self, message, routing_key=None):
         self._queue.put(message)
 
@@ -70,7 +70,7 @@ class Backend(object):
             #super(__impl, self).__init__(*args, **kwargs)
             self._exchanges = {}
             self._queues = {}
-        
+
         def _reset_all(self):
             self._exchanges = {}
             self._queues = {}
@@ -78,7 +78,7 @@ class Backend(object):
         def queue_declare(self, queue, **kwargs):
             if queue not in self._queues:
                 logging.debug('Declaring queue %s', queue)
-                self._queues[queue] = Queue(queue) 
+                self._queues[queue] = Queue(queue)
 
         def exchange_declare(self, exchange, type, *args, **kwargs):
             if exchange not in self._exchanges:
@@ -92,7 +92,7 @@ class Backend(object):
                                            routing_key)
 
         def get(self, queue, no_ack=False):
-            if not self._queues[queue].size():
+            if not queue in self._queues or not self._queues[queue].size():
                 return None
             (message_data, content_type, content_encoding) = \
                     self._queues[queue].pop()
@@ -122,7 +122,7 @@ class Backend(object):
 
     def __getattr__(self, attr):
         return getattr(self.__instance, attr)
-    
+
     def __setattr__(self, attr, value):
         return setattr(self.__instance, attr, value)
 

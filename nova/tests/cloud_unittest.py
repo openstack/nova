@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ import unittest
 from xml.etree import ElementTree
 
 from nova import vendor
-import mox
 from tornado import ioloop
 from twisted.internet import defer
 
@@ -53,18 +52,24 @@ class CloudTestCase(test.BaseTestCase):
                                                       topic=FLAGS.cloud_topic,
                                                       proxy=self.cloud)
         self.injected.append(self.cloud_consumer.attach_to_tornado(self.ioloop))
-        
+
         # set up a node
         self.node = node.Node()
         self.node_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                      topic=FLAGS.compute_topic,
                                                      proxy=self.node)
         self.injected.append(self.node_consumer.attach_to_tornado(self.ioloop))
-        
-        user_mocker = mox.Mox()
-        self.admin = user_mocker.CreateMock(users.User)
-        self.admin.is_authorized(mox.IgnoreArg()).AndReturn(True)
-        self.context = api.APIRequestContext(handler=None,user=self.admin) 
+
+        try:
+            users.UserManager.instance().create_user('admin', 'admin', 'admin')
+        except: pass
+        admin = users.UserManager.instance().get_user('admin')
+        project = users.UserManager.instance().create_project('proj', 'admin', 'proj')
+        self.context = api.APIRequestContext(handler=None,project=project,user=admin)
+
+    def tearDown(self):
+        users.UserManager.instance().delete_project('proj')
+        users.UserManager.instance().delete_user('admin')
 
     def test_console_output(self):
         if FLAGS.fake_libvirt:
@@ -76,7 +81,7 @@ class CloudTestCase(test.BaseTestCase):
         logging.debug(output)
         self.assert_(output)
         rv = yield self.node.terminate_instance(instance_id)
-    
+
     def test_run_instances(self):
         if FLAGS.fake_libvirt:
             logging.debug("Can't test instances without a real virtual env.")
@@ -128,9 +133,7 @@ class CloudTestCase(test.BaseTestCase):
                 'state': 0x01,
                 'user_data': ''
             }
-        
-        rv = self.cloud.format_instances(self.admin)
-        print rv
+        rv = self.cloud._format_instances(self.context)
         self.assert_(len(rv['reservationSet']) == 0)
 
         # simulate launch of 5 instances
@@ -139,19 +142,18 @@ class CloudTestCase(test.BaseTestCase):
         #    inst = instance(i)
         #    self.cloud.instances['pending'][inst['instance_id']] = inst
 
-        #rv = self.cloud.format_instances(self.admin)
+        #rv = self.cloud._format_instances(self.admin)
         #self.assert_(len(rv['reservationSet']) == 1)
         #self.assert_(len(rv['reservationSet'][0]['instances_set']) == 5)
-        
         # report 4 nodes each having 1 of the instances
         #for i in xrange(4):
         #    self.cloud.update_state('instances', {('node-%s' % i): {('i-%s' % i): instance(i)}})
-            
+
         # one instance should be pending still
         #self.assert_(len(self.cloud.instances['pending'].keys()) == 1)
 
         # check that the reservations collapse
-        #rv = self.cloud.format_instances(self.admin)
+        #rv = self.cloud._format_instances(self.admin)
         #self.assert_(len(rv['reservationSet']) == 1)
         #self.assert_(len(rv['reservationSet'][0]['instances_set']) == 5)
 

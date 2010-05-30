@@ -39,21 +39,20 @@ flags.DEFINE_string('keys_path', utils.abspath('../keys'), 'Where we keep our ke
 flags.DEFINE_string('ca_path', utils.abspath('../CA'), 'Where we keep our root CA')
 flags.DEFINE_boolean('use_intermediate_ca', False, 'Should we use intermediate CAs for each project?')
 
-
-def ca_path(username):
-    if username:
-        return "%s/INTER/%s/cacert.pem" % (FLAGS.ca_path, username)
+def ca_path(project_id):
+    if project_id:
+        return "%s/INTER/%s/cacert.pem" % (FLAGS.ca_path, project_id)
     return "%s/cacert.pem" % (FLAGS.ca_path)
 
-def fetch_ca(username=None, chain=True):
+def fetch_ca(project_id=None, chain=True):
     if not FLAGS.use_intermediate_ca:
-        username = None
+        project_id = None
     buffer = ""
-    if username:
-        with open(ca_path(username),"r") as cafile:
+    if project_id:
+        with open(ca_path(project_id),"r") as cafile:
             buffer += cafile.read()
-    if username and not chain:
-        return buffer
+        if not chain:
+            return buffer
     with open(ca_path(None),"r") as cafile:
         buffer += cafile.read()
     return buffer
@@ -104,7 +103,6 @@ def generate_x509_cert(subject="/C=US/ST=California/L=The Mission/O=CloudFed/OU=
     shutil.rmtree(tmpdir)
     return (private_key, csr)
 
-
 def sign_csr(csr_text, intermediate=None):
     if not FLAGS.use_intermediate_ca:
         intermediate = None
@@ -117,7 +115,6 @@ def sign_csr(csr_text, intermediate=None):
         utils.runthis("Generating intermediate CA: %s", "sh geninter.sh %s" % (intermediate))
         os.chdir(start)
     return _sign_csr(csr_text, user_ca)
-
 
 def _sign_csr(csr_text, ca_folder):
     tmpfolder = tempfile.mkdtemp()
@@ -197,7 +194,7 @@ def mkcacert(subject='nova', years=1):
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
 # ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.

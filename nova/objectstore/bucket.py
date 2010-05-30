@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,11 +28,9 @@ from nova import flags
 from nova import utils
 from nova.objectstore import stored
 
-
 FLAGS = flags.FLAGS
 flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),
                     'path to s3 buckets')
-
 
 class Bucket(object):
     def __init__(self, name):
@@ -62,11 +60,11 @@ class Bucket(object):
         return buckets
 
     @staticmethod
-    def create(bucket_name, user):
-        """Create a new bucket owned by a user.
+    def create(bucket_name, context):
+        """Create a new bucket owned by a project.
 
         @bucket_name: a string representing the name of the bucket to create
-        @user: a nova.auth.user who should own the bucket.
+        @context: a nova.auth.api.ApiContext object representing who owns the bucket.
 
         Raises:
             NotAuthorized: if the bucket is already exists or has invalid name
@@ -80,7 +78,7 @@ class Bucket(object):
         os.makedirs(path)
 
         with open(path+'.json', 'w') as f:
-            json.dump({'ownerId': user.id}, f)
+            json.dump({'ownerId': context.project.id}, f)
 
     @property
     def metadata(self):
@@ -101,9 +99,9 @@ class Bucket(object):
         except:
             return None
 
-    def is_authorized(self, user):
+    def is_authorized(self, context):
         try:
-            return user.is_admin() or self.owner_id == user.id
+            return context.user.is_admin() or self.owner_id == context.project.id
         except Exception, e:
             pass
 

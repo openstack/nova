@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,7 +41,6 @@ from nova.auth import users
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 
-
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
 
@@ -63,9 +62,10 @@ def _underscore_to_xmlcase(str):
 
 
 class APIRequestContext(object):
-    def __init__(self, handler, user):
+    def __init__(self, handler, user, project):
         self.handler = handler
         self.user = user
+        self.project = project
         self.request_id = ''.join(
                 [random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-')
                  for x in xrange(20)]
@@ -73,13 +73,11 @@ class APIRequestContext(object):
 
 
 class APIRequest(object):
-    def __init__(self, handler, controller, action):
-        self.handler = handler
+    def __init__(self, controller, action):
         self.controller = controller
         self.action = action
 
-    def send(self, user, **kwargs):
-        context = APIRequestContext(self.handler, user)
+    def send(self, context, **kwargs):
 
         try:
             method = getattr(self.controller,
@@ -227,7 +225,6 @@ class MetadataRequestHandler(tornado.web.RequestHandler):
         self.print_data(data)
         self.finish()
 
-
 class APIRequestHandler(tornado.web.RequestHandler):
     def get(self, controller_name):
         self.execute(controller_name)
@@ -257,7 +254,7 @@ class APIRequestHandler(tornado.web.RequestHandler):
         # Get requested action and remove authentication args for final request.
         try:
             action = args.pop('Action')[0]
-            args.pop('AWSAccessKeyId')
+            access = args.pop('AWSAccessKeyId')[0]
             args.pop('SignatureMethod')
             args.pop('SignatureVersion')
             args.pop('Version')
@@ -266,15 +263,18 @@ class APIRequestHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(400)
 
         # Authenticate the request.
-        user = self.application.user_manager.authenticate(
-            auth_params,
-            signature,
-            self.request.method,
-            self.request.host,
-            self.request.path
-        )
+        try:
+            (user, project) = users.UserManager.instance().authenticate(
+                access,
+                signature,
+                auth_params,
+                self.request.method,
+                self.request.host,
+                self.request.path
+            )
 
-        if not user:
+        except exception.Error, ex:
+            logging.debug("Authentication Failure: %s" % ex)
             raise tornado.web.HTTPError(403)
 
         _log.debug('action: %s' % action)
@@ -282,8 +282,9 @@ class APIRequestHandler(tornado.web.RequestHandler):
         for key, value in args.items():
             _log.debug('arg: %s\t\tval: %s' % (key, value))
 
-        request = APIRequest(self, controller, action)
-        d = request.send(user, **args)
+        request = APIRequest(controller, action)
+        context = APIRequestContext(self, user, project)
+        d = request.send(context, **args)
         # d.addCallback(utils.debug)
 
         # TODO: Wrap response in AWS XML format

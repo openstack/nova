@@ -19,6 +19,7 @@ dispatched to other nodes via AMQP RPC. State is via distributed
 datastore.
 """
 
+import base64
 import json
 import logging
 import os
@@ -58,7 +59,6 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self._instances = datastore.Keeper(FLAGS.instances_prefix)
         self.instdir = model.InstanceDirectory()
         self.network = network.NetworkController()
         self.setup()
@@ -97,7 +97,7 @@ class CloudController(object):
         return self.instdir.by_ip(ip)
 
     def get_metadata(self, ip):
-        i = self.instdir.by_ip(ip)
+        i = self.get_instance_by_ip(ip)
         if i is None:
             return None
         if i['key_name']:
@@ -144,7 +144,6 @@ class CloudController(object):
         if i.get('product_codes', None):
             data['product-codes'] = i['product_codes']
         return data
-
 
     def describe_availability_zones(self, context, **kwargs):
         return {'availabilityZoneInfo': [{'zoneName': 'nova',
@@ -207,11 +206,9 @@ class CloudController(object):
 
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
-        instance = self.instdir.get(instance_id[0])
+        instance = self._get_instance(context, instance_id[0])
         if instance['state'] == 'pending':
             raise exception.ApiError('Cannot get output for pending instance')
-        if not context.user.is_authorized(instance.get('owner_id', None)):
-            raise exception.ApiError('Not authorized to view output')
         return rpc.call('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
             {"method": "get_console_output",
              "args" : {"instance_id": instance_id[0]}})
@@ -225,7 +222,7 @@ class CloudController(object):
     def describe_volumes(self, context, **kwargs):
         volumes = []
         for volume in self.volumes:
-            if context.user.is_authorized(volume.get('user_id', None)):
+            if context.user.is_admin() or volume['project_id'] == context.project.id:
                 v = self.format_volume(context, volume)
                 volumes.append(v)
         return defer.succeed({'volumeSet': volumes})
@@ -252,36 +249,59 @@ class CloudController(object):
                                  "args" : {"size": size,
                                            "user_id": context.user.id}})
         def _format_result(result):
-            volume = self._get_volume(result['result'])
+            volume = self._get_volume(context, result['result'])
             return {'volumeSet': [self.format_volume(context, volume)]}
         res.addCallback(_format_result)
         return res
 
-    def _get_by_id(self, nodes, id):
-        if nodes == {}:
-            raise exception.NotFound("%s not found" % id)
-        for node_name, node in nodes.iteritems():
-            if node.has_key(id):
-                return node_name, node[id]
-        raise exception.NotFound("%s not found" % id)
+    def _convert_address(self, network_address):
+        # FIXME(vish): this should go away when network.py stores info properly
+        address = {}
+        address['public_ip'] == network_address[u'address']
+        address['user_id'] == network_address[u'user_id']
+        address['project_id'] == network_address.get(u'project_id', address['user_id'])
+        address['instance_id'] == network_address.get(u'instance_id', None)
+        return address
 
-    def _get_volume(self, volume_id):
+    def _get_address(self, context, public_ip):
+        # right now all addresses are allocated locally
+        # FIXME(vish) this should move into network.py
+        for network_address in self.network.describe_addresses():
+            if network_address[u'address'] == public_ip:
+                address = self._convert_address(network_address)
+                if context.user.is_admin() or address['project_id'] == context.project.id:
+                    return address
+        raise exception.NotFound("Address at ip %s not found" % public_ip)
+
+    def _get_image(self, context, image_id):
+        """passes in context because
+        objectstore does its own authorization"""
+        result = images.list(context, [image_id])
+        if not result:
+            raise exception.NotFound('Image %s could not be found' % image_id)
+        image = result[0]
+        return image
+
+    def _get_instance(self, context, instance_id):
+        for instance in self.instances:
+            if instance['instance_id'] == instance_id:
+                if context.user.is_admin() or instance['project_id'] == context.project.id:
+                    return instance
+        raise exception.NotFound('Instance %s could not be found' % instance_id)
+
+    def _get_volume(self, context, volume_id):
         for volume in self.volumes:
             if volume['volume_id'] == volume_id:
-                return volume
+                if context.user.is_admin() or volume['project_id'] == context.project.id:
+                    return volume
+        raise exception.NotFound('Volume %s could not be found' % volume_id)
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume = self._get_volume(volume_id)
+        volume = self._get_volume(context, volume_id)
         storage_node = volume['node_name']
         # TODO: (joshua) Fix volumes to store creator id
-        if not context.user.is_authorized(volume.get('user_id', None)):
-            raise exception.ApiError("%s not authorized for %s" %
-                                        (context.user.id, volume_id))
-        instance = self.instdir.get(instance_id)
+        instance = self._get_instance(context, instance_id)
         compute_node = instance['node_name']
-        if not context.user.is_authorized(instance.get('owner_id', None)):
-            raise exception.ApiError(message="%s not authorized for %s" %
-                                        (context.user.id, instance_id))
         aoe_device = volume['aoe_device']
         # Needs to get right node controller for attaching to
         # TODO: Maybe have another exchange that goes to everyone?
@@ -297,24 +317,17 @@ class CloudController(object):
                                            "mountpoint" : device}})
         return defer.succeed(True)
 
+
     def detach_volume(self, context, volume_id, **kwargs):
         # TODO(joshua): Make sure the updated state has been received first
-        volume = self._get_volume(volume_id)
+        volume = self._get_volume(context, volume_id)
         storage_node = volume['node_name']
-        if not context.user.is_authorized(volume.get('user_id', None)):
-            raise exception.ApiError("%s not authorized for %s" %
-                                        (context.user.id, volume_id))
         if 'instance_id' in volume.keys():
             instance_id = volume['instance_id']
             try:
-                instance = self.instdir.get(instance_id)
+                instance = self._get_instance(context, instance_id)
                 compute_node = instance['node_name']
                 mountpoint = volume['mountpoint']
-                if not context.user.is_authorized(
-                        instance.get('owner_id', None)):
-                    raise exception.ApiError(
-                            "%s not authorized for %s" %
-                            (context.user.id, instance_id))
                 rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
                                 {"method": "detach_volume",
                                  "args" : {"instance_id": instance_id,
@@ -332,16 +345,16 @@ class CloudController(object):
         return [{str: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return defer.succeed(self.format_instances(context.user))
+        return defer.succeed(self._format_instances(context))
 
-    def format_instances(self, user, reservation_id = None):
+    def _format_instances(self, context, reservation_id = None):
         if self.instances == {}:
             return {'reservationSet': []}
         reservations = {}
         for inst in self.instances:
             instance = inst.values()[0]
             res_id = instance.get('reservation_id', 'Unknown')
-            if (user.is_authorized(instance.get('owner_id', None))
+            if ((context.user.is_admin() or context.project.id == instance['project_id'])
                 and (reservation_id == None or reservation_id == res_id)):
                 i = {}
                 i['instance_id'] = instance.get('instance_id', None)
@@ -357,7 +370,7 @@ class CloudController(object):
                     i['public_dns_name'] = i['private_dns_name']
                 i['dns_name'] = instance.get('dns_name', None)
                 i['key_name'] = instance.get('key_name', None)
-                if user.is_admin():
+                if context.user.is_admin():
                     i['key_name'] = '%s (%s, %s)' % (i['key_name'],
                         instance.get('owner_id', None), instance.get('node_name',''))
                 i['product_codes_set'] = self._convert_to_set(
@@ -369,7 +382,7 @@ class CloudController(object):
                 if not reservations.has_key(res_id):
                     r = {}
                     r['reservation_id'] = res_id
-                    r['owner_id'] = instance.get('owner_id', None)
+                    r['owner_id'] = instance.get('project_id', None)
                     r['group_set'] = self._convert_to_set(
                         instance.get('groups', None), 'group_id')
                     r['instances_set'] = []
@@ -382,52 +395,52 @@ class CloudController(object):
     def describe_addresses(self, context, **kwargs):
         return self.format_addresses(context.user)
 
-    def format_addresses(self, user):
+    def format_addresses(self, context):
         addresses = []
         # TODO(vish): move authorization checking into network.py
-        for address_record in self.network.describe_addresses(
-                                    type=network.PublicNetwork):
+        for network_address in self.network.describe_addresses(type=network.PublicNetwork):
             #logging.debug(address_record)
-            if user.is_authorized(address_record[u'user_id']):
-                address = {
-                    'public_ip': address_record[u'address'],
-                    'instance_id' : address_record.get(u'instance_id', 'free')
-                }
-                # FIXME: add another field for user id
-                if user.is_admin():
-                    address['instance_id'] = "%s (%s)" % (
-                        address['instance_id'],
-                        address_record[u'user_id'],
-                    )
-                addresses.append(address)
+            address = self._convert_address(network_address)
+            address_rv = {
+                'public_ip': address['public_ip'],
+                'instance_id' : address.get('instance_id', 'free')
+            }
+            # FIXME: add another field for user id
+            if context.user.is_admin():
+                address_rv['instance_id'] = "%s (%s, %s)" % (
+                    address['instance_id'],
+                    address['user_id'],
+                    address['project_id'],
+                )
+            addresses.append(address_rv)
         # logging.debug(addresses)
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
-        # TODO: Verify user is valid?
-        kwargs['owner_id'] = context.user.id
         (address,network_name) = self.network.allocate_address(
-                                context.user.id, type=network.PublicNetwork)
+                                context.user.id, context.project_id, type=network.PublicNetwork)
         return defer.succeed({'addressSet': [{'publicIp' : address}]})
 
-    def release_address(self, context, **kwargs):
-        self.network.deallocate_address(kwargs.get('public_ip', None))
+    def release_address(self, context, public_ip, **kwargs):
+        address = self._get_address(public_ip)
         return defer.succeed({'releaseResponse': ["Address released."]})
 
     def associate_address(self, context, instance_id, **kwargs):
-        instance = self.instdir.get(instance_id)
+        instance = self._get_instance(context, instance_id)
         rv = self.network.associate_address(
                             kwargs['public_ip'],
                             instance['private_dns_name'],
                             instance_id)
         return defer.succeed({'associateResponse': ["Address associated."]})
 
-    def disassociate_address(self, context, **kwargs):
-        rv = self.network.disassociate_address(kwargs['public_ip'])
+    def disassociate_address(self, context, public_ip, **kwargs):
+        address = self._get_address(public_ip)
+        rv = self.network.disassociate_address(public_ip)
         # TODO - Strip the IP from the instance
-        return rv
+        return defer.succeed({'disassociateResponse': ["Address disassociated."]})
 
     def run_instances(self, context, **kwargs):
+        image = self._get_image(context, kwargs['image_id'])
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -449,11 +462,14 @@ class CloudController(object):
             inst['launch_time'] = launch_time
             inst['key_data'] = key_data or ''
             inst['key_name'] = kwargs.get('key_name', '')
-            inst['owner_id'] = context.user.id
+            inst['user_id'] = context.user.id
+            inst['project_id'] = context.project.id
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
             address, _netname = self.network.allocate_address(
-                inst['owner_id'], mac=inst['mac_address'])
+                user_id=inst['user_id'],
+                project_id=inst['project_id'],
+                mac=inst['mac_address'])
             network = self.network.get_users_network(str(context.user.id))
             inst['network_str'] = json.dumps(network.to_dict())
             inst['bridge_name'] = network.bridge_name
@@ -466,82 +482,77 @@ class CloudController(object):
             logging.debug("Casting to node for %s's instance with IP of %s" %
                       (context.user.name, inst['private_dns_name']))
         # TODO: Make the NetworkComputeNode figure out the network name from ip.
-        return defer.succeed(self.format_instances(
+        return defer.succeed(self._format_instances(
                                 context.user, reservation_id))
 
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        # TODO: return error if not authorized
         for i in instance_id:
             logging.debug("Going to try and terminate %s" % i)
-            instance = self.instdir.get(i)
-            #if instance['state'] == 'pending':
-            #    raise exception.ApiError('Cannot terminate pending instance')
-            if context.user.is_authorized(instance.get('owner_id', None)):
+            try:
+                instance = self._get_instance(context, i)
+            except exception.NotFound:
+                logging.warning("Instance %s was not found during terminate" % i)
+                continue
+            try:
+                self.network.disassociate_address(
+                    instance.get('public_dns_name', 'bork'))
+            except:
+                pass
+            if instance.get('private_dns_name', None):
+                logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
                 try:
-                    self.network.disassociate_address(
-                        instance.get('public_dns_name', 'bork'))
-                except:
+                    self.network.deallocate_address(instance.get('private_dns_name', None))
+                except Exception, _err:
                     pass
-                if instance.get('private_dns_name', None):
-                    logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
-                    try:
-                        self.network.deallocate_address(instance.get('private_dns_name', None))
-                    except Exception, _err:
-                        pass
-                if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
-                    rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
+            if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
+                rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "terminate_instance",
                               "args" : {"instance_id": i}})
-                else:
-                    instance.destroy()
+            else:
+                instance.destroy()
         return defer.succeed(True)
 
     def reboot_instances(self, context, instance_id, **kwargs):
-        # TODO: return error if not authorized
+        """instance_id is a list of instance ids"""
         for i in instance_id:
-            instance = self.instdir.get(i)
+            instance = self._get_instance(context, i)
             if instance['state'] == 'pending':
                 raise exception.ApiError('Cannot reboot pending instance')
-            if context.user.is_authorized(instance.get('owner_id', None)):
-                rpc.cast('%s.%s' % (FLAGS.node_topic, instance['node_name']),
+            rpc.cast('%s.%s' % (FLAGS.node_topic, instance['node_name']),
                              {"method": "reboot_instance",
                               "args" : {"instance_id": i}})
         return defer.succeed(True)
 
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
-        volume = self._get_volume(volume_id)
+        volume = self._get_volume(context, volume_id)
         storage_node = volume['node_name']
-        if context.user.is_authorized(volume.get('user_id', None)):
-            rpc.cast('%s.%s' % (FLAGS.storage_topic, storage_node),
-                                {"method": "delete_volume",
-                                 "args" : {"volume_id": volume_id}})
+        rpc.cast('%s.%s' % (FLAGS.storage_topic, storage_node),
+                            {"method": "delete_volume",
+                             "args" : {"volume_id": volume_id}})
         return defer.succeed(True)
 
     def describe_images(self, context, image_id=None, **kwargs):
-        imageSet = images.list(context.user)
-        if not image_id is None:
-            imageSet = [i for i in imageSet if i['imageId'] in image_id]
-
+        # The objectstore does its own authorization for describe
+        imageSet = images.list(context, image_id)
         return defer.succeed({'imagesSet': imageSet})
 
     def deregister_image(self, context, image_id, **kwargs):
-        images.deregister(context.user, image_id)
-
+        # FIXME: should the objectstore be doing these authorization checks?
+        images.deregister(context, image_id)
         return defer.succeed({'imageId': image_id})
 
     def register_image(self, context, image_location=None, **kwargs):
+        # FIXME: should the objectstore be doing these authorization checks?
         if image_location is None and kwargs.has_key('name'):
             image_location = kwargs['name']
-
-        image_id = images.register(context.user, image_location)
+        image_id = images.register(context, image_location)
         logging.debug("Registered %s as %s" % (image_location, image_id))
 
         return defer.succeed({'imageId': image_id})
 
-    def modify_image_attribute(self, context, image_id,
-                                attribute, operation_type, **kwargs):
+    def modify_image_attribute(self, context, image_id, attribute, operation_type, **kwargs):
         if attribute != 'launchPermission':
             raise exception.ApiError('only launchPermission is supported')
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':

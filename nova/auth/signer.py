@@ -46,12 +46,9 @@ import urllib
 import base64
 from nova.exception import Error
 
-_log = logging.getLogger('signer')
-logging.getLogger('signer').setLevel(logging.WARN)
-
 class Signer(object):
     """ hacked up code from boto/connection.py """
-    
+
     def __init__(self, secret_key):
         self.hmac = hmac.new(secret_key, digestmod=hashlib.sha1)
         if hashlib.sha256:
@@ -59,15 +56,14 @@ class Signer(object):
 
     def generate(self, params, verb, server_string, path):
         if params['SignatureVersion'] == '0':
-            t = self._calc_signature_0(params)
-        elif params['SignatureVersion'] == '1':
-            t = self._calc_signature_1(params)
-        elif params['SignatureVersion'] == '2':
-            t = self._calc_signature_2(params, verb, server_string, path)
-        else:
-            raise Error('Unknown Signature Version: %s' % self.SignatureVersion)
-        return t
-        
+            return self._calc_signature_0(params)
+        if params['SignatureVersion'] == '1':
+            return self._calc_signature_1(params)
+        if params['SignatureVersion'] == '2':
+            return self._calc_signature_2(params, verb, server_string, path)
+        raise Error('Unknown Signature Version: %s' % self.SignatureVersion)
+
+
     def _get_utf8_value(self, value):
         if not isinstance(value, str) and not isinstance(value, unicode):
             value = str(value)
@@ -99,7 +95,7 @@ class Signer(object):
         return base64.b64encode(self.hmac.digest())
 
     def _calc_signature_2(self, params, verb, server_string, path):
-        _log.debug('using _calc_signature_2')
+        logging.debug('using _calc_signature_2')
         string_to_sign = '%s\n%s\n%s\n' % (verb, server_string, path)
         if self.hmac_256:
             hmac = self.hmac_256
@@ -114,13 +110,13 @@ class Signer(object):
             val = self._get_utf8_value(params[key])
             pairs.append(urllib.quote(key, safe='') + '=' + urllib.quote(val, safe='-_~'))
         qs = '&'.join(pairs)
-        _log.debug('query string: %s' % qs)
+        logging.debug('query string: %s' % qs)
         string_to_sign += qs
-        _log.debug('string_to_sign: %s' % string_to_sign)
+        logging.debug('string_to_sign: %s' % string_to_sign)
         hmac.update(string_to_sign)
         b64 = base64.b64encode(hmac.digest())
-        _log.debug('len(b64)=%d' % len(b64))
-        _log.debug('base64 encoded digest: %s' % b64)
+        logging.debug('len(b64)=%d' % len(b64))
+        logging.debug('base64 encoded digest: %s' % b64)
         return b64
 
 if __name__ == '__main__':

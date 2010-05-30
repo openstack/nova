@@ -58,9 +58,9 @@ class Image(object):
         except:
             pass
 
-    def is_authorized(self, user):
+    def is_authorized(self, context):
         try:
-            return self.metadata['isPublic'] or self.metadata['imageOwnerId'] == user.id
+            return self.metadata['isPublic'] or context.user.is_admin() or self.metadata['imageOwnerId'] == context.project.id
         except:
             return False
 
@@ -91,7 +91,7 @@ class Image(object):
             return json.load(f)
 
     @staticmethod
-    def create(image_id, image_location, user):
+    def create(image_id, image_location, context):
         image_path = os.path.join(FLAGS.images_path, image_id)
         os.makedirs(image_path)
 
@@ -119,7 +119,7 @@ class Image(object):
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
-            'imageOwnerId': user.id,
+            'imageOwnerId': context.project.id,
             'isPublic': False, # FIXME: grab public from manifest
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
             'type' : image_type

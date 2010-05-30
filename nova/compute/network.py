@@ -26,7 +26,6 @@ from nova import vendor
 import IPy
 
 from nova import datastore
-import nova.exception
 from nova.compute import exception
 from nova import flags
 from nova import utils
@@ -113,13 +112,13 @@ class Network(object):
         for idx in range(3, len(self.network)-2):
             yield self.network[idx]
 
-    def allocate_ip(self, user_id, mac):
+    def allocate_ip(self, user_id, project_id, mac):
         for ip in self.range():
             address = str(ip)
             if not address in self.hosts.keys():
-                logging.debug("Allocating IP %s to %s" % (address, user_id))
+                logging.debug("Allocating IP %s to %s" % (address, project_id))
                 self.hosts[address] = {
-                    "address" : address, "user_id" : user_id, 'mac' : mac
+                    "address" : address, "user_id": user_id, "project_id" : project_id, 'mac' : mac
                 }
                 self.express(address=address)
                 return address
@@ -238,7 +237,6 @@ class DHCPNetwork(VirtNetwork):
         else:
             linux_net.start_dnsmasq(self)
 
-
 class PrivateNetwork(DHCPNetwork):
     def __init__(self, **kwargs):
         super(PrivateNetwork, self).__init__(**kwargs)
@@ -249,23 +247,18 @@ class PrivateNetwork(DHCPNetwork):
                 'network': self.network_str,
                 'hosts': self.hosts}
 
-    def express(self, *args, **kwargs):
-        super(PrivateNetwork, self).express(*args, **kwargs)
-
-
-
 class PublicNetwork(Network):
     def __init__(self, network="192.168.216.0/24", **kwargs):
         super(PublicNetwork, self).__init__(network=network, **kwargs)
         self.express()
 
-    def allocate_ip(self, user_id, mac):
+    def allocate_ip(self, user_id, project_id, mac):
         for ip in self.range():
             address = str(ip)
             if not address in self.hosts.keys():
-                logging.debug("Allocating IP %s to %s" % (address, user_id))
+                logging.debug("Allocating IP %s to %s" % (address, project_id))
                 self.hosts[address] = {
-                    "address" : address, "user_id" : user_id, 'mac' : mac
+                    "address" : address, "user_id": user_id, "project_id" : project_id, 'mac' : mac
                 }
                 self.express(address=address)
                 return address
@@ -354,8 +347,8 @@ class VlanPool(object):
         self.vlans = kwargs.get('vlans', {})
         self.vlanpool = {}
         self.manager = users.UserManager.instance()
-        for user_id, vlan in self.vlans.iteritems():
-            self.vlanpool[vlan] = user_id
+        for project_id, vlan in self.vlans.iteritems():
+            self.vlanpool[vlan] = project_id
 
     def to_dict(self):
         return {'vlans': self.vlans}
@@ -380,25 +373,25 @@ class VlanPool(object):
         parsed = json.loads(json_string)
         return cls.from_dict(parsed)
 
-    def assign_vlan(self, user_id, vlan):
-        logging.debug("Assigning vlan %s to user %s" % (vlan, user_id))
-        self.vlans[user_id] = vlan
-        self.vlanpool[vlan] = user_id
-        return self.vlans[user_id]
+    def assign_vlan(self, project_id, vlan):
+        logging.debug("Assigning vlan %s to project %s" % (vlan, project_id))
+        self.vlans[project_id] = vlan
+        self.vlanpool[vlan] = project_id
+        return self.vlans[project_id]
 
-    def next(self, user_id):
-        for old_user_id, vlan in self.vlans.iteritems():
-            if not self.manager.get_user(old_user_id):
-                _get_keeper()["%s-default" % old_user_id] = {}
-                del _get_keeper()["%s-default" % old_user_id]
-                del self.vlans[old_user_id]
-                return self.assign_vlan(user_id, vlan)
+    def next(self, project_id):
+        for old_project_id, vlan in self.vlans.iteritems():
+            if not self.manager.get_project(old_project_id):
+                _get_keeper()["%s-default" % old_project_id] = {}
+                del _get_keeper()["%s-default" % old_project_id]
+                del self.vlans[old_project_id]
+                return self.assign_vlan(project_id, vlan)
         vlans = self.vlanpool.keys()
         vlans.append(self.start)
         nextvlan = max(vlans) + 1
         if nextvlan == self.end:
             raise exception.AddressNotAllocated("Out of VLANs")
-        return self.assign_vlan(user_id, nextvlan)
+        return self.assign_vlan(project_id, nextvlan)
 
 
 class NetworkController(object):
@@ -442,37 +435,37 @@ class NetworkController(object):
             if address_record.get(u'instance_id', 'free') == instance_id:
                 return address_record[u'address']
 
-    def get_users_network(self, user_id):
-        """ get a user's private network, allocating one if needed """
+    def get_project_network(self, project_id):
+        """ get a project's private network, allocating one if needed """
 
-        user = self.manager.get_user(user_id)
-        if not user:
-           raise Exception("User %s doesn't exist, uhoh." % user_id)
-        usernet = self.get_network_from_name("%s-default" % user_id)
-        if not usernet:
+        project = self.manager.get_project(project_id)
+        if not project:
+           raise Exception("Project %s doesn't exist, uhoh." % project_id)
+        project_net = self.get_network_from_name("%s-default" % project_id)
+        if not project_net:
             pool = self.vlan_pool
-            vlan = pool.next(user_id)
+            vlan = pool.next(project_id)
             private_pool = NetworkPool()
             network_str = private_pool.get_from_vlan(vlan)
-            logging.debug("Constructing network %s and %s for %s" % (network_str, vlan, user_id))
-            usernet = PrivateNetwork(
+            logging.debug("Constructing network %s and %s for %s" % (network_str, vlan, project_id))
+            project_net = PrivateNetwork(
                 network=network_str,
                 vlan=vlan)
-            _get_keeper()["%s-default" % user_id] = usernet.to_dict()
+            _get_keeper()["%s-default" % project_id] = project_net.to_dict()
             _get_keeper()['vlans'] = pool.to_dict()
-        return usernet
+        return project_net
 
-    def allocate_address(self, user_id, mac=None, type=PrivateNetwork):
+    def allocate_address(self, user_id, project_id, mac=None, type=PrivateNetwork):
         ip = None
         net_name = None
         if type == PrivateNetwork:
-            net = self.get_users_network(user_id)
-            ip = net.allocate_ip(user_id, mac)
+            net = self.get_project_network(project_id)
+            ip = net.allocate_ip(user_id, project_id, mac)
             net_name = net.name
-            _get_keeper()["%s-default" % user_id] = net.to_dict()
+            _get_keeper()["%s-default" % project_id] = net.to_dict()
         else:
             net = self.public_net
-            ip = net.allocate_ip(user_id, mac)
+            ip = net.allocate_ip(user_id, project_id, mac)
             net_name = net.name
             _get_keeper()['public'] = net.to_dict()
         return (ip, net_name)
@@ -483,19 +476,19 @@ class NetworkController(object):
             rv = net.deallocate_ip(str(address))
             _get_keeper()['public'] = net.to_dict()
             return rv
-        for user in self.manager.get_users():
-            if address in self.get_users_network(user.id).network:
-                net = self.get_users_network(user.id)
+        for project in self.manager.get_projects():
+            if address in self.get_project_network(project.id).network:
+                net = self.get_project_network(project.id)
                 rv = net.deallocate_ip(str(address))
-                _get_keeper()["%s-default" % user.id] = net.to_dict()
+                _get_keeper()["%s-default" % project.id] = net.to_dict()
                 return rv
         raise exception.AddressNotAllocated()
 
     def describe_addresses(self, type=PrivateNetwork):
         if type == PrivateNetwork:
             addresses = []
-            for user in self.manager.get_users():
-                addresses.extend(self.get_users_network(user.id).list_addresses())
+            for project in self.manager.get_projects():
+                addresses.extend(self.get_project_network(project.id).list_addresses())
             return addresses
         return self.public_net.list_addresses()
 
@@ -512,8 +505,8 @@ class NetworkController(object):
         return rv
 
     def express(self,address=None):
-        for user in self.manager.get_users():
-            self.get_users_network(user.id).express()
+        for project in self.manager.get_projects():
+            self.get_project_network(project.id).express()
 
     def report_state(self):
         pass

@@ -24,10 +24,8 @@ from M2Crypto import X509
 from nova import crypto
 from nova import flags
 from nova import test
-from nova import utils
 from nova.auth import users
 from nova.endpoint import cloud
-
 
 FLAGS = flags.FLAGS
 
@@ -40,8 +38,9 @@ class UserTestCase(test.BaseTestCase):
                    redis_db=8)
         self.users = users.UserManager.instance()
 
-    def test_001_can_create_user(self):
+    def test_001_can_create_users(self):
         self.users.create_user('test1', 'access', 'secret')
+        self.users.create_user('test2')
 
     def test_002_can_get_user(self):
         user = self.users.get_user('test1')
@@ -83,7 +82,6 @@ class UserTestCase(test.BaseTestCase):
         key.save_pub_key_bio(bio)
         converted = crypto.ssl_pub_to_ssh_pub(bio.read())
         # assert key fields are equal
-        print converted
         self.assertEqual(public_key.split(" ")[1].strip(),
                          converted.split(" ")[1].strip())
 
@@ -101,16 +99,44 @@ class UserTestCase(test.BaseTestCase):
         users = self.users.get_users()
         self.assertTrue(filter(lambda u: u.id == 'test1', users))
 
-    def test_011_can_generate_x509(self):
+    def test_201_can_create_project(self):
+        project = self.users.create_project('testproj', 'test1', 'A test project', ['test1'])
+        self.assertTrue(filter(lambda p: p.name == 'testproj', self.users.get_projects()))
+        self.assertEqual(project.name, 'testproj')
+        self.assertEqual(project.description, 'A test project')
+        self.assertEqual(project.project_manager_id, 'test1')
+        self.assertTrue(project.has_member('test1'))
+
+    def test_202_user1_is_project_member(self):
+        self.assertTrue(self.users.get_user('test1').is_project_member('testproj'))
+
+    def test_203_user2_is_not_project_member(self):
+        self.assertFalse(self.users.get_user('test2').is_project_member('testproj'))
+
+    def test_204_user1_is_project_manager(self):
+        self.assertTrue(self.users.get_user('test1').is_project_manager('testproj'))
+
+    def test_205_user2_is_not_project_manager(self):
+        self.assertFalse(self.users.get_user('test2').is_project_manager('testproj'))
+
+    def test_206_can_add_user_to_project(self):
+        self.users.add_to_project('test2', 'testproj')
+        self.assertTrue(self.users.get_project('testproj').has_member('test2'))
+
+    def test_208_can_remove_user_from_project(self):
+        self.users.remove_from_project('test2', 'testproj')
+        self.assertFalse(self.users.get_project('testproj').has_member('test2'))
+
+    def test_209_can_generate_x509(self):
         # MUST HAVE RUN CLOUD SETUP BY NOW
         self.cloud = cloud.CloudController()
         self.cloud.setup()
-        private_key, signed_cert_string = self.users.get_user('test1').generate_x509_cert()
+        private_key, signed_cert_string = self.users.get_project('testproj').generate_x509_cert('test1')
         logging.debug(signed_cert_string)
 
         # Need to verify that it's signed by the right intermediate CA
-        full_chain = crypto.fetch_ca(username='test1', chain=True)
-        int_cert = crypto.fetch_ca(username='test1', chain=False)
+        full_chain = crypto.fetch_ca(project_id='testproj', chain=True)
+        int_cert = crypto.fetch_ca(project_id='testproj', chain=False)
         cloud_cert = crypto.fetch_ca()
         logging.debug("CA chain:\n\n =====\n%s\n\n=====" % full_chain)
         signed_cert = X509.load_cert_string(signed_cert_string)
@@ -125,11 +151,16 @@ class UserTestCase(test.BaseTestCase):
         else:
             self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
 
-    def test_012_can_delete_user(self):
+    def test_299_can_delete_project(self):
+        self.users.delete_project('testproj')
+        self.assertFalse(filter(lambda p: p.name == 'testproj', self.users.get_projects()))
+
+    def test_999_can_delete_users(self):
         self.users.delete_user('test1')
         users = self.users.get_users()
-        if users != None:
-            self.assertFalse(filter(lambda u: u.id == 'test1', users))
+        self.assertFalse(filter(lambda u: u.id == 'test1', users))
+        self.users.delete_user('test2')
+        self.assertEqual(self.users.get_user('test2'), None)
 
 
 if __name__ == "__main__":

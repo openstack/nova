@@ -264,6 +264,12 @@ class SqliteKeeper(object):
         group.remove(value)
         self[item] = group
 
+    def set_members(self, item):
+        group = self[item]
+        if not group:
+            group = []
+        return group
+
     def set_fetch(self, item):
         # TODO(termie): I don't really know what set_fetch is supposed to do
         group = self[item]
@@ -353,6 +359,10 @@ class RedisKeeper(object):
     def set_remove(self, item, value):
         item = slugify(item, self.prefix)
         return Redis.instance().srem(item, json.dumps(value))
+
+    def set_members(self, item):
+        item = slugify(item, self.prefix)
+        return [json.loads(v) for v in Redis.instance().smembers(item)]
 
     def set_fetch(self, item):
         item = slugify(item, self.prefix)

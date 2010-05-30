@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4 expandtab
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ InstanceDirectory manager.
 True
 >>> inst = InstDir['i-123']
 >>> inst['ip'] = "192.168.0.3"
->>> inst['owner_id'] = "projectA"
+>>> inst['project_id'] = "projectA"
 >>> inst.save()
 True
 
@@ -46,6 +46,8 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('instances_prefix', 'compute-',
+                    'prefix for keepers for instances')
 
 # TODO(ja): singleton instance of the directory
 class InstanceDirectory(object):
@@ -62,11 +64,12 @@ class InstanceDirectory(object):
 
     def by_project(self, project):
         """ returns a list of instance objects for a project """
-        for instance_id in self.keeper['project:%s:instances' % project]:
+        for instance_id in self.keeper.smembers('project:%s:instances' % project):
             yield Instance(instance_id)
 
     def by_node(self, node_id):
         """ returns a list of instances for a node """
+
         for instance in self.all:
             if instance['node_name'] == node_id:
                 yield instance
@@ -83,17 +86,13 @@ class InstanceDirectory(object):
         pass
 
     def exists(self, instance_id):
-        if instance_id in self.keeper['instances']:
-            return True
-        return False
+        return self.keeper.set_is_member('instances', instance_id)
 
     @property
     def all(self):
         """ returns a list of all instances """
-        instances = self.keeper['instances']
-        if instances != None:
-            for instance_id in self.keeper['instances']:
-                yield Instance(instance_id)
+        for instance_id in self.keeper.set_members('instances'):
+            yield Instance(instance_id)
 
     def new(self):
         """ returns an empty Instance object, with ID """
@@ -114,10 +113,12 @@ class Instance(object):
         if self.state:
             self.initial_state = self.state
         else:
-            self.state = {'state' : 'pending',
-                          'instance_id' : instance_id,
-                          'node_name' : 'unassigned',
-                          'owner_id' : 'unassigned' }
+            self.state = {'state': 'pending',
+                          'instance_id': instance_id,
+                          'node_name': 'unassigned',
+                          'project_id': 'unassigned',
+                          'user_id': 'unassigned'
+                         }
 
     @property
     def __redis_key(self):
@@ -143,8 +144,8 @@ class Instance(object):
 
     def save(self):
         """ update the directory with the state from this instance
-            make sure you've set the owner_id before you call save
-            for the first time.
+        make sure you've set the project_id and user_id before you call save
+        for the first time.
         """
         # TODO(ja): implement hmset in redis-py and use it
         # instead of multiple calls to hset
@@ -157,17 +158,23 @@ class Instance(object):
                 state[key] = val
         self.keeper[self.__redis_key] = state
         if self.initial_state == {}:
-            self.keeper.set_add('project:%s:instances' % self.state['owner_id'],
+            self.keeper.set_add('project:%s:instances' % self.project,
                                 self.instance_id)
             self.keeper.set_add('instances', self.instance_id)
         self.initial_state = self.state
         return True
 
+    @property
+    def project(self):
+        if self.state.get('project_id', None):
+            return self.state['project_id']
+        return self.state.get('owner_id', 'unassigned')
+
     def destroy(self):
         """ deletes all related records from datastore.
-         does NOT do anything to running libvirt state.
+        does NOT do anything to running libvirt state.
         """
-        self.keeper.set_remove('project:%s:instances' % self.state['owner_id'],
+        self.keeper.set_remove('project:%s:instances' % self.project,
                                self.instance_id)
         del self.keeper[self.__redis_key]
         self.keeper.set_remove('instances', self.instance_id)
@@ -184,18 +191,18 @@ class Instance(object):
         pass
 
 # class Reservation(object):
-#     """ ORM wrapper for a batch of launched instances """
-#     def __init__(self):
-#         pass
+# """ ORM wrapper for a batch of launched instances """
+# def __init__(self):
+# pass
 #
-#     def userdata(self):
-#         """ """
-#         pass
+# def userdata(self):
+# """ """
+# pass
 #
 #
 # class NodeDirectory(object):
-#     def __init__(self):
-#         pass
+# def __init__(self):
+# pass
 #
 
 if __name__ == "__main__":

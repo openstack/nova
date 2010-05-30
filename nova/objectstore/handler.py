@@ -31,6 +31,7 @@ S3 client with this module::
     print c.get("mybucket", "mykey").body
 
 """
+
 import datetime
 import os
 import urllib
@@ -44,6 +45,7 @@ from tornado import escape, web
 
 from nova import exception
 from nova import flags
+from nova.endpoint import api
 from nova.objectstore import bucket
 from nova.objectstore import image
 
@@ -87,16 +89,18 @@ class BaseRequestHandler(web.RequestHandler):
     SUPPORTED_METHODS = ("PUT", "GET", "DELETE", "HEAD")
 
     @property
-    def user(self):
-        if not hasattr(self, '_user'):
+    def context(self):
+        if not hasattr(self, '_context'):
             try:
-                access = self.request.headers['Authorization'].split(' ')[1].split(':')[0]
-                user = self.application.user_manager.get_user_from_access_key(access)
-                user.secret # FIXME: check signature here!
-                self._user = user
-            except:
+                # Authorization Header format: 'AWS <access>:<secret>'
+                access, sep, secret = self.request.headers['Authorization'].split(' ')[1].rpartition(':')
+                (user, project) = self.application.user_manager.authenticate(access, secret, {}, self.request.method, self.request.host, self.request.path, False)
+                # FIXME: check signature here!
+                self._context = api.APIRequestContext(self, user, project)
+            except exception.Error, ex:
+                logging.debug("Authentication Failure: %s" % ex)
                 raise web.HTTPError(403)
-        return self._user
+        return self._context
 
     def render_xml(self, value):
         assert isinstance(value, dict) and len(value) == 1
@@ -134,7 +138,7 @@ class BaseRequestHandler(web.RequestHandler):
 
 class RootHandler(BaseRequestHandler):
     def get(self):
-        buckets = [b for b in bucket.Bucket.all() if b.is_authorized(self.user)]
+        buckets = [b for b in bucket.Bucket.all() if b.is_authorized(self.context)]
 
         self.render_xml({"ListAllMyBucketsResult": {
             "Buckets": {"Bucket": [b.metadata for b in buckets]},
@@ -148,7 +152,7 @@ class BucketHandler(BaseRequestHandler):
 
         bucket_object = bucket.Bucket(bucket_name)
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         prefix = self.get_argument("prefix", u"")
@@ -162,7 +166,7 @@ class BucketHandler(BaseRequestHandler):
     @catch_nova_exceptions
     def put(self, bucket_name):
         logging.debug("Creating bucket %s" % (bucket_name))
-        bucket.Bucket.create(bucket_name, self.user)
+        bucket.Bucket.create(bucket_name, self.context)
         self.finish()
 
     @catch_nova_exceptions
@@ -170,7 +174,7 @@ class BucketHandler(BaseRequestHandler):
         logging.debug("Deleting bucket %s" % (bucket_name))
         bucket_object = bucket.Bucket(bucket_name)
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         bucket_object.delete()
@@ -185,7 +189,7 @@ class ObjectHandler(BaseRequestHandler):
 
         bucket_object = bucket.Bucket(bucket_name)
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         obj = bucket_object[urllib.unquote(object_name)]
@@ -199,7 +203,7 @@ class ObjectHandler(BaseRequestHandler):
         logging.debug("Putting object: %s / %s" % (bucket_name, object_name))
         bucket_object = bucket.Bucket(bucket_name)
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         key = urllib.unquote(object_name)
@@ -212,7 +216,7 @@ class ObjectHandler(BaseRequestHandler):
         logging.debug("Deleting object: %s / %s" % (bucket_name, object_name))
         bucket_object = bucket.Bucket(bucket_name)
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         del bucket_object[urllib.unquote(object_name)]
@@ -228,7 +232,7 @@ class ImageHandler(BaseRequestHandler):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(self.user)]
+        images = [i for i in image.Image.all() if i.is_authorized(self.context)]
 
         self.finish(json.dumps([i.metadata for i in images]))
 
@@ -247,11 +251,11 @@ class ImageHandler(BaseRequestHandler):
         bucket_object = bucket.Bucket(image_location.split("/")[0])
         manifest = image_location[len(image_location.split('/')[0])+1:]
 
-        if not bucket_object.is_authorized(self.user):
+        if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         p = multiprocessing.Process(target=image.Image.create,args=
-            (image_id, image_location, self.user))
+            (image_id, image_location, self.context))
         p.start()
         self.finish()
 
@@ -264,7 +268,7 @@ class ImageHandler(BaseRequestHandler):
 
         image_object = image.Image(image_id)
 
-        if image_object.owner_id != self.user.id:
+        if not image.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.set_public(operation=='add')
@@ -277,7 +281,7 @@ class ImageHandler(BaseRequestHandler):
         image_id = self.get_argument("image_id", u"")
         image_object = image.Image(image_id)
 
-        if image_object.owner_id != self.user.id:
+        if not image.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.delete()

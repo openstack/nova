@@ -1,9 +1,24 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+# Copyright [2010] [Anso Labs, LLC]
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
-import signal
+import logging
 import os
-import nova.utils
+import signal
 import subprocess
+
+from nova import utils
 
 # todo(ja): does the definition of network_path belong here?
 
@@ -12,16 +27,16 @@ FLAGS=flags.FLAGS
 
 def execute(cmd):
     if FLAGS.fake_network:
-        print "FAKE NET: %s" % cmd
+        logging.debug("FAKE NET: %s" % cmd)
         return "fake", 0
     else:
-        nova.utils.execute(cmd)
+        utils.execute(cmd)
 
 def runthis(desc, cmd):
     if FLAGS.fake_network:
         execute(cmd)
     else:
-        nova.utils.runthis(desc,cmd)
+        utils.runthis(desc,cmd)
 
 def Popen(cmd):
     if FLAGS.fake_network:
@@ -110,7 +125,7 @@ def start_dnsmasq(network):
             os.kill(pid, signal.SIGHUP)
             return
         except Exception, e:
-            logging.debug("Killing dnsmasq threw %s", e)
+            logging.debug("Hupping dnsmasq threw %s", e)
 
     # otherwise delete the existing leases file and start dnsmasq
     lease_file = dhcp_file(network.vlan, 'leases')
@@ -124,7 +139,10 @@ def stop_dnsmasq(network):
     pid = dnsmasq_pid_for(network)
 
     if pid:
-        os.kill(pid, signal.SIGTERM)
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception, e:
+            logging.debug("Killing dnsmasq threw %s", e)
 
 def dhcp_file(vlan, kind):
     """ return path to a pid, leases or conf file for a vlan """

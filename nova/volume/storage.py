@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@ destroying persistent storage volumes, ala EBS.
 Currently uses Ata-over-Ethernet.
 """
 
+import glob
 import logging
 import random
 import socket
@@ -52,7 +53,7 @@ flags.DEFINE_integer('shelf_id',
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this node')
-flags.DEFINE_boolean('fake_storage', False, 
+flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
 class BlockStore(object):
@@ -62,7 +63,7 @@ class BlockStore(object):
         if FLAGS.fake_storage:
             self.volume_class = FakeVolume
         self._init_volume_group()
-        self.keeper = datastore.Keeper('instances')
+        self.keeper = datastore.Keeper('storage-')
 
     def report_state(self):
         #TODO: aggregate the state of the system
@@ -82,7 +83,7 @@ class BlockStore(object):
 
     def get_volume(self, volume_id):
         """ Returns a redis-backed volume object """
-        if volume_id in self.keeper['volumes']:
+        if self.keeper.set_is_member('volumes', volume_id):
             return self.volume_class(volume_id=volume_id)
         raise exception.Error("Volume does not exist")
 
