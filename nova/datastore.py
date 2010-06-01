@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import sqlite3
+import time
 
 from nova import vendor
 import redis
@@ -77,10 +78,11 @@ class RedisModel(object):
     def set_default_state(self):
         self.state = {'state' : 'pending'}
         self.state[self.object_type+"_id"] = self.object_id
+        self.state["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 
     @property
     def __redis_key(self):
-        """ Magic string for instance keys """
+        """ Magic string for keys """
         return '%s:%s' % (self.object_type, self.object_id)
 
     def __repr__(self):

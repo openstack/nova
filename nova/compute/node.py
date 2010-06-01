@@ -137,11 +137,15 @@ class Node(object, service.Service):
         logging.debug("Reporting State")
         return
 
-    @exception.wrap_exception
+    # @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
         inst = self.instdir.get(instance_id)
+        # TODO: Get the real security group of launch in here
+        security_group = "default"
+        net = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'],
+                                            security_group).express()
         inst['node_name'] = FLAGS.node_name
         inst.save()
         # TODO(vish) check to make sure the availability zone matches
@@ -337,8 +341,6 @@ class Instance(object):
                 'basepath', os.path.abspath(
                 os.path.join(FLAGS.instances_path, self.name)))
         self._s['memory_kb'] = int(self._s['memory_mb']) * 1024
-        # TODO(joshua) - Get this from network directory controller later
-        self._s['bridge_name'] = data.get('bridge_name', 'br0')
         self._s['image_id'] = data.get('image_id', FLAGS.default_image)
         self._s['kernel_id'] = data.get('kernel_id', FLAGS.default_kernel)
         self._s['ramdisk_id'] = data.get('ramdisk_id', FLAGS.default_ramdisk)
@@ -360,6 +362,7 @@ class Instance(object):
         self._s['addressing_type'] = data.get('addressing_type', None)
         self._s['availability_zone'] = data.get('availability_zone', 'fixme')
 
+        self._s['bridge_name'] = data.get('bridge_name', None)
         #TODO: put real dns items here
         self._s['private_dns_name'] = data.get('private_dns_name', 'fixme')
         self._s['dns_name'] = data.get('dns_name',
@@ -476,7 +479,7 @@ class Instance(object):
         logging.debug('rebooted instance %s' % self.name)
         defer.returnValue(None)
 
-    @exception.wrap_exception
+    # @exception.wrap_exception
     def spawn(self):
         self.datamodel['state'] = "spawning"
         self.datamodel.save()
@@ -516,30 +519,3 @@ class Instance(object):
         else:
             console = 'FAKE CONSOLE OUTPUT'
         return defer.succeed(console)
-
-    def generate_mac(self):
-        mac = [0x00, 0x16, 0x3e, random.randint(0x00, 0x7f),
-               random.randint(0x00, 0xff), random.randint(0x00, 0xff)
-               ]
-        return ':'.join(map(lambda x: "%02x" % x, mac))
-
-
-
-class NetworkNode(Node):
-    def __init__(self, **kwargs):
-        super(NetworkNode, self).__init__(**kwargs)
-        self.virtNets = {}
-
-    def add_network(self, net_dict):
-        net = network.VirtNetwork(**net_dict)
-        self.virtNets[net.name] = net
-        self.virtNets[net.name].express()
-        return defer.succeed({'retval': 'network added'})
-
-    @exception.wrap_exception
-    def run_instance(self, instance_id, **kwargs):
-        inst = self.instdir.get(instance_id)
-        net_dict = json.loads(inst.get('network_str', "{}"))
-        self.add_network(net_dict)
-        return super(NetworkNode, self).run_instance(instance_id, **kwargs)
-
