@@ -93,9 +93,12 @@ class User(AuthBase):
     def is_project_manager(self, project):
         return UserManager.instance().is_project_manager(self, project)
 
-    def generate_rc(self):
+    def generate_rc(self, project=None):
+        if project is None:
+            project = self.id
         rc = open(FLAGS.credentials_template).read()
         rc = rc % { 'access': self.access,
+                    'project': project,
                     'secret': self.secret,
                     'ec2': FLAGS.ec2_url,
                     's3': 'http://%s:%s' % (FLAGS.s3_host, FLAGS.s3_port),
@@ -168,7 +171,9 @@ class Project(Group):
         return User.safe_id(user) == self.project_manager_id
 
     def get_credentials(self, user):
-        rc = user.generate_rc()
+        if not isinstance(user, User):
+            user = UserManager.instance().get_user(user)
+        rc = user.generate_rc(self.id)
         private_key, signed_cert = self.generate_x509_cert(user)
 
         tmpdir = tempfile.mkdtemp()
@@ -238,7 +243,7 @@ class UserManager(object):
                 raise exception.NotAuthorized('Signature does not match')
         return (user, project)
 
-    def create_project(self, name, manager_user, description, member_users=None):
+    def create_project(self, name, manager_user, description=None, member_users=None):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
         with LDAPWrapper() as conn:
@@ -462,12 +467,15 @@ class LDAPWrapper(object):
         self.conn.add_s(self.__uid_to_dn(name), attr)
         return self.__to_user(dict(attr))
 
-    def create_project(self, name, manager_uid, description, member_uids = None):
+    def create_project(self, name, manager_uid, description=None, member_uids=None):
         if self.project_exists(name):
             raise exception.Duplicate("Project can't be created because project %s already exists" % name)
         if not self.user_exists(manager_uid):
             raise exception.NotFound("Project can't be created because manager %s doesn't exist" % manager_uid)
         manager_dn = self.__uid_to_dn(manager_uid)
+        # description is a required attribute
+        if description is None:
+            description = name
         members = []
         if member_uids != None:
             for member_uid in member_uids:
