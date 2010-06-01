@@ -197,7 +197,7 @@ class DHCPNetwork(BridgedNetwork):
         logging.debug("Initing DHCPNetwork object...")
         self.dhcp_listen_address = self.network[1]
         self.dhcp_range_start = self.network[3]
-        self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
+        self.dhcp_range_end = self.network[-1]
         try:
             os.makedirs(FLAGS.networks_path)
         except Exception, err:
