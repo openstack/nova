@@ -66,8 +66,7 @@ class CloudController(object):
     @property
     def instances(self):
         """ All instances in the system, as dicts """
-        for instance in self.instdir.all:
-            yield {instance['instance_id']: instance}
+        return self.instdir.all
 
     @property
     def volumes(self):
@@ -337,11 +336,8 @@ class CloudController(object):
         return defer.succeed(self._format_instances(context))
 
     def _format_instances(self, context, reservation_id = None):
-        if self.instances == {}:
-            return {'reservationSet': []}
         reservations = {}
-        for inst in self.instances:
-            instance = inst.values()[0]
+        for instance in self.instances:
             res_id = instance.get('reservation_id', 'Unknown')
             if ((context.user.is_admin() or context.project.id == instance['project_id'])
                 and (reservation_id == None or reservation_id == res_id)):
