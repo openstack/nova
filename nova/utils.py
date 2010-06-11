@@ -102,6 +102,8 @@ def last_octet(address):
 def get_my_ip():
     ''' returns the actual ip of the local machine.
     '''
+    if getattr(FLAGS, 'fake_tests', None):
+        return '127.0.0.1'
     csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     csock.connect(('www.google.com', 80))
     (addr, port) = csock.getsockname()
