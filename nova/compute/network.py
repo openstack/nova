@@ -88,6 +88,9 @@ class BaseNetwork(datastore.RedisModel):
     def netmask(self):
         return self.network.netmask()
     @property
+    def gateway(self):
+        return self.network[1]
+    @property
     def broadcast(self):
         return self.network.broadcast()
     @property
