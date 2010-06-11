@@ -382,7 +382,7 @@ class CloudController(object):
         return instance_response
 
     def describe_addresses(self, context, **kwargs):
-        return self.format_addresses(context.user)
+        return self.format_addresses(context)
 
     def format_addresses(self, context):
         addresses = []
@@ -456,7 +456,7 @@ class CloudController(object):
             address = network.allocate_ip(
                         inst['user_id'], inst['project_id'], mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
-            inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'])['bridge_name']
+            inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'], 'default')['bridge_name']
             # TODO: allocate expresses on the router node
             inst.save()
             rpc.cast(FLAGS.compute_topic,
@@ -466,7 +466,7 @@ class CloudController(object):
                       (context.user.name, inst['private_dns_name']))
         # TODO: Make the NetworkComputeNode figure out the network name from ip.
         return defer.succeed(self._format_instances(
-                                context.user, reservation_id))
+                                context, reservation_id))
 
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
@@ -542,7 +542,7 @@ class CloudController(object):
             raise exception.ApiError('only group "all" is supported')
         if not operation_type in ['add', 'delete']:
             raise exception.ApiError('operation_type must be add or delete')
-        result = images.modify(context.user, image_id, operation_type)
+        result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
 
     def update_state(self, topic, value):
