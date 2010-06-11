@@ -23,11 +23,17 @@ from nova import flags
 from nova import test
 from nova.compute import network
 from nova.auth import users
+from nova import utils
 
 
 class NetworkTestCase(test.TrialTestCase):
     def setUp(self):
         super(NetworkTestCase, self).setUp()
+        self.flags(fake_libvirt=True,
+                   fake_storage=True,
+                   fake_network=True,
+                   network_size=32,
+                   redis_db=8)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = users.UserManager.instance()
         try:
@@ -37,7 +43,7 @@ class NetworkTestCase(test.TrialTestCase):
             name = 'project%s' % i
             if not self.manager.get_project(name):
                 self.manager.create_project(name, 'netuser', name)
-        self.network = network.NetworkController(netsize=16)
+        self.network = network.PublicNetworkController()
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
@@ -46,70 +52,69 @@ class NetworkTestCase(test.TrialTestCase):
             self.manager.delete_project(name)
         self.manager.delete_user('netuser')
 
-    def test_network_serialization(self):
-        net1 = network.Network(vlan=100, network="192.168.100.0/24", conn=None)
-        address = net1.allocate_ip("netuser", "project0", "01:24:55:36:f2:a0")
-        net_json = str(net1)
-        net2 = network.Network.from_json(net_json)
-        self.assertEqual(net_json, str(net2))
-        self.assertTrue(IPy.IP(address) in net2.network)
+    def test_public_network_allocation(self):
+        pubnet = IPy.IP(flags.FLAGS.public_range)
+        address = self.network.allocate_ip("netuser", "project0", "public")
+        self.assertTrue(IPy.IP(address) in pubnet)
+        self.assertTrue(IPy.IP(address) in self.network.network)
 
-    def test_allocate_deallocate_address(self):
-        (address, net_name) = self.network.allocate_address("netuser",
-                "project0", "01:24:55:36:f2:a0")
+    def test_allocate_deallocate_ip(self):
+        address = network.allocate_ip(
+                "netuser", "project0", utils.generate_mac())
         logging.debug("Was allocated %s" % (address))
         self.assertEqual(True, address in self._get_project_addresses("project0"))
-        rv = self.network.deallocate_address(address)
+        rv = network.deallocate_ip(address)
         self.assertEqual(False, address in self._get_project_addresses("project0"))
 
     def test_range_allocation(self):
-        (address, net_name) = self.network.allocate_address("netuser",
-                "project0", "01:24:55:36:f2:a0")
-        (secondaddress, net_name) = self.network.allocate_address("netuser",
-                "project1", "01:24:55:36:f2:a0")
-        self.assertEqual(True, address in self._get_project_addresses("project0"))
+        address = network.allocate_ip(
+                "netuser", "project0", utils.generate_mac())
+        secondaddress = network.allocate_ip(
+                "netuser", "project1", utils.generate_mac())
+        self.assertEqual(True,
+                         address in self._get_project_addresses("project0"))
         self.assertEqual(True,
                          secondaddress in self._get_project_addresses("project1"))
         self.assertEqual(False, address in self._get_project_addresses("project1"))
-        rv = self.network.deallocate_address(address)
+        rv = network.deallocate_ip(address)
         self.assertEqual(False, address in self._get_project_addresses("project0"))
-        rv = self.network.deallocate_address(secondaddress)
+        rv = network.deallocate_ip(secondaddress)
         self.assertEqual(False,
                          secondaddress in self._get_project_addresses("project1"))
 
     def test_subnet_edge(self):
-        (secondaddress, net_name) = self.network.allocate_address("netuser", "project0")
+        secondaddress = network.allocate_ip("netuser", "project0",
+                                utils.generate_mac())
         for project in range(1,5):
             project_id = "project%s" % (project)
-            (address, net_name) = self.network.allocate_address("netuser",
-                    project_id, "01:24:55:36:f2:a0")
-            (address2, net_name) = self.network.allocate_address("netuser",
-                    project_id, "01:24:55:36:f2:a0")
-            (address3, net_name) = self.network.allocate_address("netuser",
-                    project_id, "01:24:55:36:f2:a0")
+            address = network.allocate_ip(
+                    "netuser", project_id, utils.generate_mac())
+            address2 = network.allocate_ip(
+                    "netuser", project_id, utils.generate_mac())
+            address3 = network.allocate_ip(
+                    "netuser", project_id, utils.generate_mac())
             self.assertEqual(False,
                              address in self._get_project_addresses("project0"))
             self.assertEqual(False,
                              address2 in self._get_project_addresses("project0"))
             self.assertEqual(False,
                              address3 in self._get_project_addresses("project0"))
-            rv = self.network.deallocate_address(address)
-            rv = self.network.deallocate_address(address2)
-            rv = self.network.deallocate_address(address3)
-        rv = self.network.deallocate_address(secondaddress)
+            rv = network.deallocate_ip(address)
+            rv = network.deallocate_ip(address2)
+            rv = network.deallocate_ip(address3)
+        rv = network.deallocate_ip(secondaddress)
 
     def test_too_many_projects(self):
         for i in range(0, 30):
             name = 'toomany-project%s' % i
             self.manager.create_project(name, 'netuser', name)
-            (address, net_name) = self.network.allocate_address("netuser",
-                    name, "01:24:55:36:f2:a0")
+            address = network.allocate_ip(
+                    "netuser", name, utils.generate_mac())
+            rv = network.deallocate_ip(address)
             self.manager.delete_project(name)
 
     def _get_project_addresses(self, project_id):
-        rv = self.network.describe_addresses()
         project_addresses = []
-        for item in rv:
-            if item['project_id'] == project_id:
-                project_addresses.append(item['address'])
+        for addr in network.get_project_network(project_id).list_addresses():
+            project_addresses.append(addr)
         return project_addresses

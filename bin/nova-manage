@@ -71,15 +71,35 @@ class UserCommands(object):
         for user in self.manager.get_users():
             print user.name
 
-    def zip(self, name, filename='nova.zip'):
+class ProjectCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+
+    def create(self, name, project_manager, description=None):
+        """creates a new project
+        arguments: name project_manager [description]"""
+        user = self.manager.create_project(name, project_manager, description)
+
+    def delete(self, name):
+        """deletes an existing project
+        arguments: name"""
+        self.manager.delete_project(name)
+
+    def list(self):
+        """lists all projects
+        arguments: <none>"""
+        for project in self.manager.get_projects():
+            print project.name
+
+    def zip(self, project_id, user_id, filename='nova.zip'):
         """exports credentials for user to a zip file
-        arguments: name [filename='nova.zip]"""
-        user = self.manager.get_user(name)
-        if user:
+        arguments: project_id user_id [filename='nova.zip]"""
+        project = self.manager.get_project(project_id)
+        if project:
             with open(filename, 'w') as f:
-                f.write(user.get_credentials())
+                f.write(project.get_credentials(user_id))
         else:
-            print "User %s doesn't exist" % name
+            print "Project %s doesn't exist" % project
 
 
 def usage(script_name):
@@ -88,6 +108,7 @@ def usage(script_name):
 
 categories = [
     ('user', UserCommands),
+    ('project', ProjectCommands),
 ]
 
 

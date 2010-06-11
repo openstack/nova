@@ -60,7 +60,7 @@ class CloudController(object):
 """
     def __init__(self):
         self.instdir = model.InstanceDirectory()
-        self.network = network.NetworkController()
+        self.network = network.PublicNetworkController()
         self.setup()
 
     @property
@@ -254,21 +254,10 @@ class CloudController(object):
         res.addCallback(_format_result)
         return res
 
-    def _convert_address(self, network_address):
-        # FIXME(vish): this should go away when network.py stores info properly
-        address = {}
-        address['public_ip'] == network_address[u'address']
-        address['user_id'] == network_address[u'user_id']
-        address['project_id'] == network_address.get(u'project_id', address['user_id'])
-        address['instance_id'] == network_address.get(u'instance_id', None)
-        return address
-
     def _get_address(self, context, public_ip):
-        # right now all addresses are allocated locally
         # FIXME(vish) this should move into network.py
-        for network_address in self.network.describe_addresses():
-            if network_address[u'address'] == public_ip:
-                address = self._convert_address(network_address)
+        for address in self.network.hosts:
+            if address['address'] == public_ip:
                 if context.user.is_admin() or address['project_id'] == context.project.id:
                     return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -398,14 +387,12 @@ class CloudController(object):
     def format_addresses(self, context):
         addresses = []
         # TODO(vish): move authorization checking into network.py
-        for network_address in self.network.describe_addresses(type=network.PublicNetwork):
+        for address in self.network.hosts:
             #logging.debug(address_record)
-            address = self._convert_address(network_address)
             address_rv = {
-                'public_ip': address['public_ip'],
+                'public_ip': address['address'],
                 'instance_id' : address.get('instance_id', 'free')
             }
-            # FIXME: add another field for user id
             if context.user.is_admin():
                 address_rv['instance_id'] = "%s (%s, %s)" % (
                     address['instance_id'],
@@ -417,17 +404,17 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
-        (address,network_name) = self.network.allocate_address(
-                                context.user.id, context.project_id, type=network.PublicNetwork)
+        address = self.network.allocate_ip(
+                                context.user.id, context.project.id, 'public')
         return defer.succeed({'addressSet': [{'publicIp' : address}]})
 
     def release_address(self, context, public_ip, **kwargs):
-        address = self._get_address(public_ip)
+        self.network.deallocate_ip(public_ip)
         return defer.succeed({'releaseResponse': ["Address released."]})
 
     def associate_address(self, context, instance_id, **kwargs):
         instance = self._get_instance(context, instance_id)
-        rv = self.network.associate_address(
+        self.network.associate_address(
                             kwargs['public_ip'],
                             instance['private_dns_name'],
                             instance_id)
@@ -435,7 +422,7 @@ class CloudController(object):
 
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(public_ip)
-        rv = self.network.disassociate_address(public_ip)
+        self.network.disassociate_address(public_ip)
         # TODO - Strip the IP from the instance
         return defer.succeed({'disassociateResponse': ["Address disassociated."]})
 
@@ -466,14 +453,10 @@ class CloudController(object):
             inst['project_id'] = context.project.id
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
-            address, _netname = self.network.allocate_address(
-                user_id=inst['user_id'],
-                project_id=inst['project_id'],
-                mac=inst['mac_address'])
-            network = self.network.get_users_network(str(context.user.id))
-            inst['network_str'] = json.dumps(network.to_dict())
-            inst['bridge_name'] = network.bridge_name
+            address = network.allocate_ip(
+                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
+            inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'])['bridge_name']
             # TODO: allocate expresses on the router node
             inst.save()
             rpc.cast(FLAGS.compute_topic,
@@ -502,7 +485,7 @@ class CloudController(object):
             if instance.get('private_dns_name', None):
                 logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
                 try:
-                    self.network.deallocate_address(instance.get('private_dns_name', None))
+                    self.network.deallocate_ip(instance.get('private_dns_name', None))
                 except Exception, _err:
                     pass
             if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
