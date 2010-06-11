@@ -19,15 +19,41 @@ Process pool, still buggy right now.
 
 import logging
 import multiprocessing
+import StringIO
 
 from nova import vendor
 from twisted.internet import defer
-from twisted.internet import reactor
+from twisted.internet import error
+from twisted.internet import process
 from twisted.internet import protocol
+from twisted.internet import reactor
 from twisted.internet import threads
+from twisted.python import failure
+
+from nova import flags
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('process_pool_size', 4,
+                     'Number of processes to use in the process pool')
+
 
 # NOTE(termie): this is copied from twisted.internet.utils but since
-#               they don't export it I've copied.
+#               they don't export it I've copied and modified
+class UnexpectedErrorOutput(IOError):
+    """
+    Standard error data was received where it was not expected.  This is a
+    subclass of L{IOError} to preserve backward compatibility with the previous
+    error behavior of L{getProcessOutput}.
+
+    @ivar processEnded: A L{Deferred} which will fire when the process which
+        produced the data on stderr has ended (exited and all file descriptors
+        closed).
+    """
+    def __init__(self, stdout=None, stderr=None):
+        IOError.__init__(self, "got stdout: %r\nstderr: %r" % (stdout, stderr))
+
+
+# NOTE(termie): this too
 class _BackRelay(protocol.ProcessProtocol):
     """
     Trivial protocol for communicating with a process and turning its output
@@ -77,26 +103,101 @@ class _BackRelay(protocol.ProcessProtocol):
 
 
 class BackRelayWithInput(_BackRelay):
-    def __init__(self, deferred, errortoo=0, input=None):
-        super(BackRelayWithInput, self).__init__(deferred, errortoo)
+    def __init__(self, deferred, startedDeferred=None, error_ok=0,
+                 input=None):
+        # Twisted doesn't use new-style classes in most places :(
+        _BackRelay.__init__(self, deferred, errortoo=error_ok)
+        self.error_ok = error_ok
         self.input = input
+        self.stderr = StringIO.StringIO()
+        self.startedDeferred = startedDeferred
 
+    def errReceivedIsBad(self, text):
+        self.stderr.write(text)
+        self.transport.loseConnection()
+
+    def errReceivedIsGood(self, text):
+        self.stderr.write(text)
+    
     def connectionMade(self):
+        if self.startedDeferred:
+            self.startedDeferred.callback(self)
         if self.input:
             self.transport.write(self.input)
         self.transport.closeStdin()
 
+    def processEnded(self, reason):
+        if self.deferred is not None:
+            stdout, stderr = self.s.getvalue(), self.stderr.getvalue()
+            try:
+                # NOTE(termie): current behavior means if error_ok is True
+                #               we won't throw an error even if the process
+                #               exited with a non-0 status, so you can't be
+                #               okay with stderr output and not with bad exit
+                #               codes.
+                if not self.error_ok:
+                    reason.trap(error.ProcessDone)
+                self.deferred.callback((stdout, stderr))
+            except:
+                self.deferred.errback(UnexpectedErrorOutput(stdout, stderr))
+
 
 def getProcessOutput(executable, args=None, env=None, path=None, reactor=None,
-                     errortoo=0, input=None):
+                     error_ok=0, input=None, startedDeferred=None):
     if reactor is None:
         from twisted.internet import reactor
     args = args and args or ()
     env = env and env and {}
     d = defer.Deferred()
-    p = BackRelayWithInput(d, errortoo=errortoo, input=input)
+    p = BackRelayWithInput(
+            d, startedDeferred=startedDeferred, error_ok=error_ok, input=input)
     reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
     return d
+
+
+class ProcessPool(object):
+    """ A simple process pool implementation using Twisted's Process bits.
+
+    This is pretty basic right now, but hopefully the API will be the correct
+    one so that it can be optimized later.
+    """
+    def __init__(self, size=None):
+        self.size = size and size or FLAGS.process_pool_size
+        self._pool = defer.DeferredSemaphore(self.size)
+
+    def simpleExecute(self, cmd, **kw):
+        """ Weak emulation of the old utils.execute() function.
+        
+        This only exists as a way to quickly move old execute methods to
+        this new style of code.
+
+        NOTE(termie): This will break on args with spaces in them.
+        """
+        parsed = cmd.split(' ')
+        executable, args = parsed[0], parsed[1:]
+        return self.execute(executable, args, **kw)
+
+    def execute(self, *args, **kw):
+        d = self._pool.acquire()
+
+        def _associateProcess(proto):
+            d.process = proto.transport
+            return proto.transport
+
+        started = defer.Deferred()
+        started.addCallback(_associateProcess)
+        kw.setdefault('startedDeferred', started)
+
+        d.process = None
+        d.started = started
+        
+        d.addCallback(lambda _: getProcessOutput(*args, **kw))
+        d.addBoth(self._release)
+        return d
+
+    def _release(self, rv=None):
+        self._pool.release()
+        return rv
 
 
 class Pool(object):
