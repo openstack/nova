@@ -125,6 +125,9 @@ ON VOLUME NODE
     losetup --show -f MY_FILE_PATH
     echo "--storage_dev=/dev/loop0" >> NOVA_PATH/bin/nova.conf
 
+Running
+---------
+
 Launch servers
 
 * rabbitmq
