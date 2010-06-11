@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import random
-import shutil
 import sys
 
 from nova import vendor
@@ -66,10 +65,14 @@ INSTANCE_TYPES['m1.large'] = {'memory_mb': 4096, 'vcpus': 4, 'local_gb': 10}
 INSTANCE_TYPES['m1.xlarge'] = {'memory_mb': 8192, 'vcpus': 4, 'local_gb': 10}
 INSTANCE_TYPES['c1.medium'] = {'memory_mb': 2048, 'vcpus': 4, 'local_gb': 10}
 
-# The number of processes to start in our process pool
-# TODO(termie): this should probably be a flag and the pool should probably
-#               be a singleton
-PROCESS_POOL_SIZE = 4
+
+def _image_path(path=''):
+    return os.path.join(FLAGS.images_path, path)
+
+
+def _image_url(path):
+    return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
+
 
 class Node(object, service.Service):
     """
@@ -80,7 +83,7 @@ class Node(object, service.Service):
         super(Node, self).__init__()
         self._instances = {}
         self._conn = self._get_connection()
-        self._pool = process.Pool(PROCESS_POOL_SIZE)
+        self._pool = process.ProcessPool()
         self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
 
@@ -231,63 +234,6 @@ class ProductCode(object):
         self.product_code = product_code
 
 
-def _create_image(data, libvirt_xml):
-    """ create libvirt.xml and copy files into instance path """
-    def basepath(path=''):
-        return os.path.abspath(os.path.join(data['basepath'], path))
-
-    def imagepath(path=''):
-        return os.path.join(FLAGS.images_path, path)
-
-    def image_url(path):
-        return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
-    logging.info(basepath('disk'))
-    try:
-        os.makedirs(data['basepath'])
-        os.chmod(data['basepath'], 0777)
-    except OSError:
-        # TODO: there is already an instance with this name, do something
-        pass
-    try:
-        logging.info('Creating image for: %s', data['instance_id'])
-        f = open(basepath('libvirt.xml'), 'w')
-        f.write(libvirt_xml)
-        f.close()
-        if not FLAGS.fake_libvirt:
-            if FLAGS.use_s3:
-                if not os.path.exists(basepath('disk')):
-                    utils.fetchfile(image_url("%s/image" % data['image_id']),
-                       basepath('disk-raw'))
-                if not os.path.exists(basepath('kernel')):
-                    utils.fetchfile(image_url("%s/image" % data['kernel_id']),
-                                basepath('kernel'))
-                if not os.path.exists(basepath('ramdisk')):
-                    utils.fetchfile(image_url("%s/image" % data['ramdisk_id']),
-                           basepath('ramdisk'))
-            else:
-                if not os.path.exists(basepath('disk')):
-                    shutil.copyfile(imagepath("%s/image" % data['image_id']),
-                        basepath('disk-raw'))
-                if not os.path.exists(basepath('kernel')):
-                    shutil.copyfile(imagepath("%s/image" % data['kernel_id']),
-                        basepath('kernel'))
-                if not os.path.exists(basepath('ramdisk')):
-                    shutil.copyfile(imagepath("%s/image" %
-                        data['ramdisk_id']),
-                        basepath('ramdisk'))
-            if data['key_data']:
-                logging.info('Injecting key data into image %s' %
-                        data['image_id'])
-                disk.inject_key(data['key_data'], basepath('disk-raw'))
-            if os.path.exists(basepath('disk')):
-                os.remove(basepath('disk'))
-            bytes = INSTANCE_TYPES[data['instance_type']]['local_gb'] * 1024 * 1024 * 1024
-            disk.partition(basepath('disk-raw'), basepath('disk'), bytes)
-        logging.info('Done create image for: %s', data['instance_id'])
-    except Exception as ex:
-        return {'exception': ex}
-
-
 class Instance(object):
 
     NOSTATE = 0x00
@@ -297,16 +243,6 @@ class Instance(object):
     SHUTDOWN = 0x04
     SHUTOFF = 0x05
     CRASHED = 0x06
-
-    def is_pending(self):
-        return (self.state == Instance.NOSTATE or self.state == 'pending')
-
-    def is_destroyed(self):
-        return self.state == Instance.SHUTOFF
-
-    def is_running(self):
-        logging.debug("Instance state is: %s" % self.state)
-        return (self.state == Instance.RUNNING or self.state == 'running')
 
     def __init__(self, conn, pool, name, data):
         """ spawn an instance with a given name """
@@ -401,6 +337,16 @@ class Instance(object):
     def name(self):
         return self._s['name']
 
+    def is_pending(self):
+        return (self.state == Instance.NOSTATE or self.state == 'pending')
+
+    def is_destroyed(self):
+        return self.state == Instance.SHUTOFF
+
+    def is_running(self):
+        logging.debug("Instance state is: %s" % self.state)
+        return (self.state == Instance.RUNNING or self.state == 'running')
+
     def describe(self):
         return self._s
 
@@ -413,6 +359,9 @@ class Instance(object):
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def basepath(self, path=''):
+        return os.path.abspath(os.path.join(self._s['basepath'], path))
 
     def update_state(self):
         info = self.info()
@@ -479,35 +428,89 @@ class Instance(object):
         logging.debug('rebooted instance %s' % self.name)
         defer.returnValue(None)
 
-    # @exception.wrap_exception
+    def _fetch_s3_image(self, image, path):
+        url = _image_url('%s/image' % image)
+        d = self._pool.simpleExecute('curl --silent %s -o %s' % (url, path))
+        return d
+
+    def _fetch_local_image(self, image, path):
+        source = _image_path('%s/image' % image)
+        d = self._pool.simpleExecute('cp %s %s' % (source, path))
+        return d
+
+    @defer.inlineCallbacks
+    def _create_image(self, libvirt_xml):
+        # syntactic nicety
+        data = self._s
+        basepath = self.basepath
+
+        # ensure directories exist and are writable
+        yield self._pool.simpleExecute('mkdir -p %s' % basepath())
+        yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
+        
+
+        # TODO(termie): these are blocking calls, it would be great
+        #               if they weren't.
+        logging.info('Creating image for: %s', data['instance_id'])
+        f = open(basepath('libvirt.xml'), 'w')
+        f.write(libvirt_xml)
+        f.close()
+        
+        if FLAGS.fake_libvirt:
+            logging.info('fake_libvirt, nothing to do for create_image')
+            raise defer.returnValue(None);
+        
+        if FLAGS.use_s3:
+            _fetch_file = self._fetch_s3_image
+        else:
+            _fetch_file = self._fetch_local_image
+
+        if not os.path.exists(basepath('disk')):
+           yield _fetch_file(data['image_id'], basepath('disk-raw'))
+        if not os.path.exists(basepath('kernel')):
+           yield _fetch_file(data['kernel_id'], basepath('kernel'))
+        if not os.path.exists(basepath('ramdisk')):
+           yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
+             
+        execute = lambda x: self._pool.simpleExecute(x, error_ok=1)
+        if data['key_data']:
+            logging.info('Injecting key data into image %s', data['image_id'])
+            yield disk.inject_key(
+                    data['key_data'], basepath('disk-raw'), execute=execute)
+
+        if os.path.exists(basepath('disk')):
+            yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
+
+        bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
+                 * 1024 * 1024 * 1024)
+        yield disk.partition(
+                basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
+        
+    @defer.inlineCallbacks
+    @exception.wrap_exception
     def spawn(self):
         self.datamodel['state'] = "spawning"
         self.datamodel.save()
         logging.debug("Starting spawn in Instance")
+
         xml = self.toXml()
-        def _launch(retvals):
+        logging.info('self %s', self)
+        try:
+            yield self._create_image(xml) 
             self.datamodel['state'] = 'launching'
             self.datamodel.save()
-            try:
-                logging.debug("Arrived in _launch")
-                if retvals and 'exception' in retvals:
-                    raise retvals['exception']
-                self._conn.createXML(self.toXml(), 0)
-                # TODO(termie): this should actually register
-                # a callback to check for successful boot
-                self._s['state'] = Instance.RUNNING
-                self.datamodel['state'] = 'running'
-                self.datamodel.save()
-                logging.debug("Instance is running")
-            except Exception as ex:
-                logging.debug(ex)
-                self.datamodel['state'] = 'shutdown'
-                self.datamodel.save()
-                #return self
-
-        d = self._pool.apply(_create_image, self._s, xml)
-        d.addCallback(_launch)
-        return d
+            self._conn.createXML(xml, 0)
+            # TODO(termie): this should actually register
+            # a callback to check for successful boot
+            self._s['state'] = Instance.RUNNING
+            self.datamodel['state'] = 'running'
+            self.datamodel.save()
+            logging.debug("Instance is running")
+        except Exception:
+            #logging.exception('while spawning instance: %s', self.name)
+            self.datamodel['state'] = 'shutdown'
+            self.datamodel.save()
+            raise
 
     @exception.wrap_exception
     def console_output(self):
