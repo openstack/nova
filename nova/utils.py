@@ -25,6 +25,11 @@ import inspect
 import subprocess
 import random
 
+from nova import flags
+
+FLAGS = flags.FLAGS
+
+
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
 #    c = pycurl.Curl()
@@ -35,6 +40,7 @@ def fetchfile(url, target):
 #    c.close()
 #    fp.close()
     execute("curl %s -o %s" % (url, target))
+
 
 def execute(cmd, input=None):
     #logging.debug("Running %s" % (cmd))
@@ -50,8 +56,10 @@ def execute(cmd, input=None):
         logging.debug("Result was %s" % (obj.returncode))
     return result
 
+
 def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
+
 
 def default_flagfile(filename='nova.conf'):
     for arg in sys.argv:
@@ -65,9 +73,11 @@ def default_flagfile(filename='nova.conf'):
         if os.path.exists(filename):
             sys.argv = sys.argv[:1] + ['--flagfile=%s' % filename] + sys.argv[1:]
 
+
 def debug(arg):
     logging.debug('debug in callback: %s', arg)
     return arg
+
 
 def runthis(prompt, cmd):
     logging.debug("Running %s" % (cmd))
@@ -77,14 +87,17 @@ def runthis(prompt, cmd):
 def generate_uid(topic, size=8):
     return '%s-%s' % (topic, ''.join([random.choice('01234567890abcdefghijklmnopqrstuvwxyz') for x in xrange(size)]))
 
+
 def generate_mac():
     mac = [0x00, 0x16, 0x3e, random.randint(0x00, 0x7f),
            random.randint(0x00, 0xff), random.randint(0x00, 0xff)
            ]
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
+
 def last_octet(address):
     return int(address.split(".")[-1])
+
 
 def get_my_ip():
     ''' returns the actual ip of the local machine.
