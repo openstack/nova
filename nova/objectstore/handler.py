@@ -33,18 +33,26 @@ S3 client with this module::
 """
 
 import datetime
-import os
-import urllib
-import json
 import logging
+import json
 import multiprocessing
+import os
+import re
+import time
+import urllib
 
 
 from nova import vendor
-from tornado import escape, web
+
+from twisted.web import resource
+from twisted.web import server
+from twisted.internet import reactor
+
+from tornado import escape # FIXME(ja): move to non-tornado escape
 
 from nova import exception
 from nova import flags
+from nova.auth import users
 from nova.endpoint import api
 from nova.objectstore import bucket
 from nova.objectstore import image
@@ -53,54 +61,102 @@ from nova.objectstore import image
 FLAGS = flags.FLAGS
 
 
-def catch_nova_exceptions(target):
-    # FIXME: find a way to wrap all handlers in the web.Application.__init__ ?
-    def wrapper(*args, **kwargs):
-        try:
-            return target(*args, **kwargs)
-        except exception.NotFound:
-            raise web.HTTPError(404)
-        except exception.NotAuthorized:
-            raise web.HTTPError(403)
-
-    return wrapper
-
-
-class Application(web.Application):
+class Application(resource.Resource):
     """Implementation of an S3-like storage server based on local files."""
-    def __init__(self, user_manager):
-        web.Application.__init__(self, [
-            (r"/", RootHandler),
+
+    isLeaf = True
+
+    def __init__(self):
+        # fixme(ja): optomize by compiling regexps?
+        self.handlers = [
             (r"/_images/(.+)", ImageDownloadHandler),
             (r"/_images/", ImageHandler),
             (r"/([^/]+)/(.+)", ObjectHandler),
             (r"/([^/]+)/", BucketHandler),
-        ])
+            (r"/", RootHandler),
+        ]
         self.buckets_path = os.path.abspath(FLAGS.buckets_path)
         self.images_path = os.path.abspath(FLAGS.images_path)
 
         if not os.path.exists(self.buckets_path):
-            raise Exception("buckets_path does not exist")
+            raise Exception("buckets_path %s does not exist" % self.buckets_path)
         if not os.path.exists(self.images_path):
-            raise Exception("images_path does not exist")
-        self.user_manager = user_manager
+            raise Exception("images_path %s does not exist" % self.images_path)
+
+    def render_GET(self, request):
+        return self.route(request)
+
+    def render_PUT(self, request):
+        return self.route(request)
+
+    def render_POST(self, request):
+        return self.route(request)
+
+    def render_DELETE(self, request):
+        return self.route(request)
+
+    def route(self, request):
+        start_time = time.time()
+
+        for regexp, handler in self.handlers:
+            match = re.search(regexp, request.path)
+            if match:
+                try:
+                    print 'match: %s' % request.path
+                    func = getattr(handler(request), request.method.lower())
+                    #print 'func: %s' % func
+                    params = match.groups()
+                    #print 'args: %s' % str(params)
+                    response = func(*params)
+                    #print 'resp: %s' % response
+                except exception.NotFound:
+                    request.setResponseCode(404)
+                    response = 'Not Found'
+                except exception.NotAuthorized:
+                    request.setResponseCode(403)
+                    response = 'Not Authorized'
+                except Exception, e:
+                    request.setResponseCode(500)
+                    response = 'Internal Error: %s' % e
+                break
+
+        duration = (time.time() - start_time) * 1000
+        logging.info("%d %s %s %0.1fms %s" % (request.code, request.method, request.uri,
+                duration, str(handler).split('.')[-1].split("'")[0]))
+        return response
 
 
-class BaseRequestHandler(web.RequestHandler):
+class BaseRequestHandler(object):
     SUPPORTED_METHODS = ("PUT", "GET", "DELETE", "HEAD")
+
+    def __init__(self, request):
+        self.request = request
+
+    def set_header(self, name, value):
+        self.request.setHeader(name, value)
+
+    def write(self, content):
+        self.request.write(content)
+
+    def finish(self, content=None):
+        if content:
+            self.request.write(content)
+        self.request.finish()
 
     @property
     def context(self):
         if not hasattr(self, '_context'):
             try:
                 # Authorization Header format: 'AWS <access>:<secret>'
-                access, sep, secret = self.request.headers['Authorization'].split(' ')[1].rpartition(':')
-                (user, project) = self.application.user_manager.authenticate(access, secret, {}, self.request.method, self.request.host, self.request.path, False)
+                access, sep, secret = self.request.getHeader('Authorization').split(' ')[1].rpartition(':')
+                um = users.UserManager.instance()
+                print 'um %s' % um
+                (user, project) = um.authenticate(access, secret, {}, self.request.method, self.request.host, self.request.uri, False)
                 # FIXME: check signature here!
                 self._context = api.APIRequestContext(self, user, project)
             except exception.Error, ex:
                 logging.debug("Authentication Failure: %s" % ex)
-                raise web.HTTPError(403)
+                raise exception.NotAuthorized
         return self._context
 
     def render_xml(self, value):
@@ -138,6 +194,7 @@ class BaseRequestHandler(web.RequestHandler):
 
 
 class RootHandler(BaseRequestHandler):
+
     def get(self):
         buckets = [b for b in bucket.Bucket.all() if b.is_authorized(self.context)]
 
@@ -147,14 +204,13 @@ class RootHandler(BaseRequestHandler):
 
 
 class BucketHandler(BaseRequestHandler):
-    @catch_nova_exceptions
     def get(self, bucket_name):
         logging.debug("List keys for bucket %s" % (bucket_name))
 
         bucket_object = bucket.Bucket(bucket_name)
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         prefix = self.get_argument("prefix", u"")
         marker = self.get_argument("marker", u"")
@@ -164,19 +220,21 @@ class BucketHandler(BaseRequestHandler):
         results = bucket_object.list_keys(prefix=prefix, marker=marker, max_keys=max_keys, terse=terse)
         self.render_xml({"ListBucketResult": results})
 
-    @catch_nova_exceptions
     def put(self, bucket_name):
         logging.debug("Creating bucket %s" % (bucket_name))
+        try:
+            print 'user is %s' % self.context
+        except Exception, e:
+            logging.exception(e)
         bucket.Bucket.create(bucket_name, self.context)
         self.finish()
 
-    @catch_nova_exceptions
     def delete(self, bucket_name):
         logging.debug("Deleting bucket %s" % (bucket_name))
         bucket_object = bucket.Bucket(bucket_name)
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         bucket_object.delete()
         self.set_status(204)
@@ -184,14 +242,13 @@ class BucketHandler(BaseRequestHandler):
 
 
 class ObjectHandler(BaseRequestHandler):
-    @catch_nova_exceptions
     def get(self, bucket_name, object_name):
         logging.debug("Getting object: %s / %s" % (bucket_name, object_name))
 
         bucket_object = bucket.Bucket(bucket_name)
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         obj = bucket_object[urllib.unquote(object_name)]
         self.set_header("Content-Type", "application/unknown")
@@ -199,26 +256,28 @@ class ObjectHandler(BaseRequestHandler):
         self.set_header("Etag", '"' + obj.md5 + '"')
         self.finish(obj.read())
 
-    @catch_nova_exceptions
     def put(self, bucket_name, object_name):
         logging.debug("Putting object: %s / %s" % (bucket_name, object_name))
         bucket_object = bucket.Bucket(bucket_name)
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         key = urllib.unquote(object_name)
-        bucket_object[key] = self.request.body
+        print 'seeking'
+        self.request.content.seek(0, 0)
+        print 'writing'
+        bucket_object[key] = self.request.content.read()
+        print 'etag %s' % bucket_object[key].md5
         self.set_header("Etag", '"' + bucket_object[key].md5 + '"')
         self.finish()
 
-    @catch_nova_exceptions
     def delete(self, bucket_name, object_name):
         logging.debug("Deleting object: %s / %s" % (bucket_name, object_name))
         bucket_object = bucket.Bucket(bucket_name)
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         del bucket_object[urllib.unquote(object_name)]
         self.set_status(204)
@@ -228,7 +287,6 @@ class ObjectHandler(BaseRequestHandler):
 class ImageDownloadHandler(BaseRequestHandler):
     SUPPORTED_METHODS = ("GET", )
 
-    @catch_nova_exceptions
     def get(self, image_id):
         """ send the decrypted image file
 
@@ -239,21 +297,21 @@ class ImageDownloadHandler(BaseRequestHandler):
 
         self.set_header("Content-Type", "application/octet-stream")
 
-        READ_SIZE = 64*1024
+        READ_SIZE = 1024*1024
 
         img = image.Image(image_id)
         with open(img.image_path, 'rb') as fp:
-            s = fp.read(READ_SIZE)
-            while s:
-                self.write(s)
-                s = fp.read(READ_SIZE)
+            chunk = fp.read(READ_SIZE)
+            while chunk:
+                self.write(chunk)
+                self.flush()
+                chunk = fp.read(READ_SIZE)
 
         self.finish()
 
 class ImageHandler(BaseRequestHandler):
     SUPPORTED_METHODS = ("POST", "PUT", "GET", "DELETE")
 
-    @catch_nova_exceptions
     def get(self):
         """ returns a json listing of all images
             that a user has permissions to see """
@@ -262,7 +320,6 @@ class ImageHandler(BaseRequestHandler):
 
         self.finish(json.dumps([i.metadata for i in images]))
 
-    @catch_nova_exceptions
     def put(self):
         """ create a new registered image """
 
@@ -272,20 +329,19 @@ class ImageHandler(BaseRequestHandler):
         image_path = os.path.join(FLAGS.images_path, image_id)
         if not image_path.startswith(FLAGS.images_path) or \
            os.path.exists(image_path):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         bucket_object = bucket.Bucket(image_location.split("/")[0])
         manifest = image_location[len(image_location.split('/')[0])+1:]
 
         if not bucket_object.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         p = multiprocessing.Process(target=image.Image.create,args=
             (image_id, image_location, self.context))
         p.start()
         self.finish()
 
-    @catch_nova_exceptions
     def post(self):
         """ update image attributes: public/private """
 
@@ -295,21 +351,24 @@ class ImageHandler(BaseRequestHandler):
         image_object = image.Image(image_id)
 
         if not image.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         image_object.set_public(operation=='add')
 
         self.finish()
 
-    @catch_nova_exceptions
     def delete(self):
         """ delete a registered image """
         image_id = self.get_argument("image_id", u"")
         image_object = image.Image(image_id)
 
         if not image.is_authorized(self.context):
-            raise web.HTTPError(403)
+            raise exception.NotAuthorized
 
         image_object.delete()
 
         self.set_status(204)
+
+factory = server.Site(Application())
+reactor.listenTCP(3333, factory)
+reactor.run()
