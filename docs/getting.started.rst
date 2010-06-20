@@ -32,10 +32,12 @@ Related servers we rely on
 * RabbitMQ: messaging queue, used for all communication between components
 * OpenLDAP: users, groups (maybe cut)
 * ReDIS: Remote Dictionary Store (for fast, shared state data)
+* nginx: HTTP server to handle serving large files (because Tornado can't)
 
 Python libraries we don't vendor
 
 * M2Crypto: python library interface for openssl
+* curl
 
 Vendored python libaries (don't require any installation)
 
@@ -62,12 +64,11 @@ Installation
     # python libraries
     apt-get install -y python-libvirt python-setuptools python-dev python-pycurl python-m2crypto
 
-
     # ON THE CLOUD CONTROLLER
-    apt-get install -y rabbitmq-server dnsmasq      
+    apt-get install -y rabbitmq-server dnsmasq nginx
     # build redis from 2.0.0-rc1 source
     # setup ldap (slap.sh as root will remove ldap and reinstall it)   
-    auth/slap.sh     
+    NOVA_PATH/nova/auth/slap.sh
     /etc/init.d/rabbitmq-server start
 
     # ON VOLUME NODE:
@@ -91,6 +92,25 @@ ON CLOUD CONTROLLER
     iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
     iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE
 
+
+* Configure NginX proxy (/etc/nginx/sites-enabled/default)::
+  server {
+    listen 3333 default;
+    server-name localhost;
+    client_max_body_size 10m;
+
+    access_log /var/log/nginx/localhost.access.log;
+
+    location ~ /_images/.+ {
+      root NOVA_PATH/images;
+      rewrite ^/_images/(.*)\$ /\$1 break;
+    }
+
+    location / {
+      proxy_pass http://localhost:3334/;
+    }
+  }
+
 ON VOLUME NODE
 
 * create a filesystem (you can use an actual disk if you have one spare, default is /dev/sdb)
@@ -107,6 +127,7 @@ Launch servers
 * rabbitmq
 * redis
 * slapd
+* nginx
 
 Launch nova components
 
