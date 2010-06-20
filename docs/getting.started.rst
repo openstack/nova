@@ -19,20 +19,34 @@ Getting Started with Nova
 
 GOTTA HAVE A nova.pth file added or it WONT WORK (will write setup.py file soon)
 
+Create a file named nova.pth in your python libraries directory
+(usually /usr/local/lib/python2.6/dist-packages) with a single line that points
+to the directory where you checked out the source (that contains the nova/
+directory).
+
 DEPENDENCIES
 ------------
 
+Related servers we rely on
+
 * RabbitMQ: messaging queue, used for all communication between components
 * OpenLDAP: users, groups (maybe cut)
+* ReDIS: Remote Dictionary Store (for fast, shared state data)
+
+Python libraries we don't vendor
+
+* M2Crypto: python library interface for openssl
+
+Vendored python libaries (don't require any installation)
+
 * Tornado: scalable non blocking web server for api requests
 * Twisted: just for the twisted.internet.defer package
 * boto: python api for aws api
-* M2Crypto: python library interface for openssl
 * IPy: library for managing ip addresses
-* ReDIS: Remote Dictionary Store (for fast, shared state data)
 
 Recommended
 -----------------
+
 * euca2ools: python implementation of aws ec2-tools and ami tools
 * build tornado to use C module for evented section
 
@@ -41,16 +55,17 @@ Installation
 --------------
 ::
 
-    # ON ALL SYSTEMS
-    apt-get install -y python-libvirt libvirt-bin python-setuptools python-dev python-pycurl python-m2crypto python-twisted
-    apt-get install -y aoetools vlan
+    # system libraries and tools
+    apt-get install -y libvirt-bin aoetools vlan
     modprobe aoe
+
+    # python libraries
+    apt-get install -y python-libvirt python-setuptools python-dev python-pycurl python-m2crypto
+
 
     # ON THE CLOUD CONTROLLER
     apt-get install -y rabbitmq-server dnsmasq      
-    # fix ec2 metadata/userdata uri - where $IP is the IP of the cloud
-    iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
-    iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE     
+    # build redis from 2.0.0-rc1 source
     # setup ldap (slap.sh as root will remove ldap and reinstall it)   
     auth/slap.sh     
     /etc/init.d/rabbitmq-server start
@@ -64,7 +79,38 @@ Installation
     # optional packages
     apt-get install -y euca2ools 
                                    
-    # Set up flagfiles with the appropriate hostnames, etc.                                     
-    # start api_worker, s3_worker, node_worker, storage_worker
-    # Add yourself to the libvirtd group, log out, and log back in
-    # Make sure the user who will launch the workers has sudo privileges w/o pass (will fix later)           
+Configuration
+---------------
+
+ON CLOUD CONTROLLER
+
+* Add yourself to the libvirtd group, log out, and log back in
+* fix hardcoded ec2 metadata/userdata uri ($IP is the IP of the cloud), and masqurade all traffic from launched instances
+::
+
+    iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
+    iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE
+
+ON VOLUME NODE
+
+* create a filesystem (you can use an actual disk if you have one spare, default is /dev/sdb)
+
+::
+
+    # This creates a 1GB file to create volumes out of
+    dd if=/dev/zero of=MY_FILE_PATH bs=100M count=10
+    losetup --show -f MY_FILE_PATH
+    echo "--storage_dev=/dev/loop0" >> NOVA_PATH/bin/nova.conf
+
+Launch servers
+
+* rabbitmq
+* redis
+* slapd
+
+Launch nova components
+
+* api_worker
+* s3_worker
+* node_worker
+* storage_worker
