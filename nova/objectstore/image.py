@@ -47,6 +47,10 @@ class Image(object):
            not os.path.isdir(self.path):
              raise exception.NotFound
 
+    @property
+    def image_path(self):
+        return os.path.join(self.path, 'image')
+
     def delete(self):
         for fn in ['info.json', 'image']:
             try:
