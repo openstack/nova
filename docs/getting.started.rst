@@ -93,7 +93,10 @@ ON CLOUD CONTROLLER
     iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE
 
 
-* Configure NginX proxy (/etc/nginx/sites-enabled/default)::
+* Configure NginX proxy (/etc/nginx/sites-enabled/default)
+
+::
+
   server {
     listen 3333 default;
     server-name localhost;
