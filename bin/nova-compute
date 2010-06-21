@@ -55,7 +55,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 def main():
     logging.warn('Starting compute node')
-    n = node.NetworkNode()
+    n = node.Node()
     d = n.adopt_instances()
     d.addCallback(lambda x: logging.info('Adopted %d instances', x))
 
