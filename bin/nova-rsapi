@@ -19,10 +19,9 @@
 """
 
 import logging
+from wsgiref import simple_server
 
 from nova import vendor
-from tornado import httpserver
-import tornado.web
 from tornado import ioloop
 
 from nova import flags
@@ -31,34 +30,28 @@ from nova import server
 from nova import utils
 from nova.auth import users
 from nova.endpoint import rackspace
-from nova.endpoint import wsgi_wrapper
-FLAGS = flags.FLAGS
-flags.DEFINE_integer('cc_port', 8773, 'api server port')
 
-def application(_args):
-  """ Wrap WSGI application as tornado """
-  wsgi_wrapper.Wrap(rackspace.Api)
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 
 def main(_argv):
     user_manager = users.UserManager()
-    controllers = {
-        'Servers': rackspace.ServersController()
-    }
-    _app = rackspace.RackspaceAPIServerApplication(user_manager, controllers)
-
+    api_instance = rackspace.Api(user_manager)
     conn = rpc.Connection.instance()
-    consumer = rpc.AdapterConsumer(connection=conn,
+    rpc_consumer = rpc.AdapterConsumer(connection=conn,
                                        topic=FLAGS.cloud_topic,
-                                       proxy=controllers['Servers'])
+                                       proxy=api_instance)
 
-    io_inst = ioloop.IOLoop.instance()
-    _injected = consumer.attach_to_tornado(io_inst)
+#   TODO: fire rpc response listener (without attach to tornado)
+#    io_inst = ioloop.IOLoop.instance()
+#    _injected = consumer.attach_to_tornado(io_inst)
 
-    http_server = httpserver.HTTPServer(_app)
-    http_server.listen(FLAGS.cc_port)
-    logging.debug('Started HTTP server on %s', FLAGS.cc_port)
-    io_inst.start()
-
+    http_server = simple_server.WSGIServer(('0.0.0.0', FLAGS.cc_port), simple_server.WSGIRequestHandler)
+    http_server.set_app(api_instance.handler)
+    logging.debug('Started HTTP server on port %i' % FLAGS.cc_port)
+    while True:
+        http_server.handle_request()
+#    io_inst.start()
 
 if __name__ == '__main__':
     utils.default_flagfile()
