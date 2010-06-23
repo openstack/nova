@@ -555,16 +555,6 @@ class CloudController(object):
         result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
 
-    def modify_image_attribute(self, context, image_id, attribute, operation_type, **kwargs):
-        if attribute != 'launchPermission':
-            raise exception.ApiError('only launchPermission is supported')
-        if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
-            raise exception.ApiError('only group "all" is supported')
-        if not operation_type in ['add', 'delete']:
-            raise exception.ApiError('operation_type must be add or delete')
-        result = images.modify(context, image_id, operation_type)
-        return defer.succeed(result)
-
     def update_state(self, topic, value):
         """ accepts status reports from the queue and consolidates them """
         # TODO(jmc): if an instance has disappeared from
