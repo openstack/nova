@@ -364,12 +364,12 @@ class CloudController(object):
                               'status' : volume['attachStatus'],
                               'volumeId' : volume_id})
 
-    def _convert_to_set(self, lst, str):
+    def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
-        return [{str: x} for x in lst]
+        return [{label: x} for x in lst]
 
     @rbac.allow('all')
     def describe_instances(self, context, **kwargs):
@@ -497,10 +497,10 @@ class CloudController(object):
             inst['project_id'] = context.project.id
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
+            inst['bridge_name'] = bridge_name
             address = network.allocate_ip(
                         inst['user_id'], inst['project_id'], mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
-            inst['bridge_name'] = bridge_name
             # TODO: allocate expresses on the router node
             inst.save()
             rpc.cast(FLAGS.compute_topic,
