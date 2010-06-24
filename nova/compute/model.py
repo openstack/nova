@@ -115,7 +115,8 @@ class Instance(object):
         if self.state:
             self.initial_state = self.state
         else:
-            self.state = {'state': 'pending',
+            self.state = {'state': 0,
+                          'state_description': 'pending',
                           'instance_id': instance_id,
                           'node_name': 'unassigned',
                           'project_id': 'unassigned',
@@ -138,13 +139,13 @@ class Instance(object):
         for item in self.keys():
             copyDict[item] = self[item]
         return copyDict
-        
+
     def get(self, item, default):
         return self.state.get(item, default)
 
     def update(self, update_dict):
         return self.state.update(update_dict)
-        
+
     def setdefault(self, item, default):
         return self.state.setdefault(item, default)
 
