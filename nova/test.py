@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,7 +15,7 @@
 
 """
 Base classes for our unit tests.
-Allows overriding of flags for use of fakes, 
+Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
@@ -47,13 +47,13 @@ def skip_if_fake(f):
             raise trial_unittest.SkipTest('Test cannot be run in fake mode')
         else:
             return f(*args, **kw)
-    
+
     _skipper.func_name = f.func_name
     return _skipper
 
 
 class TrialTestCase(trial_unittest.TestCase):
-    flush_db = True
+
     def setUp(self):
         super(TrialTestCase, self).setUp()
 
@@ -62,11 +62,6 @@ class TrialTestCase(trial_unittest.TestCase):
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
-        self.flags(redis_db=8)
-        if self.flush_db:
-            logging.info("Flushing redis datastore")
-            r = datastore.Redis.instance()
-            r.flushdb()
 
     def tearDown(self):
         super(TrialTestCase, self).tearDown()
@@ -78,7 +73,7 @@ class TrialTestCase(trial_unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
-        
+
         # attempt to wipe all keepers
         #keeper = datastore.Keeper()
         #keeper.clear_all()
@@ -96,7 +91,7 @@ class TrialTestCase(trial_unittest.TestCase):
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
 
-    
+
 
 class BaseTestCase(TrialTestCase):
     def setUp(self):
@@ -105,7 +100,7 @@ class BaseTestCase(TrialTestCase):
         #               the injected listeners... this is fine for now though
         self.injected = []
         self.ioloop = ioloop.IOLoop.instance()
-  
+
         self._waiting = None
         self._doneWaiting = False
         self._timedOut = False
@@ -124,8 +119,6 @@ class BaseTestCase(TrialTestCase):
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
         self.tear_down()
-        r = datastore.Redis.instance()
-        r.flushdb()
 
     def _waitForTest(self, timeout=60):
         """ Push the ioloop along to wait for our test to complete. """
@@ -152,10 +145,10 @@ class BaseTestCase(TrialTestCase):
                 pass
             self._waiting = None
         self._doneWaiting = True
-    
+
     def _maybeInlineCallbacks(self, f):
         """ If we're doing async calls in our tests, wait on them.
-        
+
         This is probably the most complicated hunk of code we have so far.
 
         First up, if the function is normal (not async) we just act normal
@@ -166,7 +159,7 @@ class BaseTestCase(TrialTestCase):
         of making epic callback chains.
 
         Example (callback chain, ugly):
-    
+
         d = self.node.terminate_instance(instance_id) # a Deferred instance
         def _describe(_):
             d_desc = self.node.describe_instances() # another Deferred instance
@@ -177,7 +170,7 @@ class BaseTestCase(TrialTestCase):
         d.addCallback(_checkDescribe)
         d.addCallback(lambda x: self._done())
         self._waitForTest()
-        
+
         Example (inline callbacks! yay!):
 
         yield self.node.terminate_instance(instance_id)
@@ -194,11 +187,11 @@ class BaseTestCase(TrialTestCase):
         if not hasattr(g, 'send'):
             self._done()
             return defer.succeed(g)
-        
+
         inlined = defer.inlineCallbacks(f)
         d = inlined()
         return d
-    
+
     def _catchExceptions(self, result, failure):
         exc = (failure.type, failure.value, failure.getTracebackObject())
         if isinstance(failure.value, self.failureException):

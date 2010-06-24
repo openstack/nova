@@ -60,6 +60,8 @@ from nova.tests.validator_unittest import *
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool('flush_db', True,
+                  'Flush the database before running fake tests')
 
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)
@@ -71,6 +73,12 @@ if __name__ == '__main__':
     # TODO(termie): these should make a call instead of doing work on import
     if FLAGS.fake_tests:
         from nova.tests.fake_flags import *
+        # use db 8 for fake tests
+        FLAGS.redis_db = 8
+        if FLAGS.flush_db:
+            logging.info("Flushing redis datastore")
+            r = datastore.Redis.instance()
+            r.flushdb()
     else:
         from nova.tests.real_flags import *
 

@@ -40,7 +40,7 @@ def initialize(uri):
 
 class FakeLDAP(object):
     def __init__(self, _uri):
-        self.keeper = datastore.SqliteKeeper('fakeldap') #Redis keeper never works here...
+        self.keeper = datastore.Keeper('fakeldap')
         if self.keeper['objects'] is None:
             self.keeper['objects'] = {}
 
