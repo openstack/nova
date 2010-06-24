@@ -1,3 +1,12 @@
+nova (0.2.2-4) UNRELEASED; urgency=low
+
+  * Documentation fixes
+  * Uncaught exceptions now log properly
+  * Nova Manage zip exporting works again
+  * Twisted threads no longer interrupt system calls
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+
 nova (0.2.2-3) UNRELEASED; urgency=low
 
   * Fixes to api calls
