@@ -288,10 +288,9 @@ class CloudController(object):
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        for address in self.network.hosts:
-            if address['address'] == public_ip:
-                if context.user.is_admin() or address['project_id'] == context.project.id:
-                    return address
+        address = self.network.get_host(public_ip)
+        if address and (context.user.is_admin() or address['project_id'] == context.project.id):
+            return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
 
     def _get_image(self, context, image_id):
@@ -427,7 +426,7 @@ class CloudController(object):
     def format_addresses(self, context):
         addresses = []
         # TODO(vish): move authorization checking into network.py
-        for address in self.network.hosts:
+        for address in self.network.host_objs:
             #logging.debug(address_record)
             address_rv = {
                 'public_ip': address['address'],
