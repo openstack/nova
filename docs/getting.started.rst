@@ -58,11 +58,11 @@ Installation
 ::
 
     # system libraries and tools
-    apt-get install -y libvirt-bin aoetools vlan
+    apt-get install -y aoetools vlan
     modprobe aoe
 
     # python libraries
-    apt-get install -y python-libvirt python-setuptools python-dev python-pycurl python-m2crypto
+    apt-get install -y python-setuptools python-dev python-pycurl python-m2crypto
 
     # ON THE CLOUD CONTROLLER
     apt-get install -y rabbitmq-server dnsmasq nginx
@@ -75,7 +75,8 @@ Installation
     apt-get install -y vblade-persist
 
     # ON THE COMPUTE NODE:
-    apt-get install -y kpartx kvm
+    apt-get install -y python-libvirt
+    apt-get install -y kpartx kvm libvirt-bin
 
     # optional packages
     apt-get install -y euca2ools
