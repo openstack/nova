@@ -1,3 +1,12 @@
+nova (0.2.2-2) UNRELEASED; urgency=low
+
+  * Bugfixes to volume code
+  * Instances no longer use keeper
+  * Sectors off by one fix
+  * State reported properly by instances
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+
 nova (0.2.2-1) UNRELEASED; urgency=low
 
   * First release based on nova/cc
