@@ -403,15 +403,20 @@ class Instance(object):
                     self._s['state'] = Instance.SHUTDOWN
                     #self.datamodel['state'] = 'shutdown'
                     #self.datamodel.save()
-                    timer.stop()
-                    d.callback(None)
+                timer.stop()
+                self._cleanup()
+                d.callback(None)
             except Exception:
                 self._s['state'] = Instance.SHUTDOWN
                 timer.stop()
+                self._cleanup()
                 d.callback(None)
         timer.f = _wait_for_shutdown
         timer.start(interval=0.5, now=True)
         return d
+        
+    def _cleanup(self):
+        shutil.rmtree(os.path.abspath(self._s['basepath']))
 
     @defer.inlineCallbacks
     @exception.wrap_exception
