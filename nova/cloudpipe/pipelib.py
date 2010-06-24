@@ -24,6 +24,7 @@ import tempfile
 import base64
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from nova import exception
 from nova import flags
 from nova.auth import users
 from nova import utils
