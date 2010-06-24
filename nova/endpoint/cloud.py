@@ -173,7 +173,7 @@ class CloudController(object):
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
-            if not context.user.is_admin() and not key_pair.name.endswith('-key'):
+            if context.user.is_admin() or not key_pair.name.endswith('-key'):
                 result.append({
                     'keyName': key_pair.name,
                     'keyFingerprint': key_pair.fingerprint,
