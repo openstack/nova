@@ -48,14 +48,9 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('instances_prefix', 'compute-',
-                    'prefix for keepers for instances')
-
 # TODO(ja): singleton instance of the directory
 class InstanceDirectory(object):
     """an api for interacting with the global state of instances """
-    def __init__(self):
-        self.keeper = datastore.Keeper(FLAGS.instances_prefix)
 
     def get(self, instance_id):
         """ returns an instance object for a given id """
@@ -66,7 +61,7 @@ class InstanceDirectory(object):
 
     def by_project(self, project):
         """ returns a list of instance objects for a project """
-        for instance_id in self.keeper.smembers('project:%s:instances' % project):
+        for instance_id in datastore.Redis.instance().smembers('project:%s:instances' % project):
             yield Instance(instance_id)
 
     def by_node(self, node_id):
@@ -88,12 +83,12 @@ class InstanceDirectory(object):
         pass
 
     def exists(self, instance_id):
-        return self.keeper.set_is_member('instances', instance_id)
+        return datastore.Redis.instance().sismember('instances', instance_id)
 
     @property
     def all(self):
         """ returns a list of all instances """
-        for instance_id in self.keeper.set_members('instances'):
+        for instance_id in datastore.Redis.instance().smembers('instances'):
             yield Instance(instance_id)
 
     def new(self):
@@ -108,10 +103,9 @@ class Instance(object):
 
     def __init__(self, instance_id):
         """ loads an instance from the datastore if exists """
-        self.keeper = datastore.Keeper(FLAGS.instances_prefix)
         self.instance_id = instance_id
         self.initial_state = {}
-        self.state = self.keeper[self.__redis_key]
+        self.state = datastore.Redis.instance().hgetall(self.__redis_key)
         if self.state:
             self.initial_state = self.state
         else:
@@ -167,18 +161,14 @@ class Instance(object):
         """
         # TODO(ja): implement hmset in redis-py and use it
         # instead of multiple calls to hset
-        state = self.keeper[self.__redis_key]
-        if not state:
-            state = {}
         for key, val in self.state.iteritems():
             # if (not self.initial_state.has_key(key)
             # or self.initial_state[key] != val):
-                state[key] = val
-        self.keeper[self.__redis_key] = state
+                datastore.Redis.instance().hset(self.__redis_key, key, val)
         if self.initial_state == {}:
-            self.keeper.set_add('project:%s:instances' % self.project,
+            datastore.Redis.instance().sadd('project:%s:instances' % self.project,
                                 self.instance_id)
-            self.keeper.set_add('instances', self.instance_id)
+            datastore.Redis.instance().sadd('instances', self.instance_id)
         self.initial_state = self.state
         return True
 
@@ -193,10 +183,9 @@ class Instance(object):
         does NOT do anything to running libvirt state.
         """
         logging.info("Destroying datamodel for instance %s", self.instance_id)
-        self.keeper.set_remove('project:%s:instances' % self.project,
+        datastore.Redis.instance().srem('project:%s:instances' % self.project,
                                self.instance_id)
-        del self.keeper[self.__redis_key]
-        self.keeper.set_remove('instances', self.instance_id)
+        datastore.Redis.instance().srem('instances', self.instance_id)
         return True
 
     @property
