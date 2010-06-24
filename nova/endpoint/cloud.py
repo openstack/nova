@@ -381,40 +381,45 @@ class CloudController(object):
         reservations = {}
         for instance in self.instdir.all:
             res_id = instance.get('reservation_id', 'Unknown')
-            if ((context.user.is_admin() or context.project.id == instance['project_id'])
-                and (reservation_id == None or reservation_id == res_id)):
-                i = {}
-                i['instance_id'] = instance.get('instance_id', None)
-                i['image_id'] = instance.get('image_id', None)
-                i['instance_state'] = {
-                    'code': instance.get('state', 0),
-                    'name': instance.get('state_description', 'pending')
-                }
-                i['public_dns_name'] = self.network.get_public_ip_for_instance(
-                                                            i['instance_id'])
-                i['private_dns_name'] = instance.get('private_dns_name', None)
-                if not i['public_dns_name']:
-                    i['public_dns_name'] = i['private_dns_name']
-                i['dns_name'] = instance.get('dns_name', None)
-                i['key_name'] = instance.get('key_name', None)
-                if context.user.is_admin():
-                    i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                        instance.get('owner_id', None), instance.get('node_name',''))
-                i['product_codes_set'] = self._convert_to_set(
-                    instance.get('product_codes', None), 'product_code')
-                i['instance_type'] = instance.get('instance_type', None)
-                i['launch_time'] = instance.get('launch_time', None)
-                i['ami_launch_index'] = instance.get('ami_launch_index',
-                                                     None)
-                if not reservations.has_key(res_id):
-                    r = {}
-                    r['reservation_id'] = res_id
-                    r['owner_id'] = instance.get('project_id', None)
-                    r['group_set'] = self._convert_to_set(
-                        instance.get('groups', None), 'group_id')
-                    r['instances_set'] = []
-                    reservations[res_id] = r
-                reservations[res_id]['instances_set'].append(i)
+            if reservation_id != None and reservation_id != res_id:
+                continue
+            if not context.user.is_admin():
+                if instance['image_id'] == FLAGS.vpn_image_id:
+                    continue
+                if context.project.id != instance['project_id']:
+                    continue
+            i = {}
+            i['instance_id'] = instance.get('instance_id', None)
+            i['image_id'] = instance.get('image_id', None)
+            i['instance_state'] = {
+                'code': instance.get('state', 0),
+                'name': instance.get('state_description', 'pending')
+            }
+            i['public_dns_name'] = self.network.get_public_ip_for_instance(
+                                                        i['instance_id'])
+            i['private_dns_name'] = instance.get('private_dns_name', None)
+            if not i['public_dns_name']:
+                i['public_dns_name'] = i['private_dns_name']
+            i['dns_name'] = instance.get('dns_name', None)
+            i['key_name'] = instance.get('key_name', None)
+            if context.user.is_admin():
+                i['key_name'] = '%s (%s, %s)' % (i['key_name'],
+                    instance.get('owner_id', None), instance.get('node_name',''))
+            i['product_codes_set'] = self._convert_to_set(
+                instance.get('product_codes', None), 'product_code')
+            i['instance_type'] = instance.get('instance_type', None)
+            i['launch_time'] = instance.get('launch_time', None)
+            i['ami_launch_index'] = instance.get('ami_launch_index',
+                                                 None)
+            if not reservations.has_key(res_id):
+                r = {}
+                r['reservation_id'] = res_id
+                r['owner_id'] = instance.get('project_id', None)
+                r['group_set'] = self._convert_to_set(
+                    instance.get('groups', None), 'group_id')
+                r['instances_set'] = []
+                reservations[res_id] = r
+            reservations[res_id]['instances_set'].append(i)
 
         instance_response = {'reservationSet' : list(reservations.values()) }
         return instance_response
@@ -471,7 +476,10 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def run_instances(self, context, **kwargs):
-        image = self._get_image(context, kwargs['image_id'])
+        # make sure user can access the image
+        # vpn image is private so it doesn't show up on lists
+        if kwargs['image_id'] != FLAGS.vpn_image_id:
+            image = self._get_image(context, kwargs['image_id'])
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
