@@ -500,7 +500,11 @@ class CloudController(object):
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
             inst['bridge_name'] = bridge_name
-            address = network.allocate_ip(
+            if inst['image_id'] == FLAGS.vpn_image_id:
+                address = network.allocate_vpn_ip(
+                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
+            else:
+                address = network.allocate_ip(
                         inst['user_id'], inst['project_id'], mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
             # TODO: allocate expresses on the router node
