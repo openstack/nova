@@ -1,9 +1,15 @@
+nova (0.2.2-6) UNRELEASED; urgency=low
+
+  * Fix to make Key Injection work again
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 14 Jun 2010 21:35:00 -0700
+
 nova (0.2.2-5) UNRELEASED; urgency=low
 
   * Lowered message callback frequency to stop compute and volume
     from eating tons of cpu
 
- -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 14 Jun 2010 14:15:00 -0700
 
 nova (0.2.2-4) UNRELEASED; urgency=low
 
@@ -12,7 +18,7 @@ nova (0.2.2-4) UNRELEASED; urgency=low
   * Nova Manage zip exporting works again
   * Twisted threads no longer interrupt system calls
 
- -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Sun, 13 Jun 2010 01:40:00 -0700
 
 nova (0.2.2-3) UNRELEASED; urgency=low
 
@@ -24,7 +30,7 @@ nova (0.2.2-3) UNRELEASED; urgency=low
   * Test redis database cleaned out on each run of tests
   * Smoketest updates
 
- -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Fri, 12 Jun 2010 20:10:00 -0700
 
 nova (0.2.2-2) UNRELEASED; urgency=low
 
