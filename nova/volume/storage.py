@@ -35,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import validate
 
 
 FLAGS = flags.FLAGS
@@ -84,6 +85,7 @@ class BlockStore(object):
         #TODO: aggregate the state of the system
         pass
 
+    @validate.rangetest(size=(0, 100))
     def create_volume(self, size, user_id):
         """
         Creates an exported volume (fake or real),

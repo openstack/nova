@@ -35,7 +35,7 @@ def rangetest(**argchecks):                 # validate ranges for both+defaults
                 # for all args to be checked
                 if argname in kargs:
                     # was passed by name
-                    if kargs[argname] < low or kargs[argname] > high:
+                    if float(kargs[argname]) < low or float(kargs[argname]) > high:
                         errmsg = '{0} argument "{1}" not in {2}..{3}'
                         errmsg = errmsg.format(funcname, argname, low, high)
                         raise TypeError(errmsg)
@@ -43,9 +43,9 @@ def rangetest(**argchecks):                 # validate ranges for both+defaults
                 elif argname in positionals:
                     # was passed by position
                     position = positionals.index(argname)
-                    if pargs[position] < low or pargs[position] > high:
-                        errmsg = '{0} argument "{1}" not in {2}..{3}'
-                        errmsg = errmsg.format(funcname, argname, low, high)
+                    if float(pargs[position]) < low or float(pargs[position]) > high:
+                        errmsg = '{0} argument "{1}" with value of {4} not in {2}..{3}'
+                        errmsg = errmsg.format(funcname, argname, low, high, pargs[position])
                         raise TypeError(errmsg)
                 else:
                     pass

@@ -59,6 +59,13 @@ class StorageTestCase(test.TrialTestCase):
         self.assertRaises(exception.Error,
                           storage.get_volume,
                           volume_id)
+                          
+    def test_too_big_volume(self):
+        vol_size = '1001'
+        user_id = 'fake'
+        self.assertRaises(TypeError,
+                          self.mystorage.create_volume,
+                          vol_size, user_id)
 
     def test_run_attach_detach_volume(self):
         # Create one volume and one node to test with
