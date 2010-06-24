@@ -165,9 +165,11 @@ class Volume(datastore.RedisModel):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol["instance_id"] = 'none'
         vol["mountpoint"] = 'none'
+        vol['attachTime'] = 'none'
         vol["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         vol['status'] = "creating" # creating | available | in-use
         vol['attachStatus'] = "detached"  # attaching | attached | detaching | detached
+        vol['deleteOnTermination'] = 'False'
         vol.save()
         vol.create_lv()
         vol.setup_export()
