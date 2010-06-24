@@ -333,7 +333,7 @@ class RedisKeeper(object):
     """
     def __init__(self, prefix="redis-"):
         self.prefix = prefix
-        Redis.instance().ping()
+        #Redis.instance().ping()
 
     def __setitem__(self, item, value):
         """

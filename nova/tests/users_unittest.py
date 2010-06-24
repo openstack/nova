@@ -31,6 +31,7 @@ FLAGS = flags.FLAGS
 
 
 class UserTestCase(test.BaseTestCase):
+    flush_db = False
     def setUp(self):
         super(UserTestCase, self).setUp()
         self.flags(fake_libvirt=True,
@@ -96,6 +97,7 @@ class UserTestCase(test.BaseTestCase):
 
     def test_010_can_list_users(self):
         users = self.users.get_users()
+        logging.warn(users)
         self.assertTrue(filter(lambda u: u.id == 'test1', users))
 
     def test_101_can_add_user_role(self):

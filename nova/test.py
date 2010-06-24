@@ -53,6 +53,7 @@ def skip_if_fake(f):
 
 
 class TrialTestCase(trial_unittest.TestCase):
+    flush_db = True
     def setUp(self):
         super(TrialTestCase, self).setUp()
 
@@ -61,6 +62,11 @@ class TrialTestCase(trial_unittest.TestCase):
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
+        self.flags(redis_db=8)
+        if self.flush_db:
+            logging.info("Flushing redis datastore")
+            r = datastore.Redis.instance()
+            r.flushdb()
 
     def tearDown(self):
         super(TrialTestCase, self).tearDown()
@@ -103,9 +109,6 @@ class BaseTestCase(TrialTestCase):
         self._waiting = None
         self._doneWaiting = False
         self._timedOut = False
-        self.flags(redis_db=8)
-        r = datastore.Redis.instance()
-        r.flushdb()
         self.set_up()
 
     def set_up(self):

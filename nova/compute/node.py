@@ -155,6 +155,7 @@ class Node(object, service.Service):
         # TODO(vish) check to make sure the availability zone matches
         new_inst = Instance(self._conn, name=instance_id,
                             pool=self._pool, data=inst)
+        logging.info("Instances current state is %s", new_inst.state)
         if new_inst.is_running():
             raise exception.Error("Instance is already running")
         d = new_inst.spawn()
@@ -258,68 +259,49 @@ class Instance(object):
         self._conn = conn
         # TODO(vish): this can be removed after data has been updated
         # data doesn't seem to have a working iterator so in doesn't work
-        if not data.get('owner_id', None) is None:
+        if data.get('owner_id', None) is not None:
             data['user_id'] = data['owner_id']
             data['project_id'] = data['owner_id']
         self.datamodel = data
-
-        # NOTE(termie): to be passed to multiprocess self._s must be
-        #               pickle-able by cPickle
-        self._s = {}
-
-        # TODO(termie): is instance_type that actual name for this?
+        
         size = data.get('instance_type', FLAGS.default_instance_type)
         if size not in INSTANCE_TYPES:
             raise exception.Error('invalid instance type: %s' % size)
 
-        self._s.update(INSTANCE_TYPES[size])
+        self.datamodel.update(INSTANCE_TYPES[size])
 
-        self._s['name'] = name
-        self._s['instance_id'] = name
-        self._s['instance_type'] = size
-        self._s['mac_address'] = data.get(
-                'mac_address', 'df:df:df:df:df:df')
-        self._s['basepath'] = data.get(
+        self.datamodel['name'] = name
+        self.datamodel['instance_id'] = name
+        self.datamodel['basepath'] = data.get(
                 'basepath', os.path.abspath(
                 os.path.join(FLAGS.instances_path, self.name)))
-        self._s['memory_kb'] = int(self._s['memory_mb']) * 1024
-        self._s['image_id'] = data.get('image_id', FLAGS.default_image)
-        self._s['kernel_id'] = data.get('kernel_id', FLAGS.default_kernel)
-        self._s['ramdisk_id'] = data.get('ramdisk_id', FLAGS.default_ramdisk)
-        self._s['user_id'] = data.get('user_id', None)
-        self._s['project_id'] = data.get('project_id', self._s['user_id'])
-        self._s['node_name'] = data.get('node_name', '')
-        self._s['user_data'] = data.get('user_data', '')
-        self._s['ami_launch_index'] = data.get('ami_launch_index', None)
-        self._s['launch_time'] = data.get('launch_time', None)
-        self._s['reservation_id'] = data.get('reservation_id', None)
-        # self._s['state'] = Instance.NOSTATE
-        self._s['state'] = data.get('state', Instance.NOSTATE)
-        self._s['key_data'] = data.get('key_data', None)
-
-        # TODO: we may not need to save the next few
-        self._s['groups'] = data.get('security_group', ['default'])
-        self._s['product_codes'] = data.get('product_code', [])
-        self._s['key_name'] = data.get('key_name', None)
-        self._s['addressing_type'] = data.get('addressing_type', None)
-        self._s['availability_zone'] = data.get('availability_zone', 'fixme')
-
-        self._s['bridge_name'] = data.get('bridge_name', None)
-        #TODO: put real dns items here
-        self._s['private_dns_name'] = data.get('private_dns_name', 'fixme')
-        self._s['dns_name'] = data.get('dns_name',
-                                self._s['private_dns_name'])
+        self.datamodel['memory_kb'] = int(self.datamodel['memory_mb']) * 1024
+        self.datamodel.setdefault('image_id', FLAGS.default_image)
+        self.datamodel.setdefault('kernel_id', FLAGS.default_kernel)
+        self.datamodel.setdefault('ramdisk_id', FLAGS.default_ramdisk)
+        self.datamodel.setdefault('project_id', self.datamodel['user_id'])
+        self.datamodel.setdefault('bridge_name', None)
+        #self.datamodel.setdefault('key_data', None)
+        #self.datamodel.setdefault('key_name', None)
+        #self.datamodel.setdefault('addressing_type', None)
+                                
+        # TODO(joshua) - The ugly non-flat ones
+        self.datamodel['groups'] = data.get('security_group', 'default')
+        # TODO(joshua): Support product codes somehow
+        self.datamodel.setdefault('product_codes', None)
+        
+        self.datamodel.save()
         logging.debug("Finished init of Instance with id of %s" % name)
 
     def toXml(self):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
         libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        xml_info = self._s.copy()
-        #xml_info.update(self._s)
+        xml_info = self.datamodel.copy()
+        # TODO(joshua): Make this xml express the attached disks as well
 
         # TODO(termie): lazy lazy hack because xml is annoying
-        xml_info['nova'] = json.dumps(self._s)
+        xml_info['nova'] = json.dumps(self.datamodel.copy())
         libvirt_xml = libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 
@@ -328,16 +310,20 @@ class Instance(object):
     @classmethod
     def fromName(cls, conn, pool, name):
         """ use the saved data for reloading the instance """
-        # if FLAGS.fake_libvirt:
-        #     raise Exception('this is a bit useless, eh?')
-
         instdir = model.InstanceDirectory()
         instance = instdir.get(name)
         return cls(conn=conn, pool=pool, name=name, data=instance)
 
+    def set_state(self, state_code, state_description=None):
+        self.datamodel['state'] = state_code
+        if not state_description:
+            state_description = STATE_NAMES[state_code]
+        self.datamodel['state_description'] = state_description
+        self.datamodel.save()
+
     @property
     def state(self):
-        return self._s['state']
+        return self.datamodel['state']
 
     @property
     def name(self):
@@ -364,16 +350,16 @@ class Instance(object):
                 'max_mem': max_mem,
                 'mem': mem,
                 'num_cpu': num_cpu,
-                'cpu_time': cpu_time}
+                'cpu_time': cpu_time,
+                'node_name': FLAGS.node_name}
 
     def basepath(self, path=''):
         return os.path.abspath(os.path.join(self._s['basepath'], path))
 
     def update_state(self):
-        info = self.info()
-        self.datamodel['state'] = info['state']
-        self.datamodel['node_name'] = FLAGS.node_name
-        self.datamodel.save()
+        self.datamodel.update(self.info())
+        self.set_state(self.state)
+        self.datamodel.save() # Extra, but harmless
 
     @exception.wrap_exception
     def destroy(self):
@@ -382,8 +368,7 @@ class Instance(object):
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % self.name)
 
-        self.datamodel['state'] = 'shutting_down'
-        self.datamodel.save()
+        self.set_state(Instance.NOSTATE, 'shutting_down')
         try:
             virt_dom = self._conn.lookupByName(self.name)
             virt_dom.destroy()
@@ -391,6 +376,7 @@ class Instance(object):
             pass
             # If the instance is already terminated, we're still happy
         d = defer.Deferred()
+        d.addCallback(lambda x: self._cleanup())
         d.addCallback(lambda x: self.datamodel.destroy())
         # TODO(termie): short-circuit me for tests
         # WE'LL save this for when we do shutdown,
@@ -398,46 +384,52 @@ class Instance(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
             try:
-                info = self.info()
-                if info['state'] == Instance.SHUTDOWN:
-                    self._s['state'] = Instance.SHUTDOWN
-                    #self.datamodel['state'] = 'shutdown'
-                    #self.datamodel.save()
-                timer.stop()
-                self._cleanup()
-                d.callback(None)
+                self.update_state()
+                if self.state == Instance.SHUTDOWN:
+                    timer.stop()
+                    d.callback(None)
             except Exception:
-                self._s['state'] = Instance.SHUTDOWN
+                self.set_state(Instance.SHUTDOWN)
                 timer.stop()
-                self._cleanup()
                 d.callback(None)
         timer.f = _wait_for_shutdown
         timer.start(interval=0.5, now=True)
         return d
         
     def _cleanup(self):
-        shutil.rmtree(os.path.abspath(self._s['basepath']))
+        target = os.path.abspath(self.datamodel['basepath'])
+        logging.info("Deleting instance files at %s", target)
+        shutil.rmtree(target)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot(self):
-        # if not self.is_running():
-        #     raise exception.Error(
-        #             'trying to reboot a non-running'
-        #             'instance: %s (state: %s)' % (self.name, self.state))
+        if not self.is_running():
+            raise exception.Error(
+                    'trying to reboot a non-running'
+                    'instance: %s (state: %s)' % (self.name, self.state))
 
+        logging.debug('rebooting instance %s' % self.name)
+        self.set_state(Instance.NOSTATE, 'rebooting')
         yield self._conn.lookupByName(self.name).destroy()
-        self.datamodel['state'] = 'rebooting'
-        self.datamodel.save()
-        self._s['state'] = Instance.NOSTATE
         self._conn.createXML(self.toXml(), 0)
-        # TODO(termie): this should actually register a callback to check
-        #               for successful boot
-        self.datamodel['state'] = 'running'
-        self.datamodel.save()
-        self._s['state'] = Instance.RUNNING
-        logging.debug('rebooted instance %s' % self.name)
-        defer.returnValue(None)
+        
+        d = defer.Deferred()
+        timer = task.LoopingCall(f=None)
+        def _wait_for_reboot():
+            try:
+                self.update_state()
+                if self.is_running():
+                    logging.debug('rebooted instance %s' % self.name)
+                    timer.stop()
+                    d.callback(None)
+            except Exception:
+                self.set_state(Instance.SHUTDOWN)
+                timer.stop()
+                d.callback(None)
+        timer.f = _wait_for_reboot
+        timer.start(interval=0.5, now=True)
+        yield d
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
@@ -500,36 +492,56 @@ class Instance(object):
     @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self):
-        self.datamodel['state'] = "spawning"
-        self.datamodel.save()
+        self.set_state(Instance.NOSTATE, 'spawning')
         logging.debug("Starting spawn in Instance")
 
         xml = self.toXml()
+        self.set_state(Instance.NOSTATE, 'launching')
         logging.info('self %s', self)
         try:
             yield self._create_image(xml) 
-            self.datamodel['state'] = 'launching'
-            self.datamodel.save()
             self._conn.createXML(xml, 0)
             # TODO(termie): this should actually register
             # a callback to check for successful boot
-            self._s['state'] = Instance.RUNNING
-            self.datamodel['state'] = 'running'
-            self.datamodel.save()
             logging.debug("Instance is running")
+
+            local_d = defer.Deferred()
+            timer = task.LoopingCall(f=None)
+            def _wait_for_boot():
+                try:
+                    self.update_state()
+                    if self.is_running():
+                        logging.debug('booted instance %s' % self.name)
+                        timer.stop()
+                        local_d.callback(None)
+                except Exception:
+                    self.set_state(Instance.SHUTDOWN)
+                    logging.error('Failed to boot instance %s' % self.name)
+                    timer.stop()
+                    local_d.callback(None)
+            timer.f = _wait_for_boot
+            timer.start(interval=0.5, now=True)
         except Exception:
-            #logging.exception('while spawning instance: %s', self.name)
-            self.datamodel['state'] = 'shutdown'
-            self.datamodel.save()
-            raise
+            logging.debug(ex)
+            self.set_state(Instance.SHUTDOWN)
 
     @exception.wrap_exception
     def console_output(self):
         if not FLAGS.fake_libvirt:
             fname = os.path.abspath(
-                    os.path.join(self._s['basepath'], 'console.log'))
+                    os.path.join(self.datamodel['basepath'], 'console.log'))
             with open(fname, 'r') as f:
                 console = f.read()
         else:
             console = 'FAKE CONSOLE OUTPUT'
         return defer.succeed(console)
+
+STATE_NAMES = {
+ Instance.NOSTATE : 'pending',
+ Instance.RUNNING : 'running',
+ Instance.BLOCKED : 'blocked',
+ Instance.PAUSED  : 'paused',
+ Instance.SHUTDOWN : 'shutdown',
+ Instance.SHUTOFF : 'shutdown',
+ Instance.CRASHED : 'crashed',
+}

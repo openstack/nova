@@ -14,7 +14,7 @@
 #    limitations under the License.
 
 import unittest
-
+import logging
 
 from nova.auth.users import UserManager
 from nova.auth import rbac
@@ -28,13 +28,15 @@ class Context(object):
 
 class AccessTestCase(test.BaseTestCase):
     def setUp(self):
+        super(AccessTestCase, self).setUp()
         FLAGS.fake_libvirt = True
         FLAGS.fake_storage = True
         um = UserManager.instance()
         # Make test users
         try:
             self.testadmin = um.create_user('testadmin')
-        except: pass
+        except Exception, err:
+            logging.error(str(err))
         try:
             self.testpmsys = um.create_user('testpmsys')
         except: pass
@@ -71,7 +73,6 @@ class AccessTestCase(test.BaseTestCase):
         self.context = Context()
         self.context.project = self.project
         #user is set in each test
-        super(AccessTestCase, self).setUp()
 
     def tearDown(self):
         um = UserManager.instance()

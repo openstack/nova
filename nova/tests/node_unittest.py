@@ -14,6 +14,8 @@
 #    limitations under the License.
 
 import logging
+import time
+
 from xml.etree import ElementTree
 
 from nova import vendor
@@ -81,11 +83,13 @@ class NodeConnectionTestCase(test.TrialTestCase):
         rv = yield self.node.run_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("Running instances: %s", rv)
         self.assertEqual(rv[instance_id].name, instance_id)
 
         rv = yield self.node.terminate_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("After terminating instances: %s", rv)
         self.assertEqual(rv, {})
 
     @defer.inlineCallbacks

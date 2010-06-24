@@ -37,6 +37,8 @@ True
 True
 """
 
+import logging
+
 from nova import vendor
 
 from nova import datastore
@@ -128,8 +130,23 @@ class Instance(object):
     def __repr__(self):
         return "<Instance:%s>" % self.instance_id
 
+    def keys(self):
+        return self.state.keys()
+
+    def copy(self):
+        copyDict = {}
+        for item in self.keys():
+            copyDict[item] = self[item]
+        return copyDict
+        
     def get(self, item, default):
         return self.state.get(item, default)
+
+    def update(self, update_dict):
+        return self.state.update(update_dict)
+        
+    def setdefault(self, item, default):
+        return self.state.setdefault(item, default)
 
     def __getitem__(self, item):
         return self.state[item]
@@ -174,6 +191,7 @@ class Instance(object):
         """ deletes all related records from datastore.
         does NOT do anything to running libvirt state.
         """
+        logging.info("Destroying datamodel for instance %s", self.instance_id)
         self.keeper.set_remove('project:%s:instances' % self.project,
                                self.instance_id)
         del self.keeper[self.__redis_key]
