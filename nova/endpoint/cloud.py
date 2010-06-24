@@ -228,8 +228,6 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance = self._get_instance(context, instance_id[0])
-        if instance['state'] == 'pending':
-            raise exception.ApiError('Cannot get output for pending instance')
         return rpc.call('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
             {"method": "get_console_output",
              "args" : {"instance_id": instance_id[0]}})
@@ -386,8 +384,8 @@ class CloudController(object):
                 i['instance_id'] = instance.get('instance_id', None)
                 i['image_id'] = instance.get('image_id', None)
                 i['instance_state'] = {
-                    'code': 42,
-                    'name': instance.get('state', 'pending')
+                    'code': instance.get('state', 0),
+                    'name': instance.get('state_description', 'pending')
                 }
                 i['public_dns_name'] = self.network.get_public_ip_for_instance(
                                                             i['instance_id'])
@@ -547,8 +545,6 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for i in instance_id:
             instance = self._get_instance(context, i)
-            if instance['state'] == 'pending':
-                raise exception.ApiError('Cannot reboot pending instance')
             rpc.cast('%s.%s' % (FLAGS.node_topic, instance['node_name']),
                              {"method": "reboot_instance",
                               "args" : {"instance_id": i}})
