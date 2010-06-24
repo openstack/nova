@@ -410,7 +410,7 @@ class VolumeTests(NovaTestCase):
 
         conn = self.connection_for(test_username)
         self.create_key_pair(conn, test_key)
-        reservation = conn.run_instances(data['image_id'], size='m1.tiny', key_name=test_key)
+        reservation = conn.run_instances(data['image_id'], instance_type='m1.tiny', key_name=test_key)
         data['instance_id'] = reservation.instances[0].id
         data['private_ip'] = reservation.instances[0].private_dns_name
         # wait for instance to show up
