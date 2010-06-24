@@ -82,6 +82,28 @@ class VpnCommands(object):
     def run(self, project_id):
         self.pipe.launch_vpn_instance(project_id)
 
+class RoleCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+
+    def add(self, user, role, project=None):
+        """adds role to user
+        if project is specified, adds project specific role
+        arguments: user, role [project]"""
+        self.manager.add_role(user, role, project)
+
+    def has(self, user, role, project=None):
+        """checks to see if user has role
+        if project is specified, returns True if user has
+        the global role and the project role
+        arguments: user, role [project]"""
+        print self.manager.has_role(user, role, project)
+
+    def remove(self, user, role, project=None):
+        """removes role from user
+        if project is specified, removes project specific role
+        arguments: user, role [project]"""
+        self.manager.remove_role(user, role, project)
 
 class UserCommands(object):
     def __init__(self):
@@ -127,6 +149,11 @@ class ProjectCommands(object):
     def __init__(self):
         self.manager = users.UserManager.instance()
 
+    def add(self, project, user):
+        """adds user to project
+        arguments: project user"""
+        self.manager.add_to_project(user, project)
+
     def create(self, name, project_manager, description=None):
         """creates a new project
         arguments: name project_manager [description]"""
@@ -143,7 +170,12 @@ class ProjectCommands(object):
         for project in self.manager.get_projects():
             print project.name
 
-    def zip(self, project_id, user_id, filename='nova.zip'):
+    def remove(self, project, user):
+        """removes user from project
+        arguments: project user"""
+        self.manager.remove_from_project(user, project)
+
+def zip(self, project_id, user_id, filename='nova.zip'):
         """exports credentials for user to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
         project = self.manager.get_project(project_id)
@@ -162,6 +194,7 @@ categories = [
     ('network', NetworkCommands),
     ('user', UserCommands),
     ('project', ProjectCommands),
+    ('role', RoleCommands),
     ('vpn', VpnCommands),
 ]
 
