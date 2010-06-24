@@ -21,6 +21,7 @@ an instance with it.
 import logging
 import os
 import tempfile
+import base64
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from nova import flags
@@ -39,9 +40,9 @@ class CloudPipe(object):
         self.controller = cloud_controller
         self.manager = users.UserManager.instance()
 
-    def launch_vpn_instance(self, username):
-        logging.debug( "Launching VPN for %s" % (username))
-        user = self.manager.get_user(username)
+    def launch_vpn_instance(self, project_id):
+        logging.debug( "Launching VPN for %s" % (project_id))
+        project = self.manager.get_project(project_id)
         # Make a payload.zip
         tmpfolder = tempfile.mkdtemp()
         filename = "payload.zip"
@@ -51,26 +52,35 @@ class CloudPipe(object):
         z.write(FLAGS.boot_script_template,'autorun.sh')
         z.close()
 
-        self.setup_keypair(username)
+        key_name = self.setup_keypair(project.project_manager_id, project_id)
         zippy = open(zippath, "r")
-        context = api.APIRequestContext(handler=None, user=user)
+        context = api.APIRequestContext(handler=None, user=project.project_manager, project=project)
 
         reservation = self.controller.run_instances(context,
-            user_data=zippy.read().encode("base64"),
+            # run instances expects encoded userdata, it is decoded in the get_metadata_call
+            # autorun.sh also decodes the zip file, hence the double encoding
+            user_data=zippy.read().encode("base64").encode("base64"),
             max_count=1,
             min_count=1,
             image_id=FLAGS.vpn_image_id,
-            key_name="vpn-key",
+            key_name=key_name,
             security_groups=["vpn-secgroup"])
         zippy.close()
 
-    def setup_keypair(self, username):
+    def setup_keypair(self, user_id, project_id):
+        key_name = '%s-key' % project_id
         try:
-            private_key, fingerprint = self.manager.generate_key_pair(username, "vpn-key")
-            os.mkdir("%s/%s" % (FLAGS.keys_path, username))
-            private_key.save(os.path.abspath("%s/%s" % (FLAGS.keys_path, username)))
-        except:
+            private_key, fingerprint = self.manager.generate_key_pair(user_id, key_name)
+            try:
+                key_dir = os.path.join(FLAGS.keys_path, user_id)
+                os.makedirs(key_dir)
+                with open(os.path.join(key_dir, '%s.pem' % key_name),'w') as f:
+                    f.write(private_key)
+            except:
+                pass
+        except exception.Duplicate:
             pass
+        return key_name
 
     # def setup_secgroups(self, username):
     #     conn = self.euca.connection_for(username)

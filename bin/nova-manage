@@ -38,37 +38,37 @@ class VpnCommands(object):
         self.pipe = pipelib.CloudPipe(cloud.CloudController())
 
     def list(self):
-        print "%-12s\t" % 'user',
+        print "%-12s\t" % 'project',
         print "%-12s\t" % 'ip:port',
         print "%s" % 'state'
-        for user in self.manager.get_users():
-            print "%-12s\t" % user.name,
-            print "%s:%s\t" % (user.vpn_ip, user.vpn_port),
+        for project in self.manager.get_projects():
+            print "%-12s\t" % project.name,
+            print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
 
-            vpn = self.__vpn_for(user.name)
+            vpn = self.__vpn_for(project.id)
             if vpn:
                 print vpn['instance_id'],
                 print vpn['state']
             else:
                 print None
 
-    def __vpn_for(self, username):
+    def __vpn_for(self, project_id):
         for instance in self.instdir.all:
             if (instance.state.has_key('image_id')
                 and instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state'] in ['shutting_down', 'shutdown']
-                and instance['owner_id'] == username):
+                and instance['project_id'] == project_id):
                 return instance
 
     def spawn(self):
-        for u in reversed(self.manager.get_users()):
-             if not self.__vpn_for(u.id):
-                 print 'spawning %s' % u.id
-                 self.pipe.launch_vpn_instance(u.id)
+        for p in reversed(self.manager.get_projects()):
+             if not self.__vpn_for(p.id):
+                 print 'spawning %s' % p.id
+                 self.pipe.launch_vpn_instance(p.id)
                  time.sleep(10)
 
-    def run(self, username):
-        self.pipe.launch_vpn_instance(username)
+    def run(self, project_id):
+        self.pipe.launch_vpn_instance(project_id)
 
 
 class UserCommands(object):

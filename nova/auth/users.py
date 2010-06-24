@@ -474,9 +474,6 @@ class UserManager(object):
         signed_cert = crypto.sign_csr(csr, Project.safe_id(project))
         return (private_key, signed_cert)
 
-    def sign_cert(self, csr, uid):
-        return crypto.sign_csr(csr, uid)
-
     def __cert_subject(self, uid):
         # FIXME(ja) - this should be pulled from a global configuration
         return "/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))

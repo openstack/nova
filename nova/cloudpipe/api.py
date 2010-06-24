@@ -35,36 +35,23 @@ class CloudPipeRequestHandler(tornado.web.RequestHandler):
     def get(self, path):
         path = self.request.path
         _log.debug( "Cloudpipe path is %s" % path)
-        self.manager = users.UserManager.instance()
         if path.endswith("/getca/"):
             self.send_root_ca()
-        elif path.endswith("/getcert/"):
-            _log.debug( "Getting zip for %s" % (path[9:]))
-            try:
-                self.send_signed_zip(self.path[9:])
-            except Exception, err:
-                _log.debug('ERROR: %s\n' % str(err))
-                raise tornado.web.HTTPError(404)
         self.finish()
 
-    def get_username_from_ip(self, ip):
+    def get_project_id_from_ip(self, ip):
         cc = self.application.controllers['Cloud']
         instance = cc.get_instance_by_ip(ip)
-        return instance['owner_id']
+        instance['project_id']
 
     def send_root_ca(self):
         _log.debug( "Getting root ca")
-        username = self.get_username_from_ip(self.request.remote_ip)
+        project_id = self.get_project_id_from_ip(self.request.remote_ip)
         self.set_header("Content-Type", "text/plain")
-        self.write(crypto.fetch_ca(username))
-
-    def send_signed_zip(self, username):
-        self.set_header("Content-Type", "application/zip")
-        self.write(self.manager.get_signed_zip(username))
+        self.write(crypto.fetch_ca(project_id))
 
     def post(self, *args, **kwargs):
-        self.manager = users.UserManager.instance()
-        username = self.get_username_from_ip(self.request.remote_ip)
+        project_id = self.get_project_id_from_ip(self.request.remote_ip)
         cert = self.get_argument('cert', '')
-        self.write(self.manager.sign_cert(urllib.unquote(cert), username))
+        self.write(crypto.sign_csr(urllib.unquote(cert), project_id))
         self.finish()
