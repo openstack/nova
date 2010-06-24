@@ -47,8 +47,15 @@ class VpnCommands(object):
 
             vpn = self.__vpn_for(project.id)
             if vpn:
+                out, err = utils.execute("ping -c1 -w1 %s > /dev/null; echo $?", vpn['private_dns_name'])
+                if out.strip() == '0':
+                    net = 'up'
+                else:
+                    net = 'down'
                 print vpn['instance_id'],
-                print vpn['state']
+                print vpn['state_description'],
+                print net
+
             else:
                 print None
 
@@ -56,7 +63,7 @@ class VpnCommands(object):
         for instance in self.instdir.all:
             if (instance.state.has_key('image_id')
                 and instance['image_id'] == FLAGS.vpn_image_id
-                and not instance['state'] in ['shutting_down', 'shutdown']
+                and not instance['state_description'] in ['shutting_down', 'shutdown']
                 and instance['project_id'] == project_id):
                 return instance
 
