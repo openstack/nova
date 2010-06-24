@@ -1,25 +1,33 @@
-# COPYRIGHT NASA
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration. 
+# All Rights Reserved.
+# 
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+# 
+#       http://www.apache.org/licenses/LICENSE-2.0
+# 
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
-import os, unittest, sys
-from commands import getstatusoutput
-from paramiko import SSHClient, RSAKey, WarningPolicy
+import commands
+import os
 import random
-
-BUCKET_NAME = 'smoketest'
-
-try:
-    # pulling from environment means euca-bundle and other shell commands
-    # are runable without futzing with the environment and zip files
-    access_key = os.environ['EC2_ACCESS_KEY']
-    secret_key = os.environ['EC2_SECRET_KEY']
-    endpoint = os.environ['EC2_URL']
-    host = endpoint.split('/')[2].split(':')[0] # http://HOST:8773/services/Cloud
-except:
-    print 'you need to source admin rc before running smoketests'
-    sys.exit(2)
+import sys
+import unittest
 
 from nova.adminclient import NovaAdminClient
-admin = NovaAdminClient(access_key=access_key, secret_key=secret_key, clc_ip=host)
+from nova.smoketests import flags
+
+from nova import vendor
+import paramiko
+
+nova_admin = NovaAdminClient(access_key=flags.admin_access_key, secret_key=flags.admin_secret_key, clc_ip=host)
 
 class NovaTestCase(unittest.TestCase):
     def setUp(self):
@@ -29,37 +37,37 @@ class NovaTestCase(unittest.TestCase):
         pass
 
     def connect_ssh(self, ip, key_name):
-        # TODO: set a more reasonable connection timeout time
-        key = RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
-        client = SSHClient()
+        # TODO(devcamcar): set a more reasonable connection timeout time
+        key = paramiko.RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
+        client = paramiko.SSHClient()
         client.load_system_host_keys()
-        client.set_missing_host_key_policy(WarningPolicy())
+        client.set_missing_host_key_policy(paramiko.WarningPolicy())
         client.connect(ip, username='root', pkey=key)
         stdin, stdout, stderr = client.exec_command('uptime')
         print 'uptime: ', stdout.read()
         return client
 
     def can_ping(self, ip):
-        return getstatusoutput('ping -c 1 %s' % ip)[0] == 0
+        return commands.getstatusoutput('ping -c 1 %s' % ip)[0] == 0
 
     @property
     def admin(self):
-        return admin.connection_for('admin')
+        return nova_admin.connection_for('admin')
 
     def connection_for(self, username):
-        return admin.connection_for(username)
+        return nova_admin.connection_for(username)
 
     def create_user(self, username):
-        return admin.create_user(username)
+        return nova_admin.create_user(username)
 
     def get_user(self, username):
-        return admin.get_user(username)
+        return nova_admin.get_user(username)
 
     def delete_user(self, username):
-        return admin.delete_user(username)
+        return nova_admin.delete_user(username)
 
     def get_signed_zip(self, username):
-        return admin.get_zip(username)
+        return nova_admin.get_zip(username)
 
     def create_key_pair(self, conn, key_name):
         try:
@@ -81,7 +89,7 @@ class NovaTestCase(unittest.TestCase):
         cmd = 'euca-bundle-image -i %s' % image
         if kernel:
             cmd += ' --kernel true'
-        status, output = getstatusoutput(cmd)
+        status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
@@ -89,7 +97,7 @@ class NovaTestCase(unittest.TestCase):
 
     def upload_image(self, bucket_name, image):
         cmd = 'euca-upload-bundle -b %s -m /tmp/%s.manifest.xml' % (bucket_name, image)
-        status, output = getstatusoutput(cmd)
+        status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
@@ -97,14 +105,14 @@ class NovaTestCase(unittest.TestCase):
 
     def delete_bundle_bucket(self, bucket_name):
         cmd = 'euca-delete-bundle --clear -b %s' % (bucket_name)
-        status, output = getstatusoutput(cmd)
+        status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n%s' % (cmd, output)
             raise Exception(output)
         return True
 
     def register_image(self, bucket_name, manifest):
-        conn = admin.connection_for('admin')
+        conn = nova_admin.connection_for('admin')
         return conn.register_image("%s/%s.manifest.xml" % (bucket_name, manifest))
 
     def setUp_test_image(self, image, kernel=False):
