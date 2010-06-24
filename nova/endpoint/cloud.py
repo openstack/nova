@@ -490,7 +490,7 @@ class CloudController(object):
             # TODO(ja): add ari, aki
             inst['image_id'] = kwargs['image_id']
             inst['user_data'] = kwargs.get('user_data', '')
-            inst['instance_type'] = kwargs.get('instance_type', '')
+            inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id
             inst['launch_time'] = launch_time
             inst['key_data'] = key_data or ''

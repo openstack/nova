@@ -63,6 +63,7 @@ class CloudPipe(object):
             user_data=zippy.read().encode("base64").encode("base64"),
             max_count=1,
             min_count=1,
+            instance_type='m1.tiny',
             image_id=FLAGS.vpn_image_id,
             key_name=key_name,
             security_groups=["vpn-secgroup"])
