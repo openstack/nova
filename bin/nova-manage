@@ -260,7 +260,9 @@ if __name__ == '__main__':
     # call the action with the remaining arguments
     try:
         fn(*argv)
+        sys.exit(0)
     except TypeError:
         print "Wrong number of arguments supplied"
         print "%s %s: %s" % (category, action, fn.__doc__)
+        sys.exit(2)
 
