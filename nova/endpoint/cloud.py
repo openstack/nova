@@ -304,7 +304,7 @@ class CloudController(object):
         return image
 
     def _get_instance(self, context, instance_id):
-        for instance in self.instances:
+        for instance in self.instdir.all:
             if instance['instance_id'] == instance_id:
                 if context.user.is_admin() or instance['project_id'] == context.project.id:
                     return instance
