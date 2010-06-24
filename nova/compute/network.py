@@ -103,6 +103,9 @@ class BaseNetwork(datastore.RedisModel):
     def broadcast(self):
         return self.network.broadcast()
     @property
+    def gateway(self):
+        return self.network[1]
+    @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
 
