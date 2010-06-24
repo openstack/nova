@@ -163,8 +163,7 @@ class SecurityTests(NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username + '_me')
         self.create_user(test_username + '_you')
-        data['kernel_id'] = 'aki-EAB510D9'
-        data['image_id'] = 'ami-25CB1213'
+        data['image_id'] = 'ami-tiny'
 
     def test_001_me_can_create_keypair(self):
         conn = self.connection_for(test_username + '_me')
@@ -178,7 +177,7 @@ class SecurityTests(NovaTestCase):
 
     def test_003_me_can_create_instance_with_keypair(self):
         conn = self.connection_for(test_username + '_me')
-        reservation = conn.run_instances(data['image_id'], kernel_id=data['kernel_id'], key_name=test_key)
+        reservation = conn.run_instances(data['image_id'], key_name=test_key)
         self.assertEqual(len(reservation.instances), 1)
         data['my_instance_id'] = reservation.instances[0].id
 
@@ -201,15 +200,13 @@ class SecurityTests(NovaTestCase):
         print data['my_private_ip'],
 
     def test_005_can_ping_private_ip(self):
-        # allow 30 seconds for PING to work
-        print "ping -c1 -w1 %s" % data['my_private_ip']
         for x in xrange(120):
             # ping waits for 1 second
             status, output = getstatusoutput("ping -c1 -w1 %s" % data['my_private_ip'])
             if status == 0:
                  break
         else:
-            self.assert_(False)
+            self.assert_("could not ping instance")
     #def test_005_me_cannot_ssh_when_unauthorized(self):
     #    self.assertRaises(SSHException, self.connect_ssh, data['my_private_ip'], 'mykey')
 
@@ -226,16 +223,8 @@ class SecurityTests(NovaTestCase):
     #    )
 
     def test_007_me_can_ssh_when_authorized(self):
-        # Wait for the instance to ACTUALLY have ssh ru/nning
-        for x in xrange(120):
-            try:
-                conn = self.connect_ssh(data['my_private_ip'], test_key)
-                conn.close()
-                break
-            except:
-                time.sleep(1)
-        else:
-            self.assertTrue(False)
+        conn = self.connect_ssh(data['my_private_ip'], test_key)
+        conn.close()
 
     #def test_008_me_can_revoke_ssh_authorization(self):
     #    conn = self.connection_for('me')
@@ -275,7 +264,6 @@ class SecurityTests(NovaTestCase):
         self.delete_user(test_username + '_me')
         self.delete_user(test_username + '_you')
         #self.tearDown_test_image(conn, data['image_id'])
-        #self.tearDown_test_image(conn, data['kernel_id'])
 
 # TODO: verify wrt image boots
 #       build python into wrt image
@@ -323,10 +311,10 @@ class RebundlingTests(NovaTestCase):
         conn = self.connect_ssh(data['my_private_ip'], 'mykey')
         stdin, stdout = conn.exec_command('python ~/smoketests/register-image.py')
         conn.close()
-        if re.matches('emi-{\w+}', stdout):
+        if re.matches('ami-{\w+}', stdout):
             data['my_image_id'] = stdout.strip()
         else:
-            self.fail('expected emi-nnnnnn, got:\n ' + stdout)
+            self.fail('expected ami-nnnnnn, got:\n ' + stdout)
 
     def test_005_you_cannot_see_my_private_image(self):
         conn = self.connection_for('you')
@@ -356,15 +344,13 @@ class RebundlingTests(NovaTestCase):
 # Test elastic IPs
 class ElasticIPTests(NovaTestCase):
     def test_000_setUp(self):
-        data['kernel_id'] = 'aki-EAB510D9'
-        data['image_id'] = 'ami-25CB1213'
+        data['image_id'] = 'ami-tiny'
 
         self.create_user('me')
         conn = self.connection_for('me')
         self.create_key_pair(conn, 'mykey')
 
         conn = self.connection_for('admin')
-        #data['kernel_id'] = self.setUp_test_image(KERNEL_FILENAME, kernel=True)
         #data['image_id'] = self.setUp_test_image(IMAGE_FILENAME)
 
     def test_001_me_can_launch_image_with_keypair(self):
@@ -397,7 +383,6 @@ class ElasticIPTests(NovaTestCase):
 
         conn = self.connection_for('admin')
         #self.tearDown_test_image(conn, data['image_id'])
-        #self.tearDown_test_image(conn, data['kernel_id'])
         data = {}
 
 ZONE = 'nova'

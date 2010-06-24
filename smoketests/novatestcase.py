@@ -34,7 +34,7 @@ class NovaTestCase(unittest.TestCase):
         client = SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(WarningPolicy())
-        client.connect(ip, username='ubuntu', pkey=key)
+        client.connect(ip, username='root', pkey=key)
         stdin, stdout, stderr = client.exec_command('uptime')
         print 'uptime: ', stdout.read()
         return client
