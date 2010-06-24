@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
+sudo ifconfig -a | grep br | grep -v bridge | cut -f1 -d" " | xargs -n1 -ifoo brctl delbr foo
+sudo ifconfig -a | grep vlan | grep -v vlan124 | grep -v vlan5 | cut -f1 -d" " | xargs -n1 -ifoo ifconfig foo down
+sudo ifconfig -a | grep vlan | grep -v vlan124 | grep -v vlan5 | cut -f1 -d" " | xargs -n1 -ifoo vconfig rem foo
