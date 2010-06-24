@@ -32,8 +32,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.flags(fake_libvirt=True,
                    fake_storage=True,
                    fake_network=True,
-                   network_size=32,
-                   redis_db=8)
+                   network_size=32)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = users.UserManager.instance()
         try:

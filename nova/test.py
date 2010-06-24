@@ -103,6 +103,9 @@ class BaseTestCase(TrialTestCase):
         self._waiting = None
         self._doneWaiting = False
         self._timedOut = False
+        self.flags(redis_db=8)
+        r = datastore.Redis.instance()
+        r.flushdb()
         self.set_up()
 
     def set_up(self):
@@ -118,6 +121,8 @@ class BaseTestCase(TrialTestCase):
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
         self.tear_down()
+        r = datastore.Redis.instance()
+        r.flushdb()
 
     def _waitForTest(self, timeout=60):
         """ Push the ioloop along to wait for our test to complete. """

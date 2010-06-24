@@ -34,8 +34,7 @@ class UserTestCase(test.BaseTestCase):
     def setUp(self):
         super(UserTestCase, self).setUp()
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   redis_db=8)
+                   fake_storage=True)
         self.users = users.UserManager.instance()
 
     def test_001_can_create_users(self):

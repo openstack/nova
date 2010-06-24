@@ -41,8 +41,7 @@ class StorageTestCase(test.TrialTestCase):
         self.mynode = node.Node()
         self.mystorage = None
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   redis_db=8)
+                   fake_storage=True)
         if FLAGS.fake_storage:
             self.mystorage = storage.FakeBlockStore()
         else:

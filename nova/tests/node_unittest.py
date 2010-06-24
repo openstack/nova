@@ -56,8 +56,7 @@ class NodeConnectionTestCase(test.TrialTestCase):
         super(NodeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
-                   fake_users=True,
-                    redis_db=8)
+                   fake_users=True)
         self.node = node.Node()
 
     def create_instance(self):
