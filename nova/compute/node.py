@@ -323,7 +323,8 @@ class Instance(object):
 
     @property
     def state(self):
-        return self.datamodel['state']
+        # it is a string in datamodel
+        return int(self.datamodel['state'])
 
     @property
     def name(self):
