@@ -56,9 +56,9 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
 
     mbr_last = 62 # a
     primary_first = mbr_last + 1 # b
-    primary_last = primary_first + primary_sectors # c
+    primary_last = primary_first + primary_sectors - 1 # c
     local_first = primary_last + 1 # d
-    local_last = local_first + local_sectors # e
+    local_last = local_first + local_sectors - 1 # e
     last_sector = local_last # e
 
     # create an empty file
