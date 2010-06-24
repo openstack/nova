@@ -1,3 +1,12 @@
+nova (0.2.2-1) UNRELEASED; urgency=low
+
+  * First release based on nova/cc
+  * Major rewrites to volumes and instances
+  * Addition of cloudpipe and rbac
+  * Major bugfixes
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 02 Jun 2010 17:42:00 -0700
+
 nova (0.2.1-1) UNRELEASED; urgency=low
 
   * Support ephemeral (local) space for instances
