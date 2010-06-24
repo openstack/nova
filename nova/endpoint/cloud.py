@@ -478,7 +478,9 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-
+        # TODO: Get the real security group of launch in here
+        security_group = "default"
+        bridge_name = network.BridgedNetwork.get_network_for_project(context.user.id, context.project.id, security_group)['bridge_name']
         for num in range(int(kwargs['max_count'])):
             inst = self.instdir.new()
             # TODO(ja): add ari, aki
@@ -496,7 +498,7 @@ class CloudController(object):
             address = network.allocate_ip(
                         inst['user_id'], inst['project_id'], mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
-            inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'], 'default')['bridge_name']
+            inst['bridge_name'] = bridge_name
             # TODO: allocate expresses on the router node
             inst.save()
             rpc.cast(FLAGS.compute_topic,
