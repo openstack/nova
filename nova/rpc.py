@@ -68,7 +68,7 @@ class Consumer(messaging.Consumer):
             io_inst = ioloop.IOLoop.instance()
 
         injected = ioloop.PeriodicCallback(
-            lambda: self.fetch(enable_callbacks=True), 1, io_loop=io_inst)
+            lambda: self.fetch(enable_callbacks=True), 100, io_loop=io_inst)
         injected.start()
         return injected
 
@@ -80,7 +80,7 @@ class Consumer(messaging.Consumer):
 
     def attach_to_twisted(self):
         loop = task.LoopingCall(self.fetch, enable_callbacks=True)
-        loop.start(interval=0.01)
+        loop.start(interval=0.1)
 
 class Publisher(messaging.Publisher):
     pass
