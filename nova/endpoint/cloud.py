@@ -340,22 +340,21 @@ class CloudController(object):
     def detach_volume(self, context, volume_id, **kwargs):
         volume = self._get_volume(context, volume_id)
         instance_id = volume.get('instance_id', None)
+        if not instance_id:
+            raise exception.Error("Volume isn't attached to anything!")
         if volume['status'] == "available":
             raise exception.Error("Volume is already detached")
-        volume.start_detach()
-        if instance_id:
-            try:
-                instance = self._get_instance(context, instance_id)
-                rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
+        try:
+            volume.start_detach()
+            instance = self._get_instance(context, instance_id)
+            rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                                 {"method": "detach_volume",
                                  "args" : {"instance_id": instance_id,
-                                           "mountpoint": volume['mountpoint']}})
-            except exception.NotFound:
-                # If the instance doesn't exist anymore,
-                # then we need to call detach blind
-                volume.finish_detach()
-        else:
-            raise exception.Error("Volume isn't attached to anything!")
+                                           "volume_id": volume_id}})
+        except exception.NotFound:
+            # If the instance doesn't exist anymore,
+            # then we need to call detach blind
+            volume.finish_detach()
         return defer.succeed({'attachTime' : volume['attachTime'],
                               'device' : volume['mountpoint'],
                               'instanceId' : instance_id,
