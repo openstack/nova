@@ -54,5 +54,6 @@ sed -i -e s/max-clients\ 1/max-clients\ 10/g server.conf
 
 echo "\npush \"route 10.255.255.1 255.255.255.255 $GATEWAY\"\n" >> server.conf
 echo "\npush \"route 10.255.255.253 255.255.255.255 $GATEWAY\"\n" >> server.conf
+echo "\nduplicate-cn\n" >> server.conf
 
 /etc/init.d/openvpn start
