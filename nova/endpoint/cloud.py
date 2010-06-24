@@ -593,6 +593,7 @@ class CloudController(object):
 
         return defer.succeed({'imageId': image_id})
 
+    @rbac.allow('all')
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
@@ -613,8 +614,8 @@ class CloudController(object):
             raise exception.ApiError('attribute not supported: %s' % attribute)
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
             raise exception.ApiError('only group "all" is supported')
-        if not operation_type in ['add', 'delete']:
-            raise exception.ApiError('operation_type must be add or delete')
+        if not operation_type in ['add', 'remove']:
+            raise exception.ApiError('operation_type must be add or remove')
         result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
 
