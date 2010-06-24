@@ -25,11 +25,16 @@ from nova import flags
 from nova import utils
 from nova.auth import users
 from nova.compute import model
+from nova.compute import network
 from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 import time
 
 FLAGS = flags.FLAGS
+
+class NetworkCommands(object):
+    def restart(self):
+        network.restart_nets()
 
 class VpnCommands(object):
     def __init__(self):
@@ -154,6 +159,7 @@ def usage(script_name):
 
 
 categories = [
+    ('network', NetworkCommands),
     ('user', UserCommands),
     ('project', ProjectCommands),
     ('vpn', VpnCommands),
