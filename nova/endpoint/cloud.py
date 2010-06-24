@@ -95,8 +95,21 @@ class CloudController(object):
     def get_instance_by_ip(self, ip):
         return self.instdir.by_ip(ip)
 
+    def _get_mpi_data(self, project_id):
+        result = {}
+        for node_name, node in self.instances.iteritems():
+            for instance in node.values():
+                if instance['project_id'] == project_id:
+                    line = '%s slots=%d' % (instance['private_dns_name'], instance.get('vcpus', 0))
+                    if instance['key_name'] in result:
+                        result[instance['key_name']].append(line)
+                    else:
+                        result[instance['key_name']] = [line]
+        return result
+
     def get_metadata(self, ip):
         i = self.get_instance_by_ip(ip)
+        mpi = self._get_mpi_data(i['project_id'])
         if i is None:
             return None
         if i['key_name']:
@@ -135,7 +148,8 @@ class CloudController(object):
                 'public-keys' : keys,
                 'ramdisk-id': i.get('ramdisk_id', ''),
                 'reservation-id': i['reservation_id'],
-                'security-groups': i.get('groups', '')
+                'security-groups': i.get('groups', ''),
+                'mpi': mpi
             }
         }
         if False: # TODO: store ancestor ids
