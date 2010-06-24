@@ -556,7 +556,7 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for i in instance_id:
             instance = self._get_instance(context, i)
-            rpc.cast('%s.%s' % (FLAGS.node_topic, instance['node_name']),
+            rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "reboot_instance",
                               "args" : {"instance_id": i}})
         return defer.succeed(True)
