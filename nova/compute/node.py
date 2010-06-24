@@ -475,8 +475,9 @@ class Instance(object):
            yield _fetch_file(data['kernel_id'], basepath('kernel'))
         if not os.path.exists(basepath('ramdisk')):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
-             
-        execute = lambda x: self._pool.simpleExecute(x, error_ok=1)
+
+        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd, input=input, error_ok=1)
+
         if data['key_data']:
             logging.info('Injecting key data into image %s', data['image_id'])
             yield disk.inject_key(
