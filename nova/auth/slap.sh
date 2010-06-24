@@ -213,6 +213,32 @@ description: Special account for authenticating users
 userPassword: {MD5}TLnIqASP0CKUR3/LGkEZGg==
 objectClass: account
 objectClass: simpleSecurityObject
+
+# create the sysadmin entry
+
+dn: cn=sysadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: sysadmins
+description: IT admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=netadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: netadmins
+description: Network admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=cloudadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: cloudadmins
+description: Cloud admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=itsec,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: itsec
+description: IT security users group
+member: uid=admin,ou=Users,dc=example,dc=com
 BASE_LDIF_EOF
 
 /etc/init.d/slapd stop
