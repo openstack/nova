@@ -263,7 +263,7 @@ class Instance(object):
             data['user_id'] = data['owner_id']
             data['project_id'] = data['owner_id']
         self.datamodel = data
-        
+
         size = data.get('instance_type', FLAGS.default_instance_type)
         if size not in INSTANCE_TYPES:
             raise exception.Error('invalid instance type: %s' % size)
@@ -284,12 +284,12 @@ class Instance(object):
         #self.datamodel.setdefault('key_data', None)
         #self.datamodel.setdefault('key_name', None)
         #self.datamodel.setdefault('addressing_type', None)
-                                
+
         # TODO(joshua) - The ugly non-flat ones
         self.datamodel['groups'] = data.get('security_group', 'default')
         # TODO(joshua): Support product codes somehow
         self.datamodel.setdefault('product_codes', None)
-        
+
         self.datamodel.save()
         logging.debug("Finished init of Instance with id of %s" % name)
 
@@ -395,7 +395,7 @@ class Instance(object):
         timer.f = _wait_for_shutdown
         timer.start(interval=0.5, now=True)
         return d
-        
+
     def _cleanup(self):
         target = os.path.abspath(self.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
@@ -413,7 +413,7 @@ class Instance(object):
         self.set_state(Instance.NOSTATE, 'rebooting')
         yield self._conn.lookupByName(self.name).destroy()
         self._conn.createXML(self.toXml(), 0)
-        
+
         d = defer.Deferred()
         timer = task.LoopingCall(f=None)
         def _wait_for_reboot():

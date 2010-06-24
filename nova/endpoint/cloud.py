@@ -367,6 +367,8 @@ class CloudController(object):
     def _convert_to_set(self, lst, str):
         if lst == None or lst == []:
             return None
+        if not isinstance(lst, list):
+            lst = [lst]
         return [{str: x} for x in lst]
 
     @rbac.allow('all')
