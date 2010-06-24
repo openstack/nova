@@ -98,14 +98,13 @@ class CloudController(object):
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for node_name, node in self.instances.iteritems():
-            for instance in node.values():
-                if instance['project_id'] == project_id:
-                    line = '%s slots=%d' % (instance['private_dns_name'], instance.get('vcpus', 0))
-                    if instance['key_name'] in result:
-                        result[instance['key_name']].append(line)
-                    else:
-                        result[instance['key_name']] = [line]
+        for instance in self.instdir.all:
+            if instance['project_id'] == project_id:
+                line = '%s slots=%d' % (instance['private_dns_name'], instance.get('vcpus', 0))
+                if instance['key_name'] in result:
+                    result[instance['key_name']].append(line)
+                else:
+                    result[instance['key_name']] = [line]
         return result
 
     def get_metadata(self, ip):
@@ -365,7 +364,7 @@ class CloudController(object):
 
     def _format_instances(self, context, reservation_id = None):
         reservations = {}
-        for instance in self.instances:
+        for instance in self.instdir.all:
             res_id = instance.get('reservation_id', 'Unknown')
             if ((context.user.is_admin() or context.project.id == instance['project_id'])
                 and (reservation_id == None or reservation_id == res_id)):
