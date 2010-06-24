@@ -423,24 +423,23 @@ class VolumeTests(NovaTestCase):
 
     def test_003_me_can_mount_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        stdin, stdout, stderr = conn.exec_command('sudo bash -c "mkdir -p /mnt/vol && mkfs.ext3 %s && mount %s /mnt/vol && echo success"' % (DEVICE, DEVICE))
+        stdin, stdout, stderr = conn.exec_command('mkdir -p /mnt/vol && mkfs.ext3 %s && mount %s /mnt/vol && echo success' % (DEVICE, DEVICE))
         out = stdout.read()
         conn.close()
         if not out.strip().endswith('success'):
             self.fail('Unable to mount: %s %s' % (out, stderr.read()))
 
     def test_004_me_can_write_to_volume(self):
-            conn = self.connect_ssh(data['private_ip'], test_key)
-            # FIXME: This doesn't fail if the volume hasn't been mounted
-            stdin, stdout, stderr = conn.exec_command('sudo bash -c "echo hello > /mnt/vol/test.txt"')
-            err = stderr.read()
-            conn.close()
-            if len(err) > 0:
-                self.fail('Unable to write to mount: %s' % (err))
+        conn = self.connect_ssh(data['private_ip'], test_key)
+        # FIXME: This doesn't fail if the volume hasn't been mounted
+        stdin, stdout, stderr = conn.exec_command('echo hello > /mnt/vol/test.txt')
+        err = stderr.read()
+        conn.close()
+        if len(err) > 0:
+            self.fail('Unable to write to mount: %s' % (err))
 
     def test_005_volume_is_correct_size(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        # FIXME: This doesn't fail if the volume hasn't been mounted
         stdin, stdout, stderr = conn.exec_command("df -h | grep %s | awk {'print $2'}" % DEVICE)
         out = stdout.read()
         conn.close()
@@ -449,7 +448,7 @@ class VolumeTests(NovaTestCase):
 
     def test_006_me_can_umount_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        stdin, stdout, stderr = conn.exec_command('sudo umount /mnt/vol')
+        stdin, stdout, stderr = conn.exec_command('umount /mnt/vol')
         err = stderr.read()
         conn.close()
         if len(err) > 0:
