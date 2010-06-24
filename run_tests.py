@@ -44,6 +44,7 @@ from twisted.scripts import trial as trial_script
 from nova import flags
 from nova import twistd
 
+from nova.tests.access_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
 from nova.tests.keeper_unittest import *

@@ -99,6 +99,16 @@ class UserTestCase(test.BaseTestCase):
         users = self.users.get_users()
         self.assertTrue(filter(lambda u: u.id == 'test1', users))
 
+    def test_101_can_add_user_role(self):
+        self.assertFalse(self.users.has_role('test1', 'itsec'))
+        self.users.add_role('test1', 'itsec')
+        self.assertTrue(self.users.has_role('test1', 'itsec'))
+
+    def test_199_can_remove_user_role(self):
+        self.assertTrue(self.users.has_role('test1', 'itsec'))
+        self.users.remove_role('test1', 'itsec')
+        self.assertFalse(self.users.has_role('test1', 'itsec'))
+
     def test_201_can_create_project(self):
         project = self.users.create_project('testproj', 'test1', 'A test project', ['test1'])
         self.assertTrue(filter(lambda p: p.name == 'testproj', self.users.get_projects()))
@@ -150,6 +160,22 @@ class UserTestCase(test.BaseTestCase):
             self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
         else:
             self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
+
+    def test_210_can_add_project_role(self):
+        project = self.users.get_project('testproj')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        self.users.add_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        project.add_role('test1', 'sysadmin')
+        self.assertTrue(project.has_role('test1', 'sysadmin'))
+
+    def test_211_can_remove_project_role(self):
+        project = self.users.get_project('testproj')
+        self.assertTrue(project.has_role('test1', 'sysadmin'))
+        project.remove_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        self.users.remove_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
 
     def test_299_can_delete_project(self):
         self.users.delete_project('testproj')

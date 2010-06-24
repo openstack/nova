@@ -58,6 +58,10 @@ flags.DEFINE_string('role_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU for 
 # mapping with these flags is necessary because we're going to tie in to an existing ldap schema
 flags.DEFINE_string('ldap_cloudadmin',
     'cn=cloudadmins,ou=Groups,dc=example,dc=com', 'cn for Cloud Admins')
+flags.DEFINE_string('ldap_sysadmin',
+    'cn=sysadmins,ou=Groups,dc=example,dc=com', 'cn for Sysadmins')
+flags.DEFINE_string('ldap_netadmin',
+    'cn=netadmins,ou=Groups,dc=example,dc=com', 'cn for NetAdmins')
 
 # a user with one of these roles will be a superuser and have access to all api commands
 flags.DEFINE_list('superuser_roles', ['cloudadmin'], 'roles that ignore rbac checking completely')
