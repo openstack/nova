@@ -515,6 +515,14 @@ class LDAPWrapper(object):
             return None
         return objects[0]
 
+    def find_dns(self, dn, query = None):
+        try:
+            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
+        except Exception:
+            return []
+        # just return the dns
+        return [x[0] for x in res]
+
     def find_objects(self, dn, query = None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
@@ -539,9 +547,11 @@ class LDAPWrapper(object):
         attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(!(objectclass=NovaProject)))')
         return [self.__to_group(attr) for attr in attrs]
 
-    def find_groups_with_member(self, tree, dn):
-        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(member=%s))' % dn )
-        return [self.__to_group(attr) for attr in attrs]
+    def find_group_dns_with_member(self, tree, uid):
+        dns = self.find_dns(tree,
+                            '(&(objectclass=groupOfNames)(member=%s))' %
+                            self.__uid_to_dn(uid) )
+        return dns
 
     def find_user(self, uid):
         attr = self.find_object(self.__uid_to_dn(uid), '(objectclass=novaUser)')
@@ -717,29 +727,32 @@ class LDAPWrapper(object):
             raise exception.NotFound("User %s can't be removed from the group because the user doesn't exist" % (uid,))
         if not self.is_in_group(uid, group_dn):
             raise exception.NotFound("User %s is not a member of the group" % (uid,))
+        self._safe_remove_from_group(group_dn, uid)
+
+    def _safe_remove_from_group(self, group_dn, uid):
+        # FIXME(vish): what if deleted user is a project manager?
         attr = [
             (ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))
         ]
         try:
             self.conn.modify_s(group_dn, attr)
         except ldap.OBJECT_CLASS_VIOLATION:
-            logging.debug("Attempted to remove the last member of a group.  Deleting the group instead.")
+            logging.debug("Attempted to remove the last member of a group. "
+                          "Deleting the group at %s instead." % group_dn )
             self.delete_group(group_dn)
 
     def remove_from_all(self, uid):
-        # FIXME(vish): what if deleted user is a project manager?
         if not self.user_exists(uid):
             raise exception.NotFound("User %s can't be removed from all because the user doesn't exist" % (uid,))
         dn = self.__uid_to_dn(uid)
-        attr = [
-            (ldap.MOD_DELETE, 'member', dn)
-        ]
-        roles = self.find_groups_with_member(FLAGS.role_ldap_subtree, dn)
-        for role in roles:
-            self.conn.modify_s('cn=%s,%s' % (role.id, FLAGS.role_ldap_subtree), attr)
-        projects = self.find_groups_with_member(FLAGS.project_ldap_subtree, dn)
-        for project in projects:
-            self.conn.modify_s('cn=%s,%s' % (project.id, FLAGS.project_ldap_subtree), attr)
+        role_dns = self.find_group_dns_with_member(
+            FLAGS.role_ldap_subtree, uid)
+        for role_dn in role_dns:
+            self._safe_remove_from_group(role_dn, uid)
+        project_dns = self.find_group_dns_with_member(
+            FLAGS.project_ldap_subtree, uid)
+        for project_dn in project_dns:
+            self._safe_remove_from_group(project_dn, uid)
 
     def create_key_pair(self, uid, key_name, public_key, fingerprint):
         """create's a public key in the directory underneath the user"""
