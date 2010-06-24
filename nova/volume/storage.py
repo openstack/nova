@@ -186,26 +186,26 @@ class Volume(datastore.RedisModel):
         self['instance_id'] = instance_id
         self['mountpoint'] = mountpoint
         self['status'] = "in-use"
-        self['attachStatus'] = "attaching"
-        self['attachTime'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        self['deleteOnTermination'] = 'False'
+        self['attach_status'] = "attaching"
+        self['attach_time'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        self['delete_on_termination'] = 'False'
         self.save()
 
     def finish_attach(self):
         """ """
-        self['attachStatus'] = "attached"
+        self['attach_status'] = "attached"
         self.save()
 
     def start_detach(self):
         """ """
-        self['attachStatus'] = "detaching"
+        self['attach_status'] = "detaching"
         self.save()
 
     def finish_detach(self):
         self['instance_id'] = None
         self['mountpoint'] = None
         self['status'] = "available"
-        self['attachStatus'] = "detached"
+        self['attach_status'] = "detached"
         self.save()
 
     def destroy(self):

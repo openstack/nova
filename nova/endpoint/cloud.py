@@ -263,8 +263,8 @@ class CloudController(object):
                 volume.get('instance_id', ''),
                 volume.get('mountpoint', ''))
         if volume['status'] == 'attached':
-            v['attachmentSet'] = [{'attachTime': volume['attachTime'],
-                                   'deleteOnTermination': volume['deleteOnTermination'],
+            v['attachmentSet'] = [{'attachTime': volume['attach_time'],
+                                   'deleteOnTermination': volume['delete_on_termination'],
                                    'device' : volume['mountpoint'],
                                    'instanceId' : volume['instance_id'],
                                    'status' : 'attached',
@@ -329,11 +329,11 @@ class CloudController(object):
                                  "args" : {"volume_id": volume_id,
                                            "instance_id" : instance_id,
                                            "mountpoint" : device}})
-        return defer.succeed({'attachTime' : volume['attachTime'],
+        return defer.succeed({'attachTime' : volume['attach_time'],
                               'device' : volume['mountpoint'],
                               'instanceId' : instance_id,
                               'requestId' : context.request_id,
-                              'status' : volume['attachStatus'],
+                              'status' : volume['attach_status'],
                               'volumeId' : volume_id})
 
 
@@ -356,11 +356,11 @@ class CloudController(object):
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
             volume.finish_detach()
-        return defer.succeed({'attachTime' : volume['attachTime'],
+        return defer.succeed({'attachTime' : volume['attach_time'],
                               'device' : volume['mountpoint'],
                               'instanceId' : instance_id,
                               'requestId' : context.request_id,
-                              'status' : volume['attachStatus'],
+                              'status' : volume['attach_status'],
                               'volumeId' : volume_id})
 
     def _convert_to_set(self, lst, label):
