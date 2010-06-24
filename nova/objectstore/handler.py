@@ -294,7 +294,7 @@ class ImageHandler(BaseRequestHandler):
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.set_public(operation=='add')
