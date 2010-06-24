@@ -90,7 +90,7 @@ class BlockStore(object):
         #TODO: aggregate the state of the system
         pass
 
-    @validate.rangetest(size=(0, 100))
+    @validate.rangetest(size=(0, 1000))
     def create_volume(self, size, user_id, project_id):
         """
         Creates an exported volume (fake or real),
