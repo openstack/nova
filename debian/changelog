@@ -1,3 +1,10 @@
+nova (0.2.2-5) UNRELEASED; urgency=low
+
+  * Lowered message callback frequency to stop compute and volume
+    from eating tons of cpu
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 03 Jun 2010 15:21:00 -0700
+
 nova (0.2.2-4) UNRELEASED; urgency=low
 
   * Documentation fixes
