@@ -175,6 +175,7 @@ class Volume(datastore.RedisModel):
         vol.setup_export()
         # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
         # TODO(joshua
+        vol['status'] = "available"
         vol.save()
         return vol
 

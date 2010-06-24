@@ -55,6 +55,7 @@ from nova.tests.process_unittest import *
 from nova.tests.storage_unittest import *
 from nova.tests.users_unittest import *
 from nova.tests.datastore_unittest import *
+from nova.tests.validator_unittest import *
 
 
 FLAGS = flags.FLAGS

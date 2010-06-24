@@ -73,7 +73,7 @@ class CloudController(object):
     def volumes(self):
         """ returns a list of all volumes """
         for volume_id in datastore.Redis.instance().smembers("storage-volumes"):
-            volume = storage.Volume(volume_id=volume_id)
+            volume = storage.get_volume(volume_id)
             yield volume
 
     def __str__(self):
