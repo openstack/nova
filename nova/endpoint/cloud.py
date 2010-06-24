@@ -324,7 +324,7 @@ class CloudController(object):
         # TODO(vish): looping through all volumes is slow. We should probably maintain an index
         for vol in self.volumes:
             if vol['instance_id'] == instance_id and vol['mountpoint'] == device:
-                raise exception.ApiError("Volume %s is already attachted to %s" % (vol.volume_id, vol['mountpoint']))
+                raise exception.ApiError("Volume %s is already attached to %s" % (vol['volume_id'], vol['mountpoint']))
         volume.start_attach(instance_id, device)
         instance = self._get_instance(context, instance_id)
         compute_node = instance['node_name']

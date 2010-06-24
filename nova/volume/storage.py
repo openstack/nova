@@ -151,14 +151,12 @@ class Volume(datastore.RedisModel):
     object_type = 'volume'
 
     def __init__(self, volume_id=None):
-        self.volume_id = volume_id
         super(Volume, self).__init__(object_id=volume_id)
 
     @classmethod
     def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
         vol = cls(volume_id=volume_id)
-        #TODO(vish): do we really need to store the volume id as .object_id .volume_id and ['volume_id']?
         vol['volume_id'] = volume_id
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
@@ -224,7 +222,7 @@ class Volume(datastore.RedisModel):
         utils.runthis("Creating LV: %s", "sudo lvcreate -L %s -n %s %s" % (sizestr, self['volume_id'], FLAGS.volume_group))
 
     def _delete_lv(self):
-        utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self.volume_id))
+        utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
 
     def setup_export(self):
         (shelf_id, blade_id) = get_next_aoe_numbers()
@@ -234,7 +232,7 @@ class Volume(datastore.RedisModel):
         self.save()
         utils.runthis("Creating AOE export: %s",
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (shelf_id, blade_id, FLAGS.aoe_eth_dev, FLAGS.volume_group, self.volume_id))
+                (shelf_id, blade_id, FLAGS.aoe_eth_dev, FLAGS.volume_group, self['volume_id']))
 
     def _remove_export(self):
         utils.runthis("Stopped AOE export: %s", "sudo vblade-persist stop %s %s" % (self['shelf_id'], self['blade_id']))
