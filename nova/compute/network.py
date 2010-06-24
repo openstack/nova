@@ -160,8 +160,8 @@ class BaseNetwork(datastore.RedisModel):
     def deallocate_ip(self, ip_str):
         if not ip_str in self.assigned:
             raise exception.AddressNotAllocated()
-        self._rem_host(ip_str)
         self.deexpress(address=ip_str)
+        self._rem_host(ip_str)
 
     def list_addresses(self):
         for address in self.hosts:
