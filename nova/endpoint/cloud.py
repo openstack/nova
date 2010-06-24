@@ -37,6 +37,7 @@ from nova.auth import rbac
 from nova.auth import users
 from nova.compute import model
 from nova.compute import network
+from nova.compute import node
 from nova.endpoint import images
 from nova.volume import storage
 
@@ -100,7 +101,7 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], instance.get('vcpus', 0))
+                line = '%s slots=%d' % (instance['private_dns_name'], node.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
                 else:
