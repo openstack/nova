@@ -243,12 +243,9 @@ class FakeVolume(Volume):
         pass
 
 def get_next_aoe_numbers():
-    aoes = subprocess.Popen("sudo ls -1 /var/lib/vblade-persist/vblades/", shell=True, stdout=subprocess.PIPE).communicate()[0]
-    last_aoe = aoes.strip().split("\n")[-1]
-    if last_aoe == '':
-        last_aoe = 'e0.0'
-    logging.debug("Last aoe is %s" % (last_aoe))
-    blade_id = last_aoe.rpartition(".")[2]
+    aoes = glob.glob("/var/lib/vblade-persist/vblades/e*")
+    aoes.extend(['e0.0'])
+    blade_id = int(max([int(a.split('.')[1]) for a in aoes])) + 1
+    logging.debug("Next blade_id is %s" % (blade_id))
     shelf_id = FLAGS.shelf_id
-    blade_id = int(blade_id) + 1
     return (shelf_id, blade_id)
