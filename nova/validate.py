@@ -63,17 +63,17 @@ def typetest(**argchecks):
     
         def onCall(*pargs, **kargs):
             positionals = list(allargs)[:len(pargs)]
-            for (argname, type) in argchecks.items():
-                 if argname in kargs:
-                    if not isinstance(kargs[argname], type):
+            for (argname, typeof) in argchecks.items():
+                if argname in kargs:
+                    if not isinstance(kargs[argname], typeof):
                         errmsg = '{0} argument "{1}" not of type {2}'
-                        errmsg = errmsg.format(funcname, argname, type)
+                        errmsg = errmsg.format(funcname, argname, typeof)
                         raise TypeError(errmsg)
                 elif argname in positionals:
                     position = positionals.index(argname)
-                    if not isinstance(pargs[position], type):
-                        errmsg = '{0} argument "{1}" not of type {2}'
-                        errmsg = errmsg.format(funcname, argname, type)
+                    if not isinstance(pargs[position], typeof):
+                        errmsg = '{0} argument "{1}" with value of {2} not of type {3}'
+                        errmsg = errmsg.format(funcname, argname, pargs[position], typeof)
                         raise TypeError(errmsg)
                 else:
                     pass
