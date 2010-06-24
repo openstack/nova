@@ -24,7 +24,6 @@ from nova import vendor
 from twisted.internet import task
 from twisted.application import service
 
-from nova import flags
 from nova import twistd
 from nova.compute import monitor
 
