@@ -316,8 +316,6 @@ class CloudController(object):
         instance = self._get_instance(context, instance_id)
         compute_node = instance['node_name']
         aoe_device = volume['aoe_device']
-        # Needs to get right node controller for attaching to
-        # TODO: Maybe have another exchange that goes to everyone?
         rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
                                 {"method": "attach_volume",
                                  "args" : {"aoe_device": aoe_device,
