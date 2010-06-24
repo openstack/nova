@@ -262,7 +262,7 @@ class CloudController(object):
                 volume.get('node_name', None),
                 volume.get('instance_id', ''),
                 volume.get('mountpoint', ''))
-        if volume['status'] == 'attached':
+        if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': volume['delete_on_termination'],
                                    'device' : volume['mountpoint'],
