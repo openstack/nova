@@ -352,7 +352,7 @@ class CloudController(object):
                                  "args" : {"instance_id": instance_id,
                                            "mountpoint": volume['mountpoint']}})
             except exception.NotFound:
-                # If the instance doesn't exist anymore, 
+                # If the instance doesn't exist anymore,
                 # then we need to call detach blind
                 volume.finish_detach()
         else:
@@ -601,8 +601,8 @@ class CloudController(object):
             raise exception.ApiError('attribute not supported: %s' % attribute)
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
             raise exception.ApiError('only group "all" is supported')
-        if not operation_type in ['add', 'remove']:
-            raise exception.ApiError('operation_type must be add or remove')
+        if not operation_type in ['add', 'delete']:
+            raise exception.ApiError('operation_type must be add or delete')
         result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
 
