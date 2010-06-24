@@ -63,7 +63,7 @@ def get_volume(volume_id):
     volume_class = Volume
     if FLAGS.fake_storage:
         volume_class = FakeVolume
-    if datastore.Keeper('storage-').set_is_member('volumes', volume_id):
+    if datastore.Redis.instance().sismember('volumes', volume_id):
         return volume_class(volume_id=volume_id)
     raise exception.Error("Volume does not exist")
 
@@ -79,7 +79,6 @@ class BlockStore(object):
         if FLAGS.fake_storage:
             self.volume_class = FakeVolume
         self._init_volume_group()
-        self.keeper = datastore.Keeper('storage-')
 
     def report_state(self):
         #TODO: aggregate the state of the system
@@ -93,20 +92,20 @@ class BlockStore(object):
         """
         logging.debug("Creating volume of size: %s" % (size))
         vol = self.volume_class.create(size, user_id)
-        self.keeper.set_add('volumes', vol['volume_id'])
-        self.keeper.set_add('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
+        datastore.Redis.instance().sadd('volumes', vol['volume_id'])
+        datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         self._restart_exports()
         return vol['volume_id']
 
     def by_node(self, node_id):
         """ returns a list of volumes for a node """
-        for volume_id in self.keeper.set_members('volumes:%s' % (node_id)):
+        for volume_id in datastore.Redis.instance().smembers('volumes:%s' % (node_id)):
             yield self.volume_class(volume_id=volume_id)
 
     @property
     def all(self):
         """ returns a list of all volumes """
-        for volume_id in self.keeper.set_members('volumes'):
+        for volume_id in datastore.Redis.instance().smembers('volumes'):
             yield self.volume_class(volume_id=volume_id)
 
     def delete_volume(self, volume_id):
@@ -117,8 +116,8 @@ class BlockStore(object):
         if vol['node_name'] != FLAGS.storage_name:
             raise exception.Error("Volume is not local to this node")
         vol.destroy()
-        self.keeper.set_remove('volumes', vol['volume_id'])
-        self.keeper.set_remove('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
+        datastore.Redis.instance().srem('volumes', vol['volume_id'])
+        datastore.Redis.instance().srem('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         return True
 
     def _restart_exports(self):
