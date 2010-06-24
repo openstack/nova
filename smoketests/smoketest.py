@@ -412,6 +412,8 @@ class VolumeTests(NovaTestCase):
         volume = conn.create_volume(1, ZONE)
         self.assertEqual(volume.size, 1)
         data['volume_id'] = volume.id
+        # give network time to find volume
+        time.sleep(5)
 
     def test_002_me_can_attach_volume(self):
         conn = self.connection_for(test_username)
@@ -420,6 +422,8 @@ class VolumeTests(NovaTestCase):
             instance_id = data['instance_id'],
              device = '/dev/%s' % DEVICE
         )
+        # give instance time to recognize volume
+        time.sleep(5)
 
     def test_003_me_can_mount_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
@@ -428,10 +432,10 @@ class VolumeTests(NovaTestCase):
         stdin, stdout, stderr = conn.exec_command('grep %s /proc/partitions | `awk \'{print "mknod /dev/"$4" b "$1" "$2}\'`' % DEVICE)
         commands = []
         commands.append('mkdir -p /mnt/vol')
-        commands.append('mkfs.ext3 %s' % DEVICE)
-        commands.append('mount %s /mnt/vol' % DEVICE)
+        commands.append('mkfs.ext2 /dev/%s' % DEVICE)
+        commands.append('mount /dev/%s /mnt/vol' % DEVICE)
         commands.append('echo success')
-        stdin, stdout, stderr = conn.exec_command(commands.join(' && '))
+        stdin, stdout, stderr = conn.exec_command(' && '.join(commands))
         out = stdout.read()
         conn.close()
         if not out.strip().endswith('success'):
@@ -451,7 +455,7 @@ class VolumeTests(NovaTestCase):
         stdin, stdout, stderr = conn.exec_command("df -h | grep %s | awk {'print $2'}" % DEVICE)
         out = stdout.read()
         conn.close()
-        if not out.strip() == '1008M':
+        if not out.strip() == '1007.9M':
             self.fail('Volume is not the right size: %s %s' % (out, stderr.read()))
 
     def test_006_me_can_umount_volume(self):
