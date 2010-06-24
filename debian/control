@@ -34,6 +34,11 @@ Architecture: all
 Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
 Description: Nova object store
 
+Package: nova-instancemonitor
+Architecture: all
+Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
+Description: Nova instance monitor
+
 Package: nova-tools
 Architecture: all
 Depends: python-boto, ${python:Depends}, ${misc:Depends}
