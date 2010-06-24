@@ -1,12 +1,12 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # Copyright [2010] [Anso Labs, LLC]
-# 
+#
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
-# 
+#
 #        http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,15 +14,6 @@
 #    limitations under the License.
 
 import logging
-import StringIO
-import time
-import unittest
-from xml.etree import ElementTree
-
-from nova import vendor
-import mox
-from tornado import ioloop
-from twisted.internet import defer
 
 from nova import exception
 from nova import flags
@@ -50,7 +41,8 @@ class StorageTestCase(test.TrialTestCase):
     def test_run_create_volume(self):
         vol_size = '0'
         user_id = 'fake'
-        volume_id = self.mystorage.create_volume(vol_size, user_id)
+        project_id = 'fake'
+        volume_id = self.mystorage.create_volume(vol_size, user_id, project_id)
         # TODO(termie): get_volume returns differently than create_volume
         self.assertEqual(volume_id,
                          storage.get_volume(volume_id)['volume_id'])
@@ -59,22 +51,24 @@ class StorageTestCase(test.TrialTestCase):
         self.assertRaises(exception.Error,
                           storage.get_volume,
                           volume_id)
-                          
+
     def test_too_big_volume(self):
         vol_size = '1001'
         user_id = 'fake'
+        project_id = 'fake'
         self.assertRaises(TypeError,
                           self.mystorage.create_volume,
-                          vol_size, user_id)
+                          vol_size, user_id, project_id)
 
     def test_run_attach_detach_volume(self):
         # Create one volume and one node to test with
         instance_id = "storage-test"
         vol_size = "5"
         user_id = "fake"
+        project_id = 'fake'
         mountpoint = "/dev/sdf"
-        volume_id = self.mystorage.create_volume(vol_size, user_id)
-        
+        volume_id = self.mystorage.create_volume(vol_size, user_id, project_id)
+
         volume_obj = storage.get_volume(volume_id)
         volume_obj.start_attach(instance_id, mountpoint)
         rv = yield self.mynode.attach_volume(volume_id,
@@ -84,7 +78,7 @@ class StorageTestCase(test.TrialTestCase):
         self.assertEqual(volume_obj['attachStatus'], "attached")
         self.assertEqual(volume_obj['instance_id'], instance_id)
         self.assertEqual(volume_obj['mountpoint'], mountpoint)
-        
+
         self.assertRaises(exception.Error,
                           self.mystorage.delete_volume,
                           volume_id)
@@ -92,12 +86,12 @@ class StorageTestCase(test.TrialTestCase):
         rv = yield self.mystorage.detach_volume(volume_id)
         volume_obj = storage.get_volume(volume_id)
         self.assertEqual(volume_obj['status'], "available")
-        
+
         rv = self.mystorage.delete_volume(volume_id)
         self.assertRaises(exception.Error,
                           storage.get_volume,
                           volume_id)
-                          
+
     def test_multi_node(self):
         # TODO(termie): Figure out how to test with two nodes,
         # each of them having a different FLAG for storage_node

@@ -279,7 +279,8 @@ class CloudController(object):
         # TODO(vish): refactor this to create the volume object here and tell storage to create it
         res = rpc.call(FLAGS.storage_topic, {"method": "create_volume",
                                  "args" : {"size": size,
-                                           "user_id": context.user.id}})
+                                           "user_id": context.user.id,
+                                           "project_id": context.project.id}})
         def _format_result(result):
             volume = self._get_volume(context, result['result'])
             return {'volumeSet': [self.format_volume(context, volume)]}

@@ -71,7 +71,7 @@ def get_volume(volume_id):
 class BlockStore(object):
     """
     There is one BlockStore running on each volume node.
-    However, each BlockStore can report on the state of 
+    However, each BlockStore can report on the state of
     *all* volumes in the cluster.
     """
     def __init__(self):
@@ -86,14 +86,14 @@ class BlockStore(object):
         pass
 
     @validate.rangetest(size=(0, 100))
-    def create_volume(self, size, user_id):
+    def create_volume(self, size, user_id, project_id):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = self.volume_class.create(size, user_id)
+        vol = self.volume_class.create(size, user_id, project_id)
         datastore.Redis.instance().sadd('volumes', vol['volume_id'])
         datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         self._restart_exports()
@@ -155,7 +155,7 @@ class Volume(datastore.RedisModel):
         super(Volume, self).__init__(object_id=volume_id)
 
     @classmethod
-    def create(cls, size, user_id):
+    def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
         vol = cls(volume_id=volume_id)
         #TODO(vish): do we really need to store the volume id as .object_id .volume_id and ['volume_id']?
@@ -163,6 +163,7 @@ class Volume(datastore.RedisModel):
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
         vol['user_id'] = user_id
+        vol['project_id'] = project_id
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol["instance_id"] = 'none'
         vol["mountpoint"] = 'none'
@@ -185,26 +186,26 @@ class Volume(datastore.RedisModel):
         self['instance_id'] = instance_id
         self['mountpoint'] = mountpoint
         self['status'] = "in-use"
-        self['attachStatus'] = "attaching" 
+        self['attachStatus'] = "attaching"
         self['attachTime'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         self['deleteOnTermination'] = 'False'
         self.save()
-        
+
     def finish_attach(self):
         """ """
-        self['attachStatus'] = "attached" 
+        self['attachStatus'] = "attached"
         self.save()
 
     def start_detach(self):
         """ """
-        self['attachStatus'] = "detaching" 
+        self['attachStatus'] = "detaching"
         self.save()
 
     def finish_detach(self):
         self['instance_id'] = None
         self['mountpoint'] = None
         self['status'] = "available"
-        self['attachStatus'] = "detached" 
+        self['attachStatus'] = "detached"
         self.save()
 
     def destroy(self):
