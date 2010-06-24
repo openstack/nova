@@ -386,7 +386,7 @@ class ElasticIPTests(NovaTestCase):
         data = {}
 
 ZONE = 'nova'
-DEVICE = '/dev/vdb'
+DEVICE = 'vdb'
 # Test iscsi volumes
 class VolumeTests(NovaTestCase):
     def test_000_setUp(self):
@@ -418,12 +418,20 @@ class VolumeTests(NovaTestCase):
         conn.attach_volume(
             volume_id = data['volume_id'],
             instance_id = data['instance_id'],
-            device = DEVICE
+             device = '/dev/%s' % DEVICE
         )
 
     def test_003_me_can_mount_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        stdin, stdout, stderr = conn.exec_command('mkdir -p /mnt/vol && mkfs.ext3 %s && mount %s /mnt/vol && echo success' % (DEVICE, DEVICE))
+        # HACK: the tiny image doesn't create the node properly
+        #       this will make /dev/vd* if it doesn't exist
+        stdin, stdout, stderr = conn.exec_command('grep %s /proc/partitions | `awk \'{print "mknod /dev/"$4" b "$1" "$2}\'`' % DEVICE)
+        commands = []
+        commands.append('mkdir -p /mnt/vol')
+        commands.append('mkfs.ext3 %s' % DEVICE)
+        commands.append('mount %s /mnt/vol' % DEVICE)
+        commands.append('echo success')
+        stdin, stdout, stderr = conn.exec_command(commands.join(' && '))
         out = stdout.read()
         conn.close()
         if not out.strip().endswith('success'):
