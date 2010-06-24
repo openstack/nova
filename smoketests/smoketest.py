@@ -358,7 +358,7 @@ class ElasticIPTests(NovaTestCase):
     def test_000_setUp(self):
         data['kernel_id'] = 'aki-EAB510D9'
         data['image_id'] = 'ami-25CB1213'
-        
+
         self.create_user('me')
         conn = self.connection_for('me')
         self.create_key_pair(conn, 'mykey')
@@ -402,71 +402,42 @@ class ElasticIPTests(NovaTestCase):
 
 ZONE = 'nova'
 DEVICE = '/dev/vdb'
-vol_key = test_key + 'volumekey'
 # Test iscsi volumes
 class VolumeTests(NovaTestCase):
     def test_000_setUp(self):
-        self.create_user('me')
-        data['kernel_id'] = 'aki-EAB510D9'
-        data['image_id'] = 'ami-25CB1213' # A7370FE3
+        self.create_user(test_username)
+        data['image_id'] = 'ami-tiny' # A7370FE3
 
-        conn = self.connection_for('me')
-        self.create_key_pair(conn, vol_key)
-        reservation = conn.run_instances(data['image_id'], key_name=vol_key)
-        data['my_instance_id'] = reservation.instances[0].id
-        data['my_private_ip'] = reservation.instances[0].private_dns_name
-        
-        time.sleep(60)
-        """
+        conn = self.connection_for(test_username)
+        self.create_key_pair(conn, test_key)
+        reservation = conn.run_instances(data['image_id'], size='m1.tiny', key_name=test_key)
+        data['instance_id'] = reservation.instances[0].id
+        data['private_ip'] = reservation.instances[0].private_dns_name
         # wait for instance to show up
         for x in xrange(120):
             # ping waits for 1 second
-            status, output = getstatusoutput("ping -c1 -w1 %s" % data['my_private_ip'])
+            status, output = getstatusoutput("ping -c1 -w1 %s" % data['private_ip'])
             if status == 0:
-                 break
+                  break
         else:
-            self.assertTrue(False)
-        """
+            self.fail('unable to ping instance')
+
     def test_001_me_can_create_volume(self):
-        conn = self.connection_for('me')
+        conn = self.connection_for(test_username)
         volume = conn.create_volume(1, ZONE)
         self.assertEqual(volume.size, 1)
         data['volume_id'] = volume.id
 
     def test_002_me_can_attach_volume(self):
-        # Wait for the volume to be reported to cloud
-
-        time.sleep(30)
-        conn = self.connection_for('me')
-        for x in xrange(20):
-            try:
-                conn.attach_volume(
-                    volume_id = data['volume_id'],
-                    instance_id = data['my_instance_id'],
-                    device = DEVICE
-                )
-                break
-            except:
-                time.sleep(1)
-        else:
-            self.assertTrue(False)
-
-    # fixme: test cannot delete attached volume!
+        conn = self.connection_for(test_username)
+        conn.attach_volume(
+            volume_id = data['volume_id'],
+            instance_id = data['instance_id'],
+            device = DEVICE
+        )
 
     def test_003_me_can_mount_volume(self):
-        # Wait for the instance to ACTUALLY have ssh running
-        time.sleep(20)
-        for x in xrange(5):
-            try:
-                conn = self.connect_ssh(data['my_private_ip'], vol_key)
-                break
-            except:
-                time.sleep(5)
-            else:
-                self.assertTrue(False)
-                if conn:
-                    conn.close()
-                return
+        conn = self.connect_ssh(data['private_ip'], test_key)
         stdin, stdout, stderr = conn.exec_command('sudo bash -c "mkdir -p /mnt/vol && mkfs.ext3 %s && mount %s /mnt/vol && echo success"' % (DEVICE, DEVICE))
         out = stdout.read()
         conn.close()
@@ -474,16 +445,16 @@ class VolumeTests(NovaTestCase):
             self.fail('Unable to mount: %s %s' % (out, stderr.read()))
 
     def test_004_me_can_write_to_volume(self):
-        conn = self.connect_ssh(data['my_private_ip'], vol_key)
-        # FIXME: This doesn't fail if the volume hasn't been mounted
-        stdin, stdout, stderr = conn.exec_command('sudo bash -c "echo hello > /mnt/vol/test.txt"')
-        err = stderr.read()
-        conn.close()
-        if len(err) > 0:
-            self.fail('Unable to write to mount: %s' % (err))
+            conn = self.connect_ssh(data['private_ip'], test_key)
+            # FIXME: This doesn't fail if the volume hasn't been mounted
+            stdin, stdout, stderr = conn.exec_command('sudo bash -c "echo hello > /mnt/vol/test.txt"')
+            err = stderr.read()
+            conn.close()
+            if len(err) > 0:
+                self.fail('Unable to write to mount: %s' % (err))
 
     def test_005_volume_is_correct_size(self):
-        conn = self.connect_ssh(data['my_private_ip'], vol_key)
+        conn = self.connect_ssh(data['private_ip'], test_key)
         # FIXME: This doesn't fail if the volume hasn't been mounted
         stdin, stdout, stderr = conn.exec_command("df -h | grep %s | awk {'print $2'}" % DEVICE)
         out = stdout.read()
@@ -492,7 +463,7 @@ class VolumeTests(NovaTestCase):
             self.fail('Volume is not the right size: %s %s' % (out, stderr.read()))
 
     def test_006_me_can_umount_volume(self):
-        conn = self.connect_ssh(data['my_private_ip'], vol_key)
+        conn = self.connect_ssh(data['private_ip'], test_key)
         stdin, stdout, stderr = conn.exec_command('sudo umount /mnt/vol')
         err = stderr.read()
         conn.close()
@@ -500,20 +471,20 @@ class VolumeTests(NovaTestCase):
             self.fail('Unable to unmount: %s' % (err))
 
     def test_007_me_can_detach_volume(self):
-        conn = self.connection_for('me')
+        conn = self.connection_for(test_username)
         self.assertTrue(conn.detach_volume(volume_id = data['volume_id']))
 
     def test_008_me_can_delete_volume(self):
-        conn = self.connection_for('me')
+        conn = self.connection_for(test_username)
         self.assertTrue(conn.delete_volume(data['volume_id']))
 
     def test_999_tearDown(self):
         global data
-        conn = self.connection_for('me')
-        self.delete_key_pair(conn, vol_key)
-        if data.has_key('my_instance_id'):
-            conn.terminate_instances([data['my_instance_id']])
-        self.delete_user('me')
+        conn = self.connection_for(test_username)
+        self.delete_key_pair(conn, test_key)
+        if data.has_key('instance_id'):
+            conn.terminate_instances([data['instance_id']])
+        self.delete_user(test_username)
         data = {}
 
 def build_suites():

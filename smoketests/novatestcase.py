@@ -2,7 +2,7 @@
 
 import os, unittest, sys
 from commands import getstatusoutput
-from paramiko import SSHClient, RSAKey, AutoAddPolicy
+from paramiko import SSHClient, RSAKey, WarningPolicy
 import random
 
 BUCKET_NAME = 'smoketest'
@@ -33,7 +33,7 @@ class NovaTestCase(unittest.TestCase):
         key = RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
         client = SSHClient()
         client.load_system_host_keys()
-        client.set_missing_host_key_policy(AutoAddPolicy())
+        client.set_missing_host_key_policy(WarningPolicy())
         client.connect(ip, username='ubuntu', pkey=key)
         stdin, stdout, stderr = client.exec_command('uptime')
         print 'uptime: ', stdout.read()
