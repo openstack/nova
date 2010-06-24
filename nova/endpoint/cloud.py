@@ -400,7 +400,7 @@ class CloudController(object):
             i['key_name'] = instance.get('key_name', None)
             if context.user.is_admin():
                 i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.get('owner_id', None), instance.get('node_name',''))
+                    instance.get('project_id', None), instance.get('node_name',''))
             i['product_codes_set'] = self._convert_to_set(
                 instance.get('product_codes', None), 'product_code')
             i['instance_type'] = instance.get('instance_type', None)
