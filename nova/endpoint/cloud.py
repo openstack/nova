@@ -263,6 +263,15 @@ class CloudController(object):
                 volume.get('node_name', None),
                 volume.get('instance_id', ''),
                 volume.get('mountpoint', ''))
+        if volume['status'] == 'attached':
+            v['attachmentSet'] = [{'attachTime': volume['attachTime'],
+                                   'deleteOnTermination': volume['deleteOnTermination'],
+                                   'device' : volume['mountpoint'],
+                                   'instanceId' : volume['instance_id'],
+                                   'status' : 'attached',
+                                   'volume_id' : volume['volume_id']}]
+        else:
+            v['attachmentSet'] = [{}]
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -302,54 +311,58 @@ class CloudController(object):
         raise exception.NotFound('Instance %s could not be found' % instance_id)
 
     def _get_volume(self, context, volume_id):
-        for volume in self.volumes:
-            if volume['volume_id'] == volume_id:
-                if context.user.is_admin() or volume['project_id'] == context.project.id:
-                    return volume
+        volume = storage.get_volume(volume_id)
+        if context.user.is_admin() or volume['project_id'] == context.project.id:
+            return volume
         raise exception.NotFound('Volume %s could not be found' % volume_id)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume = self._get_volume(context, volume_id)
-        storage_node = volume['node_name']
-        # TODO: (joshua) Fix volumes to store creator id
+        if volume['status'] == "attached":
+            raise exception.Error("Volume is already attached")
+        volume.start_attach(instance_id, device)
         instance = self._get_instance(context, instance_id)
         compute_node = instance['node_name']
-        aoe_device = volume['aoe_device']
         rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
-                                {"method": "attach_volume",
-                                 "args" : {"aoe_device": aoe_device,
-                                           "instance_id" : instance_id,
-                                           "mountpoint" : device}})
-        rpc.cast('%s.%s' % (FLAGS.storage_topic, storage_node),
                                 {"method": "attach_volume",
                                  "args" : {"volume_id": volume_id,
                                            "instance_id" : instance_id,
                                            "mountpoint" : device}})
-        return defer.succeed(True)
+        return defer.succeed({'attachTime' : volume['attachTime'],
+                              'device' : volume['mountpoint'],
+                              'instanceId' : instance_id,
+                              'requestId' : context.request_id,
+                              'status' : volume['attachStatus'],
+                              'volumeId' : volume_id})
 
 
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
-        # TODO(joshua): Make sure the updated state has been received first
         volume = self._get_volume(context, volume_id)
-        storage_node = volume['node_name']
-        if 'instance_id' in volume.keys():
-            instance_id = volume['instance_id']
+        instance_id = volume.get('instance_id', None)
+        if volume['status'] == "available":
+            raise exception.Error("Volume is already detached")
+        volume.start_detach()
+        if instance_id:
             try:
                 instance = self._get_instance(context, instance_id)
-                compute_node = instance['node_name']
-                mountpoint = volume['mountpoint']
-                rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
+                rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                                 {"method": "detach_volume",
                                  "args" : {"instance_id": instance_id,
-                                           "mountpoint": mountpoint}})
+                                           "mountpoint": volume['mountpoint']}})
             except exception.NotFound:
-                pass
-        rpc.cast('%s.%s' % (FLAGS.storage_topic, storage_node),
-                                {"method": "detach_volume",
-                                 "args" : {"volume_id": volume_id}})
-        return defer.succeed(True)
+                # If the instance doesn't exist anymore, 
+                # then we need to call detach blind
+                volume.finish_detach()
+        else:
+            raise exception.Error("Volume isn't attached to anything!")
+        return defer.succeed({'attachTime' : volume['attachTime'],
+                              'device' : volume['mountpoint'],
+                              'instanceId' : instance_id,
+                              'requestId' : context.request_id,
+                              'status' : volume['attachStatus'],
+                              'volumeId' : volume_id})
 
     def _convert_to_set(self, lst, str):
         if lst == None or lst == []:

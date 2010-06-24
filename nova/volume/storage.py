@@ -58,6 +58,15 @@ flags.DEFINE_boolean('fake_storage', False,
 
 # TODO(joshua) Index of volumes by project
 
+def get_volume(volume_id):
+    """ Returns a redis-backed volume object """
+    volume_class = Volume
+    if FLAGS.fake_storage:
+        volume_class = FakeVolume
+    if datastore.Keeper('storage-').set_is_member('volumes', volume_id):
+        return volume_class(volume_id=volume_id)
+    raise exception.Error("Volume does not exist")
+
 class BlockStore(object):
     """
     There is one BlockStore running on each volume node.
@@ -89,17 +98,10 @@ class BlockStore(object):
         self._restart_exports()
         return vol['volume_id']
 
-    def get_volume(self, volume_id):
-        """ Returns a redis-backed volume object """
-        if self.keeper.set_is_member('volumes', volume_id):
-            return self.volume_class(volume_id=volume_id)
-        raise exception.Error("Volume does not exist")
-
     def by_node(self, node_id):
         """ returns a list of volumes for a node """
-        for volume in self.all:
-            if volume['node_name'] == node_id:
-                yield volume
+        for volume_id in self.keeper.set_members('volumes:%s' % (node_id)):
+            yield self.volume_class(volume_id=volume_id)
 
     @property
     def all(self):
@@ -107,15 +109,9 @@ class BlockStore(object):
         for volume_id in self.keeper.set_members('volumes'):
             yield self.volume_class(volume_id=volume_id)
 
-    @property
-    def local(self):
-        """ returns a list of locally attached volumes """
-        for volume_id in self.keeper.set_members('volumes:%s' % (FLAGS.storage_name)):
-            yield self.volume_class(volume_id=volume_id)
-
     def delete_volume(self, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
-        vol = self.get_volume(volume_id)
+        vol = get_volume(volume_id)
         if vol['status'] == "attached":
             raise exception.Error("Volume is still attached")
         if vol['node_name'] != FLAGS.storage_name:
@@ -124,22 +120,6 @@ class BlockStore(object):
         self.keeper.set_remove('volumes', vol['volume_id'])
         self.keeper.set_remove('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         return True
-
-    def attach_volume(self, volume_id, instance_id, mountpoint):
-        vol = self.get_volume(volume_id)
-        if vol['status'] == "attached":
-            raise exception.Error("Volume is already attached")
-        if vol['node_name'] != FLAGS.storage_name:
-            raise exception.Error("Volume is not local to this node")
-        vol.attach(instance_id, mountpoint)
-
-    def detach_volume(self, volume_id):
-        vol = self.get_volume(volume_id)
-        if vol['status'] == "available":
-            raise exception.Error("Volume is already detached")
-        if vol['node_name'] != FLAGS.storage_name:
-            raise exception.Error("Volume is not local to this node")
-        vol.detach()
 
     def _restart_exports(self):
         if FLAGS.fake_storage:
@@ -186,23 +166,41 @@ class Volume(datastore.RedisModel):
         vol["instance_id"] = 'none'
         vol["mountpoint"] = 'none'
         vol["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        vol["attachment_set"] = ''
+        vol['status'] = "creating" # creating | available | in-use
+        vol['attachStatus'] = "detached"  # attaching | attached | detaching | detached
+        vol.save()
         vol.create_lv()
         vol.setup_export()
-        vol['status'] = "available"
+        # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
+        # TODO(joshua
         vol.save()
         return vol
 
-    def attach(self, instance_id, mountpoint):
+    def start_attach(self, instance_id, mountpoint):
+        """ """
         self['instance_id'] = instance_id
         self['mountpoint'] = mountpoint
-        self['status'] = "attached"
+        self['status'] = "in-use"
+        self['attachStatus'] = "attaching" 
+        self['attachTime'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        self['deleteOnTermination'] = 'False'
+        self.save()
+        
+    def finish_attach(self):
+        """ """
+        self['attachStatus'] = "attached" 
         self.save()
 
-    def detach(self):
+    def start_detach(self):
+        """ """
+        self['attachStatus'] = "detaching" 
+        self.save()
+
+    def finish_detach(self):
         self['instance_id'] = None
         self['mountpoint'] = None
         self['status'] = "available"
+        self['attachStatus'] = "detached" 
         self.save()
 
     def destroy(self):

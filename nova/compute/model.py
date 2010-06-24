@@ -190,20 +190,6 @@ class Instance(object):
         """ Returns a reservation object """
         pass
 
-# class Reservation(object):
-# """ ORM wrapper for a batch of launched instances """
-# def __init__(self):
-# pass
-#
-# def userdata(self):
-# """ """
-# pass
-#
-#
-# class NodeDirectory(object):
-# def __init__(self):
-# pass
-#
 
 if __name__ == "__main__":
     import doctest

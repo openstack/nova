@@ -54,11 +54,11 @@ class StorageTestCase(test.TrialTestCase):
         volume_id = self.mystorage.create_volume(vol_size, user_id)
         # TODO(termie): get_volume returns differently than create_volume
         self.assertEqual(volume_id,
-                         self.mystorage.get_volume(volume_id)['volume_id'])
+                         storage.get_volume(volume_id)['volume_id'])
 
         rv = self.mystorage.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          self.mystorage.get_volume,
+                          storage.get_volume,
                           volume_id)
 
     def test_run_attach_detach_volume(self):
@@ -68,11 +68,14 @@ class StorageTestCase(test.TrialTestCase):
         user_id = "fake"
         mountpoint = "/dev/sdf"
         volume_id = self.mystorage.create_volume(vol_size, user_id)
-        rv = self.mystorage.attach_volume(volume_id,
+        
+        volume_obj = storage.get_volume(volume_id)
+        volume_obj.start_attach(instance_id, mountpoint)
+        rv = yield self.mynode.attach_volume(volume_id,
                                           instance_id,
                                           mountpoint)
-        volume_obj = self.mystorage.get_volume(volume_id)
-        self.assertEqual(volume_obj['status'], "attached")
+        self.assertEqual(volume_obj['status'], "in-use")
+        self.assertEqual(volume_obj['attachStatus'], "attached")
         self.assertEqual(volume_obj['instance_id'], instance_id)
         self.assertEqual(volume_obj['mountpoint'], mountpoint)
         
@@ -80,13 +83,13 @@ class StorageTestCase(test.TrialTestCase):
                           self.mystorage.delete_volume,
                           volume_id)
 
-        rv = self.mystorage.detach_volume(volume_id)
-        volume_obj = self.mystorage.get_volume(volume_id)
+        rv = yield self.mystorage.detach_volume(volume_id)
+        volume_obj = storage.get_volume(volume_id)
         self.assertEqual(volume_obj['status'], "available")
         
         rv = self.mystorage.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          self.mystorage.get_volume,
+                          storage.get_volume,
                           volume_id)
                           
     def test_multi_node(self):
