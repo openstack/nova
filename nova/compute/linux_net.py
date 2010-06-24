@@ -76,7 +76,7 @@ def bridge_create(net):
     if not device_exists(net['bridge_name']):
         logging.debug("Starting Bridge inteface for %s network", (net['vlan']))
         execute("sudo brctl addbr %s" % (net['bridge_name']))
-        # execute("sudo brctl setfd %s 0" % (net.bridge_name))
+        execute("sudo brctl setfd %s 0" % (net.bridge_name))
         # execute("sudo brctl setageing %s 10" % (net.bridge_name))
         execute("sudo brctl stp %s off" % (net['bridge_name']))
         execute("sudo brctl addif %s vlan%s" % (net['bridge_name'], net['vlan']))
