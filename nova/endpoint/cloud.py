@@ -465,7 +465,7 @@ class CloudController(object):
 
     @rbac.allow('netadmin')
     def disassociate_address(self, context, public_ip, **kwargs):
-        address = self._get_address(public_ip)
+        address = self._get_address(context, public_ip)
         self.network.disassociate_address(public_ip)
         # TODO - Strip the IP from the instance
         return defer.succeed({'disassociateResponse': ["Address disassociated."]})
