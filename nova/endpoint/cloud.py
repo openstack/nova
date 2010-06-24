@@ -166,24 +166,20 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = []
-        key_names = key_name and key_name or []
-        if len(key_names) > 0:
-            for key_name in key_names:
-                key_pair = context.user.get_key_pair(key_name)
-                if key_pair != None:
-                    key_pairs.append({
-                        'keyName': key_pair.name,
-                        'keyFingerprint': key_pair.fingerprint,
-                    })
-        else:
-            for key_pair in context.user.get_key_pairs():
-                key_pairs.append({
+        key_pairs = context.user.get_key_pairs()
+        if not key_name is None:
+            key_pairs = [x for x in key_pairs if x.name in key_name]
+
+        result = []
+        for key_pair in key_pairs:
+            # filter out the vpn keys
+            if not context.user.is_admin() and not key_pair.name.endswith('-key'):
+                result.append({
                     'keyName': key_pair.name,
                     'keyFingerprint': key_pair.fingerprint,
                 })
 
-        return { 'keypairsSet': key_pairs }
+        return { 'keypairsSet': result }
 
     @rbac.allow('all')
     def create_key_pair(self, context, key_name, **kwargs):
