@@ -51,6 +51,11 @@ flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
 
 logging.getLogger().setLevel(logging.DEBUG)
 
+# CLEANUP:
+# TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
+# TODO(ja): use singleton for usermanager instead of self.manager in vlanpool et al
+# TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
+# TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
 
 class BaseNetwork(datastore.RedisModel):
     bridge_gets_ip = False
@@ -96,6 +101,11 @@ class BaseNetwork(datastore.RedisModel):
     @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
+
+    def range(self):
+        # the .2 address is always CloudPipe
+        for idx in range(3, len(self.network)-2):
+            yield self.network[idx]
 
     @property
     def user(self):

@@ -1,6 +1,129 @@
-nova (0.3.0-1) UNRELEASED; urgency=low
+nova (0.2.1-1) UNRELEASED; urgency=low
+
+  * Support ephemeral (local) space for instances
+  * instance related fixes
+  * fix network & cloudpipe bugs
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 25 May 2010 12:14:00 -0700
+
+nova (0.2.0-20) UNRELEASED; urgency=low
+
+  * template files are in proper folder
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 25 May 2010 12:14:00 -0700
+
+nova (0.2.0-19) UNRELEASED; urgency=low
+
+  * removed mox dependency and added templates to install
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 25 May 2010 11:53:00 -0700
+
+nova (0.2.0-18) UNRELEASED; urgency=low
+
+  * api server properly sends instance status code
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 24 May 2010 17:18:00 -0700
+
+nova (0.2.0-17) UNRELEASED; urgency=low
+
+  * redis-backed datastore
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 24 May 2010 16:28:00 -0700
+
+nova (0.2.0-16) UNRELEASED; urgency=low
+
+  * make sure twistd.pid is really overriden
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 22:18:47 -0700
+
+nova (0.2.0-15) UNRELEASED; urgency=low
+
+  * rpc shouldn't require tornado unless you are using attach_to_tornado
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 21:59:00 -0700
+
+nova (0.2.0-14) UNRELEASED; urgency=low
+
+  * quicky init scripts for the other services, based on nova-objectstore
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 21:49:43 -0700
+
+nova (0.2.0-13) UNRELEASED; urgency=low
+
+  * init script for nova-objectstore
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 21:33:25 -0700
+
+nova (0.2.0-12) UNRELEASED; urgency=low
+
+  * kvm, kpartx required for nova-compute
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 21:32:00 -0700
+
+nova (0.2.0-11) UNRELEASED; urgency=low
+
+  * Need to include the python modules in nova-common.install as well.
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 20:04:27 -0700
+
+nova (0.2.0-10) UNRELEASED; urgency=low
+
+  * add more requirements to bin packages
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 19:54:00 -0700
+
+nova (0.2.0-9) UNRELEASED; urgency=low
+
+  * nova bin packages should depend on the same version of nova-common they
+    were built from.
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 18:46:34 -0700
+
+nova (0.2.0-8) UNRELEASED; urgency=low
+
+  * Require libvirt 0.8.1 or newer for nova-compute
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 18:33:00 -0700
+
+nova (0.2.0-7) UNRELEASED; urgency=low
+
+  * Split bins into separate packages
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 18:46:34 -0700
+
+nova (0.2.0-6) UNRELEASED; urgency=low
+
+  * Add python-m2crypto to deps
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 18:33:00 -0700
+
+nova (0.2.0-5) UNRELEASED; urgency=low
+
+  * Add python-gflags to deps
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 18:28:50 -0700
+
+nova (0.2.0-4) UNRELEASED; urgency=low
+
+  * install scripts
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 18:16:27 -0700
+
+nova (0.2.0-3) UNRELEASED; urgency=low
+
+  * debian build goop
+
+ -- Manish Singh <yosh@gimp.org>  Sun, 23 May 2010 18:06:37 -0700
+
+nova (0.2.0-2) UNRELEASED; urgency=low
+
+  * improved requirements
+
+ -- Jesse Andrews <anotherjesse@gmail.com>  Sun, 23 May 2010 17:42:00 -0700
+
+nova (0.2.0-1) UNRELEASED; urgency=low
 
   * initial release
 
- -- Jesse Andrews <jesse@ansolabs.com>  Thur, 27 May 2010 12:28:00 -0700
+ -- Jesse Andrews <anotherjesse@gmail.com>  Fri, 21 May 2010 12:28:00 -0700
 

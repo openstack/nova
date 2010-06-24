@@ -23,6 +23,7 @@ import logging
 import os
 import shutil
 import string
+from string import Template
 import tempfile
 import uuid
 import zipfile
@@ -56,12 +57,16 @@ flags.DEFINE_string('project_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU f
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
                     'Template for creating users rc file')
+flags.DEFINE_string('vpn_client_template',
+                    utils.abspath('cloudpipe/client.ovpn.template'),
+                    'Template for creating users vpn file')
 flags.DEFINE_string('credential_key_file', 'pk.pem',
                     'Filename of private key in credentials zip')
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
+flags.DEFINE_string('vpn_ip', '127.0.0.1', 'Public IP for the cloudpipe VPN servers')
 
 class AuthBase(object):
     @classmethod
@@ -82,6 +87,23 @@ class User(AuthBase):
         self.access = access
         self.secret = secret
         self.admin = admin
+
+    @property
+    def vpn_port(self):
+        port_map = self.keeper['vpn_ports']
+        if not port_map: port_map = {}
+        if not port_map.has_key(self.id):
+            ports = port_map.values()
+            if len(ports) > 0:
+                port_map[self.id] = max(ports) + 1
+            else:
+                port_map[self.id] = 8000
+        self.keeper['vpn_ports'] = port_map
+        return self.keeper['vpn_ports'][self.id]
+
+    @property
+    def vpn_ip(self):
+        return FLAGS.vpn_ip
 
     def is_admin(self):
         """allows user to see objects from all projects"""
@@ -353,7 +375,8 @@ class UserManager(object):
         return crypto.sign_csr(csr, uid)
 
     def __cert_subject(self, uid):
-        return "/C=US/ST=California/L=The_Mission/O=AnsoLabs/OU=Nova/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        # FIXME(ja) - this should be pulled from a global configuration
+        return "/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
 
 
 class LDAPWrapper(object):

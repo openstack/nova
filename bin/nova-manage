@@ -25,10 +25,50 @@ from nova import flags
 from nova import utils
 from nova.auth import users
 from nova.compute import model
+from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 import time
 
 FLAGS = flags.FLAGS
+
+class VpnCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+        self.instdir = model.InstanceDirectory()
+        self.pipe = pipelib.CloudPipe(cloud.CloudController())
+
+    def list(self):
+        print "%-12s\t" % 'user',
+        print "%-12s\t" % 'ip:port',
+        print "%s" % 'state'
+        for user in self.manager.get_users():
+            print "%-12s\t" % user.name,
+            print "%s:%s\t" % (user.vpn_ip, user.vpn_port),
+
+            vpn = self.__vpn_for(user.name)
+            if vpn:
+                print vpn['instance_id'],
+                print vpn['state']
+            else:
+                print None
+
+    def __vpn_for(self, username):
+        for instance in self.instdir.all:
+            if (instance.state.has_key('image_id')
+                and instance['image_id'] == FLAGS.vpn_image_id
+                and not instance['state'] in ['shutting_down', 'shutdown']
+                and instance['owner_id'] == username):
+                return instance
+
+    def spawn(self):
+        for u in reversed(self.manager.get_users()):
+             if not self.__vpn_for(u.id):
+                 print 'spawning %s' % u.id
+                 self.pipe.launch_vpn_instance(u.id)
+                 time.sleep(10)
+
+    def run(self, username):
+        self.pipe.launch_vpn_instance(username)
 
 
 class UserCommands(object):
@@ -109,6 +149,7 @@ def usage(script_name):
 categories = [
     ('user', UserCommands),
     ('project', ProjectCommands),
+    ('vpn', VpnCommands),
 ]
 
 
