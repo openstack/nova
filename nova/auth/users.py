@@ -349,7 +349,9 @@ class UserManager(object):
 
     def has_role(self, user, role, project=None):
         with LDAPWrapper() as conn:
-            if project and role == 'projectmanager':
+            if role == 'projectmanager':
+                if not project:
+                    raise exception.Error("Must specify project")
                 return self.is_project_manager(user, project)
 
             global_role = conn.has_role(User.safe_id(user),
