@@ -515,13 +515,13 @@ class LDAPWrapper(object):
             return None
         return objects[0]
 
-    def find_dns(self, dn, query = None):
+    def find_dns(self, dn, query=None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
         except Exception:
             return []
-        # just return the dns
-        return [x[0] for x in res]
+        # just return the DNs
+        return [dn for dn, attributes in res]
 
     def find_objects(self, dn, query = None):
         try:
@@ -529,7 +529,7 @@ class LDAPWrapper(object):
         except Exception:
             return []
         # just return the attributes
-        return [x[1] for x in res]
+        return [attributes for dn, attributes in res]
 
     def find_users(self):
         attrs = self.find_objects(FLAGS.user_ldap_subtree, '(objectclass=novaUser)')
@@ -550,7 +550,7 @@ class LDAPWrapper(object):
     def find_group_dns_with_member(self, tree, uid):
         dns = self.find_dns(tree,
                             '(&(objectclass=groupOfNames)(member=%s))' %
-                            self.__uid_to_dn(uid) )
+                            self.__uid_to_dn(uid))
         return dns
 
     def find_user(self, uid):
@@ -731,9 +731,7 @@ class LDAPWrapper(object):
 
     def _safe_remove_from_group(self, group_dn, uid):
         # FIXME(vish): what if deleted user is a project manager?
-        attr = [
-            (ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))
-        ]
+        attr = [(ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
         try:
             self.conn.modify_s(group_dn, attr)
         except ldap.OBJECT_CLASS_VIOLATION:
@@ -746,11 +744,11 @@ class LDAPWrapper(object):
             raise exception.NotFound("User %s can't be removed from all because the user doesn't exist" % (uid,))
         dn = self.__uid_to_dn(uid)
         role_dns = self.find_group_dns_with_member(
-            FLAGS.role_ldap_subtree, uid)
+                FLAGS.role_ldap_subtree, uid)
         for role_dn in role_dns:
             self._safe_remove_from_group(role_dn, uid)
         project_dns = self.find_group_dns_with_member(
-            FLAGS.project_ldap_subtree, uid)
+                FLAGS.project_ldap_subtree, uid)
         for project_dn in project_dns:
             self._safe_remove_from_group(project_dn, uid)
 
