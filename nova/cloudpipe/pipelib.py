@@ -76,7 +76,7 @@ class CloudPipe(object):
         zippy.close()
 
     def setup_keypair(self, user_id, project_id):
-        key_name = '%s-key' % project_id
+        key_name = '%s%s' % (project_id, FLAGS.vpn_key_suffix)
         try:
             private_key, fingerprint = self.manager.generate_key_pair(user_id, key_name)
             try:
