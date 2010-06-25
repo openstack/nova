@@ -81,7 +81,8 @@ class CloudPipe(object):
             private_key, fingerprint = self.manager.generate_key_pair(user_id, key_name)
             try:
                 key_dir = os.path.join(FLAGS.keys_path, user_id)
-                os.makedirs(key_dir)
+                if not os.path.exists(key_dir):
+                    os.makedirs(key_dir)
                 with open(os.path.join(key_dir, '%s.pem' % key_name),'w') as f:
                     f.write(private_key)
             except:
