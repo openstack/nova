@@ -142,9 +142,19 @@ class Node(object, service.Service):
         return retval
 
     @defer.inlineCallbacks
-    def report_state(self):
-        logging.debug("Reporting State")
-        return
+    def report_state(self, hostname, worker):
+        try:
+            record = model.Worker(hostname, worker)
+            record.heartbeat()
+            if getattr(self, "model_disconnected", False):
+                self.model_disconnected = False
+                logging.error("Recovered model server connection!")
+
+        except model.ConnectionError, ex:
+            if not getattr(self, "model_disconnected", False):
+                self.model_disconnected = True
+                logging.exception("model server went away")
+        yield
 
     # @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):

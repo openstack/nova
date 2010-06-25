@@ -20,7 +20,7 @@
 #    under the License.
 
 """
-  Tornado daemon for the main API endpoint.  
+Tornado daemon for the main API endpoint.  
 """
 
 import logging
@@ -34,6 +34,7 @@ from nova import rpc
 from nova import server
 from nova import utils
 from nova.auth import users
+from nova.compute import model
 from nova.endpoint import admin
 from nova.endpoint import api
 from nova.endpoint import cloud
@@ -43,9 +44,10 @@ FLAGS = flags.FLAGS
 
 def main(_argv):
     user_manager = users.UserManager()
+    host_manager = model.Host
     controllers = {
         'Cloud': cloud.CloudController(),
-        'Admin': admin.AdminController(user_manager)
+        'Admin': admin.AdminController(user_manager, host_manager)
     }
     _app = api.APIServerApplication(user_manager, controllers)
 

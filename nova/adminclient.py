@@ -21,9 +21,11 @@
 Nova User API client library.
 """
 
+import base64
+
+from nova import vendor
 import boto
 from boto.ec2.regioninfo import RegionInfo
-import base64
 
 class UserInfo(object):
     """ Information about a Nova user
@@ -57,6 +59,30 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+class HostInfo(object):
+    """
+    Information about a Nova Host:
+        Disk stats
+        Running Instances
+        Memory stats
+        CPU stats
+        Network address info
+        Firewall info
+        Bridge and devices
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.hostname = None
+
+    def __repr__(self):
+        return 'Host:%s' % self.hostname
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        setattr(self, name, value)
 
 class NovaAdminClient(object):
     def __init__(self, clc_ip='127.0.0.1', region='nova', access_key='admin',
@@ -91,7 +117,7 @@ class NovaAdminClient(object):
 
     def get_users(self):
         """ grabs the list of all users """
-        return self.apiconn.get_list('DescribeUsers', {}, (['item', UserInfo]))
+        return self.apiconn.get_list('DescribeUsers', {}, [('item', UserInfo)])
 
     def get_user(self, name):
         """ grab a single user by name """
@@ -115,4 +141,7 @@ class NovaAdminClient(object):
     def get_zip(self, username):
         """ returns the content of a zip file containing novarc and access credentials. """
         return self.apiconn.get_object('GenerateX509ForUser', {'Name': username}, UserInfo).file
+
+    def get_hosts(self):
+        return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
 

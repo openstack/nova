@@ -29,6 +29,7 @@ import os.path
 import inspect
 import subprocess
 import random
+import time
 
 from nova import flags
 
@@ -114,3 +115,8 @@ def get_my_ip():
     (addr, port) = csock.getsockname()
     csock.close()
     return addr
+
+def timestamp(at=None):
+    if not at:
+        at = time.gmtime()
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", at)

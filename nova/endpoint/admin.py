@@ -25,7 +25,7 @@ Admin API controller, exposed through http via the api worker.
 import base64
 
 def user_dict(user, base64_file=None):
-    """Convert the user object to a result dict"""
+    """ Convert the user object to a result dict """
     if user:
         return {
             'username': user.id,
@@ -36,23 +36,17 @@ def user_dict(user, base64_file=None):
     else:
         return {}
 
-def node_dict(node):
-    """Convert a node object to a result dict"""
-    if node:
-        return {
-            'node_id': node.id,
-            'workers': ", ".join(node.workers),
-            'disks': ", ".join(node.disks),
-            'ram': node.memory,
-            'load_average' : node.load_average,
-        }
+def host_dict(host):
+    """ Convert a host model object to a result dict """
+    if host:
+        return host.state
     else:
         return {}
 
 def admin_only(target):
-    """Decorator for admin-only API calls"""
+    """ Decorator for admin-only API calls """
     def wrapper(*args, **kwargs):
-        """Internal wrapper method for admin-only API calls"""
+        """ Internal wrapper method for admin-only API calls """
         context = args[1]
         if context.user.is_admin():
             return target(*args, **kwargs)
@@ -63,27 +57,26 @@ def admin_only(target):
 
 class AdminController(object):
     """
-    API Controller for users, node status, and worker mgmt.
+    API Controller for users, hosts, nodes, and workers.
     Trivial admin_only wrapper will be replaced with RBAC,
     allowing project managers to administer project users.
     """
-    def __init__(self, user_manager, node_manager=None):
+
+    def __init__(self, user_manager, host_manager):
         self.user_manager = user_manager
-        self.node_manager = node_manager
+        self.host_manager = host_manager
 
     def __str__(self):
         return 'AdminController'
 
     @admin_only
     def describe_user(self, _context, name, **_kwargs):
-        """Returns user data, including access and secret keys.
-        """
+        """ Returns user data, including access and secret keys. """
         return user_dict(self.user_manager.get_user(name))
 
     @admin_only
     def describe_users(self, _context, **_kwargs):
-        """Returns all users - should be changed to deal with a list.
-        """
+        """ Returns all users - should be changed to deal with a list. """
         return {'userSet':
             [user_dict(u) for u in self.user_manager.get_users()] }
 
@@ -116,7 +109,7 @@ class AdminController(object):
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
 
     @admin_only
-    def describe_nodes(self, _context, **_kwargs):
+    def describe_hosts(self, _context, **_kwargs):
         """Returns status info for all nodes. Includes:
             * Disk Space
             * Instance List
@@ -125,11 +118,11 @@ class AdminController(object):
             * DHCP servers running
             * Iptables / bridges
         """
-        return {'nodeSet':
-            [node_dict(n) for n in self.node_manager.get_nodes()] }
+        return {'hostSet':
+            [host_dict(h) for h in self.host_manager.all()] }
 
     @admin_only
-    def describe_node(self, _context, name, **_kwargs):
+    def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node.
         """
-        return node_dict(self.node_manager.get_node(name))
+        return host_dict(self.host_manager.lookup(name))
