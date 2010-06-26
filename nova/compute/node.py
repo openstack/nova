@@ -142,9 +142,11 @@ class Node(object, service.Service):
         return retval
 
     @defer.inlineCallbacks
-    def report_state(self, hostname, worker):
+    def report_state(self, nodename, daemon):
+        # TODO(termie): Termie has an idea for wrapping this connection failure
+        #               pattern to be more elegant.  -todd
         try:
-            record = model.Worker(hostname, worker)
+            record = model.Daemon(nodename, daemon)
             record.heartbeat()
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False

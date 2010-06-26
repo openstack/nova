@@ -29,7 +29,7 @@ import os.path
 import inspect
 import subprocess
 import random
-import time
+from datetime import datetime
 
 from nova import flags
 
@@ -116,7 +116,7 @@ def get_my_ip():
     csock.close()
     return addr
 
-def timestamp(at=None):
+def isotime(at=None):
     if not at:
-        at = time.gmtime()
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", at)
+        at = datetime.utcnow()
+    return at.strftime("%Y-%m-%dT%H:%M:%SZ")

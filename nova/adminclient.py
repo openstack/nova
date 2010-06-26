@@ -46,9 +46,11 @@ class UserInfo(object):
     def __repr__(self):
         return 'UserInfo:%s' % self.username
 
+    # this is needed by the sax parser, so ignore the ugly name
     def startElement(self, name, attrs, connection):
         return None
 
+    # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
         if name == 'username':
             self.username = str(value)
@@ -78,9 +80,11 @@ class HostInfo(object):
     def __repr__(self):
         return 'Host:%s' % self.hostname
 
+    # this is needed by the sax parser, so ignore the ugly name
     def startElement(self, name, attrs, connection):
         return None
 
+    # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
         setattr(self, name, value)
 

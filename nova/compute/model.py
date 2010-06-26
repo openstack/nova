@@ -56,8 +56,10 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 
+
 class ConnectionError(exception.Error):
     pass
+
 
 def absorb_connection_error(fn):
     def _wrapper(*args, **kwargs):
@@ -67,12 +69,13 @@ def absorb_connection_error(fn):
             raise ConnectionError(str(ce))
     return _wrapper
 
+
 # TODO(ja): singleton instance of the directory
 class InstanceDirectory(object):
-    """an api for interacting with the global state of instances """
+    """an api for interacting with the global state of instances"""
 
     def get(self, instance_id):
-        """ returns an instance object for a given id """
+        """returns an instance object for a given id"""
         return Instance(instance_id)
 
     def __getitem__(self, item):
@@ -80,26 +83,26 @@ class InstanceDirectory(object):
 
     @absorb_connection_error
     def by_project(self, project):
-        """ returns a list of instance objects for a project """
+        """returns a list of instance objects for a project"""
         for instance_id in datastore.Redis.instance().smembers('project:%s:instances' % project):
             yield Instance(instance_id)
 
     def by_node(self, node_id):
-        """ returns a list of instances for a node """
+        """returns a list of instances for a node"""
 
         for instance in self.all:
             if instance['node_name'] == node_id:
                 yield instance
 
     def by_ip(self, ip_address):
-        """ returns an instance object that is using the IP """
+        """returns an instance object that is using the IP"""
         for instance in self.all:
             if instance['private_dns_name'] == ip_address:
                 return instance
         return None
 
     def by_volume(self, volume_id):
-        """ returns the instance a volume is attached to """
+        """returns the instance a volume is attached to"""
         pass
 
     @absorb_connection_error
@@ -109,12 +112,12 @@ class InstanceDirectory(object):
     @property
     @absorb_connection_error
     def all(self):
-        """ returns a list of all instances """
+        """returns a list of all instances"""
         for instance_id in datastore.Redis.instance().smembers('instances'):
             yield Instance(instance_id)
 
     def new(self):
-        """ returns an empty Instance object, with ID """
+        """returns an empty Instance object, with ID"""
         instance_id = utils.generate_uid('i')
         return self.get(instance_id)
 
@@ -129,13 +132,13 @@ class BasicModel(object):
             self.state = self.default_state()
 
     def default_state(self):
-        """ You probably want to define this in your subclass """
+        """You probably want to define this in your subclass"""
         return {}
 
     @classmethod
     def lookup(cls, identifier):
         rv = cls(identifier)
-        if rv.new_record():
+        if rv.is_new_record():
             return None
         else:
             return rv
@@ -143,7 +146,7 @@ class BasicModel(object):
     @classmethod
     @absorb_connection_error
     def all(cls):
-        """ yields all objects in the store """
+        """yields all objects in the store"""
         redis_set = cls._redis_set_name(cls.__name__)
         for identifier in datastore.Redis.instance().smembers(redis_set):
             yield cls(identifier)
@@ -162,15 +165,13 @@ class BasicModel(object):
 
     @classmethod
     def _redis_association_name(cls, foreign_type, foreign_id):
-        return cls._redis_set_name(
-                        "%s:%s:%s" % 
-                        (foreign_type, foreign_id, cls.__name__)
-                    )
+        return cls._redis_set_name("%s:%s:%s" % 
+                                   (foreign_type, foreign_id, cls.__name__))
 
     @property
     def identifier(self):
-        """ You DEFINITELY want to define this in your subclass """
-        raise Exception("Your sublcass should define identifier")
+        """You DEFINITELY want to define this in your subclass"""
+        raise NotImplementedError("Your sublcass should define identifier")
 
     @property
     def __redis_key(self):
@@ -205,10 +206,10 @@ class BasicModel(object):
         return self.state[item]
 
     def __delitem__(self, item):
-        """ We don't support this """
+        """We don't support this"""
         raise Exception("Silly monkey, models NEED all their properties.")
 
-    def new_record(self):
+    def is_new_record(self):
         return self.initial_state == {}
 
     @absorb_connection_error
@@ -222,22 +223,23 @@ class BasicModel(object):
         datastore.Redis.instance().srem(set_name, self.identifier)
 
     @absorb_connection_error
+    def remove_from_index(self):
+        set_name = self.__class__._redis_set_name(self.__class__.__name__)
+        datastore.Redis.instance().srem(set_name, self.identifier)
+
+    @absorb_connection_error
     def associate_with(self, foreign_type, foreign_id):
         # note the extra 's' on the end is for plurality
         # to match the old data without requiring a migration of any sort
         self.add_associated_model_to_its_set(foreign_type, foreign_id)
-        redis_set = self.__class__._redis_association_name(
-                        foreign_type,
-                        foreign_id
-                    )
+        redis_set = self.__class__._redis_association_name(foreign_type,
+                                                           foreign_id)
         datastore.Redis.instance().sadd(redis_set, self.identifier)
 
     @absorb_connection_error
     def unassociate_with(self, foreign_type, foreign_id):
-        redis_set = self.__class__._redis_association_name(
-                        foreign_type,
-                        foreign_id
-                    )
+        redis_set = self.__class__._redis_association_name(foreign_type,
+                                                           foreign_id)
         datastore.Redis.instance().srem(redis_set, self.identifier)
 
     def add_associated_model_to_its_set(self, my_type, my_id):
@@ -248,10 +250,9 @@ class BasicModel(object):
             my_inst = my_class(my_id)
             my_inst.save()
         else:
-            logging.warning(
-                "no model class for %s when building association from %s" %
-                (klsname, self)
-            )
+            logging.warning("no model class for %s when building"
+                            " association from %s",
+                            klsname, self)
 
     @absorb_connection_error
     def save(self):
@@ -276,32 +277,29 @@ class BasicModel(object):
         deletes all related records from datastore.
         does NOT do anything to running libvirt state.
         """
-        logging.info(
-            "Destroying datamodel for %s %s",
-            (self.__class__.__name__, self.identifier)
-        )
+        logging.info("Destroying datamodel for %s %s",
+                     self.__class__.__name__, self.identifier)
         datastore.Redis.instance().delete(self.__redis_key)
+        self.remove_from_index()
         return True
 
 
 class Instance(BasicModel):
-    """ Wrapper around stored properties of an instance """
+    """Wrapper around stored properties of an instance"""
 
     def __init__(self, instance_id):
-        """ loads an instance from the datastore if exists """
+        """loads an instance from the datastore if exists"""
         # set instance data before super call since it uses default_state
         self.instance_id = instance_id
         super(Instance, self).__init__()
 
     def default_state(self):
-        return {
-            'state': 0,
-            'state_description': 'pending',
-            'instance_id': self.instance_id,
-            'node_name': 'unassigned',
-            'project_id': 'unassigned',
-            'user_id': 'unassigned'
-        }
+        return {'state': 0,
+                'state_description': 'pending',
+                'instance_id': self.instance_id,
+                'node_name': 'unassigned',
+                'project_id': 'unassigned',
+                'user_id': 'unassigned'}
 
     @property
     def identifier(self):
@@ -315,58 +313,55 @@ class Instance(BasicModel):
 
     @property
     def volumes(self):
-        """ returns a list of attached volumes """
+        """returns a list of attached volumes"""
         pass
 
     @property
     def reservation(self):
-        """ Returns a reservation object """
+        """Returns a reservation object"""
         pass
 
     def save(self):
-        """ Call into superclass to save object, then save associations """
-        # XXX: doesn't track migration between projects, just adds the first one
-        should_update_project = self.new_record()
+        """Call into superclass to save object, then save associations"""
+        # NOTE(todd): doesn't track migration between projects,
+        #             it just adds the first one
+        should_update_project = self.is_new_record()
         success = super(Instance, self).save()
         if success and should_update_project:
             self.associate_with("project", self.project)
         return True
 
     def destroy(self):
-        """ Destroy associations, then destroy the object """
+        """Destroy associations, then destroy the object"""
         self.unassociate_with("project", self.project)
         return super(Instance, self).destroy()
 
 class Host(BasicModel):
     """
-    A Host is the base machine that runs many virtualized Instance.
-    Hosts are usually controlled vi nova.compute.node.Node, this model
-    just stores stats about a host in redis.
+    A Host is the machine where a Daemon is running.
     """
 
     def __init__(self, hostname):
-        """ loads an instance from the datastore if exists """
+        """loads an instance from the datastore if exists"""
         # set instance data before super call since it uses default_state
         self.hostname = hostname
         super(Host, self).__init__()
 
     def default_state(self):
-        return {
-            "hostname":     self.hostname
-        }
+        return {"hostname": self.hostname}
 
     @property
     def identifier(self):
         return self.hostname
 
 
-class Worker(BasicModel):
+class Daemon(BasicModel):
     """
-    A Worker is a job (compute, api, network, ...) that runs on a host.
+    A Daemon is a job (compute, api, network, ...) that runs on a host.
     """
 
     def __init__(self, host_or_combined, binpath=None):
-        """ loads an instance from the datastore if exists """
+        """loads an instance from the datastore if exists"""
         # set instance data before super call since it uses default_state
         # since loading from datastore expects a combined key that
         # is equivilent to identifier, we need to expect that, while
@@ -377,34 +372,34 @@ class Worker(BasicModel):
             self.binary = binpath
         else:
             self.hostname, self.binary = host_or_combined.split(":")
-        super(Worker, self).__init__()
+        super(Daemon, self).__init__()
 
     def default_state(self):
-        return {
-            "hostname":     self.hostname,
-            "binary":       self.binary,
-            "updated_at":   utils.timestamp()
-        }
+        return {"hostname":     self.hostname,
+                "binary":       self.binary,
+                "updated_at":   utils.isotime()
+                }
 
     @property
     def identifier(self):
         return "%s:%s" % (self.hostname, self.binary)
 
     def save(self):
-        """ Call into superclass to save object, then save associations """
-        # XXX: doesn't clear out from host list after crash, termination, etc
-        success = super(Worker, self).save()
+        """Call into superclass to save object, then save associations"""
+        # NOTE(todd): this makes no attempt to destroy itsself,
+        #             so after termination a record w/ old timestmap remains
+        success = super(Daemon, self).save()
         if success:
             self.associate_with("host", self.hostname)
         return True
 
     def destroy(self):
-        """ Destroy associations, then destroy the object """
+        """Destroy associations, then destroy the object"""
         self.unassociate_with("host", self.hostname)
-        return super(Worker, self).destroy()
+        return super(Daemon, self).destroy()
 
     def heartbeat(self):
-        self['updated_at'] = utils.timestamp()
+        self['updated_at'] = utils.isotime()
         self.save()
         return True
 

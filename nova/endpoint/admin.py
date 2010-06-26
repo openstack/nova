@@ -25,7 +25,7 @@ Admin API controller, exposed through http via the api worker.
 import base64
 
 def user_dict(user, base64_file=None):
-    """ Convert the user object to a result dict """
+    """Convert the user object to a result dict"""
     if user:
         return {
             'username': user.id,
@@ -37,16 +37,16 @@ def user_dict(user, base64_file=None):
         return {}
 
 def host_dict(host):
-    """ Convert a host model object to a result dict """
+    """Convert a host model object to a result dict"""
     if host:
         return host.state
     else:
         return {}
 
 def admin_only(target):
-    """ Decorator for admin-only API calls """
+    """Decorator for admin-only API calls"""
     def wrapper(*args, **kwargs):
-        """ Internal wrapper method for admin-only API calls """
+        """Internal wrapper method for admin-only API calls"""
         context = args[1]
         if context.user.is_admin():
             return target(*args, **kwargs)
@@ -71,19 +71,18 @@ class AdminController(object):
 
     @admin_only
     def describe_user(self, _context, name, **_kwargs):
-        """ Returns user data, including access and secret keys. """
+        """Returns user data, including access and secret keys."""
         return user_dict(self.user_manager.get_user(name))
 
     @admin_only
     def describe_users(self, _context, **_kwargs):
-        """ Returns all users - should be changed to deal with a list. """
+        """Returns all users - should be changed to deal with a list."""
         return {'userSet':
             [user_dict(u) for u in self.user_manager.get_users()] }
 
     @admin_only
     def register_user(self, _context, name, **_kwargs):
-        """ Creates a new user, and returns generated credentials.
-        """
+        """Creates a new user, and returns generated credentials."""
         return user_dict(self.user_manager.create_user(name))
 
     @admin_only
@@ -118,11 +117,9 @@ class AdminController(object):
             * DHCP servers running
             * Iptables / bridges
         """
-        return {'hostSet':
-            [host_dict(h) for h in self.host_manager.all()] }
+        return {'hostSet': [host_dict(h) for h in self.host_manager.all()]}
 
     @admin_only
     def describe_host(self, _context, name, **_kwargs):
-        """Returns status info for single node.
-        """
+        """Returns status info for single node."""
         return host_dict(self.host_manager.lookup(name))

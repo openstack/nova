@@ -26,12 +26,12 @@ from nova import utils
 from nova.compute import model
 from nova.compute import node
 
+
 FLAGS = flags.FLAGS
 
 
 class ModelTestCase(test.TrialTestCase):
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(ModelTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
@@ -40,7 +40,7 @@ class ModelTestCase(test.TrialTestCase):
     def tearDown(self):
         model.Instance('i-test').destroy()
         model.Host('testhost').destroy()
-        model.Worker('testhost', 'nova-testworker').destroy()
+        model.Daemon('testhost', 'nova-testdaemon').destroy()
 
     def create_instance(self):
         inst = model.Instance('i-test')
@@ -60,45 +60,45 @@ class ModelTestCase(test.TrialTestCase):
         host.save()
         return host
 
-    def create_worker(self):
-        worker = model.Worker('testhost', 'nova-testworker')
-        worker.save()
-        return worker
+    def create_daemon(self):
+        daemon = model.Daemon('testhost', 'nova-testdaemon')
+        daemon.save()
+        return daemon
 
     @defer.inlineCallbacks
     def test_create_instance(self):
-        """ store with create_instace, then test that a load finds it """
+        """store with create_instace, then test that a load finds it"""
         instance = yield self.create_instance()
         old = yield model.Instance(instance.identifier)
-        self.assertEqual(False, old.new_record())
+        self.assertFalse(old.is_new_record())
 
     @defer.inlineCallbacks
     def test_delete_instance(self):
-        """ create, then destroy, then make sure loads a new record """
+        """create, then destroy, then make sure loads a new record"""
         instance = yield self.create_instance()
         yield instance.destroy()
         newinst = yield model.Instance('i-test')
-        self.assertEqual(True, newinst.new_record())
+        self.assertTrue(newinst.is_new_record())
 
     @defer.inlineCallbacks
     def test_instance_added_to_set(self):
-        """ create, then check that it is listed for the project """
+        """create, then check that it is listed for the project"""
         instance = yield self.create_instance()
         found = False
         for x in model.InstanceDirectory().all:
             if x.identifier == 'i-test':
                 found = True
-        self.assertEqual(True, found)
+        self.assert_(found)
 
     @defer.inlineCallbacks
     def test_instance_associates_project(self):
-        """ create, then check that it is listed for the project """
+        """create, then check that it is listed for the project"""
         instance = yield self.create_instance()
         found = False
         for x in model.InstanceDirectory().by_project(instance.project):
             if x.identifier == 'i-test':
                 found = True
-        self.assertEqual(True, found)
+        self.assert_(found)
 
     @defer.inlineCallbacks
     def test_host_class_finds_hosts(self):
@@ -112,102 +112,94 @@ class ModelTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_create_host(self):
-        """ store with create_host, then test that a load finds it """
+        """store with create_host, then test that a load finds it"""
         host = yield self.create_host()
         old = yield model.Host(host.identifier)
-        self.assertEqual(False, old.new_record())
+        self.assertFalse(old.is_new_record())
 
     @defer.inlineCallbacks
     def test_delete_host(self):
-        """ create, then destroy, then make sure loads a new record """
+        """create, then destroy, then make sure loads a new record"""
         instance = yield self.create_host()
         yield instance.destroy()
         newinst = yield model.Host('testhost')
-        self.assertEqual(True, newinst.new_record())
+        self.assertTrue(newinst.is_new_record())
 
     @defer.inlineCallbacks
     def test_host_added_to_set(self):
-        """ create, then check that it is included in list """
+        """create, then check that it is included in list"""
         instance = yield self.create_host()
         found = False
         for x in model.Host.all():
             if x.identifier == 'testhost':
                 found = True
-        self.assertEqual(True, found)
+        self.assert_(found)
 
     @defer.inlineCallbacks
-    def test_create_worker_two_args(self):
-        """ create a worker with two arguments """
-        w = yield self.create_worker()
-        self.assertEqual(
-            False,
-            model.Worker('testhost', 'nova-testworker').new_record()
-        )
+    def test_create_daemon_two_args(self):
+        """create a daemon with two arguments"""
+        d = yield self.create_daemon()
+        d = model.Daemon('testhost', 'nova-testdaemon')
+        self.assertFalse(d.is_new_record())
 
     @defer.inlineCallbacks
-    def test_create_worker_single_arg(self):
-        """ Create a worker using the combined host:bin format """
-        w = yield model.Worker("testhost:nova-testworker")
-        w.save()
-        self.assertEqual(
-            False,
-            model.Worker('testhost:nova-testworker').new_record()
-        )
+    def test_create_daemon_single_arg(self):
+        """Create a daemon using the combined host:bin format"""
+        d = yield model.Daemon("testhost:nova-testdaemon")
+        d.save()
+        d = model.Daemon('testhost:nova-testdaemon')
+        self.assertFalse(d.is_new_record())
 
     @defer.inlineCallbacks
-    def test_equality_of_worker_single_and_double_args(self):
-        """ Create a worker using the combined host:bin arg, find with 2 """
-        w = yield model.Worker("testhost:nova-testworker")
-        w.save()
-        self.assertEqual(
-            False,
-            model.Worker('testhost', 'nova-testworker').new_record()
-        )
+    def test_equality_of_daemon_single_and_double_args(self):
+        """Create a daemon using the combined host:bin arg, find with 2"""
+        d = yield model.Daemon("testhost:nova-testdaemon")
+        d.save()
+        d = model.Daemon('testhost', 'nova-testdaemon')
+        self.assertFalse(d.is_new_record())
 
     @defer.inlineCallbacks
-    def test_equality_worker_of_double_and_single_args(self):
-        """ Create a worker using the combined host:bin arg, find with 2 """
-        w = yield self.create_worker()
-        self.assertEqual(
-            False,
-            model.Worker('testhost:nova-testworker').new_record()
-        )
+    def test_equality_daemon_of_double_and_single_args(self):
+        """Create a daemon using the combined host:bin arg, find with 2"""
+        d = yield self.create_daemon()
+        d = model.Daemon('testhost:nova-testdaemon')
+        self.assertFalse(d.is_new_record())
 
     @defer.inlineCallbacks
-    def test_delete_worker(self):
-        """ create, then destroy, then make sure loads a new record """
-        instance = yield self.create_worker()
+    def test_delete_daemon(self):
+        """create, then destroy, then make sure loads a new record"""
+        instance = yield self.create_daemon()
         yield instance.destroy()
-        newinst = yield model.Worker('testhost', 'nova-testworker')
-        self.assertEqual(True, newinst.new_record())
+        newinst = yield model.Daemon('testhost', 'nova-testdaemon')
+        self.assertTrue(newinst.is_new_record())
 
     @defer.inlineCallbacks
-    def test_worker_heartbeat(self):
-        """ Create a worker, sleep, heartbeat, check for update """
-        w = yield self.create_worker()
-        ts = w['updated_at']
-        yield time.sleep(2)
-        w.heartbeat()
-        w2 = model.Worker('testhost', 'nova-testworker')
-        ts2 = w2['updated_at']
-        self.assertEqual(True, (ts2 > ts))
+    def test_daemon_heartbeat(self):
+        """Create a daemon, sleep, heartbeat, check for update"""
+        d = yield self.create_daemon()
+        ts = d['updated_at']
+        time.sleep(2)
+        d.heartbeat()
+        d2 = model.Daemon('testhost', 'nova-testdaemon')
+        ts2 = d2['updated_at']
+        self.assert_(ts2 > ts)
 
     @defer.inlineCallbacks
-    def test_worker_added_to_set(self):
-        """ create, then check that it is included in list """
-        instance = yield self.create_worker()
+    def test_daemon_added_to_set(self):
+        """create, then check that it is included in list"""
+        instance = yield self.create_daemon()
         found = False
-        for x in model.Worker.all():
-            if x.identifier == 'testhost:nova-testworker':
+        for x in model.Daemon.all():
+            if x.identifier == 'testhost:nova-testdaemon':
                 found = True
-        self.assertEqual(True, found)
+        self.assert_(found)
 
     @defer.inlineCallbacks
-    def test_worker_associates_host(self):
-        """ create, then check that it is listed for the host """
-        instance = yield self.create_worker()
+    def test_daemon_associates_host(self):
+        """create, then check that it is listed for the host"""
+        instance = yield self.create_daemon()
         found = False
-        for x in model.Worker.by_host('testhost'):
-            if x.identifier == 'testhost:nova-testworker':
+        for x in model.Daemon.by_host('testhost'):
+            if x.identifier == 'testhost:nova-testdaemon':
                 found = True
-        self.assertEqual(True, found)
+        self.assertTrue(found)
