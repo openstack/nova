@@ -84,6 +84,8 @@ class Consumer(messaging.Consumer):
     attachToTornado = attach_to_tornado
 
     def fetch(self, *args, **kwargs):
+        # TODO(vish): the logic for failed connections and logging should be
+        #             refactored into some sort of connection manager object
         try:
             if getattr(self, 'failed_connection', False):
                 # attempt to reconnect
