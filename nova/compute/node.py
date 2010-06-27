@@ -31,6 +31,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import sys
 
 from nova import vendor
@@ -165,7 +166,8 @@ class Node(object, service.Service):
         inst = self.instdir.get(instance_id)
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        net = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'],
+        net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
+                                                             inst['project_id'],
                                             security_group).express()
         inst['node_name'] = FLAGS.node_name
         inst.save()
@@ -345,7 +347,7 @@ class Instance(object):
 
     @property
     def name(self):
-        return self._s['name']
+        return self.datamodel['name']
 
     def is_pending(self):
         return (self.state == Instance.NOSTATE or self.state == 'pending')
@@ -358,7 +360,7 @@ class Instance(object):
         return (self.state == Instance.RUNNING or self.state == 'running')
 
     def describe(self):
-        return self._s
+        return self.datamodel
 
     def info(self):
         logging.debug("Getting info for dom %s" % self.name)
@@ -372,7 +374,7 @@ class Instance(object):
                 'node_name': FLAGS.node_name}
 
     def basepath(self, path=''):
-        return os.path.abspath(os.path.join(self._s['basepath'], path))
+        return os.path.abspath(os.path.join(self.datamodel['basepath'], path))
 
     def update_state(self):
         self.datamodel.update(self.info())
@@ -462,7 +464,7 @@ class Instance(object):
     @defer.inlineCallbacks
     def _create_image(self, libvirt_xml):
         # syntactic nicety
-        data = self._s
+        data = self.datamodel
         basepath = self.basepath
 
         # ensure directories exist and are writable
@@ -540,7 +542,9 @@ class Instance(object):
                     local_d.callback(None)
             timer.f = _wait_for_boot
             timer.start(interval=0.5, now=True)
-        except Exception:
+        except Exception, ex:
+            # FIXME(todd): this is just for debugging during testing
+            print "FUUUUUUUUUUUUUUUUUUUUUU: %s" % ex
             logging.debug(ex)
             self.set_state(Instance.SHUTDOWN)
 
