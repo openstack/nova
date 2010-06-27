@@ -70,7 +70,7 @@ def absorb_connection_error(fn):
     return _wrapper
 
 
-# TODO(ja): singleton instance of the directory
+# TODO(todd): Implement this at the class level for Instance
 class InstanceDirectory(object):
     """an api for interacting with the global state of instances"""
 
@@ -122,6 +122,26 @@ class InstanceDirectory(object):
         return self.get(instance_id)
 
 class BasicModel(object):
+    """
+    All Redis-backed data derives from this class.
+
+    You MUST specify an identifier() property that returns a unique string
+    per instance.
+
+    You MUST have an initializer that takes a single argument that is a value
+    returned by identifier() to load a new class with.
+
+    You may want to specify a dictionary for default_state().
+
+    You may also specify override_type at the class left to use a key other
+    than __class__.__name__.
+
+    You override save and destroy calls to automatically build and destroy
+    associations.
+    """
+
+    override_type = None
+
     @absorb_connection_error
     def __init__(self):
         self.initial_state = {}
@@ -134,6 +154,10 @@ class BasicModel(object):
     def default_state(self):
         """You probably want to define this in your subclass"""
         return {}
+
+    @classmethod
+    def _redis_name(cls):
+        return self.override_type or cls.__name__
 
     @classmethod
     def lookup(cls, identifier):
