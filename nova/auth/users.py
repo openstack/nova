@@ -502,12 +502,13 @@ class LDAPWrapper(object):
 
     def connect(self):
         """ connect to ldap as admin user """
-        global ldap
         if FLAGS.fake_users:
-            import fakeldap as ldap
+            self.NO_SUCH_OBJECT = fakeldap.NO_SUCH_OBJECT
+            self.OBJECT_CLASS_VIOLATION = fakeldap.OBJECT_CLASS_VIOLATION
             self.conn = fakeldap.initialize(FLAGS.ldap_url)
         else:
-            assert(ldap.__name__ != 'fakeldap')
+            self.NO_SUCH_OBJECT = ldap.NO_SUCH_OBJECT
+            self.OBJECT_CLASS_VIOLATION = ldap.OBJECT_CLASS_VIOLATION
             self.conn = ldap.initialize(FLAGS.ldap_url)
         self.conn.simple_bind_s(self.user, self.passwd)
 
@@ -520,7 +521,7 @@ class LDAPWrapper(object):
     def find_dns(self, dn, query=None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except ldap.NO_SUCH_OBJECT:
+        except self.NO_SUCH_OBJECT:
             return []
         # just return the DNs
         return [dn for dn, attributes in res]
@@ -528,7 +529,7 @@ class LDAPWrapper(object):
     def find_objects(self, dn, query = None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except ldap.NO_SUCH_OBJECT:
+        except self.NO_SUCH_OBJECT:
             return []
         # just return the attributes
         return [attributes for dn, attributes in res]
@@ -732,7 +733,7 @@ class LDAPWrapper(object):
         attr = [(ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
         try:
             self.conn.modify_s(group_dn, attr)
-        except ldap.OBJECT_CLASS_VIOLATION:
+        except self.OBJECT_CLASS_VIOLATION:
             logging.debug("Attempted to remove the last member of a group. "
                           "Deleting the group at %s instead." % group_dn )
             self.delete_group(group_dn)
