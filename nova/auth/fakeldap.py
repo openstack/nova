@@ -37,6 +37,8 @@ MOD_DELETE = 1
 class NO_SUCH_OBJECT(Exception):
     pass
 
+class OBJECT_CLASS_VIOLATION(Exception):
+    pass
 
 def initialize(uri):
     return FakeLDAP()
