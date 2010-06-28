@@ -509,6 +509,10 @@ class VolumeTests(NovaTestCase):
         conn = self.connection_for(test_username)
         self.assertTrue(conn.delete_volume(data['volume_id']))
 
+    def test_009_volume_size_must_be_int(self):
+        conn = self.connection_for(test_username)
+        self.assertRaises(Exception, conn.create_volume, 'foo', ZONE)
+
     def test_999_tearDown(self):
         global data
         conn = self.connection_for(test_username)
