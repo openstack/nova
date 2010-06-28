@@ -502,7 +502,9 @@ class LDAPWrapper(object):
 
     def connect(self):
         """ connect to ldap as admin user """
+        global ldap
         if FLAGS.fake_users:
+            import fakeldap as ldap
             self.conn = fakeldap.initialize(FLAGS.ldap_url)
         else:
             assert(ldap.__name__ != 'fakeldap')
@@ -518,7 +520,7 @@ class LDAPWrapper(object):
     def find_dns(self, dn, query=None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except Exception:
+        except ldap.NO_SUCH_OBJECT:
             return []
         # just return the DNs
         return [dn for dn, attributes in res]
@@ -526,7 +528,7 @@ class LDAPWrapper(object):
     def find_objects(self, dn, query = None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except Exception:
+        except ldap.NO_SUCH_OBJECT:
             return []
         # just return the attributes
         return [attributes for dn, attributes in res]
@@ -544,7 +546,7 @@ class LDAPWrapper(object):
         return [self.__to_project(attr) for attr in attrs]
 
     def find_roles(self, tree):
-        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(!(objectclass=NovaProject)))')
+        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(!(objectclass=novaProject)))')
         return [self.__to_group(attr) for attr in attrs]
 
     def find_group_dns_with_member(self, tree, uid):
@@ -693,11 +695,7 @@ class LDAPWrapper(object):
 
     def remove_role(self, uid, role, project_id=None):
         role_dn = self.__role_to_dn(role, project_id)
-        try:
-            return self.remove_from_group(uid, role_dn)
-        except Exception, ex:
-            print type(ex), ex
-
+        return self.remove_from_group(uid, role_dn)
 
     def is_in_group(self, uid, group_dn):
         if not self.user_exists(uid):
@@ -794,9 +792,8 @@ class LDAPWrapper(object):
 
     def delete_roles(self, project_dn):
         roles = self.find_roles(project_dn)
-        if roles != None:
-            for role in roles:
-                self.delete_group('cn=%s,%s' % (role.id, project_dn))
+        for role in roles:
+            self.delete_group('cn=%s,%s' % (role.id, project_dn))
 
     def delete_project(self, name):
         project_dn = 'cn=%s,%s' % (name, FLAGS.project_ldap_subtree)
