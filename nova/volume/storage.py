@@ -26,9 +26,10 @@ Currently uses Ata-over-Ethernet.
 
 import glob
 import logging
-import random
+import os
 import socket
-import subprocess
+import shutil
+import tempfile
 import time
 
 from nova import vendor
@@ -38,7 +39,6 @@ from twisted.internet import defer
 from nova import datastore
 from nova import exception
 from nova import flags
-from nova import rpc
 from nova import utils
 from nova import validate
 
@@ -53,14 +53,23 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
 flags.DEFINE_string('storage_name',
                     socket.gethostname(),
                     'name of this node')
-flags.DEFINE_integer('shelf_id',
-                    utils.last_octet(utils.get_my_ip()),
-                    'AoE shelf_id for this node')
+flags.DEFINE_integer('first_shelf_id',
+                    utils.last_octet(utils.get_my_ip()) * 10,
+                    'AoE starting shelf_id for this node')
+flags.DEFINE_integer('last_shelf_id',
+                    utils.last_octet(utils.get_my_ip()) * 10 + 9,
+                    'AoE starting shelf_id for this node')
+flags.DEFINE_integer('slots_per_shelf',
+                    16,
+                    'Number of AoE slots per shelf')
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this node')
 flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
+
+class NoMoreVolumes(exception.Error):
+    pass
 
 # TODO(joshua) Index of volumes by project
 
@@ -82,9 +91,15 @@ class BlockStore(object):
     def __init__(self):
         super(BlockStore, self).__init__()
         self.volume_class = Volume
+        self.export_dir = "/var/lib/vblade-persist/vblades"
         if FLAGS.fake_storage:
+            self.export_dir = tempfile.mkdtemp()
             self.volume_class = FakeVolume
         self._init_volume_group()
+
+    def __del__(self):
+        if FLAGS.fake_storage:
+            shutil.rmtree(self.export_dir)
 
     def report_state(self):
         #TODO: aggregate the state of the system
@@ -98,7 +113,10 @@ class BlockStore(object):
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = self.volume_class.create(size, user_id, project_id)
+        vol = self.volume_class.create(size,
+                                       user_id,
+                                       project_id,
+                                       self.export_dir)
         datastore.Redis.instance().sadd('volumes', vol['volume_id'])
         datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         self._restart_exports()
@@ -139,29 +157,20 @@ class BlockStore(object):
         utils.runthis("PVCreate returned: %s", "sudo pvcreate %s" % (FLAGS.storage_dev))
         utils.runthis("VGCreate returned: %s", "sudo vgcreate %s %s" % (FLAGS.volume_group, FLAGS.storage_dev))
 
-
-class FakeBlockStore(BlockStore):
-    def __init__(self):
-        super(FakeBlockStore, self).__init__()
-
-    def _init_volume_group(self):
-        pass
-
-    def _restart_exports(self):
-        pass
-
-
 class Volume(datastore.RedisModel):
 
     object_type = 'volume'
 
-    def __init__(self, volume_id=None):
+    def __init__(self,
+                 volume_id=None,
+                 export_dir="/var/lib/vblade-persist/vblades"):
+        self.export_dir = export_dir
         super(Volume, self).__init__(object_id=volume_id)
 
     @classmethod
-    def create(cls, size, user_id, project_id):
+    def create(cls, size, user_id, project_id, export_dir=None):
         volume_id = utils.generate_uid('vol')
-        vol = cls(volume_id=volume_id)
+        vol = cls(volume_id=volume_id, export_dir=export_dir)
         vol['volume_id'] = volume_id
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
@@ -177,7 +186,7 @@ class Volume(datastore.RedisModel):
         vol['delete_on_termination'] = 'False'
         vol.save()
         vol.create_lv()
-        vol.setup_export()
+        vol._setup_export()
         # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
         # TODO(joshua
         vol['status'] = "available"
@@ -229,15 +238,21 @@ class Volume(datastore.RedisModel):
     def _delete_lv(self):
         utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
 
-    def setup_export(self):
-        (shelf_id, blade_id) = get_next_aoe_numbers()
+    def _setup_export(self):
+        (shelf_id, blade_id ) = get_next_aoe_numbers(self.export_dir)
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
         self['shelf_id'] = shelf_id
         self['blade_id'] = blade_id
         self.save()
+        self._exec_export()
+
+    def _exec_export(self):
         utils.runthis("Creating AOE export: %s",
-                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (shelf_id, blade_id, FLAGS.aoe_eth_dev, FLAGS.volume_group, self['volume_id']))
+                "sudo vblade- persist setup %s %s %s /dev/%s/%s" %
+                (self['shelf_id'],
+                 self['blade_id'],
+                 FLAGS.aoe_eth_dev,
+                 FLAGS.volume_group, self['volume_id']))
 
     def _remove_export(self):
         utils.runthis("Stopped AOE export: %s", "sudo vblade-persist stop %s %s" % (self['shelf_id'], self['blade_id']))
@@ -248,13 +263,10 @@ class FakeVolume(Volume):
     def create_lv(self):
         pass
 
-    def setup_export(self):
-        # TODO(???): This may not be good enough?
-        blade_id = ''.join([random.choice('0123456789') for x in xrange(3)])
-        self['shelf_id'] = FLAGS.shelf_id
-        self['blade_id'] = blade_id
-        self['aoe_device'] = "e%s.%s" % (FLAGS.shelf_id, blade_id)
-        self.save()
+    def _exec_export(self):
+        fname = os.path.join(self.export_dir, self['aoe_device'])
+        with file(fname, "w"):
+            pass
 
     def _remove_export(self):
         pass
@@ -262,10 +274,14 @@ class FakeVolume(Volume):
     def _delete_lv(self):
         pass
 
-def get_next_aoe_numbers():
-    aoes = glob.glob("/var/lib/vblade-persist/vblades/e*")
-    aoes.extend(['e0.0'])
-    blade_id = int(max([int(a.split('.')[1]) for a in aoes])) + 1
-    logging.debug("Next blade_id is %s" % (blade_id))
-    shelf_id = FLAGS.shelf_id
-    return (shelf_id, blade_id)
+def get_next_aoe_numbers(dir):
+    for shelf_id in xrange(FLAGS.first_shelf_id, FLAGS.last_shelf_id + 1):
+        aoes = glob.glob("%s/e%s.*" % (dir, shelf_id))
+        if not aoes:
+            blade_id = 0
+        else:
+            blade_id = int(max([int(a.rpartition('.')[2]) for a in aoes])) + 1
+        if blade_id < FLAGS.slots_per_shelf:
+            print("Next shelf.blade is %s.%s" % (shelf_id, blade_id))
+            return (shelf_id, blade_id)
+    raise NoMoreVolumes()
