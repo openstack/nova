@@ -221,6 +221,12 @@ objectClass: simpleSecurityObject
 
 # create the sysadmin entry
 
+dn: cn=developers,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: developers
+description: IT admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
 dn: cn=sysadmins,ou=Groups,dc=example,dc=com
 objectclass: groupOfNames
 cn: sysadmins
