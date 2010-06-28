@@ -59,6 +59,9 @@ flags.DEFINE_integer('first_shelf_id',
 flags.DEFINE_integer('last_shelf_id',
                     utils.last_octet(utils.get_my_ip()) * 10 + 9,
                     'AoE starting shelf_id for this node')
+flags.DEFINE_string('aoe_export_dir',
+                    '/var/lib/vblade-persist/vblades',
+                    'AoE directory where exports are created')
 flags.DEFINE_integer('slots_per_shelf',
                     16,
                     'Number of AoE slots per shelf')
@@ -91,15 +94,14 @@ class BlockStore(object):
     def __init__(self):
         super(BlockStore, self).__init__()
         self.volume_class = Volume
-        self.export_dir = "/var/lib/vblade-persist/vblades"
         if FLAGS.fake_storage:
-            self.export_dir = tempfile.mkdtemp()
+            FLAGS.aoe_export_dir = tempfile.mkdtemp()
             self.volume_class = FakeVolume
         self._init_volume_group()
 
     def __del__(self):
         if FLAGS.fake_storage:
-            shutil.rmtree(self.export_dir)
+            shutil.rmtree(FLAGS.aoe_export_dir)
 
     def report_state(self):
         #TODO: aggregate the state of the system
@@ -113,10 +115,7 @@ class BlockStore(object):
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = self.volume_class.create(size,
-                                       user_id,
-                                       project_id,
-                                       self.export_dir)
+        vol = self.volume_class.create(size, user_id, project_id)
         datastore.Redis.instance().sadd('volumes', vol['volume_id'])
         datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         self._restart_exports()
@@ -161,16 +160,13 @@ class Volume(datastore.RedisModel):
 
     object_type = 'volume'
 
-    def __init__(self,
-                 volume_id=None,
-                 export_dir="/var/lib/vblade-persist/vblades"):
-        self.export_dir = export_dir
+    def __init__(self, volume_id=None):
         super(Volume, self).__init__(object_id=volume_id)
 
     @classmethod
-    def create(cls, size, user_id, project_id, export_dir=None):
+    def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
-        vol = cls(volume_id=volume_id, export_dir=export_dir)
+        vol = cls(volume_id=volume_id)
         vol['volume_id'] = volume_id
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
@@ -239,7 +235,7 @@ class Volume(datastore.RedisModel):
         utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
 
     def _setup_export(self):
-        (shelf_id, blade_id ) = get_next_aoe_numbers(self.export_dir)
+        (shelf_id, blade_id ) = get_next_aoe_numbers()
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
         self['shelf_id'] = shelf_id
         self['blade_id'] = blade_id
@@ -264,7 +260,7 @@ class FakeVolume(Volume):
         pass
 
     def _exec_export(self):
-        fname = os.path.join(self.export_dir, self['aoe_device'])
+        fname = os.path.join(FLAGS.aoe_export_dir, self['aoe_device'])
         with file(fname, "w"):
             pass
 
@@ -274,14 +270,14 @@ class FakeVolume(Volume):
     def _delete_lv(self):
         pass
 
-def get_next_aoe_numbers(dir):
+def get_next_aoe_numbers():
     for shelf_id in xrange(FLAGS.first_shelf_id, FLAGS.last_shelf_id + 1):
-        aoes = glob.glob("%s/e%s.*" % (dir, shelf_id))
+        aoes = glob.glob("%s/e%s.*" % (FLAGS.aoe_export_dir, shelf_id))
         if not aoes:
             blade_id = 0
         else:
             blade_id = int(max([int(a.rpartition('.')[2]) for a in aoes])) + 1
         if blade_id < FLAGS.slots_per_shelf:
-            print("Next shelf.blade is %s.%s" % (shelf_id, blade_id))
+            logging.debug("Next shelf.blade is %s.%s" % (shelf_id, blade_id))
             return (shelf_id, blade_id)
     raise NoMoreVolumes()
