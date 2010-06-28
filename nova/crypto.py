@@ -96,7 +96,7 @@ def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
     return '%s %s@%s\n' %(out.strip(), name, suffix)
 
 
-def generate_x509_cert(subject="/C=US/ST=California/L=The Mission/O=CloudFed/OU=NOVA/CN=foo", bits=1024):
+def generate_x509_cert(subject, bits=1024):
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
     csrfile = os.path.join(tmpdir, 'temp.csr')
