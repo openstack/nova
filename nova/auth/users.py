@@ -552,14 +552,17 @@ class UserManager(object):
             if not conn.user_exists(user):
                 raise exception.NotFound("User %s doesn't exist" % user)
             if conn.key_pair_exists(user, key_name):
-                raise exception.Duplicate("The keypair %s already exists" % key_name)
+                raise exception.Duplicate("The keypair %s already exists"
+                                          % key_name)
         private_key, public_key, fingerprint = crypto.generate_key_pair()
-        self.create_key_pair(User.safe_id(user), key_name, public_key, fingerprint)
+        self.create_key_pair(User.safe_id(user), key_name,
+                             public_key, fingerprint)
         return private_key, fingerprint
 
     def create_key_pair(self, user, key_name, public_key, fingerprint):
         with LDAPWrapper() as conn:
-            return conn.create_key_pair(User.safe_id(user), key_name, public_key, fingerprint)
+            return conn.create_key_pair(User.safe_id(user), key_name,
+                                        public_key, fingerprint)
 
     def get_key_pair(self, user, key_name):
         with LDAPWrapper() as conn:
@@ -574,7 +577,8 @@ class UserManager(object):
             conn.delete_key_pair(User.safe_id(user), key_name)
 
     def generate_x509_cert(self, user, project):
-        (private_key, csr) = crypto.generate_x509_cert(self.__cert_subject(User.safe_id(user)))
+        (private_key, csr) = crypto.generate_x509_cert(
+                self.__cert_subject(User.safe_id(user)))
         # TODO - This should be async call back to the cloud controller
         signed_cert = crypto.sign_csr(csr, Project.safe_id(project))
         return (private_key, signed_cert)
@@ -594,7 +598,6 @@ class LDAPWrapper(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        #logging.info('type, value, traceback: %s, %s, %s', type, value, traceback)
         self.conn.unbind_s()
         return False
 
