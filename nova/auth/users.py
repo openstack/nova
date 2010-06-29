@@ -239,7 +239,6 @@ class Project(Group):
     def __init__(self, id, project_manager_id, description, member_ids):
         self.project_manager_id = project_manager_id
         super(Project, self).__init__(id, description, member_ids)
-        self.keeper = datastore.Keeper(prefix="project-")
 
     @property
     def project_manager(self):

@@ -36,7 +36,6 @@ from twisted.python import failure
 from twisted.trial import unittest as trial_unittest
 import stubout
 
-from nova import datastore
 from nova import fakerabbit
 from nova import flags
 
@@ -78,10 +77,6 @@ class TrialTestCase(trial_unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
-
-        # attempt to wipe all keepers
-        #keeper = datastore.Keeper()
-        #keeper.clear_all()
 
     def flags(self, **kw):
         for k, v in kw.iteritems():
