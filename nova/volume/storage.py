@@ -71,10 +71,9 @@ flags.DEFINE_string('storage_availability_zone',
 flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
+
 class NoMoreVolumes(exception.Error):
     pass
-
-# TODO(joshua) Index of volumes by project
 
 def get_volume(volume_id):
     """ Returns a redis-backed volume object """
@@ -157,7 +156,7 @@ class BlockStore(object):
         utils.runthis("VGCreate returned: %s", "sudo vgcreate %s %s" % (FLAGS.volume_group, FLAGS.storage_dev))
 
 class Volume(datastore.RedisModel):
-
+    # TODO(joshua) Index of volumes by project
     object_type = 'volume'
 
     def __init__(self, volume_id=None):
@@ -235,7 +234,7 @@ class Volume(datastore.RedisModel):
         utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
 
     def _setup_export(self):
-        (shelf_id, blade_id ) = get_next_aoe_numbers()
+        (shelf_id, blade_id) = get_next_aoe_numbers()
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
         self['shelf_id'] = shelf_id
         self['blade_id'] = blade_id
@@ -248,7 +247,8 @@ class Volume(datastore.RedisModel):
                 (self['shelf_id'],
                  self['blade_id'],
                  FLAGS.aoe_eth_dev,
-                 FLAGS.volume_group, self['volume_id']))
+                 FLAGS.volume_group,
+                 self['volume_id']))
 
     def _remove_export(self):
         utils.runthis("Stopped AOE export: %s", "sudo vblade-persist stop %s %s" % (self['shelf_id'], self['blade_id']))
@@ -261,8 +261,8 @@ class FakeVolume(Volume):
 
     def _exec_export(self):
         fname = os.path.join(FLAGS.aoe_export_dir, self['aoe_device'])
-        with file(fname, "w"):
-            pass
+        f = file(fname, "w")
+        f.close()
 
     def _remove_export(self):
         pass
@@ -278,6 +278,6 @@ def get_next_aoe_numbers():
         else:
             blade_id = int(max([int(a.rpartition('.')[2]) for a in aoes])) + 1
         if blade_id < FLAGS.slots_per_shelf:
-            logging.debug("Next shelf.blade is %s.%s" % (shelf_id, blade_id))
+            logging.debug("Next shelf.blade is %s.%s", shelf_id, blade_id)
             return (shelf_id, blade_id)
     raise NoMoreVolumes()
