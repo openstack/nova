@@ -183,6 +183,17 @@ class UserTestCase(test.BaseTestCase):
         self.users.remove_role('test1', 'sysadmin')
         self.assertFalse(project.has_role('test1', 'sysadmin'))
 
+    def test_212_vpn_ip_and_port_looks_valid(self):
+        project = self.users.get_project('testproj')
+        self.assert_(project.vpn_ip)
+        self.assert_(project.vpn_port >= FLAGS.vpn_start_port)
+        self.assert_(project.vpn_port <= FLAGS.vpn_end_port)
+
+    def test_213_too_many_vpns(self):
+        for i in xrange(users.Vpn.num_ports_for_ip(FLAGS.vpn_ip)):
+            users.Vpn.create("vpnuser%s" % i)
+        self.assertRaises(users.NoMorePorts, users.Vpn.create, "boom")
+
     def test_299_can_delete_project(self):
         self.users.delete_project('testproj')
         self.assertFalse(filter(lambda p: p.name == 'testproj', self.users.get_projects()))

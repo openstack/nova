@@ -47,6 +47,7 @@ from nova import exception
 from nova import flags
 from nova import crypto
 from nova import utils
+from nova.compute import model
 
 from nova import objectstore # for flags
 
@@ -100,6 +101,10 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
+flags.DEFINE_integer('vpn_start_port', 8000,
+                    'Start port for the cloudpipe VPN servers')
+flags.DEFINE_integer('vpn_end_port', 9999,
+                    'End port for the cloudpipe VPN servers')
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
@@ -119,6 +124,7 @@ class AuthBase(object):
         else:
             return obj
 
+
 class User(AuthBase):
     """id and name are currently the same"""
     def __init__(self, id, name, access, secret, admin):
@@ -127,23 +133,6 @@ class User(AuthBase):
         self.access = access
         self.secret = secret
         self.admin = admin
-
-    @property
-    def vpn_port(self):
-        port_map = self.keeper['vpn_ports']
-        if not port_map: port_map = {}
-        if not port_map.has_key(self.id):
-            ports = port_map.values()
-            if len(ports) > 0:
-                port_map[self.id] = max(ports) + 1
-            else:
-                port_map[self.id] = 8000
-        self.keeper['vpn_ports'] = port_map
-        return self.keeper['vpn_ports'][self.id]
-
-    @property
-    def vpn_ip(self):
-        return FLAGS.vpn_ip
 
     def is_superuser(self):
         """allows user to bypass rbac completely"""
@@ -213,6 +202,7 @@ class User(AuthBase):
         return "User('%s', '%s', '%s', '%s', %s)" % (
                 self.id, self.name, self.access, self.secret, self.admin)
 
+
 class KeyPair(AuthBase):
     def __init__(self, id, owner_id, public_key, fingerprint):
         self.id = id
@@ -228,6 +218,7 @@ class KeyPair(AuthBase):
         return "KeyPair('%s', '%s', '%s', '%s')" % (
                 self.id, self.owner_id, self.public_key, self.fingerprint)
 
+
 class Group(AuthBase):
     """id and name are currently the same"""
     def __init__(self, id, description = None, member_ids = None):
@@ -242,6 +233,7 @@ class Group(AuthBase):
     def __repr__(self):
         return "Group('%s', '%s', %s)" % (
                 self.id, self.description, self.member_ids)
+
 
 class Project(Group):
     def __init__(self, id, project_manager_id, description, member_ids):
@@ -265,23 +257,13 @@ class Project(Group):
     def has_role(self, user, role):
         return UserManager.instance().has_role(user, role, self)
 
+    @property
+    def vpn_ip(self):
+        return Vpn(self.id).ip
 
     @property
     def vpn_port(self):
-        port_map = self.keeper['vpn_ports']
-        if not port_map: port_map = {}
-        if not port_map.has_key(self.id):
-            ports = port_map.values()
-            if len(ports) > 0:
-                port_map[self.id] = max(ports) + 1
-            else:
-                port_map[self.id] = 8000
-        self.keeper['vpn_ports'] = port_map
-        return self.keeper['vpn_ports'][self.id]
-
-    @property
-    def vpn_ip(self):
-        return FLAGS.vpn_ip
+        return Vpn(self.id).port
 
     def get_credentials(self, user):
         if not isinstance(user, User):
@@ -319,6 +301,77 @@ class Project(Group):
         return "Project('%s', '%s', '%s', %s)" % (
                 self.id, self.project_manager_id,
                 self.description, self.member_ids)
+
+
+class NoMorePorts(exception.Error):
+    pass
+
+
+class Vpn(model.BasicModel):
+    def __init__(self, project_id):
+        self.project_id = project_id
+        super(Vpn, self).__init__()
+
+    @property
+    def identifier(self):
+        return self.project_id
+
+    @classmethod
+    def create(cls, project_id):
+        # TODO (vish): get list of vpn ips from redis
+        for ip in [FLAGS.vpn_ip]:
+            try:
+                port = cls.find_free_port_for_ip(ip)
+                vpn = cls(project_id)
+                # save ip for project
+                vpn['project'] = project_id
+                vpn['ip'] = ip
+                vpn['port'] = port
+                vpn.save()
+                return vpn
+            except NoMorePorts:
+                pass
+        raise NoMorePorts()
+
+    @classmethod
+    def find_free_port_for_ip(cls, ip):
+        # TODO(vish): the redis access should be refactored into a
+        #             base class
+        redis = datastore.Redis.instance()
+        key = 'ip:%s:ports'
+        # TODO(vish): these ports should be allocated through an admin
+        #             command instead of a flag
+        if (not redis.exists(key) and
+            not redis.exists(cls._redis_association_name('ip', ip))):
+            for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
+                redis.sadd(key, i)
+
+        port = datastore.Redis.instance().spop(key)
+        if not port:
+            raise NoMorePorts()
+        return port
+
+    @classmethod
+    def num_ports_for_ip(cls, ip):
+        return datastore.Redis.instance().scard('ip:%s:ports')
+
+    @property
+    def ip(self):
+        return self['ip']
+
+    @property
+    def port(self):
+        return int(self['port'])
+
+    def save(self):
+        self.associate_with('ip', self.ip)
+        super(Vpn, self).save()
+
+    def destroy(self):
+        self.unassociate_with('ip', self.ip)
+        datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
+        super(Vpn, self).destroy()
+
 
 class UserManager(object):
     def __init__(self):
@@ -409,8 +462,13 @@ class UserManager(object):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
         with LDAPWrapper() as conn:
-            return conn.create_project(name, User.safe_id(manager_user),
-                                       description, member_users)
+            # NOTE(vish): try to associate a vpn ip and port first because
+            #             if it throws an exception, we save having to
+            #             create and destroy a project
+            Vpn.create(name)
+            return conn.create_project(name,
+                    User.safe_id(manager_user), description, member_users)
+
 
     def get_projects(self):
         with LDAPWrapper() as conn:
@@ -467,7 +525,13 @@ class UserManager(object):
             user = User.safe_id(user)
             result = conn.create_user(user, access, secret, admin)
             if create_project:
-                conn.create_project(user, user, user)
+                # NOTE(vish): if the project creation fails, we delete
+                #             the user and return an exception
+                try:
+                    conn.create_project(user, user, user)
+                except Exception:
+                    conn.delete_user(user)
+                    raise
             return result
 
     def delete_user(self, user, delete_project=True):
