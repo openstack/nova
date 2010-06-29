@@ -29,10 +29,10 @@ import json
 
 from nova import datastore
 
+
 SCOPE_SUBTREE  = 2
 MOD_ADD = 0
 MOD_DELETE = 1
-
 
 class NO_SUCH_OBJECT(Exception):
     pass
@@ -43,8 +43,75 @@ class OBJECT_CLASS_VIOLATION(Exception):
 def initialize(uri):
     return FakeLDAP()
 
+def _match_query(query, attrs):
+    """Match an ldap query to an attribute dictionary.
+
+    &, |, and ! are supported in the query. No syntax checking is performed,
+    so malformed querys will not work correctly.
+
+    """
+    # cut off the parentheses
+    inner = query[1:-1]
+    if inner.startswith('&'):
+        # cut off the &
+        l, r = _paren_groups(inner[1:])
+        return _match_query(l, attrs) and _match_query(r, attrs)
+    if inner.startswith('|'):
+        # cut off the |
+        l, r = _paren_groups(inner[1:])
+        return _match_query(l, attrs) or _match_query(r, attrs)
+    if inner.startswith('!'):
+        # cut off the ! and the nested parentheses
+        return not _match_query(query[2:-1], attrs)
+
+    (k, sep, v) = inner.partition('=')
+    return _match(k, v, attrs)
+
+def _paren_groups(source):
+    """Split a string into parenthesized groups."""
+    count = 0
+    start = 0
+    result = []
+    for pos in xrange(len(source)):
+        if source[pos] == '(':
+            if count == 0:
+                start = pos
+            count += 1
+        if source[pos] == ')':
+            count -= 1
+            if count == 0:
+                result.append(source[start:pos+1])
+    return result
+
+def _match(k, v, attrs):
+    """Match a given key and value against an attribute list."""
+    if k not in attrs:
+        return False
+    if k != "objectclass":
+        return v in attrs[k]
+    # it is an objectclass check, so check subclasses
+    values = _subs(v)
+    for value in values:
+        if value in attrs[k]:
+            return True
+    return False
+
+def _subs(value):
+    """Returns a list of subclass strings.
+
+    The strings represent the ldap objectclass plus any subclasses that
+    inherit from it. Fakeldap doesn't know about the ldap object structure,
+    so subclasses need to be defined manually in the dictionary below.
+
+    """
+    subs = {'groupOfNames': ['novaProject']}
+    if value in subs:
+        return [value] + subs[value]
+    return [value]
 
 class FakeLDAP(object):
+    #TODO(vish): refactor this class to use a wrapper instead of accessing
+    #            redis directly
 
     def simple_bind_s(self, dn, password):
         """This method is ignored, but provided for compatibility."""
@@ -56,22 +123,26 @@ class FakeLDAP(object):
 
     def add_s(self, dn, attr):
         """Add an object with the specified attributes at dn."""
-        key = self._redis_prefix + dn
+        key = "%s%s" % (self.__redis_prefix, dn)
 
         value_dict = dict([(k, self.__to_json(v)) for k, v in attr])
         datastore.Redis.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
-        datastore.Redis.instance().delete(self._redis_prefix + dn)
+        datastore.Redis.instance().delete("%s%s" % (self.__redis_prefix, dn))
 
     def modify_s(self, dn, attrs):
         """Modify the object at dn using the attribute list.
-        attr is a list of tuples in the following form:
+
+        Args:
+        dn -- a dn
+        attrs -- a list of tuples in the following form:
             ([MOD_ADD | MOD_DELETE], attribute, value)
+
         """
         redis = datastore.Redis.instance()
-        key = self._redis_prefix + dn
+        key = "%s%s" % (self.__redis_prefix, dn)
 
         for cmd, k, v in attrs:
             values = self.__from_json(redis.hget(key, k))
@@ -82,13 +153,19 @@ class FakeLDAP(object):
             values = redis.hset(key, k, self.__to_json(values))
 
     def search_s(self, dn, scope, query=None, fields=None):
-        """search for all matching objects under dn using the query
-        only SCOPE_SUBTREE is supported.
+        """Search for all matching objects under dn using the query.
+
+        Args:
+        dn -- dn to search under
+        scope -- only SCOPE_SUBTREE is supported
+        query -- query to filter objects by
+        fields -- fields to return. Returns all fields if not specified
+
         """
         if scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
         redis = datastore.Redis.instance()
-        keys = redis.keys(self._redis_prefix + '*' + dn)
+        keys = redis.keys("%s*%s" % (self.__redis_prefix, dn))
         objects = []
         for key in keys:
             # get the attributes from redis
@@ -97,90 +174,39 @@ class FakeLDAP(object):
             attrs = dict([(k, self.__from_json(v))
                           for k, v in attrs.iteritems()])
             # filter the objects by query
-            if not query or self.__match_query(query, attrs):
+            if not query or _match_query(query, attrs):
                 # filter the attributes by fields
                 attrs = dict([(k, v) for k, v in attrs.iteritems()
                               if not fields or k in fields])
-                objects.append((key[len(self._redis_prefix):], attrs))
+                objects.append((key[len(self.__redis_prefix):], attrs))
         if objects == []:
             raise NO_SUCH_OBJECT()
         return objects
 
-    def __match_query(self, query, attrs):
-        """Match an ldap query to an attribute dictionary.
-        &, |, and ! are supported
-        No syntax checking is performed, so malformed querys will
-        not work correctly.
-        """
-        # cut off the parentheses
-        inner = query[1:-1]
-        if inner.startswith('&'):
-            # cut off the &
-            l, r = self.__paren_groups(inner[1:])
-            return self.__match_query(l, attrs) and self.__match_query(r, attrs)
-        if inner.startswith('|'):
-            # cut off the |
-            l, r = self.__paren_groups(inner[1:])
-            return self.__match_query(l, attrs) or self.__match_query(r, attrs)
-        if inner.startswith('!'):
-            # cut off the ! and the nested parentheses
-            return not self.__match_query(query[2:-1], attrs)
-
-        (k, sep, v) = inner.partition('=')
-        return self.__match(k, v, attrs)
-
-    def __paren_groups(self, source):
-        """Split a string into parenthesized groups."""
-        count = 0
-        start = 0
-        result = []
-        for pos in xrange(len(source)):
-            if source[pos] == '(':
-                if count == 0:
-                    start = pos
-                count += 1
-            if source[pos] == ')':
-                count -= 1
-                if count == 0:
-                    result.append(source[start:pos+1])
-        return result
-
-    def __match(self, k, v, attrs):
-        """Match a given key and value against an attribute list."""
-        if k not in attrs:
-            return False
-        if k != "objectclass":
-            return v in attrs[k]
-        # it is an objectclass check, so check subclasses
-        values = self.__subs(v)
-        for value in values:
-            if value in attrs[k]:
-                return True
-        return False
-
-    def __subs(self, value):
-        """Returns a list of strings representing the ldap objectclass plus
-        any subclasses that inherit from it.
-        Fakeldap doesn't know about the ldap object structure, so subclasses
-        need to be defined manually in the dictionary below
-        """
-        subs = {
-            'groupOfNames': ['novaProject']
-        }
-        if value in subs:
-            return [value] + subs[value]
-        return [value]
 
     @property
-    def _redis_prefix(self):
+    def __redis_prefix(self):
         return 'ldap:'
 
     def __from_json(self, encoded):
-        """Convert attribute values from json representation."""
-        # return as simple strings instead of unicode strings
+        """Convert attribute values from json representation.
+
+        Args:
+        encoded -- a json encoded string
+
+        Returns a list of strings
+
+        """
         return [str(x) for x in json.loads(encoded)]
 
     def __to_json(self, unencoded):
-        """Convert attribute values into json representation."""
-        # all values are returned as lists from ldap
+        """Convert attribute values into json representation.
+
+        Args:
+        unencoded -- an unencoded string or list of strings.  If it
+            is a single string, it will be converted into a list.
+
+        Returns a json string
+
+        """
         return json.dumps(list(unencoded))
