@@ -287,6 +287,8 @@ class BasicModel(object):
         """
         # TODO(ja): implement hmset in redis-py and use it
         # instead of multiple calls to hset
+        if self.is_new_record():
+            self["create_time"] = utils.isotime()
         for key, val in self.state.iteritems():
             # if (not self.initial_state.has_key(key)
             # or self.initial_state[key] != val):

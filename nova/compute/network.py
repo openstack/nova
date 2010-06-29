@@ -154,14 +154,6 @@ class BaseNetwork(model.BasicModel):
     def default_state(self):
         return {'network_id': self.network_id, 'network_str': self.network_str}
 
-#    NOTE(todd): Unused?
-#    @classmethod
-#    def get_all_hosts(cls):
-#        for vlan in Vlan.all():
-#            network_str = vlan.subnet()
-#            for host in model.Host.associated_to("network", network_str):
-#                yield host
-
     @classmethod
     def create(cls, user_id, project_id, security_group, vlan, network_str):
         network_id = "%s:%s" % (project_id, security_group)
@@ -282,6 +274,8 @@ class BridgedNetwork(BaseNetwork):
             netmask
     """
 
+    override_type = 'network'
+
     @classmethod
     def get_network_for_project(cls, user_id, project_id, security_group):
         vlan = get_vlan_for_project(project_id)
@@ -309,6 +303,7 @@ class DHCPNetwork(BridgedNetwork):
         dhcp_range_end: the last ip to give out
     """
     bridge_gets_ip = True
+    override_type = 'network'
 
     def __init__(self, *args, **kwargs):
         super(DHCPNetwork, self).__init__(*args, **kwargs)
@@ -318,6 +313,10 @@ class DHCPNetwork(BridgedNetwork):
         self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
         try:
             os.makedirs(FLAGS.networks_path)
+        # NOTE(todd): I guess this is a lazy way to not have to check if the
+        #             directory exists, but shouldn't we be smarter about
+        #             telling the difference between existing directory and
+        #             permission denied? (Errno 17 vs 13, OSError)
         except Exception, err:
             pass
 
@@ -352,26 +351,34 @@ class DHCPNetwork(BridgedNetwork):
         else:
             linux_net.start_dnsmasq(self)
 
-class PublicAddress(datastore.RedisModel):
-    object_type="address"
+class PublicAddress(model.BasicModel):
+    override_type = "address"
 
     def __init__(self, address):
-        super(PublicAddress, self).__init__(address)
+        self.address = address
+        super(PublicAddress, self).__init__()
+
+    @property
+    def identifier(self):
+        return self.address
+
+    def default_state(self):
+        return {'address': self.address}
 
     @classmethod
     def create(cls, user_id, project_id, address):
-        addr = cls(address=address)
-        addr['address'] = address
+        addr = cls(address)
         addr['user_id'] = user_id
         addr['project_id'] = project_id
         addr['instance_id'] = 'available'
         addr['private_ip'] = 'available'
-        addr["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         addr.save()
         return addr
 
 DEFAULT_PORTS = [("tcp",80), ("tcp",22), ("udp",1194), ("tcp",443)]
 class PublicNetworkController(BaseNetwork):
+    override_type = 'network'
+
     def __init__(self, *args, **kwargs):
         network_id = "public:default"
         super(PublicNetworkController, self).__init__(network_id, FLAGS.public_range)
@@ -476,7 +483,6 @@ class PublicNetworkController(BaseNetwork):
 
 # FIXME(todd): does this present a race condition, or is there some piece of
 #              architecture that mitigates it (only one queue listener per net)?
-# TODO(todd): probably make this a class method on Vlan
 def get_vlan_for_project(project_id):
     """
     Allocate vlan IDs to individual users.
