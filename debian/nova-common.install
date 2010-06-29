@@ -1,4 +1,5 @@
 bin/nova-manage usr/bin
 nova/auth/novarc.template             usr/lib/pymodules/python2.6/nova/auth
+nova/cloudpipe/client.ovpn.template   usr/lib/pymodules/python2.6/nova/cloudpipe
 nova/compute/libvirt.xml.template     usr/lib/pymodules/python2.6/nova/compute
 usr/lib/python*/*-packages/nova/*

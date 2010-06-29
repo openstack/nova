@@ -35,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import validate
 
 
 FLAGS = flags.FLAGS
@@ -56,83 +57,76 @@ flags.DEFINE_string('storage_availability_zone',
 flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
+# TODO(joshua) Index of volumes by project
+
+def get_volume(volume_id):
+    """ Returns a redis-backed volume object """
+    volume_class = Volume
+    if FLAGS.fake_storage:
+        volume_class = FakeVolume
+    if datastore.Redis.instance().sismember('volumes', volume_id):
+        return volume_class(volume_id=volume_id)
+    raise exception.Error("Volume does not exist")
+
 class BlockStore(object):
+    """
+    There is one BlockStore running on each volume node.
+    However, each BlockStore can report on the state of
+    *all* volumes in the cluster.
+    """
     def __init__(self):
         super(BlockStore, self).__init__()
         self.volume_class = Volume
         if FLAGS.fake_storage:
             self.volume_class = FakeVolume
         self._init_volume_group()
-        self.keeper = datastore.Keeper('storage-')
 
     def report_state(self):
         #TODO: aggregate the state of the system
         pass
 
-    def create_volume(self, size, user_id):
+    @validate.rangetest(size=(0, 100))
+    def create_volume(self, size, user_id, project_id):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = self.volume_class.create(size, user_id)
-        self.keeper.set_add('volumes', vol['volume_id'])
+        vol = self.volume_class.create(size, user_id, project_id)
+        datastore.Redis.instance().sadd('volumes', vol['volume_id'])
+        datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         self._restart_exports()
         return vol['volume_id']
 
-    def get_volume(self, volume_id):
-        """ Returns a redis-backed volume object """
-        if self.keeper.set_is_member('volumes', volume_id):
-            return self.volume_class(volume_id=volume_id)
-        raise exception.Error("Volume does not exist")
-
-    def by_project(self, project):
-        """ returns a list of volume objects for a project """
-        # TODO(termie): I don't understand why this is doing a range
-        #for volume_id in datastore.Redis.instance().lrange("project:%s:volumes" %
-                                    #project, 0, -1):
-        for volume_id in datastore['project:%s:volumes' % project]:
-            yield self.volume_class(volume_id=volume_id)
-
     def by_node(self, node_id):
         """ returns a list of volumes for a node """
-        for volume in self.all:
-            if volume['node_name'] == node_id:
-                yield volume
+        for volume_id in datastore.Redis.instance().smembers('volumes:%s' % (node_id)):
+            yield self.volume_class(volume_id=volume_id)
 
     @property
     def all(self):
         """ returns a list of all volumes """
-        for volume_id in self.keeper['volumes']:
+        for volume_id in datastore.Redis.instance().smembers('volumes'):
             yield self.volume_class(volume_id=volume_id)
-
 
     def delete_volume(self, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
-        vol = self.get_volume(volume_id)
+        vol = get_volume(volume_id)
+        if vol['status'] == "attached":
+            raise exception.Error("Volume is still attached")
+        if vol['node_name'] != FLAGS.storage_name:
+            raise exception.Error("Volume is not local to this node")
         vol.destroy()
-        self.keeper.set_remove('volumes', vol['volume_id'])
+        datastore.Redis.instance().srem('volumes', vol['volume_id'])
+        datastore.Redis.instance().srem('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         return True
-
-    def attach_volume(self, volume_id, instance_id, mountpoint):
-        self.volume_class(volume_id).attach(instance_id, mountpoint)
-
-    def detach_volume(self, volume_id):
-        self.volume_class(volume_id).detach()
-
-    def loop_volumes(self):
-        volumes = subprocess.Popen(["sudo", "lvs", "--noheadings"], stdout=subprocess.PIPE).communicate()[0].split("\n")
-        for lv in volumes:
-            if len(lv.split(" ")) > 1:
-                yield lv.split(" ")[2]
 
     def _restart_exports(self):
         if FLAGS.fake_storage:
             return
         utils.runthis("Setting exports to auto: %s", "sudo vblade-persist auto all")
         utils.runthis("Starting all exports: %s", "sudo vblade-persist start all")
-        utils.runthis("Discovering AOE devices: %s", "sudo aoe-discover")
 
     def _init_volume_group(self):
         if FLAGS.fake_storage:
@@ -144,9 +138,6 @@ class BlockStore(object):
 class FakeBlockStore(BlockStore):
     def __init__(self):
         super(FakeBlockStore, self).__init__()
-
-    def loop_volumes(self):
-        return self.volumes
 
     def _init_volume_group(self):
         pass
@@ -160,39 +151,59 @@ class Volume(datastore.RedisModel):
     object_type = 'volume'
 
     def __init__(self, volume_id=None):
-        self.volume_id = volume_id
         super(Volume, self).__init__(object_id=volume_id)
 
     @classmethod
-    def create(cls, size, user_id):
+    def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
         vol = cls(volume_id=volume_id)
-        #TODO(vish): do we really need to store the volume id as .object_id .volume_id and ['volume_id']?
         vol['volume_id'] = volume_id
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
         vol['user_id'] = user_id
+        vol['project_id'] = project_id
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol["instance_id"] = 'none'
         vol["mountpoint"] = 'none'
+        vol['attach_time'] = 'none'
         vol["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        vol["attachment_set"] = ''
+        vol['status'] = "creating" # creating | available | in-use
+        vol['attach_status'] = "detached"  # attaching | attached | detaching | detached
+        vol['delete_on_termination'] = 'False'
+        vol.save()
         vol.create_lv()
         vol.setup_export()
+        # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
+        # TODO(joshua
         vol['status'] = "available"
         vol.save()
         return vol
 
-    def attach(self, instance_id, mountpoint):
+    def start_attach(self, instance_id, mountpoint):
+        """ """
         self['instance_id'] = instance_id
         self['mountpoint'] = mountpoint
-        self['status'] = "attached"
+        self['status'] = "in-use"
+        self['attach_status'] = "attaching"
+        self['attach_time'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        self['delete_on_termination'] = 'False'
         self.save()
 
-    def detach(self):
+    def finish_attach(self):
+        """ """
+        self['attach_status'] = "attached"
+        self.save()
+
+    def start_detach(self):
+        """ """
+        self['attach_status'] = "detaching"
+        self.save()
+
+    def finish_detach(self):
         self['instance_id'] = None
         self['mountpoint'] = None
         self['status'] = "available"
+        self['attach_status'] = "detached"
         self.save()
 
     def destroy(self):
@@ -208,22 +219,24 @@ class Volume(datastore.RedisModel):
             sizestr = '100M'
         else:
             sizestr = '%sG' % self['size']
-        utils.runthis("Creating LV: %s", "sudo lvcreate -L %s -n %s %s" % (sizestr, self.volume_id, FLAGS.volume_group))
+        utils.runthis("Creating LV: %s", "sudo lvcreate -L %s -n %s %s" % (sizestr, self['volume_id'], FLAGS.volume_group))
 
     def _delete_lv(self):
-        utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self.volume_id))
+        utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
 
     def setup_export(self):
         (shelf_id, blade_id) = get_next_aoe_numbers()
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
+        self['shelf_id'] = shelf_id
+        self['blade_id'] = blade_id
         self.save()
         utils.runthis("Creating AOE export: %s",
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (shelf_id, blade_id, FLAGS.aoe_eth_dev, FLAGS.volume_group, self.volume_id))
+                (shelf_id, blade_id, FLAGS.aoe_eth_dev, FLAGS.volume_group, self['volume_id']))
 
     def _remove_export(self):
-        utils.runthis("Destroyed AOE export: %s", "sudo vblade-persist stop %s %s" % (self.aoe_device[1], self.aoe_device[3]))
-        utils.runthis("Destroyed AOE export: %s", "sudo vblade-persist destroy %s %s" % (self.aoe_device[1], self.aoe_device[3]))
+        utils.runthis("Stopped AOE export: %s", "sudo vblade-persist stop %s %s" % (self['shelf_id'], self['blade_id']))
+        utils.runthis("Destroyed AOE export: %s", "sudo vblade-persist destroy %s %s" % (self['shelf_id'], self['blade_id']))
 
 
 class FakeVolume(Volume):
@@ -232,8 +245,10 @@ class FakeVolume(Volume):
 
     def setup_export(self):
         # TODO(???): This may not be good enough?
-        self['aoe_device'] = 'e%s.%s' % (FLAGS.shelf_id,
-                                      ''.join([random.choice('0123456789') for x in xrange(3)]))
+        blade_id = ''.join([random.choice('0123456789') for x in xrange(3)])
+        self['shelf_id'] = FLAGS.shelf_id
+        self['blade_id'] = blade_id
+        self['aoe_device'] = "e%s.%s" % (FLAGS.shelf_id, blade_id)
         self.save()
 
     def _remove_export(self):

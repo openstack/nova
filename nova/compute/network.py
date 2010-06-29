@@ -48,9 +48,18 @@ flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
 flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
 flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
+flags.DEFINE_integer('cnt_vpn_clients', 5,
+                        'Number of addresses reserved for vpn clients')
+flags.DEFINE_integer('cloudpipe_start_port', 12000,
+                        'Starting port for mapped CloudPipe external ports')
 
 logging.getLogger().setLevel(logging.DEBUG)
 
+# CLEANUP:
+# TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
+# TODO(ja): use singleton for usermanager instead of self.manager in vlanpool et al
+# TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
+# TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
 
 class BaseNetwork(datastore.RedisModel):
     bridge_gets_ip = False
@@ -88,11 +97,22 @@ class BaseNetwork(datastore.RedisModel):
     def netmask(self):
         return self.network.netmask()
     @property
+    def gateway(self):
+        return self.network[1]
+    @property
     def broadcast(self):
         return self.network.broadcast()
     @property
+    def gateway(self):
+        return self.network[1]
+    @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
+
+    def range(self):
+        # the .2 address is always CloudPipe
+        for idx in range(3, len(self.network)-2):
+            yield self.network[idx]
 
     @property
     def user(self):
@@ -122,7 +142,9 @@ class BaseNetwork(datastore.RedisModel):
 
     @property
     def available(self):
-        for idx in range(3, len(self.network) - 1):
+        # the .2 address is always CloudPipe
+        # and the top <n> are for vpn clients
+        for idx in range(3, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
                 yield str(address)
@@ -138,8 +160,8 @@ class BaseNetwork(datastore.RedisModel):
     def deallocate_ip(self, ip_str):
         if not ip_str in self.assigned:
             raise exception.AddressNotAllocated()
-        self._rem_host(ip_str)
         self.deexpress(address=ip_str)
+        self._rem_host(ip_str)
 
     def list_addresses(self):
         for address in self.hosts:
@@ -197,7 +219,7 @@ class DHCPNetwork(BridgedNetwork):
         logging.debug("Initing DHCPNetwork object...")
         self.dhcp_listen_address = self.network[1]
         self.dhcp_range_start = self.network[3]
-        self.dhcp_range_end = self.network[-1]
+        self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
         try:
             os.makedirs(FLAGS.networks_path)
         except Exception, err:
@@ -211,6 +233,20 @@ class DHCPNetwork(BridgedNetwork):
             linux_net.start_dnsmasq(self)
         else:
             logging.debug("Not launching dnsmasq: no hosts.")
+        self.express_cloudpipe()
+
+    def allocate_vpn_ip(self, mac):
+        address = str(self.network[2])
+        self._add_host(self['user_id'], self['project_id'], address, mac)
+        self.express(address=address)
+        return address
+
+    def express_cloudpipe(self):
+        private_ip = self.network[2]
+        linux_net.confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT"
+                               % (private_ip, ))
+        linux_net.confirm_rule("PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+                               % (self.project.vpn_ip, self.project.vpn_port, private_ip))
 
     def deexpress(self, address=None):
         # if this is the last address, stop dns
@@ -380,6 +416,9 @@ def get_network_by_address(address):
         if address in net.assigned:
             return net
     raise exception.AddressNotAllocated()
+
+def allocate_vpn_ip(user_id, project_id, mac):
+    return get_project_network(project_id).allocate_vpn_ip(mac)
 
 def allocate_ip(user_id, project_id, mac):
     return get_project_network(project_id).allocate_ip(user_id, project_id, mac)

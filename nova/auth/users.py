@@ -23,6 +23,7 @@ import logging
 import os
 import shutil
 import string
+from string import Template
 import tempfile
 import uuid
 import zipfile
@@ -52,16 +53,40 @@ flags.DEFINE_string('user_dn', 'cn=Manager,dc=example,dc=com', 'DN of admin user
 flags.DEFINE_string('user_unit', 'Users', 'OID for Users')
 flags.DEFINE_string('user_ldap_subtree', 'ou=Users,dc=example,dc=com', 'OU for Users')
 flags.DEFINE_string('project_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU for Projects')
+flags.DEFINE_string('role_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU for Roles')
+
+# mapping with these flags is necessary because we're going to tie in to an existing ldap schema
+flags.DEFINE_string('ldap_cloudadmin',
+    'cn=cloudadmins,ou=Groups,dc=example,dc=com', 'cn for Cloud Admins')
+flags.DEFINE_string('ldap_itsec',
+    'cn=itsec,ou=Groups,dc=example,dc=com', 'cn for ItSec')
+flags.DEFINE_string('ldap_sysadmin',
+    'cn=sysadmins,ou=Groups,dc=example,dc=com', 'cn for Sysadmins')
+flags.DEFINE_string('ldap_netadmin',
+    'cn=netadmins,ou=Groups,dc=example,dc=com', 'cn for NetAdmins')
+flags.DEFINE_string('ldap_developer',
+    'cn=developers,ou=Groups,dc=example,dc=com', 'cn for Developers')
+
+# a user with one of these roles will be a superuser and have access to all api commands
+flags.DEFINE_list('superuser_roles', ['cloudadmin'], 'roles that ignore rbac checking completely')
+
+# a user with one of these roles will have it for every project, even if he or she is not a member of the project
+flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'], 'roles that apply to all projects')
 
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
                     'Template for creating users rc file')
+flags.DEFINE_string('vpn_client_template',
+                    utils.abspath('cloudpipe/client.ovpn.template'),
+                    'Template for creating users vpn file')
 flags.DEFINE_string('credential_key_file', 'pk.pem',
                     'Filename of private key in credentials zip')
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
+flags.DEFINE_string('vpn_ip', '127.0.0.1', 'Public IP for the cloudpipe VPN servers')
+
 
 class AuthBase(object):
     @classmethod
@@ -83,9 +108,47 @@ class User(AuthBase):
         self.secret = secret
         self.admin = admin
 
+    @property
+    def vpn_port(self):
+        port_map = self.keeper['vpn_ports']
+        if not port_map: port_map = {}
+        if not port_map.has_key(self.id):
+            ports = port_map.values()
+            if len(ports) > 0:
+                port_map[self.id] = max(ports) + 1
+            else:
+                port_map[self.id] = 8000
+        self.keeper['vpn_ports'] = port_map
+        return self.keeper['vpn_ports'][self.id]
+
+    @property
+    def vpn_ip(self):
+        return FLAGS.vpn_ip
+
+    def is_superuser(self):
+        """allows user to bypass rbac completely"""
+        if self.admin:
+            return True
+        for role in FLAGS.superuser_roles:
+            if self.has_role(role):
+                return True
+
     def is_admin(self):
         """allows user to see objects from all projects"""
-        return self.admin
+        if self.is_superuser():
+            return True
+        for role in FLAGS.global_roles:
+            if self.has_role(role):
+                return True
+
+    def has_role(self, role):
+        return UserManager.instance().has_role(self, role)
+
+    def add_role(self, role):
+        return UserManager.instance().add_role(self, role)
+
+    def remove_role(self, role):
+        return UserManager.instance().remove_role(self, role)
 
     def is_project_member(self, project):
         return UserManager.instance().is_project_member(self, project)
@@ -170,11 +233,46 @@ class Project(Group):
     def has_manager(self, user):
         return User.safe_id(user) == self.project_manager_id
 
+    def add_role(self, user, role):
+        return UserManager.instance().add_role(user, role, self)
+
+    def remove_role(self, user, role):
+        return UserManager.instance().remove_role(user, role, self)
+
+    def has_role(self, user, role):
+        return UserManager.instance().has_role(user, role, self)
+
+
+    @property
+    def vpn_port(self):
+        port_map = self.keeper['vpn_ports']
+        if not port_map: port_map = {}
+        if not port_map.has_key(self.id):
+            ports = port_map.values()
+            if len(ports) > 0:
+                port_map[self.id] = max(ports) + 1
+            else:
+                port_map[self.id] = 8000
+        self.keeper['vpn_ports'] = port_map
+        return self.keeper['vpn_ports'][self.id]
+
+    @property
+    def vpn_ip(self):
+        return FLAGS.vpn_ip
+
     def get_credentials(self, user):
         if not isinstance(user, User):
             user = UserManager.instance().get_user(user)
         rc = user.generate_rc(self.id)
         private_key, signed_cert = self.generate_x509_cert(user)
+
+        configfile = open(FLAGS.vpn_client_template,"r")
+        s = string.Template(configfile.read())
+        configfile.close()
+        config = s.substitute(keyfile=FLAGS.credential_key_file,
+                              certfile=FLAGS.credential_cert_file,
+                              ip=self.vpn_ip,
+                              port=self.vpn_port)
 
         tmpdir = tempfile.mkdtemp()
         zf = os.path.join(tmpdir, "temp.zip")
@@ -182,6 +280,7 @@ class Project(Group):
         zippy.writestr(FLAGS.credential_rc_file, rc)
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
+        zippy.writestr("nebula-client.conf", config)
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(self.id))
         zippy.close()
         with open(zf, 'rb') as f:
@@ -242,6 +341,32 @@ class UserManager(object):
             if signature != expected_signature:
                 raise exception.NotAuthorized('Signature does not match')
         return (user, project)
+
+    def has_role(self, user, role, project=None):
+        with LDAPWrapper() as conn:
+            if project and role == 'projectmanager':
+                return self.is_project_manager(user, project)
+
+            global_role = conn.has_role(User.safe_id(user),
+                                        role,
+                                        None)
+            if not global_role:
+                return global_role
+
+            if not project or role in FLAGS.global_roles:
+                return global_role
+
+            return conn.has_role(User.safe_id(user),
+                                 role,
+                                 Project.safe_id(project))
+
+    def add_role(self, user, role, project=None):
+        with LDAPWrapper() as conn:
+            return conn.add_role(User.safe_id(user), role, Project.safe_id(project))
+
+    def remove_role(self, user, role, project=None):
+        with LDAPWrapper() as conn:
+            return conn.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
     def create_project(self, name, manager_user, description=None, member_users=None):
         if member_users:
@@ -349,11 +474,9 @@ class UserManager(object):
         signed_cert = crypto.sign_csr(csr, Project.safe_id(project))
         return (private_key, signed_cert)
 
-    def sign_cert(self, csr, uid):
-        return crypto.sign_csr(csr, uid)
-
     def __cert_subject(self, uid):
-        return "/C=US/ST=California/L=The_Mission/O=AnsoLabs/OU=Nova/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        # FIXME(ja) - this should be pulled from a global configuration
+        return "/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
 
 
 class LDAPWrapper(object):
@@ -404,6 +527,10 @@ class LDAPWrapper(object):
     def find_projects(self):
         attrs = self.find_objects(FLAGS.project_ldap_subtree, '(objectclass=novaProject)')
         return [self.__to_project(attr) for attr in attrs]
+
+    def find_roles(self, tree):
+        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(!(objectclass=NovaProject)))')
+        return [self.__to_group(attr) for attr in attrs]
 
     def find_groups_with_member(self, tree, dn):
         attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(member=%s))' % dn )
@@ -507,6 +634,12 @@ class LDAPWrapper(object):
         dn = 'cn=%s,%s' % (project_id, FLAGS.project_ldap_subtree)
         return self.is_in_group(uid, dn)
 
+    def __role_to_dn(self, role, project_id=None):
+        if project_id == None:
+            return FLAGS.__getitem__("ldap_%s" % role).value
+        else:
+            return 'cn=%s,cn=%s,%s' % (role, project_id, FLAGS.project_ldap_subtree)
+
     def __create_group(self, group_dn, name, uid, description, member_uids = None):
         if self.group_exists(name):
             raise exception.Duplicate("Group can't be created because group %s already exists" % name)
@@ -527,6 +660,27 @@ class LDAPWrapper(object):
         ]
         self.conn.add_s(group_dn, attr)
         return self.__to_group(dict(attr))
+
+    def has_role(self, uid, role, project_id=None):
+        role_dn = self.__role_to_dn(role, project_id)
+        return self.is_in_group(uid, role_dn)
+
+    def add_role(self, uid, role, project_id=None):
+        role_dn = self.__role_to_dn(role, project_id)
+        if not self.group_exists(role_dn):
+            # create the role if it doesn't exist
+            description = '%s role for %s' % (role, project_id)
+            self.__create_group(role_dn, role, uid, description)
+        else:
+            return self.add_to_group(uid, role_dn)
+
+    def remove_role(self, uid, role, project_id=None):
+        role_dn = self.__role_to_dn(role, project_id)
+        try:
+            return self.remove_from_group(uid, role_dn)
+        except Exception, ex:
+            print type(ex), ex
+
 
     def is_in_group(self, uid, group_dn):
         if not self.user_exists(uid):
@@ -573,6 +727,9 @@ class LDAPWrapper(object):
         attr = [
             (ldap.MOD_DELETE, 'member', dn)
         ]
+        roles = self.find_groups_with_member(FLAGS.role_ldap_subtree, dn)
+        for role in roles:
+            self.conn.modify_s('cn=%s,%s' % (role.id, FLAGS.role_ldap_subtree), attr)
         projects = self.find_groups_with_member(FLAGS.project_ldap_subtree, dn)
         for project in projects:
             self.conn.modify_s('cn=%s,%s' % (project.id, FLAGS.project_ldap_subtree), attr)
@@ -617,8 +774,15 @@ class LDAPWrapper(object):
             raise exception.NotFound("Group at dn %s doesn't exist" % group_dn)
         self.conn.delete_s(group_dn)
 
+    def delete_roles(self, project_dn):
+        roles = self.find_roles(project_dn)
+        if roles != None:
+            for role in roles:
+                self.delete_group('cn=%s,%s' % (role.id, project_dn))
+
     def delete_project(self, name):
         project_dn = 'cn=%s,%s' % (name, FLAGS.project_ldap_subtree)
+        self.delete_roles(project_dn)
         self.delete_group(project_dn)
 
     def __to_user(self, attr):

@@ -71,6 +71,7 @@ class Application(web.Application):
     def __init__(self, user_manager):
         web.Application.__init__(self, [
             (r"/", RootHandler),
+            (r"/_images/(.+)", ImageDownloadHandler),
             (r"/_images/", ImageHandler),
             (r"/([^/]+)/(.+)", ObjectHandler),
             (r"/([^/]+)/", BucketHandler),
@@ -224,6 +225,31 @@ class ObjectHandler(BaseRequestHandler):
         self.finish()
 
 
+class ImageDownloadHandler(BaseRequestHandler):
+    SUPPORTED_METHODS = ("GET", )
+
+    @catch_nova_exceptions
+    def get(self, image_id):
+        """ send the decrypted image file
+
+        streaming content through python is slow and should only be used
+        in development mode.  You should serve files via a web server
+        in production.
+        """
+
+        self.set_header("Content-Type", "application/octet-stream")
+
+        READ_SIZE = 64*1024
+
+        img = image.Image(image_id)
+        with open(img.image_path, 'rb') as fp:
+            s = fp.read(READ_SIZE)
+            while s:
+                self.write(s)
+                s = fp.read(READ_SIZE)
+
+        self.finish()
+
 class ImageHandler(BaseRequestHandler):
     SUPPORTED_METHODS = ("POST", "PUT", "GET", "DELETE")
 
@@ -268,7 +294,7 @@ class ImageHandler(BaseRequestHandler):
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.set_public(operation=='add')
@@ -281,7 +307,7 @@ class ImageHandler(BaseRequestHandler):
         image_id = self.get_argument("image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.delete()

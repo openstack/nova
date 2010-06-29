@@ -14,6 +14,8 @@
 #    limitations under the License.
 
 import logging
+import time
+
 from xml.etree import ElementTree
 
 from nova import vendor
@@ -56,8 +58,7 @@ class NodeConnectionTestCase(test.TrialTestCase):
         super(NodeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
-                   fake_users=True,
-                    redis_db=8)
+                   fake_users=True)
         self.node = node.Node()
 
     def create_instance(self):
@@ -82,11 +83,13 @@ class NodeConnectionTestCase(test.TrialTestCase):
         rv = yield self.node.run_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("Running instances: %s", rv)
         self.assertEqual(rv[instance_id].name, instance_id)
 
         rv = yield self.node.terminate_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("After terminating instances: %s", rv)
         self.assertEqual(rv, {})
 
     @defer.inlineCallbacks

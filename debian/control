@@ -9,7 +9,7 @@ XS-Python-Version: 2.6
 
 Package: nova-common
 Architecture: all
-Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted, python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
+Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted (>= 10.0.0-2ubuntu2nebula1), python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
 Provides: ${python:Provides}
 Conflicts: nova
 Description: Nova is a cloud

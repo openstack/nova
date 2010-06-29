@@ -76,9 +76,19 @@ class RedisModel(object):
             self.set_default_state()
 
     def set_default_state(self):
-        self.state = {'state' : 'pending'}
+        self.state = {'state': 0,
+                      'state_description': 'pending',
+                      'node_name': 'unassigned',
+                      'project_id': 'unassigned',
+                      'user_id': 'unassigned'}
         self.state[self.object_type+"_id"] = self.object_id
         self.state["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+
+    @property
+    def project(self):
+        if self.state.get('project_id', None):
+            return self.state['project_id']
+        return self.state.get('owner_id', 'unassigned')
 
     @property
     def __redis_key(self):
@@ -324,7 +334,7 @@ class RedisKeeper(object):
     """
     def __init__(self, prefix="redis-"):
         self.prefix = prefix
-        Redis.instance().ping()
+        #Redis.instance().ping()
 
     def __setitem__(self, item, value):
         """

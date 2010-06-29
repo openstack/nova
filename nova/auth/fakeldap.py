@@ -91,7 +91,7 @@ class FakeLDAP(object):
         return False
 
     def search_s(self, dn, scope, query=None, fields=None):
-        logging.debug("searching for %s" % dn)
+        #logging.debug("searching for %s" % dn)
         filtered = {}
         d = self.keeper['objects'] or {}
         for cn, attrs in d.iteritems():
@@ -108,7 +108,7 @@ class FakeLDAP(object):
         return objects.items()
 
     def add_s(self, cn, attr):
-        logging.debug("adding %s" % cn)
+        #logging.debug("adding %s" % cn)
         stored = {}
         for k, v in attr:
             if type(v) is list:

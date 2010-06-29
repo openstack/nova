@@ -1,18 +1,3 @@
-..
-      Copyright [2010] [Anso Labs, LLC]
- 
-      Licensed under the Apache License, Version 2.0 (the "License");
-      you may not use this file except in compliance with the License.
-      You may obtain a copy of the License at
- 
-          http://www.apache.org/licenses/LICENSE-2.0
- 
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      See the License for the specific language governing permissions and
-      limitations under the License.
-
 Getting Started with Nova
 =========================
 
@@ -58,28 +43,29 @@ Installation
 ::
 
     # system libraries and tools
-    apt-get install -y libvirt-bin aoetools vlan
+    apt-get install -y aoetools vlan
     modprobe aoe
 
     # python libraries
-    apt-get install -y python-libvirt python-setuptools python-dev python-pycurl python-m2crypto
+    apt-get install -y python-setuptools python-dev python-pycurl python-m2crypto
 
     # ON THE CLOUD CONTROLLER
     apt-get install -y rabbitmq-server dnsmasq nginx
     # build redis from 2.0.0-rc1 source
-    # setup ldap (slap.sh as root will remove ldap and reinstall it)   
-    NOVA_PATH/nova/auth/slap.sh     
+    # setup ldap (slap.sh as root will remove ldap and reinstall it)
+    NOVA_PATH/nova/auth/slap.sh
     /etc/init.d/rabbitmq-server start
 
     # ON VOLUME NODE:
-    apt-get install -y vblade-persist 
+    apt-get install -y vblade-persist
 
     # ON THE COMPUTE NODE:
-    apt-get install -y kpartx kvm
+    apt-get install -y python-libvirt
+    apt-get install -y kpartx kvm libvirt-bin
 
     # optional packages
-    apt-get install -y euca2ools 
-                                   
+    apt-get install -y euca2ools
+
 Configuration
 ---------------
 
@@ -90,10 +76,10 @@ ON CLOUD CONTROLLER
 ::
 
     iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
-    iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE     
+    iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE
 
 
-* Configure NginX proxy (/etc/nginx/sites-enabled/default) 
+* Configure NginX proxy (/etc/nginx/sites-enabled/default)
 
 ::
 
@@ -137,8 +123,7 @@ Launch servers
 
 Launch nova components
 
-* api_worker
-* s3_worker
-* node_worker
-* storage_worker
-
+* nova-api
+* nova-compute
+* nova-objectstore
+* nova-volume

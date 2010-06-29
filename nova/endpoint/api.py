@@ -37,6 +37,7 @@ from nova import flags
 from nova import utils
 from nova.endpoint import cloud
 from nova.auth import users
+import nova.cloudpipe.api
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
@@ -322,6 +323,8 @@ class APIServerApplication(tornado.web.Application):
     def __init__(self, user_manager, controllers):
         tornado.web.Application.__init__(self, [
             (r'/', RootRequestHandler),
+            (r'/cloudpipe/(.*)', nova.cloudpipe.api.CloudPipeRequestHandler),
+            (r'/cloudpipe', nova.cloudpipe.api.CloudPipeRequestHandler),
             (r'/services/([A-Za-z0-9]+)/', APIRequestHandler),
             (r'/latest/([-A-Za-z0-9/]*)', MetadataRequestHandler),
             (r'/2009-04-04/([-A-Za-z0-9/]*)', MetadataRequestHandler),

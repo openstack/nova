@@ -25,11 +25,85 @@ from nova import flags
 from nova import utils
 from nova.auth import users
 from nova.compute import model
+from nova.compute import network
+from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 import time
 
 FLAGS = flags.FLAGS
 
+class NetworkCommands(object):
+    def restart(self):
+        network.restart_nets()
+
+class VpnCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+        self.instdir = model.InstanceDirectory()
+        self.pipe = pipelib.CloudPipe(cloud.CloudController())
+
+    def list(self):
+        print "%-12s\t" % 'project',
+        print "%-12s\t" % 'ip:port',
+        print "%s" % 'state'
+        for project in self.manager.get_projects():
+            print "%-12s\t" % project.name,
+            print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
+
+            vpn = self.__vpn_for(project.id)
+            if vpn:
+                out, err = utils.execute("ping -c1 -w1 %s > /dev/null; echo $?" % vpn['private_dns_name'])
+                if out.strip() == '0':
+                    net = 'up'
+                else:
+                    net = 'down'
+                print vpn['instance_id'],
+                print vpn['state_description'],
+                print net
+
+            else:
+                print None
+
+    def __vpn_for(self, project_id):
+        for instance in self.instdir.all:
+            if (instance.state.has_key('image_id')
+                and instance['image_id'] == FLAGS.vpn_image_id
+                and not instance['state_description'] in ['shutting_down', 'shutdown']
+                and instance['project_id'] == project_id):
+                return instance
+
+    def spawn(self):
+        for p in reversed(self.manager.get_projects()):
+             if not self.__vpn_for(p.id):
+                 print 'spawning %s' % p.id
+                 self.pipe.launch_vpn_instance(p.id)
+                 time.sleep(10)
+
+    def run(self, project_id):
+        self.pipe.launch_vpn_instance(project_id)
+
+class RoleCommands(object):
+    def __init__(self):
+        self.manager = users.UserManager.instance()
+
+    def add(self, user, role, project=None):
+        """adds role to user
+        if project is specified, adds project specific role
+        arguments: user, role [project]"""
+        self.manager.add_role(user, role, project)
+
+    def has(self, user, role, project=None):
+        """checks to see if user has role
+        if project is specified, returns True if user has
+        the global role and the project role
+        arguments: user, role [project]"""
+        print self.manager.has_role(user, role, project)
+
+    def remove(self, user, role, project=None):
+        """removes role from user
+        if project is specified, removes project specific role
+        arguments: user, role [project]"""
+        self.manager.remove_role(user, role, project)
 
 class UserCommands(object):
     def __init__(self):
@@ -75,6 +149,11 @@ class ProjectCommands(object):
     def __init__(self):
         self.manager = users.UserManager.instance()
 
+    def add(self, project, user):
+        """adds user to project
+        arguments: project user"""
+        self.manager.add_to_project(user, project)
+
     def create(self, name, project_manager, description=None):
         """creates a new project
         arguments: name project_manager [description]"""
@@ -90,6 +169,11 @@ class ProjectCommands(object):
         arguments: <none>"""
         for project in self.manager.get_projects():
             print project.name
+
+    def remove(self, project, user):
+        """removes user from project
+        arguments: project user"""
+        self.manager.remove_from_project(user, project)
 
     def zip(self, project_id, user_id, filename='nova.zip'):
         """exports credentials for user to a zip file
@@ -107,8 +191,11 @@ def usage(script_name):
 
 
 categories = [
+    ('network', NetworkCommands),
     ('user', UserCommands),
     ('project', ProjectCommands),
+    ('role', RoleCommands),
+    ('vpn', VpnCommands),
 ]
 
 
@@ -173,7 +260,9 @@ if __name__ == '__main__':
     # call the action with the remaining arguments
     try:
         fn(*argv)
+        sys.exit(0)
     except TypeError:
         print "Wrong number of arguments supplied"
         print "%s %s: %s" % (category, action, fn.__doc__)
+        sys.exit(2)
 

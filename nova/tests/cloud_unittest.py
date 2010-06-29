@@ -40,8 +40,7 @@ class CloudTestCase(test.BaseTestCase):
         super(CloudTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
-                   fake_users=True,
-                    redis_db=8)
+                   fake_users=True)
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)

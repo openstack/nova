@@ -68,6 +68,8 @@ DEFINE_string('default_instance_type',
                     'm1.small',
                     'default instance type to use, testing only')
 
+DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
+
 # UNUSED
 DEFINE_string('node_availability_zone',
                     'nova',

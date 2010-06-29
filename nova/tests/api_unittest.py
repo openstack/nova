@@ -174,16 +174,25 @@ class ApiEc2TestCase(test.BaseTestCase):
     def test_describe_instances(self):
         self.expect_http()
         self.mox.ReplayAll()
-
+        try:
+            self.users.create_user('fake', 'fake', 'fake')
+        except Exception, _err:
+            pass # User may already exist
         self.assertEqual(self.ec2.get_all_instances(), [])
+        self.users.delete_user('fake')
 
 
     def test_get_all_key_pairs(self):
         self.expect_http()
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") for x in range(random.randint(4, 8)))
+        try:
+            self.users.create_user('fake', 'fake', 'fake')
+        except Exception, _err:
+            pass # User may already exist
         self.users.generate_key_pair('fake', keyname)
 
         rv = self.ec2.get_all_key_pairs()
         self.assertTrue(filter(lambda k: k.name == keyname, rv))
+        self.users.delete_user('fake')
 
