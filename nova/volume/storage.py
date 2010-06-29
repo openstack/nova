@@ -41,6 +41,7 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import validate
+from nova.compute import model
 
 
 FLAGS = flags.FLAGS
@@ -151,18 +152,23 @@ class FakeBlockStore(BlockStore):
         pass
 
 
-class Volume(datastore.RedisModel):
-
-    object_type = 'volume'
+class Volume(model.BasicModel):
 
     def __init__(self, volume_id=None):
-        super(Volume, self).__init__(object_id=volume_id)
+        self.volume_id = volume_id
+        super(Volume, self).__init__()
+
+    @property
+    def identifier(self):
+        self.volume_id
+
+    def default_state(self):
+        return {"volume_id": self.volume_id}
 
     @classmethod
     def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
-        vol = cls(volume_id=volume_id)
-        vol['volume_id'] = volume_id
+        vol = cls(volume_id)
         vol['node_name'] = FLAGS.storage_name
         vol['size'] = size
         vol['user_id'] = user_id
@@ -171,7 +177,6 @@ class Volume(datastore.RedisModel):
         vol["instance_id"] = 'none'
         vol["mountpoint"] = 'none'
         vol['attach_time'] = 'none'
-        vol["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         vol['status'] = "creating" # creating | available | in-use
         vol['attach_status'] = "detached"  # attaching | attached | detaching | detached
         vol['delete_on_termination'] = 'False'
@@ -190,7 +195,7 @@ class Volume(datastore.RedisModel):
         self['mountpoint'] = mountpoint
         self['status'] = "in-use"
         self['attach_status'] = "attaching"
-        self['attach_time'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        self['attach_time'] = utils.utctime()
         self['delete_on_termination'] = 'False'
         self.save()
 

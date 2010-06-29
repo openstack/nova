@@ -75,8 +75,8 @@ def main():
             topic='%s.%s' % (FLAGS.compute_topic, FLAGS.node_name),
             proxy=n)
 
-    # heartbeat = task.LoopingCall(n.report_state)
-    # heartbeat.start(interval=FLAGS.node_report_state_interval, now=False)
+    pulse = task.LoopingCall(n.report_state, FLAGS.node_name, 'nova-compute')
+    pulse.start(interval=FLAGS.node_report_state_interval, now=False)
 
     injected = consumer_all.attach_to_twisted()
     injected = consumer_node.attach_to_twisted()

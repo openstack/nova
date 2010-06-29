@@ -350,7 +350,8 @@ class UserManager(object):
 
         user = self.get_user_from_access_key(access_key)
         if user == None:
-            raise exception.NotFound('No user found for access key')
+            raise exception.NotFound('No user found for access key %s' %
+                                     access_key)
         if project_name is '':
             project_name = user.name
 
