@@ -349,12 +349,15 @@ class Instance(BasicModel):
 
     def save(self):
         """Call into superclass to save object, then save associations"""
-        # NOTE(todd): doesn't track migration between projects,
+        # NOTE(todd): doesn't track migration between projects/nodes,
         #             it just adds the first one
         should_update_project = self.is_new_record()
+        should_update_node = self.is_new_record()
         success = super(Instance, self).save()
         if success and should_update_project:
             self.associate_with("project", self.project)
+        if success and should_update_node:
+            self.associate_with("node", self['node_name'])
         return True
 
     def destroy(self):
