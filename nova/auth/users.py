@@ -481,7 +481,7 @@ class UserManager(object):
 
     def __cert_subject(self, uid):
         # FIXME(ja) - this should be pulled from a global configuration
-        return "/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        return "/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
 
 
 class LDAPWrapper(object):
