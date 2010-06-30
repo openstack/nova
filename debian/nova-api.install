@@ -1,1 +1,2 @@
 bin/nova-api usr/bin
+debian/nova-api.conf etc

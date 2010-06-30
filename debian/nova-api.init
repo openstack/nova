@@ -13,10 +13,10 @@
 set -e
 
 DAEMON=/usr/bin/nova-api
-DAEMON_ARGS="--flagfile=/etc/nova.conf"
+DAEMON_ARGS="--flagfile=/etc/nova-api.conf"
 PIDFILE=/var/run/nova-api.pid
 
-ENABLED=false
+ENABLED=true
 
 if test -f /etc/default/nova-api; then
   . /etc/default/nova-api

@@ -13,10 +13,10 @@
 set -e
 
 DAEMON=/usr/bin/nova-objectstore
-DAEMON_ARGS="--flagfile=/etc/nova.conf"
+DAEMON_ARGS="--flagfile=/etc/nova-objectstore.conf"
 PIDFILE=/var/run/nova-objectstore.pid
 
-ENABLED=false
+ENABLED=true
 
 if test -f /etc/default/nova-objectstore; then
   . /etc/default/nova-objectstore
