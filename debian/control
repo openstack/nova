@@ -3,38 +3,129 @@ Section: net
 Priority: extra
 Maintainer: Jesse Andrews <jesse@ansolabs.com>
 Build-Depends: debhelper (>= 7)
-Build-Depends-Indep: python-support
+Build-Depends-Indep: python-support, python-setuptools
 Standards-Version: 3.8.4
 XS-Python-Version: 2.6
 
 Package: nova-common
 Architecture: all
-Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted (>= 10.0.0-2ubuntu2nebula1), python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
+Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted, python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
 Provides: ${python:Provides}
-Conflicts: nova
-Description: Nova is a cloud
+Description: Nova Cloud Computing - common files
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This package contains things that are needed by all parts of Nova.
 
 Package: nova-compute
 Architecture: all
-Depends: nova-common (= ${binary:Version}), kpartx, kvm, python-libvirt, libvirt-bin (>= 0.8.1), ${python:Depends}, ${misc:Depends}
-Description: Nova compute
+Depends: nova-common (= ${binary:Version}), kpartx, kvm, python-libvirt, libvirt-bin (>= 0.7.5), ${python:Depends}, ${misc:Depends}
+Description: Nova Cloud Computing - compute node
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This is the package you will install on the nodes that will run your
+ virtual machines.
 
 Package: nova-volume
 Architecture: all
 Depends: nova-common (= ${binary:Version}), vblade, vblade-persist, ${python:Depends}, ${misc:Depends}
-Description: Nova volume
+Description: Nova Cloud Computing - storage
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This is the package you will install on your storage nodes.
 
 Package: nova-api
 Architecture: all
 Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
-Description: Nova api
+Description: Nova Cloud Computing - API frontend 
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This package provides the API frontend.
 
 Package: nova-objectstore
 Architecture: all
 Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
-Description: Nova object store
+Description: Nova Cloud Computing - object store
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This is the package you will install on the nodes that will contain your
+ object store.
 
 Package: nova-tools
 Architecture: all
 Depends: python-boto, ${python:Depends}, ${misc:Depends}
-Description: CLI tools to access nova
+Description: Nova Cloud Computing - management tools
+ Nova is a cloud computing fabric controller (the main part of an IaaS
+ system) built to match the popular AWS EC2 and S3 APIs. It is written in
+ Python, using the Tornado and Twisted frameworks, and relies on the
+ standard AMQP messaging protocol, and the Redis distributed KVS.
+ .
+ Nova is intended to be easy to extend, and adapt. For example, it
+ currently uses an LDAP server for users and groups, but also includes a
+ fake LDAP server, that stores data in Redis. It has extensive test
+ coverage, and uses the Sphinx toolkit (the same as Python itself) for code
+ and user documentation.
+ .
+ While Nova is currently in Beta use within several organizations, the
+ codebase is very much under active development.
+ .
+ This package contains admin tools for Nova.
