@@ -1,19 +1,43 @@
-# COPYRIGHT NASA
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration. 
+# All Rights Reserved.
+# 
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+# 
+#       http://www.apache.org/licenses/LICENSE-2.0
+# 
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
-import os, re, sys, time, unittest, random
-from novatestcase import NovaTestCase
-from commands import getstatusoutput
-from paramiko import SSHException
-from zipfile import ZipFile, ZIP_DEFLATED
+import commands
+import os
+import random
+import re
+import sys
+import time
+import unittest
+import zipfile
 
-# TODO: Make endpoint configurable
+from nova.smoketests import flags
+from nova.smoketests.novatestcase import NovaTestCase
 
-DEBUG = True
+from nova import vendor
+import paramiko
 
-KERNEL_FILENAME = 'openwrt-x86-vmlinuz'
-IMAGE_FILENAME = 'openwrt-x86-ext2.image'
+FLAGS = flags.FLAGS
+flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
+              'Local kernel file to use for bundling tests')
+flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
+              'Local image file to use for bundling tests')
 
-ZIP_FILENAME = '/tmp/nova-x509.zip'
+# TODO(devamcar): Use random tempfile
+ZIP_FILENAME = '/tmp/euca-me-x509.zip'
 
 data = {}
 
@@ -38,7 +62,7 @@ class UserTests(NovaTestCase):
         output.write(buf)
         output.close()
 
-        zip = ZipFile(ZIP_FILENAME, 'a', ZIP_DEFLATED)
+        zip = zipfile.ZipFile(ZIP_FILENAME, 'a', zipfile.ZIP_DEFLATED)
         bad = zip.testzip()
         zip.close()
 
@@ -70,14 +94,14 @@ class ImageTests(NovaTestCase):
         data['image_id'] = image_id
 
     def test_004_admin_can_bundle_kernel(self):
-        self.assertTrue(self.bundle_image(KERNEL_FILENAME, kernel=True))
+        self.assertTrue(self.bundle_image(flags.bundle_kernel, kernel=True))
 
     def test_005_admin_can_upload_kernel(self):
-        self.assertTrue(self.upload_image(test_bucket, KERNEL_FILENAME))
+        self.assertTrue(self.upload_image(test_bucket, flags.bundle_kernel))
 
     def test_006_admin_can_register_kernel(self):
-        # FIXME: registeration should verify that bucket/manifest exists before returning successfully!
-        kernel_id = self.register_image(test_bucket, KERNEL_FILENAME)
+        # FIXME: registration should verify that bucket/manifest exists before returning successfully!
+        kernel_id = self.register_image(test_bucket, flags.bundle_kernel)
         self.assert_(kernel_id is not None)
         data['kernel_id'] = kernel_id
 
@@ -101,56 +125,61 @@ class ImageTests(NovaTestCase):
             self.assert_(False) # wasn't available within 10 seconds
         self.assert_(kernel.type == 'kernel')
 
-    def test_008_images_not_public_by_default(self):
+    def test_008_admin_can_describe_image_attribute(self):
+        attrs = self.admin.get_image_attribute(data['image_id'], 'launchPermission')
+        self.assert_(attrs.name, 'launch_permission')
+        
+    def test_009_me_cannot_see_non_public_images(self):
         conn = self.connection_for(test_username)
         images = conn.get_all_images(image_ids=[data['image_id']])
         self.assertEqual(len(images), 0)
-        images = conn.get_all_images(image_ids=[data['kernel_id']])
-        self.assertEqual(len(images), 0)
 
-    def test_009_images_can_be_made_public(self):
-        userconn = self.connection_for(test_username)
+    def test_010_admin_can_modify_image_launch_permission(self):
+        conn = self.connection_for(test_username)
 
         self.admin.modify_image_attribute(image_id=data['image_id'],
                                           operation='add',
                                           attribute='launchPermission',
                                           groups='all')
 
-        image = userconn.get_image(data['image_id'])
+        image = conn.get_image(data['image_id'])
         self.assertEqual(image.id, data['image_id'])
 
-        self.admin.modify_image_attribute(image_id=data['kernel_id'],
-                                          operation='add',
-                                          attribute='launchPermission',
-                                          groups='all')
-
-        image = userconn.get_image(data['kernel_id'])
-        self.assertEqual(image.id, data['kernel_id'])
-
+    def test_011_me_can_list_public_images(self):
+        conn = self.connection_for(test_username)
+        images = conn.get_all_images(image_ids=[data['image_id']])
+        self.assertEqual(len(images), 1)
+        pass
+        
+    def test_012_me_can_see_launch_permission(self):
+        attrs = self.admin.get_image_attribute(data['image_id'], 'launchPermission')
+        self.assert(_attrs.name, 'launch_permission')
+        self.assert(_attrs.groups[0], 'all')
+        
     # FIXME: add tests that user can launch image
 
-#     def test_010_user_can_launch_admin_public_image(self):
+#     def test_013_user_can_launch_admin_public_image(self):
 #         # TODO: Use openwrt kernel instead of default kernel
 #         conn = self.connection_for(test_username)
 #         reservation = conn.run_instances(data['image_id'])
 #         self.assertEqual(len(reservation.instances), 1)
 #         data['my_instance_id'] = reservation.instances[0].id
 
-#     def test_011_instances_launch_within_30_seconds(self):
+#     def test_014_instances_launch_within_30_seconds(self):
 #         pass
 
-#     def test_012_user_can_terminate(self):
+#     def test_015_user_can_terminate(self):
 #         conn = self.connection_for(test_username)
 #         terminated = conn.terminate_instances(instance_ids=[data['my_instance_id']])
 #         self.assertEqual(len(terminated), 1)
 
-    def test_013_admin_can_deregister_kernel(self):
+    def test_016_admin_can_deregister_kernel(self):
         self.assertTrue(self.admin.deregister_image(data['kernel_id']))
 
-    def test_014_admin_can_deregister_image(self):
+    def test_017_admin_can_deregister_image(self):
         self.assertTrue(self.admin.deregister_image(data['image_id']))
 
-    def test_015_admin_can_delete_bundle(self):
+    def test_018_admin_can_delete_bundle(self):
         self.assertTrue(self.delete_bundle_bucket(test_bucket))
 
     def test_999_tearDown(self):
@@ -202,13 +231,13 @@ class SecurityTests(NovaTestCase):
     def test_005_can_ping_private_ip(self):
         for x in xrange(120):
             # ping waits for 1 second
-            status, output = getstatusoutput("ping -c1 -w1 %s" % data['my_private_ip'])
+            status, output = commands.getstatusoutput("ping -c1 -w1 %s" % data['my_private_ip'])
             if status == 0:
                  break
         else:
             self.assert_("could not ping instance")
     #def test_005_me_cannot_ssh_when_unauthorized(self):
-    #    self.assertRaises(SSHException, self.connect_ssh, data['my_private_ip'], 'mykey')
+    #    self.assertRaises(paramiko.SSHException, self.connect_ssh, data['my_private_ip'], 'mykey')
 
     #def test_006_me_can_authorize_ssh(self):
     #    conn = self.connection_for(test_username + '_me')
@@ -246,7 +275,7 @@ class SecurityTests(NovaTestCase):
         try:
             conn = self.connect_ssh(data['my_private_ip'], test_key + 'yourkey')
             conn.close()
-        except SSHException:
+        except paramiko.SSHException:
             pass
         else:
             self.fail("expected SSHException")
@@ -274,7 +303,7 @@ class SecurityTests(NovaTestCase):
 #       build a script to bundle the instance
 #       build a script to upload the bundle
 
-# status, output = getstatusoutput('cmd')
+# status, output = commands.getstatusoutput('cmd')
 # if status == 0:
 #    print 'ok'
 # else:
@@ -321,10 +350,13 @@ class RebundlingTests(NovaTestCase):
         image = conn.get_image(data['my_image_id'])
         self.assertEqual(image, None)
 
-#    def test_006_me_can_make_image_public(self):
-#        # TODO: research this
-#        self.assert_(False)
-#
+    def test_006_me_can_make_image_public(self):
+        conn = self.connection_for(test_username)
+        conn.modify_image_attribute(image_id=data['my_image_id'],
+                                          operation='add',
+                                          attribute='launchPermission',
+                                          groups='all')
+
     def test_007_you_can_see_my_public_image(self):
         conn = self.connection_for('you')
         image = conn.get_image(data['my_image_id'])
@@ -401,7 +433,7 @@ class VolumeTests(NovaTestCase):
         # wait for instance to show up
         for x in xrange(120):
             # ping waits for 1 second
-            status, output = getstatusoutput("ping -c1 -w1 %s" % data['private_ip'])
+            status, output = commands.getstatusoutput("ping -c1 -w1 %s" % data['private_ip'])
             if status == 0:
                   break
         else:
