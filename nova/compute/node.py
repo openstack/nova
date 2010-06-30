@@ -269,6 +269,7 @@ class Instance(object):
             data['project_id'] = data['owner_id']
         self.datamodel = data
 
+        self._s = data
         size = data.get('instance_type', FLAGS.default_instance_type)
         if size not in INSTANCE_TYPES:
             raise exception.Error('invalid instance type: %s' % size)
