@@ -115,9 +115,10 @@ class AdapterConsumer(TopicConsumer):
         args = message_data.get('args', {})
         message.ack()
         if not method:
-            # vish: we may not want to ack here, but that means that bad messages
-            #       stay in the queue indefinitely, so for now we just log the
-            #       message and send an error string back to the caller
+            # NOTE(vish): we may not want to ack here, but that means that bad
+            #             messages stay in the queue indefinitely, so for now
+            #             we just log the message and send an error string
+            #             back to the caller
             _log.warn('no method for message: %s' % (message_data))
             msg_reply(msg_id, 'No method for message: %s' % message_data)
             return
