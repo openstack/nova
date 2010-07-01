@@ -43,7 +43,7 @@ Installation
 ::
 
     # system libraries and tools
-    apt-get install -y aoetools vlan
+    apt-get install -y aoetools vlan curl
     modprobe aoe
 
     # python libraries
@@ -62,6 +62,7 @@ Installation
     # ON THE COMPUTE NODE:
     apt-get install -y python-libvirt
     apt-get install -y kpartx kvm libvirt-bin
+    modprobe kvm
 
     # optional packages
     apt-get install -y euca2ools
@@ -92,7 +93,7 @@ ON CLOUD CONTROLLER
 
     location ~ /_images/.+ {
       root NOVA_PATH/images;
-      rewrite ^/_images/(.*)\$ /\$1 break;
+      rewrite ^/_images/(.*)$ /$1 break;
     }
 
     location / {
@@ -109,6 +110,7 @@ ON VOLUME NODE
     # This creates a 1GB file to create volumes out of
     dd if=/dev/zero of=MY_FILE_PATH bs=100M count=10
     losetup --show -f MY_FILE_PATH
+    # replace loop0 below with whatever losetup returns
     echo "--storage_dev=/dev/loop0" >> NOVA_PATH/bin/nova.conf
 
 Running
