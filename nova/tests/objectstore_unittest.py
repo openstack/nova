@@ -28,7 +28,6 @@ import tempfile
 from nova import vendor
 
 from nova import flags
-from nova import rpc
 from nova import objectstore
 from nova import test
 from nova.auth import users
@@ -57,7 +56,6 @@ class ObjectStoreTestCase(test.BaseTestCase):
                    buckets_path=os.path.join(oss_tempdir, 'buckets'),
                    images_path=os.path.join(oss_tempdir, 'images'),
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
-        self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
 
         self.um = users.UserManager.instance()
