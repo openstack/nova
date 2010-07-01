@@ -30,7 +30,7 @@ import base64
 import json
 import logging
 import os
-import random
+import shutil
 import sys
 
 from nova import vendor
@@ -153,7 +153,8 @@ class Node(object, service.Service):
         inst = self.instdir.get(instance_id)
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        net = network.BridgedNetwork.get_network_for_project(inst['user_id'], inst['project_id'],
+        net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
+                                                             inst['project_id'],
                                             security_group).express()
         inst['node_name'] = FLAGS.node_name
         inst.save()
@@ -333,7 +334,7 @@ class Instance(object):
 
     @property
     def name(self):
-        return self._s['name']
+        return self.datamodel['name']
 
     def is_pending(self):
         return (self.state == Instance.NOSTATE or self.state == 'pending')
@@ -346,7 +347,7 @@ class Instance(object):
         return (self.state == Instance.RUNNING or self.state == 'running')
 
     def describe(self):
-        return self._s
+        return self.datamodel
 
     def info(self):
         logging.debug("Getting info for dom %s" % self.name)
@@ -360,7 +361,7 @@ class Instance(object):
                 'node_name': FLAGS.node_name}
 
     def basepath(self, path=''):
-        return os.path.abspath(os.path.join(self._s['basepath'], path))
+        return os.path.abspath(os.path.join(self.datamodel['basepath'], path))
 
     def update_state(self):
         self.datamodel.update(self.info())
@@ -450,13 +451,13 @@ class Instance(object):
     @defer.inlineCallbacks
     def _create_image(self, libvirt_xml):
         # syntactic nicety
-        data = self._s
+        data = self.datamodel
         basepath = self.basepath
 
         # ensure directories exist and are writable
         yield self._pool.simpleExecute('mkdir -p %s' % basepath())
         yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
-        
+
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
@@ -464,11 +465,11 @@ class Instance(object):
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
-        
+
         if FLAGS.fake_libvirt:
             logging.info('fake_libvirt, nothing to do for create_image')
             raise defer.returnValue(None);
-        
+
         if FLAGS.use_s3:
             _fetch_file = self._fetch_s3_image
         else:
@@ -495,7 +496,7 @@ class Instance(object):
                  * 1024 * 1024 * 1024)
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
-        
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self):
@@ -506,7 +507,7 @@ class Instance(object):
         self.set_state(Instance.NOSTATE, 'launching')
         logging.info('self %s', self)
         try:
-            yield self._create_image(xml) 
+            yield self._create_image(xml)
             self._conn.createXML(xml, 0)
             # TODO(termie): this should actually register
             # a callback to check for successful boot
@@ -528,7 +529,7 @@ class Instance(object):
                     local_d.callback(None)
             timer.f = _wait_for_boot
             timer.start(interval=0.5, now=True)
-        except Exception:
+        except Exception, ex:
             logging.debug(ex)
             self.set_state(Instance.SHUTDOWN)
 
