@@ -30,7 +30,7 @@ Description: Nova Cloud Computing - common files
 
 Package: nova-compute
 Architecture: all
-Depends: nova-common (= ${binary:Version}), kpartx, kvm, python-libvirt, libvirt-bin (>= 0.7.5), ${python:Depends}, ${misc:Depends}
+Depends: nova-common (= ${binary:Version}), kpartx, kvm, python-libvirt, libvirt-bin (>= 0.7.5), curl, ${python:Depends}, ${misc:Depends}
 Description: Nova Cloud Computing - compute node
  Nova is a cloud computing fabric controller (the main part of an IaaS
  system) built to match the popular AWS EC2 and S3 APIs. It is written in
