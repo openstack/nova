@@ -98,26 +98,22 @@ class BaseNetwork(datastore.RedisModel):
     @property
     def network(self):
         return IPy.IP(self['network_str'])
+
     @property
     def netmask(self):
         return self.network.netmask()
+
     @property
     def gateway(self):
         return self.network[1]
+
     @property
     def broadcast(self):
         return self.network.broadcast()
-    @property
-    def gateway(self):
-        return self.network[1]
+
     @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
-
-    def range(self):
-        # the .2 address is always CloudPipe
-        for idx in range(3, len(self.network)-2):
-            yield self.network[idx]
 
     @property
     def user(self):
