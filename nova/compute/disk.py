@@ -125,7 +125,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                     # inject key file
                     yield _inject_key_into_fs(key, tmpdir, execute=execute)
                 if net:
-                    yield _inject_net_into_fs(net, tmpdir)
+                    yield _inject_net_into_fs(net, tmpdir, execute=execute)
             finally:
                 # unmount device
                 yield execute('sudo umount %s' % mapped_device)

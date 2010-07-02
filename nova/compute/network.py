@@ -75,7 +75,7 @@ flags.DEFINE_string('simple_network_gateway', '192.168.0.1',
                        'Broadcast for simple network')
 flags.DEFINE_string('simple_network_broadcast', '192.168.0.255',
                        'Broadcast for simple network')
-flags.DEFINE_string('simple_network_dns', '8.8.8.8',
+flags.DEFINE_string('simple_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
 logging.getLogger().setLevel(logging.DEBUG)

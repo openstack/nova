@@ -538,7 +538,7 @@ class CloudController(object):
             inst['ami_launch_index'] = num
             inst['bridge_name'] = bridge_name
             if FLAGS.simple_network:
-                network.allocate_simple_ip(mac=inst['mac_address'])
+                address = network.allocate_simple_ip()
             else:
                 if inst['image_id'] == FLAGS.vpn_image_id:
                     address = network.allocate_vpn_ip(
@@ -579,10 +579,13 @@ class CloudController(object):
                 pass
             if instance.get('private_dns_name', None):
                 logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
-                try:
-                    self.network.deallocate_ip(instance.get('private_dns_name', None))
-                except Exception, _err:
-                    pass
+                if FLAGS.simple_network:
+                    network.deallocate_simple_ip(instance.get('private_dns_name', None))
+                else:
+                    try:
+                        self.network.deallocate_ip(instance.get('private_dns_name', None))
+                    except Exception, _err:
+                        pass
             if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
                 rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "terminate_instance",
