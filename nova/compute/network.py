@@ -58,6 +58,13 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
 flags.DEFINE_integer('cloudpipe_start_port', 12000,
                         'Starting port for mapped CloudPipe external ports')
 
+flags.DEFINE_boolean('simple_network', False,
+                       'Use simple networking instead of vlans')
+flags.DEFINE_string('simple_network_bridge', 'br100',
+                       'Bridge for instances')
+flags.DEFINE_list('simple_network_ips', ['192.168.1.1'],
+                       'Available ips for network')
+
 logging.getLogger().setLevel(logging.DEBUG)
 
 # CLEANUP:
@@ -417,6 +424,20 @@ def get_network_by_address(address):
         if address in net.assigned:
             return net
     raise exception.AddressNotAllocated()
+
+def allocate_simple_ip():
+    redis = datastore.Redis.instance()
+    if not redis.exists('ips') and not len(redis.keys('instances:*')):
+        for address in FLAGS.simple_network_ips:
+            redis.sadd('ips', address)
+    address = redis.spop('ips')
+    if not address:
+        raise exception.NoMoreAddresses()
+    return address
+
+def deallocate_simple_ip(address):
+    datastore.Redis.instance().sadd('ips', address)
+
 
 def allocate_vpn_ip(user_id, project_id, mac):
     return get_project_network(project_id).allocate_vpn_ip(mac)

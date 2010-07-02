@@ -516,7 +516,12 @@ class CloudController(object):
             key_data = key_pair.public_key
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        bridge_name = network.BridgedNetwork.get_network_for_project(context.user.id, context.project.id, security_group)['bridge_name']
+        if FLAGS.simple_network:
+            bridge_name = FLAGS.simple_network_bridge
+        else:
+            net = network.BridgedNetwork.get_network_for_project(
+                    context.user.id, context.project.id, security_group)
+            bridge_name = net['bridge_name']
         for num in range(int(kwargs['max_count'])):
             inst = self.instdir.new()
             # TODO(ja): add ari, aki
@@ -532,12 +537,19 @@ class CloudController(object):
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
             inst['bridge_name'] = bridge_name
-            if inst['image_id'] == FLAGS.vpn_image_id:
-                address = network.allocate_vpn_ip(
-                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
+            if FLAGS.simple_network:
+                network.allocate_simple_ip(mac=inst['mac_address'])
             else:
-                address = network.allocate_ip(
-                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
+                if inst['image_id'] == FLAGS.vpn_image_id:
+                    address = network.allocate_vpn_ip(
+                            inst['user_id'],
+                            inst['project_id'],
+                            mac=inst['mac_address'])
+                else:
+                    address = network.allocate_ip(
+                            inst['user_id'],
+                            inst['project_id'],
+                            mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
             # TODO: allocate expresses on the router node
             inst.save()

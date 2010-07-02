@@ -57,7 +57,7 @@ from nova.objectstore import image # for image_path flag
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                         utils.abspath('compute/libvirt.xml.template'),
-                        'Network XML Template')
+                        'Libvirt XML Template')
 flags.DEFINE_bool('use_s3', True,
                       'whether to get images from s3 or use local copy')
 flags.DEFINE_string('instances_path', utils.abspath('../instances'),
@@ -151,9 +151,10 @@ class Node(object, service.Service):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
         inst = self.instdir.get(instance_id)
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
-        net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
+        if not FLAGS.simple_network:
+            # TODO: Get the real security group of launch in here
+            security_group = "default"
+            net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
                                                              inst['project_id'],
                                             security_group).express()
         inst['node_name'] = FLAGS.node_name
