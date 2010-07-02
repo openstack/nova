@@ -61,9 +61,22 @@ flags.DEFINE_integer('cloudpipe_start_port', 12000,
 flags.DEFINE_boolean('simple_network', False,
                        'Use simple networking instead of vlans')
 flags.DEFINE_string('simple_network_bridge', 'br100',
-                       'Bridge for instances')
-flags.DEFINE_list('simple_network_ips', ['192.168.1.1'],
-                       'Available ips for network')
+                       'Bridge for simple network instances')
+flags.DEFINE_list('simple_network_ips', ['192.168.0.2'],
+                       'Available ips for simple network')
+flags.DEFINE_string('simple_network_template',
+                    utils.abspath('compute/interfaces.template'),
+                    'Template file for simple network')
+flags.DEFINE_string('simple_network_netmask', '255.255.255.0',
+                       'Netmask for simple network')
+flags.DEFINE_string('simple_network_network', '192.168.0.0',
+                       'Network for simple network')
+flags.DEFINE_string('simple_network_gateway', '192.168.0.1',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_broadcast', '192.168.0.255',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_dns', '8.8.8.8',
+                       'Dns for simple network')
 
 logging.getLogger().setLevel(logging.DEBUG)
 

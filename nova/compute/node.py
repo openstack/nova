@@ -483,12 +483,23 @@ class Instance(object):
         if not os.path.exists(basepath('ramdisk')):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
-        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd, input=input, error_ok=1)
+        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
+                                                                   input=input,
+                                                                   error_ok=1)
 
-        if data['key_data']:
-            logging.info('Injecting key data into image %s', data['image_id'])
-            yield disk.inject_key(
-                    data['key_data'], basepath('disk-raw'), execute=execute)
+        key = data['key_data']
+        net = None
+        if FLAGS.simple_network:
+            with open(FLAGS.simple_network_template) as f:
+                net = f.read() % {'address': data['private_dns_name'],
+                                  'network': FLAGS.simple_network_network,
+                                  'netmask': FLAGS.simple_network_netmask,
+                                  'gateway': FLAGS.simple_network_gateway,
+                                  'broadcast': FLAGS.simple_network_broadcast,
+                                  'dns': FLAGS.simple_network_dns}
+        if key or net:
+            logging.info('Injecting data into image %s', data['image_id'])
+            yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
             yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
