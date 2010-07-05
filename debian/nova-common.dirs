@@ -1,0 +1,6 @@
+var/lib/nova/buckets
+var/lib/nova/CA
+var/lib/nova/images
+var/lib/nova/instances
+var/lib/nova/keys
+var/lib/nova/networks

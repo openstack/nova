@@ -2,6 +2,8 @@ nova (0.3.0+really0.2.2-0ubuntu0ppa2) UNRELEASED; urgency=low
 
   * Added --network_path setting to nova-compute's flagfile.
   * Move templates from python directories to /usr/share/nova.
+  * Add debian/nova-common.dirs to create
+    var/lib/nova/{buckets,CA,images,instances,keys,networks}
 
  -- Soren Hansen <soren@ubuntu.com>  Mon, 05 Jul 2010 13:20:11 +0200
 
