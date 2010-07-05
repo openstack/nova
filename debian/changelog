@@ -1,3 +1,9 @@
+nova (0.3.0+really0.2.2-0ubuntu0ppa1) lucid; urgency=low
+
+  * Upload to PPA.
+
+ -- Soren Hansen <soren@ubuntu.com>  Mon, 05 Jul 2010 12:47:43 +0200
+
 nova (0.2.2-6) UNRELEASED; urgency=low
 
   * Fix to make Key Injection work again
