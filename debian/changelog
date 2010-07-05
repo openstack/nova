@@ -1,3 +1,9 @@
+nova (0.3.0+really0.2.2-0ubuntu0ppa1ubuntu1) UNRELEASED; urgency=low
+
+  * Added --network_path setting to nova-compute's flagfile.
+
+ -- Soren Hansen <soren@ubuntu.com>  Mon, 05 Jul 2010 13:20:11 +0200
+
 nova (0.3.0+really0.2.2-0ubuntu0ppa1) lucid; urgency=low
 
   * Upload to PPA.
