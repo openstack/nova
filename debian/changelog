@@ -1,4 +1,4 @@
-nova (0.3.0+really0.2.2-0ubuntu0ppa1ubuntu1) UNRELEASED; urgency=low
+nova (0.3.0+really0.2.2-0ubuntu0ppa2) UNRELEASED; urgency=low
 
   * Added --network_path setting to nova-compute's flagfile.
   * Move templates from python directories to /usr/share/nova.
