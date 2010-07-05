@@ -1,4 +1,4 @@
-nova (0.3.0+really0.2.2-0ubuntu0ppa2) UNRELEASED; urgency=low
+nova (0.3.0+really0.2.2-0ubuntu0ppa2) lucid; urgency=low
 
   * Added --network_path setting to nova-compute's flagfile.
   * Move templates from python directories to /usr/share/nova.
@@ -7,7 +7,7 @@ nova (0.3.0+really0.2.2-0ubuntu0ppa2) UNRELEASED; urgency=low
   * Don't pass --daemonize=1 to nova-compute. It's already daemonising
     by default.
 
- -- Soren Hansen <soren@ubuntu.com>  Mon, 05 Jul 2010 13:20:11 +0200
+ -- Soren Hansen <soren@ubuntu.com>  Mon, 05 Jul 2010 22:06:54 +0200
 
 nova (0.3.0+really0.2.2-0ubuntu0ppa1) lucid; urgency=low
 
