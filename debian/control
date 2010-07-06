@@ -9,7 +9,7 @@ XS-Python-Version: 2.6
 
 Package: nova-common
 Architecture: all
-Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted, python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
+Depends: ${python:Depends}, aoetools, vlan, python-ipy, python-boto, python-m2crypto, python-pycurl, python-twisted-core, python-daemon, python-redis, python-carrot, python-lockfile, python-gflags, python-tornado, ${misc:Depends}
 Provides: ${python:Provides}
 Description: Nova Cloud Computing - common files
  Nova is a cloud computing fabric controller (the main part of an IaaS

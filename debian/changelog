@@ -1,3 +1,10 @@
+nova (0.3.0+really0.2.2-0ubuntu0ppa4) UNRELEASED; urgency=low
+
+  * Relax the Twisted dependency to python-twisted-core (rather than the
+    full stack).
+
+ -- Soren Hansen <soren@ubuntu.com>  Tue, 06 Jul 2010 22:28:28 +0200
+
 nova (0.3.0+really0.2.2-0ubuntu0ppa3) lucid; urgency=low
 
   * Add a dependency on nginx from nova-objectsstore and install a
