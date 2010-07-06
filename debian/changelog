@@ -4,6 +4,8 @@ nova (0.3.0+really0.2.2-0ubuntu0ppa3) UNRELEASED; urgency=low
     suitable configuration file.
   * Ship the CA directory in nova-common.
   * Add a default flag file for nova-manage to help it find the CA.
+  * If set, pass KernelId and RamdiskId from RunInstances call to the
+    target compute node.
 
  -- Soren Hansen <soren@ubuntu.com>  Tue, 06 Jul 2010 13:33:44 +0200
 
