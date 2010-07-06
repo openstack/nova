@@ -91,7 +91,7 @@ Description: Nova Cloud Computing - API frontend
 
 Package: nova-objectstore
 Architecture: all
-Depends: nova-common (= ${binary:Version}), ${python:Depends}, ${misc:Depends}
+Depends: nova-common (= ${binary:Version}), nginx, ${python:Depends}, ${misc:Depends}
 Description: Nova Cloud Computing - object store
  Nova is a cloud computing fabric controller (the main part of an IaaS
  system) built to match the popular AWS EC2 and S3 APIs. It is written in
