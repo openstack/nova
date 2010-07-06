@@ -1,5 +1,9 @@
 var/lib/nova/buckets
 var/lib/nova/CA
+var/lib/nova/CA/INTER
+var/lib/nova/CA/newcerts
+var/lib/nova/CA/private
+var/lib/nova/CA/reqs
 var/lib/nova/images
 var/lib/nova/instances
 var/lib/nova/keys
