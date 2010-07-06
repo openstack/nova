@@ -1,4 +1,4 @@
-nova (0.3.0+really0.2.2-0ubuntu0ppa3) UNRELEASED; urgency=low
+nova (0.3.0+really0.2.2-0ubuntu0ppa3) lucid; urgency=low
 
   * Add a dependency on nginx from nova-objectsstore and install a
     suitable configuration file.
@@ -7,7 +7,7 @@ nova (0.3.0+really0.2.2-0ubuntu0ppa3) UNRELEASED; urgency=low
   * If set, pass KernelId and RamdiskId from RunInstances call to the
     target compute node.
 
- -- Soren Hansen <soren@ubuntu.com>  Tue, 06 Jul 2010 13:33:44 +0200
+ -- Soren Hansen <soren@ubuntu.com>  Tue, 06 Jul 2010 17:47:38 +0200
 
 nova (0.3.0+really0.2.2-0ubuntu0ppa2) lucid; urgency=low
 
