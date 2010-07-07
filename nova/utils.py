@@ -48,11 +48,9 @@ def fetchfile(url, target):
     execute("curl %s -o %s" % (url, target))
 
 def execute(cmd, input=None, addl_env=None):
-    #logging.debug("Running %s" % (cmd))
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
-    logging.debug(env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None

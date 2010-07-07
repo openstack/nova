@@ -98,11 +98,10 @@ def dnsmasq_cmd(net):
         ' --pid-file=%s' % dhcp_file(net['vlan'], 'pid'),
         ' --listen-address=%s' % net.dhcp_listen_address,
         ' --except-interface=lo',
-        ' --dhcp-range=%s,static,120s' % (net.dhcp_range_start),
-        ' --dhcp-lease-max=61',
+        ' --dhcp-range=%s,static,600s' % (net.dhcp_range_start),
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-leasefile=%s' % dhcp_file(net['vlan'], 'leases'),
-        ' ---dhcp-script=%s' % bin_file('dhcpleasor.py')]
+        ' --dhcp-script=%s' % bin_file('dhcpleasor.py'),
+        ' --leasefile-ro']
     return ''.join(cmd)
 
 def hostDHCP(network, host, mac):

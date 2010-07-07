@@ -160,7 +160,10 @@ class BaseNetwork(datastore.RedisModel):
             self._add_host(user_id, project_id, address, mac)
             self.express(address=address)
             return address
-        raise exception.NoMoreAddresses()
+        raise exception.NoMoreAddresses("Project %s with network %s" % (project_id, str(self.network)))
+
+    def lease_ip(self, ip_str):    
+        logging.debug("Leasing allocated IP %s" % (ip_str))
 
     def release_ip(self, ip_str):
         if not ip_str in self.assigned:
@@ -419,14 +422,22 @@ def get_vlan_for_project(project_id):
             return vlan
     raise exception.AddressNotAllocated("Out of VLANs")
 
+def get_project_id_for_vlan(vlan):
+    assigned_vlans = get_assigned_vlans()
+    for project_id, project_vlan in assigned_vlans.iteritems():
+        if vlan == project_vlan:
+            return project_id
+
+def get_network_by_interface(iface, security_group='default'):
+    vlan = iface.rpartition("br")[2]
+    return get_project_network(get_project_id_for_vlan(vlan), security_group)
 
 def get_network_by_address(address):
-    logging.debug("Get Network By Address:")
+    logging.debug("Get Network By Address: %s" % address)
     for project in users.UserManager.instance().get_projects():
-        logging.debug("  looking at project %s", project.id)
         net = get_project_network(project.id)
-        logging.debug("   is %s in %s ?" % (address, str(net.assigned)))
         if address in net.assigned:
+            logging.debug("Found %s in %s" % (address, project.id))
             return net
     raise exception.AddressNotAllocated()
 
@@ -438,6 +449,12 @@ def allocate_ip(user_id, project_id, mac):
 
 def deallocate_ip(address):
     return get_network_by_address(address).deallocate_ip(address)
+    
+def release_ip(address):
+    return get_network_by_address(address).release_ip(address)
+    
+def lease_ip(address):
+    return get_network_by_address(address).lease_ip(address)
 
 def get_project_network(project_id, security_group='default'):
     """ get a project's private network, allocating one if needed """

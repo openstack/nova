@@ -21,6 +21,7 @@
 import os
 import logging
 import unittest
+import time
 
 from nova import vendor
 import IPy
@@ -86,18 +87,36 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertEqual(False, address in self._get_project_addresses("project0"))
 
     def test_range_allocation(self):
+        mac = utils.generate_mac()
+        secondmac = utils.generate_mac()
+        hostname = "test-host"
         address = network.allocate_ip(
-                "netuser", "project0", utils.generate_mac())
+                    "netuser", "project0", mac)
         secondaddress = network.allocate_ip(
-                "netuser", "project1", utils.generate_mac())
+                "netuser", "project1", secondmac)
+        net = network.get_project_network("project0", "default")
+        secondnet = network.get_project_network("project1", "default")
+        
         self.assertEqual(True,
                          address in self._get_project_addresses("project0"))
         self.assertEqual(True,
                          secondaddress in self._get_project_addresses("project1"))
         self.assertEqual(False, address in self._get_project_addresses("project1"))
+        # Addresses are allocated before they're issued
+        self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
+        self.dnsmasq.issue_ip(secondmac, secondaddress, 
+                                hostname, secondnet.bridge_name)
+        
         rv = network.deallocate_ip(address)
+        self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
         self.assertEqual(False, address in self._get_project_addresses("project0"))
+        # First address release shouldn't affect the second
+        self.assertEqual(True,
+         secondaddress in self._get_project_addresses("project1"))
+        
         rv = network.deallocate_ip(secondaddress)
+        self.dnsmasq.release_ip(secondmac, secondaddress, 
+                                hostname, secondnet.bridge_name)
         self.assertEqual(False,
                          secondaddress in self._get_project_addresses("project1"))
 
@@ -127,9 +146,14 @@ class NetworkTestCase(test.TrialTestCase):
         for i in range(0, 30):
             name = 'toomany-project%s' % i
             self.manager.create_project(name, 'netuser', name)
+            net = network.get_project_network(name, "default")
+            mac = utils.generate_mac()
+            hostname = "toomany-hosts"
             address = network.allocate_ip(
-                    "netuser", name, utils.generate_mac())
+                    "netuser", name, mac)
+            self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
             rv = network.deallocate_ip(address)
+            self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
             self.manager.delete_project(name)
 
     def _get_project_addresses(self, project_id):
@@ -144,15 +168,13 @@ def binpath(script):
 class FakeDNSMasq(object):
     def issue_ip(self, mac, ip, hostname, interface):
         cmd = "%s add %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
-        env = {'DNSMASQ_INTERFACE': interface, 'REDIS_DB' : '8'}
+        env = {'DNSMASQ_INTERFACE': interface, 'TESTING' : '1'}
         (out, err) = utils.execute(cmd, addl_env=env)
-        logging.debug(out)
-        logging.debug(err)
+        logging.debug("ISSUE_IP: %s, %s " % (out, err))
     
     def release_ip(self, mac, ip, hostname, interface):
         cmd = "%s del %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
-        env = {'DNSMASQ_INTERFACE': interface, 'REDIS_DB' : '8'}
+        env = {'DNSMASQ_INTERFACE': interface, 'TESTING' : '1'}
         (out, err) = utils.execute(cmd, addl_env=env)
-        logging.debug(out)
-        logging.debug(err)
+        logging.debug("RELEASE_IP: %s, %s " % (out, err))
         

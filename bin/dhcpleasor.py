@@ -27,32 +27,50 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 logging.debug(sys.path)
 import getopt
 from os import environ
+from nova.compute import linux_net
 from nova.compute import network
+from nova import rpc
+
 from nova import flags
 FLAGS = flags.FLAGS
 
 
 def add_lease(mac, ip, hostname, interface):
-    pass
+    if FLAGS.fake_rabbit:
+        network.lease_ip(ip)     
+    else:
+        rpc.cast(FLAGS.cloud_topic, {"method": "lease_ip",
+                "args" : {"address": ip}})
 
 def old_lease(mac, ip, hostname, interface):
-    pass
+    logging.debug("Adopted old lease or got a change of mac/hostname")
     
 def del_lease(mac, ip, hostname, interface):
-    # TODO - get net from interface instead
-    net = network.get_network_by_address(ip)
-    net.release_ip(ip)    
+    if FLAGS.fake_rabbit:
+        network.release_ip(ip)     
+    else:
+        rpc.cast(FLAGS.cloud_topic, {"method": "release_ip",
+                "args" : {"address": ip}})   
     
 def init_leases(interface):
-    return ""
+    net = network.get_network_by_interface(interface)
+    res = ""
+    for host_name in net.hosts:
+        res += "%s\n" % linux_net.hostDHCP(net, host_name, net.hosts[host_name])
+    return res
 
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
     interface = environ.get('DNSMASQ_INTERFACE', 'br0')
-    old_redis_db = FLAGS.redis_db
-    FLAGS.redis_db = int(environ.get('REDIS_DB', '0'))
+    if int(environ.get('TESTING', '0')):
+        FLAGS.fake_rabbit = True
+        FLAGS.redis_db = 8
+        FLAGS.network_size = 32
+        FLAGS.fake_libvirt=True
+        FLAGS.fake_network=True
+        FLAGS.fake_users = True
     action = argv[1]
     if action in ['add','del','old']:
         mac = argv[2]
@@ -62,7 +80,7 @@ def main(argv=None):
         globals()[action+'_lease'](mac, ip, hostname, interface)
     else:
         print init_leases(interface)
-    FLAGS.redis_db = old_redis_db
+    exit(0)
 
 if __name__ == "__main__":
     sys.exit(main())
