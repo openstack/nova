@@ -1,18 +1,24 @@
-#!/opt/local/bin/python
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright [2010] [Anso Labs, LLC]
-# 
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-# 
-#        http://www.apache.org/licenses/LICENSE-2.0
-# 
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 """
 dhcpleasor.py
 
@@ -37,21 +43,21 @@ FLAGS = flags.FLAGS
 
 def add_lease(mac, ip, hostname, interface):
     if FLAGS.fake_rabbit:
-        network.lease_ip(ip)     
+        network.lease_ip(ip)
     else:
         rpc.cast(FLAGS.cloud_topic, {"method": "lease_ip",
                 "args" : {"address": ip}})
 
 def old_lease(mac, ip, hostname, interface):
     logging.debug("Adopted old lease or got a change of mac/hostname")
-    
+
 def del_lease(mac, ip, hostname, interface):
     if FLAGS.fake_rabbit:
-        network.release_ip(ip)     
+        network.release_ip(ip)
     else:
         rpc.cast(FLAGS.cloud_topic, {"method": "release_ip",
-                "args" : {"address": ip}})   
-    
+                "args" : {"address": ip}})
+
 def init_leases(interface):
     net = network.get_network_by_interface(interface)
     res = ""
