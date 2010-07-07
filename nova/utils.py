@@ -26,6 +26,7 @@ import logging
 import socket
 import sys
 import os.path
+from os import environ
 import inspect
 import subprocess
 import random
@@ -46,11 +47,14 @@ def fetchfile(url, target):
 #    fp.close()
     execute("curl %s -o %s" % (url, target))
 
-
-def execute(cmd, input=None):
+def execute(cmd, input=None, addl_env=None):
     #logging.debug("Running %s" % (cmd))
+    env = os.environ.copy()
+    if addl_env:
+        env.update(addl_env)
+    logging.debug(env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
     if input != None:
         result = obj.communicate(input)

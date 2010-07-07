@@ -18,6 +18,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 import logging
 import unittest
 
@@ -26,6 +27,7 @@ import IPy
 
 from nova import flags
 from nova import test
+from nova import exception
 from nova.compute import network
 from nova.auth import users
 from nova import utils
@@ -40,6 +42,7 @@ class NetworkTestCase(test.TrialTestCase):
                    network_size=32)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = users.UserManager.instance()
+        self.dnsmasq = FakeDNSMasq()
         try:
             self.manager.create_user('netuser', 'netuser', 'netuser')
         except: pass
@@ -63,11 +66,23 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertTrue(IPy.IP(address) in self.network.network)
 
     def test_allocate_deallocate_ip(self):
+        # Address should be allocated
+        # Then, simulate acquisition of the address
+        # Deallocate it, and wait for simulated ip release
+        # then confirm it's gone.
         address = network.allocate_ip(
                 "netuser", "project0", utils.generate_mac())
         logging.debug("Was allocated %s" % (address))
+        net = network.get_project_network("project0", "default")
         self.assertEqual(True, address in self._get_project_addresses("project0"))
+        mac = utils.generate_mac()
+        hostname = "test-host"
+        self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
         rv = network.deallocate_ip(address)
+        # Doesn't go away until it's dhcp released
+        self.assertEqual(True, address in self._get_project_addresses("project0"))
+        
+        self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
         self.assertEqual(False, address in self._get_project_addresses("project0"))
 
     def test_range_allocation(self):
@@ -122,3 +137,22 @@ class NetworkTestCase(test.TrialTestCase):
         for addr in network.get_project_network(project_id).list_addresses():
             project_addresses.append(addr)
         return project_addresses
+
+def binpath(script):
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
+
+class FakeDNSMasq(object):
+    def issue_ip(self, mac, ip, hostname, interface):
+        cmd = "%s add %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
+        env = {'DNSMASQ_INTERFACE': interface, 'REDIS_DB' : '8'}
+        (out, err) = utils.execute(cmd, addl_env=env)
+        logging.debug(out)
+        logging.debug(err)
+    
+    def release_ip(self, mac, ip, hostname, interface):
+        cmd = "%s del %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
+        env = {'DNSMASQ_INTERFACE': interface, 'REDIS_DB' : '8'}
+        (out, err) = utils.execute(cmd, addl_env=env)
+        logging.debug(out)
+        logging.debug(err)
+        

@@ -162,11 +162,15 @@ class BaseNetwork(datastore.RedisModel):
             return address
         raise exception.NoMoreAddresses()
 
-    def deallocate_ip(self, ip_str):
+    def release_ip(self, ip_str):
         if not ip_str in self.assigned:
             raise exception.AddressNotAllocated()
         self.deexpress(address=ip_str)
         self._rem_host(ip_str)
+
+    def deallocate_ip(self, ip_str):
+        # Do nothing for now, cleanup on ip release
+        pass
 
     def list_addresses(self):
         for address in self.hosts:
@@ -197,7 +201,7 @@ class BridgedNetwork(BaseNetwork):
     def get_network_for_project(cls, user_id, project_id, security_group):
         vlan = get_vlan_for_project(project_id)
         network_str = get_subnet_from_vlan(vlan)
-        logging.debug("creating network on vlan %s with network string %s" % (vlan, network_str))
+        # logging.debug("creating network on vlan %s with network string %s" % (vlan, network_str))
         return cls.create(user_id, project_id, security_group, vlan, network_str)
 
     def __init__(self, *args, **kwargs):
@@ -221,7 +225,7 @@ class DHCPNetwork(BridgedNetwork):
 
     def __init__(self, *args, **kwargs):
         super(DHCPNetwork, self).__init__(*args, **kwargs)
-        logging.debug("Initing DHCPNetwork object...")
+        # logging.debug("Initing DHCPNetwork object...")
         self.dhcp_listen_address = self.network[1]
         self.dhcp_range_start = self.network[3]
         self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
@@ -372,6 +376,7 @@ class PublicNetworkController(BaseNetwork):
     def deexpress(self, address=None):
         addr = self.get_host(address)
         private_ip = addr['private_ip']
+        linux_net.unbind_public_ip(address, FLAGS.public_interface)
         linux_net.remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
                               % (address, private_ip))
         linux_net.remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
@@ -416,8 +421,11 @@ def get_vlan_for_project(project_id):
 
 
 def get_network_by_address(address):
+    logging.debug("Get Network By Address:")
     for project in users.UserManager.instance().get_projects():
+        logging.debug("  looking at project %s", project.id)
         net = get_project_network(project.id)
+        logging.debug("   is %s in %s ?" % (address, str(net.assigned)))
         if address in net.assigned:
             return net
     raise exception.AddressNotAllocated()

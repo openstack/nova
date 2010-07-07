@@ -62,6 +62,9 @@ def remove_rule(cmd):
 
 def bind_public_ip(ip, interface):
     runthis("Binding IP to interface: %s", "sudo ip addr add %s dev %s" % (ip, interface))
+    
+def unbind_public_ip(ip, interface):
+    runthis("Binding IP to interface: %s", "sudo ip addr del %s dev %s" % (ip, interface))
 
 def vlan_create(net):
     """ create a vlan on on a bridge device unless vlan already exists """
@@ -98,7 +101,8 @@ def dnsmasq_cmd(net):
         ' --dhcp-range=%s,static,120s' % (net.dhcp_range_start),
         ' --dhcp-lease-max=61',
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-leasefile=%s' % dhcp_file(net['vlan'], 'leases')]
+        ' --dhcp-leasefile=%s' % dhcp_file(net['vlan'], 'leases'),
+        ' ---dhcp-script=%s' % bin_file('dhcpleasor.py')]
     return ''.join(cmd)
 
 def hostDHCP(network, host, mac):
@@ -153,6 +157,9 @@ def dhcp_file(vlan, kind):
     """ return path to a pid, leases or conf file for a vlan """
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
+
+def bin_file(script):
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 def dnsmasq_pid_for(network):
     """ the pid for prior dnsmasq instance for a vlan,
