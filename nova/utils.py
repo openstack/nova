@@ -26,7 +26,7 @@ import logging
 import socket
 import sys
 import os.path
-from os import environ
+import os.environ
 import inspect
 import subprocess
 import random

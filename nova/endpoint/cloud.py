@@ -504,7 +504,7 @@ class CloudController(object):
 
     def lease_ip(self, context, private_ip, **kwargs):
         self.network.lease_ip(private_ip)
-        return defer.succeed({'leaseResponse': ["Address lease."]})
+        return defer.succeed({'leaseResponse': ["Address leased."]})
 
     @rbac.allow('projectmanager', 'sysadmin')
     def run_instances(self, context, **kwargs):
