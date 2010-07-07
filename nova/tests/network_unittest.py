@@ -21,7 +21,6 @@
 import os
 import logging
 import unittest
-import time
 
 from nova import vendor
 import IPy
@@ -154,20 +153,20 @@ class NetworkTestCase(test.TrialTestCase):
     def test_too_many_addresses(self):  
         """
         Network size is 32, there are 5 addresses reserved for VPN.
-        So we should get 24 usable addresses
+        So we should get 23 usable addresses
         """  
         net = network.get_project_network("project0", "default")
         hostname = "toomany-hosts"
         macs = {}
         addresses = {}
-        for i in range(0, 23):
+        for i in range(0, 22):
             macs[i] = utils.generate_mac()
             addresses[i] = network.allocate_ip("netuser", "project0", macs[i])
             self.dnsmasq.issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
         
         self.assertRaises(NoMoreAddresses, network.allocate_ip, "netuser", "project0", utils.generate_mac())
         
-        for i in range(0, 23):    
+        for i in range(0, 22):    
             rv = network.deallocate_ip(addresses[i])
             self.dnsmasq.release_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
