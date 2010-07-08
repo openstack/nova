@@ -22,7 +22,6 @@
 System-level utilities and helper functions.
 """
 
-import datetime
 import inspect
 import logging
 import os.path
@@ -30,6 +29,7 @@ import random
 import socket
 import subprocess
 import sys
+from datetime import datetime
 
 from nova import flags
 
