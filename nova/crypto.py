@@ -92,7 +92,7 @@ def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
     + " transport | lsh-export-key --openssh"
     (out, err) = utils.execute(convert, ssl_public_key)
     if err:
-        raise exception.Error("Failed to generate key: %s", err)
+        raise exception.Error("Failed to generate key: %s" % err)
     return '%s %s@%s\n' %(out.strip(), name, suffix)
 
 
