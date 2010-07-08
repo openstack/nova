@@ -24,13 +24,15 @@ import random
 import sys
 import unittest
 
-from nova.adminclient import NovaAdminClient
-from nova.smoketests import flags
-
 from nova import vendor
 import paramiko
 
-nova_admin = NovaAdminClient(access_key=flags.admin_access_key, secret_key=flags.admin_secret_key, clc_ip=host)
+from nova import adminclient
+from nova import flags
+
+FLAGS = flags.FLAGS
+
+nova_admin = adminclient.NovaAdminClient(access_key=FLAGS.admin_access_key, secret_key=FLAGS.admin_secret_key, clc_ip=FLAGS.clc_ip)
 
 class NovaTestCase(unittest.TestCase):
     def setUp(self):
