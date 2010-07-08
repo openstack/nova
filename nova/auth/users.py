@@ -102,7 +102,7 @@ flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
 flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
-                    'OU=NovaDev/CN=%s-%s'
+                    'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
