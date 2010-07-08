@@ -335,10 +335,13 @@ class Vpn(model.BasicModel):
 
     @classmethod
     def find_free_port_for_ip(cls, ip):
-        # TODO(vish): the redis access should be refactored into a
-        #             base class
+        # TODO(vish): these redis commands should be generalized and
+        #             placed into a base class. Conceptually, it is
+        #             similar to an association, but we are just
+        #             storing a set of values instead of keys that
+        #             should be turned into objects.
         redis = datastore.Redis.instance()
-        key = 'ip:%s:ports'
+        key = 'ip:%s:ports' % ip
         # TODO(vish): these ports should be allocated through an admin
         #             command instead of a flag
         if (not redis.exists(key) and
@@ -346,14 +349,14 @@ class Vpn(model.BasicModel):
             for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
                 redis.sadd(key, i)
 
-        port = datastore.Redis.instance().spop(key)
+        port = redis.spop(key)
         if not port:
             raise NoMorePorts()
         return port
 
     @classmethod
     def num_ports_for_ip(cls, ip):
-        return datastore.Redis.instance().scard('ip:%s:ports')
+        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
 
     @property
     def ip(self):
@@ -467,7 +470,9 @@ class UserManager(object):
             #             create and destroy a project
             Vpn.create(name)
             return conn.create_project(name,
-                    User.safe_id(manager_user), description, member_users)
+                                       User.safe_id(manager_user),
+                                       description,
+                                       member_users)
 
 
     def get_projects(self):
