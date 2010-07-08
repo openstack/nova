@@ -1,3 +1,16 @@
+nova (0.2.2-7) UNRELEASED; urgency=low
+
+  * Missing files from twisted patch
+  * License upedates
+  * Reformatting/cleanup
+  * Users/ldap bugfixes
+  * Merge fixes
+  * Documentation updates
+  * Vpn key creation fix
+  * Multiple shelves for volumes
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 07 Jul 2010 18:45:00 -0700
+
 nova (0.2.2-6) UNRELEASED; urgency=low
 
   * Fix to make Key Injection work again
