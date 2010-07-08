@@ -1,3 +1,9 @@
+nova (0.2.2-8) UNRELEASED; urgency=low
+
+  * Added a missing comma
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 08 Jul 2010 10:05:00 -0700
+
 nova (0.2.2-7) UNRELEASED; urgency=low
 
   * Missing files from twisted patch
