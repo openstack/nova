@@ -32,6 +32,13 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('admin_access_key', 'admin', 'Access key for admin user')
+flags.DEFINE_string('admin_secret_key', 'admin', 'Secret key for admin user')
+flags.DEFINE_string('clc_ip', '127.0.0.1', 'IP of cloud controller API')
+#flags.DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE',
+#                    'AMI for cloudpipe vpn server')
+
+
 nova_admin = adminclient.NovaAdminClient(access_key=FLAGS.admin_access_key, secret_key=FLAGS.admin_secret_key, clc_ip=FLAGS.clc_ip)
 
 class NovaTestCase(unittest.TestCase):

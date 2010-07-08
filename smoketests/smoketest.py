@@ -31,9 +31,10 @@ from nova import vendor
 import paramiko
 
 from nova import flags
-from nova.smoketests import novatestcase
+from smoketests import novatestcase
 
 FLAGS = flags.FLAGS
+
 flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
               'Local kernel file to use for bundling tests')
 flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
@@ -81,7 +82,7 @@ class UserTests(novatestcase.NovaTestCase):
             pass
 
 # Test image bundling, registration, and launching
-class ImageTests(NovaTestCase):
+class ImageTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username)
 
@@ -159,8 +160,8 @@ class ImageTests(NovaTestCase):
     def test_012_me_can_see_launch_permission(self):
         attrs = self.admin.get_image_attribute(data['image_id'],
                                                'launchPermission')
-        self.assert(_attrs.name, 'launch_permission')
-        self.assert(_attrs.groups[0], 'all')
+        self.assert_(attrs.name, 'launch_permission')
+        self.assert_(attrs.groups[0], 'all')
         
     # FIXME: add tests that user can launch image
 
@@ -195,7 +196,7 @@ class ImageTests(NovaTestCase):
 
 
 # Test key pairs and security groups
-class SecurityTests(NovaTestCase):
+class SecurityTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username + '_me')
         self.create_user(test_username + '_you')
@@ -320,7 +321,7 @@ class SecurityTests(NovaTestCase):
 #    print output
 
 # Testing rebundling
-class RebundlingTests(NovaTestCase):
+class RebundlingTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user('me')
         self.create_user('you')
@@ -388,7 +389,7 @@ class RebundlingTests(NovaTestCase):
         data = {}
 
 # Test elastic IPs
-class ElasticIPTests(NovaTestCase):
+class ElasticIPTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         data['image_id'] = 'ami-tiny'
 
@@ -434,7 +435,7 @@ class ElasticIPTests(NovaTestCase):
 ZONE = 'nova'
 DEVICE = 'vdb'
 # Test iscsi volumes
-class VolumeTests(NovaTestCase):
+class VolumeTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username)
         data['image_id'] = 'ami-tiny' # A7370FE3
@@ -549,7 +550,10 @@ def build_suites():
         'volume': unittest.makeSuite(VolumeTests),
     }
 
-def main(argv=None):
+def main():
+    argv = FLAGS(sys.argv)
+    #argv = sys.argv
+
     if len(argv) == 1:
         unittest.main()
     else:
@@ -564,4 +568,4 @@ def main(argv=None):
         unittest.TextTestRunner(verbosity=2).run(suite)
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
