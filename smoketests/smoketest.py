@@ -30,15 +30,13 @@ import zipfile
 from nova import vendor
 import paramiko
 
-from nova import flags
+from smoketests import flags
 from smoketests import novatestcase
 
-FLAGS = flags.FLAGS
+SUITE_NAMES = '[user, image, security, public_network, volume]'
 
-flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
-              'Local kernel file to use for bundling tests')
-flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
-              'Local image file to use for bundling tests')
+FLAGS = flags.FLAGS
+flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 
 # TODO(devamcar): Use random tempfile
 ZIP_FILENAME = '/tmp/nova-me-x509.zip'
@@ -87,13 +85,13 @@ class ImageTests(novatestcase.NovaTestCase):
         self.create_user(test_username)
 
     def test_001_admin_can_bundle_image(self):
-        self.assertTrue(self.bundle_image(IMAGE_FILENAME))
+        self.assertTrue(self.bundle_image(FLAGS.bundle_image))
 
     def test_002_admin_can_upload_image(self):
-        self.assertTrue(self.upload_image(test_bucket, IMAGE_FILENAME))
+        self.assertTrue(self.upload_image(test_bucket, FLAGS.bundle_image))
 
     def test_003_admin_can_register_image(self):
-        image_id = self.register_image(test_bucket, IMAGE_FILENAME)
+        image_id = self.register_image(test_bucket, FLAGS.bundle_image)
         self.assert_(image_id is not None)
         data['image_id'] = image_id
 
@@ -398,7 +396,7 @@ class ElasticIPTests(novatestcase.NovaTestCase):
         self.create_key_pair(conn, 'mykey')
 
         conn = self.connection_for('admin')
-        #data['image_id'] = self.setUp_test_image(IMAGE_FILENAME)
+        #data['image_id'] = self.setUp_test_image(FLAGS.bundle_image)
 
     def test_001_me_can_launch_image_with_keypair(self):
         conn = self.connection_for('me')
@@ -552,20 +550,19 @@ def build_suites():
 
 def main():
     argv = FLAGS(sys.argv)
-    #argv = sys.argv
+    suites = build_suites()
 
-    if len(argv) == 1:
-        unittest.main()
-    else:
-        suites = build_suites()
-
+    if FLAGS.suite:
         try:
-            suite = suites[argv[1]]
+            suite = suites[FLAGS.suite]
         except KeyError:
-            print >> sys.stderr, 'Available test suites: [user, image, security, public_network, volume]'
-            return
+            print >> sys.stderr, 'Available test suites:', SUITE_NAMES
+            return 1
 
         unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        for suite in suites.itervalues():
+            unittest.TextTestRunner(verbosity=2).run(suite)
 
 if __name__ == "__main__":
     sys.exit(main())
