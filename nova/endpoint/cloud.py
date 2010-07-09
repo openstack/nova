@@ -115,9 +115,9 @@ class CloudController(object):
 
     def get_metadata(self, ip):
         i = self.get_instance_by_ip(ip)
-        mpi = self._get_mpi_data(i['project_id'])
         if i is None:
             return None
+        mpi = self._get_mpi_data(i['project_id'])
         if i['key_name']:
             keys = {
                 '0': {
