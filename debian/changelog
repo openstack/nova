@@ -1,3 +1,9 @@
+nova (0.2.2-9) UNRELEASED; urgency=low
+
+  * Fixed invalid dn bug in ldap for adding roles
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 12 Jul 2010 15:20:00 -0700
+
 nova (0.2.2-8) UNRELEASED; urgency=low
 
   * Added a missing comma
