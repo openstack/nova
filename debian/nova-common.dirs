@@ -1,3 +1,4 @@
+etc/nova
 var/lib/nova/buckets
 var/lib/nova/CA
 var/lib/nova/CA/INTER

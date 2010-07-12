@@ -13,7 +13,7 @@
 set -e
 
 DAEMON=/usr/bin/nova-volume
-DAEMON_ARGS="--flagfile=/etc/nova-volume.conf"
+DAEMON_ARGS="--flagfile=/etc/nova/nova-volume.conf"
 PIDFILE=/var/run/nova-volume.pid
 
 ENABLED=true

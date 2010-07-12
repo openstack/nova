@@ -13,7 +13,7 @@
 set -e
 
 DAEMON=/usr/bin/nova-compute
-DAEMON_ARGS="--flagfile=/etc/nova-compute.conf"
+DAEMON_ARGS="--flagfile=/etc/nova/nova-compute.conf"
 PIDFILE=/var/run/nova-compute.pid
 
 ENABLED=true
