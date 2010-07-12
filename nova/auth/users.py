@@ -710,7 +710,7 @@ class LDAPWrapper(object):
 
     def __create_group(self, group_dn, name, uid,
                        description, member_uids = None):
-        if self.group_exists(name):
+        if self.group_exists(group_dn):
             raise exception.Duplicate("Group can't be created because "
                                       "group %s already exists" % name)
         members = []
