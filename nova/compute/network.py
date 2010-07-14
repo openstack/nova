@@ -502,7 +502,7 @@ def get_vlan_for_project(project_id):
                 # NOTE(todd): This doesn't check for vlan id match, because
                 #             it seems to be assumed that vlan<=>project is
                 #             always a 1:1 mapping.  It could be made way
-                #             sexier if it didn't fight agains the way
+                #             sexier if it didn't fight against the way
                 #             BasicModel worked and used associate_with
                 #             to build connections to projects.
                 vlan.project_id = project_id
