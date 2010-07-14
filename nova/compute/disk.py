@@ -131,8 +131,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                 yield execute('sudo umount %s' % mapped_device)
         finally:
             # remove temporary directory
-            # TODO(termie): scary, is there any thing we can check here?
-            yield execute('rm -rf %s' % tmpdir)
+            yield execute('rmdir %s' % tmpdir)
             if not partition is None:
                 # remove partitions
                 yield execute('sudo kpartx -d %s' % device)

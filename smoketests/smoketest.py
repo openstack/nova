@@ -27,20 +27,19 @@ import time
 import unittest
 import zipfile
 
-from nova.smoketests import flags
-from nova.smoketests.novatestcase import NovaTestCase
-
 from nova import vendor
 import paramiko
 
+from smoketests import flags
+from smoketests import novatestcase
+
+SUITE_NAMES = '[user, image, security, public_network, volume]'
+
 FLAGS = flags.FLAGS
-flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
-              'Local kernel file to use for bundling tests')
-flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
-              'Local image file to use for bundling tests')
+flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 
 # TODO(devamcar): Use random tempfile
-ZIP_FILENAME = '/tmp/euca-me-x509.zip'
+ZIP_FILENAME = '/tmp/nova-me-x509.zip'
 
 data = {}
 
@@ -50,7 +49,7 @@ test_bucket = '%s_bucket' % test_prefix
 test_key = '%s_key' % test_prefix
 
 # Test admin credentials and user creation
-class UserTests(NovaTestCase):
+class UserTests(novatestcase.NovaTestCase):
     def test_001_admin_can_connect(self):
         conn = self.connection_for('admin')
         self.assert_(conn)
@@ -81,30 +80,31 @@ class UserTests(NovaTestCase):
             pass
 
 # Test image bundling, registration, and launching
-class ImageTests(NovaTestCase):
+class ImageTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username)
 
     def test_001_admin_can_bundle_image(self):
-        self.assertTrue(self.bundle_image(IMAGE_FILENAME))
+        self.assertTrue(self.bundle_image(FLAGS.bundle_image))
 
     def test_002_admin_can_upload_image(self):
-        self.assertTrue(self.upload_image(test_bucket, IMAGE_FILENAME))
+        self.assertTrue(self.upload_image(test_bucket, FLAGS.bundle_image))
 
     def test_003_admin_can_register_image(self):
-        image_id = self.register_image(test_bucket, IMAGE_FILENAME)
+        image_id = self.register_image(test_bucket, FLAGS.bundle_image)
         self.assert_(image_id is not None)
         data['image_id'] = image_id
 
     def test_004_admin_can_bundle_kernel(self):
-        self.assertTrue(self.bundle_image(flags.bundle_kernel, kernel=True))
+        self.assertTrue(self.bundle_image(FLAGS.bundle_kernel, kernel=True))
 
     def test_005_admin_can_upload_kernel(self):
-        self.assertTrue(self.upload_image(test_bucket, flags.bundle_kernel))
+        self.assertTrue(self.upload_image(test_bucket, FLAGS.bundle_kernel))
 
     def test_006_admin_can_register_kernel(self):
-        # FIXME: registration should verify that bucket/manifest exists before returning successfully!
-        kernel_id = self.register_image(test_bucket, flags.bundle_kernel)
+        # FIXME(devcamcar): registration should verify that bucket/manifest
+        # exists before returning successfully.
+        kernel_id = self.register_image(test_bucket, FLAGS.bundle_kernel)
         self.assert_(kernel_id is not None)
         data['kernel_id'] = kernel_id
 
@@ -129,7 +129,8 @@ class ImageTests(NovaTestCase):
         self.assert_(kernel.type == 'kernel')
 
     def test_008_admin_can_describe_image_attribute(self):
-        attrs = self.admin.get_image_attribute(data['image_id'], 'launchPermission')
+        attrs = self.admin.get_image_attribute(data['image_id'],
+                                               'launchPermission')
         self.assert_(attrs.name, 'launch_permission')
         
     def test_009_me_cannot_see_non_public_images(self):
@@ -155,9 +156,10 @@ class ImageTests(NovaTestCase):
         pass
         
     def test_012_me_can_see_launch_permission(self):
-        attrs = self.admin.get_image_attribute(data['image_id'], 'launchPermission')
-        self.assert(_attrs.name, 'launch_permission')
-        self.assert(_attrs.groups[0], 'all')
+        attrs = self.admin.get_image_attribute(data['image_id'],
+                                               'launchPermission')
+        self.assert_(attrs.name, 'launch_permission')
+        self.assert_(attrs.groups[0], 'all')
         
     # FIXME: add tests that user can launch image
 
@@ -173,7 +175,8 @@ class ImageTests(NovaTestCase):
 
 #     def test_015_user_can_terminate(self):
 #         conn = self.connection_for(test_username)
-#         terminated = conn.terminate_instances(instance_ids=[data['my_instance_id']])
+#         terminated = conn.terminate_instances(
+#            instance_ids=[data['my_instance_id']])
 #         self.assertEqual(len(terminated), 1)
 
     def test_016_admin_can_deregister_kernel(self):
@@ -191,7 +194,7 @@ class ImageTests(NovaTestCase):
 
 
 # Test key pairs and security groups
-class SecurityTests(NovaTestCase):
+class SecurityTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username + '_me')
         self.create_user(test_username + '_you')
@@ -234,13 +237,15 @@ class SecurityTests(NovaTestCase):
     def test_005_can_ping_private_ip(self):
         for x in xrange(120):
             # ping waits for 1 second
-            status, output = commands.getstatusoutput("ping -c1 -w1 %s" % data['my_private_ip'])
+            status, output = commands.getstatusoutput(
+                'ping -c1 -w1 %s' % data['my_private_ip'])
             if status == 0:
                  break
         else:
-            self.assert_("could not ping instance")
+            self.assert_('could not ping instance')
     #def test_005_me_cannot_ssh_when_unauthorized(self):
-    #    self.assertRaises(paramiko.SSHException, self.connect_ssh, data['my_private_ip'], 'mykey')
+    #    self.assertRaises(paramiko.SSHException, self.connect_ssh,
+    #                      data['my_private_ip'], 'mykey')
 
     #def test_006_me_can_authorize_ssh(self):
     #    conn = self.connection_for(test_username + '_me')
@@ -271,12 +276,13 @@ class SecurityTests(NovaTestCase):
     #    )
 
     #def test_009_you_cannot_ping_my_instance(self):
-        # TODO: should ping my_private_ip from with an instance started by "you"
+        # TODO: should ping my_private_ip from with an instance started by you.
         #self.assertFalse(self.can_ping(data['my_private_ip']))
 
     def test_010_you_cannot_ssh_to_my_instance(self):
         try:
-            conn = self.connect_ssh(data['my_private_ip'], test_key + 'yourkey')
+            conn = self.connect_ssh(data['my_private_ip'],
+                                    test_key + 'yourkey')
             conn.close()
         except paramiko.SSHException:
             pass
@@ -313,7 +319,7 @@ class SecurityTests(NovaTestCase):
 #    print output
 
 # Testing rebundling
-class RebundlingTests(NovaTestCase):
+class RebundlingTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user('me')
         self.create_user('you')
@@ -323,25 +329,29 @@ class RebundlingTests(NovaTestCase):
 
     def test_001_me_can_download_credentials_within_instance(self):
         conn = self.connect_ssh(data['my_private_ip'], 'mykey')
-        stdin, stdout = conn.exec_command('python ~/smoketests/install-credentials.py')
+        stdin, stdout = conn.exec_command(
+            'python ~/smoketests/install-credentials.py')
         conn.close()
         self.assertEqual(stdout, 'ok')
 
     def test_002_me_can_rebundle_within_instance(self):
         conn = self.connect_ssh(data['my_private_ip'], 'mykey')
-        stdin, stdout = conn.exec_command('python ~/smoketests/rebundle-instance.py')
+        stdin, stdout = conn.exec_command(
+            'python ~/smoketests/rebundle-instance.py')
         conn.close()
         self.assertEqual(stdout, 'ok')
 
     def test_003_me_can_upload_image_within_instance(self):
         conn = self.connect_ssh(data['my_private_ip'], 'mykey')
-        stdin, stdout = conn.exec_command('python ~/smoketests/upload-bundle.py')
+        stdin, stdout = conn.exec_command(
+            'python ~/smoketests/upload-bundle.py')
         conn.close()
         self.assertEqual(stdout, 'ok')
 
     def test_004_me_can_register_image_within_instance(self):
         conn = self.connect_ssh(data['my_private_ip'], 'mykey')
-        stdin, stdout = conn.exec_command('python ~/smoketests/register-image.py')
+        stdin, stdout = conn.exec_command(
+            'python ~/smoketests/register-image.py')
         conn.close()
         if re.matches('ami-{\w+}', stdout):
             data['my_image_id'] = stdout.strip()
@@ -356,9 +366,9 @@ class RebundlingTests(NovaTestCase):
     def test_006_me_can_make_image_public(self):
         conn = self.connection_for(test_username)
         conn.modify_image_attribute(image_id=data['my_image_id'],
-                                          operation='add',
-                                          attribute='launchPermission',
-                                          groups='all')
+                                    operation='add',
+                                    attribute='launchPermission',
+                                    groups='all')
 
     def test_007_you_can_see_my_public_image(self):
         conn = self.connection_for('you')
@@ -377,7 +387,7 @@ class RebundlingTests(NovaTestCase):
         data = {}
 
 # Test elastic IPs
-class ElasticIPTests(NovaTestCase):
+class ElasticIPTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         data['image_id'] = 'ami-tiny'
 
@@ -386,7 +396,7 @@ class ElasticIPTests(NovaTestCase):
         self.create_key_pair(conn, 'mykey')
 
         conn = self.connection_for('admin')
-        #data['image_id'] = self.setUp_test_image(IMAGE_FILENAME)
+        #data['image_id'] = self.setUp_test_image(FLAGS.bundle_image)
 
     def test_001_me_can_launch_image_with_keypair(self):
         conn = self.connection_for('me')
@@ -423,20 +433,23 @@ class ElasticIPTests(NovaTestCase):
 ZONE = 'nova'
 DEVICE = 'vdb'
 # Test iscsi volumes
-class VolumeTests(NovaTestCase):
+class VolumeTests(novatestcase.NovaTestCase):
     def test_000_setUp(self):
         self.create_user(test_username)
         data['image_id'] = 'ami-tiny' # A7370FE3
 
         conn = self.connection_for(test_username)
         self.create_key_pair(conn, test_key)
-        reservation = conn.run_instances(data['image_id'], instance_type='m1.tiny', key_name=test_key)
+        reservation = conn.run_instances(data['image_id'],
+                                         instance_type='m1.tiny',
+                                         key_name=test_key)
         data['instance_id'] = reservation.instances[0].id
         data['private_ip'] = reservation.instances[0].private_dns_name
         # wait for instance to show up
         for x in xrange(120):
             # ping waits for 1 second
-            status, output = commands.getstatusoutput("ping -c1 -w1 %s" % data['private_ip'])
+            status, output = commands.getstatusoutput(
+                'ping -c1 -w1 %s' % data['private_ip'])
             if status == 0:
                   break
         else:
@@ -462,9 +475,11 @@ class VolumeTests(NovaTestCase):
 
     def test_003_me_can_mount_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        # HACK: the tiny image doesn't create the node properly
-        #       this will make /dev/vd* if it doesn't exist
-        stdin, stdout, stderr = conn.exec_command('grep %s /proc/partitions | `awk \'{print "mknod /dev/"$4" b "$1" "$2}\'`' % DEVICE)
+        # FIXME(devcamcar): the tiny image doesn't create the node properly
+        # this will make /dev/vd* if it doesn't exist
+        stdin, stdout, stderr = conn.exec_command(
+            'grep %s /proc/partitions |' + \
+            '`awk \'{print "mknod /dev/"$4" b "$1" "$2}\'`' % DEVICE)
         commands = []
         commands.append('mkdir -p /mnt/vol')
         commands.append('mkfs.ext2 /dev/%s' % DEVICE)
@@ -478,8 +493,9 @@ class VolumeTests(NovaTestCase):
 
     def test_004_me_can_write_to_volume(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        # FIXME: This doesn't fail if the volume hasn't been mounted
-        stdin, stdout, stderr = conn.exec_command('echo hello > /mnt/vol/test.txt')
+        # FIXME(devcamcar): This doesn't fail if the volume hasn't been mounted
+        stdin, stdout, stderr = conn.exec_command(
+            'echo hello > /mnt/vol/test.txt')
         err = stderr.read()
         conn.close()
         if len(err) > 0:
@@ -487,7 +503,8 @@ class VolumeTests(NovaTestCase):
 
     def test_005_volume_is_correct_size(self):
         conn = self.connect_ssh(data['private_ip'], test_key)
-        stdin, stdout, stderr = conn.exec_command("df -h | grep %s | awk {'print $2'}" % DEVICE)
+        stdin, stdout, stderr = conn.exec_command(
+            "df -h | grep %s | awk {'print $2'}" % DEVICE)
         out = stdout.read()
         conn.close()
         if not out.strip() == '1007.9M':
@@ -531,19 +548,21 @@ def build_suites():
         'volume': unittest.makeSuite(VolumeTests),
     }
 
-def main(argv=None):
-    if len(argv) == 1:
-        unittest.main()
-    else:
-        suites = build_suites()
+def main():
+    argv = FLAGS(sys.argv)
+    suites = build_suites()
 
+    if FLAGS.suite:
         try:
-            suite = suites[argv[1]]
+            suite = suites[FLAGS.suite]
         except KeyError:
-            print >> sys.stderr, 'Available test suites: [user, image, security, public_network, volume]'
-            return
+            print >> sys.stderr, 'Available test suites:', SUITE_NAMES
+            return 1
 
         unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        for suite in suites.itervalues():
+            unittest.TextTestRunner(verbosity=2).run(suite)
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())

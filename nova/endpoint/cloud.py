@@ -115,9 +115,9 @@ class CloudController(object):
 
     def get_metadata(self, ip):
         i = self.get_instance_by_ip(ip)
-        mpi = self._get_mpi_data(i['project_id'])
         if i is None:
             return None
+        mpi = self._get_mpi_data(i['project_id'])
         if i['key_name']:
             keys = {
                 '0': {
@@ -526,6 +526,10 @@ class CloudController(object):
             inst = self.instdir.new()
             # TODO(ja): add ari, aki
             inst['image_id'] = kwargs['image_id']
+            if 'kernel_id' in kwargs:
+                inst['kernel_id'] = kwargs['kernel_id']
+            if 'ramdisk_id' in kwargs:
+                inst['ramdisk_id'] = kwargs['ramdisk_id']
             inst['user_data'] = kwargs.get('user_data', '')
             inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id

@@ -243,7 +243,7 @@ class Volume(datastore.RedisModel):
 
     def _exec_export(self):
         utils.runthis("Creating AOE export: %s",
-                "sudo vblade- persist setup %s %s %s /dev/%s/%s" %
+                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (self['shelf_id'],
                  self['blade_id'],
                  FLAGS.aoe_eth_dev,
