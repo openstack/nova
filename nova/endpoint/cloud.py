@@ -500,6 +500,14 @@ class CloudController(object):
         # TODO - Strip the IP from the instance
         return defer.succeed({'disassociateResponse': ["Address disassociated."]})
 
+    def release_ip(self, context, private_ip, **kwargs):
+        self.network.release_ip(private_ip)
+        return defer.succeed({'releaseResponse': ["Address released."]})
+
+    def lease_ip(self, context, private_ip, **kwargs):
+        self.network.lease_ip(private_ip)
+        return defer.succeed({'leaseResponse': ["Address leased."]})
+
     @rbac.allow('projectmanager', 'sysadmin')
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
