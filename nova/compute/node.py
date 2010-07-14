@@ -144,8 +144,7 @@ class Node(object, service.Service):
 
     @defer.inlineCallbacks
     def report_state(self, nodename, daemon):
-        # TODO(termie): Termie has an idea for wrapping this connection failure
-        #               pattern to be more elegant.  -todd
+        # TODO(termie): make this pattern be more elegant. -todd
         try:
             record = model.Daemon(nodename, daemon)
             record.heartbeat()

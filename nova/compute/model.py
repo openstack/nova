@@ -366,9 +366,7 @@ class Instance(BasicModel):
         return super(Instance, self).destroy()
 
 class Host(BasicModel):
-    """
-    A Host is the machine where a Daemon is running.
-    """
+    """A Host is the machine where a Daemon is running."""
 
     def __init__(self, hostname):
         """loads an instance from the datastore if exists"""
@@ -385,9 +383,7 @@ class Host(BasicModel):
 
 
 class Daemon(BasicModel):
-    """
-    A Daemon is a job (compute, api, network, ...) that runs on a host.
-    """
+    """A Daemon is a job (compute, api, network, ...) that runs on a host."""
 
     def __init__(self, host_or_combined, binpath=None):
         """loads an instance from the datastore if exists"""
@@ -404,9 +400,9 @@ class Daemon(BasicModel):
         super(Daemon, self).__init__()
 
     def default_state(self):
-        return {"hostname":     self.hostname,
-                "binary":       self.binary,
-                "updated_at":   utils.isotime()
+        return {"hostname": self.hostname,
+                "binary": self.binary,
+                "updated_at": utils.isotime()
                 }
 
     @property
