@@ -20,7 +20,7 @@
 #    under the License.
 
 """
-Tornado daemon for the main API endpoint.  
+Tornado daemon for the main API endpoint.
 """
 
 import logging
