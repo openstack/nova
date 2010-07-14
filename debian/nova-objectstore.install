@@ -1,1 +1,3 @@
 bin/nova-objectstore usr/bin
+debian/nova-objectstore.conf etc/nova
+debian/nova-objectstore.nginx.conf etc/nginx/sites-available

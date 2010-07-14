@@ -220,7 +220,7 @@ def methods_of(obj):
 
 
 if __name__ == '__main__':
-    utils.default_flagfile()
+    utils.default_flagfile('/etc/nova/nova-manage.conf')
     argv = FLAGS(sys.argv)
     script_name = argv.pop(0)
     if len(argv) < 1:
