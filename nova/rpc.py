@@ -63,6 +63,10 @@ class Connection(connection.BrokerConnection):
             cls._instance = cls(**params)
         return cls._instance
 
+    @classmethod
+    def recreate(cls):
+        del cls._instance
+        return cls.instance()
 
 class Consumer(messaging.Consumer):
     # TODO(termie): it would be nice to give these some way of automatically
@@ -79,9 +83,22 @@ class Consumer(messaging.Consumer):
 
     attachToTornado = attach_to_tornado
 
-    @exception.wrap_exception
     def fetch(self, *args, **kwargs):
-        super(Consumer, self).fetch(*args, **kwargs)
+        # TODO(vish): the logic for failed connections and logging should be
+        #             refactored into some sort of connection manager object
+        try:
+            if getattr(self, 'failed_connection', False):
+                # attempt to reconnect
+                self.conn = Connection.recreate()
+                self.backend = self.conn.create_backend()
+            super(Consumer, self).fetch(*args, **kwargs)
+            if getattr(self, 'failed_connection', False):
+                logging.error("Reconnected to queue")
+                self.failed_connection = False
+        except Exception, ex:
+            if not getattr(self, 'failed_connection', False):
+                logging.exception("Failed to fetch message from queue")
+                self.failed_connection = True
 
     def attach_to_twisted(self):
         loop = task.LoopingCall(self.fetch, enable_callbacks=True)
@@ -115,9 +132,10 @@ class AdapterConsumer(TopicConsumer):
         args = message_data.get('args', {})
         message.ack()
         if not method:
-            # vish: we may not want to ack here, but that means that bad messages
-            #       stay in the queue indefinitely, so for now we just log the
-            #       message and send an error string back to the caller
+            # NOTE(vish): we may not want to ack here, but that means that bad
+            #             messages stay in the queue indefinitely, so for now
+            #             we just log the message and send an error string
+            #             back to the caller
             _log.warn('no method for message: %s' % (message_data))
             msg_reply(msg_id, 'No method for message: %s' % message_data)
             return

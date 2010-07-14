@@ -38,10 +38,7 @@ class StorageTestCase(test.TrialTestCase):
         self.mystorage = None
         self.flags(fake_libvirt=True,
                    fake_storage=True)
-        if FLAGS.fake_storage:
-            self.mystorage = storage.FakeBlockStore()
-        else:
-            self.mystorage = storage.BlockStore()
+        self.mystorage = storage.BlockStore()
 
     def test_run_create_volume(self):
         vol_size = '0'
@@ -62,6 +59,18 @@ class StorageTestCase(test.TrialTestCase):
         user_id = 'fake'
         project_id = 'fake'
         self.assertRaises(TypeError,
+                          self.mystorage.create_volume,
+                          vol_size, user_id, project_id)
+
+    def test_too_many_volumes(self):
+        vol_size = '1'
+        user_id = 'fake'
+        project_id = 'fake'
+        num_shelves = FLAGS.last_shelf_id - FLAGS.first_shelf_id + 1
+        total_slots = FLAGS.slots_per_shelf * num_shelves
+        for i in xrange(total_slots):
+            self.mystorage.create_volume(vol_size, user_id, project_id)
+        self.assertRaises(storage.NoMoreVolumes,
                           self.mystorage.create_volume,
                           vol_size, user_id, project_id)
 

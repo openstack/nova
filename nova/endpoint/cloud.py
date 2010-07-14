@@ -170,6 +170,28 @@ class CloudController(object):
                                           'zoneState': 'available'}]}
 
     @rbac.allow('all')
+    def describe_regions(self, context, region_name=None, **kwargs):
+        # TODO(vish): region_name is an array.  Support filtering
+        return {'regionInfo': [{'regionName': 'nova',
+                                'regionUrl': FLAGS.ec2_url}]}
+
+    @rbac.allow('all')
+    def describe_snapshots(self,
+                           context,
+                           snapshot_id=None,
+                           owner=None,
+                           restorable_by=None,
+                           **kwargs):
+        return {'snapshotSet': [{'snapshotId': 'fixme',
+                                 'volumeId': 'fixme',
+                                 'status': 'fixme',
+                                 'startTime': 'fixme',
+                                 'progress': 'fixme',
+                                 'ownerId': 'fixme',
+                                 'volumeSize': 0,
+                                 'description': 'fixme'}]}
+
+    @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = context.user.get_key_pairs()
         if not key_name is None:
@@ -178,7 +200,8 @@ class CloudController(object):
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
-            if context.user.is_admin() or not key_pair.name.endswith('-key'):
+            suffix = FLAGS.vpn_key_suffix
+            if context.user.is_admin() or not key_pair.name.endswith(suffix):
                 result.append({
                     'keyName': key_pair.name,
                     'keyFingerprint': key_pair.fingerprint,
@@ -609,9 +632,8 @@ class CloudController(object):
         result = { 'image_id': image_id, 'launchPermission': [] }
         if image['isPublic']:
             result['launchPermission'].append({ 'group': 'all' })
-        
         return defer.succeed(result)
-        
+
     @rbac.allow('projectmanager', 'sysadmin')
     def modify_image_attribute(self, context, image_id, attribute, operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.

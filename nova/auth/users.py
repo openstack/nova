@@ -52,15 +52,21 @@ from nova import objectstore # for flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('ldap_url', 'ldap://localhost', 'Point this at your ldap server')
+flags.DEFINE_string('ldap_url', 'ldap://localhost',
+                    'Point this at your ldap server')
 flags.DEFINE_string('ldap_password',  'changeme', 'LDAP password')
-flags.DEFINE_string('user_dn', 'cn=Manager,dc=example,dc=com', 'DN of admin user')
+flags.DEFINE_string('user_dn', 'cn=Manager,dc=example,dc=com',
+                    'DN of admin user')
 flags.DEFINE_string('user_unit', 'Users', 'OID for Users')
-flags.DEFINE_string('user_ldap_subtree', 'ou=Users,dc=example,dc=com', 'OU for Users')
-flags.DEFINE_string('project_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU for Projects')
-flags.DEFINE_string('role_ldap_subtree', 'ou=Groups,dc=example,dc=com', 'OU for Roles')
+flags.DEFINE_string('user_ldap_subtree', 'ou=Users,dc=example,dc=com',
+                    'OU for Users')
+flags.DEFINE_string('project_ldap_subtree', 'ou=Groups,dc=example,dc=com',
+                    'OU for Projects')
+flags.DEFINE_string('role_ldap_subtree', 'ou=Groups,dc=example,dc=com',
+                    'OU for Roles')
 
-# mapping with these flags is necessary because we're going to tie in to an existing ldap schema
+# NOTE(vish): mapping with these flags is necessary because we're going
+#             to tie in to an existing ldap schema
 flags.DEFINE_string('ldap_cloudadmin',
     'cn=cloudadmins,ou=Groups,dc=example,dc=com', 'cn for Cloud Admins')
 flags.DEFINE_string('ldap_itsec',
@@ -72,11 +78,15 @@ flags.DEFINE_string('ldap_netadmin',
 flags.DEFINE_string('ldap_developer',
     'cn=developers,ou=Groups,dc=example,dc=com', 'cn for Developers')
 
-# a user with one of these roles will be a superuser and have access to all api commands
-flags.DEFINE_list('superuser_roles', ['cloudadmin'], 'roles that ignore rbac checking completely')
+# NOTE(vish): a user with one of these roles will be a superuser and
+#             have access to all api commands
+flags.DEFINE_list('superuser_roles', ['cloudadmin'],
+                  'roles that ignore rbac checking completely')
 
-# a user with one of these roles will have it for every project, even if he or she is not a member of the project
-flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'], 'roles that apply to all projects')
+# NOTE(vish): a user with one of these roles will have it for every
+#             project, even if he or she is not a member of the project
+flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
+                  'roles that apply to all projects')
 
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
@@ -90,15 +100,20 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
-flags.DEFINE_string('vpn_ip', '127.0.0.1', 'Public IP for the cloudpipe VPN servers')
+flags.DEFINE_string('vpn_ip', '127.0.0.1',
+                    'Public IP for the cloudpipe VPN servers')
 
 
 class AuthBase(object):
     @classmethod
     def safe_id(cls, obj):
-        """this method will return the id of the object if the object is of this class, otherwise
-        it will return the original object.  This allows methods to accept objects or
-        ids as paramaters"""
+        """Safe get object id.
+
+        This method will return the id of the object if the object
+        is of this class, otherwise it will return the original object.
+        This allows methods to accept objects or ids as paramaters.
+
+        """
         if isinstance(obj, cls):
             return obj.id
         else:
@@ -195,7 +210,8 @@ class User(AuthBase):
         return UserManager.instance().get_key_pairs(self.id)
 
     def __repr__(self):
-        return "User('%s', '%s', '%s', '%s', %s)" % (self.id, self.name, self.access, self.secret, self.admin)
+        return "User('%s', '%s', '%s', '%s', %s)" % (
+                self.id, self.name, self.access, self.secret, self.admin)
 
 class KeyPair(AuthBase):
     def __init__(self, id, owner_id, public_key, fingerprint):
@@ -209,7 +225,8 @@ class KeyPair(AuthBase):
         return UserManager.instance().delete_key_pair(self.owner, self.name)
 
     def __repr__(self):
-        return "KeyPair('%s', '%s', '%s', '%s')" % (self.id, self.owner_id, self.public_key, self.fingerprint)
+        return "KeyPair('%s', '%s', '%s', '%s')" % (
+                self.id, self.owner_id, self.public_key, self.fingerprint)
 
 class Group(AuthBase):
     """id and name are currently the same"""
@@ -223,7 +240,8 @@ class Group(AuthBase):
         return User.safe_id(user) in self.member_ids
 
     def __repr__(self):
-        return "Group('%s', '%s', %s)" % (self.id, self.description, self.member_ids)
+        return "Group('%s', '%s', %s)" % (
+                self.id, self.description, self.member_ids)
 
 class Project(Group):
     def __init__(self, id, project_manager_id, description, member_ids):
@@ -298,7 +316,9 @@ class Project(Group):
         return UserManager.instance().generate_x509_cert(user, self)
 
     def __repr__(self):
-        return "Project('%s', '%s', '%s', %s)" % (self.id, self.project_manager_id, self.description, self.member_ids)
+        return "Project('%s', '%s', '%s', %s)" % (
+                self.id, self.project_manager_id,
+                self.description, self.member_ids)
 
 class UserManager(object):
     def __init__(self):
@@ -322,7 +342,9 @@ class UserManager(object):
                 except: pass
         return cls._instance
 
-    def authenticate(self, access, signature, params, verb='GET', server_string='127.0.0.1:8773', path='/', verify_signature=True):
+    def authenticate(self, access, signature, params, verb='GET',
+                     server_string='127.0.0.1:8773', path='/',
+                     verify_signature=True):
         # TODO: Check for valid timestamp
         (access_key, sep, project_name) = access.partition(':')
 
@@ -335,12 +357,16 @@ class UserManager(object):
 
         project = self.get_project(project_name)
         if project == None:
-            raise exception.NotFound('No project called %s could be found' % project_name)
+            raise exception.NotFound('No project called %s could be found' %
+                                     project_name)
         if not user.is_admin() and not project.has_member(user):
-            raise exception.NotFound('User %s is not a member of project %s' % (user.id, project.id))
+            raise exception.NotFound('User %s is not a member of project %s' %
+                                     (user.id, project.id))
         if verify_signature:
-            # hmac can't handle unicode, so encode ensures that secret isn't unicode
-            expected_signature = signer.Signer(user.secret.encode()).generate(params, verb, server_string, path)
+            # NOTE(vish): hmac can't handle unicode, so encode ensures that
+            #             secret isn't unicode
+            expected_signature = signer.Signer(user.secret.encode()).generate(
+                    params, verb, server_string, path)
             logging.debug('user.secret: %s', user.secret)
             logging.debug('expected_signature: %s', expected_signature)
             logging.debug('signature: %s', signature)
@@ -350,7 +376,9 @@ class UserManager(object):
 
     def has_role(self, user, role, project=None):
         with LDAPWrapper() as conn:
-            if project and role == 'projectmanager':
+            if role == 'projectmanager':
+                if not project:
+                    raise exception.Error("Must specify project")
                 return self.is_project_manager(user, project)
 
             global_role = conn.has_role(User.safe_id(user),
@@ -368,17 +396,21 @@ class UserManager(object):
 
     def add_role(self, user, role, project=None):
         with LDAPWrapper() as conn:
-            return conn.add_role(User.safe_id(user), role, Project.safe_id(project))
+            return conn.add_role(User.safe_id(user), role,
+                                 Project.safe_id(project))
 
     def remove_role(self, user, role, project=None):
         with LDAPWrapper() as conn:
-            return conn.remove_role(User.safe_id(user), role, Project.safe_id(project))
+            return conn.remove_role(User.safe_id(user), role,
+                                    Project.safe_id(project))
 
-    def create_project(self, name, manager_user, description=None, member_users=None):
+    def create_project(self, name, manager_user,
+                       description=None, member_users=None):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
         with LDAPWrapper() as conn:
-            return conn.create_project(name, User.safe_id(manager_user), description, member_users)
+            return conn.create_project(name, User.safe_id(manager_user),
+                                       description, member_users)
 
     def get_projects(self):
         with LDAPWrapper() as conn:
@@ -391,7 +423,8 @@ class UserManager(object):
 
     def add_to_project(self, user, project):
         with LDAPWrapper() as conn:
-            return conn.add_to_project(User.safe_id(user), Project.safe_id(project))
+            return conn.add_to_project(User.safe_id(user),
+                                       Project.safe_id(project))
 
     def is_project_manager(self, user, project):
         if not isinstance(project, Project):
@@ -407,7 +440,8 @@ class UserManager(object):
 
     def remove_from_project(self, user, project):
         with LDAPWrapper() as conn:
-            return conn.remove_from_project(User.safe_id(user), Project.safe_id(project))
+            return conn.remove_from_project(User.safe_id(user),
+                                            Project.safe_id(project))
 
     def delete_project(self, project):
         with LDAPWrapper() as conn:
@@ -425,7 +459,8 @@ class UserManager(object):
         with LDAPWrapper() as conn:
             return conn.find_users()
 
-    def create_user(self, user, access=None, secret=None, admin=False, create_project=True):
+    def create_user(self, user, access=None, secret=None,
+                    admin=False, create_project=True):
         if access == None: access = str(uuid.uuid4())
         if secret == None: secret = str(uuid.uuid4())
         with LDAPWrapper() as conn:
@@ -482,7 +517,7 @@ class UserManager(object):
 
     def __cert_subject(self, uid):
         # FIXME(ja) - this should be pulled from a global configuration
-        return "/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        return "/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
 
 
 class LDAPWrapper(object):
@@ -502,9 +537,12 @@ class LDAPWrapper(object):
     def connect(self):
         """ connect to ldap as admin user """
         if FLAGS.fake_users:
+            self.NO_SUCH_OBJECT = fakeldap.NO_SUCH_OBJECT
+            self.OBJECT_CLASS_VIOLATION = fakeldap.OBJECT_CLASS_VIOLATION
             self.conn = fakeldap.initialize(FLAGS.ldap_url)
         else:
-            assert(ldap.__name__ != 'fakeldap')
+            self.NO_SUCH_OBJECT = ldap.NO_SUCH_OBJECT
+            self.OBJECT_CLASS_VIOLATION = ldap.OBJECT_CLASS_VIOLATION
             self.conn = ldap.initialize(FLAGS.ldap_url)
         self.conn.simple_bind_s(self.user, self.passwd)
 
@@ -514,36 +552,51 @@ class LDAPWrapper(object):
             return None
         return objects[0]
 
+    def find_dns(self, dn, query=None):
+        try:
+            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
+        except self.NO_SUCH_OBJECT:
+            return []
+        # just return the DNs
+        return [dn for dn, attributes in res]
+
     def find_objects(self, dn, query = None):
         try:
             res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except Exception:
+        except self.NO_SUCH_OBJECT:
             return []
         # just return the attributes
-        return [x[1] for x in res]
+        return [attributes for dn, attributes in res]
 
     def find_users(self):
-        attrs = self.find_objects(FLAGS.user_ldap_subtree, '(objectclass=novaUser)')
+        attrs = self.find_objects(FLAGS.user_ldap_subtree,
+                                  '(objectclass=novaUser)')
         return [self.__to_user(attr) for attr in attrs]
 
     def find_key_pairs(self, uid):
-        attrs = self.find_objects(self.__uid_to_dn(uid), '(objectclass=novaKeyPair)')
+        attrs = self.find_objects(self.__uid_to_dn(uid),
+                                  '(objectclass=novaKeyPair)')
         return [self.__to_key_pair(uid, attr) for attr in attrs]
 
     def find_projects(self):
-        attrs = self.find_objects(FLAGS.project_ldap_subtree, '(objectclass=novaProject)')
+        attrs = self.find_objects(FLAGS.project_ldap_subtree,
+                                  '(objectclass=novaProject)')
         return [self.__to_project(attr) for attr in attrs]
 
     def find_roles(self, tree):
-        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(!(objectclass=NovaProject)))')
+        attrs = self.find_objects(tree,
+                '(&(objectclass=groupOfNames)(!(objectclass=novaProject)))')
         return [self.__to_group(attr) for attr in attrs]
 
-    def find_groups_with_member(self, tree, dn):
-        attrs = self.find_objects(tree, '(&(objectclass=groupOfNames)(member=%s))' % dn )
-        return [self.__to_group(attr) for attr in attrs]
+    def find_group_dns_with_member(self, tree, uid):
+        dns = self.find_dns(tree,
+                            '(&(objectclass=groupOfNames)(member=%s))' %
+                            self.__uid_to_dn(uid))
+        return dns
 
     def find_user(self, uid):
-        attr = self.find_object(self.__uid_to_dn(uid), '(objectclass=novaUser)')
+        attr = self.find_object(self.__uid_to_dn(uid),
+                                '(objectclass=novaUser)')
         return self.__to_user(attr)
 
     def find_key_pair(self, uid, key_name):
@@ -600,11 +653,14 @@ class LDAPWrapper(object):
         self.conn.add_s(self.__uid_to_dn(name), attr)
         return self.__to_user(dict(attr))
 
-    def create_project(self, name, manager_uid, description=None, member_uids=None):
+    def create_project(self, name, manager_uid,
+                       description=None, member_uids=None):
         if self.project_exists(name):
-            raise exception.Duplicate("Project can't be created because project %s already exists" % name)
+            raise exception.Duplicate("Project can't be created because "
+                                      "project %s already exists" % name)
         if not self.user_exists(manager_uid):
-            raise exception.NotFound("Project can't be created because manager %s doesn't exist" % manager_uid)
+            raise exception.NotFound("Project can't be created because "
+                                     "manager %s doesn't exist" % manager_uid)
         manager_dn = self.__uid_to_dn(manager_uid)
         # description is a required attribute
         if description is None:
@@ -613,7 +669,8 @@ class LDAPWrapper(object):
         if member_uids != None:
             for member_uid in member_uids:
                 if not self.user_exists(member_uid):
-                    raise exception.NotFound("Project can't be created because user %s doesn't exist" % member_uid)
+                    raise exception.NotFound("Project can't be created "
+                            "because user %s doesn't exist" % member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         # always add the manager as a member because members is required
         if not manager_dn in members:
@@ -644,16 +701,21 @@ class LDAPWrapper(object):
         if project_id == None:
             return FLAGS.__getitem__("ldap_%s" % role).value
         else:
-            return 'cn=%s,cn=%s,%s' % (role, project_id, FLAGS.project_ldap_subtree)
+            return 'cn=%s,cn=%s,%s' % (role,
+                                       project_id,
+                                       FLAGS.project_ldap_subtree)
 
-    def __create_group(self, group_dn, name, uid, description, member_uids = None):
+    def __create_group(self, group_dn, name, uid,
+                       description, member_uids = None):
         if self.group_exists(name):
-            raise exception.Duplicate("Group can't be created because group %s already exists" % name)
+            raise exception.Duplicate("Group can't be created because "
+                                      "group %s already exists" % name)
         members = []
         if member_uids != None:
             for member_uid in member_uids:
                 if not self.user_exists(member_uid):
-                    raise exception.NotFound("Group can't be created because user %s doesn't exist" % member_uid)
+                    raise exception.NotFound("Group can't be created "
+                            "because user %s doesn't exist" % member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         dn = self.__uid_to_dn(uid)
         if not dn in members:
@@ -682,15 +744,12 @@ class LDAPWrapper(object):
 
     def remove_role(self, uid, role, project_id=None):
         role_dn = self.__role_to_dn(role, project_id)
-        try:
-            return self.remove_from_group(uid, role_dn)
-        except Exception, ex:
-            print type(ex), ex
-
+        return self.remove_from_group(uid, role_dn)
 
     def is_in_group(self, uid, group_dn):
         if not self.user_exists(uid):
-            raise exception.NotFound("User %s can't be searched in group becuase the user doesn't exist" % (uid,))
+            raise exception.NotFound("User %s can't be searched in group "
+                    "becuase the user doesn't exist" % (uid,))
         if not self.group_exists(group_dn):
             return False
         res = self.find_object(group_dn,
@@ -699,11 +758,14 @@ class LDAPWrapper(object):
 
     def add_to_group(self, uid, group_dn):
         if not self.user_exists(uid):
-            raise exception.NotFound("User %s can't be added to the group becuase the user doesn't exist" % (uid,))
+            raise exception.NotFound("User %s can't be added to the group "
+                    "becuase the user doesn't exist" % (uid,))
         if not self.group_exists(group_dn):
-            raise exception.NotFound("The group at dn %s doesn't exist" % (group_dn,))
+            raise exception.NotFound("The group at dn %s doesn't exist" %
+                                     (group_dn,))
         if self.is_in_group(uid, group_dn):
-            raise exception.Duplicate("User %s is already a member of the group %s" % (uid, group_dn))
+            raise exception.Duplicate("User %s is already a member of "
+                                      "the group %s" % (uid, group_dn))
         attr = [
             (ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))
         ]
@@ -711,34 +773,39 @@ class LDAPWrapper(object):
 
     def remove_from_group(self, uid, group_dn):
         if not self.group_exists(group_dn):
-            raise exception.NotFound("The group at dn %s doesn't exist" % (group_dn,))
+            raise exception.NotFound("The group at dn %s doesn't exist" %
+                                     (group_dn,))
         if not self.user_exists(uid):
-            raise exception.NotFound("User %s can't be removed from the group because the user doesn't exist" % (uid,))
+            raise exception.NotFound("User %s can't be removed from the "
+                    "group because the user doesn't exist" % (uid,))
         if not self.is_in_group(uid, group_dn):
-            raise exception.NotFound("User %s is not a member of the group" % (uid,))
-        attr = [
-            (ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))
-        ]
+            raise exception.NotFound("User %s is not a member of the group" %
+                                     (uid,))
+        self._safe_remove_from_group(group_dn, uid)
+
+    def _safe_remove_from_group(self, group_dn, uid):
+        # FIXME(vish): what if deleted user is a project manager?
+        attr = [(ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
         try:
             self.conn.modify_s(group_dn, attr)
-        except ldap.OBJECT_CLASS_VIOLATION:
-            logging.debug("Attempted to remove the last member of a group.  Deleting the group instead.")
+        except self.OBJECT_CLASS_VIOLATION:
+            logging.debug("Attempted to remove the last member of a group. "
+                          "Deleting the group at %s instead." % group_dn )
             self.delete_group(group_dn)
 
     def remove_from_all(self, uid):
-        # FIXME(vish): what if deleted user is a project manager?
         if not self.user_exists(uid):
-            raise exception.NotFound("User %s can't be removed from all because the user doesn't exist" % (uid,))
+            raise exception.NotFound("User %s can't be removed from all "
+                    "because the user doesn't exist" % (uid,))
         dn = self.__uid_to_dn(uid)
-        attr = [
-            (ldap.MOD_DELETE, 'member', dn)
-        ]
-        roles = self.find_groups_with_member(FLAGS.role_ldap_subtree, dn)
-        for role in roles:
-            self.conn.modify_s('cn=%s,%s' % (role.id, FLAGS.role_ldap_subtree), attr)
-        projects = self.find_groups_with_member(FLAGS.project_ldap_subtree, dn)
-        for project in projects:
-            self.conn.modify_s('cn=%s,%s' % (project.id, FLAGS.project_ldap_subtree), attr)
+        role_dns = self.find_group_dns_with_member(
+                FLAGS.role_ldap_subtree, uid)
+        for role_dn in role_dns:
+            self._safe_remove_from_group(role_dn, uid)
+        project_dns = self.find_group_dns_with_member(
+                FLAGS.project_ldap_subtree, uid)
+        for project_dn in project_dns:
+            self._safe_remove_from_group(project_dn, uid)
 
     def create_key_pair(self, uid, key_name, public_key, fingerprint):
         """create's a public key in the directory underneath the user"""
@@ -782,9 +849,8 @@ class LDAPWrapper(object):
 
     def delete_roles(self, project_dn):
         roles = self.find_roles(project_dn)
-        if roles != None:
-            for role in roles:
-                self.delete_group('cn=%s,%s' % (role.id, project_dn))
+        for role in roles:
+            self.delete_group('cn=%s,%s' % (role.id, project_dn))
 
     def delete_project(self, name):
         project_dn = 'cn=%s,%s' % (name, FLAGS.project_ldap_subtree)

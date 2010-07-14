@@ -36,7 +36,7 @@ from nova import exception
 def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     """Takes a single partition represented by infile and writes a bootable
     drive image into outfile.
-    
+
     The first 63 sectors (0-62) of the resulting image is a master boot record.
     Infile becomes the first primary partition.
     If local bytes is specified, a second primary partition is created and
@@ -142,5 +142,5 @@ def _inject_into_fs(key, fs, execute=None):
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    yield execute('sudo bash -c "cat >> %s"' % keyfile, '\n' + key + '\n')
+    yield execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
 
