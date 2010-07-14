@@ -75,7 +75,8 @@ def main():
             topic='%s.%s' % (FLAGS.compute_topic, FLAGS.node_name),
             proxy=n)
 
-    pulse = task.LoopingCall(n.report_state, FLAGS.node_name, 'nova-compute')
+    bin_name = os.path.basename(__file__)
+    pulse = task.LoopingCall(n.report_state, FLAGS.node_name, bin_name)
     pulse.start(interval=FLAGS.node_report_state_interval, now=False)
 
     injected = consumer_all.attach_to_twisted()
@@ -83,7 +84,7 @@ def main():
 
     # This is the parent service that twistd will be looking for when it
     # parses this file, return it so that we can get it into globals below
-    application = service.Application('nova-compute')
+    application = service.Application(bin_name)
     n.setServiceParent(application)
     return application
 
