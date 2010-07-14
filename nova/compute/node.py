@@ -541,11 +541,6 @@ class Instance(object):
             timer.f = _wait_for_boot
             timer.start(interval=0.5, now=True)
         except Exception, ex:
-<<<<<<< HEAD
-            # FIXME(todd): this is just for debugging during testing
-            print "FUUUUUUUUUUUUUUUUUUUUUU: %s" % ex
-=======
->>>>>>> master
             logging.debug(ex)
             self.set_state(Instance.SHUTDOWN)
 
