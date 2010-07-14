@@ -43,13 +43,11 @@ FLAGS = flags.FLAGS
 
 
 def main(_argv):
-    user_manager = users.UserManager()
-    host_manager = model.Host
     controllers = {
         'Cloud': cloud.CloudController(),
-        'Admin': admin.AdminController(user_manager, host_manager)
+        'Admin': admin.AdminController()
     }
-    _app = api.APIServerApplication(user_manager, controllers)
+    _app = api.APIServerApplication(controllers)
 
     conn = rpc.Connection.instance()
     consumer = rpc.AdapterConsumer(connection=conn,
