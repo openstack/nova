@@ -133,7 +133,7 @@ class BaseNetwork(datastore.RedisModel):
 
     @property
     def hosts(self):
-        return datastore.Redis.instance().hgetall(self._hosts_key)
+        return datastore.Redis.instance().hgetall(self._hosts_key) or {}
 
     def _add_host(self, _user_id, _project_id, host, target):
         datastore.Redis.instance().hset(self._hosts_key, host, target)
@@ -392,7 +392,7 @@ def _rem_vlan(project_id):
 
 def get_assigned_vlans():
     """ Returns a dictionary, with keys of project_id and values of vlan_id """
-    return datastore.Redis.instance().hgetall(VLANS_KEY)
+    return datastore.Redis.instance().hgetall(VLANS_KEY) or {}
 
 def get_vlan_for_project(project_id):
     """
