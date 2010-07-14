@@ -3,6 +3,7 @@ debian/nova-manage.conf etc/nova
 nova/auth/novarc.template             usr/share/nova
 nova/cloudpipe/client.ovpn.template   usr/share/nova
 nova/compute/libvirt.xml.template     usr/share/nova
+nova/compute/interfaces.template      usr/share/nova
 usr/lib/python*/*-packages/nova/*
 CA/openssl.cnf.tmpl                   var/lib/nova/CA
 CA/geninter.sh                        var/lib/nova/CA
