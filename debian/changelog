@@ -1,3 +1,23 @@
+nova (0.2.3-1) UNRELEASED; urgency=low
+
+  * Relax the Twisted dependency to python-twisted-core (rather than the
+    full stack).
+  * Move nova related configuration files into /etc/nova/.
+  * Add a dependency on nginx from nova-objectsstore and install a
+    suitable configuration file.
+  * Ship the CA directory in nova-common.
+  * Add a default flag file for nova-manage to help it find the CA.
+  * If set, pass KernelId and RamdiskId from RunInstances call to the
+    target compute node.
+  * Added --network_path setting to nova-compute's flagfile.
+  * Move templates from python directories to /usr/share/nova.
+  * Add debian/nova-common.dirs to create
+    var/lib/nova/{buckets,CA,images,instances,keys,networks}
+  * Don't pass --daemonize=1 to nova-compute. It's already daemonising
+    by default.
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 14 Jul 2010 12:00:00 -0700
+
 nova (0.2.2-10) UNRELEASED; urgency=low
 
   * Fixed extra space in vblade-persist
