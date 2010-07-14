@@ -403,14 +403,16 @@ class CloudController(object):
 
     def _format_instances(self, context, reservation_id = None):
         reservations = {}
-        for instance in self.instdir.all:
+        if context.user.is_admin():
+            instgenerator = self.instdir.all
+        else:
+            instgenerator = self.instdir.by_project(context.project.id)
+        for instance in instgenerator:
             res_id = instance.get('reservation_id', 'Unknown')
             if reservation_id != None and reservation_id != res_id:
                 continue
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
-                    continue
-                if context.project.id != instance['project_id']:
                     continue
             i = {}
             i['instance_id'] = instance.get('instance_id', None)
