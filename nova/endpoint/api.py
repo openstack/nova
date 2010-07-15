@@ -324,7 +324,7 @@ class APIRequestHandler(tornado.web.RequestHandler):
 
 
 class APIServerApplication(tornado.web.Application):
-    def __init__(self, user_manager, controllers):
+    def __init__(self, controllers):
         tornado.web.Application.__init__(self, [
             (r'/', RootRequestHandler),
             (r'/cloudpipe/(.*)', nova.cloudpipe.api.CloudPipeRequestHandler),
@@ -341,5 +341,4 @@ class APIServerApplication(tornado.web.Application):
             (r'/2007-01-19/([-A-Za-z0-9/]*)', MetadataRequestHandler),
             (r'/1.0/([-A-Za-z0-9/]*)', MetadataRequestHandler),
         ], pool=multiprocessing.Pool(4))
-        self.user_manager = user_manager
         self.controllers = controllers

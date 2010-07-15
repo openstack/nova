@@ -30,7 +30,6 @@ import base64
 import json
 import logging
 import os
-import random
 import shutil
 import sys
 
@@ -58,7 +57,7 @@ from nova.objectstore import image # for image_path flag
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                         utils.abspath('compute/libvirt.xml.template'),
-                        'Network XML Template')
+                        'Libvirt XML Template')
 flags.DEFINE_bool('use_s3', True,
                       'whether to get images from s3 or use local copy')
 flags.DEFINE_string('instances_path', utils.abspath('../instances'),
@@ -144,8 +143,7 @@ class Node(object, service.Service):
 
     @defer.inlineCallbacks
     def report_state(self, nodename, daemon):
-        # TODO(termie): Termie has an idea for wrapping this connection failure
-        #               pattern to be more elegant.  -todd
+        # TODO(termie): make this pattern be more elegant. -todd
         try:
             record = model.Daemon(nodename, daemon)
             record.heartbeat()
@@ -164,9 +162,10 @@ class Node(object, service.Service):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
         inst = self.instdir.get(instance_id)
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
-        net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
+        if not FLAGS.simple_network:
+            # TODO: Get the real security group of launch in here
+            security_group = "default"
+            net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
                                                              inst['project_id'],
                                             security_group).express()
         inst['node_name'] = FLAGS.node_name
@@ -470,7 +469,7 @@ class Instance(object):
         # ensure directories exist and are writable
         yield self._pool.simpleExecute('mkdir -p %s' % basepath())
         yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
-        
+
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
@@ -478,11 +477,11 @@ class Instance(object):
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
-        
+
         if FLAGS.fake_libvirt:
             logging.info('fake_libvirt, nothing to do for create_image')
             raise defer.returnValue(None);
-        
+
         if FLAGS.use_s3:
             _fetch_file = self._fetch_s3_image
         else:
@@ -495,12 +494,23 @@ class Instance(object):
         if not os.path.exists(basepath('ramdisk')):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
-        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd, input=input, error_ok=1)
+        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
+                                                                   input=input,
+                                                                   error_ok=1)
 
-        if data['key_data']:
-            logging.info('Injecting key data into image %s', data['image_id'])
-            yield disk.inject_key(
-                    data['key_data'], basepath('disk-raw'), execute=execute)
+        key = data['key_data']
+        net = None
+        if FLAGS.simple_network:
+            with open(FLAGS.simple_network_template) as f:
+                net = f.read() % {'address': data['private_dns_name'],
+                                  'network': FLAGS.simple_network_network,
+                                  'netmask': FLAGS.simple_network_netmask,
+                                  'gateway': FLAGS.simple_network_gateway,
+                                  'broadcast': FLAGS.simple_network_broadcast,
+                                  'dns': FLAGS.simple_network_dns}
+        if key or net:
+            logging.info('Injecting data into image %s', data['image_id'])
+            yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
             yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
@@ -509,7 +519,7 @@ class Instance(object):
                  * 1024 * 1024 * 1024)
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
-        
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self):
@@ -520,7 +530,7 @@ class Instance(object):
         self.set_state(Instance.NOSTATE, 'launching')
         logging.info('self %s', self)
         try:
-            yield self._create_image(xml) 
+            yield self._create_image(xml)
             self._conn.createXML(xml, 0)
             # TODO(termie): this should actually register
             # a callback to check for successful boot
@@ -543,8 +553,6 @@ class Instance(object):
             timer.f = _wait_for_boot
             timer.start(interval=0.5, now=True)
         except Exception, ex:
-            # FIXME(todd): this is just for debugging during testing
-            print "FUUUUUUUUUUUUUUUUUUUUUU: %s" % ex
             logging.debug(ex)
             self.set_state(Instance.SHUTDOWN)
 

@@ -101,10 +101,17 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
+
 flags.DEFINE_integer('vpn_start_port', 8000,
                     'Start port for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_end_port', 9999,
                     'End port for the cloudpipe VPN servers')
+
+flags.DEFINE_string('credential_cert_subject',
+                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
+                    'OU=NovaDev/CN=%s-%s',
+                    'Subject for certificate for users')
+
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
@@ -590,7 +597,7 @@ class UserManager(object):
 
     def __cert_subject(self, uid):
         # FIXME(ja) - this should be pulled from a global configuration
-        return "/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        return FLAGS.credential_cert_subject % (uid, utils.isotime())
 
 
 class LDAPWrapper(object):
@@ -779,7 +786,7 @@ class LDAPWrapper(object):
 
     def __create_group(self, group_dn, name, uid,
                        description, member_uids = None):
-        if self.group_exists(name):
+        if self.group_exists(group_dn):
             raise exception.Duplicate("Group can't be created because "
                                       "group %s already exists" % name)
         members = []

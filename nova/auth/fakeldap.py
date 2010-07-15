@@ -34,14 +34,18 @@ SCOPE_SUBTREE  = 2
 MOD_ADD = 0
 MOD_DELETE = 1
 
+
 class NO_SUCH_OBJECT(Exception):
     pass
+
 
 class OBJECT_CLASS_VIOLATION(Exception):
     pass
 
+
 def initialize(uri):
     return FakeLDAP()
+
 
 def _match_query(query, attrs):
     """Match an ldap query to an attribute dictionary.
@@ -67,6 +71,7 @@ def _match_query(query, attrs):
     (k, sep, v) = inner.partition('=')
     return _match(k, v, attrs)
 
+
 def _paren_groups(source):
     """Split a string into parenthesized groups."""
     count = 0
@@ -83,6 +88,7 @@ def _paren_groups(source):
                 result.append(source[start:pos+1])
     return result
 
+
 def _match(k, v, attrs):
     """Match a given key and value against an attribute list."""
     if k not in attrs:
@@ -96,6 +102,7 @@ def _match(k, v, attrs):
             return True
     return False
 
+
 def _subs(value):
     """Returns a list of subclass strings.
 
@@ -108,6 +115,32 @@ def _subs(value):
     if value in subs:
         return [value] + subs[value]
     return [value]
+
+
+def _from_json(encoded):
+    """Convert attribute values from json representation.
+
+    Args:
+    encoded -- a json encoded string
+
+    Returns a list of strings
+
+    """
+    return [str(x) for x in json.loads(encoded)]
+
+
+def _to_json(unencoded):
+    """Convert attribute values into json representation.
+
+    Args:
+    unencoded -- an unencoded string or list of strings.  If it
+        is a single string, it will be converted into a list.
+
+    Returns a json string
+
+    """
+    return json.dumps(list(unencoded))
+
 
 class FakeLDAP(object):
     #TODO(vish): refactor this class to use a wrapper instead of accessing
@@ -125,7 +158,7 @@ class FakeLDAP(object):
         """Add an object with the specified attributes at dn."""
         key = "%s%s" % (self.__redis_prefix, dn)
 
-        value_dict = dict([(k, self.__to_json(v)) for k, v in attr])
+        value_dict = dict([(k, _to_json(v)) for k, v in attr])
         datastore.Redis.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
@@ -145,12 +178,12 @@ class FakeLDAP(object):
         key = "%s%s" % (self.__redis_prefix, dn)
 
         for cmd, k, v in attrs:
-            values = self.__from_json(redis.hget(key, k))
+            values = _from_json(redis.hget(key, k))
             if cmd == MOD_ADD:
                 values.append(v)
             else:
                 values.remove(v)
-            values = redis.hset(key, k, self.__to_json(values))
+            values = redis.hset(key, k, _to_json(values))
 
     def search_s(self, dn, scope, query=None, fields=None):
         """Search for all matching objects under dn using the query.
@@ -171,7 +204,7 @@ class FakeLDAP(object):
             # get the attributes from redis
             attrs = redis.hgetall(key)
             # turn the values from redis into lists
-            attrs = dict([(k, self.__from_json(v))
+            attrs = dict([(k, _from_json(v))
                           for k, v in attrs.iteritems()])
             # filter the objects by query
             if not query or _match_query(query, attrs):
@@ -188,25 +221,4 @@ class FakeLDAP(object):
     def __redis_prefix(self):
         return 'ldap:'
 
-    def __from_json(self, encoded):
-        """Convert attribute values from json representation.
 
-        Args:
-        encoded -- a json encoded string
-
-        Returns a list of strings
-
-        """
-        return [str(x) for x in json.loads(encoded)]
-
-    def __to_json(self, unencoded):
-        """Convert attribute values into json representation.
-
-        Args:
-        unencoded -- an unencoded string or list of strings.  If it
-            is a single string, it will be converted into a list.
-
-        Returns a json string
-
-        """
-        return json.dumps(list(unencoded))

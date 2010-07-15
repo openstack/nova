@@ -28,5 +28,5 @@ FLAGS.fake_rabbit = True
 FLAGS.fake_network = True
 FLAGS.fake_users = True
 #FLAGS.keeper_backend = 'sqlite'
-FLAGS.datastore_path = ':memory:'
+# FLAGS.datastore_path = ':memory:'
 FLAGS.verbose = True

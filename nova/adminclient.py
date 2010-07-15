@@ -28,7 +28,8 @@ import boto
 from boto.ec2.regioninfo import RegionInfo
 
 class UserInfo(object):
-    """ Information about a Nova user
+    """
+    Information about a Nova user, as parsed through SAX
     fields include:
         username
         accesskey
@@ -46,11 +47,9 @@ class UserInfo(object):
     def __repr__(self):
         return 'UserInfo:%s' % self.username
 
-    # this is needed by the sax parser, so ignore the ugly name
     def startElement(self, name, attrs, connection):
         return None
 
-    # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
         if name == 'username':
             self.username = str(value)
@@ -63,7 +62,7 @@ class UserInfo(object):
 
 class HostInfo(object):
     """
-    Information about a Nova Host:
+    Information about a Nova Host, as parsed through SAX:
         Disk stats
         Running Instances
         Memory stats

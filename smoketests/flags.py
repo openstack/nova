@@ -1,7 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Administrator of the National Aeronautics and Space Administration. 
 # All Rights Reserved.
 #
 # Copyright 2010 Anso Labs, LLC
@@ -23,8 +23,6 @@ Package-level global flags are defined here, the rest are defined
 where they're used.
 """
 
-import socket
-
 from nova import vendor
 from gflags import *
 
@@ -37,9 +35,13 @@ DEFINE_bool = DEFINE_bool
 # __GLOBAL FLAGS ONLY__
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
-
-DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_string('admin_access_key', 'admin', 'Access key for admin user')
 DEFINE_string('admin_secret_key', 'admin', 'Secret key for admin user')
 DEFINE_string('clc_ip', '127.0.0.1', 'IP of cloud controller API')
-DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
+DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
+              'Local kernel file to use for bundling tests')
+DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
+              'Local image file to use for bundling tests')
+#DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE',
+#                    'AMI for cloudpipe vpn server')
+

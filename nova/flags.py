@@ -74,6 +74,9 @@ DEFINE_string('default_instance_type',
                     'default instance type to use, testing only')
 
 DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
+DEFINE_string('vpn_key_suffix',
+              '-key',
+              'Suffix to add to project name for vpn key')
 
 # UNUSED
 DEFINE_string('node_availability_zone',

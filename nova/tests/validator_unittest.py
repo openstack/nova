@@ -42,5 +42,4 @@ class ValidationTestCase(test.TrialTestCase):
         
 @validate.typetest(instanceid=str, size=int, number_of_instances=int)
 def type_case(instanceid, size, number_of_instances):
-    print ("type_case was successfully executed")
     return True

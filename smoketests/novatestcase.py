@@ -24,17 +24,21 @@ import random
 import sys
 import unittest
 
-from nova.adminclient import NovaAdminClient
-from nova.smoketests import flags
-
 from nova import vendor
 import paramiko
 
-nova_admin = NovaAdminClient(access_key=flags.admin_access_key, secret_key=flags.admin_secret_key, clc_ip=host)
+from nova import adminclient
+from smoketests import flags
+
+FLAGS = flags.FLAGS
+
 
 class NovaTestCase(unittest.TestCase):
     def setUp(self):
-        pass
+        self.nova_admin = adminclient.NovaAdminClient(
+            access_key=FLAGS.admin_access_key,
+            secret_key=FLAGS.admin_secret_key,
+            clc_ip=FLAGS.clc_ip)
 
     def tearDown(self):
         pass
@@ -55,22 +59,22 @@ class NovaTestCase(unittest.TestCase):
 
     @property
     def admin(self):
-        return nova_admin.connection_for('admin')
+        return self.nova_admin.connection_for('admin')
 
     def connection_for(self, username):
-        return nova_admin.connection_for(username)
+        return self.nova_admin.connection_for(username)
 
     def create_user(self, username):
-        return nova_admin.create_user(username)
+        return self.nova_admin.create_user(username)
 
     def get_user(self, username):
-        return nova_admin.get_user(username)
+        return self.nova_admin.get_user(username)
 
     def delete_user(self, username):
-        return nova_admin.delete_user(username)
+        return self.nova_admin.delete_user(username)
 
     def get_signed_zip(self, username):
-        return nova_admin.get_zip(username)
+        return self.nova_admin.get_zip(username)
 
     def create_key_pair(self, conn, key_name):
         try:

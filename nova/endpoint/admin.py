@@ -24,6 +24,9 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 
+from nova.auth import users
+from nova.compute import model
+
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
     if user:
@@ -62,28 +65,24 @@ class AdminController(object):
     allowing project managers to administer project users.
     """
 
-    def __init__(self, user_manager, host_manager):
-        self.user_manager = user_manager
-        self.host_manager = host_manager
-
     def __str__(self):
         return 'AdminController'
 
     @admin_only
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
-        return user_dict(self.user_manager.get_user(name))
+        return user_dict(users.UserManager.instance().get_user(name))
 
     @admin_only
     def describe_users(self, _context, **_kwargs):
         """Returns all users - should be changed to deal with a list."""
         return {'userSet':
-            [user_dict(u) for u in self.user_manager.get_users()] }
+            [user_dict(u) for u in users.UserManager.instance().get_users()] }
 
     @admin_only
     def register_user(self, _context, name, **_kwargs):
         """Creates a new user, and returns generated credentials."""
-        return user_dict(self.user_manager.create_user(name))
+        return user_dict(users.UserManager.instance().create_user(name))
 
     @admin_only
     def deregister_user(self, _context, name, **_kwargs):
@@ -91,7 +90,7 @@ class AdminController(object):
            Should throw an exception if the user has instances,
            volumes, or buckets remaining.
         """
-        self.user_manager.delete_user(name)
+        users.UserManager.instance().delete_user(name)
 
         return True
 
@@ -103,8 +102,8 @@ class AdminController(object):
         """
         if project is None:
             project = name
-        project = self.user_manager.get_project(project)
-        user = self.user_manager.get_user(name)
+        project = users.UserManager.instance().get_project(project)
+        user = users.UserManager.instance().get_user(name)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
 
     @admin_only
@@ -117,9 +116,9 @@ class AdminController(object):
             * DHCP servers running
             * Iptables / bridges
         """
-        return {'hostSet': [host_dict(h) for h in self.host_manager.all()]}
+        return {'hostSet': [host_dict(h) for h in model.Host.all()]}
 
     @admin_only
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
-        return host_dict(self.host_manager.lookup(name))
+        return host_dict(model.Host.lookup(name))
