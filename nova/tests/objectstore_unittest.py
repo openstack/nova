@@ -41,9 +41,12 @@ oss_tempdir = tempfile.mkdtemp(prefix='test_oss-')
 
 # delete tempdirs from previous runs (we don't delete after test to allow
 # checking the contents after running tests)
-for path in glob.glob(os.path.abspath(os.path.join(oss_tempdir, '../test_oss-*'))):
-    if path != oss_tempdir:
-        shutil.rmtree(path)
+# TODO: This fails on the test box with a permission denied error
+# Also, doing these things in a global tempdir means that different runs of
+# the test suite on the same box could clobber each other.
+#for path in glob.glob(os.path.abspath(os.path.join(oss_tempdir, '../test_oss-*'))):
+#    if path != oss_tempdir:
+#        shutil.rmtree(path)
 
 
 # create bucket/images path
