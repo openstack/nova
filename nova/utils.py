@@ -22,13 +22,13 @@
 System-level utilities and helper functions.
 """
 
+import inspect
 import logging
+import os
+import random
+import subprocess
 import socket
 import sys
-import os.path
-import inspect
-import subprocess
-import random
 from datetime import datetime
 
 from nova import flags
@@ -47,11 +47,12 @@ def fetchfile(url, target):
 #    fp.close()
     execute("curl %s -o %s" % (url, target))
 
-
-def execute(cmd, input=None):
-    #logging.debug("Running %s" % (cmd))
+def execute(cmd, input=None, addl_env=None):
+    env = os.environ.copy()
+    if addl_env:
+        env.update(addl_env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
     if input != None:
         result = obj.communicate(input)

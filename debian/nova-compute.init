@@ -13,10 +13,10 @@
 set -e
 
 DAEMON=/usr/bin/nova-compute
-DAEMON_ARGS="--flagfile=/etc/nova.conf"
+DAEMON_ARGS="--flagfile=/etc/nova/nova-compute.conf"
 PIDFILE=/var/run/nova-compute.pid
 
-ENABLED=false
+ENABLED=true
 
 if test -f /etc/default/nova-compute; then
   . /etc/default/nova-compute

@@ -58,6 +58,26 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
 flags.DEFINE_integer('cloudpipe_start_port', 12000,
                         'Starting port for mapped CloudPipe external ports')
 
+flags.DEFINE_boolean('simple_network', False,
+                       'Use simple networking instead of vlans')
+flags.DEFINE_string('simple_network_bridge', 'br100',
+                       'Bridge for simple network instances')
+flags.DEFINE_list('simple_network_ips', ['192.168.0.2'],
+                       'Available ips for simple network')
+flags.DEFINE_string('simple_network_template',
+                    utils.abspath('compute/interfaces.template'),
+                    'Template file for simple network')
+flags.DEFINE_string('simple_network_netmask', '255.255.255.0',
+                       'Netmask for simple network')
+flags.DEFINE_string('simple_network_network', '192.168.0.0',
+                       'Network for simple network')
+flags.DEFINE_string('simple_network_gateway', '192.168.0.1',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_broadcast', '192.168.0.255',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_dns', '8.8.4.4',
+                       'Dns for simple network')
+
 logging.getLogger().setLevel(logging.DEBUG)
 
 
@@ -188,17 +208,8 @@ class BaseNetwork(datastore.BasicModel):
         return self.network.broadcast()
 
     @property
-    def gateway(self):
-        return self.network[1]
-
-    @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
-
-    def range(self):
-        # the .2 address is always CloudPipe
-        for idx in range(3, len(self.network)-2):
-            yield self.network[idx]
 
     @property
     def user(self):
@@ -214,7 +225,7 @@ class BaseNetwork(datastore.BasicModel):
 
     @property
     def hosts(self):
-        return datastore.Redis.instance().hgetall(self._hosts_key)
+        return datastore.Redis.instance().hgetall(self._hosts_key) or {}
 
     def _add_host(self, _user_id, _project_id, host, target):
         datastore.Redis.instance().hset(self._hosts_key, host, target)
@@ -241,13 +252,21 @@ class BaseNetwork(datastore.BasicModel):
             self._add_host(user_id, project_id, address, mac)
             self.express(address=address)
             return address
-        raise compute_exception.NoMoreAddresses()
+        raise compute_exception.NoMoreAddresses("Project %s with network %s" %
+                                                (project_id, str(self.network)))
 
-    def deallocate_ip(self, ip_str):
+    def lease_ip(self, ip_str):    
+        logging.debug("Leasing allocated IP %s" % (ip_str))
+
+    def release_ip(self, ip_str):
         if not ip_str in self.assigned:
             raise compute_exception.AddressNotAllocated()
         self.deexpress(address=ip_str)
         self._rem_host(ip_str)
+
+    def deallocate_ip(self, ip_str):
+        # Do nothing for now, cleanup on ip release
+        pass
 
     def list_addresses(self):
         for address in self.hosts:
@@ -280,8 +299,6 @@ class BridgedNetwork(BaseNetwork):
     def get_network_for_project(cls, user_id, project_id, security_group):
         vlan = get_vlan_for_project(project_id)
         network_str = vlan.subnet()
-        logging.debug("creating network on vlan %s with network string %s",
-                      vlan.vlan_id, network_str)
         return cls.create(user_id, project_id, security_group, vlan.vlan_id,
                           network_str)
 
@@ -307,7 +324,7 @@ class DHCPNetwork(BridgedNetwork):
 
     def __init__(self, *args, **kwargs):
         super(DHCPNetwork, self).__init__(*args, **kwargs)
-        logging.debug("Initing DHCPNetwork object...")
+        # logging.debug("Initing DHCPNetwork object...")
         self.dhcp_listen_address = self.network[1]
         self.dhcp_range_start = self.network[3]
         self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
@@ -470,6 +487,7 @@ class PublicNetworkController(BaseNetwork):
     def deexpress(self, address=None):
         addr = self.get_host(address)
         private_ip = addr['private_ip']
+        linux_net.unbind_public_ip(address, FLAGS.public_interface)
         linux_net.remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
                               % (address, private_ip))
         linux_net.remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
@@ -517,11 +535,27 @@ def get_vlan_for_project(project_id):
     raise compute_exception.AddressNotAllocated("Out of VLANs")
 
 def get_network_by_address(address):
+    logging.debug("Get Network By Address: %s" % address)
     for project in users.UserManager.instance().get_projects():
         net = get_project_network(project.id)
         if address in net.assigned:
+            logging.debug("Found %s in %s" % (address, project.id))
             return net
     raise compute_exception.AddressNotAllocated()
+
+def allocate_simple_ip():
+    redis = datastore.Redis.instance()
+    if not redis.exists('ips') and not len(redis.keys('instances:*')):
+        for address in FLAGS.simple_network_ips:
+            redis.sadd('ips', address)
+    address = redis.spop('ips')
+    if not address:
+        raise exception.NoMoreAddresses()
+    return address
+
+def deallocate_simple_ip(address):
+    datastore.Redis.instance().sadd('ips', address)
+
 
 def allocate_vpn_ip(user_id, project_id, mac):
     return get_project_network(project_id).allocate_vpn_ip(mac)
@@ -531,6 +565,12 @@ def allocate_ip(user_id, project_id, mac):
 
 def deallocate_ip(address):
     return get_network_by_address(address).deallocate_ip(address)
+    
+def release_ip(address):
+    return get_network_by_address(address).release_ip(address)
+    
+def lease_ip(address):
+    return get_network_by_address(address).lease_ip(address)
 
 def get_project_network(project_id, security_group='default'):
     """ get a project's private network, allocating one if needed """

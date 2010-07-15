@@ -115,9 +115,9 @@ class CloudController(object):
 
     def get_metadata(self, ip):
         i = self.get_instance_by_ip(ip)
-        mpi = self._get_mpi_data(i['project_id'])
         if i is None:
             return None
+        mpi = self._get_mpi_data(i['project_id'])
         if i['key_name']:
             keys = {
                 '0': {
@@ -403,14 +403,16 @@ class CloudController(object):
 
     def _format_instances(self, context, reservation_id = None):
         reservations = {}
-        for instance in self.instdir.all:
+        if context.user.is_admin():
+            instgenerator = self.instdir.all
+        else:
+            instgenerator = self.instdir.by_project(context.project.id)
+        for instance in instgenerator:
             res_id = instance.get('reservation_id', 'Unknown')
             if reservation_id != None and reservation_id != res_id:
                 continue
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
-                    continue
-                if context.project.id != instance['project_id']:
                     continue
             i = {}
             i['instance_id'] = instance.get('instance_id', None)
@@ -498,6 +500,14 @@ class CloudController(object):
         # TODO - Strip the IP from the instance
         return defer.succeed({'disassociateResponse': ["Address disassociated."]})
 
+    def release_ip(self, context, private_ip, **kwargs):
+        self.network.release_ip(private_ip)
+        return defer.succeed({'releaseResponse': ["Address released."]})
+
+    def lease_ip(self, context, private_ip, **kwargs):
+        self.network.lease_ip(private_ip)
+        return defer.succeed({'leaseResponse': ["Address leased."]})
+
     @rbac.allow('projectmanager', 'sysadmin')
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
@@ -516,11 +526,20 @@ class CloudController(object):
             key_data = key_pair.public_key
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        bridge_name = network.BridgedNetwork.get_network_for_project(context.user.id, context.project.id, security_group)['bridge_name']
+        if FLAGS.simple_network:
+            bridge_name = FLAGS.simple_network_bridge
+        else:
+            net = network.BridgedNetwork.get_network_for_project(
+                    context.user.id, context.project.id, security_group)
+            bridge_name = net['bridge_name']
         for num in range(int(kwargs['max_count'])):
             inst = self.instdir.new()
             # TODO(ja): add ari, aki
             inst['image_id'] = kwargs['image_id']
+            if 'kernel_id' in kwargs:
+                inst['kernel_id'] = kwargs['kernel_id']
+            if 'ramdisk_id' in kwargs:
+                inst['ramdisk_id'] = kwargs['ramdisk_id']
             inst['user_data'] = kwargs.get('user_data', '')
             inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id
@@ -532,12 +551,19 @@ class CloudController(object):
             inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
             inst['bridge_name'] = bridge_name
-            if inst['image_id'] == FLAGS.vpn_image_id:
-                address = network.allocate_vpn_ip(
-                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
+            if FLAGS.simple_network:
+                address = network.allocate_simple_ip()
             else:
-                address = network.allocate_ip(
-                        inst['user_id'], inst['project_id'], mac=inst['mac_address'])
+                if inst['image_id'] == FLAGS.vpn_image_id:
+                    address = network.allocate_vpn_ip(
+                            inst['user_id'],
+                            inst['project_id'],
+                            mac=inst['mac_address'])
+                else:
+                    address = network.allocate_ip(
+                            inst['user_id'],
+                            inst['project_id'],
+                            mac=inst['mac_address'])
             inst['private_dns_name'] = str(address)
             # TODO: allocate expresses on the router node
             inst.save()
@@ -567,10 +593,13 @@ class CloudController(object):
                 pass
             if instance.get('private_dns_name', None):
                 logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
-                try:
-                    self.network.deallocate_ip(instance.get('private_dns_name', None))
-                except Exception, _err:
-                    pass
+                if FLAGS.simple_network:
+                    network.deallocate_simple_ip(instance.get('private_dns_name', None))
+                else:
+                    try:
+                        self.network.deallocate_ip(instance.get('private_dns_name', None))
+                    except Exception, _err:
+                        pass
             if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
                 rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "terminate_instance",

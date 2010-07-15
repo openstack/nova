@@ -23,10 +23,12 @@ Wrappers around standard crypto, including root and intermediate CAs,
 SSH keypairs and x509 certificates.
 """
 
+import base64
 import hashlib
 import logging
 import os
 import shutil
+import struct
 import tempfile
 import time
 import utils
@@ -86,14 +88,17 @@ def generate_key_pair(bits=1024):
 
 
 def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
-    """requires lsh-utils"""
-    convert="sed -e'1d' -e'$d' |  pkcs1-conv --public-key-info --base-64 |" \
-    + " sexp-conv |  sed -e'1s/(rsa-pkcs1/(rsa-pkcs1-sha1/' |  sexp-conv -s" \
-    + " transport | lsh-export-key --openssh"
-    (out, err) = utils.execute(convert, ssl_public_key)
-    if err:
-        raise exception.Error("Failed to generate key: %s", err)
-    return '%s %s@%s\n' %(out.strip(), name, suffix)
+    rsa_key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(ssl_public_key))
+    e, n = rsa_key.pub()
+
+    key_type = 'ssh-rsa'
+
+    key_data = struct.pack('>I', len(key_type))
+    key_data += key_type
+    key_data += '%s%s' % (e,n)
+
+    b64_blob = base64.b64encode(key_data)
+    return '%s %s %s@%s\n' %(key_type, b64_blob, name, suffix)
 
 
 def generate_x509_cert(subject, bits=1024):
