@@ -4,8 +4,6 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 #
-# Copyright 2010 Anso Labs, LLC
-#
 # Copyright 2009 Facebook
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may

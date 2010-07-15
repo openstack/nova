@@ -42,7 +42,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'nova'
-copyright = u'2010, Anso Labs, LLC'
+copyright = u'2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
