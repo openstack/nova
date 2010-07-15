@@ -100,7 +100,69 @@ class Image(object):
             return json.load(f)
 
     @staticmethod
-    def create(image_id, image_location, context):
+    def add(src, description, kernel=None, ramdisk=None, public=True):
+        """adds an image to imagestore
+
+        @type src: str
+        @param src: location of the partition image on disk
+
+        @type description: str
+        @param description: string describing the image contents
+
+        @type kernel: bool or str
+        @param kernel: either TRUE meaning this partition is a kernel image or
+                       a string of the image id for the kernel
+
+        @type ramdisk: bool or str
+        @param ramdisk: either TRUE meaning this partition is a ramdisk image or
+                        a string of the image id for the ramdisk
+
+
+        @type public: bool
+        @param public: determine if this is a public image or private
+        
+        @rtype: str
+        @return: a string with the image id
+        """
+        
+        image_type = 'machine'
+        image_id = utils.generate_uid('ami')
+
+        if kernel is True:
+            image_type = 'kernel'
+            image_id = utils.generate_uid('aki')
+        if ramdisk is True:
+            image_type = 'ramdisk'
+            image_id = utils.generate_uid('ari')
+
+        image_path = os.path.join(FLAGS.images_path, image_id)
+        os.makedirs(image_path)
+
+        shutil.copyfile(src, os.path.join(image_path, 'image'))
+
+        info = {
+            'imageId': image_id,
+            'imageLocation': description,
+            'imageOwnerId': 'system',
+            'isPublic': public,
+            'architecture': 'x86_64',
+            'type': image_type,
+            'state': 'available'
+        }
+        
+        if type(kernel) is str and len(kernel) > 0:
+            info['kernelId'] = kernel
+
+        if type(ramdisk) is str and len(ramdisk) > 0:
+            info['ramdiskId'] = ramdisk
+
+        with open(os.path.join(image_path, 'info.json'), "w") as f:
+            json.dump(info, f)
+
+        return image_id
+
+    @staticmethod
+    def register_aws_image(image_id, image_location, context):
         image_path = os.path.join(FLAGS.images_path, image_id)
         os.makedirs(image_path)
 
