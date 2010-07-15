@@ -38,14 +38,11 @@ S3 client with this module::
 
 import datetime
 import os
-import urllib
 import json
 import logging
 import multiprocessing
-
-
-
 from tornado import escape, web
+import urllib
 
 from nova import exception
 from nova import flags

@@ -27,15 +27,13 @@ import json
 import logging
 import os
 import time
-
-
 from twisted.internet import defer
 
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova import exception
 from nova.auth import rbac
 from nova.auth import users
 from nova.compute import model
@@ -43,6 +41,7 @@ from nova.compute import network
 from nova.compute import node
 from nova.endpoint import images
 from nova.volume import storage
+
 
 FLAGS = flags.FLAGS
 

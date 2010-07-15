@@ -18,8 +18,6 @@
 
 import logging
 import time
-
-
 from twisted.internet import defer
 
 from nova import exception

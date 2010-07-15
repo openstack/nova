@@ -24,8 +24,6 @@ before trying to run this.
 """
 
 import logging
-
-
 import redis
 
 from nova import exception

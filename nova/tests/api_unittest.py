@@ -16,13 +16,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import boto
+from boto.ec2 import regioninfo
 import httplib
 import random
 import StringIO
-
-
-import boto
-from boto.ec2 import regioninfo
 from tornado import httpserver
 from twisted.internet import defer
 

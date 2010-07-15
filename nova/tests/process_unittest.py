@@ -17,11 +17,9 @@
 #    under the License.
 
 import logging
-from xml.etree import ElementTree
-
-
 from twisted.internet import defer
 from twisted.internet import reactor
+from xml.etree import ElementTree
 
 from nova import exception
 from nova import flags

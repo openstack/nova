@@ -22,8 +22,6 @@
 """
 
 import logging
-
-
 from twisted.internet import task
 from twisted.application import service
 

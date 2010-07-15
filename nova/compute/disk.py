@@ -24,11 +24,10 @@ Includes injection of SSH PGP keys into authorized_keys file.
 import logging
 import os
 import tempfile
-
-
 from twisted.internet import defer
 
 from nova import exception
+
 
 @defer.inlineCallbacks
 def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):

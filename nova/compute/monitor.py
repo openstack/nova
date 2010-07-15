@@ -24,11 +24,18 @@ Instance Monitoring:
     in the object store.
 """
 
+import boto
+import boto.s3
 import datetime
+import libxml2
 import logging
 import os
+import rrdtool
 import sys
 import time
+from twisted.internet import defer
+from twisted.internet import task
+from twisted.application import service
 
 try:
     import libvirt
@@ -37,13 +44,6 @@ except Exception, err:
 
 from nova import flags
 
-import boto
-import boto.s3
-import libxml2
-import rrdtool
-from twisted.internet import defer
-from twisted.internet import task
-from twisted.application import service
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer(

@@ -22,8 +22,6 @@
 """
 
 import logging
-
-
 from tornado import ioloop
 
 from nova import flags

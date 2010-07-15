@@ -23,8 +23,6 @@ Process pool, still buggy right now.
 import logging
 import multiprocessing
 import StringIO
-
-
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import process

@@ -31,11 +31,10 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 logging.debug(sys.path)
 import getopt
 from os import environ
+from nova import rpc
+from nova import flags
 from nova.compute import linux_net
 from nova.compute import network
-from nova import rpc
-
-from nova import flags
 FLAGS = flags.FLAGS
 
 

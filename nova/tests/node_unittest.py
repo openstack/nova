@@ -18,11 +18,8 @@
 
 import logging
 import time
-
-from xml.etree import ElementTree
-
-
 from twisted.internet import defer
+from xml.etree import ElementTree
 
 from nova import exception
 from nova import flags
@@ -30,6 +27,7 @@ from nova import test
 from nova import utils
 from nova.compute import model
 from nova.compute import node
+
 
 FLAGS = flags.FLAGS
 

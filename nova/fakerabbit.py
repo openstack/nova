@@ -18,10 +18,9 @@
 
 """ Based a bit on the carrot.backeds.queue backend... but a lot better """
 
+from carrot.backends import base
 import logging
 import Queue as queue
-
-from carrot.backends import base
 
 
 class Message(base.BaseMessage):

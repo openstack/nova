@@ -43,11 +43,12 @@
 Utility class for parsing signed AMI manifests.
 """
 
-import logging
+import base64
 import hashlib
 import hmac
+import logging
 import urllib
-import base64
+
 from nova.exception import Error
 
 class Signer(object):

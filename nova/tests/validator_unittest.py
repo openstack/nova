@@ -19,8 +19,6 @@
 import logging
 import unittest
 
-
-
 from nova import flags
 from nova import test
 from nova import validate

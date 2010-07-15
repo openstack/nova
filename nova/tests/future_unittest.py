@@ -17,15 +17,13 @@
 #    under the License.
 
 import logging
+import mox
 import StringIO
 import time
-import unittest
-from xml.etree import ElementTree
-
-
-import mox
 from tornado import ioloop
 from twisted.internet import defer
+import unittest
+from xml.etree import ElementTree
 
 from nova import cloud
 from nova import exception

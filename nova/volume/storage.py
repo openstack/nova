@@ -25,12 +25,10 @@ Currently uses Ata-over-Ethernet.
 import glob
 import logging
 import os
-import socket
 import shutil
+import socket
 import tempfile
 import time
-
-
 from tornado import ioloop
 from twisted.internet import defer
 

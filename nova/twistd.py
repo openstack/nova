@@ -22,21 +22,20 @@ manage pid files and support syslogging.
 """
 
 import logging
+import logging.handlers
 import os
 import signal
 import sys
 import time
-import UserDict
-import logging.handlers
-
-
 from twisted.scripts import twistd
 from twisted.python import log
 from twisted.python import reflect
 from twisted.python import runtime
 from twisted.python import usage
+import UserDict
 
 from nova import flags
+
 
 if runtime.platformType == "win32":
     from twisted.scripts._twistw import ServerOptions
