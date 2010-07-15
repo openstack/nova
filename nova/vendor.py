@@ -20,27 +20,5 @@
 Get our vendor folders into the system path.
 """
 
-import os
-import sys
+print 'sorry, we cannot include vendor open source libraries... :('
 
-# abspath/__file__/../vendor
-VENDOR_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'vendor'))
-
-if not os.path.exists(VENDOR_PATH):
-    print 'warning: no vendor libraries included'
-else:
-  paths = [VENDOR_PATH,
-           os.path.join(VENDOR_PATH, 'pymox'),
-           os.path.join(VENDOR_PATH, 'tornado'),
-           os.path.join(VENDOR_PATH, 'python-gflags'),
-           os.path.join(VENDOR_PATH, 'python-daemon'),
-           os.path.join(VENDOR_PATH, 'lockfile'),
-           os.path.join(VENDOR_PATH, 'boto'),
-           os.path.join(VENDOR_PATH, 'Twisted-10.0.0'),
-           os.path.join(VENDOR_PATH, 'redis-py'),
-           ]
-
-  for p in paths:
-    if p not in sys.path:
-      sys.path.insert(0, p)

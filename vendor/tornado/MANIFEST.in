@@ -1,2 +1,0 @@
-recursive-include demos *.py *.yaml *.html *.css *.png *.js *.xml *.sql README
-include tornado/epoll.c
