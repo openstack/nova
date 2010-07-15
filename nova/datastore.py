@@ -387,13 +387,13 @@ class BasicModel(object):
 
     @classmethod
     def _redis_association_name(cls, foreign_type, foreign_id):
-        return cls._redis_set_name("%s:%s:%s" % 
+        return cls._redis_set_name("%s:%s:%s" %
                                    (foreign_type, foreign_id, cls.__name__))
 
     @property
     def identifier(self):
         """You DEFINITELY want to define this in your subclass"""
-        raise NotImplementedError("Your sublcass should define identifier")
+        raise NotImplementedError("Your subclass should define identifier")
 
     @property
     def __redis_key(self):
@@ -488,19 +488,14 @@ class BasicModel(object):
         if self.is_new_record():
             self["create_time"] = utils.isotime()
         for key, val in self.state.iteritems():
-            # if (not self.initial_state.has_key(key)
-            # or self.initial_state[key] != val):
-                Redis.instance().hset(self.__redis_key, key, val)
+            Redis.instance().hset(self.__redis_key, key, val)
         self.add_to_index()
         self.initial_state = self.state
         return True
 
     @absorb_connection_error
     def destroy(self):
-        """
-        deletes all related records from datastore.
-        does NOT do anything to running libvirt state.
-        """
+        """deletes all related records from datastore."""
         logging.info("Destroying datamodel for %s %s",
                      self.__class__.__name__, self.identifier)
         Redis.instance().delete(self.__redis_key)

@@ -119,7 +119,7 @@ class Vlan(datastore.BasicModel):
     def save(self):
         """
         Vlan saves state into a giant hash named "vlans", with keys of
-        proejct_id and value of valn number.  Therefore, we skip the
+        project_id and value of vlan number.  Therefore, we skip the
         default way of saving into "vlan:ID" and adding to a set of "vlans".
         """
         set_name = self._redis_set_name(self.__class__.__name__)
@@ -134,6 +134,7 @@ class Vlan(datastore.BasicModel):
         vlan = int(self.vlan_id)
         network = IPy.IP(FLAGS.private_range)
         start = (vlan-FLAGS.vlan_start) * FLAGS.network_size
+        # minus one for the gateway.
         return "%s-%s" % (network[start],
                           network[start + FLAGS.network_size - 1])
 
@@ -504,6 +505,10 @@ def get_vlan_for_project(project_id):
                 #             sexier if it didn't fight against the way
                 #             BasicModel worked and used associate_with
                 #             to build connections to projects.
+                # NOTE(josh): This is here because we want to make sure we
+                #             don't orphan any VLANs.  It is basically
+                #             garbage collection for after projects abandoned
+                #             their reference.
                 vlan.project_id = project_id
                 vlan.save()
                 return vlan

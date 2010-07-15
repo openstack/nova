@@ -225,8 +225,7 @@ class Daemon(datastore.BasicModel):
 
     def heartbeat(self):
         self['updated_at'] = utils.isotime()
-        self.save()
-        return True
+        return self.save()
 
     @classmethod
     def by_host(cls, hostname):

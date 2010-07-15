@@ -41,7 +41,6 @@ from nova import exception
 from nova import flags
 from nova import utils
 from nova import validate
-from nova.compute import model
 
 
 FLAGS = flags.FLAGS
@@ -199,7 +198,7 @@ class Volume(datastore.BasicModel):
         self['mountpoint'] = mountpoint
         self['status'] = "in-use"
         self['attach_status'] = "attaching"
-        self['attach_time'] = utils.utctime()
+        self['attach_time'] = utils.isotime()
         self['delete_on_termination'] = 'False'
         self.save()
 
