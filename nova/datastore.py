@@ -25,6 +25,8 @@ MAKE Sure that ReDIS is running, and your flags are set properly,
 before trying to run this.
 """
 
+import logging
+
 from nova import vendor
 import redis
 
