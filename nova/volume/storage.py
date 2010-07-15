@@ -99,8 +99,12 @@ class BlockStore(object):
         self._init_volume_group()
 
     def __del__(self):
+        # TODO(josh): Get rid of this destructor, volumes destroy themselves
         if FLAGS.fake_storage:
-            shutil.rmtree(FLAGS.aoe_export_dir)
+            try:
+                shutil.rmtree(FLAGS.aoe_export_dir)
+            except Exception, err:
+                pass
 
     def report_state(self):
         #TODO: aggregate the state of the system
@@ -163,7 +167,7 @@ class Volume(datastore.BasicModel):
 
     @property
     def identifier(self):
-        self.volume_id
+        return self.volume_id
 
     def default_state(self):
         return {"volume_id": self.volume_id}

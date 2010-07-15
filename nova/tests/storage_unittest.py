@@ -68,11 +68,17 @@ class StorageTestCase(test.TrialTestCase):
         project_id = 'fake'
         num_shelves = FLAGS.last_shelf_id - FLAGS.first_shelf_id + 1
         total_slots = FLAGS.slots_per_shelf * num_shelves
+        vols = []
         for i in xrange(total_slots):
-            self.mystorage.create_volume(vol_size, user_id, project_id)
+            vid = self.mystorage.create_volume(vol_size, user_id, project_id)
+            print vid
+            vols.append(vid)
         self.assertRaises(storage.NoMoreVolumes,
                           self.mystorage.create_volume,
                           vol_size, user_id, project_id)
+        for id in vols:
+            print id
+            self.mystorage.delete_volume(id)
 
     def test_run_attach_detach_volume(self):
         # Create one volume and one node to test with
