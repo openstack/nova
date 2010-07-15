@@ -102,9 +102,9 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
 
-flags.DEFINE_integer('vpn_start_port', 8000,
+flags.DEFINE_integer('vpn_start_port', 1000,
                     'Start port for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_end_port', 9999,
+flags.DEFINE_integer('vpn_end_port', 2000,
                     'End port for the cloudpipe VPN servers')
 
 flags.DEFINE_string('credential_cert_subject',
@@ -325,20 +325,15 @@ class Vpn(datastore.BasicModel):
 
     @classmethod
     def create(cls, project_id):
-        # TODO (vish): get list of vpn ips from redis
-        for ip in [FLAGS.vpn_ip]:
-            try:
-                port = cls.find_free_port_for_ip(ip)
-                vpn = cls(project_id)
-                # save ip for project
-                vpn['project'] = project_id
-                vpn['ip'] = ip
-                vpn['port'] = port
-                vpn.save()
-                return vpn
-            except NoMorePorts:
-                pass
-        raise NoMorePorts()
+        # TODO(vish): get list of vpn ips from redis
+        port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
+        vpn = cls(project_id)
+        # save ip for project
+        vpn['project'] = project_id
+        vpn['ip'] = FLAGS.vpn_ip
+        vpn['port'] = port
+        vpn.save()
+        return vpn
 
     @classmethod
     def find_free_port_for_ip(cls, ip):
