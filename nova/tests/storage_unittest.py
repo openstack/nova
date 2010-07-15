@@ -69,13 +69,11 @@ class StorageTestCase(test.TrialTestCase):
         vols = []
         for i in xrange(total_slots):
             vid = self.mystorage.create_volume(vol_size, user_id, project_id)
-            print vid
             vols.append(vid)
         self.assertRaises(storage.NoMoreVolumes,
                           self.mystorage.create_volume,
                           vol_size, user_id, project_id)
         for id in vols:
-            print id
             self.mystorage.delete_volume(id)
 
     def test_run_attach_detach_volume(self):
