@@ -27,6 +27,7 @@ import datetime
 import logging
 import os
 import shutil
+import signer
 import string
 from string import Template
 import tempfile
@@ -39,15 +40,14 @@ except Exception, e:
     import fakeldap as ldap
 
 import fakeldap
-from nova import datastore
 
 # TODO(termie): clean up these imports
-import signer
+from nova import datastore
 from nova import exception
 from nova import flags
 from nova import crypto
 from nova import utils
-from nova.compute import model
+
 
 from nova import objectstore # for flags
 
@@ -314,7 +314,7 @@ class NoMorePorts(exception.Error):
     pass
 
 
-class Vpn(model.BasicModel):
+class Vpn(datastore.BasicModel):
     def __init__(self, project_id):
         self.project_id = project_id
         super(Vpn, self).__init__()
