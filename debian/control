@@ -2,7 +2,7 @@ Source: nova
 Section: net
 Priority: extra
 Maintainer: Jesse Andrews <jesse@ansolabs.com>
-Build-Depends: debhelper (>= 7)
+Build-Depends: debhelper (>= 7), redis-server (>=2:2.0.0~rc1), python-m2crypto
 Build-Depends-Indep: python-support, python-setuptools
 Standards-Version: 3.8.4
 XS-Python-Version: 2.6
