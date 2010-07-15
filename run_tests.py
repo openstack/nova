@@ -1,17 +1,22 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 This is our basic test running framework based on Twisted's Trial.
@@ -41,23 +46,27 @@ import sys
 from nova import vendor
 from twisted.scripts import trial as trial_script
 
+from nova import datastore
 from nova import flags
 from nova import twistd
 
+from nova.tests.access_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
-from nova.tests.keeper_unittest import *
+from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
 from nova.tests.node_unittest import *
 from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
 from nova.tests.storage_unittest import *
 from nova.tests.users_unittest import *
-from nova.tests.datastore_unittest import *
+from nova.tests.validator_unittest import *
 
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_bool('flush_db', True,
+                  'Flush the database before running fake tests')
 
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)
@@ -69,6 +78,12 @@ if __name__ == '__main__':
     # TODO(termie): these should make a call instead of doing work on import
     if FLAGS.fake_tests:
         from nova.tests.fake_flags import *
+        # use db 8 for fake tests
+        FLAGS.redis_db = 8
+        if FLAGS.flush_db:
+            logging.info("Flushing redis datastore")
+            r = datastore.Redis.instance()
+            r.flushdb()
     else:
         from nova.tests.real_flags import *
 

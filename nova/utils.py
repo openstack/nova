@@ -1,29 +1,35 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
-# 
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-# 
-#        http://www.apache.org/licenses/LICENSE-2.0
-# 
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 System-level utilities and helper functions.
 """
 
+import inspect
 import logging
+import os
+import random
+import subprocess
 import socket
 import sys
-import os.path
-import inspect
-import subprocess
-import random
+from datetime import datetime
 
 from nova import flags
 
@@ -41,11 +47,12 @@ def fetchfile(url, target):
 #    fp.close()
     execute("curl %s -o %s" % (url, target))
 
-
-def execute(cmd, input=None):
-    #logging.debug("Running %s" % (cmd))
+def execute(cmd, input=None, addl_env=None):
+    env = os.environ.copy()
+    if addl_env:
+        env.update(addl_env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
     if input != None:
         result = obj.communicate(input)
@@ -109,3 +116,8 @@ def get_my_ip():
     (addr, port) = csock.getsockname()
     csock.close()
     return addr
+
+def isotime(at=None):
+    if not at:
+        at = datetime.utcnow()
+    return at.strftime("%Y-%m-%dT%H:%M:%SZ")

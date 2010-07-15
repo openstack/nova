@@ -1,21 +1,26 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
-# 
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-# 
-#        http://www.apache.org/licenses/LICENSE-2.0
-# 
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 Base classes for our unit tests.
-Allows overriding of flags for use of fakes, 
+Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
@@ -31,7 +36,6 @@ from twisted.python import failure
 from twisted.trial import unittest as trial_unittest
 import stubout
 
-from nova import datastore
 from nova import fakerabbit
 from nova import flags
 
@@ -47,12 +51,13 @@ def skip_if_fake(f):
             raise trial_unittest.SkipTest('Test cannot be run in fake mode')
         else:
             return f(*args, **kw)
-    
+
     _skipper.func_name = f.func_name
     return _skipper
 
 
 class TrialTestCase(trial_unittest.TestCase):
+
     def setUp(self):
         super(TrialTestCase, self).setUp()
 
@@ -72,10 +77,6 @@ class TrialTestCase(trial_unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
-        
-        # attempt to wipe all keepers
-        #keeper = datastore.Keeper()
-        #keeper.clear_all()
 
     def flags(self, **kw):
         for k, v in kw.iteritems():
@@ -90,7 +91,7 @@ class TrialTestCase(trial_unittest.TestCase):
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
 
-    
+
 
 class BaseTestCase(TrialTestCase):
     def setUp(self):
@@ -99,7 +100,7 @@ class BaseTestCase(TrialTestCase):
         #               the injected listeners... this is fine for now though
         self.injected = []
         self.ioloop = ioloop.IOLoop.instance()
-  
+
         self._waiting = None
         self._doneWaiting = False
         self._timedOut = False
@@ -144,10 +145,10 @@ class BaseTestCase(TrialTestCase):
                 pass
             self._waiting = None
         self._doneWaiting = True
-    
+
     def _maybeInlineCallbacks(self, f):
         """ If we're doing async calls in our tests, wait on them.
-        
+
         This is probably the most complicated hunk of code we have so far.
 
         First up, if the function is normal (not async) we just act normal
@@ -158,7 +159,7 @@ class BaseTestCase(TrialTestCase):
         of making epic callback chains.
 
         Example (callback chain, ugly):
-    
+
         d = self.node.terminate_instance(instance_id) # a Deferred instance
         def _describe(_):
             d_desc = self.node.describe_instances() # another Deferred instance
@@ -169,7 +170,7 @@ class BaseTestCase(TrialTestCase):
         d.addCallback(_checkDescribe)
         d.addCallback(lambda x: self._done())
         self._waitForTest()
-        
+
         Example (inline callbacks! yay!):
 
         yield self.node.terminate_instance(instance_id)
@@ -186,11 +187,11 @@ class BaseTestCase(TrialTestCase):
         if not hasattr(g, 'send'):
             self._done()
             return defer.succeed(g)
-        
+
         inlined = defer.inlineCallbacks(f)
         d = inlined()
         return d
-    
+
     def _catchExceptions(self, result, failure):
         exc = (failure.type, failure.value, failure.getTracebackObject())
         if isinstance(failure.value, self.failureException):

@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-# Copyright [2010] [Anso Labs, LLC]
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
-
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 # LDAP INSTALL SCRIPT - SHOULD BE IDEMPOTENT, but it SCRUBS all USERS
 
 apt-get install -y slapd ldap-utils python-ldap
@@ -213,6 +218,38 @@ description: Special account for authenticating users
 userPassword: {MD5}TLnIqASP0CKUR3/LGkEZGg==
 objectClass: account
 objectClass: simpleSecurityObject
+
+# create the sysadmin entry
+
+dn: cn=developers,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: developers
+description: IT admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=sysadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: sysadmins
+description: IT admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=netadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: netadmins
+description: Network admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=cloudadmins,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: cloudadmins
+description: Cloud admin group
+member: uid=admin,ou=Users,dc=example,dc=com
+
+dn: cn=itsec,ou=Groups,dc=example,dc=com
+objectclass: groupOfNames
+cn: itsec
+description: IT security users group
+member: uid=admin,ou=Users,dc=example,dc=com
 BASE_LDIF_EOF
 
 /etc/init.d/slapd stop

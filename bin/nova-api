@@ -1,21 +1,26 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright [2010] [Anso Labs, LLC]
-# 
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-# 
-#        http://www.apache.org/licenses/LICENSE-2.0
-# 
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 """
-  Tornado daemon for the main API endpoint.  
+Tornado daemon for the main API endpoint.
 """
 
 import logging
@@ -29,6 +34,7 @@ from nova import rpc
 from nova import server
 from nova import utils
 from nova.auth import users
+from nova.compute import model
 from nova.endpoint import admin
 from nova.endpoint import api
 from nova.endpoint import cloud
@@ -37,12 +43,11 @@ FLAGS = flags.FLAGS
 
 
 def main(_argv):
-    user_manager = users.UserManager()
     controllers = {
         'Cloud': cloud.CloudController(),
-        'Admin': admin.AdminController(user_manager)
+        'Admin': admin.AdminController()
     }
-    _app = api.APIServerApplication(user_manager, controllers)
+    _app = api.APIServerApplication(controllers)
 
     conn = rpc.Connection.instance()
     consumer = rpc.AdapterConsumer(connection=conn,

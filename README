@@ -1,0 +1,20 @@
+The Choose Your Own Adventure README for Nova:
+
+  You have come across a cloud computing fabric controller.  It has identified
+  itself as "Nova."  It is apparent that it maintains compatability with
+  the popular Amazon EC2 and S3 APIs.
+
+To monitor it from a distance: follow @novacc on twitter
+
+To tame it for use in your own cloud: read http://docs.novacc.org/getting.started.html
+
+To study its anatomy: read http://docs.novacc.org/architecture.html
+
+To disect it in detail: visit http://github.com/nova/cc
+
+To taunt it with its weaknesses: use http://github.com/nova/cc/issues
+
+To hack at it: read HACKING
+
+To watch it: http://test.novacc.org/waterfall
+

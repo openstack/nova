@@ -1,27 +1,35 @@
-# Copyright [2010] [Anso Labs, LLC]
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
-
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 """
 Nova User API client library.
 """
 
-import boto
-from boto.ec2.regioninfo import RegionInfo
 import base64
 
+from nova import vendor
+import boto
+from boto.ec2.regioninfo import RegionInfo
+
 class UserInfo(object):
-    """ Information about a Nova user
+    """
+    Information about a Nova user, as parsed through SAX
     fields include:
         username
         accesskey
@@ -52,6 +60,32 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+class HostInfo(object):
+    """
+    Information about a Nova Host, as parsed through SAX:
+        Disk stats
+        Running Instances
+        Memory stats
+        CPU stats
+        Network address info
+        Firewall info
+        Bridge and devices
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.hostname = None
+
+    def __repr__(self):
+        return 'Host:%s' % self.hostname
+
+    # this is needed by the sax parser, so ignore the ugly name
+    def startElement(self, name, attrs, connection):
+        return None
+
+    # this is needed by the sax parser, so ignore the ugly name
+    def endElement(self, name, value, connection):
+        setattr(self, name, value)
 
 class NovaAdminClient(object):
     def __init__(self, clc_ip='127.0.0.1', region='nova', access_key='admin',
@@ -86,7 +120,7 @@ class NovaAdminClient(object):
 
     def get_users(self):
         """ grabs the list of all users """
-        return self.apiconn.get_list('DescribeUsers', {}, (['item', UserInfo]))
+        return self.apiconn.get_list('DescribeUsers', {}, [('item', UserInfo)])
 
     def get_user(self, name):
         """ grab a single user by name """
@@ -110,4 +144,7 @@ class NovaAdminClient(object):
     def get_zip(self, username):
         """ returns the content of a zip file containing novarc and access credentials. """
         return self.apiconn.get_object('GenerateX509ForUser', {'Name': username}, UserInfo).file
+
+    def get_hosts(self):
+        return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
 

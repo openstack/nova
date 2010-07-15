@@ -1,0 +1,69 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          nova-instancemonitor
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: nova-instancemonitor
+# Description:       nova-instancemonitor
+### END INIT INFO
+
+
+set -e
+
+DAEMON=/usr/bin/nova-instancemonitor
+DAEMON_ARGS="--flagfile=/etc/nova.conf"
+PIDFILE=/var/run/nova-instancemonitor.pid
+
+ENABLED=false
+
+if test -f /etc/default/nova-instancemonitor; then
+  . /etc/default/nova-instancemonitor
+fi
+
+. /lib/lsb/init-functions
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+case "$1" in
+  start)
+    test "$ENABLED" = "true" || exit 0
+    log_daemon_msg "Starting nova compute" "nova-instancemonitor"
+    cd /var/run
+    if $DAEMON $DAEMON_ARGS start; then
+      log_end_msg 0
+    else
+      log_end_msg 1
+    fi
+    ;;
+  stop)
+    test "$ENABLED" = "true" || exit 0
+    log_daemon_msg "Stopping nova compute" "nova-instancemonitor"
+    cd /var/run
+    if $DAEMON $DAEMON_ARGS stop; then
+      log_end_msg 0
+    else
+      log_end_msg 1
+    fi
+    ;;
+  restart|force-reload)
+    test "$ENABLED" = "true" || exit 1
+    cd /var/run
+    if $DAEMON $DAEMON_ARGS restart; then
+      log_end_msg 0
+    else
+      log_end_msg 1
+    fi
+    ;;
+  status)
+    test "$ENABLED" = "true" || exit 0
+    status_of_proc -p $PIDFILE $DAEMON nova-instancemonitor && exit 0 || exit $?
+    ;;
+  *)
+    log_action_msg "Usage: /etc/init.d/nova-instancemonitor {start|stop|restart|force-reload|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

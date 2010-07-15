@@ -1,17 +1,22 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 import logging
 import unittest
@@ -31,11 +36,11 @@ FLAGS = flags.FLAGS
 
 
 class UserTestCase(test.BaseTestCase):
+    flush_db = False
     def setUp(self):
         super(UserTestCase, self).setUp()
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   redis_db=8)
+                   fake_storage=True)
         self.users = users.UserManager.instance()
 
     def test_001_can_create_users(self):
@@ -97,7 +102,18 @@ class UserTestCase(test.BaseTestCase):
 
     def test_010_can_list_users(self):
         users = self.users.get_users()
+        logging.warn(users)
         self.assertTrue(filter(lambda u: u.id == 'test1', users))
+
+    def test_101_can_add_user_role(self):
+        self.assertFalse(self.users.has_role('test1', 'itsec'))
+        self.users.add_role('test1', 'itsec')
+        self.assertTrue(self.users.has_role('test1', 'itsec'))
+
+    def test_199_can_remove_user_role(self):
+        self.assertTrue(self.users.has_role('test1', 'itsec'))
+        self.users.remove_role('test1', 'itsec')
+        self.assertFalse(self.users.has_role('test1', 'itsec'))
 
     def test_201_can_create_project(self):
         project = self.users.create_project('testproj', 'test1', 'A test project', ['test1'])
@@ -150,6 +166,33 @@ class UserTestCase(test.BaseTestCase):
             self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
         else:
             self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
+
+    def test_210_can_add_project_role(self):
+        project = self.users.get_project('testproj')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        self.users.add_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        project.add_role('test1', 'sysadmin')
+        self.assertTrue(project.has_role('test1', 'sysadmin'))
+
+    def test_211_can_remove_project_role(self):
+        project = self.users.get_project('testproj')
+        self.assertTrue(project.has_role('test1', 'sysadmin'))
+        project.remove_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+        self.users.remove_role('test1', 'sysadmin')
+        self.assertFalse(project.has_role('test1', 'sysadmin'))
+
+    def test_212_vpn_ip_and_port_looks_valid(self):
+        project = self.users.get_project('testproj')
+        self.assert_(project.vpn_ip)
+        self.assert_(project.vpn_port >= FLAGS.vpn_start_port)
+        self.assert_(project.vpn_port <= FLAGS.vpn_end_port)
+
+    def test_213_too_many_vpns(self):
+        for i in xrange(users.Vpn.num_ports_for_ip(FLAGS.vpn_ip)):
+            users.Vpn.create("vpnuser%s" % i)
+        self.assertRaises(users.NoMorePorts, users.Vpn.create, "boom")
 
     def test_299_can_delete_project(self):
         self.users.delete_project('testproj')

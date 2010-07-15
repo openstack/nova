@@ -1,17 +1,22 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
-# 
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-# 
-#        http://www.apache.org/licenses/LICENSE-2.0
-# 
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 Process pool, still buggy right now.
@@ -118,7 +123,7 @@ class BackRelayWithInput(_BackRelay):
 
     def errReceivedIsGood(self, text):
         self.stderr.write(text)
-    
+
     def connectionMade(self):
         if self.startedDeferred:
             self.startedDeferred.callback(self)
@@ -151,6 +156,11 @@ def getProcessOutput(executable, args=None, env=None, path=None, reactor=None,
     d = defer.Deferred()
     p = BackRelayWithInput(
             d, startedDeferred=startedDeferred, error_ok=error_ok, input=input)
+    # VISH: commands come in as unicode, but self.executes needs
+    #       strings or process.spawn raises a deprecation warning
+    executable = str(executable)
+    if not args is None:
+        args = [str(x) for x in args]
     reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
     return d
 
@@ -167,7 +177,7 @@ class ProcessPool(object):
 
     def simpleExecute(self, cmd, **kw):
         """ Weak emulation of the old utils.execute() function.
-        
+
         This only exists as a way to quickly move old execute methods to
         this new style of code.
 
@@ -190,7 +200,7 @@ class ProcessPool(object):
 
         d.process = None
         d.started = started
-        
+
         d.addCallback(lambda _: getProcessOutput(*args, **kw))
         d.addBoth(self._release)
         return d

@@ -1,18 +1,24 @@
-#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
 #
 # Copyright 2009 Facebook
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 Implementation of an S3-like storage server based on local files.
@@ -71,6 +77,7 @@ class Application(web.Application):
     def __init__(self, user_manager):
         web.Application.__init__(self, [
             (r"/", RootHandler),
+            (r"/_images/(.+)", ImageDownloadHandler),
             (r"/_images/", ImageHandler),
             (r"/([^/]+)/(.+)", ObjectHandler),
             (r"/([^/]+)/", BucketHandler),
@@ -224,6 +231,31 @@ class ObjectHandler(BaseRequestHandler):
         self.finish()
 
 
+class ImageDownloadHandler(BaseRequestHandler):
+    SUPPORTED_METHODS = ("GET", )
+
+    @catch_nova_exceptions
+    def get(self, image_id):
+        """ send the decrypted image file
+
+        streaming content through python is slow and should only be used
+        in development mode.  You should serve files via a web server
+        in production.
+        """
+
+        self.set_header("Content-Type", "application/octet-stream")
+
+        READ_SIZE = 64*1024
+
+        img = image.Image(image_id)
+        with open(img.image_path, 'rb') as fp:
+            s = fp.read(READ_SIZE)
+            while s:
+                self.write(s)
+                s = fp.read(READ_SIZE)
+
+        self.finish()
+
 class ImageHandler(BaseRequestHandler):
     SUPPORTED_METHODS = ("POST", "PUT", "GET", "DELETE")
 
@@ -254,8 +286,8 @@ class ImageHandler(BaseRequestHandler):
         if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
-        p = multiprocessing.Process(target=image.Image.create,args=
-            (image_id, image_location, self.context))
+        p = multiprocessing.Process(target=image.Image.register_aws_image,
+                args=(image_id, image_location, self.context))
         p.start()
         self.finish()
 
@@ -268,7 +300,7 @@ class ImageHandler(BaseRequestHandler):
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.set_public(operation=='add')
@@ -281,7 +313,7 @@ class ImageHandler(BaseRequestHandler):
         image_id = self.get_argument("image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
         image_object.delete()

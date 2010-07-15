@@ -1,19 +1,26 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 import logging
+import time
+
 from xml.etree import ElementTree
 
 from nova import vendor
@@ -56,8 +63,7 @@ class NodeConnectionTestCase(test.TrialTestCase):
         super(NodeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
-                   fake_users=True,
-                    redis_db=8)
+                   fake_users=True)
         self.node = node.Node()
 
     def create_instance(self):
@@ -82,11 +88,13 @@ class NodeConnectionTestCase(test.TrialTestCase):
         rv = yield self.node.run_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("Running instances: %s", rv)
         self.assertEqual(rv[instance_id].name, instance_id)
 
         rv = yield self.node.terminate_instance(instance_id)
 
         rv = yield self.node.describe_instances()
+        logging.info("After terminating instances: %s", rv)
         self.assertEqual(rv, {})
 
     @defer.inlineCallbacks

@@ -1,5 +1,23 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+# Copyright 2010 Anso Labs, LLC
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import logging
 import signal
 import os
@@ -44,6 +62,9 @@ def remove_rule(cmd):
 
 def bind_public_ip(ip, interface):
     runthis("Binding IP to interface: %s", "sudo ip addr add %s dev %s" % (ip, interface))
+    
+def unbind_public_ip(ip, interface):
+    runthis("Binding IP to interface: %s", "sudo ip addr del %s dev %s" % (ip, interface))
 
 def vlan_create(net):
     """ create a vlan on on a bridge device unless vlan already exists """
@@ -58,7 +79,7 @@ def bridge_create(net):
     if not device_exists(net['bridge_name']):
         logging.debug("Starting Bridge inteface for %s network", (net['vlan']))
         execute("sudo brctl addbr %s" % (net['bridge_name']))
-        # execute("sudo brctl setfd %s 0" % (net.bridge_name))
+        execute("sudo brctl setfd %s 0" % (net.bridge_name))
         # execute("sudo brctl setageing %s 10" % (net.bridge_name))
         execute("sudo brctl stp %s off" % (net['bridge_name']))
         execute("sudo brctl addif %s vlan%s" % (net['bridge_name'], net['vlan']))
@@ -77,10 +98,10 @@ def dnsmasq_cmd(net):
         ' --pid-file=%s' % dhcp_file(net['vlan'], 'pid'),
         ' --listen-address=%s' % net.dhcp_listen_address,
         ' --except-interface=lo',
-        ' --dhcp-range=%s,static,120s' % (net.dhcp_range_start),
-        ' --dhcp-lease-max=61',
+        ' --dhcp-range=%s,static,600s' % (net.dhcp_range_start),
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-leasefile=%s' % dhcp_file(net['vlan'], 'leases')]
+        ' --dhcp-script=%s' % bin_file('dhcpleasor.py'),
+        ' --leasefile-ro']
     return ''.join(cmd)
 
 def hostDHCP(network, host, mac):
@@ -135,6 +156,9 @@ def dhcp_file(vlan, kind):
     """ return path to a pid, leases or conf file for a vlan """
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
+
+def bin_file(script):
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 def dnsmasq_pid_for(network):
     """ the pid for prior dnsmasq instance for a vlan,

@@ -1,17 +1,22 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 import httplib
 import random
@@ -154,7 +159,7 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         self.host = '127.0.0.1'
 
-        self.app = api.APIServerApplication(self.users, {'Cloud': self.cloud})
+        self.app = api.APIServerApplication({'Cloud': self.cloud})
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
@@ -174,16 +179,25 @@ class ApiEc2TestCase(test.BaseTestCase):
     def test_describe_instances(self):
         self.expect_http()
         self.mox.ReplayAll()
-
+        try:
+            self.users.create_user('fake', 'fake', 'fake')
+        except Exception, _err:
+            pass # User may already exist
         self.assertEqual(self.ec2.get_all_instances(), [])
+        self.users.delete_user('fake')
 
 
     def test_get_all_key_pairs(self):
         self.expect_http()
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") for x in range(random.randint(4, 8)))
+        try:
+            self.users.create_user('fake', 'fake', 'fake')
+        except Exception, _err:
+            pass # User may already exist
         self.users.generate_key_pair('fake', keyname)
 
         rv = self.ec2.get_all_key_pairs()
         self.assertTrue(filter(lambda k: k.name == keyname, rv))
+        self.users.delete_user('fake')
 

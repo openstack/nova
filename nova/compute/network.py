@@ -1,17 +1,22 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# Copyright [2010] [Anso Labs, LLC]
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+# Copyright 2010 Anso Labs, LLC
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 """
 Classes for network control, including VLANs, DHCP, and IP allocation.
@@ -26,10 +31,10 @@ from nova import vendor
 import IPy
 
 from nova import datastore
-import nova.exception
-from nova.compute import exception
 from nova import flags
 from nova import utils
+from nova import exception
+from nova.compute import exception as compute_exception
 from nova.auth import users
 
 import linux_net
@@ -48,21 +53,126 @@ flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
 flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
 flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
+flags.DEFINE_integer('cnt_vpn_clients', 5,
+                        'Number of addresses reserved for vpn clients')
+flags.DEFINE_integer('cloudpipe_start_port', 12000,
+                        'Starting port for mapped CloudPipe external ports')
+
+flags.DEFINE_boolean('simple_network', False,
+                       'Use simple networking instead of vlans')
+flags.DEFINE_string('simple_network_bridge', 'br100',
+                       'Bridge for simple network instances')
+flags.DEFINE_list('simple_network_ips', ['192.168.0.2'],
+                       'Available ips for simple network')
+flags.DEFINE_string('simple_network_template',
+                    utils.abspath('compute/interfaces.template'),
+                    'Template file for simple network')
+flags.DEFINE_string('simple_network_netmask', '255.255.255.0',
+                       'Netmask for simple network')
+flags.DEFINE_string('simple_network_network', '192.168.0.0',
+                       'Network for simple network')
+flags.DEFINE_string('simple_network_gateway', '192.168.0.1',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_broadcast', '192.168.0.255',
+                       'Broadcast for simple network')
+flags.DEFINE_string('simple_network_dns', '8.8.4.4',
+                       'Dns for simple network')
 
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-class BaseNetwork(datastore.RedisModel):
-    bridge_gets_ip = False
-    object_type = 'network'
+class Vlan(datastore.BasicModel):
+    def __init__(self, project, vlan):
+        """
+        Since we don't want to try and find a vlan by its identifier,
+        but by a project id, we don't call super-init.
+        """
+        self.project_id = project
+        self.vlan_id = vlan
+
+    @property
+    def identifier(self):
+        return "%s:%s" % (self.project_id, self.vlan_id)
 
     @classmethod
-    def get_all_hosts(cls):
-        for vlan in get_assigned_vlans().values():
-            network_str = get_subnet_from_vlan(vlan)
-            for addr in datastore.Redis.instance().hgetall(
-                            "network:%s:hosts" % (network_str)):
-                yield addr
+    def create(cls, project, vlan):
+        instance = cls(project, vlan)
+        instance.save()
+        return instance
+
+    @classmethod
+    @datastore.absorb_connection_error
+    def lookup(cls, project):
+        set_name = cls._redis_set_name(cls.__name__)
+        vlan = datastore.Redis.instance().hget(set_name, project)
+        if vlan:
+            return cls(project, vlan)
+        else:
+            return None
+
+    @classmethod
+    @datastore.absorb_connection_error
+    def dict_by_project(cls):
+        """a hash of project:vlan"""
+        set_name = cls._redis_set_name(cls.__name__)
+        return datastore.Redis.instance().hgetall(set_name)
+
+    @classmethod
+    @datastore.absorb_connection_error
+    def dict_by_vlan(cls):
+        """a hash of vlan:project"""
+        set_name = cls._redis_set_name(cls.__name__)
+        rv = {}
+        h = datastore.Redis.instance().hgetall(set_name)
+        for v in h.keys():
+            rv[h[v]] = v
+        return rv
+
+    @classmethod
+    @datastore.absorb_connection_error
+    def all(cls):
+        set_name = cls._redis_set_name(cls.__name__)
+        for project,vlan in datastore.Redis.instance().hgetall(set_name):
+            yield cls(project, vlan)
+
+    @datastore.absorb_connection_error
+    def save(self):
+        """
+        Vlan saves state into a giant hash named "vlans", with keys of
+        project_id and value of vlan number.  Therefore, we skip the
+        default way of saving into "vlan:ID" and adding to a set of "vlans".
+        """
+        set_name = self._redis_set_name(self.__class__.__name__)
+        datastore.Redis.instance().hset(set_name, self.project_id, self.vlan_id)
+
+    @datastore.absorb_connection_error
+    def destroy(self):
+        set_name = self._redis_set_name(self.__class__.__name__)
+        datastore.Redis.instance().hdel(set_name, self.project)
+
+    def subnet(self):
+        vlan = int(self.vlan_id)
+        network = IPy.IP(FLAGS.private_range)
+        start = (vlan-FLAGS.vlan_start) * FLAGS.network_size
+        # minus one for the gateway.
+        return "%s-%s" % (network[start],
+                          network[start + FLAGS.network_size - 1])
+
+# CLEANUP:
+# TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
+# TODO(ja): use singleton for usermanager instead of self.manager in vlanpool et al
+# TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
+# TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
+
+class BaseNetwork(datastore.BasicModel):
+    override_type = 'network'
+
+    @property
+    def identifier(self):
+        return self.network_id
+
+    def default_state(self):
+        return {'network_id': self.network_id, 'network_str': self.network_str}
 
     @classmethod
     def create(cls, user_id, project_id, security_group, vlan, network_str):
@@ -76,20 +186,27 @@ class BaseNetwork(datastore.RedisModel):
         return net
 
     def __init__(self, network_id, network_str=None):
-        super(BaseNetwork, self).__init__(object_id=network_id)
-        self['network_id'] = network_id
-        self['network_str'] = network_str
+        self.network_id = network_id
+        self.network_str = network_str
+        super(BaseNetwork, self).__init__()
         self.save()
 
     @property
     def network(self):
         return IPy.IP(self['network_str'])
+
     @property
     def netmask(self):
         return self.network.netmask()
+
+    @property
+    def gateway(self):
+        return self.network[1]
+
     @property
     def broadcast(self):
         return self.network.broadcast()
+
     @property
     def bridge_name(self):
         return "br%s" % (self["vlan"])
@@ -108,7 +225,7 @@ class BaseNetwork(datastore.RedisModel):
 
     @property
     def hosts(self):
-        return datastore.Redis.instance().hgetall(self._hosts_key)
+        return datastore.Redis.instance().hgetall(self._hosts_key) or {}
 
     def _add_host(self, _user_id, _project_id, host, target):
         datastore.Redis.instance().hset(self._hosts_key, host, target)
@@ -122,7 +239,9 @@ class BaseNetwork(datastore.RedisModel):
 
     @property
     def available(self):
-        for idx in range(3, len(self.network) - 1):
+        # the .2 address is always CloudPipe
+        # and the top <n> are for vpn clients
+        for idx in range(3, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
                 yield str(address)
@@ -133,13 +252,21 @@ class BaseNetwork(datastore.RedisModel):
             self._add_host(user_id, project_id, address, mac)
             self.express(address=address)
             return address
-        raise exception.NoMoreAddresses()
+        raise compute_exception.NoMoreAddresses("Project %s with network %s" %
+                                                (project_id, str(self.network)))
+
+    def lease_ip(self, ip_str):    
+        logging.debug("Leasing allocated IP %s" % (ip_str))
+
+    def release_ip(self, ip_str):
+        if not ip_str in self.assigned:
+            raise compute_exception.AddressNotAllocated()
+        self.deexpress(address=ip_str)
+        self._rem_host(ip_str)
 
     def deallocate_ip(self, ip_str):
-        if not ip_str in self.assigned:
-            raise exception.AddressNotAllocated()
-        self._rem_host(ip_str)
-        self.deexpress(address=ip_str)
+        # Do nothing for now, cleanup on ip release
+        pass
 
     def list_addresses(self):
         for address in self.hosts:
@@ -166,12 +293,14 @@ class BridgedNetwork(BaseNetwork):
             netmask
     """
 
+    override_type = 'network'
+
     @classmethod
     def get_network_for_project(cls, user_id, project_id, security_group):
         vlan = get_vlan_for_project(project_id)
-        network_str = get_subnet_from_vlan(vlan)
-        logging.debug("creating network on vlan %s with network string %s" % (vlan, network_str))
-        return cls.create(user_id, project_id, security_group, vlan, network_str)
+        network_str = vlan.subnet()
+        return cls.create(user_id, project_id, security_group, vlan.vlan_id,
+                          network_str)
 
     def __init__(self, *args, **kwargs):
         super(BridgedNetwork, self).__init__(*args, **kwargs)
@@ -191,15 +320,20 @@ class DHCPNetwork(BridgedNetwork):
         dhcp_range_end: the last ip to give out
     """
     bridge_gets_ip = True
+    override_type = 'network'
 
     def __init__(self, *args, **kwargs):
         super(DHCPNetwork, self).__init__(*args, **kwargs)
-        logging.debug("Initing DHCPNetwork object...")
+        # logging.debug("Initing DHCPNetwork object...")
         self.dhcp_listen_address = self.network[1]
         self.dhcp_range_start = self.network[3]
-        self.dhcp_range_end = self.network[-1]
+        self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
         try:
             os.makedirs(FLAGS.networks_path)
+        # NOTE(todd): I guess this is a lazy way to not have to check if the
+        #             directory exists, but shouldn't we be smarter about
+        #             telling the difference between existing directory and
+        #             permission denied? (Errno 17 vs 13, OSError)
         except Exception, err:
             pass
 
@@ -211,6 +345,20 @@ class DHCPNetwork(BridgedNetwork):
             linux_net.start_dnsmasq(self)
         else:
             logging.debug("Not launching dnsmasq: no hosts.")
+        self.express_cloudpipe()
+
+    def allocate_vpn_ip(self, mac):
+        address = str(self.network[2])
+        self._add_host(self['user_id'], self['project_id'], address, mac)
+        self.express(address=address)
+        return address
+
+    def express_cloudpipe(self):
+        private_ip = self.network[2]
+        linux_net.confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT"
+                               % (private_ip, ))
+        linux_net.confirm_rule("PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+                               % (self.project.vpn_ip, self.project.vpn_port, private_ip))
 
     def deexpress(self, address=None):
         # if this is the last address, stop dns
@@ -220,26 +368,34 @@ class DHCPNetwork(BridgedNetwork):
         else:
             linux_net.start_dnsmasq(self)
 
-class PublicAddress(datastore.RedisModel):
-    object_type="address"
+class PublicAddress(datastore.BasicModel):
+    override_type = "address"
 
     def __init__(self, address):
-        super(PublicAddress, self).__init__(address)
+        self.address = address
+        super(PublicAddress, self).__init__()
+
+    @property
+    def identifier(self):
+        return self.address
+
+    def default_state(self):
+        return {'address': self.address}
 
     @classmethod
     def create(cls, user_id, project_id, address):
-        addr = cls(address=address)
-        addr['address'] = address
+        addr = cls(address)
         addr['user_id'] = user_id
         addr['project_id'] = project_id
         addr['instance_id'] = 'available'
         addr['private_ip'] = 'available'
-        addr["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         addr.save()
         return addr
 
 DEFAULT_PORTS = [("tcp",80), ("tcp",22), ("udp",1194), ("tcp",443)]
 class PublicNetworkController(BaseNetwork):
+    override_type = 'network'
+
     def __init__(self, *args, **kwargs):
         network_id = "public:default"
         super(PublicNetworkController, self).__init__(network_id, FLAGS.public_range)
@@ -283,14 +439,14 @@ class PublicNetworkController(BaseNetwork):
 
     def associate_address(self, public_ip, private_ip, instance_id):
         if not public_ip in self.assigned:
-            raise exception.AddressNotAllocated()
+            raise compute_exception.AddressNotAllocated()
         # TODO(joshua): Keep an index going both ways
         for addr in self.host_objs:
             if addr.get('private_ip', None) == private_ip:
-                raise exception.AddressAlreadyAssociated()
+                raise compute_exception.AddressAlreadyAssociated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') != 'available':
-            raise exception.AddressAlreadyAssociated()
+            raise compute_exception.AddressAlreadyAssociated()
         addr['private_ip'] = private_ip
         addr['instance_id'] = instance_id
         addr.save()
@@ -298,10 +454,10 @@ class PublicNetworkController(BaseNetwork):
 
     def disassociate_address(self, public_ip):
         if not public_ip in self.assigned:
-            raise exception.AddressNotAllocated()
+            raise compute_exception.AddressNotAllocated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') == 'available':
-            raise exception.AddressNotAssociated()
+            raise compute_exception.AddressNotAssociated()
         self.deexpress(address=public_ip)
         addr['private_ip'] = 'available'
         addr['instance_id'] = 'available'
@@ -331,6 +487,7 @@ class PublicNetworkController(BaseNetwork):
     def deexpress(self, address=None):
         addr = self.get_host(address)
         private_ip = addr['private_ip']
+        linux_net.unbind_public_ip(address, FLAGS.public_interface)
         linux_net.remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
                               % (address, private_ip))
         linux_net.remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
@@ -342,64 +499,90 @@ class PublicNetworkController(BaseNetwork):
                                   % (private_ip, protocol, port))
 
 
-VLANS_KEY = "vlans"
-def _add_vlan(project_id, vlan):
-    datastore.Redis.instance().hset(VLANS_KEY, project_id, vlan)
-
-def _rem_vlan(project_id):
-    datastore.Redis.instance().hdel(VLANS_KEY, project_id)
-
-def get_assigned_vlans():
-    """ Returns a dictionary, with keys of project_id and values of vlan_id """
-    return datastore.Redis.instance().hgetall(VLANS_KEY)
-
+# FIXME(todd): does this present a race condition, or is there some piece of
+#              architecture that mitigates it (only one queue listener per net)?
 def get_vlan_for_project(project_id):
     """
     Allocate vlan IDs to individual users.
     """
-    vlan = datastore.Redis.instance().hget(VLANS_KEY, project_id)
+    vlan = Vlan.lookup(project_id)
     if vlan:
         return vlan
-    assigned_vlans = get_assigned_vlans()
-    # TODO(joshua) I can do this in one loop, I think
-    for old_project_id, vlan in assigned_vlans.iteritems():
+    known_vlans = Vlan.dict_by_vlan()
+    for vnum in range(FLAGS.vlan_start, FLAGS.vlan_end):
+        vstr = str(vnum)
+        if not known_vlans.has_key(vstr):
+            return Vlan.create(project_id, vnum)
+        old_project_id = known_vlans[vstr]
         if not users.UserManager.instance().get_project(old_project_id):
-            _rem_vlan(old_project_id)
-            _add_vlan(project_id, vlan)
-            return vlan
-    for vlan in range(FLAGS.vlan_start, FLAGS.vlan_end):
-        if not str(vlan) in assigned_vlans.values():
-            _add_vlan(project_id, vlan)
-            return vlan
-    raise exception.AddressNotAllocated("Out of VLANs")
-
+            vlan = Vlan.lookup(old_project_id)
+            if vlan:
+                # NOTE(todd): This doesn't check for vlan id match, because
+                #             it seems to be assumed that vlan<=>project is
+                #             always a 1:1 mapping.  It could be made way
+                #             sexier if it didn't fight against the way
+                #             BasicModel worked and used associate_with
+                #             to build connections to projects.
+                # NOTE(josh): This is here because we want to make sure we
+                #             don't orphan any VLANs.  It is basically
+                #             garbage collection for after projects abandoned
+                #             their reference.
+                vlan.project_id = project_id
+                vlan.save()
+                return vlan
+            else:
+                return Vlan.create(project_id, vnum)
+    raise compute_exception.AddressNotAllocated("Out of VLANs")
 
 def get_network_by_address(address):
+    logging.debug("Get Network By Address: %s" % address)
     for project in users.UserManager.instance().get_projects():
         net = get_project_network(project.id)
         if address in net.assigned:
+            logging.debug("Found %s in %s" % (address, project.id))
             return net
-    raise exception.AddressNotAllocated()
+    raise compute_exception.AddressNotAllocated()
+
+def allocate_simple_ip():
+    redis = datastore.Redis.instance()
+    if not redis.exists('ips') and not len(redis.keys('instances:*')):
+        for address in FLAGS.simple_network_ips:
+            redis.sadd('ips', address)
+    address = redis.spop('ips')
+    if not address:
+        raise exception.NoMoreAddresses()
+    return address
+
+def deallocate_simple_ip(address):
+    datastore.Redis.instance().sadd('ips', address)
+
+
+def allocate_vpn_ip(user_id, project_id, mac):
+    return get_project_network(project_id).allocate_vpn_ip(mac)
 
 def allocate_ip(user_id, project_id, mac):
     return get_project_network(project_id).allocate_ip(user_id, project_id, mac)
 
 def deallocate_ip(address):
     return get_network_by_address(address).deallocate_ip(address)
+    
+def release_ip(address):
+    return get_network_by_address(address).release_ip(address)
+    
+def lease_ip(address):
+    return get_network_by_address(address).lease_ip(address)
 
 def get_project_network(project_id, security_group='default'):
     """ get a project's private network, allocating one if needed """
+    # TODO(todd): It looks goofy to get a project from a UserManager.
+    #             Refactor to still use the LDAP backend, but not User specific.
     project = users.UserManager.instance().get_project(project_id)
     if not project:
-        raise nova.exception.Error("Project %s doesn't exist, uhoh." % project_id)
-    return DHCPNetwork.get_network_for_project(project.project_manager_id, project.id, security_group)
+        raise exception.Error("Project %s doesn't exist, uhoh." %
+                                   project_id)
+    return DHCPNetwork.get_network_for_project(project.project_manager_id,
+                                               project.id, security_group)
 
-def get_subnet_from_vlan(vlan):
-    """Assign one subnet to each VLAN, for now."""
-    vlan = int(vlan)
-    network = IPy.IP(FLAGS.private_range)
-    start = (vlan-FLAGS.vlan_start) * FLAGS.network_size
-    return "%s-%s" % (network[start], network[start + FLAGS.network_size - 1])
 
 def restart_nets():
     """ Ensure the network for each user is enabled"""
