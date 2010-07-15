@@ -162,6 +162,7 @@ class Instance(datastore.BasicModel):
     def destroy(self):
         """Destroy associations, then destroy the object"""
         self.unassociate_with("project", self.project)
+        self.unassociate_with("node", self['node_name'])
         return super(Instance, self).destroy()
 
 class Host(datastore.BasicModel):
