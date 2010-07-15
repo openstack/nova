@@ -28,7 +28,7 @@ import boto
 from boto.ec2.regioninfo import RegionInfo
 
 class UserInfo(object):
-    """ 
+    """
     Information about a Nova user, as parsed through SAX
     fields include:
         username
