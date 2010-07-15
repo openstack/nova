@@ -19,7 +19,7 @@
 import logging
 import time
 
-from nova import vendor
+
 from twisted.internet import defer
 
 from nova import exception

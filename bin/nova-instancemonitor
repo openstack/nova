@@ -23,7 +23,7 @@
 
 import logging
 
-from nova import vendor
+
 from twisted.internet import task
 from twisted.application import service
 

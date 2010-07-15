@@ -26,7 +26,7 @@ import logging
 import time
 import unittest
 
-from nova import vendor
+
 import mox
 from tornado import ioloop
 from twisted.internet import defer

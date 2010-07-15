@@ -31,7 +31,7 @@ import tempfile
 import time
 import utils
 
-from nova import vendor
+
 import M2Crypto
 
 from nova import exception

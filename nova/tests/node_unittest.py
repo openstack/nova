@@ -21,7 +21,7 @@ import time
 
 from xml.etree import ElementTree
 
-from nova import vendor
+
 from twisted.internet import defer
 
 from nova import exception

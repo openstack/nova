@@ -19,7 +19,7 @@
 import logging
 import unittest
 
-from nova import vendor
+
 
 from nova import flags
 from nova import test

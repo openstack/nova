@@ -30,7 +30,7 @@ import shutil
 import tempfile
 import time
 
-from nova import vendor
+
 from tornado import ioloop
 from twisted.internet import defer
 

@@ -23,7 +23,7 @@ import os
 import shutil
 import tempfile
 
-from nova import vendor
+
 
 from nova import flags
 from nova import objectstore

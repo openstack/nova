@@ -25,7 +25,7 @@ before trying to run this.
 
 import logging
 
-from nova import vendor
+
 import redis
 
 from nova import exception

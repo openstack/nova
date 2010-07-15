@@ -23,7 +23,7 @@ Tornado daemon for the main API endpoint.
 
 import logging
 
-from nova import vendor
+
 from tornado import httpserver
 from tornado import ioloop
 

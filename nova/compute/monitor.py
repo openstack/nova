@@ -36,7 +36,7 @@ except Exception, err:
     logging.warning('no libvirt found')
 
 from nova import flags
-from nova import vendor
+
 import boto
 import boto.s3
 import libxml2

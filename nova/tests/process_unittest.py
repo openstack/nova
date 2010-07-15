@@ -19,7 +19,7 @@
 import logging
 from xml.etree import ElementTree
 
-from nova import vendor
+
 from twisted.internet import defer
 from twisted.internet import reactor
 

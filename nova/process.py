@@ -24,7 +24,7 @@ import logging
 import multiprocessing
 import StringIO
 
-from nova import vendor
+
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import process

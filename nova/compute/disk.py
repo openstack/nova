@@ -25,7 +25,7 @@ import logging
 import os
 import tempfile
 
-from nova import vendor
+
 from twisted.internet import defer
 
 from nova import exception

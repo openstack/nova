@@ -25,7 +25,7 @@ import os
 import time
 
 # TODO(termie): clean up these imports
-from nova import vendor
+
 import IPy
 
 from nova import datastore

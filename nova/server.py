@@ -27,7 +27,7 @@ import signal
 import sys
 import time
 
-from nova import vendor
+
 import daemon
 from daemon import pidlockfile
 

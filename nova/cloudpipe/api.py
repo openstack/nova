@@ -23,7 +23,7 @@ Tornado REST API Request Handlers for CloudPipe
 import logging
 import urllib
 
-from nova import vendor
+
 import tornado.web
 
 from nova import crypto

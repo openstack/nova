@@ -20,7 +20,7 @@ import httplib
 import random
 import StringIO
 
-from nova import vendor
+
 import boto
 from boto.ec2 import regioninfo
 from tornado import httpserver

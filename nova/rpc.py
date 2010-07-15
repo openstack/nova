@@ -26,7 +26,7 @@ import logging
 import sys
 import uuid
 
-from nova import vendor
+
 from carrot import connection
 from carrot import messaging
 from twisted.internet import defer

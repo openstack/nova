@@ -29,7 +29,7 @@ import urllib
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
-from nova import vendor
+
 import tornado.web
 from twisted.internet import defer
 

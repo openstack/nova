@@ -23,7 +23,7 @@
 
 import logging
 
-from nova import vendor 
+ 
 from tornado import httpserver
 from tornado import ioloop
 

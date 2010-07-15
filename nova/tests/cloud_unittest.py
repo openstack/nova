@@ -22,7 +22,7 @@ import time
 import unittest
 from xml.etree import ElementTree
 
-from nova import vendor
+
 from tornado import ioloop
 from twisted.internet import defer
 

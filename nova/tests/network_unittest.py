@@ -20,7 +20,7 @@ import os
 import logging
 import unittest
 
-from nova import vendor
+
 import IPy
 
 from nova import flags

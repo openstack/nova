@@ -31,7 +31,7 @@ import os
 import shutil
 import sys
 
-from nova import vendor
+
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service

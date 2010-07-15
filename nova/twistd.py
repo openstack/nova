@@ -29,7 +29,7 @@ import time
 import UserDict
 import logging.handlers
 
-from nova import vendor
+
 from twisted.scripts import twistd
 from twisted.python import log
 from twisted.python import reflect

@@ -27,7 +27,7 @@ import multiprocessing
 import os
 import time
 
-from nova import vendor
+
 import tornado.web
 from twisted.internet import defer
 

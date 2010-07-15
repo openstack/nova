@@ -44,7 +44,7 @@ import logging
 import multiprocessing
 
 
-from nova import vendor
+
 from tornado import escape, web
 
 from nova import exception

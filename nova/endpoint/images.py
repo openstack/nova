@@ -25,7 +25,7 @@ import json
 import random
 import urllib
 
-from nova import vendor
+
 import boto
 import boto.s3
 
