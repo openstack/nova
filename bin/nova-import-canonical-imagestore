@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+"""
+  Download images from Canonical Image Store
+"""
+
+import json
+import os
+import tempfile
+import shutil
+import subprocess
+import sys
+import urllib2
+
+from nova.objectstore import image
+from nova import flags
+from nova import utils
+
+FLAGS = flags.FLAGS
+
+api_url = 'https://imagestore.canonical.com/api/dashboard'
+
+image_cache = None
+def images():
+    global image_cache
+    if not image_cache:
+        try:
+            images = json.load(urllib2.urlopen(api_url))['images']
+            image_cache = [i for i in images if i['title'].find('amd64') > -1]
+        except Exception:
+            print 'unable to download canonical image list'
+            sys.exit(1)
+    return image_cache
+
+# FIXME(ja): add checksum/signature checks
+def download(img):
+    tempdir = tempfile.mkdtemp(prefix='cis-')
+
+    kernel_id = None
+    ramdisk_id = None
+
+    for f in img['files']:
+        if f['kind'] == 'kernel':
+            dest = os.path.join(tempdir, 'kernel')
+            subprocess.call(['curl', f['url'], '-o', dest])
+            kernel_id = image.Image.add(dest,
+                description='kernel/' + img['title'], kernel=True)
+
+    for f in img['files']:
+        if f['kind'] == 'ramdisk':
+            dest = os.path.join(tempdir, 'ramdisk')
+            subprocess.call(['curl', f['url'], '-o', dest])
+            ramdisk_id = image.Image.add(dest,
+                description='ramdisk/' + img['title'], ramdisk=True)
+
+    for f in img['files']:
+        if f['kind'] == 'image':
+            dest = os.path.join(tempdir, 'image')
+            subprocess.call(['curl', f['url'], '-o', dest])
+            ramdisk_id = image.Image.add(dest,
+                description=img['title'], kernel=kernel_id, ramdisk=ramdisk_id)
+
+    shutil.rmtree(tempdir)
+
+def main():
+    utils.default_flagfile()
+    argv = FLAGS(sys.argv)
+
+    if len(argv) == 2:
+        for img in images():
+            if argv[1] == 'all' or argv[1] == img['title']:
+                download(img)
+    else:
+        print 'usage: %s (title|all)'
+        print 'available images:'
+        for image in images():
+            print image['title']
+
+if __name__ == '__main__':
+    main()
+

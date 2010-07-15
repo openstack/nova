@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright [2010] [Anso Labs, LLC]
+# 
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+# 
+#        http://www.apache.org/licenses/LICENSE-2.0
+# 
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+"""
+  WSGI daemon for the main API endpoint.  
+"""
+
+import logging
+from wsgiref import simple_server
+
+from nova import vendor
+from tornado import ioloop
+
+from nova import flags
+from nova import rpc
+from nova import server
+from nova import utils
+from nova.auth import users
+from nova.endpoint import rackspace
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
+
+def main(_argv):
+    user_manager = users.UserManager()
+    api_instance = rackspace.Api(user_manager)
+    conn = rpc.Connection.instance()
+    rpc_consumer = rpc.AdapterConsumer(connection=conn,
+                                       topic=FLAGS.cloud_topic,
+                                       proxy=api_instance)
+
+#   TODO: fire rpc response listener (without attach to tornado)
+#    io_inst = ioloop.IOLoop.instance()
+#    _injected = consumer.attach_to_tornado(io_inst)
+
+    http_server = simple_server.WSGIServer(('0.0.0.0', FLAGS.cc_port), simple_server.WSGIRequestHandler)
+    http_server.set_app(api_instance.handler)
+    logging.debug('Started HTTP server on port %i' % FLAGS.cc_port)
+    while True:
+        http_server.handle_request()
+#    io_inst.start()
+
+if __name__ == '__main__':
+    utils.default_flagfile()
+    server.serve('nova-rsapi', main)

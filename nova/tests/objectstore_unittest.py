@@ -155,7 +155,7 @@ class ObjectStoreTestCase(test.BaseTestCase):
             bucket[os.path.basename(path)] = open(path, 'rb').read()
 
         # register an image
-        objectstore.image.Image.create('i-testing', 'image_bucket/1mb.manifest.xml', self.context)
+        objectstore.image.Image.register_aws_image('i-testing', 'image_bucket/1mb.manifest.xml', self.context)
 
         # verify image
         my_img = objectstore.image.Image('i-testing')
