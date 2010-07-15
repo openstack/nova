@@ -31,11 +31,10 @@ from nova import vendor
 import IPy
 
 from nova import datastore
-import nova.exception
-from nova.compute import exception
 from nova import flags
-from nova.compute import model
 from nova import utils
+from nova import exception
+from nova.compute import exception as compute_exception
 from nova.auth import users
 
 import linux_net
@@ -62,7 +61,7 @@ flags.DEFINE_integer('cloudpipe_start_port', 12000,
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-class Vlan(model.BasicModel):
+class Vlan(datastore.BasicModel):
     def __init__(self, project, vlan):
         """
         Since we don't want to try and find a vlan by its identifier,
@@ -82,7 +81,7 @@ class Vlan(model.BasicModel):
         return instance
 
     @classmethod
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def lookup(cls, project):
         set_name = cls._redis_set_name(cls.__name__)
         vlan = datastore.Redis.instance().hget(set_name, project)
@@ -92,14 +91,14 @@ class Vlan(model.BasicModel):
             return None
 
     @classmethod
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def dict_by_project(cls):
         """a hash of project:vlan"""
         set_name = cls._redis_set_name(cls.__name__)
         return datastore.Redis.instance().hgetall(set_name)
 
     @classmethod
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def dict_by_vlan(cls):
         """a hash of vlan:project"""
         set_name = cls._redis_set_name(cls.__name__)
@@ -110,13 +109,13 @@ class Vlan(model.BasicModel):
         return rv
 
     @classmethod
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def all(cls):
         set_name = cls._redis_set_name(cls.__name__)
         for project,vlan in datastore.Redis.instance().hgetall(set_name):
             yield cls(project, vlan)
 
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def save(self):
         """
         Vlan saves state into a giant hash named "vlans", with keys of
@@ -126,7 +125,7 @@ class Vlan(model.BasicModel):
         set_name = self._redis_set_name(self.__class__.__name__)
         datastore.Redis.instance().hset(set_name, self.project_id, self.vlan_id)
 
-    @model.absorb_connection_error
+    @datastore.absorb_connection_error
     def destroy(self):
         set_name = self._redis_set_name(self.__class__.__name__)
         datastore.Redis.instance().hdel(set_name, self.project)
@@ -144,7 +143,7 @@ class Vlan(model.BasicModel):
 # TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
 # TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
 
-class BaseNetwork(model.BasicModel):
+class BaseNetwork(datastore.BasicModel):
     override_type = 'network'
 
     @property
@@ -241,11 +240,11 @@ class BaseNetwork(model.BasicModel):
             self._add_host(user_id, project_id, address, mac)
             self.express(address=address)
             return address
-        raise exception.NoMoreAddresses()
+        raise compute_exception.NoMoreAddresses()
 
     def deallocate_ip(self, ip_str):
         if not ip_str in self.assigned:
-            raise exception.AddressNotAllocated()
+            raise compute_exception.AddressNotAllocated()
         self.deexpress(address=ip_str)
         self._rem_host(ip_str)
 
@@ -351,7 +350,7 @@ class DHCPNetwork(BridgedNetwork):
         else:
             linux_net.start_dnsmasq(self)
 
-class PublicAddress(model.BasicModel):
+class PublicAddress(datastore.BasicModel):
     override_type = "address"
 
     def __init__(self, address):
@@ -422,14 +421,14 @@ class PublicNetworkController(BaseNetwork):
 
     def associate_address(self, public_ip, private_ip, instance_id):
         if not public_ip in self.assigned:
-            raise exception.AddressNotAllocated()
+            raise compute_exception.AddressNotAllocated()
         # TODO(joshua): Keep an index going both ways
         for addr in self.host_objs:
             if addr.get('private_ip', None) == private_ip:
-                raise exception.AddressAlreadyAssociated()
+                raise compute_exception.AddressAlreadyAssociated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') != 'available':
-            raise exception.AddressAlreadyAssociated()
+            raise compute_exception.AddressAlreadyAssociated()
         addr['private_ip'] = private_ip
         addr['instance_id'] = instance_id
         addr.save()
@@ -437,10 +436,10 @@ class PublicNetworkController(BaseNetwork):
 
     def disassociate_address(self, public_ip):
         if not public_ip in self.assigned:
-            raise exception.AddressNotAllocated()
+            raise compute_exception.AddressNotAllocated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') == 'available':
-            raise exception.AddressNotAssociated()
+            raise compute_exception.AddressNotAssociated()
         self.deexpress(address=public_ip)
         addr['private_ip'] = 'available'
         addr['instance_id'] = 'available'
@@ -510,14 +509,14 @@ def get_vlan_for_project(project_id):
                 return vlan
             else:
                 return Vlan.create(project_id, vnum)
-    raise exception.AddressNotAllocated("Out of VLANs")
+    raise compute_exception.AddressNotAllocated("Out of VLANs")
 
 def get_network_by_address(address):
     for project in users.UserManager.instance().get_projects():
         net = get_project_network(project.id)
         if address in net.assigned:
             return net
-    raise exception.AddressNotAllocated()
+    raise compute_exception.AddressNotAllocated()
 
 def allocate_vpn_ip(user_id, project_id, mac):
     return get_project_network(project_id).allocate_vpn_ip(mac)
@@ -534,7 +533,7 @@ def get_project_network(project_id, security_group='default'):
     #             Refactor to still use the LDAP backend, but not User specific.
     project = users.UserManager.instance().get_project(project_id)
     if not project:
-        raise nova.exception.Error("Project %s doesn't exist, uhoh." %
+        raise exception.Error("Project %s doesn't exist, uhoh." %
                                    project_id)
     return DHCPNetwork.get_network_for_project(project.project_manager_id,
                                                project.id, security_group)

@@ -156,7 +156,7 @@ class BlockStore(object):
         utils.runthis("PVCreate returned: %s", "sudo pvcreate %s" % (FLAGS.storage_dev))
         utils.runthis("VGCreate returned: %s", "sudo vgcreate %s %s" % (FLAGS.volume_group, FLAGS.storage_dev))
 
-class Volume(model.BasicModel):
+class Volume(datastore.BasicModel):
 
     def __init__(self, volume_id=None):
         self.volume_id = volume_id
