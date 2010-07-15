@@ -36,7 +36,7 @@ from nova import exception
 def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     """Takes a single partition represented by infile and writes a bootable
     drive image into outfile.
-    
+
     The first 63 sectors (0-62) of the resulting image is a master boot record.
     Infile becomes the first primary partition.
     If local bytes is specified, a second primary partition is created and
@@ -87,12 +87,14 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
                   % (infile, outfile, sector_size, primary_first))
 
 @defer.inlineCallbacks
-def inject_key(key, image, partition=None, execute=None):
-    """Injects a ssh key into a disk image.
-    It adds the specified key to /root/.ssh/authorized_keys
+def inject_data(image, key=None, net=None, partition=None, execute=None):
+    """Injects a ssh key and optionally net data into a disk image.
+
     it will mount the image as a fully partitioned disk and attempt to inject
     into the specified partition number.
+
     If partition is not specified it mounts the image as a single partition.
+
     """
     out, err = yield execute('sudo losetup -f --show %s' % image)
     if err:
@@ -119,15 +121,17 @@ def inject_key(key, image, partition=None, execute=None):
                 raise exception.Error('Failed to mount filesystem: %s' % err)
 
             try:
-                # inject key file
-                yield _inject_into_fs(key, tmpdir, execute=execute)
+                if key:
+                    # inject key file
+                    yield _inject_key_into_fs(key, tmpdir, execute=execute)
+                if net:
+                    yield _inject_net_into_fs(net, tmpdir, execute=execute)
             finally:
                 # unmount device
                 yield execute('sudo umount %s' % mapped_device)
         finally:
             # remove temporary directory
-            # TODO(termie): scary, is there any thing we can check here?
-            yield execute('rm -rf %s' % tmpdir)
+            yield execute('rmdir %s' % tmpdir)
             if not partition is None:
                 # remove partitions
                 yield execute('sudo kpartx -d %s' % device)
@@ -136,11 +140,17 @@ def inject_key(key, image, partition=None, execute=None):
         yield execute('sudo losetup -d %s' % device)
 
 @defer.inlineCallbacks
-def _inject_into_fs(key, fs, execute=None):
+def _inject_key_into_fs(key, fs, execute=None):
     sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
     yield execute('sudo mkdir -p %s' % sshdir) # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    yield execute('sudo bash -c "cat >> %s"' % keyfile, '\n' + key + '\n')
+    yield execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
+
+@defer.inlineCallbacks
+def _inject_net_into_fs(net, fs, execute=None):
+    netfile = os.path.join(os.path.join(os.path.join(
+            fs, 'etc'), 'network'), 'interfaces')
+    yield execute('sudo tee %s' % netfile, net)
 

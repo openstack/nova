@@ -159,7 +159,7 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         self.host = '127.0.0.1'
 
-        self.app = api.APIServerApplication(self.users, {'Cloud': self.cloud})
+        self.app = api.APIServerApplication({'Cloud': self.cloud})
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',

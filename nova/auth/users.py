@@ -27,6 +27,7 @@ import datetime
 import logging
 import os
 import shutil
+import signer
 import string
 from string import Template
 import tempfile
@@ -39,15 +40,14 @@ except Exception, e:
     import fakeldap as ldap
 
 import fakeldap
-from nova import datastore
 
 # TODO(termie): clean up these imports
-import signer
+from nova import datastore
 from nova import exception
 from nova import flags
 from nova import crypto
 from nova import utils
-from nova.compute import model
+
 
 from nova import objectstore # for flags
 
@@ -101,10 +101,17 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
-flags.DEFINE_integer('vpn_start_port', 8000,
+
+flags.DEFINE_integer('vpn_start_port', 1000,
                     'Start port for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_end_port', 9999,
+flags.DEFINE_integer('vpn_end_port', 2000,
                     'End port for the cloudpipe VPN servers')
+
+flags.DEFINE_string('credential_cert_subject',
+                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
+                    'OU=NovaDev/CN=%s-%s',
+                    'Subject for certificate for users')
+
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
@@ -306,7 +313,7 @@ class NoMorePorts(exception.Error):
     pass
 
 
-class Vpn(model.BasicModel):
+class Vpn(datastore.BasicModel):
     def __init__(self, project_id):
         self.project_id = project_id
         super(Vpn, self).__init__()
@@ -317,27 +324,25 @@ class Vpn(model.BasicModel):
 
     @classmethod
     def create(cls, project_id):
-        # TODO (vish): get list of vpn ips from redis
-        for ip in [FLAGS.vpn_ip]:
-            try:
-                port = cls.find_free_port_for_ip(ip)
-                vpn = cls(project_id)
-                # save ip for project
-                vpn['project'] = project_id
-                vpn['ip'] = ip
-                vpn['port'] = port
-                vpn.save()
-                return vpn
-            except NoMorePorts:
-                pass
-        raise NoMorePorts()
+        # TODO(vish): get list of vpn ips from redis
+        port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
+        vpn = cls(project_id)
+        # save ip for project
+        vpn['project'] = project_id
+        vpn['ip'] = FLAGS.vpn_ip
+        vpn['port'] = port
+        vpn.save()
+        return vpn
 
     @classmethod
     def find_free_port_for_ip(cls, ip):
-        # TODO(vish): the redis access should be refactored into a
-        #             base class
+        # TODO(vish): these redis commands should be generalized and
+        #             placed into a base class. Conceptually, it is
+        #             similar to an association, but we are just
+        #             storing a set of values instead of keys that
+        #             should be turned into objects.
         redis = datastore.Redis.instance()
-        key = 'ip:%s:ports'
+        key = 'ip:%s:ports' % ip
         # TODO(vish): these ports should be allocated through an admin
         #             command instead of a flag
         if (not redis.exists(key) and
@@ -345,14 +350,14 @@ class Vpn(model.BasicModel):
             for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
                 redis.sadd(key, i)
 
-        port = datastore.Redis.instance().spop(key)
+        port = redis.spop(key)
         if not port:
             raise NoMorePorts()
         return port
 
     @classmethod
     def num_ports_for_ip(cls, ip):
-        return datastore.Redis.instance().scard('ip:%s:ports')
+        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
 
     @property
     def ip(self):
@@ -466,7 +471,9 @@ class UserManager(object):
             #             create and destroy a project
             Vpn.create(name)
             return conn.create_project(name,
-                    User.safe_id(manager_user), description, member_users)
+                                       User.safe_id(manager_user),
+                                       description,
+                                       member_users)
 
 
     def get_projects(self):
@@ -584,7 +591,7 @@ class UserManager(object):
 
     def __cert_subject(self, uid):
         # FIXME(ja) - this should be pulled from a global configuration
-        return "/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=%s-%s" % (uid, str(datetime.datetime.utcnow().isoformat()))
+        return FLAGS.credential_cert_subject % (uid, utils.isotime())
 
 
 class LDAPWrapper(object):
@@ -773,7 +780,7 @@ class LDAPWrapper(object):
 
     def __create_group(self, group_dn, name, uid,
                        description, member_uids = None):
-        if self.group_exists(name):
+        if self.group_exists(group_dn):
             raise exception.Duplicate("Group can't be created because "
                                       "group %s already exists" % name)
         members = []

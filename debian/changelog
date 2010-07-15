@@ -1,3 +1,54 @@
+nova (0.2.3-1) UNRELEASED; urgency=low
+
+  * Relax the Twisted dependency to python-twisted-core (rather than the
+    full stack).
+  * Move nova related configuration files into /etc/nova/.
+  * Add a dependency on nginx from nova-objectsstore and install a
+    suitable configuration file.
+  * Ship the CA directory in nova-common.
+  * Add a default flag file for nova-manage to help it find the CA.
+  * If set, pass KernelId and RamdiskId from RunInstances call to the
+    target compute node.
+  * Added --network_path setting to nova-compute's flagfile.
+  * Move templates from python directories to /usr/share/nova.
+  * Add debian/nova-common.dirs to create
+    var/lib/nova/{buckets,CA,images,instances,keys,networks}
+  * Don't pass --daemonize=1 to nova-compute. It's already daemonising
+    by default.
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 14 Jul 2010 12:00:00 -0700
+
+nova (0.2.2-10) UNRELEASED; urgency=low
+
+  * Fixed extra space in vblade-persist
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 13 Jul 2010 19:00:00 -0700
+
+nova (0.2.2-9) UNRELEASED; urgency=low
+
+  * Fixed invalid dn bug in ldap for adding roles
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 12 Jul 2010 15:20:00 -0700
+
+nova (0.2.2-8) UNRELEASED; urgency=low
+
+  * Added a missing comma
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Mon, 08 Jul 2010 10:05:00 -0700
+
+nova (0.2.2-7) UNRELEASED; urgency=low
+
+  * Missing files from twisted patch
+  * License upedates
+  * Reformatting/cleanup
+  * Users/ldap bugfixes
+  * Merge fixes
+  * Documentation updates
+  * Vpn key creation fix
+  * Multiple shelves for volumes
+
+ -- Vishvananda Ishaya <vishvananda@gmail.com>  Wed, 07 Jul 2010 18:45:00 -0700
+
 nova (0.2.2-6) UNRELEASED; urgency=low
 
   * Fix to make Key Injection work again

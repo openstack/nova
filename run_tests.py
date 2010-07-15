@@ -46,13 +46,13 @@ import sys
 from nova import vendor
 from twisted.scripts import trial as trial_script
 
+from nova import datastore
 from nova import flags
 from nova import twistd
 
 from nova.tests.access_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
-from nova.tests.keeper_unittest import *
 from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
 from nova.tests.node_unittest import *
@@ -60,7 +60,6 @@ from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
 from nova.tests.storage_unittest import *
 from nova.tests.users_unittest import *
-from nova.tests.datastore_unittest import *
 from nova.tests.validator_unittest import *
 
 
