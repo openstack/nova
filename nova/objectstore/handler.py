@@ -286,8 +286,8 @@ class ImageHandler(BaseRequestHandler):
         if not bucket_object.is_authorized(self.context):
             raise web.HTTPError(403)
 
-        p = multiprocessing.Process(target=image.Image.create,args=
-            (image_id, image_location, self.context))
+        p = multiprocessing.Process(target=image.Image.register_aws_image,
+                args=(image_id, image_location, self.context))
         p.start()
         self.finish()
 

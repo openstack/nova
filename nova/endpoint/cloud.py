@@ -514,6 +514,18 @@ class CloudController(object):
         # vpn image is private so it doesn't show up on lists
         if kwargs['image_id'] != FLAGS.vpn_image_id:
             image = self._get_image(context, kwargs['image_id'])
+
+        # FIXME(ja): if image is cloudpipe, this breaks
+
+        # get defaults from imagestore
+        image_id = image['imageId']
+        kernel_id = image.get('kernelId', None)
+        ramdisk_id = image.get('ramdiskId', None)
+
+        # API parameters overrides of defaults
+        kernel_id = kwargs.get('kernel_id', kernel_id)
+        ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
+
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -534,12 +546,9 @@ class CloudController(object):
             bridge_name = net['bridge_name']
         for num in range(int(kwargs['max_count'])):
             inst = self.instdir.new()
-            # TODO(ja): add ari, aki
-            inst['image_id'] = kwargs['image_id']
-            if 'kernel_id' in kwargs:
-                inst['kernel_id'] = kwargs['kernel_id']
-            if 'ramdisk_id' in kwargs:
-                inst['ramdisk_id'] = kwargs['ramdisk_id']
+            inst['image_id'] = image_id
+            inst['kernel_id'] = kernel_id
+            inst['ramdisk_id'] = ramdisk_id
             inst['user_data'] = kwargs.get('user_data', '')
             inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id
