@@ -79,8 +79,8 @@ def deregister(context, image_id):
 
 def conn(context):
     return boto.s3.connection.S3Connection (
-        aws_access_key_id='%s:%s' % (context.user.access, context.project.name),
-        aws_secret_access_key=context.user.secret,
+        aws_access_key_id=str('%s:%s' % (context.user.access, context.project.name)),
+        aws_secret_access_key=str(context.user.secret),
         is_secure=False,
         calling_format=boto.s3.connection.OrdinaryCallingFormat(),
         port=FLAGS.s3_port,
