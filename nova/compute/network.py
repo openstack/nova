@@ -253,7 +253,7 @@ class BaseNetwork(datastore.BasicModel):
         raise compute_exception.NoMoreAddresses("Project %s with network %s" %
                                                 (project_id, str(self.network)))
 
-    def lease_ip(self, ip_str):    
+    def lease_ip(self, ip_str):
         logging.debug("Leasing allocated IP %s" % (ip_str))
 
     def release_ip(self, ip_str):
@@ -563,10 +563,10 @@ def allocate_ip(user_id, project_id, mac):
 
 def deallocate_ip(address):
     return get_network_by_address(address).deallocate_ip(address)
-    
+
 def release_ip(address):
     return get_network_by_address(address).release_ip(address)
-    
+
 def lease_ip(address):
     return get_network_by_address(address).lease_ip(address)
 

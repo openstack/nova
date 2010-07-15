@@ -18,19 +18,18 @@
 
 import os
 import logging
-import unittest
 
 from nova import vendor
 import IPy
 
 from nova import flags
 from nova import test
-from nova import exception
-from nova.compute.exception import NoMoreAddresses
-from nova.compute import network
-from nova.auth import users
 from nova import utils
+from nova.auth import users
+from nova.compute import network
+from nova.compute.exception import NoMoreAddresses
 
+FLAGS = flags.FLAGS
 
 class NetworkTestCase(test.TrialTestCase):
     def setUp(self):
@@ -182,14 +181,20 @@ def binpath(script):
 
 class FakeDNSMasq(object):
     def issue_ip(self, mac, ip, hostname, interface):
-        cmd = "%s add %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
-        env = {'DNSMASQ_INTERFACE': interface, 'TESTING' : '1'}
+        cmd = "%s add %s %s %s" % (binpath('nova-dhcpbridge'),
+                                   mac, ip, hostname)
+        env = {'DNSMASQ_INTERFACE': interface,
+               'TESTING' : '1',
+               'FLAGFILE' : FLAGS.dhcpbridge_flagfile}
         (out, err) = utils.execute(cmd, addl_env=env)
         logging.debug("ISSUE_IP: %s, %s " % (out, err))
 
     def release_ip(self, mac, ip, hostname, interface):
-        cmd = "%s del %s %s %s" % (binpath('dhcpleasor.py'), mac, ip, hostname)
-        env = {'DNSMASQ_INTERFACE': interface, 'TESTING' : '1'}
+        cmd = "%s del %s %s %s" % (binpath('nova-dhcpbridge'),
+                                   mac, ip, hostname)
+        env = {'DNSMASQ_INTERFACE': interface,
+               'TESTING' : '1',
+               'FLAGFILE' : FLAGS.dhcpbridge_flagfile}
         (out, err) = utils.execute(cmd, addl_env=env)
         logging.debug("RELEASE_IP: %s, %s " % (out, err))
 

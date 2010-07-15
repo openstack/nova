@@ -27,12 +27,16 @@ import subprocess
 from nova import flags
 FLAGS=flags.FLAGS
 
-def execute(cmd):
+flags.DEFINE_string('dhcpbridge_flagfile',
+                    '/etc/nova-dhcpbridge.conf',
+                    'location of flagfile for dhcpbridge')
+
+def execute(cmd, addl_env=None):
     if FLAGS.fake_network:
         logging.debug("FAKE NET: %s" % cmd)
         return "fake", 0
     else:
-        return nova.utils.execute(cmd)
+        return nova.utils.execute(cmd, addl_env=addl_env)
 
 def runthis(desc, cmd):
     if FLAGS.fake_network:
@@ -60,7 +64,7 @@ def remove_rule(cmd):
 
 def bind_public_ip(ip, interface):
     runthis("Binding IP to interface: %s", "sudo ip addr add %s dev %s" % (ip, interface))
-    
+
 def unbind_public_ip(ip, interface):
     runthis("Binding IP to interface: %s", "sudo ip addr del %s dev %s" % (ip, interface))
 
@@ -98,7 +102,7 @@ def dnsmasq_cmd(net):
         ' --except-interface=lo',
         ' --dhcp-range=%s,static,600s' % (net.dhcp_range_start),
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-script=%s' % bin_file('dhcpleasor.py'),
+        ' --dhcp-script=%s' % bin_file('nova-dhcpbridge'),
         ' --leasefile-ro']
     return ''.join(cmd)
 
@@ -138,7 +142,9 @@ def start_dnsmasq(network):
     if os.path.exists(lease_file):
         os.unlink(lease_file)
 
-    Popen(dnsmasq_cmd(network).split(" "))
+    # FLAGFILE in env
+    env = {'FLAGFILE' : FLAGS.dhcpbridge_flagfile}
+    execute(dnsmasq_cmd(network), addl_env=env)
 
 def stop_dnsmasq(network):
     """ stops the dnsmasq instance for a given network """
