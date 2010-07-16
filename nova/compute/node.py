@@ -223,16 +223,20 @@ class Node(object, service.Service):
                       volume_id = None, mountpoint = None):
         volume = storage.get_volume(volume_id)
         yield self._init_aoe()
-        yield utils.runthis("Attached Volume: %s",
-                "sudo virsh attach-disk %s /dev/etherd/%s %s"
-                % (instance_id, volume['aoe_device'], mountpoint.split("/")[-1]))
+        yield process.SharedPool().simple_execute(
+                "sudo virsh attach-disk %s /dev/etherd/%s %s" %
+                (instance_id,
+                 volume['aoe_device'],
+                 mountpoint.rpartition('/dev/')[2]))
         volume.finish_attach()
         defer.returnValue(True)
 
+    @defer.inlineCallbacks
     def _init_aoe(self):
-        utils.runthis("Doin an AoE discover, returns %s", "sudo aoe-discover")
-        utils.runthis("Doin an AoE stat, returns %s", "sudo aoe-stat")
+        yield process.SharedPool().simple_execute("sudo aoe-discover")
+        yield process.SharedPool().simple_execute("sudo aoe-stat")
 
+    @defer.inlineCallbacks
     @exception.wrap_exception
     def detach_volume(self, instance_id, volume_id):
         """ detach a volume from an instance """
@@ -240,10 +244,10 @@ class Node(object, service.Service):
         # name without the leading /dev/
         volume = storage.get_volume(volume_id)
         target = volume['mountpoint'].rpartition('/dev/')[2]
-        utils.runthis("Detached Volume: %s", "sudo virsh detach-disk %s %s "
-                % (instance_id, target))
+        yield process.SharedPool().simple_execute(
+                "sudo virsh detach-disk %s %s " % (instance_id, target))
         volume.finish_detach()
-        return defer.succeed(True)
+        defer.returnValue(True)
 
 
 class Group(object):
