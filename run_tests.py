@@ -39,6 +39,7 @@ Due to our use of multiprocessing it we frequently get some ignorable
 
 """
 import __main__
+import os
 import sys
 
 from nova import vendor
@@ -66,6 +67,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool('flush_db', True,
                   'Flush the database before running fake tests')
 
+flags.DEFINE_string('tests_stderr', 'run_tests.err.log',
+                    'Path to where to pipe STDERR during test runs. Default = "run_tests.err.log"')
+
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)
     config = OptionsClass()
@@ -84,6 +88,11 @@ if __name__ == '__main__':
             r.flushdb()
     else:
         from nova.tests.real_flags import *
+
+    # Establish redirect for STDERR
+    sys.stderr.flush()
+    err = open(FLAGS.tests_stderr, 'w+', 0)
+    os.dup2(err.fileno(), sys.stderr.fileno())
 
     if len(argv) == 1 and len(config['tests']) == 0:
         # If no tests were specified run the ones imported in this file
