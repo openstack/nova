@@ -21,10 +21,8 @@
 """
 
 import logging
-from wsgiref import simple_server
-
-from nova import vendor
 from tornado import ioloop
+from wsgiref import simple_server
 
 from nova import flags
 from nova import rpc

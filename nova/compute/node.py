@@ -30,11 +30,10 @@ import logging
 import os
 import shutil
 import sys
-
-from nova import vendor
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
+
 
 try:
     import libvirt
@@ -49,8 +48,9 @@ from nova import utils
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
-from nova.volume import storage
 from nova.objectstore import image # for image_path flag
+from nova.volume import storage
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',

@@ -19,11 +19,12 @@
 import unittest
 import logging
 
-from nova.auth.users import UserManager
-from nova.auth import rbac
 from nova import exception
 from nova import flags
 from nova import test
+from nova.auth.users import UserManager
+from nova.auth import rbac
+
 
 FLAGS = flags.FLAGS
 class Context(object):

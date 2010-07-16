@@ -42,8 +42,6 @@ True
 
 import logging
 import time
-
-from nova import vendor
 import redis
 
 from nova import datastore

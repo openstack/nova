@@ -20,16 +20,14 @@
 Base functionality for nova daemons - gradually being replaced with twistd.py.
 """
 
+import daemon
+from daemon import pidlockfile
 import logging
 import logging.handlers
 import os
 import signal
 import sys
 import time
-
-from nova import vendor
-import daemon
-from daemon import pidlockfile
 
 from nova import flags
 

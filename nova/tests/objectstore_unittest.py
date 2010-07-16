@@ -23,15 +23,13 @@ import os
 import shutil
 import tempfile
 
-from nova import vendor
-
 from nova import flags
 from nova import objectstore
 from nova import test
 from nova.auth import users
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 
 oss_tempdir = tempfile.mkdtemp(prefix='test_oss-')
 

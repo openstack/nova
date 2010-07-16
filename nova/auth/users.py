@@ -26,7 +26,6 @@ import os
 import shutil
 import signer
 import string
-from string import Template
 import tempfile
 import uuid
 import zipfile
@@ -44,8 +43,6 @@ from nova import exception
 from nova import flags
 from nova import crypto
 from nova import utils
-
-
 from nova import objectstore # for flags
 
 FLAGS = flags.FLAGS

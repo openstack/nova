@@ -22,6 +22,7 @@ Exceptions for Compute Node errors, mostly network addressing.
 
 from nova.exception import Error
 
+
 class NoMoreAddresses(Error):
     pass
 

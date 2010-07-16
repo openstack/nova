@@ -20,10 +20,11 @@
 Properties of an object stored within a bucket.
 """
 
+import os
+
+import nova.crypto
 from nova.exception import NotFound, NotAuthorized
 
-import os
-import nova.crypto
 
 class Object(object):
     def __init__(self, bucket, key):
