@@ -172,10 +172,10 @@ Further Challenges
 
 
 
-The :mod:`access` Module
+The :mod:`rbac` Module
 --------------------------
 
-.. automodule:: nova.auth.access
+.. automodule:: nova.auth.rbac
     :members:
     :undoc-members:
     :show-inheritance:

@@ -44,6 +44,8 @@ Contents:
    fakes
    binaries
    todo
+   modules
+   packages
 
 Indices and tables
 ==================
