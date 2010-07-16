@@ -212,3 +212,6 @@ class SharedPool(ProcessPool):
             cls._instance = super(SharedPool, cls).__new__(
                     cls, *args, **kwargs)
         return cls._instance
+
+def simple_execute(cmd, **kwargs):
+    return SharedPool().simple_execute(cmd, **kwargs)
