@@ -87,7 +87,6 @@ class Node(object, service.Service):
         super(Node, self).__init__()
         self._instances = {}
         self._conn = self._get_connection()
-        self._pool = process.ProcessPool()
         self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
 
@@ -115,7 +114,7 @@ class Node(object, service.Service):
         # inst = self.instdir.get(instance_id)
         # return inst
         if self.instdir.exists(instance_id):
-            return Instance.fromName(self._conn, self._pool, instance_id)
+            return Instance.fromName(self._conn, instance_id)
         return None
 
     @exception.wrap_exception
@@ -126,7 +125,7 @@ class Node(object, service.Service):
                           for x in self._conn.listDomainsID()]
         for name in instance_names:
             try:
-                new_inst = Instance.fromName(self._conn, self._pool, name)
+                new_inst = Instance.fromName(self._conn, name)
                 new_inst.update_state()
             except:
                 pass
@@ -136,7 +135,8 @@ class Node(object, service.Service):
     def describe_instances(self):
         retval = {}
         for inst in self.instdir.by_node(FLAGS.node_name):
-            retval[inst['instance_id']] = (Instance.fromName(self._conn, self._pool, inst['instance_id']))
+            retval[inst['instance_id']] = (
+                    Instance.fromName(self._conn, inst['instance_id']))
         return retval
 
     @defer.inlineCallbacks
@@ -169,8 +169,7 @@ class Node(object, service.Service):
         inst['node_name'] = FLAGS.node_name
         inst.save()
         # TODO(vish) check to make sure the availability zone matches
-        new_inst = Instance(self._conn, name=instance_id,
-                            pool=self._pool, data=inst)
+        new_inst = Instance(self._conn, name=instance_id, data=inst)
         logging.info("Instances current state is %s", new_inst.state)
         if new_inst.is_running():
             raise exception.Error("Instance is already running")
@@ -267,11 +266,8 @@ class Instance(object):
     SHUTOFF = 0x05
     CRASHED = 0x06
 
-    def __init__(self, conn, pool, name, data):
+    def __init__(self, conn, name, data):
         """ spawn an instance with a given name """
-        # TODO(termie): pool should probably be a singleton instead of being passed
-        #               here and in the classmethods
-        self._pool = pool
         self._conn = conn
         # TODO(vish): this can be removed after data has been updated
         # data doesn't seem to have a working iterator so in doesn't work
@@ -324,11 +320,11 @@ class Instance(object):
         return libvirt_xml
 
     @classmethod
-    def fromName(cls, conn, pool, name):
+    def fromName(cls, conn, name):
         """ use the saved data for reloading the instance """
         instdir = model.InstanceDirectory()
         instance = instdir.get(name)
-        return cls(conn=conn, pool=pool, name=name, data=instance)
+        return cls(conn=conn, name=name, data=instance)
 
     def set_state(self, state_code, state_description=None):
         self.datamodel['state'] = state_code
@@ -450,12 +446,13 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
-        d = self._pool.simpleExecute('curl --silent %s -o %s' % (url, path))
+        d = process.SharedPool().simple_execute(
+                'curl --silent %s -o %s' % (url, path))
         return d
 
     def _fetch_local_image(self, image, path):
         source = _image_path('%s/image' % image)
-        d = self._pool.simpleExecute('cp %s %s' % (source, path))
+        d = process.SharedPool().simple_execute('cp %s %s' % (source, path))
         return d
 
     @defer.inlineCallbacks
@@ -465,8 +462,10 @@ class Instance(object):
         basepath = self.basepath
 
         # ensure directories exist and are writable
-        yield self._pool.simpleExecute('mkdir -p %s' % basepath())
-        yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
+        yield process.SharedPool().simple_execute(
+                'mkdir -p %s' % basepath())
+        yield process.SharedPool().simple_execute(
+                'chmod 0777 %s' % basepath())
 
 
         # TODO(termie): these are blocking calls, it would be great
@@ -492,9 +491,10 @@ class Instance(object):
         if not os.path.exists(basepath('ramdisk')):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
-        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
-                                                                   input=input,
-                                                                   error_ok=1)
+        execute = lambda cmd, input=None: \
+                  process.SharedPool().simple_execute(cmd=cmd,
+                                                      input=input,
+                                                      error_ok=1)
 
         key = data['key_data']
         net = None
@@ -511,7 +511,8 @@ class Instance(object):
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
-            yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
+            yield process.SharedPool().simple_execute(
+                    'rm -f %s' % basepath('disk'))
 
         bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
                  * 1024 * 1024 * 1024)
