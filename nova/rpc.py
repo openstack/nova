@@ -112,6 +112,7 @@ class TopicConsumer(Consumer):
         self.queue = topic
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.durable = False
         super(TopicConsumer, self).__init__(connection=connection)
 
 
@@ -238,7 +239,8 @@ def send_message(topic, message, wait=True):
                                       exchange=msg_id,
                                       auto_delete=True,
                                       exchange_type="direct",
-                                      routing_key=msg_id)
+                                      routing_key=msg_id,
+                                      durable=False)
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
