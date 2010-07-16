@@ -28,8 +28,8 @@ import os
 import shutil
 import socket
 import tempfile
-import time
-from tornado import ioloop
+
+from twisted.application import service
 from twisted.internet import defer
 
 from nova import datastore
@@ -38,6 +38,7 @@ from nova import flags
 from nova import process
 from nova import utils
 from nova import validate
+from nova.compute import model
 
 
 FLAGS = flags.FLAGS
@@ -81,7 +82,7 @@ def get_volume(volume_id):
         return volume_class(volume_id=volume_id)
     raise exception.Error("Volume does not exist")
 
-class BlockStore(object):
+class BlockStore(object, service.Service):
     """
     There is one BlockStore running on each volume node.
     However, each BlockStore can report on the state of
@@ -103,9 +104,21 @@ class BlockStore(object):
             except Exception, err:
                 pass
 
-    def report_state(self):
-        #TODO: aggregate the state of the system
-        pass
+    @defer.inlineCallbacks
+    def report_state(self, nodename, daemon):
+        # TODO(termie): make this pattern be more elegant. -todd
+        try:
+            record = model.Daemon(nodename, daemon)
+            record.heartbeat()
+            if getattr(self, "model_disconnected", False):
+                self.model_disconnected = False
+                logging.error("Recovered model server connection!")
+
+        except model.ConnectionError, ex:
+            if not getattr(self, "model_disconnected", False):
+                self.model_disconnected = True
+                logging.exception("model server went away")
+        yield
 
     @validate.rangetest(size=(0, 1000))
     def create_volume(self, size, user_id, project_id):

@@ -33,9 +33,6 @@ NOVA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'nova')
 if os.path.exists(NOVA_PATH):
     sys.path.insert(0, os.path.dirname(NOVA_PATH))
 
-
-from carrot import connection
-from carrot import messaging
 from twisted.internet import task
 from twisted.application import service
 
@@ -50,8 +47,8 @@ FLAGS = flags.FLAGS
 #               context when the twistd.serve() call is made below so any
 #               flags we define here will have to be conditionally defined,
 #               flags defined by imported modules are safe.
-if 'node_report_state_interval' not in FLAGS:
-    flags.DEFINE_integer('node_report_state_interval', 10,
+if 'compute_report_state_interval' not in FLAGS:
+    flags.DEFINE_integer('compute_report_state_interval', 10,
                          'seconds between nodes reporting state to cloud',
                          lower_bound=1)
 logging.getLogger().setLevel(logging.DEBUG)
@@ -75,7 +72,7 @@ def main():
 
     bin_name = os.path.basename(__file__)
     pulse = task.LoopingCall(n.report_state, FLAGS.node_name, bin_name)
-    pulse.start(interval=FLAGS.node_report_state_interval, now=False)
+    pulse.start(interval=FLAGS.compute_report_state_interval, now=False)
 
     injected = consumer_all.attach_to_twisted()
     injected = consumer_node.attach_to_twisted()
