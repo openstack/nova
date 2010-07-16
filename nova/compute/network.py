@@ -164,6 +164,7 @@ class Vlan(datastore.BasicModel):
 
 class BaseNetwork(datastore.BasicModel):
     override_type = 'network'
+    NUM_STATIC_IPS = 3 # Network, Gateway, and CloudPipe
 
     @property
     def identifier(self):
@@ -239,10 +240,14 @@ class BaseNetwork(datastore.BasicModel):
     def available(self):
         # the .2 address is always CloudPipe
         # and the top <n> are for vpn clients
-        for idx in range(3, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
+        for idx in range(self.num_static_ips, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
                 yield str(address)
+
+    @property
+    def num_static_ips(self):
+        return BaseNetwork.NUM_STATIC_IPS
 
     def allocate_ip(self, user_id, project_id, mac):
         for address in self.available:
