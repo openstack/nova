@@ -462,11 +462,11 @@ class UserManager(object):
                        description=None, member_users=None):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
+        # NOTE(vish): try to associate a vpn ip and port first because
+        #             if it throws an exception, we save having to
+        #             create and destroy a project
+        Vpn.create(name)
         with LDAPWrapper() as conn:
-            # NOTE(vish): try to associate a vpn ip and port first because
-            #             if it throws an exception, we save having to
-            #             create and destroy a project
-            Vpn.create(name)
             return conn.create_project(name,
                                        User.safe_id(manager_user),
                                        description,
@@ -527,15 +527,16 @@ class UserManager(object):
         with LDAPWrapper() as conn:
             user = User.safe_id(user)
             result = conn.create_user(user, access, secret, admin)
-            if create_project:
-                # NOTE(vish): if the project creation fails, we delete
-                #             the user and return an exception
-                try:
-                    conn.create_project(user, user, user)
-                except Exception:
+        if create_project:
+            # NOTE(vish): if the project creation fails, we delete
+            #             the user and return an exception
+            try:
+                conn.create_project(user, user, user)
+            except Exception:
+                with LDAPWrapper() as conn:
                     conn.delete_user(user)
-                    raise
-            return result
+                raise
+        return result
 
     def delete_user(self, user, delete_project=True):
         with LDAPWrapper() as conn:

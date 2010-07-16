@@ -130,8 +130,9 @@ class Vlan(datastore.BasicModel):
     @datastore.absorb_connection_error
     def all(cls):
         set_name = cls._redis_set_name(cls.__name__)
-        for project,vlan in datastore.Redis.instance().hgetall(set_name):
-            yield cls(project, vlan)
+        elements = datastore.Redis.instance().hgetall(set_name)
+        for project in elements:
+            yield cls(project, elements[project])
 
     @datastore.absorb_connection_error
     def save(self):
@@ -291,6 +292,7 @@ class BridgedNetwork(BaseNetwork):
             netmask
     """
 
+    bridge_gets_ip = False
     override_type = 'network'
 
     @classmethod
@@ -531,6 +533,10 @@ def get_vlan_for_project(project_id):
             else:
                 return Vlan.create(project_id, vnum)
     raise compute_exception.AddressNotAllocated("Out of VLANs")
+
+def get_network_by_interface(iface, security_group='default'):
+    vlan = iface.rpartition("br")[2]
+    return get_project_network(Vlan.dict_by_vlan().get(vlan), security_group)
 
 def get_network_by_address(address):
     logging.debug("Get Network By Address: %s" % address)
