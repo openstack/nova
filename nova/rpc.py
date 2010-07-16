@@ -197,7 +197,10 @@ def call(topic, msg):
     conn = Connection.instance()
     d = defer.Deferred()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
-    consumer.register_callback(lambda data, message: d.callback(data))
+    def deferred_receive(data, message):
+        message.ack()
+        d.callback(data)
+    consumer.register_callback(deferred_receive)
     injected = consumer.attach_to_tornado()
 
     # clean up after the injected listened and return x
