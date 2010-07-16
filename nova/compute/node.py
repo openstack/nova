@@ -446,13 +446,13 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
-        d = process.SharedPool().simple_execute(
+        d = process.simple_execute(
                 'curl --silent %s -o %s' % (url, path))
         return d
 
     def _fetch_local_image(self, image, path):
         source = _image_path('%s/image' % image)
-        d = process.SharedPool().simple_execute('cp %s %s' % (source, path))
+        d = process.simple_execute('cp %s %s' % (source, path))
         return d
 
     @defer.inlineCallbacks
@@ -462,9 +462,9 @@ class Instance(object):
         basepath = self.basepath
 
         # ensure directories exist and are writable
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 'mkdir -p %s' % basepath())
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 'chmod 0777 %s' % basepath())
 
 
@@ -492,7 +492,7 @@ class Instance(object):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
         execute = lambda cmd, input=None: \
-                  process.SharedPool().simple_execute(cmd=cmd,
+                  process.simple_execute(cmd=cmd,
                                                       input=input,
                                                       error_ok=1)
 
@@ -511,7 +511,7 @@ class Instance(object):
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
-            yield process.SharedPool().simple_execute(
+            yield process.simple_execute(
                     'rm -f %s' % basepath('disk'))
 
         bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
