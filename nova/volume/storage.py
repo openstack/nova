@@ -35,6 +35,7 @@ from twisted.internet import defer
 from nova import datastore
 from nova import exception
 from nova import flags
+from nova import process
 from nova import utils
 from nova import validate
 
@@ -143,17 +144,24 @@ class BlockStore(object):
         datastore.Redis.instance().srem('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         return True
 
+    @defer.inlineCallbacks
     def _restart_exports(self):
         if FLAGS.fake_storage:
             return
-        utils.runthis("Setting exports to auto: %s", "sudo vblade-persist auto all")
-        utils.runthis("Starting all exports: %s", "sudo vblade-persist start all")
+        yield process.SharedPool().simple_execute(
+                "sudo vblade-persist auto all")
+        yield process.SharedPool().simple_execute(
+                "sudo vblade-persist start all")
 
+    @defer.inlineCallbacks
     def _init_volume_group(self):
         if FLAGS.fake_storage:
             return
-        utils.runthis("PVCreate returned: %s", "sudo pvcreate %s" % (FLAGS.storage_dev))
-        utils.runthis("VGCreate returned: %s", "sudo vgcreate %s %s" % (FLAGS.volume_group, FLAGS.storage_dev))
+        yield process.SharedPool().simple_execute(
+                "sudo pvcreate %s" % (FLAGS.storage_dev))
+        yield process.SharedPool().simple_execute(
+                "sudo vgcreate %s %s" % (FLAGS.volume_group,
+                                         FLAGS.storage_dev))
 
 class Volume(datastore.BasicModel):
 
@@ -227,15 +235,22 @@ class Volume(datastore.BasicModel):
         self._delete_lv()
         super(Volume, self).destroy()
 
+    @defer.inlineCallbacks
     def create_lv(self):
         if str(self['size']) == '0':
             sizestr = '100M'
         else:
             sizestr = '%sG' % self['size']
-        utils.runthis("Creating LV: %s", "sudo lvcreate -L %s -n %s %s" % (sizestr, self['volume_id'], FLAGS.volume_group))
+        yield process.SharedPool().simple_execute(
+                "sudo lvcreate -L %s -n %s %s" % (sizestr,
+                                                  self['volume_id'],
+                                                  FLAGS.volume_group))
 
+    @defer.inlineCallbacks
     def _delete_lv(self):
-        utils.runthis("Removing LV: %s", "sudo lvremove -f %s/%s" % (FLAGS.volume_group, self['volume_id']))
+        yield process.SharedPool().simple_execute(
+                "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
+                                            self['volume_id']))
 
     def _setup_export(self):
         (shelf_id, blade_id) = get_next_aoe_numbers()
@@ -245,8 +260,9 @@ class Volume(datastore.BasicModel):
         self.save()
         self._exec_export()
 
+    @defer.inlineCallbacks
     def _exec_export(self):
-        utils.runthis("Creating AOE export: %s",
+        yield process.SharedPool().simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (self['shelf_id'],
                  self['blade_id'],
@@ -254,9 +270,14 @@ class Volume(datastore.BasicModel):
                  FLAGS.volume_group,
                  self['volume_id']))
 
+    @defer.inlineCallbacks
     def _remove_export(self):
-        utils.runthis("Stopped AOE export: %s", "sudo vblade-persist stop %s %s" % (self['shelf_id'], self['blade_id']))
-        utils.runthis("Destroyed AOE export: %s", "sudo vblade-persist destroy %s %s" % (self['shelf_id'], self['blade_id']))
+        yield process.SharedPool().simple_execute(
+                "sudo vblade-persist stop %s %s" % (self['shelf_id'],
+                                                    self['blade_id']))
+        yield process.SharedPool().simple_execute(
+                "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
+                                                       self['blade_id']))
 
 
 class FakeVolume(Volume):
