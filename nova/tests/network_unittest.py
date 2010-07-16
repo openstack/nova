@@ -159,8 +159,8 @@ class NetworkTestCase(test.TrialTestCase):
             
             There are FLAGS.cnt_vpn_clients addresses reserved for VPN (NUM_RESERVED_VPN_IPS)
 
-            And there are NUM_CONST_IPS that are always reserved by Nova for the necessary
-            services (API, CloudPipe, etc)
+            And there are NUM_STATIC_IPS that are always reserved by Nova for the necessary
+            services (gateway, CloudPipe, etc)
 
         So we should get 32 - (NUM_STATIC_IPS + 
                                NUM_PREALLOCATED_IPS + 
