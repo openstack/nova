@@ -21,16 +21,15 @@ Proxy AMI-related calls from the cloud controller, to the running
 objectstore daemon.
 """
 
+import boto
+import boto.s3
 import json
 import random
 import urllib
 
-from nova import vendor
-import boto
-import boto.s3
-
 from nova import flags
 from nova import utils
+
 
 FLAGS = flags.FLAGS
 

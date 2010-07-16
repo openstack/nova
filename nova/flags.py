@@ -23,7 +23,7 @@ where they're used.
 
 import socket
 
-from nova import vendor
+
 from gflags import *
 
 # This keeps pylint from barfing on the imports

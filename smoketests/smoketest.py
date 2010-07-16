@@ -25,7 +25,7 @@ import time
 import unittest
 import zipfile
 
-from nova import vendor
+
 import paramiko
 
 from smoketests import flags

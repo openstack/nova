@@ -20,8 +20,6 @@ Nova User API client library.
 """
 
 import base64
-
-from nova import vendor
 import boto
 from boto.ec2.regioninfo import RegionInfo
 

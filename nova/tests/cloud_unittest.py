@@ -19,12 +19,10 @@
 import logging
 import StringIO
 import time
-import unittest
-from xml.etree import ElementTree
-
-from nova import vendor
 from tornado import ioloop
 from twisted.internet import defer
+import unittest
+from xml.etree import ElementTree
 
 from nova import flags
 from nova import rpc

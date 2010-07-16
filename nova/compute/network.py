@@ -20,22 +20,19 @@
 Classes for network control, including VLANs, DHCP, and IP allocation.
 """
 
+import IPy
 import logging
 import os
 import time
 
-# TODO(termie): clean up these imports
-from nova import vendor
-import IPy
-
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import utils
-from nova import exception
-from nova.compute import exception as compute_exception
 from nova.auth import users
+from nova.compute import exception as compute_exception
+from nova.compute import linux_net
 
-import linux_net
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('networks_path', utils.abspath('../networks'),

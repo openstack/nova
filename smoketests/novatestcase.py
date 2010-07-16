@@ -22,7 +22,7 @@ import random
 import sys
 import unittest
 
-from nova import vendor
+
 import paramiko
 
 from nova import adminclient

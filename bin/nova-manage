@@ -23,6 +23,7 @@
 """
 
 import sys
+import time
 
 from nova import flags
 from nova import utils
@@ -31,7 +32,7 @@ from nova.compute import model
 from nova.compute import network
 from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
-import time
+
 
 FLAGS = flags.FLAGS
 

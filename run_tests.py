@@ -41,7 +41,7 @@ Due to our use of multiprocessing it we frequently get some ignorable
 import __main__
 import sys
 
-from nova import vendor
+
 from twisted.scripts import trial as trial_script
 
 from nova import datastore
