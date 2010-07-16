@@ -223,7 +223,7 @@ class Node(object, service.Service):
                       volume_id = None, mountpoint = None):
         volume = storage.get_volume(volume_id)
         yield self._init_aoe()
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo virsh attach-disk %s /dev/etherd/%s %s" %
                 (instance_id,
                  volume['aoe_device'],
@@ -233,8 +233,8 @@ class Node(object, service.Service):
 
     @defer.inlineCallbacks
     def _init_aoe(self):
-        yield process.SharedPool().simple_execute("sudo aoe-discover")
-        yield process.SharedPool().simple_execute("sudo aoe-stat")
+        yield process.simple_execute("sudo aoe-discover")
+        yield process.simple_execute("sudo aoe-stat")
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -244,7 +244,7 @@ class Node(object, service.Service):
         # name without the leading /dev/
         volume = storage.get_volume(volume_id)
         target = volume['mountpoint'].rpartition('/dev/')[2]
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo virsh detach-disk %s %s " % (instance_id, target))
         volume.finish_detach()
         defer.returnValue(True)

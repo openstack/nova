@@ -148,18 +148,18 @@ class BlockStore(object):
     def _restart_exports(self):
         if FLAGS.fake_storage:
             return
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vblade-persist auto all")
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vblade-persist start all")
 
     @defer.inlineCallbacks
     def _init_volume_group(self):
         if FLAGS.fake_storage:
             return
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo pvcreate %s" % (FLAGS.storage_dev))
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vgcreate %s %s" % (FLAGS.volume_group,
                                          FLAGS.storage_dev))
 
@@ -241,14 +241,14 @@ class Volume(datastore.BasicModel):
             sizestr = '100M'
         else:
             sizestr = '%sG' % self['size']
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   self['volume_id'],
                                                   FLAGS.volume_group))
 
     @defer.inlineCallbacks
     def _delete_lv(self):
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             self['volume_id']))
 
@@ -262,7 +262,7 @@ class Volume(datastore.BasicModel):
 
     @defer.inlineCallbacks
     def _exec_export(self):
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (self['shelf_id'],
                  self['blade_id'],
@@ -272,10 +272,10 @@ class Volume(datastore.BasicModel):
 
     @defer.inlineCallbacks
     def _remove_export(self):
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self['shelf_id'],
                                                     self['blade_id']))
-        yield process.SharedPool().simple_execute(
+        yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
                                                        self['blade_id']))
 
