@@ -42,13 +42,10 @@ import logging
 import json
 import multiprocessing
 import os
-import re
 import time
 import urllib
 
-
-from nova import vendor
-
+from twisted.application import internet, service
 from twisted.web.resource import Resource
 from twisted.web import server, static
 from twisted.internet import reactor
@@ -64,7 +61,6 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
-FLAGS.fake_users = True
 
 def render_xml(request, value):
     assert isinstance(value, dict) and len(value) == 1
@@ -264,15 +260,15 @@ class ImageResource(Resource):
         bucket_object = bucket.Bucket(image_location.split("/")[0])
         manifest = image_location[len(image_location.split('/')[0])+1:]
 
-        if not bucket_object.is_authorized(self.context):
+        if not bucket_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         p = multiprocessing.Process(target=image.Image.register_aws_image,
-                args=(image_id, image_location, self.context))
+                args=(image_id, image_location, request.context))
         p.start()
         return ''
 
-    def render_POST(self):
+    def render_POST(self, request):
         """ update image attributes: public/private """
 
         image_id = self.get_argument('image_id', u'')
@@ -280,19 +276,19 @@ class ImageResource(Resource):
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.set_public(operation=='add')
 
         return ''
 
-    def render_DELETE(self):
+    def render_DELETE(self, request):
         """ delete a registered image """
         image_id = self.get_argument("image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(self.context):
+        if not image.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.delete()
@@ -300,7 +296,10 @@ class ImageResource(Resource):
         request.setResponseCode(204)
         return ''
 
-root = S3()
-factory = server.Site(root)
-reactor.listenTCP(3333, factory)
-reactor.run()
+def get_application():
+    root = S3()
+    factory = server.Site(root)
+    application = service.Application("objectstore")
+    objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
+    objectStoreService.setServiceParent(application)
+    return application

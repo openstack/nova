@@ -18,35 +18,32 @@
 #    under the License.
 
 """
-  Tornado daemon for nova objectstore. Supports S3 API.  
+  Twisted daemon for nova objectstore. Supports S3 API.
 """
 
 import logging
 
-from nova import vendor 
-from tornado import httpserver
-from tornado import ioloop
-
 from nova import flags
-from nova import server
 from nova import utils
-from nova.auth import users
+from nova import twistd
 from nova.objectstore import handler
 
 
 FLAGS = flags.FLAGS
 
 
-def main(argv):
+def main():
     # FIXME: if this log statement isn't here, no logging
     # appears from other files and app won't start daemonized
     logging.debug('Started HTTP server on %s' % (FLAGS.s3_internal_port))
-    app = handler.Application(users.UserManager())
-    server = httpserver.HTTPServer(app)
-    server.listen(FLAGS.s3_internal_port)
-    ioloop.IOLoop.instance().start()
+    app = handler.get_application()
+    print app
+    return app
 
-
+# NOTE(soren): Stolen from nova-compute
 if __name__ == '__main__':
+    twistd.serve(__file__)
+
+if __name__ == '__builtin__':
     utils.default_flagfile()
-    server.serve('nova-objectstore', main)
+    application = main()
