@@ -33,13 +33,13 @@ def execute(cmd):
         logging.debug("FAKE NET: %s" % cmd)
         return "fake", 0
     else:
-        return nova.utils.execute(cmd)
+        return utils.execute(cmd)
 
 def runthis(desc, cmd):
     if FLAGS.fake_network:
         return execute(cmd)
     else:
-        return nova.utils.runthis(desc,cmd)
+        return utils.runthis(desc,cmd)
 
 def Popen(cmd):
     if FLAGS.fake_network:
