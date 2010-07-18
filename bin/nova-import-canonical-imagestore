@@ -29,9 +29,9 @@ import subprocess
 import sys
 import urllib2
 
-from nova.objectstore import image
 from nova import flags
 from nova import utils
+from nova.objectstore import image
 
 FLAGS = flags.FLAGS
 

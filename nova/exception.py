@@ -22,8 +22,8 @@ Nova-type exceptions. SHOULD include dedicated exception logging.
 """
 
 import logging
-import traceback
 import sys
+import traceback
 
 class Error(Exception):
     def __init__(self, message=None):

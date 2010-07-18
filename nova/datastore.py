@@ -24,8 +24,6 @@ before trying to run this.
 """
 
 import logging
-
-from nova import vendor
 import redis
 
 from nova import exception
@@ -105,7 +103,7 @@ class BasicModel(object):
 
     @classmethod
     def _redis_name(cls):
-        return self.override_type or cls.__name__
+        return cls.override_type or cls.__name__
 
     @classmethod
     def lookup(cls, identifier):
@@ -147,7 +145,7 @@ class BasicModel(object):
 
     @property
     def __redis_key(self):
-        return '%s:%s' % (self.__class__.__name__.lower(), self.identifier)
+        return '%s:%s' % (self._redis_name(), self.identifier)
 
     def __repr__(self):
         return "<%s:%s>" % (self.__class__.__name__, self.identifier)

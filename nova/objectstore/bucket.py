@@ -20,16 +20,17 @@
 Simple object store using Blobs and JSON files on disk.
 """
 
+import bisect
 import datetime
 import glob
 import json
 import os
-import bisect
 
 from nova import exception
 from nova import flags
 from nova import utils
 from nova.objectstore import stored
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),

@@ -42,15 +42,13 @@ import logging
 import json
 import multiprocessing
 import os
-import time
+from tornado import escape
 import urllib
 
 from twisted.application import internet, service
 from twisted.web.resource import Resource
 from twisted.web import server, static
-from twisted.internet import reactor
 
-from tornado import escape # FIXME(ja): move to non-tornado escape
 
 from nova import exception
 from nova import flags

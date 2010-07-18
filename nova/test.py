@@ -23,16 +23,14 @@ and some black magic for inline callbacks.
 """
 
 import logging
+import mox
+import stubout
 import time
 import unittest
-
-from nova import vendor
-import mox
 from tornado import ioloop
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.trial import unittest as trial_unittest
-import stubout
 
 from nova import fakerabbit
 from nova import flags

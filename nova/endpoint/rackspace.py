@@ -26,21 +26,19 @@ import logging
 import multiprocessing
 import os
 import time
-
-from nova import vendor
 import tornado.web
 from twisted.internet import defer
 
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova import exception
 from nova.auth import users
 from nova.compute import model
 from nova.compute import network
-from nova.endpoint import wsgi
 from nova.endpoint import images
+from nova.endpoint import wsgi
 from nova.volume import storage
 
 
