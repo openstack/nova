@@ -20,62 +20,33 @@
 Compute Node:
 
     Runs on each compute node, managing the
-    hypervisor using libvirt.
+    hypervisor using the virt module.
 
 """
 
 import base64
-import json
 import logging
 import os
-import shutil
 import sys
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
-
-try:
-    import libvirt
-except Exception, err:
-    logging.warning('no libvirt found')
-
 from nova import exception
-from nova import fakevirt
 from nova import flags
 from nova import process
 from nova import utils
-from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
-from nova.objectstore import image # for image_path flag
+from nova.compute import power_state
+from nova.compute.instance_types import INSTANCE_TYPES
+from nova.virt import connection as virt_connection
 from nova.volume import storage
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('libvirt_xml_template',
-                        utils.abspath('compute/libvirt.xml.template'),
-                        'Libvirt XML Template')
-flags.DEFINE_bool('use_s3', True,
-                      'whether to get images from s3 or use local copy')
 flags.DEFINE_string('instances_path', utils.abspath('../instances'),
                         'where instances are stored on disk')
-
-INSTANCE_TYPES = {}
-INSTANCE_TYPES['m1.tiny'] = {'memory_mb': 512, 'vcpus': 1, 'local_gb': 0}
-INSTANCE_TYPES['m1.small'] = {'memory_mb': 1024, 'vcpus': 1, 'local_gb': 10}
-INSTANCE_TYPES['m1.medium'] = {'memory_mb': 2048, 'vcpus': 2, 'local_gb': 10}
-INSTANCE_TYPES['m1.large'] = {'memory_mb': 4096, 'vcpus': 4, 'local_gb': 10}
-INSTANCE_TYPES['m1.xlarge'] = {'memory_mb': 8192, 'vcpus': 4, 'local_gb': 10}
-INSTANCE_TYPES['c1.medium'] = {'memory_mb': 2048, 'vcpus': 4, 'local_gb': 10}
-
-
-def _image_path(path=''):
-    return os.path.join(FLAGS.images_path, path)
-
-
-def _image_url(path):
-    return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
 
 
 class Node(object, service.Service):
@@ -83,29 +54,13 @@ class Node(object, service.Service):
     Manages the running instances.
     """
     def __init__(self):
-        """ load configuration options for this node and connect to libvirt """
+        """ load configuration options for this node and connect to the hypervisor"""
         super(Node, self).__init__()
         self._instances = {}
-        self._conn = self._get_connection()
+        self._conn = virt_connection.get_connection()
         self._pool = process.ProcessPool()
         self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
-
-    def _get_connection(self):
-        """ returns a libvirt connection object """
-        # TODO(termie): maybe lazy load after initial check for permissions
-        # TODO(termie): check whether we can be disconnected
-        if FLAGS.fake_libvirt:
-            conn = fakevirt.FakeVirtConnection.instance()
-        else:
-            auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
-                    'root',
-                    None]
-            conn = libvirt.openAuth('qemu:///system', auth, 0)
-            if conn == None:
-                logging.error('Failed to open connection to the hypervisor')
-                sys.exit(1)
-        return conn
 
     def noop(self):
         """ simple test of an AMQP message call """
@@ -122,8 +77,7 @@ class Node(object, service.Service):
     def adopt_instances(self):
         """ if there are instances already running, adopt them """
         return defer.succeed(0)
-        instance_names = [self._conn.lookupByID(x).name()
-                          for x in self._conn.listDomainsID()]
+        instance_names = self._conn.list_instances()
         for name in instance_names:
             try:
                 new_inst = Instance.fromName(self._conn, self._pool, name)
@@ -155,7 +109,7 @@ class Node(object, service.Service):
                 logging.exception("model server went away")
         yield
 
-    # @exception.wrap_exception
+    @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
@@ -174,8 +128,7 @@ class Node(object, service.Service):
         logging.info("Instances current state is %s", new_inst.state)
         if new_inst.is_running():
             raise exception.Error("Instance is already running")
-        d = new_inst.spawn()
-        return d
+        new_inst.spawn()
 
     @exception.wrap_exception
     def terminate_instance(self, instance_id):
@@ -309,20 +262,6 @@ class Instance(object):
         self.datamodel.save()
         logging.debug("Finished init of Instance with id of %s" % name)
 
-    def toXml(self):
-        # TODO(termie): cache?
-        logging.debug("Starting the toXML method")
-        libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        xml_info = self.datamodel.copy()
-        # TODO(joshua): Make this xml express the attached disks as well
-
-        # TODO(termie): lazy lazy hack because xml is annoying
-        xml_info['nova'] = json.dumps(self.datamodel.copy())
-        libvirt_xml = libvirt_xml % xml_info
-        logging.debug("Finished the toXML method")
-
-        return libvirt_xml
-
     @classmethod
     def fromName(cls, conn, pool, name):
         """ use the saved data for reloading the instance """
@@ -333,7 +272,7 @@ class Instance(object):
     def set_state(self, state_code, state_description=None):
         self.datamodel['state'] = state_code
         if not state_description:
-            state_description = STATE_NAMES[state_code]
+            state_description = power_state.name(state_code)
         self.datamodel['state_description'] = state_description
         self.datamodel.save()
 
@@ -347,37 +286,29 @@ class Instance(object):
         return self.datamodel['name']
 
     def is_pending(self):
-        return (self.state == Instance.NOSTATE or self.state == 'pending')
+        return (self.state == power_state.NOSTATE or self.state == 'pending')
 
     def is_destroyed(self):
-        return self.state == Instance.SHUTOFF
+        return self.state == power_state.SHUTOFF
 
     def is_running(self):
         logging.debug("Instance state is: %s" % self.state)
-        return (self.state == Instance.RUNNING or self.state == 'running')
+        return (self.state == power_state.RUNNING or self.state == 'running')
 
     def describe(self):
         return self.datamodel
 
     def info(self):
-        logging.debug("Getting info for dom %s" % self.name)
-        virt_dom = self._conn.lookupByName(self.name)
-        (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
-        return {'state': state,
-                'max_mem': max_mem,
-                'mem': mem,
-                'num_cpu': num_cpu,
-                'cpu_time': cpu_time,
-                'node_name': FLAGS.node_name}
-
-    def basepath(self, path=''):
-        return os.path.abspath(os.path.join(self.datamodel['basepath'], path))
+        result = self._conn.get_info(self.name)
+        result['node_name'] = FLAGS.node_name
+        return result
 
     def update_state(self):
         self.datamodel.update(self.info())
         self.set_state(self.state)
         self.datamodel.save() # Extra, but harmless
 
+    @defer.inlineCallbacks
     @exception.wrap_exception
     def destroy(self):
         if self.is_destroyed():
@@ -385,38 +316,9 @@ class Instance(object):
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % self.name)
 
-        self.set_state(Instance.NOSTATE, 'shutting_down')
-        try:
-            virt_dom = self._conn.lookupByName(self.name)
-            virt_dom.destroy()
-        except Exception, _err:
-            pass
-            # If the instance is already terminated, we're still happy
-        d = defer.Deferred()
-        d.addCallback(lambda x: self._cleanup())
-        d.addCallback(lambda x: self.datamodel.destroy())
-        # TODO(termie): short-circuit me for tests
-        # WE'LL save this for when we do shutdown,
-        # instead of destroy - but destroy returns immediately
-        timer = task.LoopingCall(f=None)
-        def _wait_for_shutdown():
-            try:
-                self.update_state()
-                if self.state == Instance.SHUTDOWN:
-                    timer.stop()
-                    d.callback(None)
-            except Exception:
-                self.set_state(Instance.SHUTDOWN)
-                timer.stop()
-                d.callback(None)
-        timer.f = _wait_for_shutdown
-        timer.start(interval=0.5, now=True)
-        return d
-
-    def _cleanup(self):
-        target = os.path.abspath(self.datamodel['basepath'])
-        logging.info("Deleting instance files at %s", target)
-        shutil.rmtree(target)
+        self.set_state(power_state.NOSTATE, 'shutting_down')
+        yield self._conn.destroy(self)
+        self.datamodel.destroy()
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -427,136 +329,26 @@ class Instance(object):
                     'instance: %s (state: %s)' % (self.name, self.state))
 
         logging.debug('rebooting instance %s' % self.name)
-        self.set_state(Instance.NOSTATE, 'rebooting')
-        yield self._conn.lookupByName(self.name).destroy()
-        self._conn.createXML(self.toXml(), 0)
-
-        d = defer.Deferred()
-        timer = task.LoopingCall(f=None)
-        def _wait_for_reboot():
-            try:
-                self.update_state()
-                if self.is_running():
-                    logging.debug('rebooted instance %s' % self.name)
-                    timer.stop()
-                    d.callback(None)
-            except Exception:
-                self.set_state(Instance.SHUTDOWN)
-                timer.stop()
-                d.callback(None)
-        timer.f = _wait_for_reboot
-        timer.start(interval=0.5, now=True)
-        yield d
-
-    def _fetch_s3_image(self, image, path):
-        url = _image_url('%s/image' % image)
-        d = self._pool.simpleExecute('curl --silent %s -o %s' % (url, path))
-        return d
-
-    def _fetch_local_image(self, image, path):
-        source = _image_path('%s/image' % image)
-        d = self._pool.simpleExecute('cp %s %s' % (source, path))
-        return d
-
-    @defer.inlineCallbacks
-    def _create_image(self, libvirt_xml):
-        # syntactic nicety
-        data = self.datamodel
-        basepath = self.basepath
-
-        # ensure directories exist and are writable
-        yield self._pool.simpleExecute('mkdir -p %s' % basepath())
-        yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
-
-
-        # TODO(termie): these are blocking calls, it would be great
-        #               if they weren't.
-        logging.info('Creating image for: %s', data['instance_id'])
-        f = open(basepath('libvirt.xml'), 'w')
-        f.write(libvirt_xml)
-        f.close()
-
-        if FLAGS.fake_libvirt:
-            logging.info('fake_libvirt, nothing to do for create_image')
-            raise defer.returnValue(None);
-
-        if FLAGS.use_s3:
-            _fetch_file = self._fetch_s3_image
-        else:
-            _fetch_file = self._fetch_local_image
-
-        if not os.path.exists(basepath('disk')):
-           yield _fetch_file(data['image_id'], basepath('disk-raw'))
-        if not os.path.exists(basepath('kernel')):
-           yield _fetch_file(data['kernel_id'], basepath('kernel'))
-        if not os.path.exists(basepath('ramdisk')):
-           yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
-
-        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
-                                                                   input=input,
-                                                                   error_ok=1)
-
-        key = data['key_data']
-        net = None
-        if FLAGS.simple_network:
-            with open(FLAGS.simple_network_template) as f:
-                net = f.read() % {'address': data['private_dns_name'],
-                                  'network': FLAGS.simple_network_network,
-                                  'netmask': FLAGS.simple_network_netmask,
-                                  'gateway': FLAGS.simple_network_gateway,
-                                  'broadcast': FLAGS.simple_network_broadcast,
-                                  'dns': FLAGS.simple_network_dns}
-        if key or net:
-            logging.info('Injecting data into image %s', data['image_id'])
-            yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
-
-        if os.path.exists(basepath('disk')):
-            yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
-
-        bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
-                 * 1024 * 1024 * 1024)
-        yield disk.partition(
-                basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
+        self.set_state(power_state.NOSTATE, 'rebooting')
+        yield self._conn.reboot(self)
+        self.update_state()
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self):
-        self.set_state(Instance.NOSTATE, 'spawning')
+        self.set_state(power_state.NOSTATE, 'spawning')
         logging.debug("Starting spawn in Instance")
-
-        xml = self.toXml()
-        self.set_state(Instance.NOSTATE, 'launching')
-        logging.info('self %s', self)
         try:
-            yield self._create_image(xml)
-            self._conn.createXML(xml, 0)
-            # TODO(termie): this should actually register
-            # a callback to check for successful boot
-            logging.debug("Instance is running")
-
-            local_d = defer.Deferred()
-            timer = task.LoopingCall(f=None)
-            def _wait_for_boot():
-                try:
-                    self.update_state()
-                    if self.is_running():
-                        logging.debug('booted instance %s' % self.name)
-                        timer.stop()
-                        local_d.callback(None)
-                except Exception:
-                    self.set_state(Instance.SHUTDOWN)
-                    logging.error('Failed to boot instance %s' % self.name)
-                    timer.stop()
-                    local_d.callback(None)
-            timer.f = _wait_for_boot
-            timer.start(interval=0.5, now=True)
+            yield self._conn.spawn(self)
         except Exception, ex:
             logging.debug(ex)
-            self.set_state(Instance.SHUTDOWN)
+            self.set_state(power_state.SHUTDOWN)
+        self.update_state()
 
     @exception.wrap_exception
     def console_output(self):
-        if not FLAGS.fake_libvirt:
+        # FIXME: Abstract this for Xen
+        if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(
                     os.path.join(self.datamodel['basepath'], 'console.log'))
             with open(fname, 'r') as f:
@@ -564,13 +356,3 @@ class Instance(object):
         else:
             console = 'FAKE CONSOLE OUTPUT'
         return defer.succeed(console)
-
-STATE_NAMES = {
- Instance.NOSTATE : 'pending',
- Instance.RUNNING : 'running',
- Instance.BLOCKED : 'blocked',
- Instance.PAUSED  : 'paused',
- Instance.SHUTDOWN : 'shutdown',
- Instance.SHUTOFF : 'shutdown',
- Instance.CRASHED : 'crashed',
-}

@@ -33,7 +33,7 @@ from nova import utils
 class NetworkTestCase(test.TrialTestCase):
     def setUp(self):
         super(NetworkTestCase, self).setUp()
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True,
                    fake_network=True,
                    network_size=32)

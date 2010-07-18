@@ -3,6 +3,7 @@
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
+# Copyright (c) 2010 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,13 +17,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import flags
+"""The various power states that a VM can be in."""
 
-FLAGS = flags.FLAGS
+NOSTATE = 0x00
+RUNNING = 0x01
+BLOCKED = 0x02
+PAUSED = 0x03
+SHUTDOWN = 0x04
+SHUTOFF = 0x05
+CRASHED = 0x06
 
-FLAGS.connection_type = 'fake'
-FLAGS.fake_storage = True
-FLAGS.fake_rabbit = True
-FLAGS.fake_network = True
-FLAGS.fake_users = True
-FLAGS.verbose = True
+
+def name(code):
+    d = {
+        NOSTATE : 'pending',
+        RUNNING : 'running',
+        BLOCKED : 'blocked',
+        PAUSED  : 'paused',
+        SHUTDOWN: 'shutdown',
+        SHUTOFF : 'shutdown',
+        CRASHED : 'crashed',
+    }
+    return d[code]

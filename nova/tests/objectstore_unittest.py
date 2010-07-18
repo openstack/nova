@@ -25,6 +25,8 @@ import tempfile
 
 from nova import flags
 from nova import objectstore
+from nova.objectstore import bucket # for buckets_path flag
+from nova.objectstore import image # for images_path flag
 from nova import test
 from nova.auth import users
 

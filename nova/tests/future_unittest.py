@@ -39,7 +39,7 @@ FLAGS = flags.FLAGS
 class AdminTestCase(test.BaseTestCase):
     def setUp(self):
         super(AdminTestCase, self).setUp()
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_rabbit=True)
 
         self.conn = rpc.Connection.instance()
