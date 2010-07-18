@@ -32,13 +32,13 @@ import sys
 #              not true the ugly line below can be removed
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 
+from nova import flags
 from nova import rpc
 from nova import utils
-
 from nova.compute import linux_net
 from nova.compute import network
 
-from nova import flags
+
 FLAGS = flags.FLAGS
 
 

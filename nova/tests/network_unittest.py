@@ -16,11 +16,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import IPy
 import os
 import logging
-
-from nova import vendor
-import IPy
 
 from nova import flags
 from nova import test

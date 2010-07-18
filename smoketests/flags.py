@@ -21,7 +21,7 @@ Package-level global flags are defined here, the rest are defined
 where they're used.
 """
 
-from nova import vendor
+
 from gflags import *
 
 # This keeps pylint from barfing on the imports

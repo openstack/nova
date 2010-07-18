@@ -17,12 +17,10 @@
 #    under the License.
 
 import logging
-import unittest
-
-from nova import vendor
 from M2Crypto import BIO
 from M2Crypto import RSA
 from M2Crypto import X509
+import unittest
 
 from nova import crypto
 from nova import flags

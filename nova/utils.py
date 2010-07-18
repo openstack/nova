@@ -20,6 +20,7 @@
 System-level utilities and helper functions.
 """
 
+from datetime import datetime
 import inspect
 import logging
 import os
@@ -27,7 +28,6 @@ import random
 import subprocess
 import socket
 import sys
-from datetime import datetime
 
 from nova import flags
 

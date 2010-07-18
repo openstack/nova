@@ -16,10 +16,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 
 import boto
 from boto.ec2.regioninfo import RegionInfo
+import unittest
+
 
 ACCESS_KEY = 'fake'
 SECRET_KEY = 'fake'

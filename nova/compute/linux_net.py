@@ -19,10 +19,11 @@
 import logging
 import signal
 import os
-import nova.utils
 import subprocess
 
 # todo(ja): does the definition of network_path belong here?
+
+from nova import utils
 
 from nova import flags
 FLAGS=flags.FLAGS

@@ -18,7 +18,7 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath('/Users/jmckenty/Projects/cc'))
 sys.path.append([os.path.abspath('../nova'),os.path.abspath('../'),os.path.abspath('../vendor')])
-from nova import vendor
+
 
 # -- General configuration -----------------------------------------------------
 
