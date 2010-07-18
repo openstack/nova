@@ -20,6 +20,7 @@
 from nova import flags
 from nova.virt import fake
 from nova.virt import libvirt_conn
+from nova.virt import xenapi
 
 
 FLAGS = flags.FLAGS
@@ -33,6 +34,8 @@ def get_connection(read_only=False):
         conn = fake.get_connection(read_only)
     elif t == 'libvirt':
         conn = libvirt_conn.get_connection(read_only)
+    elif t == 'xenapi':
+        conn = xenapi.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 
