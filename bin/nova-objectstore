@@ -35,7 +35,7 @@ FLAGS = flags.FLAGS
 def main():
     # FIXME: if this log statement isn't here, no logging
     # appears from other files and app won't start daemonized
-    logging.debug('Started HTTP server on %s' % (FLAGS.s3_internal_port))
+    logging.debug('Started HTTP server on %s' % (FLAGS.s3_port))
     app = handler.get_application()
     print app
     return app

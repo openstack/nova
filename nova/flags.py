@@ -37,7 +37,6 @@ DEFINE_bool = DEFINE_bool
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_integer('s3_internal_port', 3334, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 #DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
