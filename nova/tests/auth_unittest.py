@@ -25,19 +25,19 @@ import unittest
 from nova import crypto
 from nova import flags
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import cloud
 
 FLAGS = flags.FLAGS
 
 
-class UserTestCase(test.BaseTestCase):
+class AuthTestCase(test.BaseTestCase):
     flush_db = False
     def setUp(self):
-        super(UserTestCase, self).setUp()
+        super(AuthTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True)
-        self.users = users.UserManager.instance()
+        self.users = manager.AuthManager()
 
     def test_001_can_create_users(self):
         self.users.create_user('test1', 'access', 'secret')

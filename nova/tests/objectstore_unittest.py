@@ -26,7 +26,7 @@ import tempfile
 from nova import flags
 from nova import objectstore
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
@@ -57,7 +57,7 @@ class ObjectStoreTestCase(test.BaseTestCase):
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
         logging.getLogger().setLevel(logging.DEBUG)
 
-        self.um = users.UserManager.instance()
+        self.um = manager.AuthManager()
         try:
             self.um.create_user('user1')
         except: pass
@@ -177,7 +177,7 @@ class ObjectStoreTestCase(test.BaseTestCase):
 #         FLAGS.images_path  = os.path.join(tempdir, 'images')
 #         FLAGS.ca_path = os.path.join(os.path.dirname(__file__), 'CA')
 #
-#         self.users = users.UserManager.instance()
+#         self.users = manager.AuthManager()
 #         self.app  = handler.Application(self.users)
 #
 #         self.host = '127.0.0.1'

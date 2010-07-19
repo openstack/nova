@@ -26,7 +26,7 @@ from nova import test
 from nova import exception
 from nova.compute.exception import NoMoreAddresses
 from nova.compute import network
-from nova.auth import users
+from nova.auth import manager
 from nova import utils
 
 
@@ -38,7 +38,7 @@ class NetworkTestCase(test.TrialTestCase):
                    fake_network=True,
                    network_size=32)
         logging.getLogger().setLevel(logging.DEBUG)
-        self.manager = users.UserManager.instance()
+        self.manager = manager.AuthManager()
         self.dnsmasq = FakeDNSMasq()
         try:
             self.manager.create_user('netuser', 'netuser', 'netuser')

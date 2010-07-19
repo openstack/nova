@@ -34,7 +34,7 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
 from nova.compute import network
 from nova.endpoint import images
@@ -78,11 +78,11 @@ class Api(object):
     def build_context(self, env):
         rv = {}
         if env.has_key("HTTP_X_AUTH_TOKEN"):
-            rv['user'] = users.UserManager.instance().get_user_from_access_key(
+            rv['user'] = manager.AuthManager().get_user_from_access_key(
                            env['HTTP_X_AUTH_TOKEN']
                          )
             if rv['user']:
-                rv['project'] = users.UserManager.instance().get_project(
+                rv['project'] = manager.AuthManager().get_project(
                                   rv['user'].name
                                 )
         return rv

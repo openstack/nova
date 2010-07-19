@@ -26,7 +26,7 @@ from twisted.internet import defer
 
 from nova import flags
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -150,7 +150,7 @@ class ApiEc2TestCase(test.BaseTestCase):
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
-        self.users = users.UserManager.instance()
+        self.users = manager.AuthManager()
         self.cloud = cloud.CloudController()
 
         self.host = '127.0.0.1'
