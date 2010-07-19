@@ -155,16 +155,16 @@ class NetworkTestCase(test.TrialTestCase):
         However, the number of available IP addresses depends on the test
         environment's setup.
 
-        Network size is 32.
+        Network size is set in test fixture's setUp method.
             
-            There are FLAGS.cnt_vpn_clients addresses reserved for VPN (NUM_RESERVED_VPN_IPS)
+        There are FLAGS.cnt_vpn_clients addresses reserved for VPN (NUM_RESERVED_VPN_IPS)
 
-            And there are NUM_STATIC_IPS that are always reserved by Nova for the necessary
-            services (gateway, CloudPipe, etc)
+        And there are NUM_STATIC_IPS that are always reserved by Nova for the necessary
+        services (gateway, CloudPipe, etc)
 
-        So we should get 32 - (NUM_STATIC_IPS + 
-                               NUM_PREALLOCATED_IPS + 
-                               NUM_RESERVED_VPN_IPS)
+        So we should get flags.network_size - (NUM_STATIC_IPS + 
+                                               NUM_PREALLOCATED_IPS + 
+                                               NUM_RESERVED_VPN_IPS)
         usable addresses
         """
         net = network.get_project_network("project0", "default")
@@ -173,7 +173,7 @@ class NetworkTestCase(test.TrialTestCase):
         num_static_ips = net.num_static_ips
         num_preallocated_ips = len(net.hosts.keys())
         num_reserved_vpn_ips = flags.FLAGS.cnt_vpn_clients
-        num_available_ips = 32 - (num_static_ips + num_preallocated_ips + num_reserved_vpn_ips)
+        num_available_ips = flags.FLAGS.network_size - (num_static_ips + num_preallocated_ips + num_reserved_vpn_ips)
 
         hostname = "toomany-hosts"
         macs = {}
