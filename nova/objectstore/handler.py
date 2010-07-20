@@ -103,17 +103,34 @@ def get_argument(request, key, default_value):
 def get_context(request):
     try:
         # Authorization Header format: 'AWS <access>:<secret>'
-        access, sep, secret = request.getHeader('Authorization').split(' ')[1].rpartition(':')
+        authorization_header = request.getHeader('Authorization')
+        if not authorization_header:
+            raise exception.NotAuthorized
+        access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
         um = users.UserManager.instance()
         print 'um %s' % um
         (user, project) = um.authenticate(access, secret, {}, request.method, request.host, request.uri, False)
         # FIXME: check signature here!
         return api.APIRequestContext(None, user, project)
-    except exception.Error, ex:
+    except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
-class S3(Resource):
+class ErrorHandlingResource(Resource):
+    """Maps exceptions to 404 / 401 codes.  Won't work for exceptions thrown after NOT_DONE_YET is returned."""
+    # TODO: This needs to be plugged in to the right place in twisted...
+    #   This doesn't look like it's the right place (consider exceptions in getChild; or after NOT_DONE_YET is returned     
+    def render(self, request):
+        try:
+            return Resource.render(self, request)
+        except exception.NotFound:
+            request.setResponseCode(404)
+            return ''
+        except exception.NotAuthorized:
+            request.setResponseCode(403)
+            return ''
+
+class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
     def getChild(self, name, request):
         request.context = get_context(request)
@@ -133,7 +150,7 @@ class S3(Resource):
         }})
         return server.NOT_DONE_YET
 
-class BucketResource(Resource):
+class BucketResource(ErrorHandlingResource):
     def __init__(self, name):
         Resource.__init__(self)
         self.name = name
@@ -165,7 +182,7 @@ class BucketResource(Resource):
         logging.debug("Creating bucket %s" % (self.name))
         try:
             print 'user is %s' % request.context
-        except Exception, e:
+        except Exception as e:
             logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
@@ -183,7 +200,7 @@ class BucketResource(Resource):
         return ''
 
 
-class ObjectResource(Resource):
+class ObjectResource(ErrorHandlingResource):
     def __init__(self, bucket, name):
         Resource.__init__(self)
         self.bucket = bucket
@@ -224,7 +241,7 @@ class ObjectResource(Resource):
         request.setResponseCode(204)
         return ''
 
-class ImageResource(Resource):
+class ImageResource(ErrorHandlingResource):
     isLeaf = True
 
     def getChild(self, name, request):
@@ -239,9 +256,10 @@ class ImageResource(Resource):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(self.context)]
+        images = [i for i in image.Image.all() if i.is_authorized(request.context)]
 
         request.write(json.dumps([i.metadata for i in images]))
+        request.finish()
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):
