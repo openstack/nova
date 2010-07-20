@@ -64,12 +64,12 @@ class LdapDriver(object):
     """
     def __enter__(self):
         """Creates the connection to LDAP"""
+        global ldap
         if FLAGS.fake_users:
             from nova.auth import fakeldap as ldap
         else:
             import ldap
-        self.ldap = ldap
-        self.conn = self.ldap.initialize(FLAGS.ldap_url)
+        self.conn = ldap.initialize(FLAGS.ldap_url)
         self.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
         return self
 
@@ -275,8 +275,8 @@ class LdapDriver(object):
     def __find_dns(self, dn, query=None):
         """Find dns by query"""
         try:
-            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
-        except self.ldap.NO_SUCH_OBJECT:
+            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
+        except ldap.NO_SUCH_OBJECT:
             return []
         # just return the DNs
         return [dn for dn, attributes in res]
@@ -284,8 +284,8 @@ class LdapDriver(object):
     def __find_objects(self, dn, query = None):
         """Find objects by query"""
         try:
-            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
-        except self.ldap.NO_SUCH_OBJECT:
+            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
+        except ldap.NO_SUCH_OBJECT:
             return []
         # just return the attributes
         return [attributes for dn, attributes in res]
@@ -369,7 +369,7 @@ class LdapDriver(object):
             raise exception.Duplicate("User %s is already a member of "
                                       "the group %s" % (uid, group_dn))
         attr = [
-            (self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))
+            (ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))
         ]
         self.conn.modify_s(group_dn, attr)
 
@@ -389,10 +389,10 @@ class LdapDriver(object):
     def __safe_remove_from_group(self, uid, group_dn):
         """Remove user from group, deleting group if user is last member"""
         # FIXME(vish): what if deleted user is a project manager?
-        attr = [(self.ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
+        attr = [(ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
         try:
             self.conn.modify_s(group_dn, attr)
-        except self.ldap.OBJECT_CLASS_VIOLATION:
+        except ldap.OBJECT_CLASS_VIOLATION:
             logging.debug("Attempted to remove the last member of a group. "
                           "Deleting the group at %s instead." % group_dn )
             self.__delete_group(group_dn)
