@@ -87,7 +87,7 @@ class NetworkTestCase(test.TrialTestCase):
         address = network.allocate_ip(
                     self.user.id, self.projects[0].id, mac)
         secondaddress = network.allocate_ip(
-                self.user, "project1", secondmac)
+                self.user, self.projects[1].id, secondmac)
         net = network.get_project_network(self.projects[0].id, "default")
         secondnet = network.get_project_network(self.projects[1].id, "default")
 
@@ -168,7 +168,6 @@ class NetworkTestCase(test.TrialTestCase):
             self.dnsmasq.release_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
 def is_in_project(address, project_id):
-    print address, list(network.get_project_network(project_id).list_addresses())
     return address in network.get_project_network(project_id).list_addresses()
 
 def _get_project_addresses(project_id):
