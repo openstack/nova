@@ -450,7 +450,7 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
-        d = self._pool.simpleExecute('curl --silent %s -o %s' % (url, path))
+        d = self._pool.simpleExecute('curl --silent --fail %s -o %s' % (url, path))
         return d
 
     def _fetch_local_image(self, image, path):
