@@ -134,7 +134,6 @@ class S3(Resource):
         render_xml(request, {"ListAllMyBucketsResult": {
             "Buckets": {"Bucket": [b.metadata for b in buckets]},
         }})
-        request.finish()
         return server.NOT_DONE_YET
 
 class BucketResource(Resource):
@@ -246,6 +245,7 @@ class ImageResource(Resource):
         images = [i for i in image.Image.all() if i.is_authorized(request.context)]
 
         request.write(json.dumps([i.metadata for i in images]))
+        request.finish()
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):
