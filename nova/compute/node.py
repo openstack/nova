@@ -505,37 +505,56 @@ class Instance(object):
 
         if not os.path.exists(basepath('disk')):
            yield _fetch_file(data['image_id'], basepath('disk-raw'))
-        if data['kernel_id'] and not os.path.exists(basepath('kernel')):
-           yield _fetch_file(data['kernel_id'], basepath('kernel'))
-        if data['ramdisk_id'] and not os.path.exists(basepath('ramdisk')):
-           yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
+        
+        using_kernel = data['kernel_id'] and True
+
+        if using_kernel:
+            if os.path.exists(basepath('kernel')):
+                yield _fetch_file(data['kernel_id'], basepath('kernel'))
+            if data['ramdisk_id'] and not os.path.exists(basepath('ramdisk')):
+                yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
         execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
                                                                    input=input,
                                                                    error_ok=1)
 
+        # For now, we assume that if we're not using a kernel, we're using a partitioned disk image
+        # where the target partition is the first partition
+        target_partition = None
+        if not using_kernel:
+            target_partition = "1"
+
         key = data['key_data']
         net = None
+        dns = None
         if FLAGS.simple_network:
+            network_info = {
+                             'address': data['private_dns_name'],
+                             'network': FLAGS.simple_network_network,
+                             'netmask': FLAGS.simple_network_netmask,
+                             'gateway': FLAGS.simple_network_gateway,
+                             'broadcast': FLAGS.simple_network_broadcast,
+                             'dns': FLAGS.simple_network_dns}
+
             with open(FLAGS.simple_network_template) as f:
-                net = f.read() % {'address': data['private_dns_name'],
-                                  'network': FLAGS.simple_network_network,
-                                  'netmask': FLAGS.simple_network_netmask,
-                                  'gateway': FLAGS.simple_network_gateway,
-                                  'broadcast': FLAGS.simple_network_broadcast,
-                                  'dns': FLAGS.simple_network_dns}
-        if key or net:
+                net = f.read() % network_info
+       
+            with open(FLAGS.simple_network_dns_template) as f:
+                dns =str(Template(f.read(), searchList=[ network_info ] )) 
+        
+        if key or net or dns:
             logging.info('Injecting data into image %s', data['image_id'])
-            yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
+            yield disk.inject_data(basepath('disk-raw'), key=key, net=net, dns=dns, remove_network_udev=True, partition=target_partition, execute=execute)
 
-        if os.path.exists(basepath('disk')):
-            yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
+        if using_kernel:
+            if os.path.exists(basepath('disk')):
+                yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
 
-        bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
-                 * 1024 * 1024 * 1024)
-        yield disk.partition(
-                basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
-
+            bytes = (INSTANCE_TYPES[data['instance_type']]['local_gb']
+                     * 1024 * 1024 * 1024)
+            yield disk.partition(
+                    basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
+    
     @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self):

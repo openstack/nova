@@ -62,6 +62,9 @@ flags.DEFINE_list('simple_network_ips', ['192.168.0.2'],
 flags.DEFINE_string('simple_network_template',
                     utils.abspath('compute/interfaces.template'),
                     'Template file for simple network')
+flags.DEFINE_string('simple_network_dns_template',
+                    utils.abspath('compute/resolv.conf.template'),
+                    'Template file for DNS settings for simple network')
 flags.DEFINE_string('simple_network_netmask', '255.255.255.0',
                        'Netmask for simple network')
 flags.DEFINE_string('simple_network_network', '192.168.0.0',

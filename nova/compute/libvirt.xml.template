@@ -16,6 +16,7 @@
     <memory>${memory_kb}</memory>
     <vcpu>${vcpus}</vcpu>
     <devices>
+        <graphics type='vnc' port='-1' autoport='yes' />
         <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
             <source file='${disk}'/>

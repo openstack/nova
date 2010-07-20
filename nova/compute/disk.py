@@ -84,7 +84,7 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
                   % (infile, outfile, sector_size, primary_first))
 
 @defer.inlineCallbacks
-def inject_data(image, key=None, net=None, partition=None, execute=None):
+def inject_data(image, key=None, net=None, dns=None, remove_network_udev=False, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -93,7 +93,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
     If partition is not specified it mounts the image as a single partition.
 
     """
-    out, err = yield execute('sudo losetup -f --show %s' % image)
+    out, err = yield execute('sudo losetup --find --show %s' % image)
     if err:
         raise exception.Error('Could not attach image to loopback: %s' % err)
     device = out.strip()
@@ -107,6 +107,8 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                                                    partition)
         else:
             mapped_device = device
+
+        # Configure ext2fs so that it doesn't auto-check every N boots
         out, err = yield execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
 
         tmpdir = tempfile.mkdtemp()
@@ -123,6 +125,11 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                     yield _inject_key_into_fs(key, tmpdir, execute=execute)
                 if net:
                     yield _inject_net_into_fs(net, tmpdir, execute=execute)
+                if dns:
+                    yield _inject_dns_into_fs(dns, tmpdir, execute=execute)
+                if remove_network_udev:
+                    yield _remove_network_udev(tmpdir, execute=execute)
+
             finally:
                 # unmount device
                 yield execute('sudo umount %s' % mapped_device)
@@ -134,11 +141,11 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                 yield execute('sudo kpartx -d %s' % device)
     finally:
         # remove loopback
-        yield execute('sudo losetup -d %s' % device)
+        yield execute('sudo losetup --detach %s' % device)
 
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
-    sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
+    sshdir = os.path.join(fs, 'root', '.ssh')
     yield execute('sudo mkdir -p %s' % sshdir) # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)
@@ -147,7 +154,17 @@ def _inject_key_into_fs(key, fs, execute=None):
 
 @defer.inlineCallbacks
 def _inject_net_into_fs(net, fs, execute=None):
-    netfile = os.path.join(os.path.join(os.path.join(
-            fs, 'etc'), 'network'), 'interfaces')
+    netfile = os.path.join(fs, 'etc', 'network', 'interfaces')
     yield execute('sudo tee %s' % netfile, net)
+
+@defer.inlineCallbacks
+def _inject_dns_into_fs(dns, fs, execute=None):
+    dnsfile = os.path.join(fs, 'etc', 'resolv.conf')
+    yield execute('sudo tee %s' % dnsfile, dns)
+
+@defer.inlineCallbacks
+def _remove_network_udev(fs, execute=None):
+    # This is correct for Ubuntu, but might not be right for other distros
+    rulesfile = os.path.join(fs, 'etc', 'udev', 'rules.d', '70-persistent-net.rules')
+    yield execute('rm -f %s' % rulesfile)
 
