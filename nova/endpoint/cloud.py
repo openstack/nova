@@ -544,8 +544,8 @@ class CloudController(object):
         for num in range(int(kwargs['max_count'])):
             inst = self.instdir.new()
             inst['image_id'] = image_id
-            inst['kernel_id'] = kernel_id
-            inst['ramdisk_id'] = ramdisk_id
+            inst['kernel_id'] = kernel_id or ''
+            inst['ramdisk_id'] = ramdisk_id or ''
             inst['user_data'] = kwargs.get('user_data', '')
             inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id

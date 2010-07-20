@@ -34,6 +34,7 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
+from Cheetah.Template import Template
 
 try:
     import libvirt
@@ -312,13 +313,30 @@ class Instance(object):
     def toXml(self):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
-        libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        template_contents = open(FLAGS.libvirt_xml_template).read()
         xml_info = self.datamodel.copy()
         # TODO(joshua): Make this xml express the attached disks as well
 
         # TODO(termie): lazy lazy hack because xml is annoying
         xml_info['nova'] = json.dumps(self.datamodel.copy())
-        libvirt_xml = libvirt_xml % xml_info
+
+        if xml_info['kernel_id']:
+            xml_info['kernel'] = xml_info['basepath'] + "/kernel"
+
+        if xml_info['ramdisk_id']:
+            xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
+
+        if xml_info['ramdisk_id'] or xml_info['kernel_id']:
+            xml_info['disk'] = xml_info['basepath'] + "/disk"
+        else:
+            xml_info['disk'] = xml_info['basepath'] + "/disk-raw"
+
+        try:
+            libvirt_xml = str(Template(template_contents, searchList=[ xml_info ] ))
+        except Exception as e:
+            logging.warning("Error running template: %s" % e)
+            raise
+
         logging.debug("Finished the toXML method")
 
         return libvirt_xml
@@ -487,9 +505,9 @@ class Instance(object):
 
         if not os.path.exists(basepath('disk')):
            yield _fetch_file(data['image_id'], basepath('disk-raw'))
-        if not os.path.exists(basepath('kernel')):
+        if data['kernel_id'] and not os.path.exists(basepath('kernel')):
            yield _fetch_file(data['kernel_id'], basepath('kernel'))
-        if not os.path.exists(basepath('ramdisk')):
+        if data['ramdisk_id'] and not os.path.exists(basepath('ramdisk')):
            yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
 
         execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
