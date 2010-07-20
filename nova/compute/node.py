@@ -509,7 +509,7 @@ class Instance(object):
         using_kernel = data['kernel_id'] and True
 
         if using_kernel:
-            if os.path.exists(basepath('kernel')):
+            if not os.path.exists(basepath('kernel')):
                 yield _fetch_file(data['kernel_id'], basepath('kernel'))
             if data['ramdisk_id'] and not os.path.exists(basepath('ramdisk')):
                 yield _fetch_file(data['ramdisk_id'], basepath('ramdisk'))
@@ -540,7 +540,7 @@ class Instance(object):
                 net = f.read() % network_info
        
             with open(FLAGS.simple_network_dns_template) as f:
-                dns =str(Template(f.read(), searchList=[ network_info ] )) 
+                dns = str(Template(f.read(), searchList=[ network_info ] )) 
         
         if key or net or dns:
             logging.info('Injecting data into image %s', data['image_id'])
