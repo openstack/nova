@@ -29,14 +29,6 @@ import logging
 from nova import exception
 from nova import flags
 
-try:
-    import ldap
-except Exception, e:
-    from nova.auth import fakeldap as ldap
-# NOTE(vish): this import is so we can use fakeldap even when real ldap
-#             is installed.
-from nova.auth import fakeldap
-
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ldap_url', 'ldap://localhost',
                     'Point this at your ldap server')
@@ -73,13 +65,11 @@ class LdapDriver(object):
     def __enter__(self):
         """Creates the connection to LDAP"""
         if FLAGS.fake_users:
-            self.NO_SUCH_OBJECT = fakeldap.NO_SUCH_OBJECT
-            self.OBJECT_CLASS_VIOLATION = fakeldap.OBJECT_CLASS_VIOLATION
-            self.conn = fakeldap.initialize(FLAGS.ldap_url)
+            from nova.auth import fakeldap as ldap
         else:
-            self.NO_SUCH_OBJECT = ldap.NO_SUCH_OBJECT
-            self.OBJECT_CLASS_VIOLATION = ldap.OBJECT_CLASS_VIOLATION
-            self.conn = ldap.initialize(FLAGS.ldap_url)
+            import ldap
+        self.ldap = ldap
+        self.conn = self.ldap.initialize(FLAGS.ldap_url)
         self.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
         return self
 
@@ -285,8 +275,8 @@ class LdapDriver(object):
     def __find_dns(self, dn, query=None):
         """Find dns by query"""
         try:
-            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except self.NO_SUCH_OBJECT:
+            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
+        except self.ldap.NO_SUCH_OBJECT:
             return []
         # just return the DNs
         return [dn for dn, attributes in res]
@@ -294,8 +284,8 @@ class LdapDriver(object):
     def __find_objects(self, dn, query = None):
         """Find objects by query"""
         try:
-            res = self.conn.search_s(dn, ldap.SCOPE_SUBTREE, query)
-        except self.NO_SUCH_OBJECT:
+            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
+        except self.ldap.NO_SUCH_OBJECT:
             return []
         # just return the attributes
         return [attributes for dn, attributes in res]
@@ -379,7 +369,7 @@ class LdapDriver(object):
             raise exception.Duplicate("User %s is already a member of "
                                       "the group %s" % (uid, group_dn))
         attr = [
-            (ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))
+            (self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))
         ]
         self.conn.modify_s(group_dn, attr)
 
@@ -399,10 +389,10 @@ class LdapDriver(object):
     def __safe_remove_from_group(self, uid, group_dn):
         """Remove user from group, deleting group if user is last member"""
         # FIXME(vish): what if deleted user is a project manager?
-        attr = [(ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
+        attr = [(self.ldap.MOD_DELETE, 'member', self.__uid_to_dn(uid))]
         try:
             self.conn.modify_s(group_dn, attr)
-        except self.OBJECT_CLASS_VIOLATION:
+        except self.ldap.OBJECT_CLASS_VIOLATION:
             logging.debug("Attempted to remove the last member of a group. "
                           "Deleting the group at %s instead." % group_dn )
             self.__delete_group(group_dn)

@@ -41,13 +41,15 @@ FLAGS = flags.FLAGS
 # NOTE(vish): a user with one of these roles will be a superuser and
 #             have access to all api commands
 flags.DEFINE_list('superuser_roles', ['cloudadmin'],
-                  'roles that ignore rbac checking completely')
+                  'Roles that ignore rbac checking completely')
 
 # NOTE(vish): a user with one of these roles will have it for every
 #             project, even if he or she is not a member of the project
 flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
-                  'roles that apply to all projects')
+                  'Roles that apply to all projects')
 
+
+flags.DEFINE_bool('use_vpn', True, 'Support per-project vpns')
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
                     'Template for creating users rc file')
@@ -189,11 +191,13 @@ class Project(AuthBase):
 
     @property
     def vpn_ip(self):
-        return AuthManager().get_project_vpn_ip(self)
+        ip, port = AuthManager().get_project_vpn_data(self)
+        return ip
 
     @property
     def vpn_port(self):
-        return AuthManager().get_project_vpn_port(self)
+        ip, port = AuthManager().get_project_vpn_data(self)
+        return port
 
     def has_manager(self, user):
         return AuthManager().is_project_manager(user, self)
@@ -551,7 +555,8 @@ class AuthManager(object):
                                                description,
                                                member_users)
             if project_dict:
-                Vpn.create(project_dict['id'])
+                if FLAGS.use_vpn:
+                    Vpn.create(project_dict['id'])
                 return Project(**project_dict)
 
     def add_to_project(self, user, project):
@@ -578,11 +583,20 @@ class AuthManager(object):
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
 
-    def get_project_vpn_ip(self, project):
-        return Vpn(Project.safe_id(project)).ip
+    def get_project_vpn_data(self, project):
+        """Gets vpn ip and port for project
 
-    def get_project_vpn_port(self, project):
-        return Vpn(Project.safe_id(project)).port
+        @type project: Project or project_id
+        @param project: Project from which to get associated vpn data
+
+        @rvalue: tuple of (str, str)
+        @return: A tuple containing (ip, port) or None, None if vpn has
+        not been allocated for user.
+        """
+        vpn = Vpn.lookup(Project.safe_id(project))
+        if not vpn:
+            return None, None
+        return (vpn.ip, vpn.port)
 
     def delete_project(self, project):
         """Deletes a project"""
@@ -713,7 +727,10 @@ class AuthManager(object):
         rc = self.__generate_rc(user.access, user.secret, pid)
         private_key, signed_cert = self._generate_x509_cert(user.id, pid)
 
-        vpn = Vpn(pid)
+        vpn = Vpn.lookup(pid)
+        if not vpn:
+            raise exception.Error("No vpn data allocated for project %s" %
+                                  project.name)
         configfile = open(FLAGS.vpn_client_template,"r")
         s = string.Template(configfile.read())
         configfile.close()
