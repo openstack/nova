@@ -33,9 +33,9 @@ from nova import datastore
 from nova import exception
 from nova import flags
 from nova import objectstore # for flags
-from nova import signer
 from nova import utils
 from nova.auth import ldapdriver
+from nova.auth import signer
 FLAGS = flags.FLAGS
 
 # NOTE(vish): a user with one of these roles will be a superuser and
@@ -187,6 +187,14 @@ class Project(AuthBase):
     def project_manager(self):
         return AuthManager().get_user(self.project_manager_id)
 
+    @property
+    def vpn_ip(self):
+        return AuthManager().get_project_vpn_ip(self)
+
+    @property
+    def vpn_port(self):
+        return AuthManager().get_project_vpn_port(self)
+
     def has_manager(self, user):
         return AuthManager().is_project_manager(user, self)
 
@@ -314,16 +322,6 @@ class AuthManager(object):
 
     def __init__(self, *args, **kwargs):
         self.driver_class = kwargs.get('driver_class', ldapdriver.LdapDriver)
-        if FLAGS.fake_tests:
-            try:
-                self.create_user('fake', 'fake', 'fake')
-            except: pass
-            try:
-                self.create_user('user', 'user', 'user')
-            except: pass
-            try:
-                self.create_user('admin', 'admin', 'admin', True)
-            except: pass
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
@@ -508,6 +506,21 @@ class AuthManager(object):
         with self.driver_class() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
+    def get_project(self, pid):
+        """Get project object by id"""
+        with self.driver_class() as drv:
+            project_dict = drv.get_project(pid)
+            if project_dict:
+                return Project(**project_dict)
+
+    def get_projects(self):
+        """Retrieves list of all projects"""
+        with self.driver_class() as drv:
+            project_list = drv.get_projects()
+            if not project_list:
+                return []
+            return [Project(**project_dict) for project_dict in project_list]
+
     def create_project(self, name, manager_user,
                        description=None, member_users=None):
         """Create a project
@@ -532,26 +545,14 @@ class AuthManager(object):
         """
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
-        # NOTE(vish): try to associate a vpn ip and port first because
-        #             if it throws an exception, we save having to
-        #             create and destroy a project
-        Vpn.create(name)
         with self.driver_class() as drv:
-            return drv.create_project(name,
-                                      User.safe_id(manager_user),
-                                      description,
-                                      member_users)
-
-    def get_projects(self):
-        """Retrieves list of all projects"""
-        with self.driver_class() as drv:
-            return drv.get_projects()
-
-
-    def get_project(self, pid):
-        """Get project object by id"""
-        with self.driver_class() as drv:
-            return drv.get_project(pid)
+            project_dict =  drv.create_project(name,
+                                               User.safe_id(manager_user),
+                                               description,
+                                               member_users)
+            if project_dict:
+                Vpn.create(project_dict['id'])
+                return Project(**project_dict)
 
     def add_to_project(self, user, project):
         """Add user to project"""
@@ -577,6 +578,12 @@ class AuthManager(object):
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
 
+    def get_project_vpn_ip(self, project):
+        return Vpn(Project.safe_id(project)).ip
+
+    def get_project_vpn_port(self, project):
+        return Vpn(Project.safe_id(project)).port
+
     def delete_project(self, project):
         """Deletes a project"""
         with self.driver_class() as drv:
@@ -585,17 +592,24 @@ class AuthManager(object):
     def get_user(self, uid):
         """Retrieves a user by id"""
         with self.driver_class() as drv:
-            return drv.get_user(uid)
+            user_dict = drv.get_user(uid)
+            if user_dict:
+                return User(**user_dict)
 
     def get_user_from_access_key(self, access_key):
         """Retrieves a user by access key"""
         with self.driver_class() as drv:
-            return drv.get_user_from_access_key(access_key)
+            user_dict = drv.get_user_from_access_key(access_key)
+            if user_dict:
+                return User(**user_dict)
 
     def get_users(self):
         """Retrieves a list of all users"""
         with self.driver_class() as drv:
-            return drv.get_users()
+            user_list = drv.get_users()
+            if not user_list:
+                return []
+            return [User(**user_dict) for user_dict in user_list]
 
     def create_user(self, name, access=None, secret=None, admin=False):
         """Creates a user
@@ -622,7 +636,9 @@ class AuthManager(object):
         if access == None: access = str(uuid.uuid4())
         if secret == None: secret = str(uuid.uuid4())
         with self.driver_class() as drv:
-            return drv.create_user(name, access, secret, admin)
+            user_dict = drv.create_user(name, access, secret, admin)
+            if user_dict:
+                return User(**user_dict)
 
     def delete_user(self, user):
         """Deletes a user"""
@@ -660,18 +676,27 @@ class AuthManager(object):
     def create_key_pair(self, user, key_name, public_key, fingerprint):
         """Creates a key pair for user"""
         with self.driver_class() as drv:
-            return drv.create_key_pair(User.safe_id(user), key_name,
-                                        public_key, fingerprint)
+            kp_dict =  drv.create_key_pair(User.safe_id(user),
+                                           key_name,
+                                           public_key,
+                                           fingerprint)
+            if kp_dict:
+                return KeyPair(**kp_dict)
 
     def get_key_pair(self, user, key_name):
         """Retrieves a key pair for user"""
         with self.driver_class() as drv:
-            return drv.get_key_pair(User.safe_id(user), key_name)
+            kp_dict = drv.get_key_pair(User.safe_id(user), key_name)
+            if kp_dict:
+                return KeyPair(**kp_dict)
 
     def get_key_pairs(self, user):
         """Retrieves all key pairs for user"""
         with self.driver_class() as drv:
-            return drv.get_key_pairs(User.safe_id(user))
+            kp_list = drv.get_key_pairs(User.safe_id(user))
+            if not kp_list:
+                return []
+            return [KeyPair(**kp_dict) for kp_dict in kp_list]
 
     def delete_key_pair(self, user, key_name):
         """Deletes a key pair for user"""
@@ -686,7 +711,7 @@ class AuthManager(object):
             project = user.id
         pid = Project.safe_id(project)
         rc = self.__generate_rc(user.access, user.secret, pid)
-        private_key, signed_cert = self.__generate_x509_cert(user.id, pid)
+        private_key, signed_cert = self._generate_x509_cert(user.id, pid)
 
         vpn = Vpn(pid)
         configfile = open(FLAGS.vpn_client_template,"r")
@@ -726,7 +751,7 @@ class AuthManager(object):
             }
         return rc
 
-    def __generate_x509_cert(self, uid, pid):
+    def _generate_x509_cert(self, uid, pid):
         """Generate x509 cert for user"""
         (private_key, csr) = crypto.generate_x509_cert(
                 self.__cert_subject(uid))

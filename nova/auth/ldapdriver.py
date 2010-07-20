@@ -28,7 +28,6 @@ import logging
 
 from nova import exception
 from nova import flags
-from nova.auth import manager
 
 try:
     import ldap
@@ -322,7 +321,7 @@ class LdapDriver(object):
         keys = self.get_key_pairs(uid)
         if keys != None:
             for key in keys:
-                self.delete_key_pair(uid, key.name)
+                self.delete_key_pair(uid, key['name'])
 
     def __role_to_dn(self, role, project_id=None):
         """Convert role to corresponding dn"""
@@ -438,38 +437,38 @@ class LdapDriver(object):
         """Convert ldap attributes to User object"""
         if attr == None:
             return None
-        return manager.User(
-            id = attr['uid'][0],
-            name = attr['cn'][0],
-            access = attr['accessKey'][0],
-            secret = attr['secretKey'][0],
-            admin = (attr['isAdmin'][0] == 'TRUE')
-        )
+        return {
+            'id': attr['uid'][0],
+            'name': attr['cn'][0],
+            'access': attr['accessKey'][0],
+            'secret': attr['secretKey'][0],
+            'admin': (attr['isAdmin'][0] == 'TRUE')
+        }
 
     def __to_key_pair(self, owner, attr):
         """Convert ldap attributes to KeyPair object"""
         if attr == None:
             return None
-        return manager.KeyPair(
-            id = attr['cn'][0],
-            name = attr['cn'][0],
-            owner_id = owner,
-            public_key = attr['sshPublicKey'][0],
-            fingerprint = attr['keyFingerprint'][0],
-        )
+        return {
+            'id': attr['cn'][0],
+            'name': attr['cn'][0],
+            'owner_id': owner,
+            'public_key': attr['sshPublicKey'][0],
+            'fingerprint': attr['keyFingerprint'][0],
+        }
 
     def __to_project(self, attr):
         """Convert ldap attributes to Project object"""
         if attr == None:
             return None
         member_dns = attr.get('member', [])
-        return manager.Project(
-            id = attr['cn'][0],
-            name = attr['cn'][0],
-            project_manager_id = self.__dn_to_uid(attr['projectManager'][0]),
-            description = attr.get('description', [None])[0],
-            member_ids = [self.__dn_to_uid(x) for x in member_dns]
-        )
+        return {
+            'id': attr['cn'][0],
+            'name': attr['cn'][0],
+            'project_manager_id': self.__dn_to_uid(attr['projectManager'][0]),
+            'description': attr.get('description', [None])[0],
+            'member_ids': [self.__dn_to_uid(x) for x in member_dns]
+        }
 
     def __dn_to_uid(self, dn):
         """Convert user dn to uid"""

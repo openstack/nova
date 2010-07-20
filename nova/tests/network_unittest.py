@@ -39,59 +39,61 @@ class NetworkTestCase(test.TrialTestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()
         self.dnsmasq = FakeDNSMasq()
-        try:
-            self.manager.create_user('netuser', 'netuser', 'netuser')
-        except: pass
+        self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
+        self.projects = []
+        self.projects.append(self.manager.create_project('netuser',
+                                                         'netuser',
+                                                         'netuser'))
         for i in range(0, 6):
             name = 'project%s' % i
-            if not self.manager.get_project(name):
-                self.manager.create_project(name, 'netuser', name)
+            self.projects.append(self.manager.create_project(name,
+                                                             'netuser',
+                                                             name))
         self.network = network.PublicNetworkController()
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
-        for i in range(0, 6):
-            name = 'project%s' % i
-            self.manager.delete_project(name)
-        self.manager.delete_user('netuser')
+        for project in self.projects:
+            self.manager.delete_project(project)
+        self.manager.delete_user(self.user)
 
     def test_public_network_allocation(self):
         pubnet = IPy.IP(flags.FLAGS.public_range)
-        address = self.network.allocate_ip("netuser", "project0", "public")
+        address = self.network.allocate_ip(self.user.id, self.projects[0].id, "public")
         self.assertTrue(IPy.IP(address) in pubnet)
         self.assertTrue(IPy.IP(address) in self.network.network)
 
     def test_allocate_deallocate_ip(self):
         address = network.allocate_ip(
-                "netuser", "project0", utils.generate_mac())
+                self.user.id, self.projects[0].id, utils.generate_mac())
         logging.debug("Was allocated %s" % (address))
-        net = network.get_project_network("project0", "default")
-        self.assertEqual(True, is_in_project(address, "project0"))
+        net = network.get_project_network(self.projects[0].id, "default")
+        self.assertEqual(True, is_in_project(address, self.projects[0].id))
         mac = utils.generate_mac()
         hostname = "test-host"
         self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
         rv = network.deallocate_ip(address)
 
         # Doesn't go away until it's dhcp released
-        self.assertEqual(True, is_in_project(address, "project0"))
+        self.assertEqual(True, is_in_project(address, self.projects[0].id))
 
         self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
-        self.assertEqual(False, is_in_project(address, "project0"))
+        self.assertEqual(False, is_in_project(address, self.projects[0].id))
 
     def test_range_allocation(self):
         mac = utils.generate_mac()
         secondmac = utils.generate_mac()
         hostname = "test-host"
         address = network.allocate_ip(
-                    "netuser", "project0", mac)
+                    self.user.id, self.projects[0].id, mac)
         secondaddress = network.allocate_ip(
-                "netuser", "project1", secondmac)
-        net = network.get_project_network("project0", "default")
-        secondnet = network.get_project_network("project1", "default")
+                self.user, "project1", secondmac)
+        net = network.get_project_network(self.projects[0].id, "default")
+        secondnet = network.get_project_network(self.projects[1].id, "default")
 
-        self.assertEqual(True, is_in_project(address, "project0"))
-        self.assertEqual(True, is_in_project(secondaddress, "project1"))
-        self.assertEqual(False, is_in_project(address, "project1"))
+        self.assertEqual(True, is_in_project(address, self.projects[0].id))
+        self.assertEqual(True, is_in_project(secondaddress, self.projects[1].id))
+        self.assertEqual(False, is_in_project(address, self.projects[1].id))
 
         # Addresses are allocated before they're issued
         self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
@@ -100,34 +102,34 @@ class NetworkTestCase(test.TrialTestCase):
 
         rv = network.deallocate_ip(address)
         self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
-        self.assertEqual(False, is_in_project(address, "project0"))
+        self.assertEqual(False, is_in_project(address, self.projects[0].id))
 
         # First address release shouldn't affect the second
-        self.assertEqual(True, is_in_project(secondaddress, "project1"))
+        self.assertEqual(True, is_in_project(secondaddress, self.projects[1].id))
 
         rv = network.deallocate_ip(secondaddress)
         self.dnsmasq.release_ip(secondmac, secondaddress,
                                 hostname, secondnet.bridge_name)
-        self.assertEqual(False, is_in_project(secondaddress, "project1"))
+        self.assertEqual(False, is_in_project(secondaddress, self.projects[1].id))
 
     def test_subnet_edge(self):
-        secondaddress = network.allocate_ip("netuser", "project0",
+        secondaddress = network.allocate_ip(self.user.id, self.projects[0].id,
                                 utils.generate_mac())
         hostname = "toomany-hosts"
-        for project in range(1,5):
-            project_id = "project%s" % (project)
+        for i in range(1,5):
+            project_id = self.projects[i].id
             mac = utils.generate_mac()
             mac2 = utils.generate_mac()
             mac3 = utils.generate_mac()
             address = network.allocate_ip(
-                    "netuser", project_id, mac)
+                    self.user, project_id, mac)
             address2 = network.allocate_ip(
-                    "netuser", project_id, mac2)
+                    self.user, project_id, mac2)
             address3 = network.allocate_ip(
-                    "netuser", project_id, mac3)
-            self.assertEqual(False, is_in_project(address, "project0"))
-            self.assertEqual(False, is_in_project(address2, "project0"))
-            self.assertEqual(False, is_in_project(address3, "project0"))
+                    self.user, project_id, mac3)
+            self.assertEqual(False, is_in_project(address, self.projects[0].id))
+            self.assertEqual(False, is_in_project(address2, self.projects[0].id))
+            self.assertEqual(False, is_in_project(address3, self.projects[0].id))
             rv = network.deallocate_ip(address)
             rv = network.deallocate_ip(address2)
             rv = network.deallocate_ip(address3)
@@ -135,7 +137,7 @@ class NetworkTestCase(test.TrialTestCase):
             self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
             self.dnsmasq.release_ip(mac2, address2, hostname, net.bridge_name)
             self.dnsmasq.release_ip(mac3, address3, hostname, net.bridge_name)
-        net = network.get_project_network("project0", "default")
+        net = network.get_project_network(self.projects[0].id, "default")
         rv = network.deallocate_ip(secondaddress)
         self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
 
@@ -150,22 +152,23 @@ class NetworkTestCase(test.TrialTestCase):
         Network size is 32, there are 5 addresses reserved for VPN.
         So we should get 23 usable addresses
         """
-        net = network.get_project_network("project0", "default")
+        net = network.get_project_network(self.projects[0].id, "default")
         hostname = "toomany-hosts"
         macs = {}
         addresses = {}
         for i in range(0, 22):
             macs[i] = utils.generate_mac()
-            addresses[i] = network.allocate_ip("netuser", "project0", macs[i])
+            addresses[i] = network.allocate_ip(self.user.id, self.projects[0].id, macs[i])
             self.dnsmasq.issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
-        self.assertRaises(NoMoreAddresses, network.allocate_ip, "netuser", "project0", utils.generate_mac())
+        self.assertRaises(NoMoreAddresses, network.allocate_ip, self.user.id, self.projects[0].id, utils.generate_mac())
 
         for i in range(0, 22):
             rv = network.deallocate_ip(addresses[i])
             self.dnsmasq.release_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
 def is_in_project(address, project_id):
+    print address, list(network.get_project_network(project_id).list_addresses())
     return address in network.get_project_network(project_id).list_addresses()
 
 def _get_project_addresses(project_id):
