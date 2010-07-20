@@ -159,26 +159,27 @@ class KeyPair(AuthBase):
     Even though this object is named KeyPair, only the public key and
     fingerprint is stored. The user's private key is not saved.
     """
-    def __init__(self, id, owner_id, public_key, fingerprint):
+    def __init__(self, id, name, owner_id, public_key, fingerprint):
         self.id = id
-        self.name = id
+        self.name = name
         self.owner_id = owner_id
         self.public_key = public_key
         self.fingerprint = fingerprint
 
     def __repr__(self):
-        return "KeyPair('%s', '%s', '%s', '%s')" % (self.id,
-                                                    self.owner_id,
-                                                    self.public_key,
-                                                    self.fingerprint)
+        return "KeyPair('%s', '%s', '%s', '%s', '%s')" % (self.id,
+                                                          self.name,
+                                                          self.owner_id,
+                                                          self.public_key,
+                                                          self.fingerprint)
 
 
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
-    def __init__(self, id, project_manager_id, description, member_ids):
-        self.project_manager_id = project_manager_id
+    def __init__(self, id, name, project_manager_id, description, member_ids):
         self.id = id
-        self.name = id
+        self.name = name
+        self.project_manager_id = project_manager_id
         self.description = description
         self.member_ids = member_ids
 
@@ -205,10 +206,11 @@ class Project(AuthBase):
         return AuthManager().get_credentials(user, self)
 
     def __repr__(self):
-        return "Project('%s', '%s', '%s', %s)" % (self.id,
-                                                  self.project_manager_id,
-                                                  self.description,
-                                                  self.member_ids)
+        return "Project('%s', '%s', '%s', '%s', %s)" % (self.id,
+                                                        self.name,
+                                                        self.project_manager_id,
+                                                        self.description,
+                                                        self.member_ids)
 
 
 class NoMorePorts(exception.Error):
@@ -223,10 +225,16 @@ class Vpn(datastore.BasicModel):
 
     @property
     def identifier(self):
+        """Identifier used for key in redis"""
         return self.project_id
 
     @classmethod
     def create(cls, project_id):
+        """Creates a vpn for project
+
+        This method finds a free ip and port and stores the associated
+        values in the datastore.
+        """
         # TODO(vish): get list of vpn ips from redis
         port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
         vpn = cls(project_id)
@@ -239,6 +247,7 @@ class Vpn(datastore.BasicModel):
 
     @classmethod
     def find_free_port_for_ip(cls, ip):
+        """Finds a free port for a given ip from the redis set"""
         # TODO(vish): these redis commands should be generalized and
         #             placed into a base class. Conceptually, it is
         #             similar to an association, but we are just
@@ -260,21 +269,26 @@ class Vpn(datastore.BasicModel):
 
     @classmethod
     def num_ports_for_ip(cls, ip):
+        """Calculates the number of free ports for a given ip"""
         return datastore.Redis.instance().scard('ip:%s:ports' % ip)
 
     @property
     def ip(self):
+        """The ip assigned to the project"""
         return self['ip']
 
     @property
     def port(self):
+        """The port assigned to the project"""
         return int(self['port'])
 
     def save(self):
+        """Saves the association to the given ip"""
         self.associate_with('ip', self.ip)
         super(Vpn, self).save()
 
     def destroy(self):
+        """Cleans up datastore and adds port back to pool"""
         self.unassociate_with('ip', self.ip)
         datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
         super(Vpn, self).destroy()
@@ -345,19 +359,22 @@ class AuthManager(object):
         @return: User and project that the request represents.
         """
         # TODO(vish): check for valid timestamp
-        (access_key, sep, project_name) = access.partition(':')
+        (access_key, sep, project_id) = access.partition(':')
 
         user = self.get_user_from_access_key(access_key)
         if user == None:
             raise exception.NotFound('No user found for access key %s' %
                                      access_key)
-        if project_name is '':
-            project_name = user.name
 
-        project = self.get_project(project_name)
+        # NOTE(vish): if we stop using project name as id we need better
+        #             logic to find a default project for user
+        if project_id is '':
+            project_id = user.name
+
+        project = self.get_project(project_id)
         if project == None:
             raise exception.NotFound('No project called %s could be found' %
-                                     project_name)
+                                     project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
             raise exception.NotFound('User %s is not a member of project %s' %
@@ -521,9 +538,9 @@ class AuthManager(object):
         Vpn.create(name)
         with self.driver_class() as drv:
             return drv.create_project(name,
-                                       User.safe_id(manager_user),
-                                       description,
-                                       member_users)
+                                      User.safe_id(manager_user),
+                                      description,
+                                      member_users)
 
     def get_projects(self):
         """Retrieves list of all projects"""
@@ -531,10 +548,10 @@ class AuthManager(object):
             return drv.get_projects()
 
 
-    def get_project(self, project):
+    def get_project(self, pid):
         """Get project object by id"""
         with self.driver_class() as drv:
-            return drv.get_project(Project.safe_id(project))
+            return drv.get_project(pid)
 
     def add_to_project(self, user, project):
         """Add user to project"""
@@ -580,13 +597,11 @@ class AuthManager(object):
         with self.driver_class() as drv:
             return drv.get_users()
 
-    def create_user(self, user, access=None, secret=None,
-                    admin=False, create_project=True):
+    def create_user(self, name, access=None, secret=None, admin=False):
         """Creates a user
 
-        @type user: str
-        @param name: Name of the user to create. The name will also be
-        used as the user id.
+        @type name: str
+        @param name: Name of the user to create.
 
         @type access: str
         @param access: Access Key (defaults to a random uuid)
@@ -607,29 +622,12 @@ class AuthManager(object):
         if access == None: access = str(uuid.uuid4())
         if secret == None: secret = str(uuid.uuid4())
         with self.driver_class() as drv:
-            user = User.safe_id(user)
-            result = drv.create_user(user, access, secret, admin)
-        if create_project:
-            # NOTE(vish): if the project creation fails, we delete
-            #             the user and return an exception
-            try:
-                drv.create_project(user, user, user)
-            except Exception:
-                with self.driver_class() as drv:
-                    drv.delete_user(user)
-                raise
-        return result
+            return drv.create_user(name, access, secret, admin)
 
-    def delete_user(self, user, delete_project=True):
+    def delete_user(self, user):
         """Deletes a user"""
         with self.driver_class() as drv:
-            user = User.safe_id(user)
-            if delete_project:
-                try:
-                    drv.delete_project(user)
-                except exception.NotFound:
-                    pass
-            drv.delete_user(user)
+            drv.delete_user(User.safe_id(user))
 
     def generate_key_pair(self, user, key_name):
         """Generates a key pair for a user

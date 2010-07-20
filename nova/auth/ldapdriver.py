@@ -108,9 +108,9 @@ class LdapDriver(object):
         attr = self.__find_object(dn, '(objectclass=novaKeyPair)')
         return self.__to_key_pair(uid, attr)
 
-    def get_project(self, name):
-        """Retrieve project by name"""
-        dn = 'cn=%s,%s' % (name,
+    def get_project(self, pid):
+        """Retrieve project by id"""
+        dn = 'cn=%s,%s' % (pid,
                            FLAGS.ldap_project_subtree)
         attr = self.__find_object(dn, '(objectclass=novaProject)')
         return self.__to_project(attr)
@@ -452,6 +452,7 @@ class LdapDriver(object):
             return None
         return manager.KeyPair(
             id = attr['cn'][0],
+            name = attr['cn'][0],
             owner_id = owner,
             public_key = attr['sshPublicKey'][0],
             fingerprint = attr['keyFingerprint'][0],
@@ -464,6 +465,7 @@ class LdapDriver(object):
         member_dns = attr.get('member', [])
         return manager.Project(
             id = attr['cn'][0],
+            name = attr['cn'][0],
             project_manager_id = self.__dn_to_uid(attr['projectManager'][0]),
             description = attr.get('description', [None])[0],
             member_ids = [self.__dn_to_uid(x) for x in member_dns]
