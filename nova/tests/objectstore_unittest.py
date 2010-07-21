@@ -23,11 +23,11 @@ import os
 import shutil
 import tempfile
 
-from nova.exception import NotEmpty, NotFound, NotAuthorized
 from nova import flags
 from nova import objectstore
 from nova import test
 from nova.auth import users
+from nova.exception import NotEmpty, NotFound, NotAuthorized
 
 
 FLAGS = flags.FLAGS
@@ -157,36 +157,3 @@ class ObjectStoreTestCase(test.BaseTestCase):
         self.context.user = self.um.get_user('user2')
         self.context.project = self.um.get_project('proj2')
         self.assertFalse(my_img.is_authorized(self.context))
-
-# class ApiObjectStoreTestCase(test.BaseTestCase):
-#     def setUp(self):
-#         super(ApiObjectStoreTestCase, self).setUp()
-#         FLAGS.fake_users   = True
-#         FLAGS.buckets_path = os.path.join(tempdir, 'buckets')
-#         FLAGS.images_path  = os.path.join(tempdir, 'images')
-#         FLAGS.ca_path = os.path.join(os.path.dirname(__file__), 'CA')
-#
-#         self.users = users.UserManager.instance()
-#         self.app  = handler.Application(self.users)
-#
-#         self.host = '127.0.0.1'
-#
-#         self.conn = boto.s3.connection.S3Connection(
-#             aws_access_key_id=user.access,
-#             aws_secret_access_key=user.secret,
-#             is_secure=False,
-#             calling_format=boto.s3.connection.OrdinaryCallingFormat(),
-#             port=FLAGS.s3_port,
-#             host=FLAGS.s3_host)
-#
-#         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
-#
-#     def tearDown(self):
-#         FLAGS.Reset()
-#         super(ApiObjectStoreTestCase, self).tearDown()
-#
-#     def test_describe_instances(self):
-#         self.expect_http()
-#         self.mox.ReplayAll()
-#
-#         self.assertEqual(self.ec2.get_all_instances(), [])
