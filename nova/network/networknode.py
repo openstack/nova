@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,15 +17,19 @@
 #    under the License.
 
 """
-  Twistd daemon for the nova compute nodes.
+Network Nodes are responsible for allocating ips and setting up network
 """
 
-from nova import twistd
-from nova.compute import node
+import logging
+
+from nova import flags
+from nova import node
 
 
-if __name__ == '__main__':
-    twistd.serve(__file__)
+FLAGS = flags.FLAGS
 
-if __name__ == '__builtin__':
-    application = node.ComputeNode.create()
+class NetworkNode(node.Node):
+    """Allocates ips and sets up networks"""
+
+    def __init__(self):
+        logging.debug("Network node working")

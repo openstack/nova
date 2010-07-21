@@ -26,7 +26,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.compute import model
-from nova.compute import node
+from nova.compute import computenode
 
 
 FLAGS = flags.FLAGS
@@ -53,14 +53,14 @@ class InstanceXmlTestCase(test.TrialTestCase):
         # rv = yield first_node.terminate_instance(instance_id)
 
 
-class NodeConnectionTestCase(test.TrialTestCase):
+class ComputeConnectionTestCase(test.TrialTestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
-        super(NodeConnectionTestCase, self).setUp()
+        super(ComputeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True,
                    fake_users=True)
-        self.node = node.Node()
+        self.node = computenode.ComputeNode()
 
     def create_instance(self):
         instdir = model.InstanceDirectory()

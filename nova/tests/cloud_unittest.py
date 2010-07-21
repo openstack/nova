@@ -28,7 +28,7 @@ from nova import flags
 from nova import rpc
 from nova import test
 from nova.auth import users
-from nova.compute import node
+from nova.compute import computenode
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -54,7 +54,7 @@ class CloudTestCase(test.BaseTestCase):
         self.injected.append(self.cloud_consumer.attach_to_tornado(self.ioloop))
 
         # set up a node
-        self.node = node.Node()
+        self.node = computenode.ComputeNode()
         self.node_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                      topic=FLAGS.compute_topic,
                                                      proxy=self.node)

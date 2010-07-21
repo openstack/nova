@@ -52,14 +52,14 @@ from nova import twistd
 from nova.tests.access_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
+from nova.tests.compute_unittest import *
 from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
-from nova.tests.node_unittest import *
 from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
-from nova.tests.storage_unittest import *
 from nova.tests.users_unittest import *
 from nova.tests.validator_unittest import *
+from nova.tests.volume_unittest import *
 
 
 FLAGS = flags.FLAGS

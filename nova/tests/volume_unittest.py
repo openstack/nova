@@ -21,22 +21,22 @@ import logging
 from nova import exception
 from nova import flags
 from nova import test
-from nova.compute import node
-from nova.volume import storage
+from nova.compute import computenode
+from nova.volume import volumenode
 
 
 FLAGS = flags.FLAGS
 
 
-class StorageTestCase(test.TrialTestCase):
+class VolumeTestCase(test.TrialTestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
-        super(StorageTestCase, self).setUp()
-        self.mynode = node.Node()
+        super(VolumeTestCase, self).setUp()
+        self.mynode = computenode.ComputeNode()
         self.mystorage = None
         self.flags(fake_libvirt=True,
                    fake_storage=True)
-        self.mystorage = storage.BlockStore()
+        self.mystorage = volumenode.VolumeNode()
 
     def test_run_create_volume(self):
         vol_size = '0'
@@ -45,11 +45,11 @@ class StorageTestCase(test.TrialTestCase):
         volume_id = self.mystorage.create_volume(vol_size, user_id, project_id)
         # TODO(termie): get_volume returns differently than create_volume
         self.assertEqual(volume_id,
-                         storage.get_volume(volume_id)['volume_id'])
+                         volumenode.get_volume(volume_id)['volume_id'])
 
         rv = self.mystorage.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          storage.get_volume,
+                          volumenode.get_volume,
                           volume_id)
 
     def test_too_big_volume(self):
@@ -70,7 +70,7 @@ class StorageTestCase(test.TrialTestCase):
         for i in xrange(total_slots):
             vid = self.mystorage.create_volume(vol_size, user_id, project_id)
             vols.append(vid)
-        self.assertRaises(storage.NoMoreVolumes,
+        self.assertRaises(volumenode.NoMoreVolumes,
                           self.mystorage.create_volume,
                           vol_size, user_id, project_id)
         for id in vols:
@@ -85,7 +85,7 @@ class StorageTestCase(test.TrialTestCase):
         mountpoint = "/dev/sdf"
         volume_id = self.mystorage.create_volume(vol_size, user_id, project_id)
 
-        volume_obj = storage.get_volume(volume_id)
+        volume_obj = volumenode.get_volume(volume_id)
         volume_obj.start_attach(instance_id, mountpoint)
         rv = yield self.mynode.attach_volume(volume_id,
                                           instance_id,
@@ -100,12 +100,12 @@ class StorageTestCase(test.TrialTestCase):
                           volume_id)
 
         rv = yield self.mystorage.detach_volume(volume_id)
-        volume_obj = storage.get_volume(volume_id)
+        volume_obj = volumenode.get_volume(volume_id)
         self.assertEqual(volume_obj['status'], "available")
 
         rv = self.mystorage.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          storage.get_volume,
+                          volumenode.get_volume,
                           volume_id)
 
     def test_multi_node(self):

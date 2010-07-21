@@ -32,7 +32,6 @@ from twisted.python import log
 from twisted.python import reflect
 from twisted.python import runtime
 from twisted.python import usage
-import UserDict
 
 from nova import flags
 
@@ -161,6 +160,13 @@ def WrapTwistedOptions(wrapped):
             except (AttributeError, KeyError):
                 self._data[key] = value
 
+        def get(self, key, default):
+            key = key.replace('-', '_')
+            try:
+                return getattr(FLAGS, key)
+            except (AttributeError, KeyError):
+                self._data.get(key, default)
+
     return TwistedOptionsToFlags
 
 
@@ -210,8 +216,12 @@ def serve(filename):
     elif FLAGS.pidfile.endswith('twistd.pid'):
         FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
 
+    print FLAGS.logfile
     if not FLAGS.logfile:
         FLAGS.logfile = '%s.log' % name
+    elif FLAGS.logfile.endswith('twistd.log'):
+        FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
+    print FLAGS.logfile
 
     action = 'start'
     if len(argv) > 1:
