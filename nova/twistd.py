@@ -215,11 +215,14 @@ def serve(filename):
         FLAGS.pidfile = '%s.pid' % name
     elif FLAGS.pidfile.endswith('twistd.pid'):
         FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
-
     if not FLAGS.logfile:
         FLAGS.logfile = '%s.log' % name
     elif FLAGS.logfile.endswith('twistd.log'):
         FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
+    if not FLAGS.prefix:
+        FLAGS.prefix = name
+    elif FLAGS.prefix.endswith('twisted'):
+        FLAGS.prefix = FLAGS.prefix.replace('twisted', name)
 
     action = 'start'
     if len(argv) > 1:
@@ -237,7 +240,7 @@ def serve(filename):
         sys.exit(1)
 
     formatter = logging.Formatter(
-        name + '(%(name)s): %(levelname)s %(message)s')
+        '(%(name)s): %(levelname)s %(message)r')
     handler = logging.StreamHandler(log.StdioOnnaStick())
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
@@ -246,11 +249,6 @@ def serve(filename):
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.WARNING)
-
-    if FLAGS.syslog:
-        syslog = logging.handlers.SysLogHandler(address='/dev/log')
-        syslog.setFormatter(formatter)
-        logging.getLogger().addHandler(syslog)
 
     logging.debug("Full set of FLAGS:")
     for flag in FLAGS:
