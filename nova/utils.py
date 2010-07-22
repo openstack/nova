@@ -45,7 +45,7 @@ def fetchfile(url, target):
 #    fp.close()
     execute("curl %s -o %s" % (url, target))
 
-def execute(cmd, input=None, addl_env=None):
+def execute(cmd, input=None, addl_env=None, check_exit_code=True):
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -59,6 +59,8 @@ def execute(cmd, input=None, addl_env=None):
     obj.stdin.close()
     if obj.returncode:
         logging.debug("Result was %s" % (obj.returncode))
+        if check_exit_code and obj.returncode <> 0:
+            raise Exception("Unexpected exit code: %s.  result=%s" % (obj.returncode, result))
     return result
 
 
@@ -84,9 +86,12 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd):
+def runthis(prompt, cmd, check_exit_code = True):
     logging.debug("Running %s" % (cmd))
-    logging.debug(prompt % (subprocess.call(cmd.split(" "))))
+    exit_code = subprocess.call(cmd.split(" "))
+    logging.debug(prompt % (exit_code))
+    if check_exit_code and exit_code <> 0:
+        raise Exception("Unexpected exit code: %s from cmd: %s" % (exit_code, cmd))
 
 
 def generate_uid(topic, size=8):
