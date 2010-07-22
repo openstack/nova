@@ -103,7 +103,10 @@ def get_argument(request, key, default_value):
 def get_context(request):
     try:
         # Authorization Header format: 'AWS <access>:<secret>'
-        access, sep, secret = request.getHeader('Authorization').split(' ')[1].rpartition(':')
+        authorization_header = request.getHeader('Authorization')
+        if not authorization_header:
+            raise exception.NotAuthorized
+        access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
         (user, project) = manager.AuthManager().authenticate(access,
                                                              secret,
                                                              {},
@@ -113,7 +116,7 @@ def get_context(request):
                                                              False)
         # FIXME: check signature here!
         return api.APIRequestContext(None, user, project)
-    except exception.Error, ex:
+    except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
@@ -169,7 +172,7 @@ class BucketResource(Resource):
         logging.debug("Creating bucket %s" % (self.name))
         try:
             print 'user is %s' % request.context
-        except Exception, e:
+        except Exception as e:
             logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
@@ -243,9 +246,10 @@ class ImageResource(Resource):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(self.context)]
+        images = [i for i in image.Image.all() if i.is_authorized(request.context)]
 
         request.write(json.dumps([i.metadata for i in images]))
+        request.finish()
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):

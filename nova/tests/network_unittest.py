@@ -32,9 +32,12 @@ FLAGS = flags.FLAGS
 class NetworkTestCase(test.TrialTestCase):
     def setUp(self):
         super(NetworkTestCase, self).setUp()
+        # NOTE(vish): if you change these flags, make sure to change the
+        #             flags in the corresponding section in nova-dhcpbridge
         self.flags(fake_libvirt=True,
                    fake_storage=True,
                    fake_network=True,
+                   auth_driver='nova.auth.fakeldapdriver',
                    network_size=32)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()
@@ -149,21 +152,44 @@ class NetworkTestCase(test.TrialTestCase):
 
     def test_too_many_addresses(self):
         """
-        Network size is 32, there are 5 addresses reserved for VPN.
-        So we should get 23 usable addresses
+        Here, we test that a proper NoMoreAddresses exception is raised.
+
+        However, the number of available IP addresses depends on the test
+        environment's setup.
+
+        Network size is set in test fixture's setUp method.
+
+        There are FLAGS.cnt_vpn_clients addresses reserved for VPN (NUM_RESERVED_VPN_IPS)
+
+        And there are NUM_STATIC_IPS that are always reserved by Nova for the necessary
+        services (gateway, CloudPipe, etc)
+
+        So we should get flags.network_size - (NUM_STATIC_IPS +
+                                               NUM_PREALLOCATED_IPS +
+                                               NUM_RESERVED_VPN_IPS)
+        usable addresses
         """
         net = network.get_project_network(self.projects[0].id, "default")
+
+        # Determine expected number of available IP addresses
+        num_static_ips = net.num_static_ips
+        num_preallocated_ips = len(net.hosts.keys())
+        num_reserved_vpn_ips = flags.FLAGS.cnt_vpn_clients
+        num_available_ips = flags.FLAGS.network_size - (num_static_ips +
+                                                        num_preallocated_ips +
+                                                        num_reserved_vpn_ips)
+
         hostname = "toomany-hosts"
         macs = {}
         addresses = {}
-        for i in range(0, 22):
+        for i in range(0, (num_available_ips - 1)):
             macs[i] = utils.generate_mac()
             addresses[i] = network.allocate_ip(self.user.id, self.projects[0].id, macs[i])
             self.dnsmasq.issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
         self.assertRaises(NoMoreAddresses, network.allocate_ip, self.user.id, self.projects[0].id, utils.generate_mac())
 
-        for i in range(0, 22):
+        for i in range(0, (num_available_ips - 1)):
             rv = network.deallocate_ip(addresses[i])
             self.dnsmasq.release_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
