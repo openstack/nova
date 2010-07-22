@@ -22,7 +22,6 @@ manage pid files and support syslogging.
 """
 
 import logging
-import logging.handlers
 import os
 import signal
 import sys
@@ -239,8 +238,16 @@ def serve(filename):
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
 
-    formatter = logging.Formatter(
-        '(%(name)s): %(levelname)s %(message)r')
+    class NoNewlineFormatter(logging.Formatter):
+        """Strips newlines from default formatter"""
+        def format(self, record):
+            """Grabs default formatter's output and strips newlines"""
+            data = logging.Formatter.format(self, record)
+            return data.replace("\n", "--")
+
+    # NOTE(vish): syslog-ng doesn't handle newlines from trackbacks very well
+    formatter = NoNewlineFormatter(
+        '(%(name)s): %(levelname)s %(message)s')
     handler = logging.StreamHandler(log.StdioOnnaStick())
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
