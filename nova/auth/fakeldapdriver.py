@@ -16,13 +16,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import flags
+"""
+Fake Auth driver for ldap
 
-FLAGS = flags.FLAGS
+"""
 
-FLAGS.fake_libvirt = True
-FLAGS.fake_storage = True
-FLAGS.fake_rabbit = True
-FLAGS.fake_network = True
-FLAGS.auth_driver = 'nova.auth.fakeldapdriver'
-FLAGS.verbose = True
+from nova.auth import ldapdriver
+
+class AuthDriver(ldapdriver.AuthDriver):
+    """Ldap Auth driver
+
+    Defines enter and exit and therefore supports the with/as syntax.
+    """
+    def __init__(self):
+        self.ldap = __import__('nova.auth.fakeldap', fromlist=True)

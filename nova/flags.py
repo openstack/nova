@@ -46,7 +46,6 @@ DEFINE_bool('fake_libvirt', False,
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False, 'should we use fake network devices and addresses')
-DEFINE_bool('fake_users', False, 'use fake users')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')

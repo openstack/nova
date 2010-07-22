@@ -34,7 +34,6 @@ from nova import exception
 from nova import flags
 from nova import objectstore # for flags
 from nova import utils
-from nova.auth import ldapdriver
 from nova.auth import signer
 FLAGS = flags.FLAGS
 
@@ -76,6 +75,8 @@ flags.DEFINE_string('credential_cert_subject',
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
+flags.DEFINE_string('auth_driver', 'fakeldapdriver',
+                    'Driver that auth manager uses')
 
 class AuthBase(object):
     """Base class for objects relating to auth
@@ -312,7 +313,7 @@ class AuthManager(object):
     Methods accept objects or ids.
 
     AuthManager uses a driver object to make requests to the data backend.
-    See ldapdriver.LdapDriver for reference.
+    See ldapdriver for reference.
 
     AuthManager also manages associated data related to Auth objects that
     need to be more accessible, such as vpn ips and ports.
@@ -325,7 +326,9 @@ class AuthManager(object):
         return cls._instance
 
     def __init__(self, *args, **kwargs):
-        self.driver_class = kwargs.get('driver_class', ldapdriver.LdapDriver)
+        """Imports the driver module and saves the Driver class"""
+        mod = __import__(FLAGS.auth_driver, fromlist=True)
+        self.driver = mod.AuthDriver
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
@@ -451,7 +454,7 @@ class AuthManager(object):
         @rtype: bool
         @return: True if the user has the role.
         """
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             if role == 'projectmanager':
                 if not project:
                     raise exception.Error("Must specify project")
@@ -487,7 +490,7 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to add local role.
         """
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
     def remove_role(self, user, role, project=None):
@@ -507,19 +510,19 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to remove local role.
         """
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
     def get_project(self, pid):
         """Get project object by id"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             project_dict = drv.get_project(pid)
             if project_dict:
                 return Project(**project_dict)
 
     def get_projects(self):
         """Retrieves list of all projects"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             project_list = drv.get_projects()
             if not project_list:
                 return []
@@ -549,7 +552,7 @@ class AuthManager(object):
         """
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             project_dict =  drv.create_project(name,
                                                User.safe_id(manager_user),
                                                description,
@@ -561,7 +564,7 @@ class AuthManager(object):
 
     def add_to_project(self, user, project):
         """Add user to project"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             return drv.add_to_project(User.safe_id(user),
                                        Project.safe_id(project))
 
@@ -579,7 +582,7 @@ class AuthManager(object):
 
     def remove_from_project(self, user, project):
         """Removes a user from a project"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
 
@@ -600,26 +603,26 @@ class AuthManager(object):
 
     def delete_project(self, project):
         """Deletes a project"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             return drv.delete_project(Project.safe_id(project))
 
     def get_user(self, uid):
         """Retrieves a user by id"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             user_dict = drv.get_user(uid)
             if user_dict:
                 return User(**user_dict)
 
     def get_user_from_access_key(self, access_key):
         """Retrieves a user by access key"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             user_dict = drv.get_user_from_access_key(access_key)
             if user_dict:
                 return User(**user_dict)
 
     def get_users(self):
         """Retrieves a list of all users"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             user_list = drv.get_users()
             if not user_list:
                 return []
@@ -649,14 +652,14 @@ class AuthManager(object):
         """
         if access == None: access = str(uuid.uuid4())
         if secret == None: secret = str(uuid.uuid4())
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             user_dict = drv.create_user(name, access, secret, admin)
             if user_dict:
                 return User(**user_dict)
 
     def delete_user(self, user):
         """Deletes a user"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             drv.delete_user(User.safe_id(user))
 
     def generate_key_pair(self, user, key_name):
@@ -677,7 +680,7 @@ class AuthManager(object):
         # NOTE(vish): generating key pair is slow so check for legal
         #             creation before creating keypair
         uid = User.safe_id(user)
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             if not drv.get_user(uid):
                 raise exception.NotFound("User %s doesn't exist" % user)
             if drv.get_key_pair(uid, key_name):
@@ -689,7 +692,7 @@ class AuthManager(object):
 
     def create_key_pair(self, user, key_name, public_key, fingerprint):
         """Creates a key pair for user"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             kp_dict =  drv.create_key_pair(User.safe_id(user),
                                            key_name,
                                            public_key,
@@ -699,14 +702,14 @@ class AuthManager(object):
 
     def get_key_pair(self, user, key_name):
         """Retrieves a key pair for user"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             kp_dict = drv.get_key_pair(User.safe_id(user), key_name)
             if kp_dict:
                 return KeyPair(**kp_dict)
 
     def get_key_pairs(self, user):
         """Retrieves all key pairs for user"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             kp_list = drv.get_key_pairs(User.safe_id(user))
             if not kp_list:
                 return []
@@ -714,7 +717,7 @@ class AuthManager(object):
 
     def delete_key_pair(self, user, key_name):
         """Deletes a key pair for user"""
-        with self.driver_class() as drv:
+        with self.driver() as drv:
             drv.delete_key_pair(User.safe_id(user), key_name)
 
     def get_credentials(self, user, project=None):
