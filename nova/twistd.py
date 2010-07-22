@@ -216,12 +216,10 @@ def serve(filename):
     elif FLAGS.pidfile.endswith('twistd.pid'):
         FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
 
-    print FLAGS.logfile
     if not FLAGS.logfile:
         FLAGS.logfile = '%s.log' % name
     elif FLAGS.logfile.endswith('twistd.log'):
         FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
-    print FLAGS.logfile
 
     action = 'start'
     if len(argv) > 1:
