@@ -25,6 +25,7 @@ Compute Node:
 """
 
 import base64
+import boto.utils
 import json
 import logging
 import os
@@ -45,11 +46,13 @@ from nova import fakevirt
 from nova import flags
 from nova import process
 from nova import utils
+from nova.auth import signer
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
 from nova.objectstore import image # for image_path flag
 from nova.volume import storage
+from nova.users import UserManager
 
 
 FLAGS = flags.FLAGS
@@ -446,8 +449,12 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
+        user_id = self.datamodel['user_id']
+        user = UserManager.instance().get_user(user_id)
+        auth = signer.Signer(user.secret.encode()).s3_authorization({}, 'GET', url)
+        auth_header = 'Authorization: %s:%s' % (user_id, auth)
         d = process.simple_execute(
-                'curl --silent %s -o %s' % (url, path))
+                'curl --silent %s -o "%s"' % (url, auth_header, path))
         return d
 
     def _fetch_local_image(self, image, path):
