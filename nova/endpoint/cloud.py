@@ -23,7 +23,6 @@ datastore.
 """
 
 import base64
-import json
 import logging
 import os
 import time
@@ -38,9 +37,9 @@ from nova.auth import rbac
 from nova.auth import users
 from nova.compute import model
 from nova.compute import network
-from nova.compute import computenode
+from nova.compute import computeservice
 from nova.endpoint import images
-from nova.volume import volumenode
+from nova.volume import volumeservice
 
 
 FLAGS = flags.FLAGS
@@ -76,7 +75,7 @@ class CloudController(object):
     def volumes(self):
         """ returns a list of all volumes """
         for volume_id in datastore.Redis.instance().smembers("volumes"):
-            volume = volumenode.get_volume(volume_id)
+            volume = volumeservice.get_volume(volume_id)
             yield volume
 
     def __str__(self):
@@ -103,7 +102,7 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], computenode.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                line = '%s slots=%d' % (instance['private_dns_name'], computeservice.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
                 else:
@@ -296,7 +295,7 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
-        # TODO(vish): refactor this to create the volume object here and tell volumenode to create it
+        # TODO(vish): refactor this to create the volume object here and tell volumeservice to create it
         res = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
                                  "args" : {"size": size,
                                            "user_id": context.user.id,
@@ -331,7 +330,7 @@ class CloudController(object):
         raise exception.NotFound('Instance %s could not be found' % instance_id)
 
     def _get_volume(self, context, volume_id):
-        volume = volumenode.get_volume(volume_id)
+        volume = volumeservice.get_volume(volume_id)
         if context.user.is_admin() or volume['project_id'] == context.project.id:
             return volume
         raise exception.NotFound('Volume %s could not be found' % volume_id)
@@ -578,7 +577,7 @@ class CloudController(object):
                   "args": {"instance_id" : inst.instance_id}})
             logging.debug("Casting to node for %s's instance with IP of %s" %
                       (context.user.name, inst['private_dns_name']))
-        # TODO: Make the NetworkComputeNode figure out the network name from ip.
+        # TODO: Make Network figure out the network name from ip.
         return defer.succeed(self._format_instances(
                                 context, reservation_id))
 

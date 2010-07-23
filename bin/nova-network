@@ -22,11 +22,11 @@
 """
 
 from nova import twistd
-from nova.network import networknode
+from nova.network import networkservice
 
 
 if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    application = networknode.NetworkNode.create()
+    application = networkservice.NetworkService.create()

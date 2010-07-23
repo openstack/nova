@@ -40,7 +40,7 @@ flags.DEFINE_integer('report_interval', 10,
                      'seconds between nodes reporting state to cloud',
                      lower_bound=1)
 
-class Node(object, service.Service):
+class Service(object, service.Service):
     """Base class for workers that run on hosts"""
 
     @classmethod

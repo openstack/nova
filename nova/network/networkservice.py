@@ -23,12 +23,12 @@ Network Nodes are responsible for allocating ips and setting up network
 import logging
 
 from nova import flags
-from nova import node
+from nova import service
 
 
 FLAGS = flags.FLAGS
 
-class NetworkNode(node.Node):
+class NetworkService(service.Service):
     """Allocates ips and sets up networks"""
 
     def __init__(self):
