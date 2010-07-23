@@ -106,8 +106,8 @@ def get_context(request):
         access, sep, secret = request.getHeader('Authorization').split(' ')[1].rpartition(':')
         um = users.UserManager.instance()
         print 'um %s' % um
-        (user, project) = um.authenticate(access, secret, {}, request.method, request.host, request.uri, False)
-        # FIXME: check signature here!
+
+        (user, project) = um.authenticate(access, secret, {}, request.method, request.getRequestHostname(), request.uri, headers=request.getAllHeaders(), check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error, ex:
         logging.debug("Authentication Failure: %s" % ex)
@@ -117,7 +117,6 @@ class S3(Resource):
     """Implementation of an S3-like storage server based on local files."""
     def getChild(self, name, request):
         request.context = get_context(request)
-
         if name == '':
             return self
         elif name == '_images':
@@ -126,6 +125,7 @@ class S3(Resource):
             return BucketResource(name)
 
     def render_GET(self, request):
+        logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() if b.is_authorized(request.context)]
 
         render_xml(request, {"ListAllMyBucketsResult": {
@@ -169,7 +169,8 @@ class BucketResource(Resource):
             logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
-        return ''
+        request.finish()
+        return server.NOT_DONE_YET
 
     def render_DELETE(self, request):
         logging.debug("Deleting bucket %s" % (self.name))
@@ -225,8 +226,6 @@ class ObjectResource(Resource):
         return ''
 
 class ImageResource(Resource):
-    isLeaf = True
-
     def getChild(self, name, request):
         if name == '':
             return self
@@ -239,9 +238,10 @@ class ImageResource(Resource):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(self.context)]
+        images = [i for i in image.Image.all() if i.is_authorized(request.context)]
 
         request.write(json.dumps([i.metadata for i in images]))
+        request.finish()
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):

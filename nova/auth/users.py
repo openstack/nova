@@ -395,11 +395,13 @@ class UserManager(object):
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
-                     verify_signature=True):
+                     check_type='ec2', headers=None):
         # TODO: Check for valid timestamp
         (access_key, sep, project_name) = access.partition(':')
 
+        logging.info('Looking up user: %r', access_key)
         user = self.get_user_from_access_key(access_key)
+        logging.info('user: %r', user)
         if user == None:
             raise exception.NotFound('No user found for access key %s' %
                                      access_key)
@@ -413,7 +415,14 @@ class UserManager(object):
         if not user.is_admin() and not project.has_member(user):
             raise exception.NotFound('User %s is not a member of project %s' %
                                      (user.id, project.id))
-        if verify_signature:
+        if check_type == 's3':
+            expected_signature = signer.Signer(user.secret.encode()).s3_authorization(headers, verb, path)
+            logging.debug('user.secret: %s', user.secret)
+            logging.debug('expected_signature: %s', expected_signature)
+            logging.debug('signature: %s', signature)
+            if signature != expected_signature:
+                raise exception.NotAuthorized('Signature does not match')
+        elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
             expected_signature = signer.Signer(user.secret.encode()).generate(
