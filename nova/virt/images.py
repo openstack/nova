@@ -24,6 +24,7 @@ Handling of VM disk images.
 import os.path
 
 from nova import flags
+from nova import process
 
 FLAGS = flags.FLAGS
 
