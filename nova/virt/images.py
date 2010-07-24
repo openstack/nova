@@ -31,22 +31,20 @@ flags.DEFINE_bool('use_s3', True,
                   'whether to get images from s3 or use local copy')
 
 
-def fetch(pool, image, path):
+def fetch(image, path):
     if FLAGS.use_s3:
         f = _fetch_s3_image
     else:
         f = _fetch_local_image
-    return f(pool, image, path)
+    return f(image, path)
 
-def _fetch_s3_image(pool, image, path):
+def _fetch_s3_image(image, path):
     url = _image_url('%s/image' % image)
-    d = pool.simpleExecute('curl --silent %s -o %s' % (url, path))
-    return d
+    return process.simple_execute('curl --silent %s -o %s' % (url, path))
 
-def _fetch_local_image(pool, image, path):
+def _fetch_local_image(image, path):
     source = _image_path('%s/image' % image)
-    d = pool.simpleExecute('cp %s %s' % (source, path))
-    return d
+    return process.simple_execute('cp %s %s' % (source, path))
 
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)

@@ -454,21 +454,21 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        # TODO(vish): move authorization checking into network.py
         for address in self.network.host_objs:
-            #logging.debug(address_record)
-            address_rv = {
-                'public_ip': address['address'],
-                'instance_id' : address.get('instance_id', 'free')
-            }
-            if context.user.is_admin():
-                address_rv['instance_id'] = "%s (%s, %s)" % (
-                    address['instance_id'],
-                    address['user_id'],
-                    address['project_id'],
-                )
+            # TODO(vish): implement a by_project iterator for addresses
+            if (context.user.is_admin() or
+                address['project_id'] == self.project.id):
+                address_rv = {
+                    'public_ip': address['address'],
+                    'instance_id' : address.get('instance_id', 'free')
+                }
+                if context.user.is_admin():
+                    address_rv['instance_id'] = "%s (%s, %s)" % (
+                        address['instance_id'],
+                        address['user_id'],
+                        address['project_id'],
+                    )
             addresses.append(address_rv)
-        # logging.debug(addresses)
         return {'addressesSet': addresses}
 
     @rbac.allow('netadmin')

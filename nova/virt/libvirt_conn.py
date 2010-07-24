@@ -175,8 +175,8 @@ class LibvirtConnection(object):
         basepath = lambda x='': self.basepath(instance, x)
 
         # ensure directories exist and are writable
-        yield self._pool.simpleExecute('mkdir -p %s' % basepath())
-        yield self._pool.simpleExecute('chmod 0777 %s' % basepath())
+        yield process.simple_execute('mkdir -p %s' % basepath())
+        yield process.simple_execute('chmod 0777 %s' % basepath())
 
 
         # TODO(termie): these are blocking calls, it would be great
@@ -187,15 +187,16 @@ class LibvirtConnection(object):
         f.close()
 
         if not os.path.exists(basepath('disk')):
-           yield images.fetch(self._pool, data['image_id'], basepath('disk-raw'))
+           yield images.fetch(data['image_id'], basepath('disk-raw'))
         if not os.path.exists(basepath('kernel')):
-           yield images.fetch(self._pool, data['kernel_id'], basepath('kernel'))
+           yield images.fetch(data['kernel_id'], basepath('kernel'))
         if not os.path.exists(basepath('ramdisk')):
-           yield images.fetch(self._pool, data['ramdisk_id'], basepath('ramdisk'))
+           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'))
 
-        execute = lambda cmd, input=None: self._pool.simpleExecute(cmd=cmd,
-                                                                   input=input,
-                                                                   error_ok=1)
+        execute = lambda cmd, input=None: \
+                  process.simple_execute(cmd=cmd,
+                                         input=input,
+                                         error_ok=1)
 
         key = data['key_data']
         net = None
@@ -212,7 +213,7 @@ class LibvirtConnection(object):
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
-            yield self._pool.simpleExecute('rm -f %s' % basepath('disk'))
+            yield process.simple_execute('rm -f %s' % basepath('disk'))
 
         bytes = (instance_types.INSTANCE_TYPES[data['instance_type']]['local_gb']
                  * 1024 * 1024 * 1024)

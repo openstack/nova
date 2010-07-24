@@ -18,23 +18,27 @@
 #    under the License.
 
 """
-dhcpleasor.py
+nova-dhcpbridge
 
 Handle lease database updates from DHCP servers.
 """
 
-import sys
-import os
 import logging
+import os
+import sys
+
+#TODO(joshua): there is concern that the user dnsmasq runs under will not
+#              have nova in the path. This should be verified and if it is
+#              not true the ugly line below can be removed
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 
-logging.debug(sys.path)
-import getopt
-from os import environ
-from nova import rpc
 from nova import flags
+from nova import rpc
+from nova import utils
 from nova.compute import linux_net
 from nova.compute import network
+
+
 FLAGS = flags.FLAGS
 
 
@@ -63,11 +67,12 @@ def init_leases(interface):
     return res
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    interface = environ.get('DNSMASQ_INTERFACE', 'br0')
-    if int(environ.get('TESTING', '0')):
+def main():
+    flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
+    utils.default_flagfile(flagfile)
+    argv = FLAGS(sys.argv)
+    interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
+    if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8
         FLAGS.network_size = 32

@@ -58,7 +58,6 @@ class Node(object, service.Service):
         super(Node, self).__init__()
         self._instances = {}
         self._conn = virt_connection.get_connection()
-        self._pool = process.ProcessPool()
         self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
 
@@ -70,7 +69,7 @@ class Node(object, service.Service):
         # inst = self.instdir.get(instance_id)
         # return inst
         if self.instdir.exists(instance_id):
-            return Instance.fromName(self._conn, self._pool, instance_id)
+            return Instance.fromName(self._conn, instance_id)
         return None
 
     @exception.wrap_exception
@@ -80,7 +79,7 @@ class Node(object, service.Service):
         instance_names = self._conn.list_instances()
         for name in instance_names:
             try:
-                new_inst = Instance.fromName(self._conn, self._pool, name)
+                new_inst = Instance.fromName(self._conn, name)
                 new_inst.update_state()
             except:
                 pass
@@ -90,7 +89,8 @@ class Node(object, service.Service):
     def describe_instances(self):
         retval = {}
         for inst in self.instdir.by_node(FLAGS.node_name):
-            retval[inst['instance_id']] = (Instance.fromName(self._conn, self._pool, inst['instance_id']))
+            retval[inst['instance_id']] = (
+                    Instance.fromName(self._conn, inst['instance_id']))
         return retval
 
     @defer.inlineCallbacks
@@ -123,8 +123,7 @@ class Node(object, service.Service):
         inst['node_name'] = FLAGS.node_name
         inst.save()
         # TODO(vish) check to make sure the availability zone matches
-        new_inst = Instance(self._conn, name=instance_id,
-                            pool=self._pool, data=inst)
+        new_inst = Instance(self._conn, name=instance_id, data=inst)
         logging.info("Instances current state is %s", new_inst.state)
         if new_inst.is_running():
             raise exception.Error("Instance is already running")
@@ -220,11 +219,8 @@ class Instance(object):
     SHUTOFF = 0x05
     CRASHED = 0x06
 
-    def __init__(self, conn, pool, name, data):
+    def __init__(self, conn, name, data):
         """ spawn an instance with a given name """
-        # TODO(termie): pool should probably be a singleton instead of being passed
-        #               here and in the classmethods
-        self._pool = pool
         self._conn = conn
         # TODO(vish): this can be removed after data has been updated
         # data doesn't seem to have a working iterator so in doesn't work
@@ -263,11 +259,11 @@ class Instance(object):
         logging.debug("Finished init of Instance with id of %s" % name)
 
     @classmethod
-    def fromName(cls, conn, pool, name):
+    def fromName(cls, conn, name):
         """ use the saved data for reloading the instance """
         instdir = model.InstanceDirectory()
         instance = instdir.get(name)
-        return cls(conn=conn, pool=pool, name=name, data=instance)
+        return cls(conn=conn, name=name, data=instance)
 
     def set_state(self, state_code, state_description=None):
         self.datamodel['state'] = state_code
