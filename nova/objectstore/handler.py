@@ -116,7 +116,21 @@ def get_context(request):
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
-class S3(Resource):
+class ErrorHandlingResource(Resource):
+    """Maps exceptions to 404 / 401 codes.  Won't work for exceptions thrown after NOT_DONE_YET is returned."""
+    # TODO(unassigned) (calling-all-twisted-experts): This needs to be plugged in to the right place in twisted...
+    #   This doesn't look like it's the right place (consider exceptions in getChild; or after NOT_DONE_YET is returned     
+    def render(self, request):
+        try:
+            return Resource.render(self, request)
+        except exception.NotFound:
+            request.setResponseCode(404)
+            return ''
+        except exception.NotAuthorized:
+            request.setResponseCode(403)
+            return ''
+
+class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
     def getChild(self, name, request):
         request.context = get_context(request)
@@ -136,7 +150,7 @@ class S3(Resource):
         }})
         return server.NOT_DONE_YET
 
-class BucketResource(Resource):
+class BucketResource(ErrorHandlingResource):
     def __init__(self, name):
         Resource.__init__(self)
         self.name = name
@@ -186,7 +200,7 @@ class BucketResource(Resource):
         return ''
 
 
-class ObjectResource(Resource):
+class ObjectResource(ErrorHandlingResource):
     def __init__(self, bucket, name):
         Resource.__init__(self)
         self.bucket = bucket
@@ -227,7 +241,7 @@ class ObjectResource(Resource):
         request.setResponseCode(204)
         return ''
 
-class ImageResource(Resource):
+class ImageResource(ErrorHandlingResource):
     isLeaf = True
 
     def getChild(self, name, request):
