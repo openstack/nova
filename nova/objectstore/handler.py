@@ -103,13 +103,16 @@ def get_argument(request, key, default_value):
 def get_context(request):
     try:
         # Authorization Header format: 'AWS <access>:<secret>'
-        access, sep, secret = request.getHeader('Authorization').split(' ')[1].rpartition(':')
+        authorization_header = request.getHeader('Authorization')
+        if not authorization_header:
+            raise exception.NotAuthorized
+        access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
         um = users.UserManager.instance()
         print 'um %s' % um
 
         (user, project) = um.authenticate(access, secret, {}, request.method, request.getRequestHostname(), request.uri, headers=request.getAllHeaders(), check_type='s3')
         return api.APIRequestContext(None, user, project)
-    except exception.Error, ex:
+    except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
@@ -165,7 +168,7 @@ class BucketResource(Resource):
         logging.debug("Creating bucket %s" % (self.name))
         try:
             print 'user is %s' % request.context
-        except Exception, e:
+        except Exception as e:
             logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
