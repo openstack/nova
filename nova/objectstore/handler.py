@@ -278,7 +278,7 @@ class ImageResource(Resource):
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.set_public(operation=='add')
@@ -290,7 +290,7 @@ class ImageResource(Resource):
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.delete()
