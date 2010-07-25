@@ -64,8 +64,8 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     last_sector = local_last # e
 
     # create an empty file
-    execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-            % (outfile, last_sector, sector_size))
+    yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                  % (outfile, last_sector, sector_size))
 
     # make mbr partition
     yield execute('parted --script %s mklabel msdos' % outfile)
