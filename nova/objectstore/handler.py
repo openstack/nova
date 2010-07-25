@@ -273,8 +273,8 @@ class ImageResource(Resource):
     def render_POST(self, request):
         """ update image attributes: public/private """
 
-        image_id = self.get_argument('image_id', u'')
-        operation = self.get_argument('operation', u'')
+        image_id = get_argument(request, 'image_id', u'')
+        operation = get_argument(request, 'operation', u'')
 
         image_object = image.Image(image_id)
 
@@ -287,7 +287,7 @@ class ImageResource(Resource):
 
     def render_DELETE(self, request):
         """ delete a registered image """
-        image_id = self.get_argument("image_id", u"")
+        image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
         if not image.is_authorized(request.context):
