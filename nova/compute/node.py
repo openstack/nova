@@ -47,12 +47,12 @@ from nova import flags
 from nova import process
 from nova import utils
 from nova.auth import signer
+from nova.auth.users import UserManager
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
 from nova.objectstore import image # for image_path flag
 from nova.volume import storage
-from nova.users import UserManager
 
 
 FLAGS = flags.FLAGS
@@ -449,12 +449,18 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
+        headers = {}
+        headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+
         user_id = self.datamodel['user_id']
         user = UserManager.instance().get_user(user_id)
-        auth = signer.Signer(user.secret.encode()).s3_authorization({}, 'GET', url)
-        auth_header = 'Authorization: %s:%s' % (user_id, auth)
-        d = process.simple_execute(
-                'curl --silent %s -o "%s"' % (url, auth_header, path))
+        auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', url)
+        headers['Authorization'] = auth
+
+        headers_opt_string = ' '.join(['-H %s:%s' % (k,v) for (k,v) in headers.iteritems()])
+        d = process.simple_execute('curl --silent %s '
+                                   '%s -o "%s"' % (url, headers_opt_string,
+                                                   path))
         return d
 
     def _fetch_local_image(self, image, path):
