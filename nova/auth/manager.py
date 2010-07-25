@@ -332,7 +332,7 @@ class AuthManager(object):
                     cls, *args, **kwargs)
             mod_str, sep, driver_str = FLAGS.auth_driver.rpartition('.')
             try:
-                mod = __import__(mod_str)
+                __import__(mod_str)
                 cls._instance.driver = getattr(sys.modules[mod_str],
                                                driver_str)
             except (ImportError, AttributeError):
