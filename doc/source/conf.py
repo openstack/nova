@@ -16,8 +16,7 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.append(os.path.abspath('/Users/jmckenty/Projects/cc'))
-sys.path.append([os.path.abspath('../nova'),os.path.abspath('../'),os.path.abspath('../vendor')])
+sys.path.append([os.path.abspath('../nova'), os.path.abspath('..'), os.path.abspath('../bin')])
 
 
 # -- General configuration -----------------------------------------------------
@@ -25,7 +24,6 @@ sys.path.append([os.path.abspath('../nova'),os.path.abspath('../'),os.path.abspa
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig']
-#sphinx_to_github = False
 todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -68,7 +66,7 @@ release = '0.42'
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
-exclude_trees = ['_build']
+exclude_trees = []
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -176,7 +174,7 @@ htmlhelp_basename = 'novadoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'nova.tex', u'nova Documentation',
+  ('index', 'Nova.tex', u'Nova Documentation',
    u'Anso Labs, LLC', 'manual'),
 ]
 
@@ -199,4 +197,6 @@ latex_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/', None),
+                       'swift': ('http://swift.openstack.org', None)}
+

@@ -43,7 +43,6 @@ Contents:
    nova
    fakes
    binaries
-   todo
    modules
    packages
 

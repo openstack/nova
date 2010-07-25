@@ -40,7 +40,8 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     formatted as ext2.
 
     In the diagram below, dashes represent drive sectors.
-     0   a b                c d               e
+    +-----+------. . .-------+------. . .------+
+    | 0  a| b               c|d               e|
     +-----+------. . .-------+------. . .------+
     | mbr | primary partiton | local partition |
     +-----+------. . .-------+------. . .------+
