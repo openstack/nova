@@ -30,6 +30,17 @@ from nova.compute import power_state
 
 XenAPI = None
 
+FLAGS = flags.FLAGS
+flags.DEFINE_string('xenapi_connection_url',
+                    None,
+                    'URL for connection to XenServer/Xen Cloud Platform.  Required if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_username',
+                    'root',
+                    'Username for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_password',
+                    None,
+                    'Password for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
@@ -37,10 +48,14 @@ def get_connection(_):
     # This is loaded late so that there's no need to install this
     # library when not using XenAPI.
     global XenAPI
-    if XenAPI is not None:
+    if XenAPI is None:
        XenAPI = __import__('XenAPI')
-    return XenAPIConnection('http://eli.testdev.hq.xensource.com',
-                            'root', 'xensource')
+    url = FLAGS.xenapi_connection_url
+    username = FLAGS.xenapi_connection_username
+    password = FLAGS.xenapi_connection_password
+    if not url or password is None:
+        raise Exception('Must specify xenapi_connection_url, xenapi_connection_username (optionally), and xenapi_connection_password to use connection_type=xenapi') 
+    return XenAPIConnection(url, username, password)
 
 
 class XenAPIConnection(object):
