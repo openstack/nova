@@ -47,7 +47,7 @@ import urllib
 
 from twisted.application import internet, service
 from twisted.web.resource import Resource
-from twisted.web import server, static
+from twisted.web import server, static, error
 
 
 from nova import exception
@@ -150,7 +150,10 @@ class BucketResource(Resource):
     def render_GET(self, request):
         logging.debug("List keys for bucket %s" % (self.name))
 
-        bucket_object = bucket.Bucket(self.name)
+        try:
+            bucket_object = bucket.Bucket(self.name)
+        except exception.NotFound, e:
+            return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
             raise exception.NotAuthorized
