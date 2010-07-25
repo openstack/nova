@@ -48,7 +48,6 @@ class XenAPIConnection(object):
     def __init__(self, url, user, pw):
         self._conn = XenAPI.Session(url)
         self._conn.login_with_password(user, pw)
-        self._pool = process.Pool()
 
     def list_instances(self):
         result = [self._conn.xenapi.VM.get_name_label(vm) \

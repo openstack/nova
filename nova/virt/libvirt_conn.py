@@ -68,7 +68,6 @@ class LibvirtConnection(object):
             self._conn = libvirt.openReadOnly('qemu:///system')
         else:
             self._conn = libvirt.openAuth('qemu:///system', auth, 0)
-        self._pool = process.ProcessPool()
 
 
     def list_instances(self):
