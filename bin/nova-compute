@@ -40,6 +40,7 @@ from nova import flags
 from nova import rpc
 from nova import twistd
 from nova.compute import node
+from nova.objectstore import image # For the images_path flag
 
 
 FLAGS = flags.FLAGS
