@@ -137,7 +137,7 @@ class NetworkTestCase(test.TrialTestCase):
             self.dnsmasq.release_ip(mac3, address3, hostname, net.bridge_name)
         net = network.get_project_network("project0", "default")
         rv = network.deallocate_ip(secondaddress)
-        self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
+        self.dnsmasq.release_ip(mac, secondaddress, hostname, net.bridge_name)
 
     def test_release_before_deallocate(self):
         pass
