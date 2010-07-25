@@ -83,7 +83,7 @@ class LibvirtConnection(object):
             pass
             # If the instance is already terminated, we're still happy
         d = defer.Deferred()
-        d.addCallback(lambda x: self._cleanup())
+        d.addCallback(lambda _: self._cleanup(instance))
         # FIXME: What does this comment mean?
         # TODO(termie): short-circuit me for tests
         # WE'LL save this for when we do shutdown,
