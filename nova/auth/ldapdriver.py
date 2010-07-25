@@ -17,7 +17,7 @@
 #    under the License.
 
 """
-Auth driver for ldap
+Auth driver for ldap.  Includes FakeLdapDriver.
 
 It should be easy to create a replacement for this driver supporting
 other backends by creating another class that exposes the same
@@ -25,6 +25,7 @@ public methods.
 """
 
 import logging
+import sys
 
 from nova import exception
 from nova import flags
@@ -61,7 +62,7 @@ flags.DEFINE_string('ldap_developer',
 #             to define a set interface for AuthDrivers. I'm delaying
 #             creating this now because I'm expecting an auth refactor
 #             in which we may want to change the interface a bit more.
-class AuthDriver(object):
+class LdapDriver(object):
     """Ldap Auth driver
 
     Defines enter and exit and therefore supports the with/as syntax.
@@ -470,4 +471,11 @@ class AuthDriver(object):
     def __uid_to_dn(self, dn):
         """Convert uid to dn"""
         return 'uid=%s,%s' % (dn, FLAGS.ldap_user_subtree)
+
+
+class FakeLdapDriver(LdapDriver):
+    """Fake Ldap Auth driver"""
+    def __init__(self):
+        __import__('nova.auth.fakeldap')
+        self.ldap = sys.modules['nova.auth.fakeldap']
 

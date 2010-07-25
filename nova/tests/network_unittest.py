@@ -37,7 +37,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.flags(fake_libvirt=True,
                    fake_storage=True,
                    fake_network=True,
-                   auth_driver='nova.auth.fakeldapdriver',
+                   auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
                    network_size=32)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()

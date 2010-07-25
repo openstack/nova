@@ -24,6 +24,7 @@ import logging
 import os
 import shutil
 import string
+import sys
 import tempfile
 import uuid
 import zipfile
@@ -75,7 +76,7 @@ flags.DEFINE_string('credential_cert_subject',
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
-flags.DEFINE_string('auth_driver', 'fakeldapdriver',
+flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.AuthDriver',
                     'Driver that auth manager uses')
 
 class AuthBase(object):
@@ -320,15 +321,24 @@ class AuthManager(object):
     """
     _instance=None
     def __new__(cls, *args, **kwargs):
+        """Returns the AuthManager singleton with driver set
+
+        __init__ is run every time AuthManager() is called, so we need to do
+        any constructor related stuff here. The driver that is specified
+        in the flagfile is loaded here.
+        """
         if not cls._instance:
             cls._instance = super(AuthManager, cls).__new__(
                     cls, *args, **kwargs)
+            mod_str, sep, driver_str = FLAGS.auth_driver.rpartition('.')
+            try:
+                mod = __import__(mod_str)
+                cls._instance.driver = getattr(sys.modules[mod_str],
+                                               driver_str)
+            except (ImportError, AttributeError):
+                raise exception.Error('Auth driver %s cannot be found'
+                                      % FLAGS.auth_driver)
         return cls._instance
-
-    def __init__(self, *args, **kwargs):
-        """Imports the driver module and saves the Driver class"""
-        mod = __import__(FLAGS.auth_driver, fromlist=True)
-        self.driver = mod.AuthDriver
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
