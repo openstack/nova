@@ -263,6 +263,7 @@ class SessionToken(datastore.BasicModel):
         if token:
             expires_at = utils.parse_isotime(token['expiry'])
             if datetime.datetime.utcnow() >= expires_at:
+                token.destroy()
                 return None
         return token
 
