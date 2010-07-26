@@ -40,6 +40,7 @@ True
 True
 """
 
+import datetime
 import logging
 import time
 import redis
@@ -241,18 +242,11 @@ class SessionToken(datastore.BasicModel):
         return self.token
 
     def default_state(self):
-        return {'user': None, 'session_type': None, 'token': self.token}
-
-    @classmethod
-    def generate(cls, userid, session_type=None):
-        token = str(uuid.uuid4())
-        while cls.lookup(token):
-            token = str(uuid.uuid4())
-        instance = cls(token)
-        instance['user'] = userid
-        instance['session_type'] = session_type
-        instance.save()
-        return instance
+        now = datetime.datetime.utcnow()
+        diff = datetime.timedelta(hours=1)
+        expires = now + diff
+        return {'user': None, 'session_type': None, 'token': self.token,
+                'expiry': expires.strftime(utils.TIME_FORMAT)}
 
     def save(self):
         """Call into superclass to save object, then save associations"""
@@ -262,6 +256,27 @@ class SessionToken(datastore.BasicModel):
         if success:
             self.associate_with("user", self['user'])
         return True
+
+    @classmethod
+    def generate(cls, userid, session_type=None):
+        """make a new token for the given user"""
+        token = str(uuid.uuid4())
+        while cls.lookup(token):
+            token = str(uuid.uuid4())
+        instance = cls(token)
+        instance['user'] = userid
+        instance['session_type'] = session_type
+        instance.save()
+        return instance
+
+    def update_expiry(self, **kwargs):
+        """updates the expirty attribute, but doesn't save"""
+        if not kwargs:
+            kwargs['hours'] = 1
+        time = datetime.datetime.utcnow()
+        diff = datetime.timedelta(**kwargs)
+        expires = time + diff
+        self['expiry'] = expires.strftime(utils.TIME_FORMAT)
 
 
 if __name__ == "__main__":

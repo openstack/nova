@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import datetime
 import logging
 import time
 from twisted.internet import defer
@@ -256,3 +257,11 @@ class ModelTestCase(test.TrialTestCase):
         instance = yield model.SessionToken.generate('username', 'TokenType')
         found = yield model.SessionToken.lookup(instance.identifier)
         self.assert_(found)
+
+    def test_update_expiry(self):
+        instance = model.SessionToken('tk12341234')
+        oldtime = datetime.utcnow()
+        instance['expiry'] = oldtime.strftime(utils.TIME_FORMAT)
+        instance.update_expiry()
+        expiry = utils.parse_isotime(instance['expiry'])
+        self.assert_(expiry > datetime.utcnow())
