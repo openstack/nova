@@ -9,3 +9,4 @@ keys
 build/*
 build-stamp
 nova.egg-info
+.nova-venv
