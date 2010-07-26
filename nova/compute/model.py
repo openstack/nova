@@ -43,6 +43,7 @@ True
 import logging
 import time
 import redis
+import uuid
 
 from nova import datastore
 from nova import exception
@@ -227,6 +228,41 @@ class Daemon(datastore.BasicModel):
     def by_host(cls, hostname):
         for x in cls.associated_to("host", hostname):
             yield x
+
+class SessionToken(datastore.BasicModel):
+    """This is a short-lived auth token that is passed through web requests"""
+
+    def __init__(self, session_token):
+        self.token = session_token
+        super(SessionToken, self).__init__()
+
+    @property
+    def identifier(self):
+        return self.token
+
+    def default_state(self):
+        return {'user': None, 'session_type': None, 'token': self.token}
+
+    @classmethod
+    def generate(cls, userid, session_type=None):
+        token = str(uuid.uuid4())
+        while cls.lookup(token):
+            token = str(uuid.uuid4())
+        instance = cls(token)
+        instance['user'] = userid
+        instance['session_type'] = session_type
+        instance.save()
+        return instance
+
+    def save(self):
+        """Call into superclass to save object, then save associations"""
+        if not self['user']:
+            raise exception.Invalid("SessionToken requires a User association")
+        success = super(SessionToken, self).save()
+        if success:
+            self.associate_with("user", self['user'])
+        return True
+
 
 if __name__ == "__main__":
     import doctest

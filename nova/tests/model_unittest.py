@@ -66,6 +66,12 @@ class ModelTestCase(test.TrialTestCase):
         daemon.save()
         return daemon
 
+    def create_session_token(self):
+        session_token = model.SessionToken('tk12341234')
+        session_token['user'] = 'testuser'
+        session_token.save()
+        return session_token
+
     @defer.inlineCallbacks
     def test_create_instance(self):
         """store with create_instace, then test that a load finds it"""
@@ -204,3 +210,49 @@ class ModelTestCase(test.TrialTestCase):
             if x.identifier == 'testhost:nova-testdaemon':
                 found = True
         self.assertTrue(found)
+
+    @defer.inlineCallbacks
+    def test_create_session_token(self):
+        """create"""
+        d = yield self.create_session_token()
+        d = model.SessionToken(d.token)
+        self.assertFalse(d.is_new_record())
+
+    @defer.inlineCallbacks
+    def test_delete_session_token(self):
+        """create, then destroy, then make sure loads a new record"""
+        instance = yield self.create_session_token()
+        yield instance.destroy()
+        newinst = yield model.SessionToken(instance.token)
+        self.assertTrue(newinst.is_new_record())
+
+    @defer.inlineCallbacks
+    def test_session_token_added_to_set(self):
+        """create, then check that it is included in list"""
+        instance = yield self.create_session_token()
+        found = False
+        for x in model.SessionToken.all():
+            if x.identifier == instance.token:
+                found = True
+        self.assert_(found)
+
+    @defer.inlineCallbacks
+    def test_session_token_associates_user(self):
+        """create, then check that it is listed for the user"""
+        instance = yield self.create_session_token()
+        found = False
+        for x in model.SessionToken.associated_to('user', 'testuser'):
+            if x.identifier == instance.identifier:
+                found = True
+        self.assertTrue(found)
+
+    @defer.inlineCallbacks
+    def test_session_token_generation(self):
+        instance = yield model.SessionToken.generate('username', 'TokenType')
+        self.assertFalse(instance.is_new_record())
+
+    @defer.inlineCallbacks
+    def test_find_generated_session_token(self):
+        instance = yield model.SessionToken.generate('username', 'TokenType')
+        found = yield model.SessionToken.lookup(instance.identifier)
+        self.assert_(found)
