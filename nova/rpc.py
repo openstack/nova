@@ -151,6 +151,7 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic="broadcast"):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
 
 
