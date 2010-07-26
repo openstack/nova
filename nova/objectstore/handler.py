@@ -108,8 +108,6 @@ def get_context(request):
             raise exception.NotAuthorized
         access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
         um = users.UserManager.instance()
-        print 'um %s' % um
-
         (user, project) = um.authenticate(access, secret, {}, request.method, request.getRequestHostname(), request.uri, headers=request.getAllHeaders(), check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error as ex:
@@ -169,10 +167,6 @@ class BucketResource(Resource):
 
     def render_PUT(self, request):
         logging.debug("Creating bucket %s" % (self.name))
-        try:
-            print 'user is %s' % request.context
-        except Exception as e:
-            logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
         request.finish()
@@ -300,9 +294,13 @@ class ImageResource(Resource):
         request.setResponseCode(204)
         return ''
 
-def get_application():
+def get_site():
     root = S3()
-    factory = server.Site(root)
+    site = server.Site(root)
+    return site
+
+def get_application():
+    factory = get_site()
     application = service.Application("objectstore")
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
     objectStoreService.setServiceParent(application)
