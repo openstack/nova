@@ -29,6 +29,7 @@ from nova import objectstore
 from nova import test
 from nova.auth import users
 from nova.objectstore.handler import S3
+from nova.exception import NotEmpty, NotFound, NotAuthorized
 
 from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from twisted.internet import reactor, threads, defer
@@ -101,49 +102,37 @@ class ObjectStoreTestCase(test.BaseTestCase):
         # another user is not authorized
         self.context.user = self.um.get_user('user2')
         self.context.project = self.um.get_project('proj2')
-        self.assert_(bucket.is_authorized(self.context) == False)
+        self.assertFalse(bucket.is_authorized(self.context))
 
         # admin is authorized to use bucket
         self.context.user = self.um.get_user('admin_user')
         self.context.project = None
-        self.assert_(bucket.is_authorized(self.context))
+        self.assertTrue(bucket.is_authorized(self.context))
 
         # new buckets are empty
-        self.assert_(bucket.list_keys()['Contents'] == [])
+        self.assertTrue(bucket.list_keys()['Contents'] == [])
 
         # storing keys works
         bucket['foo'] = "bar"
 
-        self.assert_(len(bucket.list_keys()['Contents']) == 1)
+        self.assertEquals(len(bucket.list_keys()['Contents']), 1)
 
-        self.assert_(bucket['foo'].read() == 'bar')
+        self.assertEquals(bucket['foo'].read(), 'bar')
 
         # md5 of key works
-        self.assert_(bucket['foo'].md5 == hashlib.md5('bar').hexdigest())
+        self.assertEquals(bucket['foo'].md5, hashlib.md5('bar').hexdigest())
 
-        # deleting non-empty bucket throws exception
-        exception = False
-        try:
-            bucket.delete()
-        except:
-            exception = True
-
-        self.assert_(exception)
+        # deleting non-empty bucket should throw a NotEmpty exception
+        self.assertRaises(NotEmpty, bucket.delete)
 
         # deleting key
         del bucket['foo']
 
-        # deleting empty button
+        # deleting empty bucket
         bucket.delete()
 
         # accessing deleted bucket throws exception
-        exception = False
-        try:
-            objectstore.bucket.Bucket('new_bucket')
-        except:
-            exception = True
-
-        self.assert_(exception)
+        self.assertRaises(NotFound, objectstore.bucket.Bucket, 'new_bucket')
 
     def test_images(self):
         self.context.user = self.um.get_user('user1')
@@ -172,7 +161,7 @@ class ObjectStoreTestCase(test.BaseTestCase):
         # verify image permissions
         self.context.user = self.um.get_user('user2')
         self.context.project = self.um.get_project('proj2')
-        self.assert_(my_img.is_authorized(self.context) == False)
+        self.assertFalse(my_img.is_authorized(self.context))
 
 
 class TestHTTPChannel(http.HTTPChannel):
