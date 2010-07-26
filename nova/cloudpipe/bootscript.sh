@@ -24,7 +24,7 @@ export VPN_IP=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 
 export BROADCAST=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f3 | awk '{print $1}'`
 export DHCP_MASK=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f4 | awk '{print $1}'`
 export GATEWAY=`netstat -r | grep default | cut -d' ' -f10`
-export SUBJ=/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=customer-vpn-$VPN_IP
+export SUBJ="/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=customer-vpn-$VPN_IP"
 
 DHCP_LOWER=`echo $BROADCAST | awk -F. '{print $1"."$2"."$3"." $4 - 10 }'`
 DHCP_UPPER=`echo $BROADCAST | awk -F. '{print $1"."$2"."$3"." $4 - 1 }'`

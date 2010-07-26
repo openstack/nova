@@ -151,6 +151,7 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic="broadcast"):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
 
 
@@ -242,7 +243,7 @@ def send_message(topic, message, wait=True):
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
-                                    exchange="nova",
+                                    exchange=FLAGS.control_exchange,
                                     exchange_type="topic",
                                     routing_key=topic)
     publisher.send(message)
