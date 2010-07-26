@@ -258,6 +258,15 @@ class SessionToken(datastore.BasicModel):
         return True
 
     @classmethod
+    def lookup(cls, key):
+        token = super(SessionToken, cls).lookup(key)
+        if token:
+            expires_at = utils.parse_isotime(token['expiry'])
+            if datetime.datetime.utcnow() >= expires_at:
+                return None
+        return token
+
+    @classmethod
     def generate(cls, userid, session_type=None):
         """make a new token for the given user"""
         token = str(uuid.uuid4())

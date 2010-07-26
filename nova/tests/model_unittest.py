@@ -258,10 +258,24 @@ class ModelTestCase(test.TrialTestCase):
         found = yield model.SessionToken.lookup(instance.identifier)
         self.assert_(found)
 
-    def test_update_expiry(self):
+    def test_update_session_token_expiry(self):
         instance = model.SessionToken('tk12341234')
         oldtime = datetime.utcnow()
         instance['expiry'] = oldtime.strftime(utils.TIME_FORMAT)
         instance.update_expiry()
         expiry = utils.parse_isotime(instance['expiry'])
         self.assert_(expiry > datetime.utcnow())
+
+    @defer.inlineCallbacks
+    def test_session_token_lookup_when_expired(self):
+        instance = yield model.SessionToken.generate("testuser")
+        instance['expiry'] = datetime.utcnow().strftime(utils.TIME_FORMAT)
+        instance.save()
+        inst = model.SessionToken.lookup(instance.identifier)
+        self.assertFalse(inst)
+
+    @defer.inlineCallbacks
+    def test_session_token_lookup_when_not_expired(self):
+        instance = yield model.SessionToken.generate("testuser")
+        inst = model.SessionToken.lookup(instance.identifier)
+        self.assert_(inst)
