@@ -31,6 +31,7 @@ import logging
 import os
 import shutil
 import sys
+import time
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
@@ -453,19 +454,25 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
+
+        # This should probably move somewhere else, like e.g. a download_as
+        # method on User objects and at the same time get rewritten to use
+        # twisted web client.
         headers = {}
         headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
         user_id = self.datamodel['user_id']
         user = UserManager.instance().get_user(user_id)
-        auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', url)
-        headers['Authorization'] = auth
+        uri = '/' + url.partition('/')[2]
+        auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', uri)
+        headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)
 
-        headers_opt_string = ' '.join(['-H %s:%s' % (k,v) for (k,v) in headers.iteritems()])
-        d = process.simple_execute('curl --silent %s '
-                                   '%s -o "%s"' % (url, headers_opt_string,
-                                                   path))
-        return d
+        cmd = ['/usr/bin/curl', '--silent', url]
+        for (k,v) in headers.iteritems():
+            cmd += ['-H', '%s: %s' % (k,v)]
+
+        cmd += ['-o', path]
+        return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
     def _fetch_local_image(self, image, path):
         source = _image_path('%s/image' % image)
