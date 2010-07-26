@@ -103,13 +103,16 @@ def get_argument(request, key, default_value):
 def get_context(request):
     try:
         # Authorization Header format: 'AWS <access>:<secret>'
-        access, sep, secret = request.getHeader('Authorization').split(' ')[1].rpartition(':')
+        authorization_header = request.getHeader('Authorization')
+        if not authorization_header:
+            raise exception.NotAuthorized
+        access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
         um = users.UserManager.instance()
         print 'um %s' % um
         (user, project) = um.authenticate(access, secret, {}, request.method, request.host, request.uri, False)
         # FIXME: check signature here!
         return api.APIRequestContext(None, user, project)
-    except exception.Error, ex:
+    except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
@@ -165,7 +168,7 @@ class BucketResource(Resource):
         logging.debug("Creating bucket %s" % (self.name))
         try:
             print 'user is %s' % request.context
-        except Exception, e:
+        except Exception as e:
             logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
@@ -239,9 +242,10 @@ class ImageResource(Resource):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(self.context)]
+        images = [i for i in image.Image.all() if i.is_authorized(request.context)]
 
         request.write(json.dumps([i.metadata for i in images]))
+        request.finish()
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):
@@ -269,12 +273,12 @@ class ImageResource(Resource):
     def render_POST(self, request):
         """ update image attributes: public/private """
 
-        image_id = self.get_argument('image_id', u'')
-        operation = self.get_argument('operation', u'')
+        image_id = get_argument(request, 'image_id', u'')
+        operation = get_argument(request, 'operation', u'')
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.set_public(operation=='add')
@@ -283,10 +287,10 @@ class ImageResource(Resource):
 
     def render_DELETE(self, request):
         """ delete a registered image """
-        image_id = self.get_argument("image_id", u"")
+        image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.delete()

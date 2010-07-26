@@ -107,7 +107,7 @@ class Bucket(object):
         try:
             return context.user.is_admin() or self.owner_id == context.project.id
         except Exception, e:
-            pass
+            return False
 
     def list_keys(self, prefix='', marker=None, max_keys=1000, terse=False):
         object_names = []
@@ -161,7 +161,7 @@ class Bucket(object):
 
     def delete(self):
         if len(os.listdir(self.path)) > 0:
-            raise exception.NotAuthorized()
+            raise exception.NotEmpty()
         os.rmdir(self.path)
         os.remove(self.path+'.json')
 
