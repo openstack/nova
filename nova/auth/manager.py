@@ -76,7 +76,7 @@ flags.DEFINE_string('credential_cert_subject',
 flags.DEFINE_string('vpn_ip', '127.0.0.1',
                     'Public IP for the cloudpipe VPN servers')
 
-flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.AuthDriver',
+flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
                     'Driver that auth manager uses')
 
 class AuthBase(object):
