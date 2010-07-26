@@ -121,7 +121,7 @@ class S3(Resource):
         if name == '':
             return self
         elif name == '_images':
-            return ImageResource()
+            return ImagesResource()
         else:
             return BucketResource(name)
 
@@ -226,13 +226,21 @@ class ObjectResource(Resource):
         return ''
 
 class ImageResource(Resource):
+    isLeaf = True
+
+    def __init__(self, name):
+        Resource.__init__(self)
+        self.img = image.Image(name)
+
+    def render_GET(self, request):
+        return static.File(self.img.image_path, defaultType='application/octet-stream').render_GET(request)
+
+class ImagesResource(Resource):
     def getChild(self, name, request):
         if name == '':
             return self
         else:
-            request.setHeader("Content-Type", "application/octet-stream")
-            img = image.Image(name)
-            return static.File(img.image_path)
+            return ImageResource(name)
 
     def render_GET(self, request):
         """ returns a json listing of all images
