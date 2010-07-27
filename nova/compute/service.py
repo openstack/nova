@@ -17,9 +17,9 @@
 #    under the License.
 
 """
-Compute Node:
+Compute Service:
 
-    Runs on each compute node, managing the
+    Runs on each compute host, managing the
     hypervisor using libvirt.
 
 """
@@ -34,7 +34,6 @@ import sys
 import time
 from twisted.internet import defer
 from twisted.internet import task
-from twisted.application import service
 
 
 try:
@@ -46,13 +45,14 @@ from nova import exception
 from nova import fakevirt
 from nova import flags
 from nova import process
+from nova import service
 from nova import utils
 from nova.auth import signer, manager
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
 from nova.objectstore import image # for image_path flag
-from nova.volume import storage
+from nova.volume import service as volume_service
 
 
 FLAGS = flags.FLAGS
@@ -81,13 +81,13 @@ def _image_url(path):
     return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
 
 
-class Node(object, service.Service):
+class ComputeService(service.Service):
     """
     Manages the running instances.
     """
     def __init__(self):
         """ load configuration options for this node and connect to libvirt """
-        super(Node, self).__init__()
+        super(ComputeService, self).__init__()
         self._instances = {}
         self._conn = self._get_connection()
         self.instdir = model.InstanceDirectory()
@@ -224,7 +224,7 @@ class Node(object, service.Service):
     @exception.wrap_exception
     def attach_volume(self, instance_id = None,
                       volume_id = None, mountpoint = None):
-        volume = storage.get_volume(volume_id)
+        volume = volume_service.get_volume(volume_id)
         yield self._init_aoe()
         yield process.simple_execute(
                 "sudo virsh attach-disk %s /dev/etherd/%s %s" %
@@ -245,7 +245,7 @@ class Node(object, service.Service):
         """ detach a volume from an instance """
         # despite the documentation, virsh detach-disk just wants the device
         # name without the leading /dev/
-        volume = storage.get_volume(volume_id)
+        volume = volume_service.get_volume(volume_id)
         target = volume['mountpoint'].rpartition('/dev/')[2]
         yield process.simple_execute(
                 "sudo virsh detach-disk %s %s " % (instance_id, target))

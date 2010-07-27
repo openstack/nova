@@ -29,16 +29,15 @@ import shutil
 import socket
 import tempfile
 
-from twisted.application import service
 from twisted.internet import defer
 
 from nova import datastore
 from nova import exception
 from nova import flags
 from nova import process
+from nova import service
 from nova import utils
 from nova import validate
-from nova.compute import model
 
 
 FLAGS = flags.FLAGS
@@ -50,13 +49,13 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
 flags.DEFINE_string('storage_name',
                     socket.gethostname(),
-                    'name of this node')
+                    'name of this service')
 flags.DEFINE_integer('first_shelf_id',
                     utils.last_octet(utils.get_my_ip()) * 10,
-                    'AoE starting shelf_id for this node')
+                    'AoE starting shelf_id for this service')
 flags.DEFINE_integer('last_shelf_id',
                     utils.last_octet(utils.get_my_ip()) * 10 + 9,
-                    'AoE starting shelf_id for this node')
+                    'AoE starting shelf_id for this service')
 flags.DEFINE_string('aoe_export_dir',
                     '/var/lib/vblade-persist/vblades',
                     'AoE directory where exports are created')
@@ -65,7 +64,7 @@ flags.DEFINE_integer('slots_per_shelf',
                     'Number of AoE slots per shelf')
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
-                    'availability zone of this node')
+                    'availability zone of this service')
 flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
@@ -82,14 +81,14 @@ def get_volume(volume_id):
         return volume_class(volume_id=volume_id)
     raise exception.Error("Volume does not exist")
 
-class BlockStore(object, service.Service):
+class VolumeService(service.Service):
     """
-    There is one BlockStore running on each volume node.
-    However, each BlockStore can report on the state of
+    There is one VolumeNode running on each host.
+    However, each VolumeNode can report on the state of
     *all* volumes in the cluster.
     """
     def __init__(self):
-        super(BlockStore, self).__init__()
+        super(VolumeService, self).__init__()
         self.volume_class = Volume
         if FLAGS.fake_storage:
             FLAGS.aoe_export_dir = tempfile.mkdtemp()
@@ -103,22 +102,6 @@ class BlockStore(object, service.Service):
                 shutil.rmtree(FLAGS.aoe_export_dir)
             except Exception, err:
                 pass
-
-    @defer.inlineCallbacks
-    def report_state(self, nodename, daemon):
-        # TODO(termie): make this pattern be more elegant. -todd
-        try:
-            record = model.Daemon(nodename, daemon)
-            record.heartbeat()
-            if getattr(self, "model_disconnected", False):
-                self.model_disconnected = False
-                logging.error("Recovered model server connection!")
-
-        except model.ConnectionError, ex:
-            if not getattr(self, "model_disconnected", False):
-                self.model_disconnected = True
-                logging.exception("model server went away")
-        yield
 
     @validate.rangetest(size=(0, 1000))
     def create_volume(self, size, user_id, project_id):

@@ -26,7 +26,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.compute import model
-from nova.compute import node
+from nova.compute import service
 
 
 FLAGS = flags.FLAGS
@@ -53,13 +53,13 @@ class InstanceXmlTestCase(test.TrialTestCase):
         # rv = yield first_node.terminate_instance(instance_id)
 
 
-class NodeConnectionTestCase(test.TrialTestCase):
+class ComputeConnectionTestCase(test.TrialTestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
-        super(NodeConnectionTestCase, self).setUp()
+        super(ComputeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
                    fake_storage=True)
-        self.node = node.Node()
+        self.compute = service.ComputeService()
 
     def create_instance(self):
         instdir = model.InstanceDirectory()
@@ -80,48 +80,48 @@ class NodeConnectionTestCase(test.TrialTestCase):
     def test_run_describe_terminate(self):
         instance_id = self.create_instance()
 
-        rv = yield self.node.run_instance(instance_id)
+        rv = yield self.compute.run_instance(instance_id)
 
-        rv = yield self.node.describe_instances()
+        rv = yield self.compute.describe_instances()
         logging.info("Running instances: %s", rv)
         self.assertEqual(rv[instance_id].name, instance_id)
 
-        rv = yield self.node.terminate_instance(instance_id)
+        rv = yield self.compute.terminate_instance(instance_id)
 
-        rv = yield self.node.describe_instances()
+        rv = yield self.compute.describe_instances()
         logging.info("After terminating instances: %s", rv)
         self.assertEqual(rv, {})
 
     @defer.inlineCallbacks
     def test_reboot(self):
         instance_id = self.create_instance()
-        rv = yield self.node.run_instance(instance_id)
+        rv = yield self.compute.run_instance(instance_id)
 
-        rv = yield self.node.describe_instances()
+        rv = yield self.compute.describe_instances()
         self.assertEqual(rv[instance_id].name, instance_id)
 
-        yield self.node.reboot_instance(instance_id)
+        yield self.compute.reboot_instance(instance_id)
 
-        rv = yield self.node.describe_instances()
+        rv = yield self.compute.describe_instances()
         self.assertEqual(rv[instance_id].name, instance_id)
-        rv = yield self.node.terminate_instance(instance_id)
+        rv = yield self.compute.terminate_instance(instance_id)
 
     @defer.inlineCallbacks
     def test_console_output(self):
         instance_id = self.create_instance()
-        rv = yield self.node.run_instance(instance_id)
+        rv = yield self.compute.run_instance(instance_id)
 
-        console = yield self.node.get_console_output(instance_id)
+        console = yield self.compute.get_console_output(instance_id)
         self.assert_(console)
-        rv = yield self.node.terminate_instance(instance_id)
+        rv = yield self.compute.terminate_instance(instance_id)
 
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
         instance_id = self.create_instance()
-        rv = yield self.node.run_instance(instance_id)
+        rv = yield self.compute.run_instance(instance_id)
 
-        rv = yield self.node.describe_instances()
+        rv = yield self.compute.describe_instances()
         self.assertEqual(rv[instance_id].name, instance_id)
 
-        self.assertRaises(exception.Error, self.node.run_instance, instance_id)
-        rv = yield self.node.terminate_instance(instance_id)
+        self.assertRaises(exception.Error, self.compute.run_instance, instance_id)
+        rv = yield self.compute.terminate_instance(instance_id)

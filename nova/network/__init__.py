@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,15 +17,16 @@
 #    under the License.
 
 """
-  Twistd daemon for the nova compute nodes.
+:mod:`nova.network` -- Network Nodes
+=====================================================
+
+.. automodule:: nova.network
+   :platform: Unix
+   :synopsis: Network is responsible for managing networking
+.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
+.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
+.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
+.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
+.. moduleauthor:: Manish Singh <yosh@gimp.org>
+.. moduleauthor:: Andy Smith <andy@anarkystic.com>
 """
-
-from nova import twistd
-from nova.compute import service
-
-
-if __name__ == '__main__':
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.ComputeService.create()
