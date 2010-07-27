@@ -288,6 +288,11 @@ class SessionToken(datastore.BasicModel):
         expires = time + diff
         self['expiry'] = expires.strftime(utils.TIME_FORMAT)
 
+    def is_expired(self):
+        now = datetime.datetime.utcnow()
+        expires = utils.parse_isotime(self['expiry'])
+        return expires <= now
+
 
 if __name__ == "__main__":
     import doctest

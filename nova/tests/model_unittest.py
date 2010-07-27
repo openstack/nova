@@ -279,3 +279,14 @@ class ModelTestCase(test.TrialTestCase):
         instance = yield model.SessionToken.generate("testuser")
         inst = model.SessionToken.lookup(instance.identifier)
         self.assert_(inst)
+
+    @defer.inlineCallbacks
+    def test_session_token_is_expired_when_expired(self):
+        instance = yield model.SessionToken.generate("testuser")
+        instance['expiry'] = datetime.utcnow().strftime(utils.TIME_FORMAT)
+        self.assert_(instance.is_expired())
+
+    @defer.inlineCallbacks
+    def test_session_token_is_expired_when_not_expired(self):
+        instance = yield model.SessionToken.generate("testuser")
+        self.assertFalse(instance.is_expired())
