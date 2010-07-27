@@ -4,7 +4,11 @@ with_venv=tools/with_venv.sh
 build:
 	# Nothing to do
 
-test: $(venv)
+default_test_type:= $(shell if [ -e $(venv) ]; then echo venv; else echo system; fi)
+
+test: test-$(default_test_type)
+
+test-venv: $(venv)
 	$(with_venv) python run_tests.py
 
 test-system:
