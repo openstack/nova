@@ -189,6 +189,8 @@ class S3APITestCase(test.TrialTestCase):
         self.tcp_port = self.listening_port.getHost().port
 
 
+        if not boto.config.has_section('Boto'):
+            boto.config.add_section('Boto')
         boto.config.set('Boto', 'num_retries', '0')
         self.conn = S3Connection(aws_access_key_id='admin',
                                  aws_secret_access_key='admin',
