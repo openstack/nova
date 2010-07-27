@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import time
 from twisted.internet import defer
@@ -290,3 +290,12 @@ class ModelTestCase(test.TrialTestCase):
     def test_session_token_is_expired_when_not_expired(self):
         instance = yield model.SessionToken.generate("testuser")
         self.assertFalse(instance.is_expired())
+
+    @defer.inlineCallbacks
+    def test_session_token_ttl(self):
+        instance = yield model.SessionToken.generate("testuser")
+        now = datetime.utcnow()
+        delta = timedelta(hours=1)
+        instance['expiry'] = (now + delta).strftime(utils.TIME_FORMAT)
+        # give 5 seconds of fuzziness
+        self.assert_(abs(instance.ttl() - FLAGS.auth_token_ttl) < 5)

@@ -235,6 +235,7 @@ class SessionToken(datastore.BasicModel):
 
     def __init__(self, session_token):
         self.token = session_token
+        self.default_ttl = FLAGS.auth_token_ttl
         super(SessionToken, self).__init__()
 
     @property
@@ -243,7 +244,7 @@ class SessionToken(datastore.BasicModel):
 
     def default_state(self):
         now = datetime.datetime.utcnow()
-        diff = datetime.timedelta(hours=1)
+        diff = datetime.timedelta(seconds=self.default_ttl)
         expires = now + diff
         return {'user': None, 'session_type': None, 'token': self.token,
                 'expiry': expires.strftime(utils.TIME_FORMAT)}
@@ -282,7 +283,7 @@ class SessionToken(datastore.BasicModel):
     def update_expiry(self, **kwargs):
         """updates the expirty attribute, but doesn't save"""
         if not kwargs:
-            kwargs['hours'] = 1
+            kwargs['seconds'] = self.default_ttl
         time = datetime.datetime.utcnow()
         diff = datetime.timedelta(**kwargs)
         expires = time + diff
@@ -292,6 +293,13 @@ class SessionToken(datastore.BasicModel):
         now = datetime.datetime.utcnow()
         expires = utils.parse_isotime(self['expiry'])
         return expires <= now
+
+    def ttl(self):
+        """number of seconds remaining before expiration"""
+        now = datetime.datetime.utcnow()
+        expires = utils.parse_isotime(self['expiry'])
+        delta = expires - now
+        return (delta.seconds + (delta.days * 24 * 3600))
 
 
 if __name__ == "__main__":
