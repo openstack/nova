@@ -25,11 +25,10 @@ from setuptools import setup, find_packages
 srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'src')
 
 setup(name='nova',
-      version='0.3.0',
-      description='None Other, Vaguely Awesome',
-      author='nova-core',
-      author_email='nova-core@googlegroups.com',
-      url='http://novacc.org/',
+      version='0.9.0',
+      description='cloud computing fabric controller',
+      author='OpenStack',
+      author_email='nova@lists.launchpad.net',
+      url='http://www.openstack.org/',
       packages = find_packages(),
-
      )
