@@ -26,7 +26,7 @@ from twisted.internet import defer
 
 from nova import flags
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -150,7 +150,7 @@ class ApiEc2TestCase(test.BaseTestCase):
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
-        self.users = users.UserManager.instance()
+        self.manager = manager.AuthManager()
         self.cloud = cloud.CloudController()
 
         self.host = '127.0.0.1'
@@ -175,25 +175,22 @@ class ApiEc2TestCase(test.BaseTestCase):
     def test_describe_instances(self):
         self.expect_http()
         self.mox.ReplayAll()
-        try:
-            self.users.create_user('fake', 'fake', 'fake')
-        except Exception, _err:
-            pass # User may already exist
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
-        self.users.delete_user('fake')
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
 
 
     def test_get_all_key_pairs(self):
         self.expect_http()
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") for x in range(random.randint(4, 8)))
-        try:
-            self.users.create_user('fake', 'fake', 'fake')
-        except Exception, _err:
-            pass # User may already exist
-        self.users.generate_key_pair('fake', keyname)
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.manager.generate_key_pair(user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         self.assertTrue(filter(lambda k: k.name == keyname, rv))
-        self.users.delete_user('fake')
-
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)

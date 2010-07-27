@@ -58,7 +58,7 @@ from nova.tests.node_unittest import *
 from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
 from nova.tests.storage_unittest import *
-from nova.tests.users_unittest import *
+from nova.tests.auth_unittest import *
 from nova.tests.validator_unittest import *
 
 

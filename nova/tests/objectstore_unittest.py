@@ -26,7 +26,7 @@ import tempfile
 from nova import flags
 from nova import objectstore
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.exception import NotEmpty, NotFound, NotAuthorized
 
 
@@ -52,13 +52,12 @@ os.makedirs(os.path.join(oss_tempdir, 'buckets'))
 class ObjectStoreTestCase(test.BaseTestCase):
     def setUp(self):
         super(ObjectStoreTestCase, self).setUp()
-        self.flags(fake_users=True,
-                   buckets_path=os.path.join(oss_tempdir, 'buckets'),
+        self.flags(buckets_path=os.path.join(oss_tempdir, 'buckets'),
                    images_path=os.path.join(oss_tempdir, 'images'),
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
         logging.getLogger().setLevel(logging.DEBUG)
 
-        self.um = users.UserManager.instance()
+        self.um = manager.AuthManager()
         try:
             self.um.create_user('user1')
         except: pass
