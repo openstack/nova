@@ -26,7 +26,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.compute import model
-from nova.compute import computeservice
+from nova.compute import service
 
 
 FLAGS = flags.FLAGS
@@ -60,7 +60,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         self.flags(fake_libvirt=True,
                    fake_storage=True,
                    fake_users=True)
-        self.compute = computeservice.ComputeService()
+        self.compute = service.ComputeService()
 
     def create_instance(self):
         instdir = model.InstanceDirectory()

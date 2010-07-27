@@ -37,9 +37,9 @@ from nova.auth import rbac
 from nova.auth import users
 from nova.compute import model
 from nova.compute import network
-from nova.compute import computeservice
+from nova.compute import service as compute_service
 from nova.endpoint import images
-from nova.volume import volumeservice
+from nova.volume import service as volume_service
 
 
 FLAGS = flags.FLAGS
@@ -75,7 +75,7 @@ class CloudController(object):
     def volumes(self):
         """ returns a list of all volumes """
         for volume_id in datastore.Redis.instance().smembers("volumes"):
-            volume = volumeservice.get_volume(volume_id)
+            volume = volume_service.get_volume(volume_id)
             yield volume
 
     def __str__(self):
@@ -102,7 +102,7 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], computeservice.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                line = '%s slots=%d' % (instance['private_dns_name'], compute_service.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
                 else:
@@ -295,7 +295,7 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
-        # TODO(vish): refactor this to create the volume object here and tell volumeservice to create it
+        # TODO(vish): refactor this to create the volume object here and tell service to create it
         res = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
                                  "args" : {"size": size,
                                            "user_id": context.user.id,
@@ -330,7 +330,7 @@ class CloudController(object):
         raise exception.NotFound('Instance %s could not be found' % instance_id)
 
     def _get_volume(self, context, volume_id):
-        volume = volumeservice.get_volume(volume_id)
+        volume = volume_service.get_volume(volume_id)
         if context.user.is_admin() or volume['project_id'] == context.project.id:
             return volume
         raise exception.NotFound('Volume %s could not be found' % volume_id)

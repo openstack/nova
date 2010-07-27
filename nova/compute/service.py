@@ -49,7 +49,7 @@ from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
 from nova.objectstore import image # for image_path flag
-from nova.volume import volumeservice
+from nova.volume import service as volume_service
 
 
 FLAGS = flags.FLAGS
@@ -221,7 +221,7 @@ class ComputeService(service.Service):
     @exception.wrap_exception
     def attach_volume(self, instance_id = None,
                       volume_id = None, mountpoint = None):
-        volume = volumeservice.get_volume(volume_id)
+        volume = volume_service.get_volume(volume_id)
         yield self._init_aoe()
         yield process.simple_execute(
                 "sudo virsh attach-disk %s /dev/etherd/%s %s" %
@@ -242,7 +242,7 @@ class ComputeService(service.Service):
         """ detach a volume from an instance """
         # despite the documentation, virsh detach-disk just wants the device
         # name without the leading /dev/
-        volume = volumeservice.get_volume(volume_id)
+        volume = volume_service.get_volume(volume_id)
         target = volume['mountpoint'].rpartition('/dev/')[2]
         yield process.simple_execute(
                 "sudo virsh detach-disk %s %s " % (instance_id, target))
