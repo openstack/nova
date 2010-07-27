@@ -56,6 +56,29 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+class ProjectInfo(object):
+    """
+    Information about a Nova project, as parsed through SAX
+    fields include:
+        projectname
+        description
+        member_ids
+    """
+
+    def __init__(self, connection=None, projectname=None, endpoint=None):
+        self.connection = connection
+        self.projectname = projectname
+        self.endpoint = endpoint
+
+    def __repr__(self):
+        return 'ProjectInfo:%s' % self.projectname
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        setattr(self, name, str(value))
+
 class HostInfo(object):
     """
     Information about a Nova Host, as parsed through SAX:
@@ -136,6 +159,85 @@ class NovaAdminClient(object):
     def delete_user(self, username):
         """ deletes a user """
         return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
+
+    def add_user_role(self, user, role, project=None):
+        """
+        Add a role to a user either globally or for a specific project.
+        """
+        return self.modify_user_role(user, role, project=project,
+                                     operation='add')
+
+    def remove_user_role(self, user, role, project=None):
+        """
+        Remove a role from a user either globally or for a specific project.
+        """
+        return self.modify_user_role(user, role, project=project,
+                                     operation='remove')
+
+    def modify_user_role(self, user, role, project=None, operation='add',
+                         **kwargs):
+        """
+        Add or remove a role for a user and project.
+        """
+        params = {
+            'User': user,
+            'Role': role,
+            'Project': project,
+            'Operation': operation
+
+        }
+        return self.apiconn.get_status('ModifyUserRole', params)
+
+    def get_projects(self):
+        """
+        Returns a list of all projects.
+        """
+        return self.apiconn.get_list('DescribeProjects', {},
+                                     [('item', ProjectInfo)])
+
+    def get_project(self, name):
+        """
+        Returns a single project with the specified name.
+        """
+        project = self.apiconn.get_object('DescribeProject',
+                                        {'Name': name},
+                                        ProjectInfo)
+
+        if project.projectname != None:
+            return project
+            
+    def create_project(self, projectname, manager_user, description=None,
+                       member_users=None):
+        """
+        Creates a new project.
+        """
+        params = {
+            'Name': projectname,
+            'ManagerUser': manager_user,
+            'Description': description,
+            'MemberUsers': member_users
+        }
+        return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
+
+    def delete_project(self, projectname):
+        """
+        Permanently deletes the specified project.
+        """
+        return self.apiconn.get_object('DeregisterProject',
+                                       {'Name': projectname},
+                                       ProjectInfo)
+
+    def modify_project_user(self, user, project, operation='add',
+                            **kwargs):
+        """
+        Adds or removes a user from a project.
+        """
+        params = {
+            'User': user,
+            'Project': project,
+            'Operation': operation
+        }
+        return self.apiconn.get_status('ModifyProjectUser', params)
 
     def get_zip(self, username):
         """ returns the content of a zip file containing novarc and access credentials. """
