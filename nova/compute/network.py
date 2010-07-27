@@ -144,7 +144,7 @@ class Vlan(datastore.BasicModel):
     @datastore.absorb_connection_error
     def destroy(self):
         set_name = self._redis_set_name(self.__class__.__name__)
-        datastore.Redis.instance().hdel(set_name, self.project)
+        datastore.Redis.instance().hdel(set_name, self.project_id)
 
     def subnet(self):
         vlan = int(self.vlan_id)
@@ -529,6 +529,7 @@ def get_vlan_for_project(project_id):
                 #             don't orphan any VLANs.  It is basically
                 #             garbage collection for after projects abandoned
                 #             their reference.
+                vlan.destroy()
                 vlan.project_id = project_id
                 vlan.save()
                 return vlan
