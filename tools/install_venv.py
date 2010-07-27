@@ -72,7 +72,7 @@ def print_help():
  To activate the Nova virtualenv for the extent of your current shell session
  you can run:
 
- $ source tools/activate_venv.sh
+ $ source .nova-venv/bin/activate 
 
  Or, if you prefer, you can run commands in the virtualenv on a case by case
  basis by running:
