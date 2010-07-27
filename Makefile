@@ -15,7 +15,7 @@ clean:
 	rm -rf keys
 	rm -rf instances
 	rm -rf networks
-	rm run_tests.err.log
+	rm -f run_tests.err.log
 
 clean-all: clean
 	rm -rf $(venv)

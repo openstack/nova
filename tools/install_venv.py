@@ -5,7 +5,6 @@ Installation script for Nova's development virtualenv
 import os
 import subprocess
 import sys
-import textwrap
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -80,7 +79,7 @@ def print_help():
 
  $ tools/with_venv.sh <your command>
 
- Also, run_tests.sh will automatically use the virtualenv.
+ Also, make test will automatically use the virtualenv.
   """
   print help
 
