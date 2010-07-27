@@ -29,7 +29,7 @@ from nova import flags
 FLAGS=flags.FLAGS
 
 flags.DEFINE_string('dhcpbridge_flagfile',
-                    '/etc/nova-dhcpbridge.conf',
+                    '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
 def execute(cmd, addl_env=None):
