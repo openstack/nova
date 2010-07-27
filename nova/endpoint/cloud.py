@@ -34,7 +34,7 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
 from nova.compute import network
 from nova.compute import service as compute_service
@@ -47,9 +47,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 
 def _gen_key(user_id, key_name):
-    """ Tuck this into UserManager """
+    """ Tuck this into AuthManager """
     try:
-        manager = users.UserManager.instance()
+        manager = manager.AuthManager()
         private_key, fingerprint = manager.generate_key_pair(user_id, key_name)
     except Exception as ex:
         return {'exception': ex}

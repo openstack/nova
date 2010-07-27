@@ -27,7 +27,7 @@ from xml.etree import ElementTree
 from nova import flags
 from nova import rpc
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import service
 from nova.endpoint import api
 from nova.endpoint import cloud
@@ -40,8 +40,7 @@ class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   fake_users=True)
+                   fake_storage=True)
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
@@ -61,15 +60,15 @@ class CloudTestCase(test.BaseTestCase):
         self.injected.append(self.compute_consumer.attach_to_tornado(self.ioloop))
 
         try:
-            users.UserManager.instance().create_user('admin', 'admin', 'admin')
+            manager.AuthManager().create_user('admin', 'admin', 'admin')
         except: pass
-        admin = users.UserManager.instance().get_user('admin')
-        project = users.UserManager.instance().create_project('proj', 'admin', 'proj')
+        admin = manager.AuthManager().get_user('admin')
+        project = manager.AuthManager().create_project('proj', 'admin', 'proj')
         self.context = api.APIRequestContext(handler=None,project=project,user=admin)
 
     def tearDown(self):
-        users.UserManager.instance().delete_project('proj')
-        users.UserManager.instance().delete_user('admin')
+        manager.AuthManager().delete_project('proj')
+        manager.AuthManager().delete_user('admin')
 
     def test_console_output(self):
         if FLAGS.fake_libvirt:

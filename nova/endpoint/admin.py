@@ -22,7 +22,7 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
 
 def user_dict(user, base64_file=None):
@@ -69,18 +69,18 @@ class AdminController(object):
     @admin_only
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
-        return user_dict(users.UserManager.instance().get_user(name))
+        return user_dict(manager.AuthManager().get_user(name))
 
     @admin_only
     def describe_users(self, _context, **_kwargs):
         """Returns all users - should be changed to deal with a list."""
         return {'userSet':
-            [user_dict(u) for u in users.UserManager.instance().get_users()] }
+            [user_dict(u) for u in manager.AuthManager().get_users()] }
 
     @admin_only
     def register_user(self, _context, name, **_kwargs):
         """Creates a new user, and returns generated credentials."""
-        return user_dict(users.UserManager.instance().create_user(name))
+        return user_dict(manager.AuthManager().create_user(name))
 
     @admin_only
     def deregister_user(self, _context, name, **_kwargs):
@@ -88,7 +88,7 @@ class AdminController(object):
            Should throw an exception if the user has instances,
            volumes, or buckets remaining.
         """
-        users.UserManager.instance().delete_user(name)
+        manager.AuthManager().delete_user(name)
 
         return True
 
@@ -100,8 +100,8 @@ class AdminController(object):
         """
         if project is None:
             project = name
-        project = users.UserManager.instance().get_project(project)
-        user = users.UserManager.instance().get_user(name)
+        project = manager.AuthManager().get_project(project)
+        user = manager.AuthManager().get_user(name)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
 
     @admin_only

@@ -58,8 +58,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeConnectionTestCase, self).setUp()
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   fake_users=True)
+                   fake_storage=True)
         self.compute = service.ComputeService()
 
     def create_instance(self):

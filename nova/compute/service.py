@@ -25,11 +25,13 @@ Compute Service:
 """
 
 import base64
+import boto.utils
 import json
 import logging
 import os
 import shutil
 import sys
+import time
 from twisted.internet import defer
 from twisted.internet import task
 
@@ -45,6 +47,7 @@ from nova import flags
 from nova import process
 from nova import service
 from nova import utils
+from nova.auth import signer, manager
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
@@ -450,9 +453,25 @@ class Instance(object):
 
     def _fetch_s3_image(self, image, path):
         url = _image_url('%s/image' % image)
-        d = process.simple_execute(
-                'curl --silent %s -o %s' % (url, path))
-        return d
+
+        # This should probably move somewhere else, like e.g. a download_as
+        # method on User objects and at the same time get rewritten to use
+        # twisted web client.
+        headers = {}
+        headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+
+        user_id = self.datamodel['user_id']
+        user = manager.AuthManager().get_user(user_id)
+        uri = '/' + url.partition('/')[2]
+        auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', uri)
+        headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)
+
+        cmd = ['/usr/bin/curl', '--silent', url]
+        for (k,v) in headers.iteritems():
+            cmd += ['-H', '%s: %s' % (k,v)]
+
+        cmd += ['-o', path]
+        return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
     def _fetch_local_image(self, image, path):
         source = _image_path('%s/image' % image)
