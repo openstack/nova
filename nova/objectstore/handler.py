@@ -47,7 +47,7 @@ import urllib
 
 from twisted.application import internet, service
 from twisted.web.resource import Resource
-from twisted.web import server, static
+from twisted.web import server, static, error
 
 
 from nova import exception
@@ -111,10 +111,10 @@ def get_context(request):
                                                              secret,
                                                              {},
                                                              request.method,
-                                                             request.host,
+                                                             request.getRequestHostname(),
                                                              request.uri,
-                                                             False)
-        # FIXME: check signature here!
+                                                             headers=request.getAllHeaders(),
+                                                             check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
@@ -124,15 +124,15 @@ class S3(Resource):
     """Implementation of an S3-like storage server based on local files."""
     def getChild(self, name, request):
         request.context = get_context(request)
-
         if name == '':
             return self
         elif name == '_images':
-            return ImageResource()
+            return ImagesResource()
         else:
             return BucketResource(name)
 
     def render_GET(self, request):
+        logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() if b.is_authorized(request.context)]
 
         render_xml(request, {"ListAllMyBucketsResult": {
@@ -154,7 +154,10 @@ class BucketResource(Resource):
     def render_GET(self, request):
         logging.debug("List keys for bucket %s" % (self.name))
 
-        bucket_object = bucket.Bucket(self.name)
+        try:
+            bucket_object = bucket.Bucket(self.name)
+        except exception.NotFound, e:
+            return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
             raise exception.NotAuthorized
@@ -170,13 +173,10 @@ class BucketResource(Resource):
 
     def render_PUT(self, request):
         logging.debug("Creating bucket %s" % (self.name))
-        try:
-            print 'user is %s' % request.context
-        except Exception as e:
-            logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
-        return ''
+        request.finish()
+        return server.NOT_DONE_YET
 
     def render_DELETE(self, request):
         logging.debug("Deleting bucket %s" % (self.name))
@@ -234,13 +234,19 @@ class ObjectResource(Resource):
 class ImageResource(Resource):
     isLeaf = True
 
+    def __init__(self, name):
+        Resource.__init__(self)
+        self.img = image.Image(name)
+
+    def render_GET(self, request):
+        return static.File(self.img.image_path, defaultType='application/octet-stream').render_GET(request)
+
+class ImagesResource(Resource):
     def getChild(self, name, request):
         if name == '':
             return self
         else:
-            request.setHeader("Content-Type", "application/octet-stream")
-            img = image.Image(name)
-            return static.File(img.image_path)
+            return ImageResource(name)
 
     def render_GET(self, request):
         """ returns a json listing of all images
@@ -302,9 +308,13 @@ class ImageResource(Resource):
         request.setResponseCode(204)
         return ''
 
-def get_application():
+def get_site():
     root = S3()
-    factory = server.Site(root)
+    site = server.Site(root)
+    return site
+
+def get_application():
+    factory = get_site()
     application = service.Application("objectstore")
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
     objectStoreService.setServiceParent(application)
