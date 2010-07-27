@@ -47,8 +47,7 @@ from nova import fakevirt
 from nova import flags
 from nova import process
 from nova import utils
-from nova.auth import signer
-from nova.auth.users import UserManager
+from nova.auth import signer, manager
 from nova.compute import disk
 from nova.compute import model
 from nova.compute import network
@@ -462,7 +461,7 @@ class Instance(object):
         headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
         user_id = self.datamodel['user_id']
-        user = UserManager.instance().get_user(user_id)
+        user = manager.AuthManager().get_user(user_id)
         uri = '/' + url.partition('/')[2]
         auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', uri)
         headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)

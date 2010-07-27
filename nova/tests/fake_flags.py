@@ -24,5 +24,5 @@ FLAGS.fake_libvirt = True
 FLAGS.fake_storage = True
 FLAGS.fake_rabbit = True
 FLAGS.fake_network = True
-FLAGS.fake_users = True
+FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 FLAGS.verbose = True

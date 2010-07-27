@@ -52,7 +52,7 @@ from twisted.web import server, static, error
 
 from nova import exception
 from nova import flags
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 from nova.objectstore import bucket
 from nova.objectstore import image
@@ -107,8 +107,14 @@ def get_context(request):
         if not authorization_header:
             raise exception.NotAuthorized
         access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
-        um = users.UserManager.instance()
-        (user, project) = um.authenticate(access, secret, {}, request.method, request.getRequestHostname(), request.uri, headers=request.getAllHeaders(), check_type='s3')
+        (user, project) = manager.AuthManager().authenticate(access,
+                                                             secret,
+                                                             {},
+                                                             request.method,
+                                                             request.getRequestHostname(),
+                                                             request.uri,
+                                                             headers=request.getAllHeaders(),
+                                                             check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)

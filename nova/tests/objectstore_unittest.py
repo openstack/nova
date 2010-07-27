@@ -27,7 +27,7 @@ import tempfile
 from nova import flags
 from nova import objectstore
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.objectstore.handler import S3
 from nova.exception import NotEmpty, NotFound, NotAuthorized
 
@@ -57,13 +57,12 @@ os.makedirs(os.path.join(oss_tempdir, 'buckets'))
 class ObjectStoreTestCase(test.BaseTestCase):
     def setUp(self):
         super(ObjectStoreTestCase, self).setUp()
-        self.flags(fake_users=True,
-                   buckets_path=os.path.join(oss_tempdir, 'buckets'),
+        self.flags(buckets_path=os.path.join(oss_tempdir, 'buckets'),
                    images_path=os.path.join(oss_tempdir, 'images'),
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
         logging.getLogger().setLevel(logging.DEBUG)
 
-        self.um = users.UserManager.instance()
+        self.um = manager.AuthManager()
         try:
             self.um.create_user('user1')
         except: pass
@@ -177,8 +176,13 @@ class TestSite(server.Site):
 class S3APITestCase(test.TrialTestCase):
     def setUp(self):
         super(S3APITestCase, self).setUp()
-        FLAGS.fake_users   = True
+
+        FLAGS.auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
         FLAGS.buckets_path = os.path.join(oss_tempdir, 'buckets')
+
+        self.um = manager.AuthManager()
+        self.admin_user = self.um.create_user('admin', admin=True)
+        self.admin_project = self.um.create_project('admin', self.admin_user)
 
         shutil.rmtree(FLAGS.buckets_path)
         os.mkdir(FLAGS.buckets_path)
@@ -192,8 +196,8 @@ class S3APITestCase(test.TrialTestCase):
         if not boto.config.has_section('Boto'):
             boto.config.add_section('Boto')
         boto.config.set('Boto', 'num_retries', '0')
-        self.conn = S3Connection(aws_access_key_id='admin',
-                                 aws_secret_access_key='admin',
+        self.conn = S3Connection(aws_access_key_id=self.admin_user.access,
+                                 aws_secret_access_key=self.admin_user.secret,
                                  host='127.0.0.1',
                                  port=self.tcp_port,
                                  is_secure=False,
@@ -257,5 +261,7 @@ class S3APITestCase(test.TrialTestCase):
         return d
 
     def tearDown(self):
-        super(S3APITestCase, self).tearDown()
+        self.um.delete_user('admin')
+        self.um.delete_project('admin')
         return defer.DeferredList([defer.maybeDeferred(self.listening_port.stopListening)])
+        super(S3APITestCase, self).tearDown()
