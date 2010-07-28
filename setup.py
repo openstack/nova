@@ -16,20 +16,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import glob
-import os
-import sys
-
 from setuptools import setup, find_packages
 
-srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'src')
-
 setup(name='nova',
-      version='0.3.0',
-      description='None Other, Vaguely Awesome',
-      author='nova-core',
-      author_email='nova-core@googlegroups.com',
-      url='http://novacc.org/',
-      packages = find_packages(),
-
+      version='0.9.0',
+      description='cloud computing fabric controller',
+      author='OpenStack',
+      author_email='nova@lists.launchpad.net',
+      url='http://www.openstack.org/',
+      packages = find_packages(exclude=['bin','smoketests']),
+      scripts=['bin/nova-api',
+               'bin/nova-compute',
+               'bin/nova-dhcpbridge',
+               'bin/nova-import-canonical-imagestore',
+               'bin/nova-instancemonitor',
+               'bin/nova-manage',
+               'bin/nova-network',
+               'bin/nova-objectstore',
+               'bin/nova-rsapi',
+               'bin/nova-volume',
+      ]
      )

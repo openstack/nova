@@ -35,7 +35,7 @@ from nova import crypto
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.auth import users
+from nova.auth import manager
 import nova.cloudpipe.api
 from nova.endpoint import cloud
 

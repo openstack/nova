@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import boto
 import glob
 import hashlib
 import logging
@@ -28,8 +29,13 @@ from nova import objectstore
 from nova.objectstore import bucket # for buckets_path flag
 from nova.objectstore import image # for images_path flag
 from nova import test
-from nova.auth import users
+from nova.auth import manager
+from nova.objectstore.handler import S3
+from nova.exception import NotEmpty, NotFound, NotAuthorized
 
+from boto.s3.connection import S3Connection, OrdinaryCallingFormat
+from twisted.internet import reactor, threads, defer
+from twisted.web import http, server
 
 FLAGS = flags.FLAGS
 
@@ -53,13 +59,12 @@ os.makedirs(os.path.join(oss_tempdir, 'buckets'))
 class ObjectStoreTestCase(test.BaseTestCase):
     def setUp(self):
         super(ObjectStoreTestCase, self).setUp()
-        self.flags(fake_users=True,
-                   buckets_path=os.path.join(oss_tempdir, 'buckets'),
+        self.flags(buckets_path=os.path.join(oss_tempdir, 'buckets'),
                    images_path=os.path.join(oss_tempdir, 'images'),
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
         logging.getLogger().setLevel(logging.DEBUG)
 
-        self.um = users.UserManager.instance()
+        self.um = manager.AuthManager()
         try:
             self.um.create_user('user1')
         except: pass
@@ -98,49 +103,37 @@ class ObjectStoreTestCase(test.BaseTestCase):
         # another user is not authorized
         self.context.user = self.um.get_user('user2')
         self.context.project = self.um.get_project('proj2')
-        self.assert_(bucket.is_authorized(self.context) == False)
+        self.assertFalse(bucket.is_authorized(self.context))
 
         # admin is authorized to use bucket
         self.context.user = self.um.get_user('admin_user')
         self.context.project = None
-        self.assert_(bucket.is_authorized(self.context))
+        self.assertTrue(bucket.is_authorized(self.context))
 
         # new buckets are empty
-        self.assert_(bucket.list_keys()['Contents'] == [])
+        self.assertTrue(bucket.list_keys()['Contents'] == [])
 
         # storing keys works
         bucket['foo'] = "bar"
 
-        self.assert_(len(bucket.list_keys()['Contents']) == 1)
+        self.assertEquals(len(bucket.list_keys()['Contents']), 1)
 
-        self.assert_(bucket['foo'].read() == 'bar')
+        self.assertEquals(bucket['foo'].read(), 'bar')
 
         # md5 of key works
-        self.assert_(bucket['foo'].md5 == hashlib.md5('bar').hexdigest())
+        self.assertEquals(bucket['foo'].md5, hashlib.md5('bar').hexdigest())
 
-        # deleting non-empty bucket throws exception
-        exception = False
-        try:
-            bucket.delete()
-        except:
-            exception = True
-
-        self.assert_(exception)
+        # deleting non-empty bucket should throw a NotEmpty exception
+        self.assertRaises(NotEmpty, bucket.delete)
 
         # deleting key
         del bucket['foo']
 
-        # deleting empty button
+        # deleting empty bucket
         bucket.delete()
 
         # accessing deleted bucket throws exception
-        exception = False
-        try:
-            objectstore.bucket.Bucket('new_bucket')
-        except:
-            exception = True
-
-        self.assert_(exception)
+        self.assertRaises(NotFound, objectstore.bucket.Bucket, 'new_bucket')
 
     def test_images(self):
         self.context.user = self.um.get_user('user1')
@@ -169,37 +162,108 @@ class ObjectStoreTestCase(test.BaseTestCase):
         # verify image permissions
         self.context.user = self.um.get_user('user2')
         self.context.project = self.um.get_project('proj2')
-        self.assert_(my_img.is_authorized(self.context) == False)
+        self.assertFalse(my_img.is_authorized(self.context))
 
-# class ApiObjectStoreTestCase(test.BaseTestCase):
-#     def setUp(self):
-#         super(ApiObjectStoreTestCase, self).setUp()
-#         FLAGS.fake_users   = True
-#         FLAGS.buckets_path = os.path.join(tempdir, 'buckets')
-#         FLAGS.images_path  = os.path.join(tempdir, 'images')
-#         FLAGS.ca_path = os.path.join(os.path.dirname(__file__), 'CA')
-#
-#         self.users = users.UserManager.instance()
-#         self.app  = handler.Application(self.users)
-#
-#         self.host = '127.0.0.1'
-#
-#         self.conn = boto.s3.connection.S3Connection(
-#             aws_access_key_id=user.access,
-#             aws_secret_access_key=user.secret,
-#             is_secure=False,
-#             calling_format=boto.s3.connection.OrdinaryCallingFormat(),
-#             port=FLAGS.s3_port,
-#             host=FLAGS.s3_host)
-#
-#         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
-#
-#     def tearDown(self):
-#         FLAGS.Reset()
-#         super(ApiObjectStoreTestCase, self).tearDown()
-#
-#     def test_describe_instances(self):
-#         self.expect_http()
-#         self.mox.ReplayAll()
-#
-#         self.assertEqual(self.ec2.get_all_instances(), [])
+
+class TestHTTPChannel(http.HTTPChannel):
+    # Otherwise we end up with an unclean reactor
+    def checkPersistence(self, _, __):
+        return False
+
+
+class TestSite(server.Site):
+    protocol = TestHTTPChannel
+
+
+class S3APITestCase(test.TrialTestCase):
+    def setUp(self):
+        super(S3APITestCase, self).setUp()
+
+        FLAGS.auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
+        FLAGS.buckets_path = os.path.join(oss_tempdir, 'buckets')
+
+        self.um = manager.AuthManager()
+        self.admin_user = self.um.create_user('admin', admin=True)
+        self.admin_project = self.um.create_project('admin', self.admin_user)
+
+        shutil.rmtree(FLAGS.buckets_path)
+        os.mkdir(FLAGS.buckets_path)
+
+        root = S3()
+        self.site = TestSite(root)
+        self.listening_port = reactor.listenTCP(0, self.site, interface='127.0.0.1')
+        self.tcp_port = self.listening_port.getHost().port
+
+
+        if not boto.config.has_section('Boto'):
+            boto.config.add_section('Boto')
+        boto.config.set('Boto', 'num_retries', '0')
+        self.conn = S3Connection(aws_access_key_id=self.admin_user.access,
+                                 aws_secret_access_key=self.admin_user.secret,
+                                 host='127.0.0.1',
+                                 port=self.tcp_port,
+                                 is_secure=False,
+                                 calling_format=OrdinaryCallingFormat())
+
+        # Don't attempt to reuse connections
+        def get_http_connection(host, is_secure):
+            return self.conn.new_http_connection(host, is_secure)
+        self.conn.get_http_connection = get_http_connection
+
+    def _ensure_empty_list(self, l):
+        self.assertEquals(len(l), 0, "List was not empty")
+        return True
+
+    def _ensure_only_bucket(self, l, name):
+        self.assertEquals(len(l), 1, "List didn't have exactly one element in it")
+        self.assertEquals(l[0].name, name, "Wrong name")
+
+    def test_000_list_buckets(self):
+        d = threads.deferToThread(self.conn.get_all_buckets)
+        d.addCallback(self._ensure_empty_list)
+        return d
+
+    def test_001_create_and_delete_bucket(self):
+        bucket_name = 'testbucket'
+
+        d = threads.deferToThread(self.conn.create_bucket, bucket_name)
+        d.addCallback(lambda _:threads.deferToThread(self.conn.get_all_buckets))
+
+        def ensure_only_bucket(l, name):
+            self.assertEquals(len(l), 1, "List didn't have exactly one element in it")
+            self.assertEquals(l[0].name, name, "Wrong name")
+        d.addCallback(ensure_only_bucket, bucket_name)
+
+        d.addCallback(lambda _:threads.deferToThread(self.conn.delete_bucket, bucket_name))
+        d.addCallback(lambda _:threads.deferToThread(self.conn.get_all_buckets))
+        d.addCallback(self._ensure_empty_list)
+        return d
+
+    def test_002_create_bucket_and_key_and_delete_key_again(self):
+        bucket_name = 'testbucket'
+        key_name = 'somekey'
+        key_contents = 'somekey'
+
+        d = threads.deferToThread(self.conn.create_bucket, bucket_name)
+        d.addCallback(lambda b:threads.deferToThread(b.new_key, key_name))
+        d.addCallback(lambda k:threads.deferToThread(k.set_contents_from_string, key_contents))
+        def ensure_key_contents(bucket_name, key_name, contents):
+            bucket = self.conn.get_bucket(bucket_name)
+            key = bucket.get_key(key_name)
+            self.assertEquals(key.get_contents_as_string(), contents,  "Bad contents")
+        d.addCallback(lambda _:threads.deferToThread(ensure_key_contents, bucket_name, key_name, key_contents))
+        def delete_key(bucket_name, key_name):
+            bucket = self.conn.get_bucket(bucket_name)
+            key = bucket.get_key(key_name)
+            key.delete()
+        d.addCallback(lambda _:threads.deferToThread(delete_key, bucket_name, key_name))
+        d.addCallback(lambda _:threads.deferToThread(self.conn.get_bucket, bucket_name))
+        d.addCallback(lambda b:threads.deferToThread(b.get_all_keys))
+        d.addCallback(self._ensure_empty_list)
+        return d
+
+    def tearDown(self):
+        self.um.delete_user('admin')
+        self.um.delete_project('admin')
+        return defer.DeferredList([defer.maybeDeferred(self.listening_port.stopListening)])
+        super(S3APITestCase, self).tearDown()

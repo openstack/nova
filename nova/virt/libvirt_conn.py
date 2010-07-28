@@ -34,6 +34,7 @@ from nova import exception
 from nova import flags
 from nova import process
 from nova import utils
+from nova.auth import manager
 from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -185,12 +186,13 @@ class LibvirtConnection(object):
         f.write(libvirt_xml)
         f.close()
 
+        user = manager.AuthManager().get_user(data['user_id'])
         if not os.path.exists(basepath('disk')):
-           yield images.fetch(data['image_id'], basepath('disk-raw'))
+           yield images.fetch(data['image_id'], basepath('disk-raw'), user)
         if not os.path.exists(basepath('kernel')):
-           yield images.fetch(data['kernel_id'], basepath('kernel'))
+           yield images.fetch(data['kernel_id'], basepath('kernel'), user)
         if not os.path.exists(basepath('ramdisk')):
-           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'))
+           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user)
 
         execute = lambda cmd, input=None: \
                   process.simple_execute(cmd=cmd,

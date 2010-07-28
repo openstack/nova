@@ -24,5 +24,4 @@ FLAGS.connection_type = 'libvirt'
 FLAGS.fake_storage = False
 FLAGS.fake_rabbit = False
 FLAGS.fake_network = False
-FLAGS.fake_users = False
 FLAGS.verbose = False
