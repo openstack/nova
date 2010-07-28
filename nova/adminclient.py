@@ -59,16 +59,18 @@ class UserInfo(object):
 class ProjectInfo(object):
     """
     Information about a Nova project, as parsed through SAX
-    fields include:
+    Fields include:
         projectname
         description
-        member_ids
+        projectManagerId
+        memberIds
     """
 
-    def __init__(self, connection=None, projectname=None, endpoint=None):
+    def __init__(self, connection=None):
         self.connection = connection
-        self.projectname = projectname
-        self.endpoint = endpoint
+        self.projectname = None
+        self.description = None
+        self.projectManagerId = None
         self.memberIds = []
 
     def __repr__(self):
@@ -78,10 +80,39 @@ class ProjectInfo(object):
         return None
 
     def endElement(self, name, value, connection):
-        if name == 'item':
+        if name == 'projectname':
+            self.projectname = value
+        elif name == 'description':
+            self.description = value
+        elif name == 'projectManagerId':
+            self.projectManagerId = value
+        elif name == 'memberId':
             self.memberIds.append(value)
-        elif name != 'memberIds':
+        else:
             setattr(self, name, str(value))
+
+class ProjectMember(object):
+    """
+    Information about a Nova project member, as parsed through SAX.
+    Fields include:
+        memberId
+    """
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.memberId = None
+    
+    def __repr__(self):
+        return 'ProjectMember:%s' % self.memberId
+
+    def startElement(self, name, attrs, connection):
+        return None
+        
+    def endElement(self, name, value, connection):
+        if name == 'member':
+            self.memberId = value
+        else:
+            setattr(self, name, str(value))
+            
 
 class HostInfo(object):
     """
@@ -193,11 +224,16 @@ class NovaAdminClient(object):
         }
         return self.apiconn.get_status('ModifyUserRole', params)
 
-    def get_projects(self):
+    def get_projects(self, user=None):
         """
         Returns a list of all projects.
         """
-        return self.apiconn.get_list('DescribeProjects', {},
+        if user:
+            params = {'User': user}
+        else:
+            params = {}
+        return self.apiconn.get_list('DescribeProjects',
+                                     params,
                                      [('item', ProjectInfo)])
 
     def get_project(self, name):
@@ -232,8 +268,27 @@ class NovaAdminClient(object):
                                        {'Name': projectname},
                                        ProjectInfo)
 
-    def modify_project_user(self, user, project, operation='add',
-                            **kwargs):
+    def get_project_members(self, name):
+        """
+        Returns a list of members of a project.
+        """
+        return self.apiconn.get_list('DescribeProjectMembers',
+                                     {'Name': name},
+                                     [('item', ProjectMember)])
+
+    def add_project_member(self, user, project):
+        """
+        Adds a user to a project.
+        """
+        return self.modify_project_member(user, project, operation='add')
+        
+    def remove_project_member(self, user, project):
+        """
+        Removes a user from a project.
+        """
+        return self.modify_project_member(user, project, operation='remove')
+
+    def modify_project_member(self, user, project, operation='add'):
         """
         Adds or removes a user from a project.
         """
@@ -242,7 +297,7 @@ class NovaAdminClient(object):
             'Project': project,
             'Operation': operation
         }
-        return self.apiconn.get_status('ModifyProjectUser', params)
+        return self.apiconn.get_status('ModifyProjectMember', params)
 
     def get_zip(self, username):
         """ returns the content of a zip file containing novarc and access credentials. """

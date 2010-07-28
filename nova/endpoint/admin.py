@@ -44,7 +44,6 @@ def project_dict(project):
             'projectname': project.id,
             'project_manager_id': project.project_manager_id,
             'description': project.description,
-            'member_ids': project.member_ids
         }
     else:
         return {}
@@ -137,10 +136,9 @@ class AdminController(object):
     @admin_only
     def describe_projects(self, context, user=None, **kwargs):
         """Returns all projects - should be changed to deal with a list."""
-        # TODO(devcamcar): Implement filter by user.
         return {'projectSet':
             [project_dict(u) for u in
-            manager.AuthManager().get_projects()]}
+            manager.AuthManager().get_projects(user=user)]}
 
     @admin_only
     def register_project(self, context, name, manager_user, description=None,
@@ -162,7 +160,15 @@ class AdminController(object):
         return True
 
     @admin_only
-    def modify_project_user(self, context, user, project, operation, **kwargs):
+    def describe_project_members(self, context, name, **kwargs):
+        project = manager.AuthManager().get_project(name)
+        result = {
+            'members': [{'member': m} for m in project.member_ids]
+        }
+        return result
+        
+    @admin_only
+    def modify_project_member(self, context, user, project, operation, **kwargs):
         """Add or remove a user from a project."""
         if operation =='add':
             manager.AuthManager().add_to_project(user, project)
@@ -170,6 +176,7 @@ class AdminController(object):
             manager.AuthManager().remove_from_project(user, project)
         else:
             raise exception.ApiError('operation must be add or remove')
+        return True
 
     @admin_only
     def describe_hosts(self, _context, **_kwargs):
