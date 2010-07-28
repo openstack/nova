@@ -25,6 +25,7 @@ import base64
 from nova.auth import manager
 from nova.compute import model
 
+
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
     if user:
@@ -32,8 +33,7 @@ def user_dict(user, base64_file=None):
             'username': user.id,
             'accesskey': user.access,
             'secretkey': user.secret,
-            'file': base64_file,
-        }
+            'file': base64_file}
     else:
         return {}
 
@@ -43,8 +43,7 @@ def project_dict(project):
         return {
             'projectname': project.id,
             'project_manager_id': project.project_manager_id,
-            'description': project.description,
-        }
+            'description': project.description}
     else:
         return {}
 
@@ -149,9 +148,7 @@ class AdminController(object):
                 name,
                 manager_user,
                 description=None,
-                member_users=None
-            )
-        )
+                member_users=None))
 
     @admin_only
     def deregister_project(self, context, name):
@@ -163,8 +160,7 @@ class AdminController(object):
     def describe_project_members(self, context, name, **kwargs):
         project = manager.AuthManager().get_project(name)
         result = {
-            'members': [{'member': m} for m in project.member_ids]
-        }
+            'members': [{'member': m} for m in project.member_ids]}
         return result
         
     @admin_only

@@ -23,6 +23,7 @@ import base64
 import boto
 from boto.ec2.regioninfo import RegionInfo
 
+
 class UserInfo(object):
     """
     Information about a Nova user, as parsed through SAX
@@ -170,8 +171,7 @@ class NovaAdminClient(object):
             region=RegionInfo(None, self.region, self.clc_ip),
             port=8773,
             path='/services/Cloud',
-            **kwargs
-        )
+            **kwargs)
 
     def get_users(self):
         """ grabs the list of all users """
@@ -215,13 +215,10 @@ class NovaAdminClient(object):
         """
         Add or remove a role for a user and project.
         """
-        params = {
-            'User': user,
-            'Role': role,
-            'Project': project,
-            'Operation': operation
-
-        }
+        params = {'User': user,
+                  'Role': role,
+                  'Project': project,
+                  'Operation': operation}
         return self.apiconn.get_status('ModifyUserRole', params)
 
     def get_projects(self, user=None):
@@ -241,8 +238,8 @@ class NovaAdminClient(object):
         Returns a single project with the specified name.
         """
         project = self.apiconn.get_object('DescribeProject',
-                                        {'Name': name},
-                                        ProjectInfo)
+                                          {'Name': name},
+                                          ProjectInfo)
 
         if project.projectname != None:
             return project
@@ -252,12 +249,10 @@ class NovaAdminClient(object):
         """
         Creates a new project.
         """
-        params = {
-            'Name': projectname,
-            'ManagerUser': manager_user,
-            'Description': description,
-            'MemberUsers': member_users
-        }
+        params = {'Name': projectname,
+                  'ManagerUser': manager_user,
+                  'Description': description,
+                  'MemberUsers': member_users}
         return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
 
     def delete_project(self, projectname):
@@ -292,11 +287,9 @@ class NovaAdminClient(object):
         """
         Adds or removes a user from a project.
         """
-        params = {
-            'User': user,
-            'Project': project,
-            'Operation': operation
-        }
+        params = {'User': user,
+                  'Project': project,
+                  'Operation': operation}
         return self.apiconn.get_status('ModifyProjectMember', params)
 
     def get_zip(self, username):
