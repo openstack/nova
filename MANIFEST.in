@@ -1,5 +1,22 @@
-include HACKING LICENSE run_tests.sh run_test.py README builddeb.sh exercise_rsapi.py
+include HACKING LICENSE run_tests.py run_tests.sh 
+include README builddeb.sh exercise_rsapi.py
 graft CA
 graft doc
 graft smoketests
 graft tools
+include nova/auth/novarc.template
+include nova/auth/slap.sh
+include nova/cloudpipe/bootscript.sh
+include nova/cloudpipe/client.ovpn.template
+include nova/compute/fakevirtinstance.xml
+include nova/compute/interfaces.template
+include nova/compute/libvirt.xml.template
+include nova/tests/CA/
+include nova/tests/CA/cacert.pem
+include nova/tests/CA/private/
+include nova/tests/CA/private/cakey.pem
+include nova/tests/bundle/
+include nova/tests/bundle/1mb.manifest.xml
+include nova/tests/bundle/1mb.part.0
+include nova/tests/bundle/1mb.part.1
+include 
