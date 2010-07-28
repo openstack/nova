@@ -35,7 +35,9 @@ from nova import exception
 from nova import flags
 from nova import objectstore # for flags
 from nova import utils
+from nova.auth import ldapdriver # for flags
 from nova.auth import signer
+
 FLAGS = flags.FLAGS
 
 # NOTE(vish): a user with one of these roles will be a superuser and
