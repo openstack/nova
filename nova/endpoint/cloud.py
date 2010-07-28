@@ -49,8 +49,7 @@ flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 def _gen_key(user_id, key_name):
     """ Tuck this into AuthManager """
     try:
-        manager = manager.AuthManager()
-        private_key, fingerprint = manager.generate_key_pair(user_id, key_name)
+        private_key, fingerprint = manager.AuthManager().generate_key_pair(user_id, key_name)
     except Exception as ex:
         return {'exception': ex}
     return {'private_key': private_key, 'fingerprint': fingerprint}

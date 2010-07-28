@@ -42,6 +42,7 @@ def project_dict(project):
     if project:
         return {
             'projectname': project.id,
+            'project_manager_id': project.project_manager_id,
             'description': project.description,
             'member_ids': project.member_ids
         }

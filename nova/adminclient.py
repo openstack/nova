@@ -69,6 +69,7 @@ class ProjectInfo(object):
         self.connection = connection
         self.projectname = projectname
         self.endpoint = endpoint
+        self.memberIds = []
 
     def __repr__(self):
         return 'ProjectInfo:%s' % self.projectname
@@ -77,7 +78,10 @@ class ProjectInfo(object):
         return None
 
     def endElement(self, name, value, connection):
-        setattr(self, name, str(value))
+        if name == 'item':
+            self.memberIds.append(value)
+        elif name != 'memberIds':
+            setattr(self, name, str(value))
 
 class HostInfo(object):
     """
