@@ -19,4 +19,3 @@ include nova/tests/bundle/
 include nova/tests/bundle/1mb.manifest.xml
 include nova/tests/bundle/1mb.part.0
 include nova/tests/bundle/1mb.part.1
-include 
