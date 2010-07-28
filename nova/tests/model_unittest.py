@@ -26,7 +26,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.compute import model
-from nova.compute import node
 
 
 FLAGS = flags.FLAGS
@@ -36,8 +35,7 @@ class ModelTestCase(test.TrialTestCase):
     def setUp(self):
         super(ModelTestCase, self).setUp()
         self.flags(fake_libvirt=True,
-                   fake_storage=True,
-                   fake_users=True)
+                   fake_storage=True)
 
     def tearDown(self):
         model.Instance('i-test').destroy()

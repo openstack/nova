@@ -25,7 +25,7 @@ import tornado.web
 import urllib
 
 from nova import crypto
-from nova.auth import users
+from nova.auth import manager
 
 
 _log = logging.getLogger("api")

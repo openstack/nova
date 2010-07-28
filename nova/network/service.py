@@ -16,24 +16,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from setuptools import setup, find_packages
+"""
+Network Nodes are responsible for allocating ips and setting up network
+"""
 
-setup(name='nova',
-      version='0.9.0',
-      description='cloud computing fabric controller',
-      author='OpenStack',
-      author_email='nova@lists.launchpad.net',
-      url='http://www.openstack.org/',
-      packages = find_packages(exclude=['bin','smoketests']),
-      scripts=['bin/nova-api',
-               'bin/nova-compute',
-               'bin/nova-dhcpbridge',
-               'bin/nova-import-canonical-imagestore',
-               'bin/nova-instancemonitor',
-               'bin/nova-manage',
-               'bin/nova-network',
-               'bin/nova-objectstore',
-               'bin/nova-rsapi',
-               'bin/nova-volume',
-      ]
-     )
+import logging
+
+from nova import flags
+from nova import service
+
+
+FLAGS = flags.FLAGS
+
+class NetworkService(service.Service):
+    """Allocates ips and sets up networks"""
+
+    def __init__(self):
+        logging.debug("Network node working")

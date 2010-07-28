@@ -243,7 +243,7 @@ def send_message(topic, message, wait=True):
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
-                                    exchange="nova",
+                                    exchange=FLAGS.control_exchange,
                                     exchange_type="topic",
                                     routing_key=topic)
     publisher.send(message)

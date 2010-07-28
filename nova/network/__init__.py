@@ -16,24 +16,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from setuptools import setup, find_packages
+"""
+:mod:`nova.network` -- Network Nodes
+=====================================================
 
-setup(name='nova',
-      version='0.9.0',
-      description='cloud computing fabric controller',
-      author='OpenStack',
-      author_email='nova@lists.launchpad.net',
-      url='http://www.openstack.org/',
-      packages = find_packages(exclude=['bin','smoketests']),
-      scripts=['bin/nova-api',
-               'bin/nova-compute',
-               'bin/nova-dhcpbridge',
-               'bin/nova-import-canonical-imagestore',
-               'bin/nova-instancemonitor',
-               'bin/nova-manage',
-               'bin/nova-network',
-               'bin/nova-objectstore',
-               'bin/nova-rsapi',
-               'bin/nova-volume',
-      ]
-     )
+.. automodule:: nova.network
+   :platform: Unix
+   :synopsis: Network is responsible for managing networking
+.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
+.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
+.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
+.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
+.. moduleauthor:: Manish Singh <yosh@gimp.org>
+.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+"""
