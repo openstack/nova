@@ -20,7 +20,7 @@
 System-level utilities and helper functions.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import inspect
 import logging
 import os
@@ -32,7 +32,7 @@ import sys
 from nova import flags
 
 FLAGS = flags.FLAGS
-
+TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
@@ -118,4 +118,7 @@ def get_my_ip():
 def isotime(at=None):
     if not at:
         at = datetime.utcnow()
-    return at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return at.strftime(TIME_FORMAT)
+
+def parse_isotime(timestr):
+    return datetime.strptime(timestr, TIME_FORMAT)
