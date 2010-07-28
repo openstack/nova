@@ -547,10 +547,10 @@ class AuthManager(object):
             if project_dict:
                 return Project(**project_dict)
 
-    def get_projects(self):
-        """Retrieves list of all projects"""
+    def get_projects(self, user=None):
+        """Retrieves list of projects, optionally filtered by user"""
         with self.driver() as drv:
-            project_list = drv.get_projects()
+            project_list = drv.get_projects(User.safe_id(user))
             if not project_list:
                 return []
             return [Project(**project_dict) for project_dict in project_list]

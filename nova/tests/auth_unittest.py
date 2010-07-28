@@ -193,9 +193,15 @@ class AuthTestCase(test.BaseTestCase):
         for vpn in vpns:
             vpn.destroy()
 
+    def test_214_can_retrieve_project_by_user(self):
+        project = self.manager.create_project('testproj2', 'test2', 'Another test project', ['test2'])
+        self.assert_(len(self.manager.get_projects()) > 1)
+        self.assertEqual(len(self.manager.get_projects('test2')), 1)
+
     def test_299_can_delete_project(self):
         self.manager.delete_project('testproj')
         self.assertFalse(filter(lambda p: p.name == 'testproj', self.manager.get_projects()))
+        self.manager.delete_project('testproj2')
 
     def test_999_can_delete_users(self):
         self.manager.delete_user('test1')
