@@ -22,7 +22,6 @@ manage pid files and support syslogging.
 """
 
 import logging
-import logging.handlers
 import os
 import signal
 import sys
@@ -32,7 +31,6 @@ from twisted.python import log
 from twisted.python import reflect
 from twisted.python import runtime
 from twisted.python import usage
-import UserDict
 
 from nova import flags
 
@@ -161,6 +159,13 @@ def WrapTwistedOptions(wrapped):
             except (AttributeError, KeyError):
                 self._data[key] = value
 
+        def get(self, key, default):
+            key = key.replace('-', '_')
+            try:
+                return getattr(FLAGS, key)
+            except (AttributeError, KeyError):
+                self._data.get(key, default)
+
     return TwistedOptionsToFlags
 
 
@@ -209,9 +214,14 @@ def serve(filename):
         FLAGS.pidfile = '%s.pid' % name
     elif FLAGS.pidfile.endswith('twistd.pid'):
         FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
-
     if not FLAGS.logfile:
         FLAGS.logfile = '%s.log' % name
+    elif FLAGS.logfile.endswith('twistd.log'):
+        FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
+    if not FLAGS.prefix:
+        FLAGS.prefix = name
+    elif FLAGS.prefix.endswith('twisted'):
+        FLAGS.prefix = FLAGS.prefix.replace('twisted', name)
 
     action = 'start'
     if len(argv) > 1:
@@ -228,8 +238,16 @@ def serve(filename):
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
 
-    formatter = logging.Formatter(
-        name + '(%(name)s): %(levelname)s %(message)s')
+    class NoNewlineFormatter(logging.Formatter):
+        """Strips newlines from default formatter"""
+        def format(self, record):
+            """Grabs default formatter's output and strips newlines"""
+            data = logging.Formatter.format(self, record)
+            return data.replace("\n", "--")
+
+    # NOTE(vish): syslog-ng doesn't handle newlines from trackbacks very well
+    formatter = NoNewlineFormatter(
+        '(%(name)s): %(levelname)s %(message)s')
     handler = logging.StreamHandler(log.StdioOnnaStick())
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
@@ -238,11 +256,6 @@ def serve(filename):
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.WARNING)
-
-    if FLAGS.syslog:
-        syslog = logging.handlers.SysLogHandler(address='/dev/log')
-        syslog.setFormatter(formatter)
-        logging.getLogger().addHandler(syslog)
 
     logging.debug("Full set of FLAGS:")
     for flag in FLAGS:

@@ -25,7 +25,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.compute import model
-from nova.compute import node
 
 
 FLAGS = flags.FLAGS

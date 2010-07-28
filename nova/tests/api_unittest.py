@@ -43,7 +43,11 @@ def boto_to_tornado(method, path, headers, data, host, connection=None):
 
     connection should be a FakeTornadoHttpConnection instance
     """
-    headers = httpserver.HTTPHeaders()
+    try:
+        headers = httpserver.HTTPHeaders()
+    except AttributeError:
+        from tornado import httputil
+        headers = httputil.HTTPHeaders()
     for k, v in headers.iteritems():
         headers[k] = v
 

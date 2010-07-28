@@ -28,7 +28,7 @@ from nova import flags
 from nova import rpc
 from nova import test
 from nova.auth import manager
-from nova.compute import node
+from nova.compute import service
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -52,12 +52,12 @@ class CloudTestCase(test.BaseTestCase):
                                                       proxy=self.cloud)
         self.injected.append(self.cloud_consumer.attach_to_tornado(self.ioloop))
 
-        # set up a node
-        self.node = node.Node()
-        self.node_consumer = rpc.AdapterConsumer(connection=self.conn,
+        # set up a service
+        self.compute = service.ComputeService()
+        self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                      topic=FLAGS.compute_topic,
-                                                     proxy=self.node)
-        self.injected.append(self.node_consumer.attach_to_tornado(self.ioloop))
+                                                     proxy=self.compute)
+        self.injected.append(self.compute_consumer.attach_to_tornado(self.ioloop))
 
         try:
             manager.AuthManager().create_user('admin', 'admin', 'admin')
@@ -75,11 +75,11 @@ class CloudTestCase(test.BaseTestCase):
             logging.debug("Can't test instances without a real virtual env.")
             return
         instance_id = 'foo'
-        inst = yield self.node.run_instance(instance_id)
+        inst = yield self.compute.run_instance(instance_id)
         output = yield self.cloud.get_console_output(self.context, [instance_id])
         logging.debug(output)
         self.assert_(output)
-        rv = yield self.node.terminate_instance(instance_id)
+        rv = yield self.compute.terminate_instance(instance_id)
 
     def test_run_instances(self):
         if FLAGS.fake_libvirt:
@@ -111,7 +111,7 @@ class CloudTestCase(test.BaseTestCase):
              # for instance in reservations[res_id]:
            for instance in reservations[reservations.keys()[0]]:
                logging.debug("Terminating instance %s" % instance['instance_id'])
-               rv = yield self.node.terminate_instance(instance['instance_id'])
+               rv = yield self.compute.terminate_instance(instance['instance_id'])
 
     def test_instance_update_state(self):
         def instance(num):

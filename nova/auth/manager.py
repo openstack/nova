@@ -342,7 +342,7 @@ class AuthManager(object):
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
-                     verify_signature=True):
+                     check_type='ec2', headers=None):
         """Authenticates AWS request using access key and signature
 
         If the project is not specified, attempts to authenticate to
@@ -367,8 +367,14 @@ class AuthManager(object):
         @type path: str
         @param path: Web request path.
 
-        @type verify_signature: bool
-        @param verify_signature: Whether to verify the signature.
+        @type check_type: str
+        @param check_type: Type of signature to check. 'ec2' for EC2, 's3' for
+                           S3. Any other value will cause signature not to be
+                           checked.
+
+        @type headers: list
+        @param headers: HTTP headers passed with the request (only needed for
+                        s3 signature checks)
 
         @rtype: tuple (User, Project)
         @return: User and project that the request represents.
@@ -376,7 +382,9 @@ class AuthManager(object):
         # TODO(vish): check for valid timestamp
         (access_key, sep, project_id) = access.partition(':')
 
+        logging.info('Looking up user: %r', access_key)
         user = self.get_user_from_access_key(access_key)
+        logging.info('user: %r', user)
         if user == None:
             raise exception.NotFound('No user found for access key %s' %
                                      access_key)
@@ -394,7 +402,14 @@ class AuthManager(object):
                                                                   project):
             raise exception.NotFound('User %s is not a member of project %s' %
                                      (user.id, project.id))
-        if verify_signature:
+        if check_type == 's3':
+            expected_signature = signer.Signer(user.secret.encode()).s3_authorization(headers, verb, path)
+            logging.debug('user.secret: %s', user.secret)
+            logging.debug('expected_signature: %s', expected_signature)
+            logging.debug('signature: %s', signature)
+            if signature != expected_signature:
+                raise exception.NotAuthorized('Signature does not match')
+        elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
             expected_signature = signer.Signer(user.secret.encode()).generate(

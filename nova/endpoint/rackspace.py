@@ -39,7 +39,6 @@ from nova.compute import model
 from nova.compute import network
 from nova.endpoint import images
 from nova.endpoint import wsgi
-from nova.volume import storage
 
 
 FLAGS = flags.FLAGS
