@@ -19,7 +19,7 @@
 from setuptools import setup, find_packages
 
 setup(name='nova',
-      version='0.9.0',
+      version='0.9.1',
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
