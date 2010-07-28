@@ -323,24 +323,20 @@ class AuthManager(object):
     """
     _instance=None
     def __new__(cls, *args, **kwargs):
-        """Returns the AuthManager singleton with driver set
-
-        __init__ is run every time AuthManager() is called, so we need to do
-        any constructor related stuff here. The driver that is specified
-        in the flagfile is loaded here.
-        """
+        """Returns the AuthManager singleton"""
         if not cls._instance:
             cls._instance = super(AuthManager, cls).__new__(
                     cls, *args, **kwargs)
-            mod_str, sep, driver_str = FLAGS.auth_driver.rpartition('.')
-            try:
-                __import__(mod_str)
-                cls._instance.driver = getattr(sys.modules[mod_str],
-                                               driver_str)
-            except (ImportError, AttributeError):
-                raise exception.Error('Auth driver %s cannot be found'
-                                      % FLAGS.auth_driver)
         return cls._instance
+
+    def __init__(self, driver=None, *args, **kwargs):
+        """Inits the driver from parameter or flag
+
+        __init__ is run every time AuthManager() is called, so we only
+        reset the driver if it is not set or a new driver is specified.
+        """
+        if driver or not getattr(self, 'driver', None):
+           self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
