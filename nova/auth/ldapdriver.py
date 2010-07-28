@@ -120,10 +120,13 @@ class LdapDriver(object):
                                   '(objectclass=novaKeyPair)')
         return [self.__to_key_pair(uid, attr) for attr in attrs]
 
-    def get_projects(self):
+    def get_projects(self, uid=None):
         """Retrieve list of projects"""
+        filter = '(objectclass=novaProject)'
+        if uid:
+            filter = "(&%s(member=%s))" % (filter, self.__uid_to_dn(uid))
         attrs = self.__find_objects(FLAGS.ldap_project_subtree,
-                                  '(objectclass=novaProject)')
+                                  filter)
         return [self.__to_project(attr) for attr in attrs]
 
     def create_user(self, name, access_key, secret_key, is_admin):

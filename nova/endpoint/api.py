@@ -266,7 +266,7 @@ class APIRequestHandler(tornado.web.RequestHandler):
 
         # Authenticate the request.
         try:
-            (user, project) = users.UserManager.instance().authenticate(
+            (user, project) = manager.AuthManager().authenticate(
                 access,
                 signature,
                 auth_params,
