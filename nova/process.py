@@ -205,12 +205,13 @@ class ProcessPool(object):
         self._pool.release()
         return rv
 
-_instance = None
-def SharedPool():
-    global _instance
-    if _instance is None:
-       _instance = ProcessPool()
-    return _instance
+class SharedPool(object):
+    _instance = None
+    def __init__(self):
+        if SharedPool._instance is None:
+            self.__class__._instance = ProcessPool()
+    def __getattr__(self, key):
+        return getattr(self._instance, key)
 
 def simple_execute(cmd, **kwargs):
     return SharedPool().simple_execute(cmd, **kwargs)
