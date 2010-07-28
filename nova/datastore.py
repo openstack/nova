@@ -103,7 +103,7 @@ class BasicModel(object):
 
     @classmethod
     def _redis_name(cls):
-        return cls.override_type or cls.__name__
+        return cls.override_type or cls.__name__.lower()
 
     @classmethod
     def lookup(cls, identifier):
