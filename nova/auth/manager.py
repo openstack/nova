@@ -532,6 +532,7 @@ class AuthManager(object):
 
     def get_projects(self):
         """Retrieves list of all projects"""
+        # TODO(devcamcar): Implement filter by user.
         with self.driver() as drv:
             project_list = drv.get_projects()
             if not project_list:

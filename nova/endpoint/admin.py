@@ -106,10 +106,7 @@ class AdminController(object):
     @admin_only
     def modify_user_role(self, context, user, role, project=None,
                          operation='add', **kwargs):
-        """
-        Add or remove a role for a user and project.
-        """
-
+        """Add or remove a role for a user and project."""
         if operation == 'add':
             manager.AuthManager().add_role(user, role, project)
         elif operation == 'remove':
@@ -137,8 +134,9 @@ class AdminController(object):
         return project_dict(manager.AuthManager().get_project(name))
 
     @admin_only
-    def describe_projects(self, context, **kwargs):
+    def describe_projects(self, context, user=None, **kwargs):
         """Returns all projects - should be changed to deal with a list."""
+        # TODO(devcamcar): Implement filter by user.
         return {'projectSet':
             [project_dict(u) for u in
             manager.AuthManager().get_projects()]}
@@ -164,10 +162,7 @@ class AdminController(object):
 
     @admin_only
     def modify_project_user(self, context, user, project, operation, **kwargs):
-        """
-        Add or remove a user from a project.
-        """
-
+        """Add or remove a user from a project."""
         if operation =='add':
             manager.AuthManager().add_to_project(user, project)
         elif operation == 'remove':

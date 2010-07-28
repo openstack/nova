@@ -122,13 +122,14 @@ class NovaAdminClient(object):
                                         **kwargs)
         self.apiconn.APIVersion = 'nova'
 
-    def connection_for(self, username, **kwargs):
+    def connection_for(self, username, project, **kwargs):
         """
         Returns a boto ec2 connection for the given username.
         """
         user = self.get_user(username)
+        access_key = '%s:%s' % (user.accesskey, project)
         return boto.connect_ec2(
-            aws_access_key_id=user.accesskey,
+            aws_access_key_id=access_key,
             aws_secret_access_key=user.secretkey,
             is_secure=False,
             region=RegionInfo(None, self.region, self.clc_ip),
