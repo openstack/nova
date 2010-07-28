@@ -76,6 +76,8 @@ DEFINE_string('vpn_key_suffix',
               '-key',
               'Suffix to add to project name for vpn key')
 
+DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
+
 # UNUSED
 DEFINE_string('node_availability_zone',
                     'nova',
