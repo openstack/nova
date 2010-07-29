@@ -54,6 +54,7 @@ from nova.tests.auth_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
 from nova.tests.compute_unittest import *
+from nova.tests.flags_unittest import *
 from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
 from nova.tests.objectstore_unittest import *
