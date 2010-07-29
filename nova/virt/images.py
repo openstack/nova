@@ -54,7 +54,7 @@ def _fetch_s3_image(image, path, user):
     auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', uri)
     headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)
 
-    cmd = ['/usr/bin/curl', '--silent', url]
+    cmd = ['/usr/bin/curl', '--fail', '--silent', url]
     for (k,v) in headers.iteritems():
         cmd += ['-H', '%s: %s' % (k,v)]
 

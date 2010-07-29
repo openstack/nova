@@ -53,7 +53,7 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl %s -o %s" % (url, target))
+    execute("curl --fail %s -o %s" % (url, target))
 
 def execute(cmd, input=None, addl_env=None, check_exit_code=True):
     env = os.environ.copy()
