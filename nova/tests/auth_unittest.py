@@ -35,7 +35,7 @@ class AuthTestCase(test.BaseTestCase):
     flush_db = False
     def setUp(self):
         super(AuthTestCase, self).setUp()
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True)
         self.manager = manager.AuthManager()
 

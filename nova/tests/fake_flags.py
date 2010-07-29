@@ -20,7 +20,7 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
-FLAGS.fake_libvirt = True
+FLAGS.connection_type = 'fake'
 FLAGS.fake_storage = True
 FLAGS.fake_rabbit = True
 FLAGS.fake_network = True

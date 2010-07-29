@@ -18,10 +18,10 @@
 Nova Fakes
 ==========
 
-The :mod:`fakevirt` Module
+The :mod:`virt.fake` Module
 --------------------------
 
-.. automodule:: nova.fakevirt
+.. automodule:: nova.virt.fake
     :members:
     :undoc-members:
     :show-inheritance:

@@ -76,7 +76,7 @@ def main():
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8
         FLAGS.network_size = 32
-        FLAGS.fake_libvirt=True
+        FLAGS.connection_type = 'fake'
         FLAGS.fake_network=True
         FLAGS.auth_driver='nova.auth.ldapdriver.FakeLdapDriver'
     action = argv[1]

@@ -33,7 +33,7 @@ class Context(object):
 class AccessTestCase(test.BaseTestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
-        FLAGS.fake_libvirt = True
+        FLAGS.connection_type = 'fake'
         FLAGS.fake_storage = True
         um = manager.AuthManager()
         # Make test users

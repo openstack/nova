@@ -37,6 +37,7 @@ from nova.auth import rbac
 from nova.auth import manager
 from nova.compute import model
 from nova.compute import network
+from nova.compute.instance_types import INSTANCE_TYPES
 from nova.compute import service as compute_service
 from nova.endpoint import images
 from nova.volume import service as volume_service
@@ -102,7 +103,7 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], compute_service.INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                line = '%s slots=%d' % (instance['private_dns_name'], INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
                 else:

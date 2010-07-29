@@ -39,7 +39,7 @@ FLAGS = flags.FLAGS
 class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True)
 
         self.conn = rpc.Connection.instance()
@@ -71,7 +71,7 @@ class CloudTestCase(test.BaseTestCase):
         manager.AuthManager().delete_user('admin')
 
     def test_console_output(self):
-        if FLAGS.fake_libvirt:
+        if FLAGS.connection_type == 'fake':
             logging.debug("Can't test instances without a real virtual env.")
             return
         instance_id = 'foo'
@@ -82,7 +82,7 @@ class CloudTestCase(test.BaseTestCase):
         rv = yield self.compute.terminate_instance(instance_id)
 
     def test_run_instances(self):
-        if FLAGS.fake_libvirt:
+        if FLAGS.connection_type == 'fake':
             logging.debug("Can't test instances without a real virtual env.")
             return
         image_id = FLAGS.default_image
@@ -103,7 +103,7 @@ class CloudTestCase(test.BaseTestCase):
                 break
         self.assert_(rv)
 
-        if not FLAGS.fake_libvirt:
+        if connection_type != 'fake':
             time.sleep(45) # Should use boto for polling here
         for reservations in rv['reservationSet']:
             # for res_id in reservations.keys():

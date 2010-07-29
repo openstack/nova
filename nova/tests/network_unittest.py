@@ -34,7 +34,7 @@ class NetworkTestCase(test.TrialTestCase):
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True,
                    fake_network=True,
                    auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
