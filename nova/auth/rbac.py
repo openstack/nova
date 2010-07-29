@@ -17,7 +17,7 @@
 #    under the License.
 
 from nova import exception
-from nova.auth import users
+from nova.auth import manager
 
 
 def allow(*roles):

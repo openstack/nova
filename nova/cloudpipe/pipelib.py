@@ -31,7 +31,7 @@ import zipfile
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 
 
@@ -44,7 +44,7 @@ flags.DEFINE_string('boot_script_template',
 class CloudPipe(object):
     def __init__(self, cloud_controller):
         self.controller = cloud_controller
-        self.manager = users.UserManager.instance()
+        self.manager = manager.AuthManager()
 
     def launch_vpn_instance(self, project_id):
         logging.debug( "Launching VPN for %s" % (project_id))

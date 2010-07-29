@@ -17,7 +17,7 @@
 #    under the License.
 
 # ARG is the id of the user
-export SUBJ=/C=US/ST=California/L=Mountain View/O=Anso Labs/OU=Nova Dev/CN=customer-intCA-$3
+export SUBJ="/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=customer-intCA-$1"
 mkdir INTER/$1
 cd INTER/$1
 cp ../../openssl.cnf.tmpl openssl.cnf

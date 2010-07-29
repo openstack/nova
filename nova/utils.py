@@ -20,7 +20,7 @@
 System-level utilities and helper functions.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import inspect
 import logging
 import os
@@ -29,10 +29,20 @@ import subprocess
 import socket
 import sys
 
+from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
+TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
+def import_class(import_str):
+    """Returns a class from a string including module and class"""
+    mod_str, _sep, class_str = import_str.rpartition('.')
+    try:
+        __import__(mod_str)
+        return getattr(sys.modules[mod_str], class_str)
+    except (ImportError, AttributeError):
+        raise exception.NotFound('Class %s cannot be found' % class_str)
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
@@ -123,4 +133,7 @@ def get_my_ip():
 def isotime(at=None):
     if not at:
         at = datetime.utcnow()
-    return at.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return at.strftime(TIME_FORMAT)
+
+def parse_isotime(timestr):
+    return datetime.strptime(timestr, TIME_FORMAT)

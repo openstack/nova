@@ -22,8 +22,9 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
+
 
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
@@ -32,8 +33,17 @@ def user_dict(user, base64_file=None):
             'username': user.id,
             'accesskey': user.access,
             'secretkey': user.secret,
-            'file': base64_file,
-        }
+            'file': base64_file}
+    else:
+        return {}
+
+def project_dict(project):
+    """Convert the project object to a result dict"""
+    if project:
+        return {
+            'projectname': project.id,
+            'project_manager_id': project.project_manager_id,
+            'description': project.description}
     else:
         return {}
 
@@ -69,18 +79,18 @@ class AdminController(object):
     @admin_only
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
-        return user_dict(users.UserManager.instance().get_user(name))
+        return user_dict(manager.AuthManager().get_user(name))
 
     @admin_only
     def describe_users(self, _context, **_kwargs):
         """Returns all users - should be changed to deal with a list."""
         return {'userSet':
-            [user_dict(u) for u in users.UserManager.instance().get_users()] }
+            [user_dict(u) for u in manager.AuthManager().get_users()] }
 
     @admin_only
     def register_user(self, _context, name, **_kwargs):
         """Creates a new user, and returns generated credentials."""
-        return user_dict(users.UserManager.instance().create_user(name))
+        return user_dict(manager.AuthManager().create_user(name))
 
     @admin_only
     def deregister_user(self, _context, name, **_kwargs):
@@ -88,7 +98,20 @@ class AdminController(object):
            Should throw an exception if the user has instances,
            volumes, or buckets remaining.
         """
-        users.UserManager.instance().delete_user(name)
+        manager.AuthManager().delete_user(name)
+
+        return True
+
+    @admin_only
+    def modify_user_role(self, context, user, role, project=None,
+                         operation='add', **kwargs):
+        """Add or remove a role for a user and project."""
+        if operation == 'add':
+            manager.AuthManager().add_role(user, role, project)
+        elif operation == 'remove':
+            manager.AuthManager().remove_role(user, role, project)
+        else:
+            raise exception.ApiError('operation must be add or remove')
 
         return True
 
@@ -100,9 +123,56 @@ class AdminController(object):
         """
         if project is None:
             project = name
-        project = users.UserManager.instance().get_project(project)
-        user = users.UserManager.instance().get_user(name)
+        project = manager.AuthManager().get_project(project)
+        user = manager.AuthManager().get_user(name)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
+
+    @admin_only
+    def describe_project(self, context, name, **kwargs):
+        """Returns project data, including member ids."""
+        return project_dict(manager.AuthManager().get_project(name))
+
+    @admin_only
+    def describe_projects(self, context, user=None, **kwargs):
+        """Returns all projects - should be changed to deal with a list."""
+        return {'projectSet':
+            [project_dict(u) for u in
+            manager.AuthManager().get_projects(user=user)]}
+
+    @admin_only
+    def register_project(self, context, name, manager_user, description=None,
+                         member_users=None, **kwargs):
+        """Creates a new project"""
+        return project_dict(
+            manager.AuthManager().create_project(
+                name,
+                manager_user,
+                description=None,
+                member_users=None))
+
+    @admin_only
+    def deregister_project(self, context, name):
+        """Permanently deletes a project."""
+        manager.AuthManager().delete_project(name)
+        return True
+
+    @admin_only
+    def describe_project_members(self, context, name, **kwargs):
+        project = manager.AuthManager().get_project(name)
+        result = {
+            'members': [{'member': m} for m in project.member_ids]}
+        return result
+        
+    @admin_only
+    def modify_project_member(self, context, user, project, operation, **kwargs):
+        """Add or remove a user from a project."""
+        if operation =='add':
+            manager.AuthManager().add_to_project(user, project)
+        elif operation == 'remove':
+            manager.AuthManager().remove_from_project(user, project)
+        else:
+            raise exception.ApiError('operation must be add or remove')
+        return True
 
     @admin_only
     def describe_hosts(self, _context, **_kwargs):
