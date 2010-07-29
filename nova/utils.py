@@ -29,10 +29,20 @@ import subprocess
 import socket
 import sys
 
+from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+def import_class(import_str):
+    """Returns a class from a string including module and class"""
+    mod_str, _sep, class_str = import_str.rpartition('.')
+    try:
+        __import__(mod_str)
+        return getattr(sys.modules[mod_str], class_str)
+    except (ImportError, AttributeError):
+        raise exception.NotFound('Class %s cannot be found' % class_str)
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
