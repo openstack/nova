@@ -25,6 +25,7 @@ import base64
 from nova.auth import manager
 from nova.compute import model
 
+
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
     if user:
@@ -32,8 +33,17 @@ def user_dict(user, base64_file=None):
             'username': user.id,
             'accesskey': user.access,
             'secretkey': user.secret,
-            'file': base64_file,
-        }
+            'file': base64_file}
+    else:
+        return {}
+
+def project_dict(project):
+    """Convert the project object to a result dict"""
+    if project:
+        return {
+            'projectname': project.id,
+            'project_manager_id': project.project_manager_id,
+            'description': project.description}
     else:
         return {}
 
@@ -93,6 +103,19 @@ class AdminController(object):
         return True
 
     @admin_only
+    def modify_user_role(self, context, user, role, project=None,
+                         operation='add', **kwargs):
+        """Add or remove a role for a user and project."""
+        if operation == 'add':
+            manager.AuthManager().add_role(user, role, project)
+        elif operation == 'remove':
+            manager.AuthManager().remove_role(user, role, project)
+        else:
+            raise exception.ApiError('operation must be add or remove')
+
+        return True
+
+    @admin_only
     def generate_x509_for_user(self, _context, name, project=None, **kwargs):
         """Generates and returns an x509 certificate for a single user.
            Is usually called from a client that will wrap this with
@@ -103,6 +126,53 @@ class AdminController(object):
         project = manager.AuthManager().get_project(project)
         user = manager.AuthManager().get_user(name)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
+
+    @admin_only
+    def describe_project(self, context, name, **kwargs):
+        """Returns project data, including member ids."""
+        return project_dict(manager.AuthManager().get_project(name))
+
+    @admin_only
+    def describe_projects(self, context, user=None, **kwargs):
+        """Returns all projects - should be changed to deal with a list."""
+        return {'projectSet':
+            [project_dict(u) for u in
+            manager.AuthManager().get_projects(user=user)]}
+
+    @admin_only
+    def register_project(self, context, name, manager_user, description=None,
+                         member_users=None, **kwargs):
+        """Creates a new project"""
+        return project_dict(
+            manager.AuthManager().create_project(
+                name,
+                manager_user,
+                description=None,
+                member_users=None))
+
+    @admin_only
+    def deregister_project(self, context, name):
+        """Permanently deletes a project."""
+        manager.AuthManager().delete_project(name)
+        return True
+
+    @admin_only
+    def describe_project_members(self, context, name, **kwargs):
+        project = manager.AuthManager().get_project(name)
+        result = {
+            'members': [{'member': m} for m in project.member_ids]}
+        return result
+        
+    @admin_only
+    def modify_project_member(self, context, user, project, operation, **kwargs):
+        """Add or remove a user from a project."""
+        if operation =='add':
+            manager.AuthManager().add_to_project(user, project)
+        elif operation == 'remove':
+            manager.AuthManager().remove_from_project(user, project)
+        else:
+            raise exception.ApiError('operation must be add or remove')
+        return True
 
     @admin_only
     def describe_hosts(self, _context, **_kwargs):
