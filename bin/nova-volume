@@ -18,52 +18,15 @@
 #    under the License.
 
 """
-    Tornado Storage daemon manages AoE volumes via AMQP messaging.
+  Twistd daemon for the nova volume nodes.
 """
 
-import logging
-from tornado import ioloop
-
-from nova import flags
-from nova import rpc
-from nova import server
-from nova import utils
-from nova.volume import storage
-
-
-FLAGS = flags.FLAGS
-flags.DEFINE_integer('storage_report_state_interval', 10,
-                     'seconds between broadcasting state to cloud',
-                     lower_bound=1)
-
-
-def main(argv):
-    bs = storage.BlockStore()
-
-    conn = rpc.Connection.instance()
-    consumer_all = rpc.AdapterConsumer(
-            connection=conn,
-            topic='%s' % FLAGS.storage_topic,
-            proxy=bs)
-
-    consumer_node = rpc.AdapterConsumer(
-            connection=conn,
-            topic='%s.%s' % (FLAGS.storage_topic, FLAGS.node_name),
-            proxy=bs)
-
-    io_inst = ioloop.IOLoop.instance()
-    scheduler = ioloop.PeriodicCallback(
-            lambda: bs.report_state(),
-            FLAGS.storage_report_state_interval * 1000,
-            io_loop=io_inst)
-
-    injected = consumer_all.attachToTornado(io_inst)
-    injected = consumer_node.attachToTornado(io_inst)
-    scheduler.start()
-    io_inst.start()
+from nova import twistd
+from nova.volume import service
 
 
 if __name__ == '__main__':
-    utils.default_flagfile()
-    server.serve('nova-volume', main)
+    twistd.serve(__file__)
 
+if __name__ == '__builtin__':
+    application = service.VolumeService.create()

@@ -19,83 +19,14 @@
 
 """
   Twistd daemon for the nova compute nodes.
-  Receives messages via AMQP, manages pool of worker threads
-  for async tasks.
 """
 
-import logging
-import os
-import sys
-
-# NOTE(termie): kludge so that we can run this from the bin directory in the
-#               checkout without having to screw with paths
-NOVA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'nova')
-if os.path.exists(NOVA_PATH):
-    sys.path.insert(0, os.path.dirname(NOVA_PATH))
-
-
-from carrot import connection
-from carrot import messaging
-from twisted.internet import task
-from twisted.application import service
-
-from nova import flags
-from nova import rpc
 from nova import twistd
-from nova.compute import node
+from nova.compute import service
 
 
-FLAGS = flags.FLAGS
-# NOTE(termie): This file will necessarily be re-imported under different
-#               context when the twistd.serve() call is made below so any
-#               flags we define here will have to be conditionally defined,
-#               flags defined by imported modules are safe.
-if 'node_report_state_interval' not in FLAGS:
-    flags.DEFINE_integer('node_report_state_interval', 10,
-                         'seconds between nodes reporting state to cloud',
-                         lower_bound=1)
-logging.getLogger().setLevel(logging.DEBUG)
-
-def main():
-    logging.warn('Starting compute node')
-    n = node.Node()
-    d = n.adopt_instances()
-    d.addCallback(lambda x: logging.info('Adopted %d instances', x))
-
-    conn = rpc.Connection.instance()
-    consumer_all = rpc.AdapterConsumer(
-            connection=conn,
-            topic='%s' % FLAGS.compute_topic,
-            proxy=n)
-
-    consumer_node = rpc.AdapterConsumer(
-            connection=conn,
-            topic='%s.%s' % (FLAGS.compute_topic, FLAGS.node_name),
-            proxy=n)
-
-    bin_name = os.path.basename(__file__)
-    pulse = task.LoopingCall(n.report_state, FLAGS.node_name, bin_name)
-    pulse.start(interval=FLAGS.node_report_state_interval, now=False)
-
-    injected = consumer_all.attach_to_twisted()
-    injected = consumer_node.attach_to_twisted()
-
-    # This is the parent service that twistd will be looking for when it
-    # parses this file, return it so that we can get it into globals below
-    application = service.Application(bin_name)
-    n.setServiceParent(application)
-    return application
-
-
-# NOTE(termie): When this script is executed from the commandline what it will
-#               actually do is tell the twistd application runner that it
-#               should run this file as a twistd application (see below).
 if __name__ == '__main__':
     twistd.serve(__file__)
 
-# NOTE(termie): When this script is loaded by the twistd application runner
-#               this code path will be executed and twistd will expect a
-#               variable named 'application' to be available, it will then
-#               handle starting it and stopping it.
 if __name__ == '__builtin__':
-    application = main()
+    application = service.ComputeService.create()

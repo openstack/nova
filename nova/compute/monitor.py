@@ -27,7 +27,6 @@ Instance Monitoring:
 import boto
 import boto.s3
 import datetime
-import libxml2
 import logging
 import os
 import rrdtool
@@ -37,12 +36,8 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
-try:
-    import libvirt
-except Exception, err:
-    logging.warning('no libvirt found')
-
 from nova import flags
+from nova.virt import connection as virt_connection
 
 
 FLAGS = flags.FLAGS
@@ -129,83 +124,6 @@ def init_rrd(instance, name):
             '--start', '0',
             *RRD_VALUES[name]
         )
-        
-def get_disks(domain):
-    """
-    Returns a list of all block devices for this domain.
-    """
-    # TODO(devcamcar): Replace libxml2 with etree.
-    xml = domain.XMLDesc(0)
-    doc = None
-
-    try:
-        doc = libxml2.parseDoc(xml)
-    except:
-        return []
-
-    ctx = doc.xpathNewContext()
-    disks = []
-
-    try:
-        ret = ctx.xpathEval('/domain/devices/disk')
-    
-        for node in ret:
-            devdst = None
-        
-            for child in node.children:
-                if child.name == 'target':
-                    devdst = child.prop('dev')
-        
-            if devdst == None:
-                continue
-        
-            disks.append(devdst)
-    finally:
-        if ctx != None:
-            ctx.xpathFreeContext()
-        if doc != None:
-            doc.freeDoc()
-    
-    return disks
-
-def get_interfaces(domain):
-    """
-    Returns a list of all network interfaces for this instance.
-    """
-    # TODO(devcamcar): Replace libxml2 with etree.
-    xml = domain.XMLDesc(0)
-    doc = None
-
-    try:
-        doc = libxml2.parseDoc(xml)
-    except:
-        return []
-
-    ctx = doc.xpathNewContext()
-    interfaces = []
-
-    try:
-        ret = ctx.xpathEval('/domain/devices/interface')
-    
-        for node in ret:
-            devdst = None
-        
-            for child in node.children:
-                if child.name == 'target':
-                    devdst = child.prop('dev')
-        
-            if devdst == None:
-                continue
-        
-            interfaces.append(devdst)
-    finally:
-        if ctx != None:
-            ctx.xpathFreeContext()
-        if doc != None:
-            doc.freeDoc()
-
-    return interfaces
-
         
 def graph_cpu(instance, duration):
     """
@@ -317,10 +235,9 @@ def store_graph(instance_id, filename):
 
 
 class Instance(object):
-    def __init__(self, conn, domain):
+    def __init__(self, conn, instance_id):
         self.conn = conn
-        self.domain = domain
-        self.instance_id = domain.name()
+        self.instance_id = instance_id
         self.last_updated = datetime.datetime.min
         self.cputime = 0
         self.cputime_last_updated = None
@@ -385,14 +302,14 @@ class Instance(object):
         """
         Returns cpu usage statistics for this instance.
         """
-        info = self.domain.info()
+        info = self.conn.get_info(self.instance_id)
 
         # Get the previous values.
         cputime_last = self.cputime
         cputime_last_updated = self.cputime_last_updated
 
         # Get the raw CPU time used in nanoseconds.
-        self.cputime = float(info[4])
+        self.cputime = float(info['cpu_time'])
         self.cputime_last_updated = utcnow()
 
         logging.debug('CPU: %d', self.cputime)
@@ -413,8 +330,8 @@ class Instance(object):
         logging.debug('cputime_delta = %s', cputime_delta)
 
         # Get the number of virtual cpus in this domain.
-        vcpus = int(info[3])
-        
+        vcpus = int(info['num_cpu'])
+ 
         logging.debug('vcpus = %d', vcpus)
 
         # Calculate CPU % used and cap at 100.
@@ -427,14 +344,13 @@ class Instance(object):
         rd = 0
         wr = 0
     
-        # Get a list of block devices for this instance.
-        disks = get_disks(self.domain)
+        disks = self.conn.get_disks(self.instance_id)
     
         # Aggregate the read and write totals.
         for disk in disks:
             try:
                 rd_req, rd_bytes, wr_req, wr_bytes, errs = \
-                    self.domain.blockStats(disk)
+                    self.conn.block_stats(self.instance_id, disk)
                 rd += rd_bytes
                 wr += wr_bytes
             except TypeError:
@@ -451,13 +367,12 @@ class Instance(object):
         rx = 0
         tx = 0
     
-        # Get a list of all network interfaces for this instance.
-        interfaces = get_interfaces(self.domain)
+        interfaces = self.conn.get_interfaces(self.instance_id)
     
         # Aggregate the in and out totals.
         for interface in interfaces:
             try:
-                stats = self.domain.interfaceStats(interface)
+                stats = self.conn.interface_stats(self.instance_id, interface)
                 rx += stats[0]
                 tx += stats[4]
             except TypeError:
@@ -493,20 +408,24 @@ class InstanceMonitor(object, service.Service):
         Update resource usage for all running instances.
         """
         try:
-            conn = libvirt.openReadOnly(None)
-        except libvirt.libvirtError:
-            logging.exception('unexpected libvirt error')
+            conn = virt_connection.get_connection(read_only=True)
+        except Exception, exn:
+            logging.exception('unexpected exception getting connection')
             time.sleep(FLAGS.monitoring_instances_delay)
             return
     
-        domain_ids = conn.listDomainsID()
-        
+        domain_ids = conn.list_instances()
+        try:
+           self.updateInstances_(conn, domain_ids)
+        except Exception, exn:
+           logging.exception('updateInstances_')
+
+    def updateInstances_(self, conn, domain_ids):
         for domain_id in domain_ids:
             if not domain_id in self._instances:                    
-                domain = conn.lookupByID(domain_id)
-                instance = Instance(conn, domain)
+                instance = Instance(conn, domain_id)
                 self._instances[domain_id] = instance
-                logging.debug('Found instance: %s', instance.instance_id)
+                logging.debug('Found instance: %s', domain_id)
         
         for key in self._instances.keys():
             instance = self._instances[key]
