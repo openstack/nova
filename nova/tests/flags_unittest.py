@@ -16,16 +16,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-from twisted.internet import defer
-from twisted.internet import reactor
-from xml.etree import ElementTree
-
 from nova import exception
 from nova import flags
-from nova import process
 from nova import test
-from nova import utils
 
 
 class FlagsTestCase(test.TrialTestCase):
