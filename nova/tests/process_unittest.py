@@ -120,3 +120,10 @@ class ProcessTestCase(test.TrialTestCase):
         pool2 = process.SharedPool()
         self.assertEqual(id(pool1._instance), id(pool2._instance))
 
+    def test_shared_pool_works_as_singleton(self):
+        d1 = process.simple_execute('sleep 1')
+        d2 = process.simple_execute('sleep 0.005')
+        # lp609749: would have failed with
+        # exceptions.AssertionError: Someone released me too many times:
+        # too many tokens!
+        return d1
