@@ -518,13 +518,13 @@ class CloudController(object):
         kernel_id = image.get('kernelId', FLAGS.default_kernel)
         ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
 
-        # make sure we have access to kernel and ramdisk
-        self._get_image(context, kernel_id)
-        self._get_image(context, ramdisk_id)
-
         # API parameters overrides of defaults
         kernel_id = kwargs.get('kernel_id', kernel_id)
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
+
+        # make sure we have access to kernel and ramdisk
+        self._get_image(context, kernel_id)
+        self._get_image(context, ramdisk_id)
 
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
