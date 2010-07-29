@@ -321,7 +321,7 @@ class AuthManager(object):
     need to be more accessible, such as vpn ips and ports.
     """
     _instance=None
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:
             cls._instance = super(AuthManager, cls).__new__(cls)
