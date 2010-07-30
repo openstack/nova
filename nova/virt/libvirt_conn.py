@@ -48,6 +48,10 @@ flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
 
+flags.DEFINE_string('libvirt_type',
+                    'hvm',
+                    'Libvirt virtualization type (hvm, qemu, etc)')
+
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
@@ -235,6 +239,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): lazy lazy hack because xml is annoying
         xml_info['nova'] = json.dumps(instance.datamodel.copy())
+        xml_info['type'] = FLAGS.libvirt_type
         libvirt_xml = libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 
@@ -255,7 +260,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        
+
         Returns a list of all block devices for this domain.
         """
         domain = self._conn.lookupByName(instance_id)
@@ -298,7 +303,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        
+
         Returns a list of all network interfaces for this instance.
         """
         domain = self._conn.lookupByName(instance_id)
@@ -341,7 +346,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        """        
+        """
         domain = self._conn.lookupByName(instance_id)
         return domain.blockStats(disk)
 
@@ -350,6 +355,6 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        """        
+        """
         domain = self._conn.lookupByName(instance_id)
         return domain.interfaceStats(interface)
