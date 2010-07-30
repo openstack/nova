@@ -228,20 +228,6 @@ class LibvirtConnection(object):
         return os.path.abspath(os.path.join(instance.datamodel['basepath'], path))
 
 
-    def toXml(self, instance):
-        # TODO(termie): cache?
-        logging.debug("Starting the toXML method")
-        libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        xml_info = instance.datamodel.copy()
-        # TODO(joshua): Make this xml express the attached disks as well
-
-        # TODO(termie): lazy lazy hack because xml is annoying
-        xml_info['nova'] = json.dumps(instance.datamodel.copy())
-        libvirt_xml = libvirt_xml % xml_info
-        logging.debug("Finished the toXML method")
-
-        return libvirt_xml
-
     def toXml(self):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
