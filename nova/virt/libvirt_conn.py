@@ -25,7 +25,6 @@ import json
 import logging
 import os.path
 import shutil
-import sys
 
 from twisted.internet import defer
 from twisted.internet import task
@@ -49,8 +48,8 @@ flags.DEFINE_string('libvirt_xml_template',
                     'Libvirt XML Template')
 
 flags.DEFINE_string('libvirt_type',
-                    'hvm',
-                    'Libvirt virtualization type (hvm, qemu, etc)')
+                    'kvm',
+                    'Libvirt domain type (kvm, qemu, etc)')
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
