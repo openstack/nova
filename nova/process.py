@@ -107,6 +107,9 @@ class BackRelayWithInput(protocol.ProcessProtocol):
                     reason.trap(error.ProcessDone)
                 self.deferred.callback((stdout, stderr))
             except:
+                # This logic is a little suspicious to me (justinsb)...
+                # If the callback throws an exception, then errback will be called also.
+                # However, this is what the unit tests test for...
                 self.deferred.errback(UnexpectedErrorOutput(stdout, stderr))
         elif self.onProcessEnded is not None:
             self.onProcessEnded.errback(reason)
