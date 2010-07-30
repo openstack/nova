@@ -54,19 +54,20 @@ class UnexpectedErrorOutput(IOError):
         IOError.__init__(self, "got stdout: %r\nstderr: %r" % (stdout, stderr))
 
 
-# NOTE(termie): this too
-class _BackRelay(protocol.ProcessProtocol):
+# This is based on _BackRelay from twister.internal.utils, but modified to capture 
+#  both stdout and stderr without odd stderr handling,  and also to handle stdin
+class BackRelayWithInput(protocol.ProcessProtocol):
     """
     Trivial protocol for communicating with a process and turning its output
     into the result of a L{Deferred}.
 
     @ivar deferred: A L{Deferred} which will be called back with all of stdout
-        and, if C{errortoo} is true, all of stderr as well (mixed together in
-        one string).  If C{errortoo} is false and any bytes are received over
-        stderr, this will fire with an L{_UnexpectedErrorOutput} instance and
-        the attribute will be set to C{None}.
+        and all of stderr as well (as a tuple).  C{terminate_on_stderr} is true
+        and any bytes are received over stderr, this will fire with an
+        L{_UnexpectedErrorOutput} instance and the attribute will be set to 
+        C{None}.
 
-    @ivar onProcessEnded: If C{errortoo} is false and bytes are received over
+    @ivar onProcessEnded: If C{terminate_on_stderr} is false and bytes are received over
         stderr, this attribute will refer to a L{Deferred} which will be called
         back when the process ends.  This C{Deferred} is also associated with
         the L{_UnexpectedErrorOutput} which C{deferred} fires with earlier in
@@ -74,51 +75,42 @@ class _BackRelay(protocol.ProcessProtocol):
         ended, in addition to knowing when bytes have been received via stderr.
     """
 
-    def __init__(self, deferred, errortoo=0):
+    def __init__(self, deferred, startedDeferred=None, terminate_on_stderr=False,
+                    check_exit_code=True, input=None):
         self.deferred = deferred
-        self.s = StringIO.StringIO()
-        if errortoo:
-            self.errReceived = self.errReceivedIsGood
-        else:
-            self.errReceived = self.errReceivedIsBad
-
-    def errReceivedIsBad(self, text):
-        if self.deferred is not None:
+        self.stdout = StringIO.StringIO()
+        self.stderr = StringIO.StringIO()
+        self.startedDeferred = startedDeferred
+        self.terminate_on_stderr = terminate_on_stderr
+        self.check_exit_code = check_exit_code
+        self.input = input
+    
+    def errReceived(self, text):
+        self.sterr.write(text)
+        if self.terminate_on_stderr and (self.deferred is not None):
             self.onProcessEnded = defer.Deferred()
-            err = UnexpectedErrorOutput(text, self.onProcessEnded)
-            self.deferred.errback(failure.Failure(err))
+            self.deferred.errback(UnexpectedErrorOutput(stdout=self.stdout.getvalue(), stderr=self.stderr.getvalue()))
             self.deferred = None
             self.transport.loseConnection()
 
-    def errReceivedIsGood(self, text):
-        self.s.write(text)
+    def errReceived(self, text):
+        self.stderr.write(text)
 
     def outReceived(self, text):
-        self.s.write(text)
+        self.stdout.write(text)
 
     def processEnded(self, reason):
         if self.deferred is not None:
-            self.deferred.callback(self.s.getvalue())
+            stdout, stderr = self.stdout.getvalue(), self.stderr.getvalue()
+            try:
+                if self.check_exit_code:
+                    reason.trap(error.ProcessDone)
+                self.deferred.callback((stdout, stderr))
+            except:
+                self.deferred.errback(UnexpectedErrorOutput(stdout, stderr))
         elif self.onProcessEnded is not None:
             self.onProcessEnded.errback(reason)
 
-
-class BackRelayWithInput(_BackRelay):
-    def __init__(self, deferred, startedDeferred=None, error_ok=0,
-                 input=None):
-        # Twisted doesn't use new-style classes in most places :(
-        _BackRelay.__init__(self, deferred, errortoo=error_ok)
-        self.error_ok = error_ok
-        self.input = input
-        self.stderr = StringIO.StringIO()
-        self.startedDeferred = startedDeferred
-
-    def errReceivedIsBad(self, text):
-        self.stderr.write(text)
-        self.transport.loseConnection()
-
-    def errReceivedIsGood(self, text):
-        self.stderr.write(text)
 
     def connectionMade(self):
         if self.startedDeferred:
@@ -127,31 +119,15 @@ class BackRelayWithInput(_BackRelay):
             self.transport.write(self.input)
         self.transport.closeStdin()
 
-    def processEnded(self, reason):
-        if self.deferred is not None:
-            stdout, stderr = self.s.getvalue(), self.stderr.getvalue()
-            try:
-                # NOTE(termie): current behavior means if error_ok is True
-                #               we won't throw an error even if the process
-                #               exited with a non-0 status, so you can't be
-                #               okay with stderr output and not with bad exit
-                #               codes.
-                if not self.error_ok:
-                    reason.trap(error.ProcessDone)
-                self.deferred.callback((stdout, stderr))
-            except:
-                self.deferred.errback(UnexpectedErrorOutput(stdout, stderr))
-
-
 def getProcessOutput(executable, args=None, env=None, path=None, reactor=None,
-                     error_ok=0, input=None, startedDeferred=None):
+                     check_exit_code=True, input=None, startedDeferred=None):
     if reactor is None:
         from twisted.internet import reactor
     args = args and args or ()
     env = env and env and {}
     d = defer.Deferred()
     p = BackRelayWithInput(
-            d, startedDeferred=startedDeferred, error_ok=error_ok, input=input)
+            d, startedDeferred=startedDeferred, check_exit_code=check_exit_code, input=input)
     # NOTE(vish): commands come in as unicode, but self.executes needs
     #             strings or process.spawn raises a deprecation warning
     executable = str(executable)

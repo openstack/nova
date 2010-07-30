@@ -197,7 +197,7 @@ class LibvirtConnection(object):
         execute = lambda cmd, input=None: \
                   process.simple_execute(cmd=cmd,
                                          input=input,
-                                         error_ok=1)
+                                         check_exit_code=True)
 
         key = data['key_data']
         net = None

@@ -18,7 +18,7 @@ def die(message, *args):
   sys.exit(1)
 
 
-def run_command(cmd, redirect_output=True, error_ok=False):
+def run_command(cmd, redirect_output=True, check_exit_code=True):
   # Useful for debugging:
   #print >>sys.stderr, ' '.join(cmd)
   if redirect_output:
@@ -28,23 +28,26 @@ def run_command(cmd, redirect_output=True, error_ok=False):
 
   proc = subprocess.Popen(cmd, stdout=stdout)
   output = proc.communicate()[0]
-  if not error_ok and proc.returncode != 0:
+  if check_exit_code and proc.returncode != 0:
     die('Command "%s" failed.\n%s', ' '.join(cmd), output)
   return output
 
 
 def check_dependencies():
   """Make sure pip and virtualenv are on the path."""
+  # Perl also has a pip program.  Hopefully the user has installed the right one!
   print 'Checking for pip...',
-  if not run_command(['which', 'pip']).strip():
+  if not run_command(['which', 'pip'], check_exit_code=False).strip():
     die('ERROR: pip not found.\n\nNova development requires pip,'
-        ' please install it using your favorite package management tool')
+        ' please install it using your favorite package management tool '
+        ' (e.g. "sudo apt-get install python-pip")')
   print 'done.'
 
   print 'Checking for virtualenv...',
-  if not run_command(['which', 'virtualenv']).strip():
+  if not run_command(['which', 'virtualenv'], check_exit_code=False).strip():
     die('ERROR: virtualenv not found.\n\nNova development requires virtualenv,'
-        ' please install it using your favorite package management tool')
+        ' please install it using your favorite package management tool '
+        ' (e.g. "sudo easy_install virtualenv")')
   print 'done.'
 
 
