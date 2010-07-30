@@ -421,7 +421,9 @@ class AuthManager(object):
 
     def get_access_key(self, user, project):
         """Get an access key that includes user and project"""
-        return "%s:%s" % (User.safe_id(user), Project.safe_id(project))
+        if not isinstance(user, User):
+            user = self.get_user(user)
+        return "%s:%s" % (user.access, Project.safe_id(project))
 
     def is_superuser(self, user):
         """Checks for superuser status, allowing user to bypass rbac
