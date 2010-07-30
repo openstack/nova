@@ -1,4 +1,5 @@
 IPy==0.70
+Cheetah==2.4.2.1
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
