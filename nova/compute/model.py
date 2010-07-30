@@ -40,9 +40,11 @@ True
 True
 """
 
+import datetime
 import logging
 import time
 import redis
+import uuid
 
 from nova import datastore
 from nova import exception
@@ -227,6 +229,78 @@ class Daemon(datastore.BasicModel):
     def by_host(cls, hostname):
         for x in cls.associated_to("host", hostname):
             yield x
+
+class SessionToken(datastore.BasicModel):
+    """This is a short-lived auth token that is passed through web requests"""
+
+    def __init__(self, session_token):
+        self.token = session_token
+        self.default_ttl = FLAGS.auth_token_ttl
+        super(SessionToken, self).__init__()
+
+    @property
+    def identifier(self):
+        return self.token
+
+    def default_state(self):
+        now = datetime.datetime.utcnow()
+        diff = datetime.timedelta(seconds=self.default_ttl)
+        expires = now + diff
+        return {'user': None, 'session_type': None, 'token': self.token,
+                'expiry': expires.strftime(utils.TIME_FORMAT)}
+
+    def save(self):
+        """Call into superclass to save object, then save associations"""
+        if not self['user']:
+            raise exception.Invalid("SessionToken requires a User association")
+        success = super(SessionToken, self).save()
+        if success:
+            self.associate_with("user", self['user'])
+        return True
+
+    @classmethod
+    def lookup(cls, key):
+        token = super(SessionToken, cls).lookup(key)
+        if token:
+            expires_at = utils.parse_isotime(token['expiry'])
+            if datetime.datetime.utcnow() >= expires_at:
+                token.destroy()
+                return None
+        return token
+
+    @classmethod
+    def generate(cls, userid, session_type=None):
+        """make a new token for the given user"""
+        token = str(uuid.uuid4())
+        while cls.lookup(token):
+            token = str(uuid.uuid4())
+        instance = cls(token)
+        instance['user'] = userid
+        instance['session_type'] = session_type
+        instance.save()
+        return instance
+
+    def update_expiry(self, **kwargs):
+        """updates the expirty attribute, but doesn't save"""
+        if not kwargs:
+            kwargs['seconds'] = self.default_ttl
+        time = datetime.datetime.utcnow()
+        diff = datetime.timedelta(**kwargs)
+        expires = time + diff
+        self['expiry'] = expires.strftime(utils.TIME_FORMAT)
+
+    def is_expired(self):
+        now = datetime.datetime.utcnow()
+        expires = utils.parse_isotime(self['expiry'])
+        return expires <= now
+
+    def ttl(self):
+        """number of seconds remaining before expiration"""
+        now = datetime.datetime.utcnow()
+        expires = utils.parse_isotime(self['expiry'])
+        delta = expires - now
+        return (delta.seconds + (delta.days * 24 * 3600))
+
 
 if __name__ == "__main__":
     import doctest

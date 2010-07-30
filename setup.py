@@ -16,20 +16,41 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import glob
-import os
-import sys
-
 from setuptools import setup, find_packages
+from setuptools.command.sdist import sdist
 
-srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'src')
+import os
+import subprocess
+
+
+class local_sdist(sdist):
+    """Customized sdist hook - builds the ChangeLog file from VC first"""
+
+    def run(self):
+        if os.path.isdir('.bzr'):
+            # We're in a bzr branch
+            log_cmd = subprocess.Popen(["bzr", "log", "--gnu"],
+                                       stdout=subprocess.PIPE)
+            changelog = log_cmd.communicate()[0]
+            with open("ChangeLog", "w") as changelog_file:
+                changelog_file.write(changelog)
+        sdist.run(self)
 
 setup(name='nova',
-      version='0.3.0',
-      description='None Other, Vaguely Awesome',
-      author='nova-core',
-      author_email='nova-core@googlegroups.com',
-      url='http://novacc.org/',
-      packages = find_packages(),
-
-     )
+      version='0.9.1',
+      description='cloud computing fabric controller',
+      author='OpenStack',
+      author_email='nova@lists.launchpad.net',
+      url='http://www.openstack.org/',
+      cmdclass={'sdist': local_sdist},
+      packages=find_packages(exclude=['bin', 'smoketests']),
+      scripts=['bin/nova-api',
+               'bin/nova-compute',
+               'bin/nova-dhcpbridge',
+               'bin/nova-import-canonical-imagestore',
+               'bin/nova-instancemonitor',
+               'bin/nova-manage',
+               'bin/nova-network',
+               'bin/nova-objectstore',
+               'bin/nova-rsapi',
+               'bin/nova-volume'])

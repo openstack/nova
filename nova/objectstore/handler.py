@@ -47,12 +47,12 @@ import urllib
 
 from twisted.application import internet, service
 from twisted.web.resource import Resource
-from twisted.web import server, static
+from twisted.web import server, static, error
 
 
 from nova import exception
 from nova import flags
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 from nova.objectstore import bucket
 from nova.objectstore import image
@@ -107,10 +107,14 @@ def get_context(request):
         if not authorization_header:
             raise exception.NotAuthorized
         access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
-        um = users.UserManager.instance()
-        print 'um %s' % um
-        (user, project) = um.authenticate(access, secret, {}, request.method, request.host, request.uri, False)
-        # FIXME: check signature here!
+        (user, project) = manager.AuthManager().authenticate(access,
+                                                             secret,
+                                                             {},
+                                                             request.method,
+                                                             request.getRequestHostname(),
+                                                             request.uri,
+                                                             headers=request.getAllHeaders(),
+                                                             check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s" % ex)
@@ -118,7 +122,7 @@ def get_context(request):
 
 class ErrorHandlingResource(Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for exceptions thrown after NOT_DONE_YET is returned."""
-    # TODO: This needs to be plugged in to the right place in twisted...
+    # TODO(unassigned) (calling-all-twisted-experts): This needs to be plugged in to the right place in twisted...
     #   This doesn't look like it's the right place (consider exceptions in getChild; or after NOT_DONE_YET is returned     
     def render(self, request):
         try:
@@ -134,15 +138,15 @@ class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
     def getChild(self, name, request):
         request.context = get_context(request)
-
         if name == '':
             return self
         elif name == '_images':
-            return ImageResource()
+            return ImagesResource()
         else:
             return BucketResource(name)
 
     def render_GET(self, request):
+        logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() if b.is_authorized(request.context)]
 
         render_xml(request, {"ListAllMyBucketsResult": {
@@ -164,7 +168,10 @@ class BucketResource(ErrorHandlingResource):
     def render_GET(self, request):
         logging.debug("List keys for bucket %s" % (self.name))
 
-        bucket_object = bucket.Bucket(self.name)
+        try:
+            bucket_object = bucket.Bucket(self.name)
+        except exception.NotFound, e:
+            return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
             raise exception.NotAuthorized
@@ -180,13 +187,10 @@ class BucketResource(ErrorHandlingResource):
 
     def render_PUT(self, request):
         logging.debug("Creating bucket %s" % (self.name))
-        try:
-            print 'user is %s' % request.context
-        except Exception as e:
-            logging.exception(e)
         logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
         bucket.Bucket.create(self.name, request.context)
-        return ''
+        request.finish()
+        return server.NOT_DONE_YET
 
     def render_DELETE(self, request):
         logging.debug("Deleting bucket %s" % (self.name))
@@ -244,13 +248,19 @@ class ObjectResource(ErrorHandlingResource):
 class ImageResource(ErrorHandlingResource):
     isLeaf = True
 
+    def __init__(self, name):
+        Resource.__init__(self)
+        self.img = image.Image(name)
+
+    def render_GET(self, request):
+        return static.File(self.img.image_path, defaultType='application/octet-stream').render_GET(request)
+
+class ImagesResource(Resource):
     def getChild(self, name, request):
         if name == '':
             return self
         else:
-            request.setHeader("Content-Type", "application/octet-stream")
-            img = image.Image(name)
-            return static.File(img.image_path)
+            return ImageResource(name)
 
     def render_GET(self, request):
         """ returns a json listing of all images
@@ -287,12 +297,12 @@ class ImageResource(ErrorHandlingResource):
     def render_POST(self, request):
         """ update image attributes: public/private """
 
-        image_id = self.get_argument('image_id', u'')
-        operation = self.get_argument('operation', u'')
+        image_id = get_argument(request, 'image_id', u'')
+        operation = get_argument(request, 'operation', u'')
 
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.set_public(operation=='add')
@@ -301,10 +311,10 @@ class ImageResource(ErrorHandlingResource):
 
     def render_DELETE(self, request):
         """ delete a registered image """
-        image_id = self.get_argument("image_id", u"")
+        image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
-        if not image.is_authorized(request.context):
+        if not image_object.is_authorized(request.context):
             raise exception.NotAuthorized
 
         image_object.delete()
@@ -312,9 +322,13 @@ class ImageResource(ErrorHandlingResource):
         request.setResponseCode(204)
         return ''
 
-def get_application():
+def get_site():
     root = S3()
-    factory = server.Site(root)
+    site = server.Site(root)
+    return site
+
+def get_application():
+    factory = get_site()
     application = service.Application("objectstore")
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
     objectStoreService.setServiceParent(application)

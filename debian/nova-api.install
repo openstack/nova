@@ -1,3 +1,0 @@
-bin/nova-api usr/bin
-debian/nova-api.conf etc/nova
-debian/nova-dhcpbridge.conf etc/nova

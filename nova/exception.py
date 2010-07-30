@@ -44,6 +44,12 @@ class Duplicate(Error):
 class NotAuthorized(Error):
     pass
 
+class NotEmpty(Error):
+    pass
+
+class Invalid(Error):
+    pass
+
 def wrap_exception(f):
     def _wrap(*args, **kw):
         try:

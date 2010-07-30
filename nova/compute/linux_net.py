@@ -29,7 +29,7 @@ from nova import flags
 FLAGS=flags.FLAGS
 
 flags.DEFINE_string('dhcpbridge_flagfile',
-                    '/etc/nova-dhcpbridge.conf',
+                    '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
 def execute(cmd, addl_env=None):
@@ -94,7 +94,7 @@ def bridge_create(net):
             execute("sudo ifconfig %s up" % net['bridge_name'])
 
 def dnsmasq_cmd(net):
-    cmd = ['sudo dnsmasq',
+    cmd = ['sudo -E dnsmasq',
         ' --strict-order',
         ' --bind-interfaces',
         ' --conf-file=',
@@ -143,8 +143,9 @@ def start_dnsmasq(network):
     if os.path.exists(lease_file):
         os.unlink(lease_file)
 
-    # FLAGFILE in env
-    env = {'FLAGFILE' : FLAGS.dhcpbridge_flagfile}
+    # FLAGFILE and DNSMASQ_INTERFACE in env
+    env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
+           'DNSMASQ_INTERFACE': network['bridge_name']}
     execute(dnsmasq_cmd(network), addl_env=env)
 
 def stop_dnsmasq(network):

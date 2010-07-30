@@ -34,7 +34,7 @@ class StorageTestCase(test.TrialTestCase):
         super(StorageTestCase, self).setUp()
         self.mynode = node.Node()
         self.mystorage = None
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True)
         self.mystorage = storage.BlockStore()
 

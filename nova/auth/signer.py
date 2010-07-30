@@ -34,7 +34,7 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
 # ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
@@ -48,6 +48,7 @@ import hashlib
 import hmac
 import logging
 import urllib
+import boto
 
 from nova.exception import Error
 
@@ -58,6 +59,13 @@ class Signer(object):
         self.hmac = hmac.new(secret_key, digestmod=hashlib.sha1)
         if hashlib.sha256:
             self.hmac_256 = hmac.new(secret_key, digestmod=hashlib.sha256)
+
+    def s3_authorization(self, headers, verb, path):
+        c_string = boto.utils.canonical_string(verb, path, headers)
+        hmac = self.hmac.copy()
+        hmac.update(c_string)
+        b64_hmac = base64.encodestring(hmac.digest()).strip()
+        return b64_hmac
 
     def generate(self, params, verb, server_string, path):
         if params['SignatureVersion'] == '0':
