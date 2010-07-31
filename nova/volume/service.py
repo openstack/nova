@@ -104,6 +104,7 @@ class VolumeService(service.Service):
                 pass
 
     @validate.rangetest(size=(0, 1000))
+    @defer.inlineCallbacks
     def create_volume(self, size, user_id, project_id):
         """
         Creates an exported volume (fake or real),
@@ -111,11 +112,12 @@ class VolumeService(service.Service):
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = self.volume_class.create(size, user_id, project_id)
+        vol = yield self.volume_class.create(size, user_id, project_id)
         datastore.Redis.instance().sadd('volumes', vol['volume_id'])
         datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
-        self._restart_exports()
-        return vol['volume_id']
+        logging.debug("restarting exports")
+        yield self._restart_exports()
+        defer.returnValue(vol['volume_id'])
 
     def by_node(self, node_id):
         """ returns a list of volumes for a node """
@@ -128,6 +130,7 @@ class VolumeService(service.Service):
         for volume_id in datastore.Redis.instance().smembers('volumes'):
             yield self.volume_class(volume_id=volume_id)
 
+    @defer.inlineCallbacks
     def delete_volume(self, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
         vol = get_volume(volume_id)
@@ -135,19 +138,18 @@ class VolumeService(service.Service):
             raise exception.Error("Volume is still attached")
         if vol['node_name'] != FLAGS.storage_name:
             raise exception.Error("Volume is not local to this node")
-        vol.destroy()
+        yield vol.destroy()
         datastore.Redis.instance().srem('volumes', vol['volume_id'])
         datastore.Redis.instance().srem('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
-        return True
+        defer.returnValue(True)
 
     @defer.inlineCallbacks
     def _restart_exports(self):
         if FLAGS.fake_storage:
             return
-        yield process.simple_execute(
-                "sudo vblade-persist auto all")
-        yield process.simple_execute(
-                "sudo vblade-persist start all")
+        yield process.simple_execute("sudo vblade-persist auto all")
+        # NOTE(vish): this command sometimes sends output to stderr for warnings
+        yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
 
     @defer.inlineCallbacks
     def _init_volume_group(self):
@@ -173,6 +175,7 @@ class Volume(datastore.BasicModel):
         return {"volume_id": self.volume_id}
 
     @classmethod
+    @defer.inlineCallbacks
     def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
         vol = cls(volume_id)
@@ -188,13 +191,12 @@ class Volume(datastore.BasicModel):
         vol['attach_status'] = "detached"  # attaching | attached | detaching | detached
         vol['delete_on_termination'] = 'False'
         vol.save()
-        vol.create_lv()
-        vol._setup_export()
+        yield vol._create_lv()
+        yield vol._setup_export()
         # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
-        # TODO(joshua
         vol['status'] = "available"
         vol.save()
-        return vol
+        defer.returnValue(vol)
 
     def start_attach(self, instance_id, mountpoint):
         """ """
@@ -223,16 +225,18 @@ class Volume(datastore.BasicModel):
         self['attach_status'] = "detached"
         self.save()
 
+    @defer.inlineCallbacks
     def destroy(self):
         try:
-            self._remove_export()
-        except:
+            yield self._remove_export()
+        except Exception as ex:
+            logging.debug("Ingnoring failure to remove export %s" % ex)
             pass
-        self._delete_lv()
+        yield self._delete_lv()
         super(Volume, self).destroy()
 
     @defer.inlineCallbacks
-    def create_lv(self):
+    def _create_lv(self):
         if str(self['size']) == '0':
             sizestr = '100M'
         else:
@@ -248,13 +252,14 @@ class Volume(datastore.BasicModel):
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             self['volume_id']))
 
+    @defer.inlineCallbacks
     def _setup_export(self):
         (shelf_id, blade_id) = get_next_aoe_numbers()
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
         self['shelf_id'] = shelf_id
         self['blade_id'] = blade_id
         self.save()
-        self._exec_export()
+        yield self._exec_export()
 
     @defer.inlineCallbacks
     def _exec_export(self):
@@ -277,7 +282,7 @@ class Volume(datastore.BasicModel):
 
 
 class FakeVolume(Volume):
-    def create_lv(self):
+    def _create_lv(self):
         pass
 
     def _exec_export(self):
