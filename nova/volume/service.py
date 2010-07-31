@@ -103,8 +103,8 @@ class VolumeService(service.Service):
             except Exception, err:
                 pass
 
-    @validate.rangetest(size=(0, 1000))
     @defer.inlineCallbacks
+    @validate.rangetest(size=(0, 1000))
     def create_volume(self, size, user_id, project_id):
         """
         Creates an exported volume (fake or real),
