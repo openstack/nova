@@ -57,6 +57,9 @@ DEFINE_string('ec2_url',
                 'http://127.0.0.1:8773/services/Cloud',
                 'Url to ec2 api server')
 
+DEFINE_string('null_kernel',
+                    'aki-00000000',
+                    'Kernel image that indicates not to use a kernel (use a raw disk image instead)')
 DEFINE_string('default_image',
                     'ami-11111',
                     'default image to use, testing only')
