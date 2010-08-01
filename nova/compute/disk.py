@@ -109,6 +109,9 @@ def inject_data(image, key=None, net=None, dns=None, remove_network_udev=False, 
         else:
             mapped_device = device
 
+        if not os.path.exists(mapped_device):
+            raise exception.Error('Mapped device was not found: %s' % mapped_device)
+
         # Configure ext2fs so that it doesn't auto-check every N boots
         out, err = yield execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
 

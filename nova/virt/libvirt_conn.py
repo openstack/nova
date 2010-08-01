@@ -49,6 +49,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
+flags.DEFINE_string('libvirt_uri',
+                    'qemu:///system',
+                    'Libvirt URI to connect to')
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
@@ -67,10 +70,11 @@ class LibvirtConnection(object):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
+        libvirt_uri = str(FLAGS.libvirt_uri)
         if read_only:
-            self._conn = libvirt.openReadOnly('qemu:///system')
+            self._conn = libvirt.openReadOnly(libvirt_uri)
         else:
-            self._conn = libvirt.openAuth('qemu:///system', auth, 0)
+            self._conn = libvirt.openAuth(libvirt_uri, auth, 0)
 
 
     def list_instances(self):
@@ -191,32 +195,54 @@ class LibvirtConnection(object):
         user = manager.AuthManager().get_user(data['user_id'])
         if not os.path.exists(basepath('disk')):
            yield images.fetch(data['image_id'], basepath('disk-raw'), user)
-        if not os.path.exists(basepath('kernel')):
-           yield images.fetch(data['kernel_id'], basepath('kernel'), user)
-        if not os.path.exists(basepath('ramdisk')):
-           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user)
+        
+        using_kernel = data['kernel_id'] and True
+
+        if using_kernel:
+            if not os.path.exists(basepath('kernel')):
+                yield images.fetch(data['kernel_id'], basepath('kernel'), user)
+            if not os.path.exists(basepath('ramdisk')):
+                yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user)
 
         execute = lambda cmd, input=None: \
                   process.simple_execute(cmd=cmd,
                                          input=input,
                                          error_ok=1)
 
+        # For now, we assume that if we're not using a kernel, we're using a partitioned disk image
+        # where the target partition is the first partition
+        target_partition = None
+        if not using_kernel:
+            target_partition = "1"
+        
         key = data['key_data']
         net = None
         if FLAGS.simple_network:
-            with open(FLAGS.simple_network_template) as f:
-                net = f.read() % {'address': data['private_dns_name'],
+            network_info = {'address': data['private_dns_name'],
                                   'network': FLAGS.simple_network_network,
                                   'netmask': FLAGS.simple_network_netmask,
                                   'gateway': FLAGS.simple_network_gateway,
                                   'broadcast': FLAGS.simple_network_broadcast,
                                   'dns': FLAGS.simple_network_dns}
-        if key or net:
-            logging.info('Injecting data into image %s', data['image_id'])
-            yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
+            
+            with open(FLAGS.simple_network_template) as f:
+                net = f.read() % network_info
 
-        if os.path.exists(basepath('disk')):
-            yield process.simple_execute('rm -f %s' % basepath('disk'))
+            with open(FLAGS.simple_network_dns_template) as f:
+                dns = str(Template(f.read(), searchList=[ network_info ] ))
+
+        
+        if key or net or dns:
+            logging.info('Injecting data into image %s', data['image_id'])
+            try:
+                yield disk.inject_data(basepath('disk-raw'), key=key, net=net, dns=dns, remove_network_udev=True, partition=target_partition, execute=execute)
+            except Exception as e:
+                # This could be a windows image, or a vmdk format disk
+                logging.warn('Could not inject data; ignoring.  (%s)' % e)
+
+        if using_kernel:
+            if os.path.exists(basepath('disk')):
+                yield process.simple_execute('rm -f %s' % basepath('disk'))
 
         bytes = (instance_types.INSTANCE_TYPES[data['instance_type']]['local_gb']
                  * 1024 * 1024 * 1024)
@@ -228,15 +254,15 @@ class LibvirtConnection(object):
         return os.path.abspath(os.path.join(instance.datamodel['basepath'], path))
 
 
-    def toXml(self):
+    def toXml(self, instance):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
         template_contents = open(FLAGS.libvirt_xml_template).read()
-        xml_info = self.datamodel.copy()
+        xml_info = instance.datamodel.copy()
         # TODO(joshua): Make this xml express the attached disks as well
 
         # TODO(termie): lazy lazy hack because xml is annoying
-        xml_info['nova'] = json.dumps(self.datamodel.copy())
+        xml_info['nova'] = json.dumps(instance.datamodel.copy())
 
         if xml_info['kernel_id']:
             xml_info['kernel'] = xml_info['basepath'] + "/kernel"
