@@ -523,9 +523,15 @@ class CloudController(object):
         kernel_id = kwargs.get('kernel_id', kernel_id)
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
 
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+            
         # make sure we have access to kernel and ramdisk
-        self._get_image(context, kernel_id)
-        self._get_image(context, ramdisk_id)
+        if kernel_id:
+            self._get_image(context, kernel_id)
+        if ramdisk_id:
+            self._get_image(context, ramdisk_id)
 
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
