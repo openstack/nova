@@ -23,6 +23,7 @@ Handling of VM disk images.
 
 import os.path
 import time
+import urlparse
 
 from nova import flags
 from nova import process
@@ -42,7 +43,7 @@ def fetch(image, path, user):
     return f(image, path, user)
 
 def _fetch_s3_image(image, path, user):
-    url = _image_url('%s/image' % image)
+    url = image_url(image)
 
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
@@ -50,8 +51,8 @@ def _fetch_s3_image(image, path, user):
     headers = {}
     headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
-    uri = '/' + url.partition('/')[2]
-    auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', uri)
+    (_, _, url_path, _, _, _) = urlparse.urlparse(url)
+    auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', url_path)
     headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)
 
     cmd = ['/usr/bin/curl', '--silent', url]
@@ -68,5 +69,6 @@ def _fetch_local_image(image, path, _):
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)
 
-def _image_url(path):
-    return "%s:%s/_images/%s" % (FLAGS.s3_host, FLAGS.s3_port, path)
+def image_url(image):
+    return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
+                                              image)
