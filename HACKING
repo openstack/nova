@@ -10,15 +10,11 @@ Imports
 - thou shalt not import objects, only modules
 - thou shalt not import more than one module per line
 - thou shalt not make relative imports
-- thou shalt "from nova import vendor" before importing third party code
 - thou shalt organize your imports according to the following template
 
 ::
   # vim: tabstop=4 shiftwidth=4 softtabstop=4
   {{stdlib imports in human alphabetical order}}
-  \n
-  from nova import vendor
-  {{vendor imports in human alphabetical order}}
   \n
   {{nova imports in human alphabetical order}}
   \n

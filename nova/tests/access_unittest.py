@@ -19,11 +19,12 @@
 import unittest
 import logging
 
-from nova.auth.users import UserManager
-from nova.auth import rbac
 from nova import exception
 from nova import flags
 from nova import test
+from nova.auth import manager
+from nova.auth import rbac
+
 
 FLAGS = flags.FLAGS
 class Context(object):
@@ -32,9 +33,9 @@ class Context(object):
 class AccessTestCase(test.BaseTestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
-        FLAGS.fake_libvirt = True
+        FLAGS.connection_type = 'fake'
         FLAGS.fake_storage = True
-        um = UserManager.instance()
+        um = manager.AuthManager()
         # Make test users
         try:
             self.testadmin = um.create_user('testadmin')
@@ -78,7 +79,7 @@ class AccessTestCase(test.BaseTestCase):
         #user is set in each test
 
     def tearDown(self):
-        um = UserManager.instance()
+        um = manager.AuthManager()
         # Delete the test project
         um.delete_project('testproj')
         # Delete the test user

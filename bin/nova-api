@@ -22,8 +22,6 @@ Tornado daemon for the main API endpoint.
 """
 
 import logging
-
-from nova import vendor
 from tornado import httpserver
 from tornado import ioloop
 
@@ -31,7 +29,7 @@ from nova import flags
 from nova import rpc
 from nova import server
 from nova import utils
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
 from nova.endpoint import admin
 from nova.endpoint import api

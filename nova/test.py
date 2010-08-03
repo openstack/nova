@@ -23,16 +23,14 @@ and some black magic for inline callbacks.
 """
 
 import logging
+import mox
+import stubout
 import time
 import unittest
-
-from nova import vendor
-import mox
 from tornado import ioloop
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.trial import unittest as trial_unittest
-import stubout
 
 from nova import fakerabbit
 from nova import flags
@@ -158,9 +156,9 @@ class BaseTestCase(TrialTestCase):
 
         Example (callback chain, ugly):
 
-        d = self.node.terminate_instance(instance_id) # a Deferred instance
+        d = self.compute.terminate_instance(instance_id) # a Deferred instance
         def _describe(_):
-            d_desc = self.node.describe_instances() # another Deferred instance
+            d_desc = self.compute.describe_instances() # another Deferred instance
             return d_desc
         def _checkDescribe(rv):
             self.assertEqual(rv, [])
@@ -171,8 +169,8 @@ class BaseTestCase(TrialTestCase):
 
         Example (inline callbacks! yay!):
 
-        yield self.node.terminate_instance(instance_id)
-        rv = yield self.node.describe_instances()
+        yield self.compute.terminate_instance(instance_id)
+        rv = yield self.compute.describe_instances()
         self.assertEqual(rv, [])
 
         If the test fits the Inline Callbacks pattern we will automatically

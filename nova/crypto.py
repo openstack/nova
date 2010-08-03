@@ -24,15 +24,13 @@ SSH keypairs and x509 certificates.
 import base64
 import hashlib
 import logging
+import M2Crypto
 import os
 import shutil
 import struct
 import tempfile
 import time
 import utils
-
-from nova import vendor
-import M2Crypto
 
 from nova import exception
 from nova import flags

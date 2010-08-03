@@ -20,22 +20,19 @@
 Classes for network control, including VLANs, DHCP, and IP allocation.
 """
 
+import IPy
 import logging
 import os
 import time
 
-# TODO(termie): clean up these imports
-from nova import vendor
-import IPy
-
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import utils
-from nova import exception
+from nova.auth import manager
 from nova.compute import exception as compute_exception
-from nova.auth import users
+from nova.compute import linux_net
 
-import linux_net
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('networks_path', utils.abspath('../networks'),
@@ -130,8 +127,9 @@ class Vlan(datastore.BasicModel):
     @datastore.absorb_connection_error
     def all(cls):
         set_name = cls._redis_set_name(cls.__name__)
-        for project,vlan in datastore.Redis.instance().hgetall(set_name):
-            yield cls(project, vlan)
+        elements = datastore.Redis.instance().hgetall(set_name)
+        for project in elements:
+            yield cls(project, elements[project])
 
     @datastore.absorb_connection_error
     def save(self):
@@ -146,7 +144,7 @@ class Vlan(datastore.BasicModel):
     @datastore.absorb_connection_error
     def destroy(self):
         set_name = self._redis_set_name(self.__class__.__name__)
-        datastore.Redis.instance().hdel(set_name, self.project)
+        datastore.Redis.instance().hdel(set_name, self.project_id)
 
     def subnet(self):
         vlan = int(self.vlan_id)
@@ -164,6 +162,7 @@ class Vlan(datastore.BasicModel):
 
 class BaseNetwork(datastore.BasicModel):
     override_type = 'network'
+    NUM_STATIC_IPS = 3 # Network, Gateway, and CloudPipe
 
     @property
     def identifier(self):
@@ -211,11 +210,11 @@ class BaseNetwork(datastore.BasicModel):
 
     @property
     def user(self):
-        return users.UserManager.instance().get_user(self['user_id'])
+        return manager.AuthManager().get_user(self['user_id'])
 
     @property
     def project(self):
-        return users.UserManager.instance().get_project(self['project_id'])
+        return manager.AuthManager().get_project(self['project_id'])
 
     @property
     def _hosts_key(self):
@@ -239,10 +238,14 @@ class BaseNetwork(datastore.BasicModel):
     def available(self):
         # the .2 address is always CloudPipe
         # and the top <n> are for vpn clients
-        for idx in range(3, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
+        for idx in range(self.num_static_ips, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
                 yield str(address)
+
+    @property
+    def num_static_ips(self):
+        return BaseNetwork.NUM_STATIC_IPS
 
     def allocate_ip(self, user_id, project_id, mac):
         for address in self.available:
@@ -253,7 +256,7 @@ class BaseNetwork(datastore.BasicModel):
         raise compute_exception.NoMoreAddresses("Project %s with network %s" %
                                                 (project_id, str(self.network)))
 
-    def lease_ip(self, ip_str):    
+    def lease_ip(self, ip_str):
         logging.debug("Leasing allocated IP %s" % (ip_str))
 
     def release_ip(self, ip_str):
@@ -291,6 +294,7 @@ class BridgedNetwork(BaseNetwork):
             netmask
     """
 
+    bridge_gets_ip = False
     override_type = 'network'
 
     @classmethod
@@ -512,7 +516,7 @@ def get_vlan_for_project(project_id):
         if not known_vlans.has_key(vstr):
             return Vlan.create(project_id, vnum)
         old_project_id = known_vlans[vstr]
-        if not users.UserManager.instance().get_project(old_project_id):
+        if not manager.AuthManager().get_project(old_project_id):
             vlan = Vlan.lookup(old_project_id)
             if vlan:
                 # NOTE(todd): This doesn't check for vlan id match, because
@@ -525,6 +529,7 @@ def get_vlan_for_project(project_id):
                 #             don't orphan any VLANs.  It is basically
                 #             garbage collection for after projects abandoned
                 #             their reference.
+                vlan.destroy()
                 vlan.project_id = project_id
                 vlan.save()
                 return vlan
@@ -532,9 +537,13 @@ def get_vlan_for_project(project_id):
                 return Vlan.create(project_id, vnum)
     raise compute_exception.AddressNotAllocated("Out of VLANs")
 
+def get_network_by_interface(iface, security_group='default'):
+    vlan = iface.rpartition("br")[2]
+    return get_project_network(Vlan.dict_by_vlan().get(vlan), security_group)
+
 def get_network_by_address(address):
     logging.debug("Get Network By Address: %s" % address)
-    for project in users.UserManager.instance().get_projects():
+    for project in manager.AuthManager().get_projects():
         net = get_project_network(project.id)
         if address in net.assigned:
             logging.debug("Found %s in %s" % (address, project.id))
@@ -563,10 +572,10 @@ def allocate_ip(user_id, project_id, mac):
 
 def deallocate_ip(address):
     return get_network_by_address(address).deallocate_ip(address)
-    
+
 def release_ip(address):
     return get_network_by_address(address).release_ip(address)
-    
+
 def lease_ip(address):
     return get_network_by_address(address).lease_ip(address)
 
@@ -574,7 +583,7 @@ def get_project_network(project_id, security_group='default'):
     """ get a project's private network, allocating one if needed """
     # TODO(todd): It looks goofy to get a project from a UserManager.
     #             Refactor to still use the LDAP backend, but not User specific.
-    project = users.UserManager.instance().get_project(project_id)
+    project = manager.AuthManager().get_project(project_id)
     if not project:
         raise exception.Error("Project %s doesn't exist, uhoh." %
                                    project_id)
@@ -584,5 +593,5 @@ def get_project_network(project_id, security_group='default'):
 
 def restart_nets():
     """ Ensure the network for each user is enabled"""
-    for project in users.UserManager.instance().get_projects():
+    for project in manager.AuthManager().get_projects():
         get_project_network(project.id).express()

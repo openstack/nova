@@ -1,2 +1,0 @@
-bin/nova-compute usr/bin
-debian/nova-compute.conf etc/nova

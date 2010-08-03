@@ -24,8 +24,6 @@ before trying to run this.
 """
 
 import logging
-
-from nova import vendor
 import redis
 
 from nova import exception
@@ -105,7 +103,7 @@ class BasicModel(object):
 
     @classmethod
     def _redis_name(cls):
-        return self.override_type or cls.__name__
+        return cls.override_type or cls.__name__.lower()
 
     @classmethod
     def lookup(cls, identifier):
@@ -147,7 +145,7 @@ class BasicModel(object):
 
     @property
     def __redis_key(self):
-        return '%s:%s' % (self.__class__.__name__.lower(), self.identifier)
+        return '%s:%s' % (self._redis_name(), self.identifier)
 
     def __repr__(self):
         return "<%s:%s>" % (self.__class__.__name__, self.identifier)
@@ -186,21 +184,19 @@ class BasicModel(object):
 
     @absorb_connection_error
     def add_to_index(self):
+        """Each insance of Foo has its id tracked int the set named Foos"""
         set_name = self.__class__._redis_set_name(self.__class__.__name__)
         Redis.instance().sadd(set_name, self.identifier)
 
     @absorb_connection_error
     def remove_from_index(self):
-        set_name = self.__class__._redis_set_name(self.__class__.__name__)
-        Redis.instance().srem(set_name, self.identifier)
-
-    @absorb_connection_error
-    def remove_from_index(self):
+        """Remove id of this instance from the set tracking ids of this type"""
         set_name = self.__class__._redis_set_name(self.__class__.__name__)
         Redis.instance().srem(set_name, self.identifier)
 
     @absorb_connection_error
     def associate_with(self, foreign_type, foreign_id):
+        """Add this class id into the set foreign_type:foreign_id:this_types"""
         # note the extra 's' on the end is for plurality
         # to match the old data without requiring a migration of any sort
         self.add_associated_model_to_its_set(foreign_type, foreign_id)
@@ -210,21 +206,24 @@ class BasicModel(object):
 
     @absorb_connection_error
     def unassociate_with(self, foreign_type, foreign_id):
+        """Delete from foreign_type:foreign_id:this_types set"""
         redis_set = self.__class__._redis_association_name(foreign_type,
                                                            foreign_id)
         Redis.instance().srem(redis_set, self.identifier)
 
-    def add_associated_model_to_its_set(self, my_type, my_id):
+    def add_associated_model_to_its_set(self, model_type, model_id):
+        """
+        When associating an X to a Y, save Y for newer timestamp, etc, and to
+        make sure to save it if Y is a new record.
+        If the model_type isn't found as a usable class, ignore it, this can
+        happen when associating to things stored in LDAP (user, project, ...).
+        """
         table = globals()
-        klsname = my_type.capitalize()
+        klsname = model_type.capitalize()
         if table.has_key(klsname):
-            my_class = table[klsname]
-            my_inst = my_class(my_id)
-            my_inst.save()
-        else:
-            logging.warning("no model class for %s when building"
-                            " association from %s",
-                            klsname, self)
+            model_class = table[klsname]
+            model_inst = model_class(model_id)
+            model_inst.save()
 
     @absorb_connection_error
     def save(self):

@@ -16,19 +16,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import boto
+from boto.ec2 import regioninfo
 import httplib
 import random
 import StringIO
-
-from nova import vendor
-import boto
-from boto.ec2 import regioninfo
 from tornado import httpserver
 from twisted.internet import defer
 
 from nova import flags
 from nova import test
-from nova.auth import users
+from nova.auth import manager
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -45,7 +43,11 @@ def boto_to_tornado(method, path, headers, data, host, connection=None):
 
     connection should be a FakeTornadoHttpConnection instance
     """
-    headers = httpserver.HTTPHeaders()
+    try:
+        headers = httpserver.HTTPHeaders()
+    except AttributeError:
+        from tornado import httputil
+        headers = httputil.HTTPHeaders()
     for k, v in headers.iteritems():
         headers[k] = v
 
@@ -152,7 +154,7 @@ class ApiEc2TestCase(test.BaseTestCase):
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
-        self.users = users.UserManager.instance()
+        self.manager = manager.AuthManager()
         self.cloud = cloud.CloudController()
 
         self.host = '127.0.0.1'
@@ -177,25 +179,22 @@ class ApiEc2TestCase(test.BaseTestCase):
     def test_describe_instances(self):
         self.expect_http()
         self.mox.ReplayAll()
-        try:
-            self.users.create_user('fake', 'fake', 'fake')
-        except Exception, _err:
-            pass # User may already exist
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
-        self.users.delete_user('fake')
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
 
 
     def test_get_all_key_pairs(self):
         self.expect_http()
         self.mox.ReplayAll()
         keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") for x in range(random.randint(4, 8)))
-        try:
-            self.users.create_user('fake', 'fake', 'fake')
-        except Exception, _err:
-            pass # User may already exist
-        self.users.generate_key_pair('fake', keyname)
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.manager.generate_key_pair(user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         self.assertTrue(filter(lambda k: k.name == keyname, rv))
-        self.users.delete_user('fake')
-
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)

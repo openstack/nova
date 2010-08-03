@@ -22,17 +22,18 @@ an instance with it.
 
 """
 
+import base64
 import logging
 import os
 import tempfile
-import base64
-from zipfile import ZipFile, ZIP_DEFLATED
+import zipfile
 
 from nova import exception
 from nova import flags
-from nova.auth import users
 from nova import utils
+from nova.auth import manager
 from nova.endpoint import api
+
 
 FLAGS = flags.FLAGS
 
@@ -43,7 +44,7 @@ flags.DEFINE_string('boot_script_template',
 class CloudPipe(object):
     def __init__(self, cloud_controller):
         self.controller = cloud_controller
-        self.manager = users.UserManager.instance()
+        self.manager = manager.AuthManager()
 
     def launch_vpn_instance(self, project_id):
         logging.debug( "Launching VPN for %s" % (project_id))
@@ -52,7 +53,7 @@ class CloudPipe(object):
         tmpfolder = tempfile.mkdtemp()
         filename = "payload.zip"
         zippath = os.path.join(tmpfolder, filename)
-        z = ZipFile(zippath, "w", ZIP_DEFLATED)
+        z = zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED)
 
         z.write(FLAGS.boot_script_template,'autorun.sh')
         z.close()

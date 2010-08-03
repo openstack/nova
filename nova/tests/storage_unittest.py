@@ -34,7 +34,7 @@ class StorageTestCase(test.TrialTestCase):
         super(StorageTestCase, self).setUp()
         self.mynode = node.Node()
         self.mystorage = None
-        self.flags(fake_libvirt=True,
+        self.flags(connection_type='fake',
                    fake_storage=True)
         self.mystorage = storage.BlockStore()
 
@@ -69,13 +69,11 @@ class StorageTestCase(test.TrialTestCase):
         vols = []
         for i in xrange(total_slots):
             vid = self.mystorage.create_volume(vol_size, user_id, project_id)
-            print vid
             vols.append(vid)
         self.assertRaises(storage.NoMoreVolumes,
                           self.mystorage.create_volume,
                           vol_size, user_id, project_id)
         for id in vols:
-            print id
             self.mystorage.delete_volume(id)
 
     def test_run_attach_detach_volume(self):

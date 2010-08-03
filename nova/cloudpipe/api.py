@@ -21,13 +21,12 @@ Tornado REST API Request Handlers for CloudPipe
 """
 
 import logging
+import tornado.web
 import urllib
 
-from nova import vendor
-import tornado.web
-
 from nova import crypto
-from nova.auth import users
+from nova.auth import manager
+
 
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)

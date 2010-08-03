@@ -22,8 +22,8 @@ Nova-type exceptions. SHOULD include dedicated exception logging.
 """
 
 import logging
-import traceback
 import sys
+import traceback
 
 class Error(Exception):
     def __init__(self, message=None):
@@ -42,6 +42,12 @@ class Duplicate(Error):
     pass
 
 class NotAuthorized(Error):
+    pass
+
+class NotEmpty(Error):
+    pass
+
+class Invalid(Error):
     pass
 
 def wrap_exception(f):

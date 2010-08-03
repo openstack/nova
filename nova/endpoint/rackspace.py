@@ -26,22 +26,19 @@ import logging
 import multiprocessing
 import os
 import time
-
-from nova import vendor
 import tornado.web
 from twisted.internet import defer
 
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova import exception
-from nova.auth import users
+from nova.auth import manager
 from nova.compute import model
 from nova.compute import network
-from nova.endpoint import wsgi
 from nova.endpoint import images
-from nova.volume import storage
+from nova.endpoint import wsgi
 
 
 FLAGS = flags.FLAGS
@@ -100,12 +97,13 @@ class Api(object):
     def build_context(self, env):
         rv = {}
         if env.has_key("HTTP_X_AUTH_TOKEN"):
-            # TODO(todd): once we make an actual unique token, this will change
-            rv['user'] = users.UserManager.instance().get_user_from_access_key(
-                             env['HTTP_X_AUTH_TOKEN'])
+            rv['user'] = manager.AuthManager().get_user_from_access_key(
+                           env['HTTP_X_AUTH_TOKEN']
+                         )
             if rv['user']:
-                rv['project'] = users.UserManager.instance().get_project(
-                                    rv['user'].name)
+                rv['project'] = manager.AuthManager().get_project(
+                                  rv['user'].name
+                                )
         return rv
 
 
@@ -166,6 +164,9 @@ class RackspaceApiEndpoint(object):
 
 
 class RackspaceAuthenticationApi(object):
+
+    def process(self, path, env):
+        return self.index(path, env)
 
     # TODO(todd): make a actual session with a unique token
     # just pass the auth key back through for now

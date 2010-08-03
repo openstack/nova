@@ -20,16 +20,17 @@
 Simple object store using Blobs and JSON files on disk.
 """
 
+import bisect
 import datetime
 import glob
 import json
 import os
-import bisect
 
 from nova import exception
 from nova import flags
 from nova import utils
 from nova.objectstore import stored
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),
@@ -106,7 +107,7 @@ class Bucket(object):
         try:
             return context.user.is_admin() or self.owner_id == context.project.id
         except Exception, e:
-            pass
+            return False
 
     def list_keys(self, prefix='', marker=None, max_keys=1000, terse=False):
         object_names = []
@@ -160,7 +161,7 @@ class Bucket(object):
 
     def delete(self):
         if len(os.listdir(self.path)) > 0:
-            raise exception.NotAuthorized()
+            raise exception.NotEmpty()
         os.rmdir(self.path)
         os.remove(self.path+'.json')
 

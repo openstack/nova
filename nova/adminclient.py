@@ -20,10 +20,9 @@ Nova User API client library.
 """
 
 import base64
-
-from nova import vendor
 import boto
 from boto.ec2.regioninfo import RegionInfo
+
 
 class UserInfo(object):
     """
@@ -57,6 +56,64 @@ class UserInfo(object):
             self.accesskey = str(value)
         elif name == 'secretkey':
             self.secretkey = str(value)
+
+class ProjectInfo(object):
+    """
+    Information about a Nova project, as parsed through SAX
+    Fields include:
+        projectname
+        description
+        projectManagerId
+        memberIds
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.projectname = None
+        self.description = None
+        self.projectManagerId = None
+        self.memberIds = []
+
+    def __repr__(self):
+        return 'ProjectInfo:%s' % self.projectname
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        if name == 'projectname':
+            self.projectname = value
+        elif name == 'description':
+            self.description = value
+        elif name == 'projectManagerId':
+            self.projectManagerId = value
+        elif name == 'memberId':
+            self.memberIds.append(value)
+        else:
+            setattr(self, name, str(value))
+
+class ProjectMember(object):
+    """
+    Information about a Nova project member, as parsed through SAX.
+    Fields include:
+        memberId
+    """
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.memberId = None
+    
+    def __repr__(self):
+        return 'ProjectMember:%s' % self.memberId
+
+    def startElement(self, name, attrs, connection):
+        return None
+        
+    def endElement(self, name, value, connection):
+        if name == 'member':
+            self.memberId = value
+        else:
+            setattr(self, name, str(value))
+            
 
 class HostInfo(object):
     """
@@ -101,20 +158,20 @@ class NovaAdminClient(object):
                                         **kwargs)
         self.apiconn.APIVersion = 'nova'
 
-    def connection_for(self, username, **kwargs):
+    def connection_for(self, username, project, **kwargs):
         """
         Returns a boto ec2 connection for the given username.
         """
         user = self.get_user(username)
+        access_key = '%s:%s' % (user.accesskey, project)
         return boto.connect_ec2(
-            aws_access_key_id=user.accesskey,
+            aws_access_key_id=access_key,
             aws_secret_access_key=user.secretkey,
             is_secure=False,
             region=RegionInfo(None, self.region, self.clc_ip),
             port=8773,
             path='/services/Cloud',
-            **kwargs
-        )
+            **kwargs)
 
     def get_users(self):
         """ grabs the list of all users """
@@ -139,9 +196,109 @@ class NovaAdminClient(object):
         """ deletes a user """
         return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
 
-    def get_zip(self, username):
-        """ returns the content of a zip file containing novarc and access credentials. """
-        return self.apiconn.get_object('GenerateX509ForUser', {'Name': username}, UserInfo).file
+    def add_user_role(self, user, role, project=None):
+        """
+        Add a role to a user either globally or for a specific project.
+        """
+        return self.modify_user_role(user, role, project=project,
+                                     operation='add')
+
+    def remove_user_role(self, user, role, project=None):
+        """
+        Remove a role from a user either globally or for a specific project.
+        """
+        return self.modify_user_role(user, role, project=project,
+                                     operation='remove')
+
+    def modify_user_role(self, user, role, project=None, operation='add',
+                         **kwargs):
+        """
+        Add or remove a role for a user and project.
+        """
+        params = {'User': user,
+                  'Role': role,
+                  'Project': project,
+                  'Operation': operation}
+        return self.apiconn.get_status('ModifyUserRole', params)
+
+    def get_projects(self, user=None):
+        """
+        Returns a list of all projects.
+        """
+        if user:
+            params = {'User': user}
+        else:
+            params = {}
+        return self.apiconn.get_list('DescribeProjects',
+                                     params,
+                                     [('item', ProjectInfo)])
+
+    def get_project(self, name):
+        """
+        Returns a single project with the specified name.
+        """
+        project = self.apiconn.get_object('DescribeProject',
+                                          {'Name': name},
+                                          ProjectInfo)
+
+        if project.projectname != None:
+            return project
+            
+    def create_project(self, projectname, manager_user, description=None,
+                       member_users=None):
+        """
+        Creates a new project.
+        """
+        params = {'Name': projectname,
+                  'ManagerUser': manager_user,
+                  'Description': description,
+                  'MemberUsers': member_users}
+        return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
+
+    def delete_project(self, projectname):
+        """
+        Permanently deletes the specified project.
+        """
+        return self.apiconn.get_object('DeregisterProject',
+                                       {'Name': projectname},
+                                       ProjectInfo)
+
+    def get_project_members(self, name):
+        """
+        Returns a list of members of a project.
+        """
+        return self.apiconn.get_list('DescribeProjectMembers',
+                                     {'Name': name},
+                                     [('item', ProjectMember)])
+
+    def add_project_member(self, user, project):
+        """
+        Adds a user to a project.
+        """
+        return self.modify_project_member(user, project, operation='add')
+        
+    def remove_project_member(self, user, project):
+        """
+        Removes a user from a project.
+        """
+        return self.modify_project_member(user, project, operation='remove')
+
+    def modify_project_member(self, user, project, operation='add'):
+        """
+        Adds or removes a user from a project.
+        """
+        params = {'User': user,
+                  'Project': project,
+                  'Operation': operation}
+        return self.apiconn.get_status('ModifyProjectMember', params)
+
+    def get_zip(self, user, project):
+        """
+        Returns the content of a zip file containing novarc and access credentials.
+        """
+        params = {'Name': user, 'Project': project}
+        zip = self.apiconn.get_object('GenerateX509ForUser', params, UserInfo)
+        return zip.file
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])

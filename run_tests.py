@@ -39,9 +39,10 @@ Due to our use of multiprocessing it we frequently get some ignorable
 
 """
 import __main__
+import os
 import sys
 
-from nova import vendor
+
 from twisted.scripts import trial as trial_script
 
 from nova import datastore
@@ -49,22 +50,25 @@ from nova import flags
 from nova import twistd
 
 from nova.tests.access_unittest import *
+from nova.tests.auth_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
+from nova.tests.compute_unittest import *
 from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
-from nova.tests.node_unittest import *
 from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
-from nova.tests.storage_unittest import *
-from nova.tests.users_unittest import *
 from nova.tests.validator_unittest import *
+from nova.tests.volume_unittest import *
 
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_bool('flush_db', True,
                   'Flush the database before running fake tests')
+
+flags.DEFINE_string('tests_stderr', 'run_tests.err.log',
+                    'Path to where to pipe STDERR during test runs. Default = "run_tests.err.log"')
 
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)
@@ -84,6 +88,11 @@ if __name__ == '__main__':
             r.flushdb()
     else:
         from nova.tests.real_flags import *
+
+    # Establish redirect for STDERR
+    sys.stderr.flush()
+    err = open(FLAGS.tests_stderr, 'w+', 0)
+    os.dup2(err.fileno(), sys.stderr.fileno())
 
     if len(argv) == 1 and len(config['tests']) == 0:
         # If no tests were specified run the ones imported in this file

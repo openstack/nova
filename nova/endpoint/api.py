@@ -25,21 +25,20 @@ import logging
 import multiprocessing
 import random
 import re
+import tornado.web
+from twisted.internet import defer
 import urllib
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
-
-from nova import vendor
-import tornado.web
-from twisted.internet import defer
 
 from nova import crypto
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.endpoint import cloud
-from nova.auth import users
+from nova.auth import manager
 import nova.cloudpipe.api
+from nova.endpoint import cloud
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
@@ -267,7 +266,7 @@ class APIRequestHandler(tornado.web.RequestHandler):
 
         # Authenticate the request.
         try:
-            (user, project) = users.UserManager.instance().authenticate(
+            (user, project) = manager.AuthManager().authenticate(
                 access,
                 signature,
                 auth_params,

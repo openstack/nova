@@ -23,8 +23,6 @@ Process pool, still buggy right now.
 import logging
 import multiprocessing
 import StringIO
-
-from nova import vendor
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import process
@@ -87,7 +85,7 @@ class _BackRelay(protocol.ProcessProtocol):
     def errReceivedIsBad(self, text):
         if self.deferred is not None:
             self.onProcessEnded = defer.Deferred()
-            err = _UnexpectedErrorOutput(text, self.onProcessEnded)
+            err = UnexpectedErrorOutput(text, self.onProcessEnded)
             self.deferred.errback(failure.Failure(err))
             self.deferred = None
             self.transport.loseConnection()
@@ -154,8 +152,8 @@ def getProcessOutput(executable, args=None, env=None, path=None, reactor=None,
     d = defer.Deferred()
     p = BackRelayWithInput(
             d, startedDeferred=startedDeferred, error_ok=error_ok, input=input)
-    # VISH: commands come in as unicode, but self.executes needs
-    #       strings or process.spawn raises a deprecation warning
+    # NOTE(vish): commands come in as unicode, but self.executes needs
+    #             strings or process.spawn raises a deprecation warning
     executable = str(executable)
     if not args is None:
         args = [str(x) for x in args]
@@ -173,7 +171,7 @@ class ProcessPool(object):
         self.size = size and size or FLAGS.process_pool_size
         self._pool = defer.DeferredSemaphore(self.size)
 
-    def simpleExecute(self, cmd, **kw):
+    def simple_execute(self, cmd, **kw):
         """ Weak emulation of the old utils.execute() function.
 
         This only exists as a way to quickly move old execute methods to
@@ -207,34 +205,13 @@ class ProcessPool(object):
         self._pool.release()
         return rv
 
+class SharedPool(object):
+    _instance = None
+    def __init__(self):
+        if SharedPool._instance is None:
+            self.__class__._instance = ProcessPool()
+    def __getattr__(self, key):
+        return getattr(self._instance, key)
 
-class Pool(object):
-    """ A simple process pool implementation around mutliprocessing.
-
-    Allows up to `size` processes at a time and queues the rest.
-
-    Using workarounds for multiprocessing behavior described in:
-    http://pypi.python.org/pypi/twisted.internet.processes/1.0b1
-    """
-
-    def __init__(self, size=None):
-        self._size = size
-        self._pool = multiprocessing.Pool(size)
-        self._registerShutdown()
-
-    def _registerShutdown(self):
-        reactor.addSystemEventTrigger(
-                'during', 'shutdown', self.shutdown, reactor)
-
-    def shutdown(self, reactor=None):
-        if not self._pool:
-            return
-        self._pool.close()
-        # wait for workers to finish
-        self._pool.terminate()
-        self._pool = None
-
-    def apply(self, f, *args, **kw):
-        """ Add a task to the pool and return a deferred. """
-        result = self._pool.apply_async(f, args, kw)
-        return threads.deferToThread(result.get)
+def simple_execute(cmd, **kwargs):
+    return SharedPool().simple_execute(cmd, **kwargs)

@@ -24,11 +24,10 @@ Includes injection of SSH PGP keys into authorized_keys file.
 import logging
 import os
 import tempfile
-
-from nova import vendor
 from twisted.internet import defer
 
 from nova import exception
+
 
 @defer.inlineCallbacks
 def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
@@ -41,7 +40,8 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     formatted as ext2.
 
     In the diagram below, dashes represent drive sectors.
-     0   a b                c d               e
+    +-----+------. . .-------+------. . .------+
+    | 0  a| b               c|d               e|
     +-----+------. . .-------+------. . .------+
     | mbr | primary partiton | local partition |
     +-----+------. . .-------+------. . .------+
@@ -65,8 +65,8 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     last_sector = local_last # e
 
     # create an empty file
-    execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-            % (outfile, last_sector, sector_size))
+    yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                  % (outfile, last_sector, sector_size))
 
     # make mbr partition
     yield execute('parted --script %s mklabel msdos' % outfile)

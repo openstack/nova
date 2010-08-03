@@ -21,14 +21,12 @@ AMQP-based RPC. Queues have consumers and publishers.
 No fan-out support yet.
 """
 
+from carrot import connection
+from carrot import messaging
 import json
 import logging
 import sys
 import uuid
-
-from nova import vendor
-from carrot import connection
-from carrot import messaging
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
@@ -112,6 +110,7 @@ class TopicConsumer(Consumer):
         self.queue = topic
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.durable = False
         super(TopicConsumer, self).__init__(connection=connection)
 
 
@@ -152,6 +151,7 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic="broadcast"):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
 
 
@@ -197,7 +197,10 @@ def call(topic, msg):
     conn = Connection.instance()
     d = defer.Deferred()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
-    consumer.register_callback(lambda data, message: d.callback(data))
+    def deferred_receive(data, message):
+        message.ack()
+        d.callback(data)
+    consumer.register_callback(deferred_receive)
     injected = consumer.attach_to_tornado()
 
     # clean up after the injected listened and return x
@@ -235,11 +238,12 @@ def send_message(topic, message, wait=True):
                                       exchange=msg_id,
                                       auto_delete=True,
                                       exchange_type="direct",
-                                      routing_key=msg_id)
+                                      routing_key=msg_id,
+                                      durable=False)
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
-                                    exchange="nova",
+                                    exchange=FLAGS.control_exchange,
                                     exchange_type="topic",
                                     routing_key=topic)
     publisher.send(message)

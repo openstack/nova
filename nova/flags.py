@@ -23,7 +23,7 @@ where they're used.
 
 import socket
 
-from nova import vendor
+
 from gflags import *
 
 # This keeps pylint from barfing on the imports
@@ -36,18 +36,17 @@ DEFINE_bool = DEFINE_bool
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
+DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_integer('s3_internal_port', 3334, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 #DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
-DEFINE_string('storage_topic', 'storage', 'the topic storage nodes listen on')
-DEFINE_bool('fake_libvirt', False,
-                  'whether to use a fake libvirt or not')
+DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
+DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
+
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False, 'should we use fake network devices and addresses')
-DEFINE_bool('fake_users', False, 'use fake users')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
@@ -75,6 +74,8 @@ DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
               '-key',
               'Suffix to add to project name for vpn key')
+
+DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 # UNUSED
 DEFINE_string('node_availability_zone',
