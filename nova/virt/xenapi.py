@@ -79,6 +79,18 @@ class XenAPIConnection(object):
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
 
+        if 'bridge_name' in instance.datamodel:
+            network_ref = \
+                yield self._find_network_with_bridge(
+                    instance.datamodel['bridge_name'])
+        else:
+            network_ref = None
+
+        if 'mac_address' in instance.datamodel:
+            mac_address = instance.datamodel['mac_address']
+        else:
+            mac_address = ''
+
         user = AuthManager().get_user(instance.datamodel['user_id'])
         vdi_uuid = yield self.fetch_image(
             instance.datamodel['image_id'], user, True)
@@ -90,6 +102,8 @@ class XenAPIConnection(object):
 
         vm_ref = yield self.create_vm(instance, kernel, ramdisk)
         yield self.create_vbd(vm_ref, vdi_ref, 0, True)
+        if network_ref:
+            yield self._create_vif(vm_ref, network_ref, mac_address)
         yield self._conn.xenapi.VM.start(vm_ref, False, False)
 
 
@@ -150,6 +164,35 @@ class XenAPIConnection(object):
         logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
                       vdi_ref)
         return vbd_ref
+
+
+    def _create_vif(self, vm_ref, network_ref, mac_address):
+        vif_rec = {}
+        vif_rec['device'] = '0'
+        vif_rec['network']= network_ref
+        vif_rec['VM'] = vm_ref
+        vif_rec['MAC'] = mac_address
+        vif_rec['MTU'] = '1500'
+        vif_rec['other_config'] = {}
+        vif_rec['qos_algorithm_type'] = ''
+        vif_rec['qos_algorithm_params'] = {}
+        logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
+                      network_ref)
+        vif_ref = self._conn.xenapi.VIF.create(vif_rec)
+        logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
+                      vm_ref, network_ref)
+        return vif_ref
+
+
+    def _find_network_with_bridge(self, bridge):
+        expr = 'field "bridge" = "%s"' % bridge
+        networks = self._conn.xenapi.network.get_all_records_where(expr)
+        if len(networks) == 1:
+            return networks.keys()[0]
+        elif len(networks) > 1:
+            raise Exception('Found non-unique network for bridge %s' % bridge)
+        else:
+            raise Exception('Found no network for bridge %s' % bridge)
 
 
     def fetch_image(self, image, user, use_sr):
@@ -213,13 +256,13 @@ class XenAPIConnection(object):
         return self._conn.xenapi.session.get_this_host(self._conn.handle)
 
 
-    power_state_from_xenapi = {
-        'Halted'   : power_state.SHUTDOWN,
-        'Running'  : power_state.RUNNING,
-        'Paused'   : power_state.PAUSED,
-        'Suspended': power_state.SHUTDOWN, # FIXME
-        'Crashed'  : power_state.CRASHED
-    }
+power_state_from_xenapi = {
+    'Halted'   : power_state.SHUTDOWN,
+    'Running'  : power_state.RUNNING,
+    'Paused'   : power_state.PAUSED,
+    'Suspended': power_state.SHUTDOWN, # FIXME
+    'Crashed'  : power_state.CRASHED
+}
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):
