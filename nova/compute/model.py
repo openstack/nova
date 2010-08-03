@@ -41,9 +41,6 @@ True
 """
 
 import datetime
-import logging
-import time
-import redis
 import uuid
 
 from nova import datastore
@@ -72,19 +69,22 @@ class InstanceDirectory(object):
         for instance_id in datastore.Redis.instance().smembers('project:%s:instances' % project):
             yield Instance(instance_id)
 
-    def by_node(self, node_id):
+    @datastore.absorb_connection_error
+    def by_node(self, node):
         """returns a list of instances for a node"""
+        for instance_id in datastore.Redis.instance().smembers('node:%s:instances' % node):
+            yield Instance(instance_id)
 
-        for instance in self.all:
-            if instance['node_name'] == node_id:
-                yield instance
-
-    def by_ip(self, ip_address):
+    def by_ip(self, ip):
         """returns an instance object that is using the IP"""
-        for instance in self.all:
-            if instance['private_dns_name'] == ip_address:
-                return instance
-        return None
+        # NOTE(vish): The ip association should be just a single value, but
+        #             to maintain consistency it is using the standard
+        #             association and the ugly method for retrieving
+        #             the first item in the set below.
+        result = datastore.Redis.instance().smembers('ip:%s:instances' % ip)
+        if not result:
+            return None
+        return Instance(list(result)[0])
 
     def by_volume(self, volume_id):
         """returns the instance a volume is attached to"""
@@ -122,7 +122,8 @@ class Instance(datastore.BasicModel):
                 'instance_id': self.instance_id,
                 'node_name': 'unassigned',
                 'project_id': 'unassigned',
-                'user_id': 'unassigned'}
+                'user_id': 'unassigned',
+                'private_dns_name': 'unassigned'}
 
     @property
     def identifier(self):
@@ -148,19 +149,22 @@ class Instance(datastore.BasicModel):
         """Call into superclass to save object, then save associations"""
         # NOTE(todd): doesn't track migration between projects/nodes,
         #             it just adds the first one
-        should_update_project = self.is_new_record()
-        should_update_node = self.is_new_record()
+        is_new = self.is_new_record()
+        node_set = (self.state['node_name'] != 'unassigned' and
+                    self.initial_state['node_name'] == 'unassigned')
         success = super(Instance, self).save()
-        if success and should_update_project:
+        if success and is_new:
             self.associate_with("project", self.project)
-        if success and should_update_node:
-            self.associate_with("node", self['node_name'])
+            self.associate_with("ip", self.state['private_dns_name'])
+        if success and node_set:
+            self.associate_with("node", self.state['node_name'])
         return True
 
     def destroy(self):
         """Destroy associations, then destroy the object"""
         self.unassociate_with("project", self.project)
-        self.unassociate_with("node", self['node_name'])
+        self.unassociate_with("node", self.state['node_name'])
+        self.unassociate_with("ip", self.state['private_dns_name'])
         return super(Instance, self).destroy()
 
 class Host(datastore.BasicModel):
