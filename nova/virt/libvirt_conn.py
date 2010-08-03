@@ -25,7 +25,6 @@ import json
 import logging
 import os.path
 import shutil
-import sys
 
 from twisted.internet import defer
 from twisted.internet import task
@@ -108,7 +107,8 @@ class LibvirtConnection(object):
     def _cleanup(self, instance):
         target = os.path.abspath(instance.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
-        shutil.rmtree(target)
+        if os.path.exists(target):
+            shutil.rmtree(target)
 
 
     @defer.inlineCallbacks
@@ -255,7 +255,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        
+
         Returns a list of all block devices for this domain.
         """
         domain = self._conn.lookupByName(instance_id)
@@ -298,7 +298,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        
+
         Returns a list of all network interfaces for this instance.
         """
         domain = self._conn.lookupByName(instance_id)
@@ -341,7 +341,7 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        """        
+        """
         domain = self._conn.lookupByName(instance_id)
         return domain.blockStats(disk)
 
@@ -350,6 +350,6 @@ class LibvirtConnection(object):
         """
         Note that this function takes an instance ID, not an Instance, so
         that it can be called by monitor.
-        """        
+        """
         domain = self._conn.lookupByName(instance_id)
         return domain.interfaceStats(interface)
