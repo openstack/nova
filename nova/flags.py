@@ -29,6 +29,14 @@ import gflags
 
 
 class FlagValues(gflags.FlagValues):
+    """Extension of gflags.FlagValues that allows undefined and runtime flags.
+
+    Unknown flags will be ignored when parsing the command line, but the
+    command line will be kept so that it can be replayed if new flags are
+    defined after the initial parsing.
+    
+    """
+
     def __init__(self):
         gflags.FlagValues.__init__(self)
         self.__dict__['__dirty'] = []
@@ -125,7 +133,7 @@ class FlagValues(gflags.FlagValues):
 FLAGS = FlagValues()
 
 
-def party_wrapper(func):
+def _wrapper(func):
     def _wrapped(*args, **kw):
         kw.setdefault('flag_values', FLAGS)
         func(*args, **kw)
@@ -133,16 +141,16 @@ def party_wrapper(func):
     return _wrapped
 
 
-DEFINE_string = party_wrapper(gflags.DEFINE_string)
-DEFINE_integer = party_wrapper(gflags.DEFINE_integer)
-DEFINE_bool = party_wrapper(gflags.DEFINE_bool)
-DEFINE_boolean = party_wrapper(gflags.DEFINE_boolean)
-DEFINE_float = party_wrapper(gflags.DEFINE_float)
-DEFINE_enum = party_wrapper(gflags.DEFINE_enum)
-DEFINE_list = party_wrapper(gflags.DEFINE_list)
-DEFINE_spaceseplist = party_wrapper(gflags.DEFINE_spaceseplist)
-DEFINE_multistring = party_wrapper(gflags.DEFINE_multistring)
-DEFINE_multi_int = party_wrapper(gflags.DEFINE_multi_int)
+DEFINE_string = _wrapper(gflags.DEFINE_string)
+DEFINE_integer = _wrapper(gflags.DEFINE_integer)
+DEFINE_bool = _wrapper(gflags.DEFINE_bool)
+DEFINE_boolean = _wrapper(gflags.DEFINE_boolean)
+DEFINE_float = _wrapper(gflags.DEFINE_float)
+DEFINE_enum = _wrapper(gflags.DEFINE_enum)
+DEFINE_list = _wrapper(gflags.DEFINE_list)
+DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
+DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
+DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
 
 
 def DECLARE(name, module_string, flag_values=FLAGS):
