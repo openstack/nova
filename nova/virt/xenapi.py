@@ -227,7 +227,7 @@ class XenAPIConnection(object):
     def get_info(self, instance_id):
         vm = self.lookup(instance_id)
         if vm is None:
-            raise Exception('instance not present %s' % instance.name)
+            raise Exception('instance not present %s' % instance_id)
         rec = self._conn.xenapi.VM.get_record(vm)
         return {'state': power_state_from_xenapi[rec['power_state']],
                 'max_mem': long(rec['memory_static_max']) >> 10,
