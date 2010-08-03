@@ -151,7 +151,8 @@ class Instance(datastore.BasicModel):
         #             it just adds the first one
         is_new = self.is_new_record()
         node_set = (self.state['node_name'] != 'unassigned' and
-                    self.initial_state['node_name'] == 'unassigned')
+                    self.initial_state.get('node_name', 'unassigned')
+                    == 'unassigned')
         success = super(Instance, self).save()
         if success and is_new:
             self.associate_with("project", self.project)
