@@ -227,11 +227,7 @@ class Volume(datastore.BasicModel):
 
     @defer.inlineCallbacks
     def destroy(self):
-        try:
-            yield self._remove_export()
-        except Exception as ex:
-            logging.debug("Ingnoring failure to remove export %s" % ex)
-            pass
+        yield self._remove_export()
         yield self._delete_lv()
         super(Volume, self).destroy()
 
@@ -250,7 +246,7 @@ class Volume(datastore.BasicModel):
     def _delete_lv(self):
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            self['volume_id']))
+                                            self['volume_id']), error_ok=1)
 
     @defer.inlineCallbacks
     def _setup_export(self):
@@ -275,10 +271,10 @@ class Volume(datastore.BasicModel):
     def _remove_export(self):
         yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self['shelf_id'],
-                                                    self['blade_id']))
+                                                    self['blade_id']), error_ok=1)
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
-                                                       self['blade_id']))
+                                                       self['blade_id']), error_ok=1)
 
 
 class FakeVolume(Volume):
