@@ -39,9 +39,9 @@ from nova import service
 from nova import utils
 from nova.compute import disk
 from nova.compute import model
-from nova.compute import network
 from nova.compute import power_state
 from nova.compute.instance_types import INSTANCE_TYPES
+from nova.network import model as net_model
 from nova.objectstore import image # for image_path flag
 from nova.virt import connection as virt_connection
 from nova.volume import service as volume_service
@@ -117,10 +117,10 @@ class ComputeService(service.Service):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
         inst = self.instdir.get(instance_id)
-        if not FLAGS.simple_network:
+        if inst.get('network_type', 'dhcp') == 'dhcp':
             # TODO: Get the real security group of launch in here
             security_group = "default"
-            net = network.BridgedNetwork.get_network_for_project(inst['user_id'],
+            net = net_model.BridgedNetwork.get_network_for_project(inst['user_id'],
                                                              inst['project_id'],
                                             security_group).express()
         inst['node_name'] = FLAGS.node_name
