@@ -41,7 +41,7 @@ from nova.compute import disk
 from nova.compute import model
 from nova.compute import power_state
 from nova.compute.instance_types import INSTANCE_TYPES
-from nova.network import model as net_model
+from nova.network import service as network_service
 from nova.objectstore import image # for image_path flag
 from nova.virt import connection as virt_connection
 from nova.volume import service as volume_service
@@ -117,12 +117,17 @@ class ComputeService(service.Service):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
         inst = self.instdir.get(instance_id)
-        if inst.get('network_type', 'dhcp') == 'dhcp':
-            # TODO: Get the real security group of launch in here
-            security_group = "default"
-            net = net_model.BridgedNetwork.get_network_for_project(inst['user_id'],
-                                                             inst['project_id'],
-                                            security_group).express()
+        # TODO: Get the real security group of launch in here
+        security_group = "default"
+        # NOTE(vish): passing network type allows us to express the
+        #             network without making a call to network to find
+        #             out which type of network to setup
+        network_service.setup_compute_network(
+                                           inst.get('network_type', 'vlan'),
+                                           inst['user_id'],
+                                           inst['project_id'],
+                                           security_group)
+
         inst['node_name'] = FLAGS.node_name
         inst.save()
         # TODO(vish) check to make sure the availability zone matches

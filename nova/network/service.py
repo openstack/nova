@@ -20,8 +20,6 @@
 Network Nodes are responsible for allocating ips and setting up network
 """
 
-import logging
-
 from twisted.internet import defer
 
 from nova import datastore
@@ -29,6 +27,7 @@ from nova import flags
 from nova import service
 from nova import utils
 from nova.auth import manager
+from nova.exception import NotFound
 from nova.network import exception
 from nova.network import model
 
@@ -53,9 +52,23 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
+def type_to_class(network_type):
+    if network_type == 'flat':
+        return FlatNetworkService
+    elif network_type  == 'vlan':
+        return VlanNetworkService
+    raise NotFound("Couldn't find %s network type" % network_type)
+
+
+def setup_compute_network(network_type, user_id, project_id, security_group):
+    srv = type_to_class(network_type)
+    srv.setup_compute_network(network_type, user_id, project_id, security_group)
+
+
 def get_host_for_project(project_id):
     redis = datastore.Redis.instance()
     return redis.get(_host_key(project_id))
+
 
 def _host_key(project_id):
     return "network_host:%s" % project_id
@@ -88,6 +101,12 @@ class BaseNetworkService(service.Service):
         """Subclass implements return of ip to the pool"""
         raise NotImplementedError()
 
+    @classmethod
+    def setup_compute_network(self, user_id, project_id, security_group,
+                              *args, **kwargs):
+        """Sets up matching network for compute hosts"""
+        raise NotImplementedError()
+
     def allocate_elastic_ip(self, user_id, project_id):
         """Gets a elastic ip from the pool"""
         # NOTE(vish): Replicating earlier decision to use 'public' as
@@ -111,6 +130,11 @@ class BaseNetworkService(service.Service):
 class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
+    @classmethod
+    def setup_compute_network(self, fixed_ip, *args, **kwargs):
+        """Network is created manually"""
+        pass
+
     def allocate_fixed_ip(self, user_id, project_id,
                           security_group='default',
                           *args, **kwargs):
@@ -118,6 +142,9 @@ class FlatNetworkService(BaseNetworkService):
 
         Flat network just grabs the next available ip from the pool
         """
+        # NOTE(vish): Some automation could be done here.  For example,
+        #             creating the flat_network_bridge and setting up
+        #             a gateway.  This is all done manually atm
         redis = datastore.Redis.instance()
         if not redis.exists('ips') and not len(redis.keys('instances:*')):
             for fixed_ip in FLAGS.flat_network_ips:
@@ -125,15 +152,16 @@ class FlatNetworkService(BaseNetworkService):
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
             raise exception.NoMoreAddresses()
-        return defer.succeed({'network_type': 'injected',
-                'mac_address': utils.generate_mac(),
-                'private_dns_name': str(fixed_ip),
-                'bridge_name': FLAGS.flat_network_bridge,
-                'network_network': FLAGS.flat_network_network,
-                'network_netmask': FLAGS.flat_network_netmask,
-                'network_gateway': FLAGS.flat_network_gateway,
-                'network_broadcast': FLAGS.flat_network_broadcast,
-                'network_dns': FLAGS.flat_network_dns})
+        return defer.succeed({'inject_network': True,
+                            'network_type': FLAGS.network_type,
+                            'mac_address': utils.generate_mac(),
+                            'private_dns_name': str(fixed_ip),
+                            'bridge_name': FLAGS.flat_network_bridge,
+                            'network_network': FLAGS.flat_network_network,
+                            'network_netmask': FLAGS.flat_network_netmask,
+                            'network_gateway': FLAGS.flat_network_gateway,
+                            'network_broadcast': FLAGS.flat_network_broadcast,
+                            'network_dns': FLAGS.flat_network_dns})
 
     def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
         """Returns an ip to the pool"""
@@ -141,7 +169,10 @@ class FlatNetworkService(BaseNetworkService):
 
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
-
+    # NOTE(vish): A lot of the interactions with network/model.py can be
+    #             simplified and improved.  Also there it may be useful
+    #             to support vlans separately from dhcp, instead of having
+    #             both of them together in this class.
     def allocate_fixed_ip(self, user_id, project_id,
                           security_group='default',
                           vpn=False, *args, **kwargs):
@@ -152,10 +183,10 @@ class VlanNetworkService(BaseNetworkService):
             fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
         else:
             fixed_ip = net.allocate_ip(user_id, project_id, mac)
-        return defer.succeed({'network_type': 'dhcp',
-                'bridge_name': net['bridge_name'],
-                'mac_address': mac,
-                'private_dns_name' : fixed_ip})
+        return defer.succeed({'network_type': FLAGS.network_type,
+                              'bridge_name': net['bridge_name'],
+                              'mac_address': mac,
+                              'private_dns_name' : fixed_ip})
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):
@@ -173,4 +204,14 @@ class VlanNetworkService(BaseNetworkService):
         for project in manager.AuthManager().get_projects():
             model.get_project_network(project.id).express()
 
-
+    @classmethod
+    def setup_compute_network(self, user_id, project_id, security_group,
+                              *args, **kwargs):
+        """Sets up matching network for compute hosts"""
+        # NOTE(vish): Use BridgedNetwork instead of DHCPNetwork because
+        #             we don't want to run dnsmasq on the client machines
+        net = model.BridgedNetwork.get_network_for_project(
+                                            user_id,
+                                            project_id,
+                                            security_group)
+        net.express()

@@ -204,7 +204,7 @@ class LibvirtConnection(object):
 
         key = data['key_data']
         net = None
-        if data.get('network_type', None) == 'injected':
+        if data.get('inject_network', False):
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': data['private_dns_name'],
                                   'network': data['network_network'],
