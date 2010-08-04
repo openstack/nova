@@ -38,6 +38,7 @@ from nova.auth import manager
 from nova.compute import model
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.endpoint import images
+from nova.network import service as network_service
 from nova.volume import service
 
 
@@ -468,25 +469,31 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
-        alloc_result = rpc.call(self._get_network_host(context),
+        network_host = yield self._get_network_host(context)
+        alloc_result = rpc.call(network_host,
                          {"method": "allocate_elastic_ip"})
         public_ip = alloc_result['result']
         return defer.succeed({'addressSet': [{'publicIp' : public_ip}]})
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
-        rpc.cast(self._get_network_host(context),
+        network_host = yield self._get_network_host(context)
+        rpc.cast(network_host,
                          {"method": "deallocate_elastic_ip",
                           "args": {"elastic_ip": public_ip}})
         return defer.succeed({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance = self._get_instance(context, instance_id)
         address = self._get_address(context, public_ip)
-        rpc.cast(self._get_network_host(context),
+        network_host = yield self._get_network_host(context)
+        rpc.cast(network_host,
                          {"method": "associate_elastic_ip",
                           "args": {"elastic_ip": address['public_ip'],
                                    "fixed_ip": instance['private_dns_name'],
@@ -494,23 +501,26 @@ class CloudController(object):
         return defer.succeed({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(context, public_ip)
-        self.network.disassociate_address(public_ip)
+        network_host = yield self._get_network_host(context)
+        rpc.cast(network_host,
+                         {"method": "associate_elastic_ip",
+                          "args": {"elastic_ip": address['public_ip']}})
         return defer.succeed({'disassociateResponse': ["Address disassociated."]})
 
-    def release_ip(self, context, private_ip, **kwargs):
-        self.network.release_ip(private_ip)
-        return defer.succeed({'releaseResponse': ["Address released."]})
-
-    def lease_ip(self, context, private_ip, **kwargs):
-        self.network.lease_ip(private_ip)
-        return defer.succeed({'leaseResponse': ["Address leased."]})
-
-    def get_network_host(self, context):
-        # FIXME(vish): this is temporary until we store net hosts for project
-        import socket
-        return socket.gethostname()
+    @defer.inlineCallbacks
+    def _get_network_host(self, context):
+        """Retrieves the network host for a project"""
+        host = network_service.get_host_for_project(context.project.id)
+        if not host:
+            result = yield rpc.call(FLAGS.network_topic,
+                                    {"method": "get_network_host",
+                                     "args": {"user_id": context.user.id,
+                                              "project_id": context.project.id}})
+            host = result['result']
+        defer.returnValue(host)
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
@@ -545,27 +555,21 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
+        network_host = yield self._get_network_host(context)
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        create_result = yield rpc.call(FLAGS.network_topic,
-                 {"method": "create_network",
-                  "args": {"user_id": context.user.id,
-                           "project_id": context.project.id,
-                           "security_group": security_group}})
-        bridge_name = create_result['result']
-        net_host = self._get_network_host(context)
         for num in range(int(kwargs['max_count'])):
             vpn = False
             if image_id  == FLAGS.vpn_image_id:
                 vpn = True
-            allocate_result = yield rpc.call(net_host,
+            allocate_result = yield rpc.call(network_host,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
+                               "security_group": security_group,
                                "vpn": vpn}})
+            allocate_data = allocate_result['result']
             inst = self.instdir.new()
-            inst['mac_address'] = allocate_result['result']['mac_address']
-            inst['private_dns_name'] = allocate_result['result']['ip_address']
             inst['image_id'] = image_id
             inst['kernel_id'] = kernel_id
             inst['ramdisk_id'] = ramdisk_id
@@ -578,7 +582,9 @@ class CloudController(object):
             inst['user_id'] = context.user.id
             inst['project_id'] = context.project.id
             inst['ami_launch_index'] = num
-            inst['bridge_name'] = bridge_name
+            inst['security_group'] = security_group
+            for (key, value) in allocate_data:
+                inst[key] = value
 
             inst.save()
             rpc.cast(FLAGS.compute_topic,
