@@ -22,6 +22,8 @@ Network Nodes are responsible for allocating ips and setting up network
 
 import logging
 
+from twisted.internet import defer
+
 from nova import datastore
 from nova import flags
 from nova import service
@@ -72,9 +74,9 @@ class BaseNetworkService(service.Service):
         redis = datastore.Redis.instance()
         key = _host_key(project_id)
         if redis.setnx(key, FLAGS.node_name):
-            return FLAGS.node_name
+            return defer.succeed(FLAGS.node_name)
         else:
-            return redis.get(key)
+            return defer.succeed(redis.get(key))
 
     def allocate_fixed_ip(self, user_id, project_id,
                           security_group='default',
@@ -120,7 +122,7 @@ class FlatNetworkService(BaseNetworkService):
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
             raise exception.NoMoreAddresses()
-        return {'network_type': 'injected',
+        return defer.succeed({'network_type': 'injected',
                 'mac_address': utils.generate_mac(),
                 'private_dns_name': str(fixed_ip),
                 'bridge_name': FLAGS.flat_network_bridge,
@@ -128,7 +130,7 @@ class FlatNetworkService(BaseNetworkService):
                 'network_netmask': FLAGS.flat_network_netmask,
                 'network_gateway': FLAGS.flat_network_gateway,
                 'network_broadcast': FLAGS.flat_network_broadcast,
-                'network_dns': FLAGS.flat_network_dns}
+                'network_dns': FLAGS.flat_network_dns})
 
     def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
         """Returns an ip to the pool"""
@@ -147,18 +149,18 @@ class VlanNetworkService(BaseNetworkService):
             fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
         else:
             fixed_ip = net.allocate_ip(user_id, project_id, mac)
-        return {'network_type': 'dhcp',
+        return defer.succeed({'network_type': 'dhcp',
                 'bridge_name': net['bridge_name'],
                 'mac_address': mac,
-                'private_dns_name' : fixed_ip}
+                'private_dns_name' : fixed_ip})
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):
         """Returns an ip to the pool"""
-        model.get_network_by_address(fixed_ip).deallocate_ip(fixed_ip)
+        return model.get_network_by_address(fixed_ip).deallocate_ip(fixed_ip)
 
     def lease_ip(self, address):
-        return self. __get_network_by_address(address).lease_ip(address)
+        return model.get_network_by_address(address).lease_ip(address)
 
     def release_ip(self, address):
         return model.get_network_by_address(address).release_ip(address)
