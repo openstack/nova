@@ -419,6 +419,12 @@ class AuthManager(object):
                 raise exception.NotAuthorized('Signature does not match')
         return (user, project)
 
+    def get_access_key(self, user, project):
+        """Get an access key that includes user and project"""
+        if not isinstance(user, User):
+            user = self.get_user(user)
+        return "%s:%s" % (user.access, Project.safe_id(project))
+
     def is_superuser(self, user):
         """Checks for superuser status, allowing user to bypass rbac
 

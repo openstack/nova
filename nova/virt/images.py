@@ -28,6 +28,7 @@ import urlparse
 from nova import flags
 from nova import process
 from nova.auth import signer
+from nova.auth import manager
 
 FLAGS = flags.FLAGS
 
@@ -35,14 +36,14 @@ flags.DEFINE_bool('use_s3', True,
                   'whether to get images from s3 or use local copy')
 
 
-def fetch(image, path, user):
+def fetch(image, path, user, project):
     if FLAGS.use_s3:
         f = _fetch_s3_image
     else:
         f = _fetch_local_image
-    return f(image, path, user)
+    return f(image, path, user, project)
 
-def _fetch_s3_image(image, path, user):
+def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
 
     # This should probably move somewhere else, like e.g. a download_as
@@ -52,8 +53,11 @@ def _fetch_s3_image(image, path, user):
     headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
     (_, _, url_path, _, _, _) = urlparse.urlparse(url)
-    auth = signer.Signer(user.secret.encode()).s3_authorization(headers, 'GET', url_path)
-    headers['Authorization'] = 'AWS %s:%s' % (user.access, auth)
+    access = manager.AuthManager().get_access_key(user, project)
+    signature = signer.Signer(user.secret.encode()).s3_authorization(headers,
+                                                                     'GET',
+                                                                     url_path)
+    headers['Authorization'] = 'AWS %s:%s' % (access, signature)
 
     cmd = ['/usr/bin/curl', '--silent', url]
     for (k,v) in headers.iteritems():
