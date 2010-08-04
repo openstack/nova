@@ -71,8 +71,8 @@ class NetworkTestCase(test.TrialTestCase):
     def test_allocate_deallocate_fixed_ip(self):
         result  = self.service.allocate_fixed_ip(
                 self.user.id, self.projects[0].id)
-        address = result['ip']
-        mac = result['mac']
+        address = result['private_dns_name']
+        mac = result['mac_address']
         logging.debug("Was allocated %s" % (address))
         net = model.get_project_network(self.projects[0].id, "default")
         self.assertEqual(True, is_in_project(address, self.projects[0].id))
@@ -90,12 +90,12 @@ class NetworkTestCase(test.TrialTestCase):
         hostname = "test-host"
         result = self.service.allocate_fixed_ip(
                     self.user.id, self.projects[0].id)
-        mac = result['mac']
-        address = result['ip']
+        mac = result['mac_address']
+        address = result['private_dns_name']
         result = self.service.allocate_fixed_ip(
                 self.user, self.projects[1].id)
-        secondmac = result['mac']
-        secondaddress = result['ip']
+        secondmac = result['mac_address']
+        secondaddress = result['private_dns_name']
 
         net = model.get_project_network(self.projects[0].id, "default")
         secondnet = model.get_project_network(self.projects[1].id, "default")
@@ -124,22 +124,22 @@ class NetworkTestCase(test.TrialTestCase):
     def test_subnet_edge(self):
         result = self.service.allocate_fixed_ip(self.user.id,
                                                        self.projects[0].id)
-        firstaddress = result['ip']
+        firstaddress = result['private_dns_name']
         hostname = "toomany-hosts"
         for i in range(1,5):
             project_id = self.projects[i].id
             result = self.service.allocate_fixed_ip(
                     self.user, project_id)
-            mac = result['mac']
-            address = result['ip']
+            mac = result['mac_address']
+            address = result['private_dns_name']
             result = self.service.allocate_fixed_ip(
                     self.user, project_id)
-            mac2 = result['mac']
-            address2 = result['ip']
+            mac2 = result['mac_address']
+            address2 = result['private_dns_name']
             result = self.service.allocate_fixed_ip(
                    self.user, project_id)
-            mac3 = result['mac']
-            address3 = result['ip']
+            mac3 = result['mac_address']
+            address3 = result['private_dns_name']
             self.assertEqual(False, is_in_project(address, self.projects[0].id))
             self.assertEqual(False, is_in_project(address2, self.projects[0].id))
             self.assertEqual(False, is_in_project(address3, self.projects[0].id))
@@ -194,8 +194,8 @@ class NetworkTestCase(test.TrialTestCase):
         addresses = {}
         for i in range(0, (num_available_ips - 1)):
             result = self.service.allocate_fixed_ip(self.user.id, self.projects[0].id)
-            macs[i] = result['mac']
-            addresses[i] = result['ip']
+            macs[i] = result['mac_address']
+            addresses[i] = result['private_dns_name']
             self.dnsmasq.issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
 
         self.assertRaises(NoMoreAddresses, self.service.allocate_fixed_ip, self.user.id, self.projects[0].id)

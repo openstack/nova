@@ -23,7 +23,6 @@ Network Nodes are responsible for allocating ips and setting up network
 import logging
 
 from nova import datastore
-from nova import exception as nova_exception
 from nova import flags
 from nova import service
 from nova import utils
@@ -52,6 +51,13 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
+def get_host_for_project(project_id):
+    redis = datastore.Redis.instance()
+    host = redis.get(__host_key(project_id))
+
+def __host_key(project_id):
+    return "network_host:%s" % project_id
+
 
 class BaseNetworkService(service.Service):
     """Implements common network service functionality
@@ -61,12 +67,18 @@ class BaseNetworkService(service.Service):
     def __init__(self, *args, **kwargs):
         self.network = model.PublicNetworkController()
 
-    def create_network(self, user_id, project_id, security_group='default',
-                       *args, **kwargs):
-        """Subclass implements creating network and returns network data"""
-        raise NotImplementedError()
+    def get_network_host(self, user_id, project_id, *args, **kwargs):
+        """Safely becomes the host of the projects network"""
+        redis = datastore.Redis.instance()
+        key = __host_key(project_id)
+        if redis.setnx(key, FLAGS.node_name):
+            return FLAGS.node_name
+        else:
+            return redis.get(key)
 
-    def allocate_fixed_ip(self, user_id, project_id, *args, **kwargs):
+    def allocate_fixed_ip(self, user_id, project_id,
+                          security_group='default',
+                          *args, **kwargs):
         """Subclass implements getting fixed ip from the pool"""
         raise NotImplementedError()
 
@@ -92,22 +104,11 @@ class BaseNetworkService(service.Service):
 
 
 class FlatNetworkService(BaseNetworkService):
-    def create_network(self, user_id, project_id, security_group='default',
-                       *args, **kwargs):
-        """Creates network and returns bridge
+    """Basic network where no vlans are used"""
 
-        Flat network service simply returns a common bridge regardless of
-        project.
-        """
-        return {'network_type': 'injected',
-                'bridge_name': FLAGS.flat_network_bridge,
-                'network_network': FLAGS.flat_network_network,
-                'network_netmask': FLAGS.flat_network_netmask,
-                'network_gateway': FLAGS.flat_network_gateway,
-                'network_broadcast': FLAGS.flat_network_broadcast,
-                'network_dns': FLAGS.flat_network_dns}
-
-    def allocate_fixed_ip(self, user_id, project_id, *args, **kwargs):
+    def allocate_fixed_ip(self, user_id, project_id,
+                          security_group='default',
+                          *args, **kwargs):
         """Gets a fixed ip from the pool
 
         Flat network just grabs the next available ip from the pool
@@ -119,23 +120,26 @@ class FlatNetworkService(BaseNetworkService):
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
             raise exception.NoMoreAddresses()
-        return {'mac': utils.generate_mac(),
-                'ip' : str(fixed_ip)}
+        return {'network_type': 'injected',
+                'mac_address': utils.generate_mac(),
+                'private_dns_name': str(fixed_ip),
+                'bridge_name': FLAGS.flat_network_bridge,
+                'network_network': FLAGS.flat_network_network,
+                'network_netmask': FLAGS.flat_network_netmask,
+                'network_gateway': FLAGS.flat_network_gateway,
+                'network_broadcast': FLAGS.flat_network_broadcast,
+                'network_dns': FLAGS.flat_network_dns}
 
     def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
         """Returns an ip to the pool"""
         datastore.Redis.instance().sadd('ips', fixed_ip)
 
 class VlanNetworkService(BaseNetworkService):
-    """Allocates ips and sets up networks"""
-    def create_network(self, user_id, project_id, security_group='default',
-                       *args, **kwargs):
-        """Creates network and returns bridge"""
-        net = model.get_project_network(project_id, security_group)
-        return {'network_type': 'dhcp',
-                'bridge_name': net['bridge_name']}
+    """Vlan network with dhcp"""
 
-    def allocate_fixed_ip(self, user_id, project_id, vpn=False, *args, **kwargs):
+    def allocate_fixed_ip(self, user_id, project_id,
+                          security_group='default',
+                          vpn=False, *args, **kwargs):
         """Gets a fixed ip from the pool """
         mac = utils.generate_mac()
         net = model.get_project_network(project_id)
@@ -143,8 +147,10 @@ class VlanNetworkService(BaseNetworkService):
             fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
         else:
             fixed_ip = net.allocate_ip(user_id, project_id, mac)
-        return {'mac': mac,
-                'ip' : fixed_ip}
+        return {'network_type': 'dhcp',
+                'bridge_name': net['bridge_name'],
+                'mac_address': mac,
+                'private_dns_name' : fixed_ip}
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):
