@@ -47,6 +47,10 @@ flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
 
+flags.DEFINE_string('libvirt_type',
+                    'kvm',
+                    'Libvirt domain type (kvm, qemu, etc)')
+
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
@@ -235,6 +239,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): lazy lazy hack because xml is annoying
         xml_info['nova'] = json.dumps(instance.datamodel.copy())
+        xml_info['type'] = FLAGS.libvirt_type
         libvirt_xml = libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 

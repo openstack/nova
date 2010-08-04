@@ -24,7 +24,6 @@ import logging
 import os
 import shutil
 import string
-import sys
 import tempfile
 import uuid
 import zipfile
@@ -325,8 +324,7 @@ class AuthManager(object):
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:
-            cls._instance = super(AuthManager, cls).__new__(
-                    cls, *args, **kwargs)
+            cls._instance = super(AuthManager, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, driver=None, *args, **kwargs):
