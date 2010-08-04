@@ -308,7 +308,7 @@ class CloudController(object):
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        address = self.network_model.PublicAddress.lookup(public_ip)
+        address = network_model.PublicAddress.lookup(public_ip)
         if address and (context.user.is_admin() or address['project_id'] == context.project.id):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -417,7 +417,7 @@ class CloudController(object):
                 'code': instance.get('state', 0),
                 'name': instance.get('state_description', 'pending')
             }
-            i['public_dns_name'] = self.network_model.get_public_ip_for_instance(
+            i['public_dns_name'] = network_model.get_public_ip_for_instance(
                                                         i['instance_id'])
             i['private_dns_name'] = instance.get('private_dns_name', None)
             if not i['public_dns_name']:
@@ -452,10 +452,10 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in self.network_model.PublicAddress.all():
+        for address in network_model.PublicAddress.all():
             # TODO(vish): implement a by_project iterator for addresses
             if (context.user.is_admin() or
-                address['project_id'] == self.project.id):
+                address['project_id'] == context.project.id):
                 address_rv = {
                     'public_ip': address['address'],
                     'instance_id' : address.get('instance_id', 'free')
@@ -609,7 +609,7 @@ class CloudController(object):
                 logging.warning("Instance %s was not found during terminate"
                                 % i)
                 continue
-            address = self.network_model.get_public_ip_for_instance(i)
+            address = network_model.get_public_ip_for_instance(i)
             if address:
                 elastic_ip = address['public_ip']
                 logging.debug("Disassociating address %s" % elastic_ip)
