@@ -611,9 +611,8 @@ class CloudController(object):
                 logging.warning("Instance %s was not found during terminate"
                                 % i)
                 continue
-            address = network_model.get_public_ip_for_instance(i)
-            if address:
-                elastic_ip = address['public_ip']
+            elastic_ip = network_model.get_public_ip_for_instance(i)
+            if elastic_ip:
                 logging.debug("Disassociating address %s" % elastic_ip)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
