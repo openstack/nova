@@ -20,8 +20,6 @@
 Network Nodes are responsible for allocating ips and setting up network
 """
 
-from twisted.internet import defer
-
 from nova import datastore
 from nova import flags
 from nova import service
@@ -87,9 +85,9 @@ class BaseNetworkService(service.Service):
         redis = datastore.Redis.instance()
         key = _host_key(project_id)
         if redis.setnx(key, FLAGS.node_name):
-            return defer.succeed(FLAGS.node_name)
+            return FLAGS.node_name
         else:
-            return defer.succeed(redis.get(key))
+            return redis.get(key)
 
     def allocate_fixed_ip(self, user_id, project_id,
                           security_group='default',
@@ -152,16 +150,16 @@ class FlatNetworkService(BaseNetworkService):
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
             raise exception.NoMoreAddresses()
-        return defer.succeed({'inject_network': True,
-                            'network_type': FLAGS.network_type,
-                            'mac_address': utils.generate_mac(),
-                            'private_dns_name': str(fixed_ip),
-                            'bridge_name': FLAGS.flat_network_bridge,
-                            'network_network': FLAGS.flat_network_network,
-                            'network_netmask': FLAGS.flat_network_netmask,
-                            'network_gateway': FLAGS.flat_network_gateway,
-                            'network_broadcast': FLAGS.flat_network_broadcast,
-                            'network_dns': FLAGS.flat_network_dns})
+        return {'inject_network': True,
+                'network_type': FLAGS.network_type,
+                'mac_address': utils.generate_mac(),
+                'private_dns_name': str(fixed_ip),
+                'bridge_name': FLAGS.flat_network_bridge,
+                'network_network': FLAGS.flat_network_network,
+                'network_netmask': FLAGS.flat_network_netmask,
+                'network_gateway': FLAGS.flat_network_gateway,
+                'network_broadcast': FLAGS.flat_network_broadcast,
+                'network_dns': FLAGS.flat_network_dns}
 
     def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
         """Returns an ip to the pool"""
@@ -183,10 +181,10 @@ class VlanNetworkService(BaseNetworkService):
             fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
         else:
             fixed_ip = net.allocate_ip(user_id, project_id, mac)
-        return defer.succeed({'network_type': FLAGS.network_type,
-                              'bridge_name': net['bridge_name'],
-                              'mac_address': mac,
-                              'private_dns_name' : fixed_ip})
+        return {'network_type': FLAGS.network_type,
+                'bridge_name': net['bridge_name'],
+                'mac_address': mac,
+                'private_dns_name' : fixed_ip}
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):

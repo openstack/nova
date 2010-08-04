@@ -238,12 +238,12 @@ def send_message(topic, message, wait=True):
                                       exchange=msg_id,
                                       auto_delete=True,
                                       exchange_type="direct",
-                                      routing_key=msg_id,
-                                      durable=False)
+                                      routing_key=msg_id)
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
                                     exchange=FLAGS.control_exchange,
+                                    durable=False,
                                     exchange_type="topic",
                                     routing_key=topic)
     publisher.send(message)
