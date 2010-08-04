@@ -399,12 +399,6 @@ class PublicNetworkController(BaseNetwork):
         for address in self.assigned:
             yield PublicAddress(address)
 
-    def get_public_ip_for_instance(self, instance_id):
-        # FIXME: this should be a lookup - iteration won't scale
-        for address_record in self.host_objs:
-            if address_record.get('instance_id', 'available') == instance_id:
-                return address_record['address']
-
     def get_host(self, host):
         if host in self.assigned:
             return PublicAddress(host)
@@ -546,4 +540,10 @@ def get_network_by_interface(iface, security_group='default'):
     return get_project_network(project_id, security_group)
 
 
+
+def get_public_ip_for_instance(self, instance_id):
+    # FIXME: this should be a lookup - iteration won't scale
+    for address_record in PublicAddress.all():
+        if address_record.get('instance_id', 'available') == instance_id:
+            return address_record['address']
 

@@ -39,6 +39,7 @@ from nova.compute import model
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.endpoint import images
 from nova.network import service as network_service
+from nova.network import model as network_model
 from nova.volume import service
 
 
@@ -307,7 +308,7 @@ class CloudController(object):
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        address = self.network.get_host(public_ip)
+        address = self.network_model.PublicAddress.lookup(public_ip)
         if address and (context.user.is_admin() or address['project_id'] == context.project.id):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -416,7 +417,7 @@ class CloudController(object):
                 'code': instance.get('state', 0),
                 'name': instance.get('state_description', 'pending')
             }
-            i['public_dns_name'] = self.network.get_public_ip_for_instance(
+            i['public_dns_name'] = self.network_model.get_public_ip_for_instance(
                                                         i['instance_id'])
             i['private_dns_name'] = instance.get('private_dns_name', None)
             if not i['public_dns_name']:
@@ -451,7 +452,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in self.network.host_objs:
+        for address in self.network_model.PublicAddress.all():
             # TODO(vish): implement a by_project iterator for addresses
             if (context.user.is_admin() or
                 address['project_id'] == self.project.id):
@@ -520,7 +521,7 @@ class CloudController(object):
                                      "args": {"user_id": context.user.id,
                                               "project_id": context.project.id}})
             host = result['result']
-            defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
+        defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
@@ -608,9 +609,10 @@ class CloudController(object):
                 logging.warning("Instance %s was not found during terminate"
                                 % i)
                 continue
-            elastic_ip = instance.get('public_dns_name', None)
-            if elastic_ip:
-                logging.debug("Deallocating address %s" % elastic_ip)
+            address = self.network_model.get_public_ip_for_instance(i)
+            if address:
+                elastic_ip = address['public_ip']
+                logging.debug("Disassociating address %s" % elastic_ip)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
@@ -626,7 +628,7 @@ class CloudController(object):
                 #             checking this later.  Perhaps in the scheduler?
                 rpc.cast(network_topic,
                          {"method": "deallocate_fixed_ip",
-                          "args": {"elastic_ip": elastic_ip}})
+                          "args": {"fixed_ip": fixed_ip}})
 
             if instance.get('node_name', 'unassigned') != 'unassigned':
                 # NOTE(joshua?): It's also internal default
