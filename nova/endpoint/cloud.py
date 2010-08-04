@@ -584,7 +584,7 @@ class CloudController(object):
             inst['project_id'] = context.project.id
             inst['ami_launch_index'] = num
             inst['security_group'] = security_group
-            for (key, value) in allocate_data:
+            for (key, value) in allocate_data.iteritems():
                 inst[key] = value
 
             inst.save()
