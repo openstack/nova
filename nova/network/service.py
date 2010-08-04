@@ -88,9 +88,12 @@ class BaseNetworkService(service.Service):
         """Subclass implements return of ip to the pool"""
         raise NotImplementedError()
 
-    def allocate_elastic_ip(self):
+    def allocate_elastic_ip(self, user_id, project_id):
         """Gets a elastic ip from the pool"""
-        return self.network.allocate_ip()
+        # NOTE(vish): Replicating earlier decision to use 'public' as
+        #             mac address name, although this should probably
+        #             be done inside of the PublicNetworkController
+        return self.network.allocate_ip(user_id, project_id, 'public')
 
     def associate_elastic_ip(self, elastic_ip, fixed_ip, instance_id):
         """Associates an elastic ip to a fixed ip"""

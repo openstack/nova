@@ -412,6 +412,10 @@ class PublicNetworkController(BaseNetwork):
         PublicAddress(host).destroy()
         datastore.Redis.instance().hdel(self._hosts_key, host)
 
+    def deallocate_ip(self, ip_str):
+        # NOTE(vish): cleanup is now done on release by the parent class
+	self.release_ip(ip_str)
+
     def associate_address(self, public_ip, private_ip, instance_id):
         if not public_ip in self.assigned:
             raise exception.AddressNotAllocated()
@@ -541,7 +545,7 @@ def get_network_by_interface(iface, security_group='default'):
 
 
 
-def get_public_ip_for_instance(self, instance_id):
+def get_public_ip_for_instance(instance_id):
     # FIXME: this should be a lookup - iteration won't scale
     for address_record in PublicAddress.all():
         if address_record.get('instance_id', 'available') == instance_id:

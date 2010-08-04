@@ -473,8 +473,10 @@ class CloudController(object):
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
         network_topic = yield self._get_network_topic(context)
-        alloc_result = rpc.call(network_topic,
-                         {"method": "allocate_elastic_ip"})
+        alloc_result = yield rpc.call(network_topic,
+                         {"method": "allocate_elastic_ip",
+                          "args": {"user_id": context.user.id,
+                                   "project_id": context.project.id}})
         public_ip = alloc_result['result']
         defer.returnValue({'addressSet': [{'publicIp' : public_ip}]})
 
@@ -496,7 +498,7 @@ class CloudController(object):
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "associate_elastic_ip",
-                          "args": {"elastic_ip": address['public_ip'],
+                          "args": {"elastic_ip": address['address'],
                                    "fixed_ip": instance['private_dns_name'],
                                    "instance_id": instance['instance_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
@@ -507,8 +509,8 @@ class CloudController(object):
         address = self._get_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_elastic_ip",
-                          "args": {"elastic_ip": address['public_ip']}})
+                         {"method": "disassociate_elastic_ip",
+                          "args": {"elastic_ip": address['address']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
