@@ -55,7 +55,7 @@ flags.DEFINE_string('flat_network_dns', '8.8.4.4',
 
 def get_host_for_project(project_id):
     redis = datastore.Redis.instance()
-    host = redis.get(_host_key(project_id))
+    return redis.get(_host_key(project_id))
 
 def _host_key(project_id):
     return "network_host:%s" % project_id

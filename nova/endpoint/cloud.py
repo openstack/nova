@@ -471,8 +471,8 @@ class CloudController(object):
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
-        network_host = yield self._get_network_host(context)
-        alloc_result = rpc.call(network_host,
+        network_topic = yield self._get_network_topic(context)
+        alloc_result = rpc.call(network_topic,
                          {"method": "allocate_elastic_ip"})
         public_ip = alloc_result['result']
         defer.returnValue({'addressSet': [{'publicIp' : public_ip}]})
@@ -481,8 +481,8 @@ class CloudController(object):
     @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
-        network_host = yield self._get_network_host(context)
-        rpc.cast(network_host,
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
                          {"method": "deallocate_elastic_ip",
                           "args": {"elastic_ip": public_ip}})
         defer.returnValue({'releaseResponse': ["Address released."]})
@@ -492,8 +492,8 @@ class CloudController(object):
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance = self._get_instance(context, instance_id)
         address = self._get_address(context, public_ip)
-        network_host = yield self._get_network_host(context)
-        rpc.cast(network_host,
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
                          {"method": "associate_elastic_ip",
                           "args": {"elastic_ip": address['public_ip'],
                                    "fixed_ip": instance['private_dns_name'],
@@ -504,23 +504,23 @@ class CloudController(object):
     @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(context, public_ip)
-        network_host = yield self._get_network_host(context)
-        rpc.cast(network_host,
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
                          {"method": "associate_elastic_ip",
                           "args": {"elastic_ip": address['public_ip']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
-    def _get_network_host(self, context):
+    def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         host = network_service.get_host_for_project(context.project.id)
         if not host:
             result = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "get_network_host",
+                                    {"method": "get_network_topic",
                                      "args": {"user_id": context.user.id,
                                               "project_id": context.project.id}})
             host = result['result']
-        defer.returnValue(host)
+            defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
@@ -555,14 +555,14 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-        network_host = yield self._get_network_host(context)
+        network_topic = yield self._get_network_topic(context)
         # TODO: Get the real security group of launch in here
         security_group = "default"
         for num in range(int(kwargs['max_count'])):
             vpn = False
             if image_id  == FLAGS.vpn_image_id:
                 vpn = True
-            allocate_result = yield rpc.call(network_host,
+            allocate_result = yield rpc.call(network_topic,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
@@ -599,7 +599,7 @@ class CloudController(object):
     @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        network_host = yield self._get_network_host(context)
+        network_topic = yield self._get_network_topic(context)
         for i in instance_id:
             logging.debug("Going to try and terminate %s" % i)
             try:
@@ -614,7 +614,7 @@ class CloudController(object):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
-                rpc.cast(network_host,
+                rpc.cast(network_topic,
                          {"method": "disassociate_elastic_ip",
                           "args": {"elastic_ip": elastic_ip}})
 
@@ -624,7 +624,7 @@ class CloudController(object):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             actually removed.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
-                rpc.cast(network_host,
+                rpc.cast(network_topic,
                          {"method": "deallocate_fixed_ip",
                           "args": {"elastic_ip": elastic_ip}})
 
