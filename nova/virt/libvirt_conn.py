@@ -47,6 +47,10 @@ flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
 
+flags.DEFINE_string('libvirt_type',
+                    'kvm',
+                    'Libvirt domain type (kvm, qemu, etc)')
+
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
@@ -187,12 +191,13 @@ class LibvirtConnection(object):
         f.close()
 
         user = manager.AuthManager().get_user(data['user_id'])
+        project = manager.AuthManager().get_project(data['project_id'])
         if not os.path.exists(basepath('disk')):
-           yield images.fetch(data['image_id'], basepath('disk-raw'), user)
+           yield images.fetch(data['image_id'], basepath('disk-raw'), user, project)
         if not os.path.exists(basepath('kernel')):
-           yield images.fetch(data['kernel_id'], basepath('kernel'), user)
+           yield images.fetch(data['kernel_id'], basepath('kernel'), user, project)
         if not os.path.exists(basepath('ramdisk')):
-           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user)
+           yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user, project)
 
         execute = lambda cmd, input=None: \
                   process.simple_execute(cmd=cmd,
@@ -235,6 +240,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): lazy lazy hack because xml is annoying
         xml_info['nova'] = json.dumps(instance.datamodel.copy())
+        xml_info['type'] = FLAGS.libvirt_type
         libvirt_xml = libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 
