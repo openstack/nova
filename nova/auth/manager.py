@@ -58,6 +58,8 @@ flags.DEFINE_string('credentials_template',
 flags.DEFINE_string('vpn_client_template',
                     utils.abspath('cloudpipe/client.ovpn.template'),
                     'Template for creating users vpn file')
+flags.DEFINE_string('credential_vpn_file', 'nova-vpn.conf',
+                    'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_key_file', 'pk.pem',
                     'Filename of private key in credentials zip')
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
@@ -663,25 +665,27 @@ class AuthManager(object):
         rc = self.__generate_rc(user.access, user.secret, pid)
         private_key, signed_cert = self._generate_x509_cert(user.id, pid)
 
-        vpn = Vpn.lookup(pid)
-        if not vpn:
-            raise exception.Error("No vpn data allocated for project %s" %
-                                  project.name)
-        configfile = open(FLAGS.vpn_client_template,"r")
-        s = string.Template(configfile.read())
-        configfile.close()
-        config = s.substitute(keyfile=FLAGS.credential_key_file,
-                              certfile=FLAGS.credential_cert_file,
-                              ip=vpn.ip,
-                              port=vpn.port)
-
         tmpdir = tempfile.mkdtemp()
         zf = os.path.join(tmpdir, "temp.zip")
         zippy = zipfile.ZipFile(zf, 'w')
         zippy.writestr(FLAGS.credential_rc_file, rc)
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
-        zippy.writestr("nebula-client.conf", config)
+
+        network_data = networkdata.NetworkData.lookup(pid)
+        if network_data:
+            configfile = open(FLAGS.vpn_client_template,"r")
+            s = string.Template(configfile.read())
+            configfile.close()
+            config = s.substitute(keyfile=FLAGS.credential_key_file,
+                                  certfile=FLAGS.credential_cert_file,
+                                  ip=network_data.ip,
+                                  port=network_data.port)
+            zippy.writestr(FLAGS.credential_vpn_file, config)
+        else:
+            logging.warn("No vpn data for project %s" %
+                                  pid)
+
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(user.id))
         zippy.close()
         with open(zf, 'rb') as f:
@@ -689,6 +693,15 @@ class AuthManager(object):
 
         shutil.rmtree(tmpdir)
         return buffer
+
+    def get_environment_rc(self, user, project=None):
+        """Get credential zip for user in project"""
+        if not isinstance(user, User):
+            user = self.get_user(user)
+        if project is None:
+            project = user.id
+        pid = Project.safe_id(project)
+        return self.__generate_rc(user.access, user.secret, pid)
 
     def __generate_rc(self, access, secret, pid):
         """Generate rc file for user"""
