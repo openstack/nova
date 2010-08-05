@@ -519,7 +519,7 @@ class CloudController(object):
         host = network_service.get_host_for_project(context.project.id)
         if not host:
             result = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "get_network_topic",
+                                    {"method": "set_network_host",
                                      "args": {"user_id": context.user.id,
                                               "project_id": context.project.id}})
             host = result['result']
