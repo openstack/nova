@@ -22,12 +22,8 @@ destroying persistent storage volumes, ala EBS.
 Currently uses Ata-over-Ethernet.
 """
 
-import glob
 import logging
 import os
-import shutil
-import socket
-import tempfile
 
 from twisted.internet import defer
 
@@ -47,9 +43,6 @@ flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
 flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
-flags.DEFINE_string('storage_name',
-                    socket.gethostname(),
-                    'name of this service')
 flags.DEFINE_integer('first_shelf_id',
                     utils.last_octet(utils.get_my_ip()) * 10,
                     'AoE starting shelf_id for this service')
@@ -59,9 +52,9 @@ flags.DEFINE_integer('last_shelf_id',
 flags.DEFINE_string('aoe_export_dir',
                     '/var/lib/vblade-persist/vblades',
                     'AoE directory where exports are created')
-flags.DEFINE_integer('slots_per_shelf',
+flags.DEFINE_integer('blades_per_shelf',
                     16,
-                    'Number of AoE slots per shelf')
+                    'Number of AoE blades per shelf')
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this service')
@@ -69,7 +62,7 @@ flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
 
-class NoMoreVolumes(exception.Error):
+class NoMoreBlades(exception.Error):
     pass
 
 def get_volume(volume_id):
@@ -77,8 +70,9 @@ def get_volume(volume_id):
     volume_class = Volume
     if FLAGS.fake_storage:
         volume_class = FakeVolume
-    if datastore.Redis.instance().sismember('volumes', volume_id):
-        return volume_class(volume_id=volume_id)
+    vol = volume_class.lookup(volume_id)
+    if vol:
+        return vol
     raise exception.Error("Volume does not exist")
 
 class VolumeService(service.Service):
@@ -91,17 +85,8 @@ class VolumeService(service.Service):
         super(VolumeService, self).__init__()
         self.volume_class = Volume
         if FLAGS.fake_storage:
-            FLAGS.aoe_export_dir = tempfile.mkdtemp()
             self.volume_class = FakeVolume
         self._init_volume_group()
-
-    def __del__(self):
-        # TODO(josh): Get rid of this destructor, volumes destroy themselves
-        if FLAGS.fake_storage:
-            try:
-                shutil.rmtree(FLAGS.aoe_export_dir)
-            except Exception, err:
-                pass
 
     @defer.inlineCallbacks
     @validate.rangetest(size=(0, 1000))
@@ -113,8 +98,6 @@ class VolumeService(service.Service):
         """
         logging.debug("Creating volume of size: %s" % (size))
         vol = yield self.volume_class.create(size, user_id, project_id)
-        datastore.Redis.instance().sadd('volumes', vol['volume_id'])
-        datastore.Redis.instance().sadd('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         logging.debug("restarting exports")
         yield self._restart_exports()
         defer.returnValue(vol['volume_id'])
@@ -134,13 +117,11 @@ class VolumeService(service.Service):
     def delete_volume(self, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
         vol = get_volume(volume_id)
-        if vol['status'] == "attached":
+        if vol['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
-        if vol['node_name'] != FLAGS.storage_name:
+        if vol['node_name'] != FLAGS.node_name:
             raise exception.Error("Volume is not local to this node")
         yield vol.destroy()
-        datastore.Redis.instance().srem('volumes', vol['volume_id'])
-        datastore.Redis.instance().srem('volumes:%s' % (FLAGS.storage_name), vol['volume_id'])
         defer.returnValue(True)
 
     @defer.inlineCallbacks
@@ -172,14 +153,15 @@ class Volume(datastore.BasicModel):
         return self.volume_id
 
     def default_state(self):
-        return {"volume_id": self.volume_id}
+        return {"volume_id": self.volume_id,
+                "node_name": "unassigned"}
 
     @classmethod
     @defer.inlineCallbacks
     def create(cls, size, user_id, project_id):
         volume_id = utils.generate_uid('vol')
         vol = cls(volume_id)
-        vol['node_name'] = FLAGS.storage_name
+        vol['node_name'] = FLAGS.node_name
         vol['size'] = size
         vol['user_id'] = user_id
         vol['project_id'] = project_id
@@ -225,10 +207,31 @@ class Volume(datastore.BasicModel):
         self['attach_status'] = "detached"
         self.save()
 
+    def save(self):
+        is_new = self.is_new_record()
+        super(Volume, self).save()
+        if is_new:
+            redis = datastore.Redis.instance()
+            key = self.__devices_key
+            # TODO(vish): these should be added by admin commands
+            more = redis.scard(self._redis_association_name("node",
+                                                            self['node_name']))
+            if (not redis.exists(key) and not more):
+                for shelf_id in range(FLAGS.first_shelf_id,
+                                      FLAGS.last_shelf_id + 1):
+                    for blade_id in range(FLAGS.blades_per_shelf):
+                        redis.sadd(key, "%s.%s" % (shelf_id, blade_id))
+            self.associate_with("node", self['node_name'])
+
     @defer.inlineCallbacks
     def destroy(self):
         yield self._remove_export()
         yield self._delete_lv()
+        self.unassociate_with("node", self['node_name'])
+        if self.get('shelf_id', None) and self.get('blade_id', None):
+            redis = datastore.Redis.instance()
+            key = self.__devices_key
+            redis.sadd(key, "%s.%s" % (self['shelf_id'], self['blade_id']))
         super(Volume, self).destroy()
 
     @defer.inlineCallbacks
@@ -248,17 +251,26 @@ class Volume(datastore.BasicModel):
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             self['volume_id']), error_ok=1)
 
+    @property
+    def __devices_key(self):
+        return 'volume_devices:%s' % FLAGS.node_name
+
     @defer.inlineCallbacks
     def _setup_export(self):
-        (shelf_id, blade_id) = get_next_aoe_numbers()
+        redis = datastore.Redis.instance()
+        key = self.__devices_key
+        device = redis.spop(key)
+        if not device:
+            raise NoMoreBlades()
+        (shelf_id, blade_id) = device.split('.')
         self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
         self['shelf_id'] = shelf_id
         self['blade_id'] = blade_id
         self.save()
-        yield self._exec_export()
+        yield self._exec_setup_export()
 
     @defer.inlineCallbacks
-    def _exec_export(self):
+    def _exec_setup_export(self):
         yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (self['shelf_id'],
@@ -269,6 +281,13 @@ class Volume(datastore.BasicModel):
 
     @defer.inlineCallbacks
     def _remove_export(self):
+        if not self.get('shelf_id', None) or not self.get('blade_id', None):
+            defer.returnValue(False)
+        yield self._exec_remove_export()
+        defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _exec_remove_export(self):
         yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self['shelf_id'],
                                                     self['blade_id']), error_ok=1)
@@ -277,29 +296,18 @@ class Volume(datastore.BasicModel):
                                                        self['blade_id']), error_ok=1)
 
 
+
 class FakeVolume(Volume):
     def _create_lv(self):
         pass
 
-    def _exec_export(self):
+    def _exec_setup_export(self):
         fname = os.path.join(FLAGS.aoe_export_dir, self['aoe_device'])
         f = file(fname, "w")
         f.close()
 
-    def _remove_export(self):
-        pass
+    def _exec_remove_export(self):
+        os.unlink(os.path.join(FLAGS.aoe_export_dir, self['aoe_device']))
 
     def _delete_lv(self):
         pass
-
-def get_next_aoe_numbers():
-    for shelf_id in xrange(FLAGS.first_shelf_id, FLAGS.last_shelf_id + 1):
-        aoes = glob.glob("%s/e%s.*" % (FLAGS.aoe_export_dir, shelf_id))
-        if not aoes:
-            blade_id = 0
-        else:
-            blade_id = int(max([int(a.rpartition('.')[2]) for a in aoes])) + 1
-        if blade_id < FLAGS.slots_per_shelf:
-            logging.debug("Next shelf.blade is %s.%s", shelf_id, blade_id)
-            return (shelf_id, blade_id)
-    raise NoMoreVolumes()
