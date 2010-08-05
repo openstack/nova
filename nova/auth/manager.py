@@ -37,7 +37,7 @@ from nova import objectstore # for flags
 from nova import utils
 from nova.auth import ldapdriver # for flags
 from nova.auth import signer
-from nova.network import networkdata
+from nova.network import vpn
 
 FLAGS = flags.FLAGS
 
@@ -531,7 +531,7 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        network_data = networkdata.NetworkData.lookup(Project.safe_id(project))
+        network_data = vpn.NetworkData.lookup(Project.safe_id(project))
         if not network_data:
             raise exception.NotFound('project network data has not been set')
         return (network_data.ip, network_data.port)
@@ -672,7 +672,7 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        network_data = networkdata.NetworkData.lookup(pid)
+        network_data = vpn.NetworkData.lookup(pid)
         if network_data:
             configfile = open(FLAGS.vpn_client_template,"r")
             s = string.Template(configfile.read())

@@ -28,7 +28,7 @@ from nova.auth import manager
 from nova.exception import NotFound
 from nova.network import exception
 from nova.network import model
-from nova.network import networkdata
+from nova.network import vpn
 
 FLAGS = flags.FLAGS
 
@@ -215,7 +215,7 @@ class VlanNetworkService(BaseNetworkService):
     def _on_set_network_host(self, user_id, project_id,
                              *args, **kwargs):
         """Called when this host becomes the host for a project"""
-        networkdata.NetworkData.create(project_id)
+        vpn.NetworkData.create(project_id)
 
     @classmethod
     def setup_compute_network(self, user_id, project_id, security_group,
