@@ -40,7 +40,7 @@ FLAGS = flags.FLAGS
 
 class SchedulerService(service.Service):
     """
-    Manages the running instances.
+    Picks nodes for instances to run.
     """
     def __init__(self):
         super(SchedulerService, self).__init__()
