@@ -80,11 +80,14 @@ class BaseNetworkService(service.Service):
     def __init__(self, *args, **kwargs):
         self.network = model.PublicNetworkController()
 
-    def get_network_host(self, user_id, project_id, *args, **kwargs):
+    def set_network_host(self, user_id, project_id, *args, **kwargs):
         """Safely becomes the host of the projects network"""
         redis = datastore.Redis.instance()
         key = _host_key(project_id)
         if redis.setnx(key, FLAGS.node_name):
+            self._on_set_network_host(user_id, project_id,
+                                      security_group='default',
+                                      *args, **kwargs)
             return FLAGS.node_name
         else:
             return redis.get(key)
@@ -98,6 +101,11 @@ class BaseNetworkService(service.Service):
     def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
         """Subclass implements return of ip to the pool"""
         raise NotImplementedError()
+
+    def _on_set_network_host(self, user_id, project_id,
+                              *args, **kwargs):
+        """Called when this host becomes the host for a project"""
+        pass
 
     @classmethod
     def setup_compute_network(self, user_id, project_id, security_group,
@@ -129,7 +137,8 @@ class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
     @classmethod
-    def setup_compute_network(self, fixed_ip, *args, **kwargs):
+    def setup_compute_network(self, user_id, project_id, security_group,
+                              *args, **kwargs):
         """Network is created manually"""
         pass
 
@@ -198,9 +207,14 @@ class VlanNetworkService(BaseNetworkService):
         return model.get_network_by_address(address).release_ip(address)
 
     def restart_nets(self):
-        """ Ensure the network for each user is enabled"""
+        """Ensure the network for each user is enabled"""
         for project in manager.AuthManager().get_projects():
             model.get_project_network(project.id).express()
+
+    def _on_set_network_host(self, user_id, project_id,
+                             *args, **kwargs):
+        """Called when this host becomes the host for a project"""
+        model.NetworkData.create(project_id)
 
     @classmethod
     def setup_compute_network(self, user_id, project_id, security_group,

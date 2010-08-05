@@ -37,6 +37,7 @@ from nova import objectstore # for flags
 from nova import utils
 from nova.auth import ldapdriver # for flags
 from nova.auth import signer
+from nova.network import model
 
 FLAGS = flags.FLAGS
 
@@ -51,7 +52,6 @@ flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
                   'Roles that apply to all projects')
 
 
-flags.DEFINE_bool('use_vpn', True, 'Support per-project vpns')
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
                     'Template for creating users rc file')
@@ -65,18 +65,10 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
 
-flags.DEFINE_integer('vpn_start_port', 1000,
-                    'Start port for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_end_port', 2000,
-                    'End port for the cloudpipe VPN servers')
-
 flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
-
-flags.DEFINE_string('vpn_ip', '127.0.0.1',
-                    'Public IP for the cloudpipe VPN servers')
 
 flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
                     'Driver that auth manager uses')
@@ -228,86 +220,6 @@ class Project(AuthBase):
                                                         self.description,
                                                         self.member_ids)
 
-
-class NoMorePorts(exception.Error):
-    pass
-
-
-class Vpn(datastore.BasicModel):
-    """Manages vpn ips and ports for projects"""
-    def __init__(self, project_id):
-        self.project_id = project_id
-        super(Vpn, self).__init__()
-
-    @property
-    def identifier(self):
-        """Identifier used for key in redis"""
-        return self.project_id
-
-    @classmethod
-    def create(cls, project_id):
-        """Creates a vpn for project
-
-        This method finds a free ip and port and stores the associated
-        values in the datastore.
-        """
-        # TODO(vish): get list of vpn ips from redis
-        port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
-        vpn = cls(project_id)
-        # save ip for project
-        vpn['project'] = project_id
-        vpn['ip'] = FLAGS.vpn_ip
-        vpn['port'] = port
-        vpn.save()
-        return vpn
-
-    @classmethod
-    def find_free_port_for_ip(cls, ip):
-        """Finds a free port for a given ip from the redis set"""
-        # TODO(vish): these redis commands should be generalized and
-        #             placed into a base class. Conceptually, it is
-        #             similar to an association, but we are just
-        #             storing a set of values instead of keys that
-        #             should be turned into objects.
-        redis = datastore.Redis.instance()
-        key = 'ip:%s:ports' % ip
-        # TODO(vish): these ports should be allocated through an admin
-        #             command instead of a flag
-        if (not redis.exists(key) and
-            not redis.exists(cls._redis_association_name('ip', ip))):
-            for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
-                redis.sadd(key, i)
-
-        port = redis.spop(key)
-        if not port:
-            raise NoMorePorts()
-        return port
-
-    @classmethod
-    def num_ports_for_ip(cls, ip):
-        """Calculates the number of free ports for a given ip"""
-        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
-
-    @property
-    def ip(self):
-        """The ip assigned to the project"""
-        return self['ip']
-
-    @property
-    def port(self):
-        """The port assigned to the project"""
-        return int(self['port'])
-
-    def save(self):
-        """Saves the association to the given ip"""
-        self.associate_with('ip', self.ip)
-        super(Vpn, self).save()
-
-    def destroy(self):
-        """Cleans up datastore and adds port back to pool"""
-        self.unassociate_with('ip', self.ip)
-        datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
-        super(Vpn, self).destroy()
 
 
 class AuthManager(object):
@@ -581,8 +493,6 @@ class AuthManager(object):
                                                description,
                                                member_users)
             if project_dict:
-                if FLAGS.use_vpn:
-                    Vpn.create(project_dict['id'])
                 return Project(**project_dict)
 
     def add_to_project(self, user, project):
@@ -619,10 +529,10 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        vpn = Vpn.lookup(Project.safe_id(project))
-        if not vpn:
-            return None, None
-        return (vpn.ip, vpn.port)
+        network_data = model.NetworkData.lookup(Project.safe_id(project))
+        if not network_data:
+            raise exception.NotFound('project network data has not been set')
+        return (network_data.ip, network_data.port)
 
     def delete_project(self, project):
         """Deletes a project"""

@@ -53,6 +53,13 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
 flags.DEFINE_integer('cloudpipe_start_port', 12000,
                         'Starting port for mapped CloudPipe external ports')
 
+flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
+                    'Public IP for the cloudpipe VPN servers')
+flags.DEFINE_integer('vpn_start_port', 1000,
+                    'Start port for the cloudpipe VPN servers')
+flags.DEFINE_integer('vpn_end_port', 2000,
+                    'End port for the cloudpipe VPN servers')
+
 logging.getLogger().setLevel(logging.DEBUG)
 
 
@@ -372,6 +379,89 @@ class PublicAddress(datastore.BasicModel):
         addr['private_ip'] = 'available'
         addr.save()
         return addr
+
+
+class NoMorePorts(exception.Error):
+    pass
+
+
+class NetworkData(datastore.BasicModel):
+    """Manages network host, and vpn ip and port for projects"""
+    def __init__(self, project_id):
+        self.project_id = project_id
+        super(NetworkData, self).__init__()
+
+    @property
+    def identifier(self):
+        """Identifier used for key in redis"""
+        return self.project_id
+
+    @classmethod
+    def create(cls, project_id):
+        """Creates a vpn for project
+
+        This method finds a free ip and port and stores the associated
+        values in the datastore.
+        """
+        # TODO(vish): will we ever need multiiple ips per host?
+        port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
+        network_data = cls(project_id)
+        # save ip for project
+        network_data['host'] = FLAGS.node_name
+        network_data['project'] = project_id
+        network_data['ip'] = FLAGS.vpn_ip
+        network_data['port'] = port
+        network_data.save()
+        return network_data
+
+    @classmethod
+    def find_free_port_for_ip(cls, ip):
+        """Finds a free port for a given ip from the redis set"""
+        # TODO(vish): these redis commands should be generalized and
+        #             placed into a base class. Conceptually, it is
+        #             similar to an association, but we are just
+        #             storing a set of values instead of keys that
+        #             should be turned into objects.
+        redis = datastore.Redis.instance()
+        key = 'ip:%s:ports' % ip
+        # TODO(vish): these ports should be allocated through an admin
+        #             command instead of a flag
+        if (not redis.exists(key) and
+            not redis.exists(cls._redis_association_name('ip', ip))):
+            for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
+                redis.sadd(key, i)
+
+        port = redis.spop(key)
+        if not port:
+            raise NoMorePorts()
+        return port
+
+    @classmethod
+    def num_ports_for_ip(cls, ip):
+        """Calculates the number of free ports for a given ip"""
+        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
+
+    @property
+    def ip(self):
+        """The ip assigned to the project"""
+        return self['ip']
+
+    @property
+    def port(self):
+        """The port assigned to the project"""
+        return int(self['port'])
+
+    def save(self):
+        """Saves the association to the given ip"""
+        self.associate_with('ip', self.ip)
+        super(NetworkData, self).save()
+
+    def destroy(self):
+        """Cleans up datastore and adds port back to pool"""
+        self.unassociate_with('ip', self.ip)
+        datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
+        super(NetworkData, self).destroy()
+
 
 DEFAULT_PORTS = [("tcp",80), ("tcp",22), ("udp",1194), ("tcp",443)]
 class PublicNetworkController(BaseNetwork):
