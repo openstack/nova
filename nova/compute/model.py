@@ -60,7 +60,6 @@ flags.DEFINE_integer('total_disk_gb', 1000,
 
 # TODO(todd): Implement this at the class level for Instance
 class InstanceDirectory(object):
-
     """an api for interacting with the global state of instances"""
 
     def get(self, instance_id):
