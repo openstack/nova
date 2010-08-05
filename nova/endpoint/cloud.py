@@ -576,7 +576,7 @@ class CloudController(object):
             inst['private_dns_name'] = str(address)
             # TODO: allocate expresses on the router node
             inst.save()
-            rpc.cast(FLAGS.compute_topic,
+            rpc.cast(FLAGS.scheduler_topic,
                  {"method": "run_instance",
                   "args": {"instance_id" : inst.instance_id}})
             logging.debug("Casting to node for %s's instance with IP of %s" %
