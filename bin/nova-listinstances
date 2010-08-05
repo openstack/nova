@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+#
+# Duplicates the functionality of euca-describe-instances, but doesn't require
+# going through the API.  Does a direct query to the datastore.  This is
+# mostly a test program written for the scheduler
+#
+
+from nova.compute import model
+
+data_needed = ['image_id', 'memory_kb', 'local_gb', 'node_name', 'vcpus']
+
+instances = model.InstanceDirectory().all
+
+for instance in instances:
+    print 'Instance: %s' % instance['instance_id']
+    for x in data_needed:
+      print '    %s: %s' % (x, instance[x])
+
