@@ -179,20 +179,6 @@ class AuthTestCase(test.BaseTestCase):
         self.manager.remove_role('test1', 'sysadmin')
         self.assertFalse(project.has_role('test1', 'sysadmin'))
 
-    def test_212_vpn_ip_and_port_looks_valid(self):
-        project = self.manager.get_project('testproj')
-        self.assert_(project.vpn_ip)
-        self.assert_(project.vpn_port >= FLAGS.vpn_start_port)
-        self.assert_(project.vpn_port <= FLAGS.vpn_end_port)
-
-    def test_213_too_many_vpns(self):
-        vpns = []
-        for i in xrange(manager.Vpn.num_ports_for_ip(FLAGS.vpn_ip)):
-            vpns.append(manager.Vpn.create("vpnuser%s" % i))
-        self.assertRaises(manager.NoMorePorts, manager.Vpn.create, "boom")
-        for vpn in vpns:
-            vpn.destroy()
-
     def test_214_can_retrieve_project_by_user(self):
         project = self.manager.create_project('testproj2', 'test2', 'Another test project', ['test2'])
         self.assert_(len(self.manager.get_projects()) > 1)

@@ -28,6 +28,7 @@ from nova.auth import manager
 from nova.exception import NotFound
 from nova.network import exception
 from nova.network import model
+from nova.network import networkdata
 
 FLAGS = flags.FLAGS
 
@@ -81,7 +82,7 @@ class BaseNetworkService(service.Service):
         self.network = model.PublicNetworkController()
 
     def set_network_host(self, user_id, project_id, *args, **kwargs):
-        """Safely becomes the host of the projects network"""
+        """Safely sets the host of the projects network"""
         redis = datastore.Redis.instance()
         key = _host_key(project_id)
         if redis.setnx(key, FLAGS.node_name):
@@ -214,7 +215,7 @@ class VlanNetworkService(BaseNetworkService):
     def _on_set_network_host(self, user_id, project_id,
                              *args, **kwargs):
         """Called when this host becomes the host for a project"""
-        model.NetworkData.create(project_id)
+        networkdata.NetworkData.create(project_id)
 
     @classmethod
     def setup_compute_network(self, user_id, project_id, security_group,

@@ -25,6 +25,7 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.network import model
+from nova.network import networkdata
 from nova.network import service
 from nova.network.exception import NoMoreAddresses
 
@@ -153,6 +154,20 @@ class NetworkTestCase(test.TrialTestCase):
         net = model.get_project_network(self.projects[0].id, "default")
         rv = self.service.deallocate_fixed_ip(firstaddress)
         self.dnsmasq.release_ip(mac, firstaddress, hostname, net.bridge_name)
+
+    def test_212_vpn_ip_and_port_looks_valid(self):
+        networkdata.NetworkData.create(self.projects[0].id)
+        self.assert_(self.projects[0].vpn_ip)
+        self.assert_(self.projects[0].vpn_port >= FLAGS.vpn_start_port)
+        self.assert_(self.projects[0].vpn_port <= FLAGS.vpn_end_port)
+
+    def test_too_many_vpns(self):
+        vpns = []
+        for i in xrange(networkdata.NetworkData.num_ports_for_ip(FLAGS.vpn_ip)):
+            vpns.append(networkdata.NetworkData.create("vpnuser%s" % i))
+        self.assertRaises(networkdata.NoMorePorts, networkdata.NetworkData.create, "boom")
+        for vpn in vpns:
+            vpn.destroy()
 
     def test_release_before_deallocate(self):
         pass
