@@ -78,7 +78,7 @@ class SchedulerService(service.Service):
     def run_instance(self, instance_id, **_kwargs):
         node = self.pick_node(instance_id, **_kwargs)
 
-        rpc.cast('%s:%s' % (FLAGS.compute_topic, node),
+        rpc.cast('%s.%s' % (FLAGS.compute_topic, node),
              {"method": "run_instance",
               "args": {"instance_id" : instance_id}})
         logging.debug("Casting to node %s for instance %s" %
