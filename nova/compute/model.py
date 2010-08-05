@@ -53,10 +53,14 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_integer('total_memory_mb', 1000,
+                        'amount of memory a node has for VMs in MB')
+flags.DEFINE_integer('total_disk_gb', 1000,
+                        'amount of disk space a node has for VMs in GB')
 
 # TODO(todd): Implement this at the class level for Instance
 class InstanceDirectory(object):
+
     """an api for interacting with the global state of instances"""
 
     def get(self, instance_id):
@@ -200,6 +204,8 @@ class Daemon(datastore.BasicModel):
     def default_state(self):
         return {"hostname": self.hostname,
                 "binary": self.binary,
+                "total_memory_mb": FLAGS.total_memory_mb,
+                "total_disk_gb": FLAGS.total_disk_gb,
                 "updated_at": utils.isotime()
                 }
 
