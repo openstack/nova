@@ -26,8 +26,6 @@ import logging
 import multiprocessing
 import os
 import time
-import tornado.web
-from twisted.internet import defer
 
 from nova import datastore
 from nova import exception

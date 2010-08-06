@@ -1,10 +1,9 @@
-import eventlet
-import eventlet.wsgi
-eventlet.patcher.monkey_patch(all=False, socket=True)
+import eventletserver
 import carrot.connection
 import carrot.messaging
 import itertools
 import routes
+
 
 # See http://pythonpaste.org/webob/ for usage
 from webob.dec import wsgify
@@ -49,6 +48,19 @@ class WSGILayer(object):
         raise NotImplementedError("You must implement __call__")
         
  
+class WsgiStack(WSGILayer):
+    def __init__(self, wsgi_layers):
+        bottom_up = list(reversed(wsgi_layers))
+        app, remaining = bottom_up[0], bottom_up[1:]
+        for layer in remaining:
+            layer.application = app
+            app = layer
+        super(WsgiStack, self).__init__(app)
+
+    @wsgify
+    def __call__(self, req):
+        return self.application
+
 class Debug(WSGILayer):
     @wsgify
     def __call__(self, req):
@@ -101,9 +113,6 @@ class Reverse(WSGILayer):
     @wsgify
     def __call__(self, req):
         inner_resp = req.get_response(self.application)
-        print "+" * 80
-        Debug()(req)
-        print "*" * 80
         resp = Response()
         resp.app_iter = itertools.imap(lambda x: x[::-1], inner_resp.app_iter)
         return resp
@@ -118,5 +127,10 @@ class File(WSGILayer):
         req.response = Response()
         req.response.app_iter = myfile
  
-sock = eventlet.listen(('localhost', 12345))
-eventlet.wsgi.server(sock, Debug(Auth(FileRouter(Message()))))
+wsgi_layers = [
+        Auth(),
+        Debug(),
+        FileRouter(),
+        Message(),
+        ]
+eventletserver.serve(app=WsgiStack(wsgi_layers), port=12345)
