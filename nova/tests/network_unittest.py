@@ -166,8 +166,8 @@ class NetworkTestCase(test.TrialTestCase):
         for i in xrange(vpn.NetworkData.num_ports_for_ip(FLAGS.vpn_ip)):
             vpns.append(vpn.NetworkData.create("vpnuser%s" % i))
         self.assertRaises(vpn.NoMorePorts, vpn.NetworkData.create, "boom")
-        for vpn in vpns:
-            vpn.destroy()
+        for network_datum in vpns:
+            network_datum.destroy()
 
     def test_release_before_deallocate(self):
         pass
