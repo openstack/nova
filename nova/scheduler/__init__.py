@@ -1,8 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright (c) 2010 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -22,12 +20,6 @@
 
 .. automodule:: nova.scheduler
    :platform: Unix
-   :synopsis: Daemon that picks a host for a VM instance.
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+   :synopsis: Module that picks a compute node to run a VM instance.
 .. moduleauthor:: Chris Behrens <cbehrens@codestud.com>
 """
