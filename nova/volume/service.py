@@ -128,8 +128,8 @@ class VolumeService(service.Service):
     def _restart_exports(self):
         if FLAGS.fake_storage:
             return
-        yield process.simple_execute("sudo vblade-persist auto all")
-        # NOTE(vish): this command sometimes sends output to stderr for warnings
+        # NOTE(vish): these commands sometimes sends output to stderr for warnings
+        yield process.simple_execute("sudo vblade-persist auto all", error_ok=1)
         yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
 
     @defer.inlineCallbacks
@@ -243,7 +243,8 @@ class Volume(datastore.BasicModel):
         yield process.simple_execute(
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   self['volume_id'],
-                                                  FLAGS.volume_group))
+                                                  FLAGS.volume_group),
+                error_ok=1)
 
     @defer.inlineCallbacks
     def _delete_lv(self):
@@ -277,7 +278,7 @@ class Volume(datastore.BasicModel):
                  self['blade_id'],
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
-                 self['volume_id']))
+                 self['volume_id']), error_ok=1)
 
     @defer.inlineCallbacks
     def _remove_export(self):
