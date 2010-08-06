@@ -17,7 +17,7 @@
 #    under the License.
 
 """
-Exceptions for Compute Node errors, mostly network addressing.
+Exceptions for network errors.
 """
 
 from nova.exception import Error
