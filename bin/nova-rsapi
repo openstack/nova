@@ -35,23 +35,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 
 def main(_argv):
-    user_manager = manager.AuthManager()
-    api_instance = rackspace.Api(user_manager)
-    conn = rpc.Connection.instance()
-    rpc_consumer = rpc.AdapterConsumer(connection=conn,
-                                       topic=FLAGS.cloud_topic,
-                                       proxy=api_instance)
-
-#   TODO: fire rpc response listener (without attach to tornado)
-#    io_inst = ioloop.IOLoop.instance()
-#    _injected = consumer.attach_to_tornado(io_inst)
-
+    api_instance = rackspace.Api()
     http_server = simple_server.WSGIServer(('0.0.0.0', FLAGS.cc_port), simple_server.WSGIRequestHandler)
     http_server.set_app(api_instance.handler)
     logging.debug('Started HTTP server on port %i' % FLAGS.cc_port)
     while True:
         http_server.handle_request()
-#    io_inst.start()
 
 if __name__ == '__main__':
     utils.default_flagfile()
