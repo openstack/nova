@@ -18,19 +18,17 @@
 Scheduler Classes
 """
 
-import logging
 import random
-import sys
 import time
 
-from nova import exception
 from nova import flags
 from nova.datastore import Redis
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('node_down_time',
                      60,
-                     'seconds without heartbeat that determines a compute node to be down')
+                     'seconds without heartbeat that determines a '
+                         'compute node to be down')
 
 
 class Scheduler(object):
@@ -40,20 +38,31 @@ class Scheduler(object):
 
     @property
     def compute_nodes(self):
-        return [identifier.split(':')[0] for identifier in Redis.instance().smembers("daemons") if (identifier.split(':')[1] == "nova-compute")]
+        return [identifier.split(':')[0]
+                   for identifier in Redis.instance().smembers("daemons")
+                       if (identifier.split(':')[1] == "nova-compute")]
 
     def compute_node_is_up(self, node):
-        time_str = Redis.instance().hget('%s:%s:%s' % ('daemon', node, 'nova-compute'), 'updated_at')
+        time_str = Redis.instance().hget('%s:%s:%s' %
+                                            ('daemon', node, 'nova-compute'),
+                                         'updated_at')
+        if not time_str:
+            return False
+
         # Would be a lot easier if we stored heartbeat time in epoch :)
-        return(time_str and
-           (time.time() - (int(time.mktime(time.strptime(time_str.replace('Z', 'UTC'), '%Y-%m-%dT%H:%M:%S%Z'))) - time.timezone) < FLAGS.node_down_time))
+        time_str = time_str.replace('Z', 'UTC')
+        time_split = time.strptime(time_str, '%Y-%m-%dT%H:%M:%S%Z')
+        epoch_time = int(time.mktime(time_split)) - time.timezone
+        return (time.time() - epoch_time) < FLAGS.node_down_time
 
     def compute_nodes_up(self):
-        return [node for node in self.compute_nodes if self.compute_node_is_up(node)]
+        return [node for node in self.compute_nodes
+                   if self.compute_node_is_up(node)]
 
     def pick_node(self, instance_id, **_kwargs):
         """You DEFINITELY want to define this in your subclass"""
         raise NotImplementedError("Your subclass should define pick_node")
+
 
 class RandomScheduler(Scheduler):
     """
@@ -67,6 +76,7 @@ class RandomScheduler(Scheduler):
         nodes = self.compute_nodes_up()
         return nodes[int(random.random() * len(nodes))]
 
+
 class BestFitScheduler(Scheduler):
     """
     Implements Scheduler as a best-fit node selector
@@ -77,4 +87,3 @@ class BestFitScheduler(Scheduler):
 
     def pick_node(self, instance_id, **_kwargs):
         raise NotImplementedError("BestFitScheduler is not done yet")
-

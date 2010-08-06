@@ -33,19 +33,20 @@ flags.DEFINE_string('scheduler_type',
                     'random',
                     'the scheduler to use')
 
-scheduler_classes = {
-                    'random': scheduler.RandomScheduler,
-                    'bestfit': scheduler.BestFitScheduler
-                    }
-                    
+scheduler_classes = {'random': scheduler.RandomScheduler,
+                     'bestfit': scheduler.BestFitScheduler}
+
+
 class SchedulerService(service.Service):
     """
     Manages the running instances.
     """
+
     def __init__(self):
         super(SchedulerService, self).__init__()
         if (FLAGS.scheduler_type not in scheduler_classes):
-            raise exception.Error("Scheduler '%s' does not exist" % FLAGS.scheduler_type)
+            raise exception.Error("Scheduler '%s' does not exist" %
+                                      FLAGS.scheduler_type)
         self._scheduler_class = scheduler_classes[FLAGS.scheduler_type]
 
     def noop(self):
@@ -77,7 +78,6 @@ class SchedulerService(service.Service):
 
         rpc.cast('%s.%s' % (FLAGS.compute_topic, node),
              {"method": "run_instance",
-              "args": {"instance_id" : instance_id}})
-        logging.debug("Casting to node %s for instance %s" %
+              "args": {"instance_id": instance_id}})
+        logging.debug("Casting to node %s for running instance %s" %
                   (node, instance_id))
-
