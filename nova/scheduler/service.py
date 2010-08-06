@@ -23,6 +23,7 @@ Scheduler Service
 import logging
 import random
 import sys
+import time
 from twisted.internet import defer
 from twisted.internet import task
 
@@ -36,11 +37,12 @@ from nova.compute import model
 from nova.datastore import Redis
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_integer('node_down_time', 60,
+                    'seconds without heartbeat that determines a compute node to be down')
 
 class SchedulerService(service.Service):
     """
-    Picks nodes for instances to run.
+    Manages the running instances.
     """
     def __init__(self):
         super(SchedulerService, self).__init__()
@@ -67,12 +69,20 @@ class SchedulerService(service.Service):
         yield
 
     @property
-    def compute_identifiers(self):
-        return [identifier for identifier in Redis.instance().smembers("daemons") if (identifier.split(':')[1] == "nova-compute")]
+    def compute_nodes(self):
+        return [identifier.split(':')[0] for identifier in Redis.instance().smembers("daemons") if (identifier.split(':')[1] == "nova-compute")]
+
+    def compute_node_is_up(self, node):
+        time_str = Redis.instance().hget('%s:%s:%s' % ('daemon', node, 'nova-compute'), 'updated_at')
+        return(time_str and
+           (time.time() - (int(time.mktime(time.strptime(time_str.replace('Z', 'UTC'), '%Y-%m-%dT%H:%M:%S%Z'))) - time.timezone) < FLAGS.node_down_time))
+
+    def compute_nodes_up(self):
+        return [node for node in self.compute_nodes if self.compute_node_is_up(node)]
 
     def pick_node(self, instance_id, **_kwargs):
-        identifiers = self.compute_identifiers
-        return identifiers[int(random.random() * len(identifiers))].split(':')[0]
+        """You DEFINITELY want to define this in your subclass"""
+        raise NotImplementedError("Your subclass should define pick_node")
 
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
@@ -83,5 +93,17 @@ class SchedulerService(service.Service):
               "args": {"instance_id" : instance_id}})
         logging.debug("Casting to node %s for instance %s" %
                   (node, instance_id))
+
+class RandomService(SchedulerService):
+    """
+    Implements SchedulerService as a random node selector
+    """
+
+    def __init__(self):
+        super(RandomService, self).__init__()
+
+    def pick_node(self, instance_id, **_kwargs):
+        nodes = self.compute_nodes_up()
+        return nodes[int(random.random() * len(nodes))]
 
 
