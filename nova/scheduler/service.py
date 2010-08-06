@@ -21,32 +21,34 @@ Scheduler Service
 """
 
 import logging
-import random
-import sys
-import time
 from twisted.internet import defer
-from twisted.internet import task
 
 from nova import exception
 from nova import flags
-from nova import process
 from nova import rpc
 from nova import service
-from nova import utils
 from nova.compute import model
-from nova.datastore import Redis
+from nova.scheduler import scheduler
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('node_down_time', 60,
-                    'seconds without heartbeat that determines a compute node to be down')
+flags.DEFINE_string('scheduler_type',
+                    'random',
+                    'the scheduler to use')
 
+scheduler_classes = {
+                    'random': scheduler.RandomScheduler,
+                    'bestfit': scheduler.BestFitScheduler
+                    }
+                    
 class SchedulerService(service.Service):
     """
     Manages the running instances.
     """
     def __init__(self):
         super(SchedulerService, self).__init__()
-        self.instdir = model.InstanceDirectory()
+        if (FLAGS.scheduler_type not in scheduler_classes):
+            raise exception.Error("Scheduler '%s' does not exist" % FLAGS.scheduler_type)
+        self._scheduler_class = scheduler_classes[FLAGS.scheduler_type]
 
     def noop(self):
         """ simple test of an AMQP message call """
@@ -68,21 +70,8 @@ class SchedulerService(service.Service):
                 logging.exception("model server went away")
         yield
 
-    @property
-    def compute_nodes(self):
-        return [identifier.split(':')[0] for identifier in Redis.instance().smembers("daemons") if (identifier.split(':')[1] == "nova-compute")]
-
-    def compute_node_is_up(self, node):
-        time_str = Redis.instance().hget('%s:%s:%s' % ('daemon', node, 'nova-compute'), 'updated_at')
-        return(time_str and
-           (time.time() - (int(time.mktime(time.strptime(time_str.replace('Z', 'UTC'), '%Y-%m-%dT%H:%M:%S%Z'))) - time.timezone) < FLAGS.node_down_time))
-
-    def compute_nodes_up(self):
-        return [node for node in self.compute_nodes if self.compute_node_is_up(node)]
-
     def pick_node(self, instance_id, **_kwargs):
-        """You DEFINITELY want to define this in your subclass"""
-        raise NotImplementedError("Your subclass should define pick_node")
+        return self._scheduler_class().pick_node(instance_id, **_kwargs)
 
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
@@ -93,17 +82,4 @@ class SchedulerService(service.Service):
               "args": {"instance_id" : instance_id}})
         logging.debug("Casting to node %s for instance %s" %
                   (node, instance_id))
-
-class RandomService(SchedulerService):
-    """
-    Implements SchedulerService as a random node selector
-    """
-
-    def __init__(self):
-        super(RandomService, self).__init__()
-
-    def pick_node(self, instance_id, **_kwargs):
-        nodes = self.compute_nodes_up()
-        return nodes[int(random.random() * len(nodes))]
-
 
