@@ -1,4 +1,4 @@
-<domain type='kvm'>
+<domain type='%(type)s'>
     <name>%(name)s</name>
     <os>
     <type>hvm</type>
@@ -12,7 +12,6 @@
     <memory>%(memory_kb)s</memory>
     <vcpu>%(vcpus)s</vcpu>
     <devices>
-        <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
             <source file='%(basepath)s/disk'/>
             <target dev='vda' bus='virtio'/>

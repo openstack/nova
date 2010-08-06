@@ -292,9 +292,13 @@ class NovaAdminClient(object):
                   'Operation': operation}
         return self.apiconn.get_status('ModifyProjectMember', params)
 
-    def get_zip(self, username):
-        """ returns the content of a zip file containing novarc and access credentials. """
-        return self.apiconn.get_object('GenerateX509ForUser', {'Name': username}, UserInfo).file
+    def get_zip(self, user, project):
+        """
+        Returns the content of a zip file containing novarc and access credentials.
+        """
+        params = {'Name': user, 'Project': project}
+        zip = self.apiconn.get_object('GenerateX509ForUser', params, UserInfo)
+        return zip.file
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])

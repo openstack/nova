@@ -21,14 +21,13 @@ Proxy AMI-related calls from the cloud controller, to the running
 objectstore daemon.
 """
 
-import boto
-import boto.s3
+import boto.s3.connection
 import json
-import random
 import urllib
 
 from nova import flags
 from nova import utils
+from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
@@ -77,13 +76,16 @@ def deregister(context, image_id):
             query_args=qs({'image_id': image_id}))
 
 def conn(context):
-    return boto.s3.connection.S3Connection (
-        aws_access_key_id=str('%s:%s' % (context.user.access, context.project.name)),
-        aws_secret_access_key=str(context.user.secret),
-        is_secure=False,
-        calling_format=boto.s3.connection.OrdinaryCallingFormat(),
-        port=FLAGS.s3_port,
-        host=FLAGS.s3_host)
+    access = manager.AuthManager().get_access_key(context.user,
+                                                  context.project)
+    secret = str(context.user.secret)
+    calling = boto.s3.connection.OrdinaryCallingFormat()
+    return boto.s3.connection.S3Connection(aws_access_key_id=access,
+                                           aws_secret_access_key=secret,
+                                           is_secure=False,
+                                           calling_format=calling,
+                                           port=FLAGS.s3_port,
+                                           host=FLAGS.s3_host)
 
 
 def qs(params):

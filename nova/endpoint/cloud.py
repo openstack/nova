@@ -294,17 +294,16 @@ class CloudController(object):
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
+    @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
-        res = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
+        result = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
                                  "args" : {"size": size,
                                            "user_id": context.user.id,
                                            "project_id": context.project.id}})
-        def _format_result(result):
-            volume = self._get_volume(context, result['result'])
-            return {'volumeSet': [self.format_volume(context, volume)]}
-        res.addCallback(_format_result)
-        return res
+        # NOTE(vish): rpc returned value is in the result key in the dictionary
+        volume = self._get_volume(context, result['result'])
+        defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
