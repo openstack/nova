@@ -34,7 +34,7 @@ from nova import rpc
 from nova import utils
 from nova.auth import manager
 from nova.compute import model
-from nova.compute import network
+from nova.network import model as network
 from nova.endpoint import images
 from nova.endpoint import wsgi
 
