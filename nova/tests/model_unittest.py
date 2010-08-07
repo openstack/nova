@@ -19,9 +19,7 @@
 from datetime import datetime, timedelta
 import logging
 import time
-from twisted.internet import defer
 
-from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
@@ -49,9 +47,9 @@ class ModelTestCase(test.TrialTestCase):
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
         inst['instance_type'] = 'm1.tiny'
-        inst['node_name'] = FLAGS.node_name
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
+        inst['private_dns_name'] = '10.0.0.1'
         inst.save()
         return inst
 
@@ -71,118 +69,126 @@ class ModelTestCase(test.TrialTestCase):
         session_token.save()
         return session_token
 
-    @defer.inlineCallbacks
     def test_create_instance(self):
         """store with create_instace, then test that a load finds it"""
-        instance = yield self.create_instance()
-        old = yield model.Instance(instance.identifier)
+        instance = self.create_instance()
+        old = model.Instance(instance.identifier)
         self.assertFalse(old.is_new_record())
 
-    @defer.inlineCallbacks
     def test_delete_instance(self):
         """create, then destroy, then make sure loads a new record"""
-        instance = yield self.create_instance()
-        yield instance.destroy()
-        newinst = yield model.Instance('i-test')
+        instance = self.create_instance()
+        instance.destroy()
+        newinst = model.Instance('i-test')
         self.assertTrue(newinst.is_new_record())
 
-    @defer.inlineCallbacks
     def test_instance_added_to_set(self):
-        """create, then check that it is listed for the project"""
-        instance = yield self.create_instance()
+        """create, then check that it is listed in global set"""
+        instance = self.create_instance()
         found = False
         for x in model.InstanceDirectory().all:
             if x.identifier == 'i-test':
                 found = True
         self.assert_(found)
 
-    @defer.inlineCallbacks
     def test_instance_associates_project(self):
         """create, then check that it is listed for the project"""
-        instance = yield self.create_instance()
+        instance = self.create_instance()
         found = False
         for x in model.InstanceDirectory().by_project(instance.project):
             if x.identifier == 'i-test':
                 found = True
         self.assert_(found)
 
-    @defer.inlineCallbacks
+    def test_instance_associates_ip(self):
+        """create, then check that it is listed for the ip"""
+        instance = self.create_instance()
+        found = False
+        x = model.InstanceDirectory().by_ip(instance['private_dns_name'])
+        self.assertEqual(x.identifier, 'i-test')
+
+    def test_instance_associates_node(self):
+        """create, then check that it is listed for the node_name"""
+        instance = self.create_instance()
+        found = False
+        for x in model.InstanceDirectory().by_node(FLAGS.node_name):
+            if x.identifier == 'i-test':
+                found = True
+        self.assertFalse(found)
+        instance['node_name'] = 'test_node'
+        instance.save()
+        for x in model.InstanceDirectory().by_node('test_node'):
+            if x.identifier == 'i-test':
+                found = True
+        self.assert_(found)
+
+
     def test_host_class_finds_hosts(self):
-        host = yield self.create_host()
+        host = self.create_host()
         self.assertEqual('testhost', model.Host.lookup('testhost').identifier)
 
-    @defer.inlineCallbacks
     def test_host_class_doesnt_find_missing_hosts(self):
-        rv = yield model.Host.lookup('woahnelly')
+        rv = model.Host.lookup('woahnelly')
         self.assertEqual(None, rv)
 
-    @defer.inlineCallbacks
     def test_create_host(self):
         """store with create_host, then test that a load finds it"""
-        host = yield self.create_host()
-        old = yield model.Host(host.identifier)
+        host = self.create_host()
+        old = model.Host(host.identifier)
         self.assertFalse(old.is_new_record())
 
-    @defer.inlineCallbacks
     def test_delete_host(self):
         """create, then destroy, then make sure loads a new record"""
-        instance = yield self.create_host()
-        yield instance.destroy()
-        newinst = yield model.Host('testhost')
+        instance = self.create_host()
+        instance.destroy()
+        newinst = model.Host('testhost')
         self.assertTrue(newinst.is_new_record())
 
-    @defer.inlineCallbacks
     def test_host_added_to_set(self):
         """create, then check that it is included in list"""
-        instance = yield self.create_host()
+        instance = self.create_host()
         found = False
         for x in model.Host.all():
             if x.identifier == 'testhost':
                 found = True
         self.assert_(found)
 
-    @defer.inlineCallbacks
     def test_create_daemon_two_args(self):
         """create a daemon with two arguments"""
-        d = yield self.create_daemon()
+        d = self.create_daemon()
         d = model.Daemon('testhost', 'nova-testdaemon')
         self.assertFalse(d.is_new_record())
 
-    @defer.inlineCallbacks
     def test_create_daemon_single_arg(self):
         """Create a daemon using the combined host:bin format"""
-        d = yield model.Daemon("testhost:nova-testdaemon")
+        d = model.Daemon("testhost:nova-testdaemon")
         d.save()
         d = model.Daemon('testhost:nova-testdaemon')
         self.assertFalse(d.is_new_record())
 
-    @defer.inlineCallbacks
     def test_equality_of_daemon_single_and_double_args(self):
         """Create a daemon using the combined host:bin arg, find with 2"""
-        d = yield model.Daemon("testhost:nova-testdaemon")
+        d = model.Daemon("testhost:nova-testdaemon")
         d.save()
         d = model.Daemon('testhost', 'nova-testdaemon')
         self.assertFalse(d.is_new_record())
 
-    @defer.inlineCallbacks
     def test_equality_daemon_of_double_and_single_args(self):
         """Create a daemon using the combined host:bin arg, find with 2"""
-        d = yield self.create_daemon()
+        d = self.create_daemon()
         d = model.Daemon('testhost:nova-testdaemon')
         self.assertFalse(d.is_new_record())
 
-    @defer.inlineCallbacks
     def test_delete_daemon(self):
         """create, then destroy, then make sure loads a new record"""
-        instance = yield self.create_daemon()
-        yield instance.destroy()
-        newinst = yield model.Daemon('testhost', 'nova-testdaemon')
+        instance = self.create_daemon()
+        instance.destroy()
+        newinst = model.Daemon('testhost', 'nova-testdaemon')
         self.assertTrue(newinst.is_new_record())
 
-    @defer.inlineCallbacks
     def test_daemon_heartbeat(self):
         """Create a daemon, sleep, heartbeat, check for update"""
-        d = yield self.create_daemon()
+        d = self.create_daemon()
         ts = d['updated_at']
         time.sleep(2)
         d.heartbeat()
@@ -190,70 +196,62 @@ class ModelTestCase(test.TrialTestCase):
         ts2 = d2['updated_at']
         self.assert_(ts2 > ts)
 
-    @defer.inlineCallbacks
     def test_daemon_added_to_set(self):
         """create, then check that it is included in list"""
-        instance = yield self.create_daemon()
+        instance = self.create_daemon()
         found = False
         for x in model.Daemon.all():
             if x.identifier == 'testhost:nova-testdaemon':
                 found = True
         self.assert_(found)
 
-    @defer.inlineCallbacks
     def test_daemon_associates_host(self):
         """create, then check that it is listed for the host"""
-        instance = yield self.create_daemon()
+        instance = self.create_daemon()
         found = False
         for x in model.Daemon.by_host('testhost'):
             if x.identifier == 'testhost:nova-testdaemon':
                 found = True
         self.assertTrue(found)
 
-    @defer.inlineCallbacks
     def test_create_session_token(self):
         """create"""
-        d = yield self.create_session_token()
+        d = self.create_session_token()
         d = model.SessionToken(d.token)
         self.assertFalse(d.is_new_record())
 
-    @defer.inlineCallbacks
     def test_delete_session_token(self):
         """create, then destroy, then make sure loads a new record"""
-        instance = yield self.create_session_token()
-        yield instance.destroy()
-        newinst = yield model.SessionToken(instance.token)
+        instance = self.create_session_token()
+        instance.destroy()
+        newinst = model.SessionToken(instance.token)
         self.assertTrue(newinst.is_new_record())
 
-    @defer.inlineCallbacks
     def test_session_token_added_to_set(self):
         """create, then check that it is included in list"""
-        instance = yield self.create_session_token()
+        instance = self.create_session_token()
         found = False
         for x in model.SessionToken.all():
             if x.identifier == instance.token:
                 found = True
         self.assert_(found)
 
-    @defer.inlineCallbacks
     def test_session_token_associates_user(self):
         """create, then check that it is listed for the user"""
-        instance = yield self.create_session_token()
+        instance = self.create_session_token()
         found = False
         for x in model.SessionToken.associated_to('user', 'testuser'):
             if x.identifier == instance.identifier:
                 found = True
         self.assertTrue(found)
 
-    @defer.inlineCallbacks
     def test_session_token_generation(self):
-        instance = yield model.SessionToken.generate('username', 'TokenType')
+        instance = model.SessionToken.generate('username', 'TokenType')
         self.assertFalse(instance.is_new_record())
 
-    @defer.inlineCallbacks
     def test_find_generated_session_token(self):
-        instance = yield model.SessionToken.generate('username', 'TokenType')
-        found = yield model.SessionToken.lookup(instance.identifier)
+        instance = model.SessionToken.generate('username', 'TokenType')
+        found = model.SessionToken.lookup(instance.identifier)
         self.assert_(found)
 
     def test_update_session_token_expiry(self):
@@ -264,34 +262,29 @@ class ModelTestCase(test.TrialTestCase):
         expiry = utils.parse_isotime(instance['expiry'])
         self.assert_(expiry > datetime.utcnow())
 
-    @defer.inlineCallbacks
     def test_session_token_lookup_when_expired(self):
-        instance = yield model.SessionToken.generate("testuser")
+        instance = model.SessionToken.generate("testuser")
         instance['expiry'] = datetime.utcnow().strftime(utils.TIME_FORMAT)
         instance.save()
         inst = model.SessionToken.lookup(instance.identifier)
         self.assertFalse(inst)
 
-    @defer.inlineCallbacks
     def test_session_token_lookup_when_not_expired(self):
-        instance = yield model.SessionToken.generate("testuser")
+        instance = model.SessionToken.generate("testuser")
         inst = model.SessionToken.lookup(instance.identifier)
         self.assert_(inst)
 
-    @defer.inlineCallbacks
     def test_session_token_is_expired_when_expired(self):
-        instance = yield model.SessionToken.generate("testuser")
+        instance = model.SessionToken.generate("testuser")
         instance['expiry'] = datetime.utcnow().strftime(utils.TIME_FORMAT)
         self.assert_(instance.is_expired())
 
-    @defer.inlineCallbacks
     def test_session_token_is_expired_when_not_expired(self):
-        instance = yield model.SessionToken.generate("testuser")
+        instance = model.SessionToken.generate("testuser")
         self.assertFalse(instance.is_expired())
 
-    @defer.inlineCallbacks
     def test_session_token_ttl(self):
-        instance = yield model.SessionToken.generate("testuser")
+        instance = model.SessionToken.generate("testuser")
         now = datetime.utcnow()
         delta = timedelta(hours=1)
         instance['expiry'] = (now + delta).strftime(utils.TIME_FORMAT)
