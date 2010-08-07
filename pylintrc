@@ -1,0 +1,6 @@
+[Basic]
+method-rgx=[a-z_][a-z0-9_]{2,50}$
+
+[Design]
+max-public-methods=100
+min-public-methods=0

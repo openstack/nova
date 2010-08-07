@@ -135,9 +135,17 @@ class AuthTestCase(test.BaseTestCase):
         self.manager.add_to_project('test2', 'testproj')
         self.assertTrue(self.manager.get_project('testproj').has_member('test2'))
 
-    def test_208_can_remove_user_from_project(self):
+    def test_207_can_remove_user_from_project(self):
         self.manager.remove_from_project('test2', 'testproj')
         self.assertFalse(self.manager.get_project('testproj').has_member('test2'))
+
+    def test_208_can_remove_add_user_with_role(self):
+        self.manager.add_to_project('test2', 'testproj')
+        self.manager.add_role('test2', 'developer', 'testproj')
+        self.manager.remove_from_project('test2', 'testproj')
+        self.assertFalse(self.manager.has_role('test2', 'developer', 'testproj'))
+        self.manager.add_to_project('test2', 'testproj')
+        self.manager.remove_from_project('test2', 'testproj')
 
     def test_209_can_generate_x509(self):
         # MUST HAVE RUN CLOUD SETUP BY NOW
@@ -178,20 +186,6 @@ class AuthTestCase(test.BaseTestCase):
         self.assertFalse(project.has_role('test1', 'sysadmin'))
         self.manager.remove_role('test1', 'sysadmin')
         self.assertFalse(project.has_role('test1', 'sysadmin'))
-
-    def test_212_vpn_ip_and_port_looks_valid(self):
-        project = self.manager.get_project('testproj')
-        self.assert_(project.vpn_ip)
-        self.assert_(project.vpn_port >= FLAGS.vpn_start_port)
-        self.assert_(project.vpn_port <= FLAGS.vpn_end_port)
-
-    def test_213_too_many_vpns(self):
-        vpns = []
-        for i in xrange(manager.Vpn.num_ports_for_ip(FLAGS.vpn_ip)):
-            vpns.append(manager.Vpn.create("vpnuser%s" % i))
-        self.assertRaises(manager.NoMorePorts, manager.Vpn.create, "boom")
-        for vpn in vpns:
-            vpn.destroy()
 
     def test_214_can_retrieve_project_by_user(self):
         project = self.manager.create_project('testproj2', 'test2', 'Another test project', ['test2'])
