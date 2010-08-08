@@ -35,7 +35,7 @@ def run_command(cmd, redirect_output=True, check_exit_code=True):
 
 def check_dependencies():
   """Make sure pip and virtualenv are on the path."""
-  # Perl also has a pip program.  Hopefully the user has installed the right one!
+  # Perl also has a pip program. Hopefully the user has installed the right one!
   print 'Checking for pip...',
   if not run_command(['which', 'pip'], check_exit_code=False).strip():
     die('ERROR: pip not found.\n\nNova development requires pip,'

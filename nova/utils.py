@@ -55,22 +55,23 @@ def fetchfile(url, target):
 #    fp.close()
     execute("curl --fail %s -o %s" % (url, target))
 
-def execute(cmd, input=None, addl_env=None, check_exit_code=True):
+def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
-    if input != None:
-        result = obj.communicate(input)
+    if process_input != None:
+        result = obj.communicate(process_input)
     else:
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
         logging.debug("Result was %s" % (obj.returncode))
         if check_exit_code and obj.returncode <> 0:
-            raise Exception("Unexpected exit code: %s.  result=%s" % (obj.returncode, result))
+            raise Exception(    "Unexpected exit code: %s.  result=%s" 
+                                % (obj.returncode, result))
     return result
 
 
@@ -101,7 +102,8 @@ def runthis(prompt, cmd, check_exit_code = True):
     exit_code = subprocess.call(cmd.split(" "))
     logging.debug(prompt % (exit_code))
     if check_exit_code and exit_code <> 0:
-        raise Exception("Unexpected exit code: %s from cmd: %s" % (exit_code, cmd))
+        raise Exception(    "Unexpected exit code: %s from cmd: %s" 
+                            % (exit_code, cmd))
 
 
 def generate_uid(topic, size=8):

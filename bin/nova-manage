@@ -56,7 +56,9 @@ class VpnCommands(object):
 
             vpn = self.__vpn_for(project.id)
             if vpn:
-                out, err = utils.execute("ping -c1 -w1 %s > /dev/null; echo $?" % vpn['private_dns_name'], check_exit_code=False)
+                out, err = utils.execute(
+                			"ping -c1 -w1 %s > /dev/null; echo $?"
+                			% vpn['private_dns_name'], check_exit_code=False)
                 if out.strip() == '0':
                     net = 'up'
                 else:
