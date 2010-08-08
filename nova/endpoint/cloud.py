@@ -209,22 +209,18 @@ class CloudController(object):
 
     @rbac.allow('all')
     def create_key_pair(self, context, key_name, **kwargs):
-        try:
-            dcall = defer.Deferred()
-            pool = context.handler.application.settings.get('pool')
-            def _complete(kwargs):
-                if 'exception' in kwargs:
-                    dcall.errback(kwargs['exception'])
-                    return
-                dcall.callback({'keyName': key_name,
-                    'keyFingerprint': kwargs['fingerprint'],
-                    'keyMaterial': kwargs['private_key']})
-            pool.apply_async(_gen_key, [context.user.id, key_name],
-                callback=_complete)
-            return dcall
-
-        except manager.UserError as e:
-            raise
+        dcall = defer.Deferred()
+        pool = context.handler.application.settings.get('pool')
+        def _complete(kwargs):
+            if 'exception' in kwargs:
+                dcall.errback(kwargs['exception'])
+                return
+            dcall.callback({'keyName': key_name,
+                'keyFingerprint': kwargs['fingerprint'],
+                'keyMaterial': kwargs['private_key']})
+        pool.apply_async(_gen_key, [context.user.id, key_name],
+            callback=_complete)
+        return dcall
 
     @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
