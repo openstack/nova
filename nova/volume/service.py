@@ -149,7 +149,8 @@ class VolumeService(service.Service):
             return
         yield process.simple_execute("sudo vblade-persist auto all")
         # NOTE(vish): this command sometimes sends output to stderr for warnings
-        yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
+        yield process.simple_execute("sudo vblade-persist start all", 
+                                     terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _init_volume_group(self):

@@ -123,15 +123,19 @@ class BackRelayWithInput(protocol.ProcessProtocol):
 
 def get_process_output(executable, args=None, env=None, path=None, 
                        process_reactor=None, check_exit_code=True, 
-                       process_input=None, started_deferred=None):
+                       process_input=None, started_deferred=None,
+                       terminate_on_stderr=False):
     if process_reactor is None:
         process_reactor = reactor
     args = args and args or ()
     env = env and env and {}
     deferred = defer.Deferred()
     process_handler = BackRelayWithInput(
-            deferred, started_deferred=started_deferred, 
-            check_exit_code=check_exit_code, process_input=process_input)
+            deferred, 
+            started_deferred=started_deferred, 
+            check_exit_code=check_exit_code, 
+            process_input=process_input,
+            terminate_on_stderr=terminate_on_stderr)
     # NOTE(vish): commands come in as unicode, but self.executes needs
     #             strings or process.spawn raises a deprecation warning
     executable = str(executable)
