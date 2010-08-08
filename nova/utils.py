@@ -41,7 +41,7 @@ def import_class(import_str):
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, AttributeError):
+    except (ImportError, ValueError, AttributeError):
         raise exception.NotFound('Class %s cannot be found' % class_str)
 
 def fetchfile(url, target):

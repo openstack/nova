@@ -65,9 +65,13 @@ class Image(object):
         except:
             pass
 
-    def is_authorized(self, context):
+    def is_authorized(self, context, readonly=False):
+        # NOTE(devcamcar): Public images can be read by anyone,
+        #                  but only modified by admin or owner.
         try:
-            return self.metadata['isPublic'] or context.user.is_admin() or self.metadata['imageOwnerId'] == context.project.id
+            return (self.metadata['isPublic'] and readonly) or \
+                   context.user.is_admin() or \
+                   self.metadata['imageOwnerId'] == context.project.id
         except:
             return False
 

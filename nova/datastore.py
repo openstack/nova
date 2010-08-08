@@ -90,12 +90,14 @@ class BasicModel(object):
 
     @absorb_connection_error
     def __init__(self):
-        self.initial_state = {}
-        self.state = Redis.instance().hgetall(self.__redis_key)
-        if self.state:
-            self.initial_state = self.state
+        state = Redis.instance().hgetall(self.__redis_key)
+        if state:
+            self.initial_state = state
+            self.state = dict(self.initial_state)
         else:
+            self.initial_state = {}
             self.state = self.default_state()
+
 
     def default_state(self):
         """You probably want to define this in your subclass"""
@@ -239,7 +241,7 @@ class BasicModel(object):
         for key, val in self.state.iteritems():
             Redis.instance().hset(self.__redis_key, key, val)
         self.add_to_index()
-        self.initial_state = self.state
+        self.initial_state = dict(self.state)
         return True
 
     @absorb_connection_error

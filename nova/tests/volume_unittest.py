@@ -42,15 +42,14 @@ class VolumeTestCase(test.TrialTestCase):
         vol_size = '0'
         user_id = 'fake'
         project_id = 'fake'
-        volume_id = self.volume.create_volume(vol_size, user_id, project_id)
+        volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
         # TODO(termie): get_volume returns differently than create_volume
         self.assertEqual(volume_id,
                          volume_service.get_volume(volume_id)['volume_id'])
 
         rv = self.volume.delete_volume(volume_id)
-        self.assertRaises(exception.Error,
-                          volume_service.get_volume,
-                          volume_id)
+        self.assertFailure(volume_service.get_volume(volume_id),
+                           exception.Error)
 
     def test_too_big_volume(self):
         vol_size = '1001'
@@ -68,13 +67,14 @@ class VolumeTestCase(test.TrialTestCase):
         total_slots = FLAGS.slots_per_shelf * num_shelves
         vols = []
         for i in xrange(total_slots):
-            vid = self.volume.create_volume(vol_size, user_id, project_id)
+            vid = yield self.volume.create_volume(vol_size, user_id, project_id)
             vols.append(vid)
-        self.assertRaises(volume_service.NoMoreVolumes,
-                          self.volume.create_volume,
-                          vol_size, user_id, project_id)
+        self.assertFailure(self.volume.create_volume(vol_size,
+                                                     user_id,
+                                                     project_id),
+                           volume_service.NoMoreVolumes)
         for id in vols:
-            self.volume.delete_volume(id)
+            yield self.volume.delete_volume(id)
 
     def test_run_attach_detach_volume(self):
         # Create one volume and one compute to test with
@@ -83,7 +83,7 @@ class VolumeTestCase(test.TrialTestCase):
         user_id = "fake"
         project_id = 'fake'
         mountpoint = "/dev/sdf"
-        volume_id = self.volume.create_volume(vol_size, user_id, project_id)
+        volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
 
         volume_obj = volume_service.get_volume(volume_id)
         volume_obj.start_attach(instance_id, mountpoint)
