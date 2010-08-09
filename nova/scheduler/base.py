@@ -15,10 +15,9 @@
 #    under the License.
 
 """
-Scheduler Classes
+Scheduler base class that all Schedulers should inherit from
 """
 
-import random
 import time
 
 from nova import flags
@@ -50,7 +49,9 @@ class Scheduler(object):
             return False
 
         # Would be a lot easier if we stored heartbeat time in epoch :)
-        time_str = time_str.replace('Z', 'UTC')
+
+        # The 'str()' here is to get rid of a pylint error
+        time_str = str(time_str).replace('Z', 'UTC')
         time_split = time.strptime(time_str, '%Y-%m-%dT%H:%M:%S%Z')
         epoch_time = int(time.mktime(time_split)) - time.timezone
         return (time.time() - epoch_time) < FLAGS.node_down_time
@@ -62,28 +63,3 @@ class Scheduler(object):
     def pick_node(self, instance_id, **_kwargs):
         """You DEFINITELY want to define this in your subclass"""
         raise NotImplementedError("Your subclass should define pick_node")
-
-
-class RandomScheduler(Scheduler):
-    """
-    Implements Scheduler as a random node selector
-    """
-
-    def __init__(self):
-        super(RandomScheduler, self).__init__()
-
-    def pick_node(self, instance_id, **_kwargs):
-        nodes = self.compute_nodes_up()
-        return nodes[int(random.random() * len(nodes))]
-
-
-class BestFitScheduler(Scheduler):
-    """
-    Implements Scheduler as a best-fit node selector
-    """
-
-    def __init__(self):
-        super(BestFitScheduler, self).__init__()
-
-    def pick_node(self, instance_id, **_kwargs):
-        raise NotImplementedError("BestFitScheduler is not done yet")

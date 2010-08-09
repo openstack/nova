@@ -25,15 +25,16 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import service
-from nova.scheduler import scheduler
+from nova.scheduler import chance
+from nova.scheduler import bestfit
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_type',
-                    'random',
+                    'chance',
                     'the scheduler to use')
 
-SCHEDULER_CLASSES = {'random': scheduler.RandomScheduler,
-                     'bestfit': scheduler.BestFitScheduler}
+SCHEDULER_CLASSES = {'chance': chance.ChanceScheduler,
+                     'bestfit': bestfit.BestFitScheduler}
 
 
 class SchedulerService(service.Service):
@@ -72,4 +73,3 @@ class SchedulerService(service.Service):
               "args": {"instance_id": instance_id}})
         logging.debug("Casting to node %s for running instance %s",
                           node, instance_id)
-
