@@ -105,7 +105,7 @@ class CloudServerAPI(wsgi.Application):
         return json.dumps(value)
 
     def instance_details(self, inst): # pylint: disable-msg=R0201
-        "Build the data structure to represent details for an instance."
+        """Build the data structure to represent details for an instance."""
         return {
             "id": inst.get("instance_id", None),
             "imageId": inst.get("image_id", None),
