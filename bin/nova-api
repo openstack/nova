@@ -29,8 +29,6 @@ from nova import flags
 from nova import rpc
 from nova import server
 from nova import utils
-from nova.auth import manager
-from nova.compute import model
 from nova.endpoint import admin
 from nova.endpoint import api
 from nova.endpoint import cloud
@@ -39,10 +37,10 @@ FLAGS = flags.FLAGS
 
 
 def main(_argv):
+    """Load the controllers and start the tornado I/O loop."""
     controllers = {
         'Cloud': cloud.CloudController(),
-        'Admin': admin.AdminController()
-    }
+        'Admin': admin.AdminController()}
     _app = api.APIServerApplication(controllers)
 
     conn = rpc.Connection.instance()
