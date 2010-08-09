@@ -29,16 +29,12 @@ from nova import flags
 from nova import utils
 from nova.auth import manager
 from nova.compute import model
-from nova.compute import network
 from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 
 
 FLAGS = flags.FLAGS
 
-class NetworkCommands(object):
-    def restart(self):
-        network.restart_nets()
 
 class VpnCommands(object):
     def __init__(self):
@@ -170,6 +166,13 @@ class ProjectCommands(object):
         arguments: name"""
         self.manager.delete_project(name)
 
+    def environment(self, project_id, user_id, filename='novarc'):
+        """exports environment variables to an sourcable file
+        arguments: project_id user_id [filename='novarc]"""
+        rc = self.manager.get_environment_rc(project_id, user_id)
+        with open(filename, 'w') as f:
+            f.write(rc)
+
     def list(self):
         """lists all projects
         arguments: <none>"""
@@ -182,14 +185,11 @@ class ProjectCommands(object):
         self.manager.remove_from_project(user, project)
 
     def zip(self, project_id, user_id, filename='nova.zip'):
-        """exports credentials for user to a zip file
+        """exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
-        project = self.manager.get_project(project_id)
-        if project:
-            with open(filename, 'w') as f:
-                f.write(project.get_credentials(user_id))
-        else:
-            print "Project %s doesn't exist" % project
+        zip = self.manager.get_credentials(project_id, user_id)
+        with open(filename, 'w') as f:
+            f.write(zip)
 
 
 def usage(script_name):
@@ -197,7 +197,6 @@ def usage(script_name):
 
 
 categories = [
-    ('network', NetworkCommands),
     ('user', UserCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
