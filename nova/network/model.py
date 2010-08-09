@@ -141,7 +141,6 @@ class Vlan(datastore.BasicModel):
 
 class BaseNetwork(datastore.BasicModel):
     override_type = 'network'
-    NUM_STATIC_IPS = 3 # Network, Gateway, and CloudPipe
 
     @property
     def identifier(self):
@@ -215,16 +214,19 @@ class BaseNetwork(datastore.BasicModel):
 
     @property
     def available(self):
-        # the .2 address is always CloudPipe
-        # and the top <n> are for vpn clients
-        for idx in range(self.num_static_ips, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
+        for idx in range(self.num_bottom_reserved_ips,
+                         len(self.network) - self.num_top_reserved_ips):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
                 yield address
 
     @property
-    def num_static_ips(self):
-        return BaseNetwork.NUM_STATIC_IPS
+    def num_bottom_reserved_ips(self):
+        return 2 # Network, Gateway
+
+    @property
+    def num_top_reserved_ips(self):
+        return 1 # Broadcast
 
     def allocate_ip(self, user_id, project_id, mac):
         for address in self.available:
@@ -306,9 +308,9 @@ class DHCPNetwork(BridgedNetwork):
     def __init__(self, *args, **kwargs):
         super(DHCPNetwork, self).__init__(*args, **kwargs)
         # logging.debug("Initing DHCPNetwork object...")
-        self.dhcp_listen_address = self.network[1]
-        self.dhcp_range_start = self.network[3]
-        self.dhcp_range_end = self.network[-(1 + FLAGS.cnt_vpn_clients)]
+        self.dhcp_listen_address = self.gateway
+        self.dhcp_range_start = self.network[self.num_bottom_reserved_ips]
+        self.dhcp_range_end = self.network[-self.num_top_reserved_ips]
         try:
             os.makedirs(FLAGS.networks_path)
         # NOTE(todd): I guess this is a lazy way to not have to check if the
@@ -317,6 +319,16 @@ class DHCPNetwork(BridgedNetwork):
         #             permission denied? (Errno 17 vs 13, OSError)
         except Exception, err:
             pass
+
+    @property
+    def num_bottom_reserved_ips(self):
+        # For cloudpipe
+        return super(DHCPNetwork, self).num_bottom_reserved_ips + 1
+
+    @property
+    def num_top_reserved_ips(self):
+        return super(DHCPNetwork, self).num_top_reserved_ips + \
+                FLAGS.cnt_vpn_clients
 
     def express(self, address=None):
         super(DHCPNetwork, self).express(address=address)
@@ -389,13 +401,6 @@ class PublicNetworkController(BaseNetwork):
         self.express()
 
     @property
-    def available(self):
-        for idx in range(2, len(self.network)-1):
-            address = str(self.network[idx])
-            if not address in self.hosts.keys():
-                yield address
-
-    @property
     def host_objs(self):
         for address in self.assigned:
             yield PublicAddress(address)
@@ -415,7 +420,7 @@ class PublicNetworkController(BaseNetwork):
 
     def deallocate_ip(self, ip_str):
         # NOTE(vish): cleanup is now done on release by the parent class
-	self.release_ip(ip_str)
+        self.release_ip(ip_str)
 
     def associate_address(self, public_ip, private_ip, instance_id):
         if not public_ip in self.assigned:

@@ -54,6 +54,7 @@ class NetworkTestCase(test.TrialTestCase):
             self.projects.append(self.manager.create_project(name,
                                                              'netuser',
                                                              name))
+            vpn.NetworkData.create(self.projects[i].id)
         self.network = model.PublicNetworkController()
         self.service = service.VlanNetworkService()
 
@@ -70,7 +71,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertTrue(IPy.IP(address) in self.network.network)
 
     def test_allocate_deallocate_fixed_ip(self):
-        result  = yield self.service.allocate_fixed_ip(
+        result  = self.service.allocate_fixed_ip(
                 self.user.id, self.projects[0].id)
         address = result['private_dns_name']
         mac = result['mac_address']
@@ -89,11 +90,11 @@ class NetworkTestCase(test.TrialTestCase):
 
     def test_range_allocation(self):
         hostname = "test-host"
-        result = yield self.service.allocate_fixed_ip(
+        result = self.service.allocate_fixed_ip(
                     self.user.id, self.projects[0].id)
         mac = result['mac_address']
         address = result['private_dns_name']
-        result = yield self.service.allocate_fixed_ip(
+        result = self.service.allocate_fixed_ip(
                 self.user, self.projects[1].id)
         secondmac = result['mac_address']
         secondaddress = result['private_dns_name']
@@ -123,21 +124,21 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertEqual(False, is_in_project(secondaddress, self.projects[1].id))
 
     def test_subnet_edge(self):
-        result = yield self.service.allocate_fixed_ip(self.user.id,
+        result = self.service.allocate_fixed_ip(self.user.id,
                                                        self.projects[0].id)
         firstaddress = result['private_dns_name']
         hostname = "toomany-hosts"
         for i in range(1,5):
             project_id = self.projects[i].id
-            result = yield self.service.allocate_fixed_ip(
+            result = self.service.allocate_fixed_ip(
                     self.user, project_id)
             mac = result['mac_address']
             address = result['private_dns_name']
-            result = yield self.service.allocate_fixed_ip(
+            result = self.service.allocate_fixed_ip(
                     self.user, project_id)
             mac2 = result['mac_address']
             address2 = result['private_dns_name']
-            result = yield self.service.allocate_fixed_ip(
+            result = self.service.allocate_fixed_ip(
                    self.user, project_id)
             mac3 = result['mac_address']
             address3 = result['private_dns_name']
@@ -155,8 +156,7 @@ class NetworkTestCase(test.TrialTestCase):
         rv = self.service.deallocate_fixed_ip(firstaddress)
         self.dnsmasq.release_ip(mac, firstaddress, hostname, net.bridge_name)
 
-    def test_212_vpn_ip_and_port_looks_valid(self):
-        vpn.NetworkData.create(self.projects[0].id)
+    def test_vpn_ip_and_port_looks_valid(self):
         self.assert_(self.projects[0].vpn_ip)
         self.assert_(self.projects[0].vpn_port >= FLAGS.vpn_start_port)
         self.assert_(self.projects[0].vpn_port <= FLAGS.vpn_end_port)
@@ -169,55 +169,85 @@ class NetworkTestCase(test.TrialTestCase):
         for network_datum in vpns:
             network_datum.destroy()
 
-    def test_release_before_deallocate(self):
-        pass
+    def test_ips_are_reused(self):
+        """Makes sure that ip addresses that are deallocated get reused"""
 
-    def test_deallocate_before_issued(self):
-        pass
+        result = self.service.allocate_fixed_ip(
+                    self.user.id, self.projects[0].id)
+        mac = result['mac_address']
+        address = result['private_dns_name']
 
-    def test_too_many_addresses(self):
-        """
-        Here, we test that a proper NoMoreAddresses exception is raised.
+        hostname = "reuse-host"
+        net = model.get_project_network(self.projects[0].id, "default")
 
-        However, the number of available IP addresses depends on the test
+        self.dnsmasq.issue_ip(mac, address, hostname, net.bridge_name)
+        rv = self.service.deallocate_fixed_ip(address)
+        self.dnsmasq.release_ip(mac, address, hostname, net.bridge_name)
+
+        result = self.service.allocate_fixed_ip(
+                self.user, self.projects[0].id)
+        secondmac = result['mac_address']
+        secondaddress = result['private_dns_name']
+        self.assertEqual(address, secondaddress)
+        rv = self.service.deallocate_fixed_ip(secondaddress)
+        self.dnsmasq.issue_ip(secondmac,
+                              secondaddress,
+                              hostname,
+                              net.bridge_name)
+        self.dnsmasq.release_ip(secondmac,
+                                secondaddress,
+                                hostname,
+                                net.bridge_name)
+
+    def test_available_ips(self):
+        """Make sure the number of available ips for the network is correct
+
+        The number of available IP addresses depends on the test
         environment's setup.
 
         Network size is set in test fixture's setUp method.
 
-        There are FLAGS.cnt_vpn_clients addresses reserved for VPN (NUM_RESERVED_VPN_IPS)
-
-        And there are NUM_STATIC_IPS that are always reserved by Nova for the necessary
-        services (gateway, CloudPipe, etc)
-
-        So we should get flags.network_size - (NUM_STATIC_IPS +
-                                               NUM_PREALLOCATED_IPS +
-                                               NUM_RESERVED_VPN_IPS)
-        usable addresses
+        There are ips reserved at the bottom and top of the range.
+        services (network, gateway, CloudPipe, broadcast)
         """
         net = model.get_project_network(self.projects[0].id, "default")
-
-        # Determine expected number of available IP addresses
-        num_static_ips = net.num_static_ips
         num_preallocated_ips = len(net.hosts.keys())
-        num_reserved_vpn_ips = flags.FLAGS.cnt_vpn_clients
-        num_available_ips = flags.FLAGS.network_size - (num_static_ips +
+        num_available_ips = flags.FLAGS.network_size - (net.num_bottom_reserved_ips +
                                                         num_preallocated_ips +
-                                                        num_reserved_vpn_ips)
+                                                        net.num_top_reserved_ips)
+        self.assertEqual(num_available_ips, len(list(net.available)))
+
+    def test_too_many_addresses(self):
+        """Test for a NoMoreAddresses exception when all fixed ips are used.
+        """
+        net = model.get_project_network(self.projects[0].id, "default")
 
         hostname = "toomany-hosts"
         macs = {}
         addresses = {}
-        for i in range(0, (num_available_ips - 1)):
-            result = yield self.service.allocate_fixed_ip(self.user.id, self.projects[0].id)
+        # Number of availaible ips is len of the available list
+        num_available_ips = len(list(net.available))
+        for i in range(num_available_ips):
+            result = self.service.allocate_fixed_ip(self.user.id,
+                                                    self.projects[0].id)
             macs[i] = result['mac_address']
             addresses[i] = result['private_dns_name']
-            self.dnsmasq.issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
+            self.dnsmasq.issue_ip(macs[i],
+                                  addresses[i],
+                                  hostname,
+                                  net.bridge_name)
 
-        self.assertFailure(self.service.allocate_fixed_ip(self.user.id, self.projects[0].id), NoMoreAddresses)
+        self.assertEqual(len(list(net.available)), 0)
+        self.assertRaises(NoMoreAddresses, self.service.allocate_fixed_ip,
+                          self.user.id, self.projects[0].id)
 
-        for i in range(0, (num_available_ips - 1)):
+        for i in range(len(addresses)):
             rv = self.service.deallocate_fixed_ip(addresses[i])
-            self.dnsmasq.release_ip(macs[i], addresses[i], hostname, net.bridge_name)
+            self.dnsmasq.release_ip(macs[i],
+                                    addresses[i],
+                                    hostname,
+                                    net.bridge_name)
+        self.assertEqual(len(list(net.available)), num_available_ips)
 
 def is_in_project(address, project_id):
     return address in model.get_project_network(project_id).list_addresses()
