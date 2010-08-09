@@ -1,6 +1,10 @@
 [Basic]
 method-rgx=[a-z_][a-z0-9_]{2,50}$
 
+[MESSAGES CONTROL]
+# TODOs in code comments are fine...
+disable-msg=W0511
+
 [Design]
 max-public-methods=100
 min-public-methods=0
