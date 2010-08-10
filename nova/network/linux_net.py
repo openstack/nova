@@ -23,14 +23,15 @@ import subprocess
 
 # todo(ja): does the definition of network_path belong here?
 
+from nova import flags
 from nova import utils
 
-from nova import flags
-FLAGS=flags.FLAGS
+FLAGS = flags.FLAGS
 
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
+
 
 def execute(cmd, addl_env=None):
     if FLAGS.fake_network:
@@ -39,11 +40,13 @@ def execute(cmd, addl_env=None):
     else:
         return utils.execute(cmd, addl_env=addl_env)
 
+
 def runthis(desc, cmd):
     if FLAGS.fake_network:
         return execute(cmd)
     else:
-        return utils.runthis(desc,cmd)
+        return utils.runthis(desc, cmd)
+
 
 def Popen(cmd):
     if FLAGS.fake_network:
@@ -56,18 +59,25 @@ def device_exists(device):
     (out, err) = execute("ifconfig %s" % device)
     return not err
 
+
 def confirm_rule(cmd):
     execute("sudo iptables --delete %s" % (cmd))
     execute("sudo iptables -I %s" % (cmd))
 
+
 def remove_rule(cmd):
     execute("sudo iptables --delete %s" % (cmd))
 
+
 def bind_public_ip(ip, interface):
-    runthis("Binding IP to interface: %s", "sudo ip addr add %s dev %s" % (ip, interface))
+    runthis("Binding IP to interface: %s",
+            "sudo ip addr add %s dev %s" % (ip, interface))
+
 
 def unbind_public_ip(ip, interface):
-    runthis("Binding IP to interface: %s", "sudo ip addr del %s dev %s" % (ip, interface))
+    runthis("Binding IP to interface: %s",
+            "sudo ip addr del %s dev %s" % (ip, interface))
+
 
 def vlan_create(net):
     """ create a vlan on on a bridge device unless vlan already exists """
@@ -77,6 +87,7 @@ def vlan_create(net):
         execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, net['vlan']))
         execute("sudo ifconfig vlan%s up" % (net['vlan']))
 
+
 def bridge_create(net):
     """ create a bridge on a vlan unless it already exists """
     if not device_exists(net['bridge_name']):
@@ -85,13 +96,16 @@ def bridge_create(net):
         execute("sudo brctl setfd %s 0" % (net.bridge_name))
         # execute("sudo brctl setageing %s 10" % (net.bridge_name))
         execute("sudo brctl stp %s off" % (net['bridge_name']))
-        execute("sudo brctl addif %s vlan%s" % (net['bridge_name'], net['vlan']))
+        execute("sudo brctl addif %s vlan%s" % (net['bridge_name'],
+                                                net['vlan']))
         if net.bridge_gets_ip:
             execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                 (net['bridge_name'], net.gateway, net.broadcast, net.netmask))
-            confirm_rule("FORWARD --in-interface %s -j ACCEPT" % (net['bridge_name']))
+            confirm_rule("FORWARD --in-interface %s -j ACCEPT" %
+                         (net['bridge_name']))
         else:
             execute("sudo ifconfig %s up" % net['bridge_name'])
+
 
 def dnsmasq_cmd(net):
     cmd = ['sudo -E dnsmasq',
@@ -107,12 +121,15 @@ def dnsmasq_cmd(net):
         ' --leasefile-ro']
     return ''.join(cmd)
 
+
 def hostDHCP(network, host, mac):
-    idx = host.split(".")[-1] # Logically, the idx of instances they've launched in this net
+    # Logically, the idx of instances they've launched in this net
+    idx = host.split(".")[-1]
     return "%s,%s-%s-%s.novalocal,%s" % \
         (mac, network['user_id'], network['vlan'], idx, host)
 
-# todo(ja): if the system has restarted or pid numbers have wrapped
+
+# TODO(ja): if the system has restarted or pid numbers have wrapped
 #           then you cannot be certain that the pid refers to the
 #           dnsmasq.  As well, sending a HUP only reloads the hostfile,
 #           so any configuration options (like dchp-range, vlan, ...)
@@ -125,13 +142,15 @@ def start_dnsmasq(network):
     """
     with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
         for host_name in network.hosts:
-            f.write("%s\n" % hostDHCP(network, host_name, network.hosts[host_name]))
+            f.write("%s\n" % hostDHCP(network,
+                                      host_name,
+                                      network.hosts[host_name]))
 
     pid = dnsmasq_pid_for(network)
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        # todo(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
+        # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
         #           correct dnsmasq process
         try:
             os.kill(pid, signal.SIGHUP)
@@ -148,6 +167,7 @@ def start_dnsmasq(network):
            'DNSMASQ_INTERFACE': network['bridge_name']}
     execute(dnsmasq_cmd(network), addl_env=env)
 
+
 def stop_dnsmasq(network):
     """ stops the dnsmasq instance for a given network """
     pid = dnsmasq_pid_for(network)
@@ -158,13 +178,16 @@ def stop_dnsmasq(network):
         except Exception, e:
             logging.debug("Killing dnsmasq threw %s", e)
 
+
 def dhcp_file(vlan, kind):
     """ return path to a pid, leases or conf file for a vlan """
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
 
+
 def bin_file(script):
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
+
 
 def dnsmasq_pid_for(network):
     """ the pid for prior dnsmasq instance for a vlan,
@@ -178,4 +201,3 @@ def dnsmasq_pid_for(network):
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:
             return int(f.read())
-

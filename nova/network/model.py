@@ -119,7 +119,9 @@ class Vlan(datastore.BasicModel):
         default way of saving into "vlan:ID" and adding to a set of "vlans".
         """
         set_name = self._redis_set_name(self.__class__.__name__)
-        datastore.Redis.instance().hset(set_name, self.project_id, self.vlan_id)
+        datastore.Redis.instance().hset(set_name,
+                                        self.project_id,
+                                        self.vlan_id)
 
     @datastore.absorb_connection_error
     def destroy(self):
@@ -129,17 +131,16 @@ class Vlan(datastore.BasicModel):
     def subnet(self):
         vlan = int(self.vlan_id)
         network = IPy.IP(FLAGS.private_range)
-        start = (vlan-FLAGS.vlan_start) * FLAGS.network_size
+        start = (vlan - FLAGS.vlan_start) * FLAGS.network_size
         # minus one for the gateway.
         return "%s-%s" % (network[start],
                           network[start + FLAGS.network_size - 1])
+
 
 # CLEANUP:
 # TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
 # TODO(ja): does vlanpool "keeper" need to know the min/max -
 #           shouldn't FLAGS always win?
-# TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
-
 class BaseNetwork(datastore.BasicModel):
     override_type = 'network'
 
@@ -223,11 +224,11 @@ class BaseNetwork(datastore.BasicModel):
 
     @property
     def num_bottom_reserved_ips(self):
-        return 2 # Network, Gateway
+        return 2  # Network, Gateway
 
     @property
     def num_top_reserved_ips(self):
-        return 1 # Broadcast
+        return 1  # Broadcast
 
     def allocate_ip(self, user_id, project_id, mac):
         for address in self.available:
@@ -257,8 +258,11 @@ class BaseNetwork(datastore.BasicModel):
         for address in self.hosts:
             yield address
 
-    def express(self, address=None): pass
-    def deexpress(self, address=None): pass
+    def express(self, address=None):
+        pass
+
+    def deexpress(self, address=None):
+        pass
 
 
 class BridgedNetwork(BaseNetwork):
@@ -297,6 +301,7 @@ class BridgedNetwork(BaseNetwork):
         super(BridgedNetwork, self).express(address=address)
         linux_net.vlan_create(self)
         linux_net.bridge_create(self)
+
 
 class DHCPNetwork(BridgedNetwork):
     """
@@ -365,6 +370,7 @@ class DHCPNetwork(BridgedNetwork):
         else:
             linux_net.start_dnsmasq(self)
 
+
 class PublicAddress(datastore.BasicModel):
     override_type = "address"
 
@@ -391,6 +397,8 @@ class PublicAddress(datastore.BasicModel):
 
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
+
+
 class PublicNetworkController(BaseNetwork):
     override_type = 'network'
 
@@ -400,7 +408,8 @@ class PublicNetworkController(BaseNetwork):
             FLAGS.public_range)
         self['user_id'] = "public"
         self['project_id'] = "public"
-        self["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        self["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ',
+                                            time.gmtime())
         self["vlan"] = FLAGS.public_vlan
         self.save()
         self.express()
@@ -458,7 +467,7 @@ class PublicNetworkController(BaseNetwork):
         if address:
             addresses = [self.get_host(address)]
         for addr in addresses:
-            if addr.get('private_ip','available') == 'available':
+            if addr.get('private_ip', 'available') == 'available':
                 continue
             public_ip = addr['address']
             private_ip = addr['private_ip']
@@ -490,8 +499,9 @@ class PublicNetworkController(BaseNetwork):
                                   % (private_ip, protocol, port))
 
 
-# FIXME(todd): does this present a race condition, or is there some piece of
-#              architecture that mitigates it (only one queue listener per net)?
+# FIXME(todd): does this present a race condition, or is there some
+#              piece of architecture that mitigates it (only one queue
+#              listener per net)?
 def get_vlan_for_project(project_id):
     """
     Allocate vlan IDs to individual users.
@@ -502,7 +512,7 @@ def get_vlan_for_project(project_id):
     known_vlans = Vlan.dict_by_vlan()
     for vnum in range(FLAGS.vlan_start, FLAGS.vlan_end):
         vstr = str(vnum)
-        if not known_vlans.has_key(vstr):
+        if not vstr in known_vlans:
             return Vlan.create(project_id, vnum)
         old_project_id = known_vlans[vstr]
         if not manager.AuthManager().get_project(old_project_id):
@@ -525,6 +535,7 @@ def get_vlan_for_project(project_id):
             else:
                 return Vlan.create(project_id, vnum)
     raise exception.AddressNotAllocated("Out of VLANs")
+
 
 def get_project_network(project_id, security_group='default'):
     """ get a project's private network, allocating one if needed """
@@ -556,10 +567,8 @@ def get_network_by_interface(iface, security_group='default'):
     return get_project_network(project_id, security_group)
 
 
-
 def get_public_ip_for_instance(instance_id):
     # FIXME: this should be a lookup - iteration won't scale
     for address_record in PublicAddress.all():
         if address_record.get('instance_id', 'available') == instance_id:
             return address_record['address']
-

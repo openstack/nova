@@ -33,6 +33,7 @@ flags.DEFINE_integer('vpn_start_port', 1000,
 flags.DEFINE_integer('vpn_end_port', 2000,
                     'End port for the cloudpipe VPN servers')
 
+
 class NoMorePorts(exception.Error):
     pass
 
@@ -121,4 +122,3 @@ class NetworkData(datastore.BasicModel):
         self.unassociate_with('ip', self.ip)
         datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
         super(NetworkData, self).destroy()
-

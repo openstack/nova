@@ -38,7 +38,7 @@ flags.DEFINE_string('network_type',
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
 flags.DEFINE_list('flat_network_ips',
-                  ['192.168.0.2','192.168.0.3','192.168.0.4'],
+                  ['192.168.0.2', '192.168.0.3', '192.168.0.4'],
                   'Available ips for simple network')
 flags.DEFINE_string('flat_network_network', '192.168.0.0',
                        'Network for simple network')
@@ -51,17 +51,21 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
+
 def type_to_class(network_type):
     if network_type == 'flat':
         return FlatNetworkService
-    elif network_type  == 'vlan':
+    elif network_type == 'vlan':
         return VlanNetworkService
     raise NotFound("Couldn't find %s network type" % network_type)
 
 
 def setup_compute_network(network_type, user_id, project_id, security_group):
     srv = type_to_class(network_type)
-    srv.setup_compute_network(network_type, user_id, project_id, security_group)
+    srv.setup_compute_network(network_type,
+                              user_id,
+                              project_id,
+                              security_group)
 
 
 def get_host_for_project(project_id):
@@ -175,6 +179,7 @@ class FlatNetworkService(BaseNetworkService):
         """Returns an ip to the pool"""
         datastore.Redis.instance().sadd('ips', fixed_ip)
 
+
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
     # NOTE(vish): A lot of the interactions with network/model.py can be
@@ -194,7 +199,7 @@ class VlanNetworkService(BaseNetworkService):
         return {'network_type': FLAGS.network_type,
                 'bridge_name': net['bridge_name'],
                 'mac_address': mac,
-                'private_dns_name' : fixed_ip}
+                'private_dns_name': fixed_ip}
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):
