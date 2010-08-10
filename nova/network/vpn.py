@@ -35,6 +35,7 @@ flags.DEFINE_integer('vpn_end_port', 2000,
 
 
 class NoMorePorts(exception.Error):
+    """No ports available to allocate for the given ip"""
     pass
 
 
@@ -68,42 +69,44 @@ class NetworkData(datastore.BasicModel):
         return network_data
 
     @classmethod
-    def find_free_port_for_ip(cls, ip):
+    def find_free_port_for_ip(cls, vpn_ip):
         """Finds a free port for a given ip from the redis set"""
         # TODO(vish): these redis commands should be generalized and
         #             placed into a base class. Conceptually, it is
         #             similar to an association, but we are just
         #             storing a set of values instead of keys that
         #             should be turned into objects.
-        cls._ensure_set_exists(ip)
+        cls._ensure_set_exists(vpn_ip)
 
-        port = datastore.Redis.instance().spop(cls._redis_ports_key(ip))
+        port = datastore.Redis.instance().spop(cls._redis_ports_key(vpn_ip))
         if not port:
             raise NoMorePorts()
         return port
 
     @classmethod
-    def _redis_ports_key(cls, ip):
-        return 'ip:%s:ports' % ip
+    def _redis_ports_key(cls, vpn_ip):
+        """Key that ports are stored under in redis"""
+        return 'ip:%s:ports' % vpn_ip
 
     @classmethod
-    def _ensure_set_exists(cls, ip):
+    def _ensure_set_exists(cls, vpn_ip):
+        """Creates the set of ports for the ip if it doesn't already exist"""
         # TODO(vish): these ports should be allocated through an admin
         #             command instead of a flag
         redis = datastore.Redis.instance()
-        if (not redis.exists(cls._redis_ports_key(ip)) and
-            not redis.exists(cls._redis_association_name('ip', ip))):
+        if (not redis.exists(cls._redis_ports_key(vpn_ip)) and
+            not redis.exists(cls._redis_association_name('ip', vpn_ip))):
             for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
-                redis.sadd(cls._redis_ports_key(ip), i)
+                redis.sadd(cls._redis_ports_key(vpn_ip), i)
 
     @classmethod
-    def num_ports_for_ip(cls, ip):
+    def num_ports_for_ip(cls, vpn_ip):
         """Calculates the number of free ports for a given ip"""
-        cls._ensure_set_exists(ip)
-        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
+        cls._ensure_set_exists(vpn_ip)
+        return datastore.Redis.instance().scard('ip:%s:ports' % vpn_ip)
 
     @property
-    def ip(self):
+    def ip(self):  # pylint: disable=C0103
         """The ip assigned to the project"""
         return self['ip']
 
