@@ -24,20 +24,25 @@ from nova.exception import Error
 
 
 class NoMoreAddresses(Error):
+    """No More Addresses are available in the network"""
     pass
 
 
 class AddressNotAllocated(Error):
+    """The specified address has not been allocated"""
     pass
 
 
 class AddressAlreadyAssociated(Error):
+    """The specified address has already been associated"""
     pass
 
 
 class AddressNotAssociated(Error):
+    """The specified address is not associated"""
     pass
 
 
 class NotValidNetworkSize(Error):
+    """The network size is not valid"""
     pass

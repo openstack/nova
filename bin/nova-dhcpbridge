@@ -70,8 +70,9 @@ def init_leases(interface):
     net = model.get_network_by_interface(interface)
     res = ""
     for host_name in net.hosts:
-        res += "%s\n" % linux_net.hostDHCP(net, host_name,
-                                           net.hosts[host_name])
+        res += "%s\n" % linux_net.host_dhcp(net,
+                                            host_name,
+                                            net.hosts[host_name])
     return res
 
 

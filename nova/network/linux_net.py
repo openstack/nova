@@ -15,11 +15,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""
+Implements vlans, bridges, and iptables rules using linux utilities.
+"""
 
 import logging
 import signal
 import os
-import subprocess
 
 # todo(ja): does the definition of network_path belong here?
 
@@ -34,53 +36,53 @@ flags.DEFINE_string('dhcpbridge_flagfile',
 
 
 def execute(cmd, addl_env=None):
+    """Wrapper around utils.execute for fake_network"""
     if FLAGS.fake_network:
-        logging.debug("FAKE NET: %s" % cmd)
+        logging.debug("FAKE NET: %s", cmd)
         return "fake", 0
     else:
         return utils.execute(cmd, addl_env=addl_env)
 
 
 def runthis(desc, cmd):
+    """Wrapper around utils.runthis for fake_network"""
     if FLAGS.fake_network:
         return execute(cmd)
     else:
         return utils.runthis(desc, cmd)
 
 
-def Popen(cmd):
-    if FLAGS.fake_network:
-        execute(' '.join(cmd))
-    else:
-        subprocess.Popen(cmd)
-
-
 def device_exists(device):
-    (out, err) = execute("ifconfig %s" % device)
+    """Check if ethernet device exists"""
+    (_out, err) = execute("ifconfig %s" % device)
     return not err
 
 
 def confirm_rule(cmd):
+    """Delete and re-add iptables rule"""
     execute("sudo iptables --delete %s" % (cmd))
     execute("sudo iptables -I %s" % (cmd))
 
 
 def remove_rule(cmd):
+    """Remove iptables rule"""
     execute("sudo iptables --delete %s" % (cmd))
 
 
-def bind_public_ip(ip, interface):
+def bind_public_ip(public_ip, interface):
+    """Bind ip to an interface"""
     runthis("Binding IP to interface: %s",
-            "sudo ip addr add %s dev %s" % (ip, interface))
+            "sudo ip addr add %s dev %s" % (public_ip, interface))
 
 
-def unbind_public_ip(ip, interface):
+def unbind_public_ip(public_ip, interface):
+    """Unbind a public ip from an interface"""
     runthis("Binding IP to interface: %s",
-            "sudo ip addr del %s dev %s" % (ip, interface))
+            "sudo ip addr del %s dev %s" % (public_ip, interface))
 
 
 def vlan_create(net):
-    """ create a vlan on on a bridge device unless vlan already exists """
+    """Create a vlan on on a bridge device unless vlan already exists"""
     if not device_exists("vlan%s" % net['vlan']):
         logging.debug("Starting VLAN inteface for %s network", (net['vlan']))
         execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
@@ -89,7 +91,7 @@ def vlan_create(net):
 
 
 def bridge_create(net):
-    """ create a bridge on a vlan unless it already exists """
+    """Create a bridge on a vlan unless it already exists"""
     if not device_exists(net['bridge_name']):
         logging.debug("Starting Bridge inteface for %s network", (net['vlan']))
         execute("sudo brctl addbr %s" % (net['bridge_name']))
@@ -107,7 +109,8 @@ def bridge_create(net):
             execute("sudo ifconfig %s up" % net['bridge_name'])
 
 
-def dnsmasq_cmd(net):
+def _dnsmasq_cmd(net):
+    """Builds dnsmasq command"""
     cmd = ['sudo -E dnsmasq',
         ' --strict-order',
         ' --bind-interfaces',
@@ -122,7 +125,8 @@ def dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
-def hostDHCP(network, host, mac):
+def host_dhcp(network, host, mac):
+    """Return a host string for a network, host, and mac"""
     # Logically, the idx of instances they've launched in this net
     idx = host.split(".")[-1]
     return "%s,%s-%s-%s.novalocal,%s" % \
@@ -135,14 +139,14 @@ def hostDHCP(network, host, mac):
 #           so any configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded
 def start_dnsmasq(network):
-    """ (re)starts a dnsmasq server for a given network
+    """(Re)starts a dnsmasq server for a given network
 
     if a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance
     """
     with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
         for host_name in network.hosts:
-            f.write("%s\n" % hostDHCP(network,
+            f.write("%s\n" % host_dhcp(network,
                                       host_name,
                                       network.hosts[host_name]))
 
@@ -154,8 +158,8 @@ def start_dnsmasq(network):
         #           correct dnsmasq process
         try:
             os.kill(pid, signal.SIGHUP)
-        except Exception, e:
-            logging.debug("Hupping dnsmasq threw %s", e)
+        except Exception as exc:  # pylint: disable-msg=W0703
+            logging.debug("Hupping dnsmasq threw %s", exc)
 
     # otherwise delete the existing leases file and start dnsmasq
     lease_file = dhcp_file(network['vlan'], 'leases')
@@ -165,35 +169,37 @@ def start_dnsmasq(network):
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
            'DNSMASQ_INTERFACE': network['bridge_name']}
-    execute(dnsmasq_cmd(network), addl_env=env)
+    execute(_dnsmasq_cmd(network), addl_env=env)
 
 
 def stop_dnsmasq(network):
-    """ stops the dnsmasq instance for a given network """
+    """Stops the dnsmasq instance for a given network"""
     pid = dnsmasq_pid_for(network)
 
     if pid:
         try:
             os.kill(pid, signal.SIGTERM)
-        except Exception, e:
-            logging.debug("Killing dnsmasq threw %s", e)
+        except Exception as exc:  # pylint: disable-msg=W0703
+            logging.debug("Killing dnsmasq threw %s", exc)
 
 
 def dhcp_file(vlan, kind):
-    """ return path to a pid, leases or conf file for a vlan """
+    """Return path to a pid, leases or conf file for a vlan"""
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
 
 
 def bin_file(script):
+    """Return the absolute path to scipt in the bin directory"""
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
 def dnsmasq_pid_for(network):
-    """ the pid for prior dnsmasq instance for a vlan,
-    returns None if no pid file exists
+    """Returns he pid for prior dnsmasq instance for a vlan
 
-    if machine has rebooted pid might be incorrect (caller should check)
+    Returns None if no pid file exists
+
+    If machine has rebooted pid might be incorrect (caller should check)
     """
 
     pid_file = dhcp_file(network['vlan'], 'pid')
