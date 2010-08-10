@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 VENV = os.path.join(ROOT, '.nova-venv')
 PIP_REQUIRES = os.path.join(ROOT, 'tools', 'pip-requires')
 TWISTED_NOVA='http://nova.openstack.org/Twisted-10.0.0Nova.tar.gz'
