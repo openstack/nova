@@ -1,4 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+# pylint: disable-msg=C0103
+# pylint: disable-msg=W0511
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -22,15 +24,14 @@ Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
-import logging
 import mox
 import stubout
+import sys
 import time
-import unittest
+
 from tornado import ioloop
 from twisted.internet import defer
-from twisted.python import failure
-from twisted.trial import unittest as trial_unittest
+from twisted.trial import unittest
 
 from nova import fakerabbit
 from nova import flags
@@ -41,20 +42,21 @@ flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 
 
-def skip_if_fake(f):
+def skip_if_fake(func):
+    """Decorator that skips a test if running in fake mode"""
     def _skipper(*args, **kw):
+        """Wrapped skipper function"""
         if FLAGS.fake_tests:
-            raise trial_unittest.SkipTest('Test cannot be run in fake mode')
+            raise unittest.SkipTest('Test cannot be run in fake mode')
         else:
-            return f(*args, **kw)
-
-    _skipper.func_name = f.func_name
+            return func(*args, **kw)
     return _skipper
 
 
-class TrialTestCase(trial_unittest.TestCase):
-
+class TrialTestCase(unittest.TestCase):
+    """Test case base class for all unit tests"""
     def setUp(self):
+        """Run before each test method to initialize test environment"""
         super(TrialTestCase, self).setUp()
 
         # emulate some of the mox stuff, we can't use the metaclass
@@ -64,6 +66,7 @@ class TrialTestCase(trial_unittest.TestCase):
         self.flag_overrides = {}
 
     def tearDown(self):
+        """Runs after each test method to finalize/tear down test environment"""
         super(TrialTestCase, self).tearDown()
         self.reset_flags()
         self.mox.UnsetStubs()
@@ -75,6 +78,7 @@ class TrialTestCase(trial_unittest.TestCase):
             fakerabbit.reset_all()
 
     def flags(self, **kw):
+        """Override flag variables for a test"""
         for k, v in kw.iteritems():
             if k in self.flag_overrides:
                 self.reset_flags()
@@ -84,13 +88,17 @@ class TrialTestCase(trial_unittest.TestCase):
             setattr(FLAGS, k, v)
 
     def reset_flags(self):
+        """Resets all flag variables for the test.  Runs after each test"""
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
 
 
 
 class BaseTestCase(TrialTestCase):
-    def setUp(self):
+    # TODO(jaypipes): Can this be moved into the TrialTestCase class?
+    """Base test case class for all unit tests."""
+    def setUp(self): # pylint: disable-msg=W0511
+        """Run before each test method to initialize test environment"""
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
         #               the injected listeners... this is fine for now though
@@ -98,33 +106,27 @@ class BaseTestCase(TrialTestCase):
         self.ioloop = ioloop.IOLoop.instance()
 
         self._waiting = None
-        self._doneWaiting = False
-        self._timedOut = False
-        self.set_up()
-
-    def set_up(self):
-        pass
-
-    def tear_down(self):
-        pass
+        self._done_waiting = False
+        self._timed_out = False
 
     def tearDown(self):
+        """Runs after each test method to finalize/tear down test environment"""
         super(BaseTestCase, self).tearDown()
         for x in self.injected:
             x.stop()
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
-        self.tear_down()
 
     def _waitForTest(self, timeout=60):
         """ Push the ioloop along to wait for our test to complete. """
         self._waiting = self.ioloop.add_timeout(time.time() + timeout,
                                                 self._timeout)
         def _wait():
-            if self._timedOut:
+            """Wrapped wait function. Called on timeout."""
+            if self._timed_out:
                 self.fail('test timed out')
                 self._done()
-            if self._doneWaiting:
+            if self._done_waiting:
                 self.ioloop.stop()
                 return
             # we can use add_callback here but this uses less cpu when testing
@@ -134,13 +136,16 @@ class BaseTestCase(TrialTestCase):
         self.ioloop.start()
 
     def _done(self):
+        """Callback used for cleaning up deferred test methods."""
         if self._waiting:
             try:
                 self.ioloop.remove_timeout(self._waiting)
-            except Exception:
+            except Exception: # pylint: disable-msg=W0703
+                # TODO(jaypipes): This produces a pylint warning.  Should
+                # we really be catching Exception and then passing here?
                 pass
             self._waiting = None
-        self._doneWaiting = True
+        self._done_waiting = True
 
     def _maybeInlineCallbacks(self, f):
         """ If we're doing async calls in our tests, wait on them.
@@ -189,6 +194,7 @@ class BaseTestCase(TrialTestCase):
         return d
 
     def _catchExceptions(self, result, failure):
+        """Catches all exceptions and handles keyboard interrupts."""
         exc = (failure.type, failure.value, failure.getTracebackObject())
         if isinstance(failure.value, self.failureException):
             result.addFailure(self, exc)
@@ -200,11 +206,12 @@ class BaseTestCase(TrialTestCase):
         self._done()
 
     def _timeout(self):
+        """Helper method which trips the timeouts"""
         self._waiting = False
-        self._timedOut = True
+        self._timed_out = True
 
     def run(self, result=None):
-        if result is None: result = self.defaultTestResult()
+        """Runs the test case"""
 
         result.startTest(self)
         testMethod = getattr(self, self._testMethodName)
@@ -214,7 +221,7 @@ class BaseTestCase(TrialTestCase):
             except KeyboardInterrupt:
                 raise
             except:
-                result.addError(self, self._exc_info())
+                result.addError(self, sys.exc_info())
                 return
 
             ok = False
@@ -225,19 +232,20 @@ class BaseTestCase(TrialTestCase):
                 self._waitForTest()
                 ok = True
             except self.failureException:
-                result.addFailure(self, self._exc_info())
+                result.addFailure(self, sys.exc_info())
             except KeyboardInterrupt:
                 raise
             except:
-                result.addError(self, self._exc_info())
+                result.addError(self, sys.exc_info())
 
             try:
                 self.tearDown()
             except KeyboardInterrupt:
                 raise
             except:
-                result.addError(self, self._exc_info())
+                result.addError(self, sys.exc_info())
                 ok = False
-            if ok: result.addSuccess(self)
+            if ok:
+                result.addSuccess(self)
         finally:
             result.stopTest(self)
