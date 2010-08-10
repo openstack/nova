@@ -37,12 +37,15 @@ FLAGS = flags.FLAGS
 
 
 class VpnCommands(object):
+    """Class for managing VPNs."""
+
     def __init__(self):
         self.manager = manager.AuthManager()
         self.instdir = model.InstanceDirectory()
         self.pipe = pipelib.CloudPipe(cloud.CloudController())
 
     def list(self):
+        """Print a listing of the VPNs for all projects."""
         print "%-12s\t" % 'project',
         print "%-12s\t" % 'ip:port',
         print "%s" % 'state'
@@ -50,9 +53,10 @@ class VpnCommands(object):
             print "%-12s\t" % project.name,
             print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
 
-            vpn = self.__vpn_for(project.id)
+            vpn = self._vpn_for(project.id)
             if vpn:
-                out, err = utils.execute("ping -c1 -w1 %s > /dev/null; echo $?" % vpn['private_dns_name'])
+                command = "ping -c1 -w1 %s > /dev/null; echo $?"
+                out, _err = utils.execute(command % vpn['private_dns_name'])
                 if out.strip() == '0':
                     net = 'up'
                 else:
@@ -66,25 +70,32 @@ class VpnCommands(object):
             else:
                 print None
 
-    def __vpn_for(self, project_id):
+    def _vpn_for(self, project_id):
+        """Get the VPN instance for a project ID."""
         for instance in self.instdir.all:
-            if (instance.state.has_key('image_id')
+            if ('image_id' in instance.state
                 and instance['image_id'] == FLAGS.vpn_image_id
-                and not instance['state_description'] in ['shutting_down', 'shutdown']
+                and not instance['state_description'] in
+                    ['shutting_down', 'shutdown']
                 and instance['project_id'] == project_id):
                 return instance
 
     def spawn(self):
+        """Run all VPNs."""
         for p in reversed(self.manager.get_projects()):
-             if not self.__vpn_for(p.id):
-                 print 'spawning %s' % p.id
-                 self.pipe.launch_vpn_instance(p.id)
-                 time.sleep(10)
+            if not self._vpn_for(p.id):
+                print 'spawning %s' % p.id
+                self.pipe.launch_vpn_instance(p.id)
+                time.sleep(10)
 
     def run(self, project_id):
+        """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
 
+
 class RoleCommands(object):
+    """Class for managing roles."""
+
     def __init__(self):
         self.manager = manager.AuthManager()
 
@@ -107,25 +118,24 @@ class RoleCommands(object):
         arguments: user, role [project]"""
         self.manager.remove_role(user, role, project)
 
+
 class UserCommands(object):
+    """Class for managing users."""
+
     def __init__(self):
         self.manager = manager.AuthManager()
-
-    def __print_export(self, user):
-        print 'export EC2_ACCESS_KEY=%s' % user.access
-        print 'export EC2_SECRET_KEY=%s' % user.secret
 
     def admin(self, name, access=None, secret=None):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, True)
-        self.__print_export(user)
+        print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, False)
-        self.__print_export(user)
+        print_export(user)
 
     def delete(self, name):
         """deletes an existing user
@@ -137,7 +147,7 @@ class UserCommands(object):
         arguments: name"""
         user = self.manager.get_user(name)
         if user:
-            self.__print_export(user)
+            print_export(user)
         else:
             print "User %s doesn't exist" % name
 
@@ -147,53 +157,58 @@ class UserCommands(object):
         for user in self.manager.get_users():
             print user.name
 
+
+def print_export(user):
+    """Print export variables to use with API."""
+    print 'export EC2_ACCESS_KEY=%s' % user.access
+    print 'export EC2_SECRET_KEY=%s' % user.secret
+
+
 class ProjectCommands(object):
+    """Class for managing projects."""
+
     def __init__(self):
         self.manager = manager.AuthManager()
 
     def add(self, project, user):
-        """adds user to project
+        """Adds user to project
         arguments: project user"""
         self.manager.add_to_project(user, project)
 
     def create(self, name, project_manager, description=None):
-        """creates a new project
+        """Creates a new project
         arguments: name project_manager [description]"""
-        user = self.manager.create_project(name, project_manager, description)
+        self.manager.create_project(name, project_manager, description)
 
     def delete(self, name):
-        """deletes an existing project
+        """Deletes an existing project
         arguments: name"""
         self.manager.delete_project(name)
 
     def environment(self, project_id, user_id, filename='novarc'):
-        """exports environment variables to an sourcable file
+        """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
         rc = self.manager.get_environment_rc(project_id, user_id)
         with open(filename, 'w') as f:
             f.write(rc)
 
     def list(self):
-        """lists all projects
+        """Lists all projects
         arguments: <none>"""
         for project in self.manager.get_projects():
             print project.name
 
     def remove(self, project, user):
-        """removes user from project
+        """Removes user from project
         arguments: project user"""
         self.manager.remove_from_project(user, project)
 
-    def zip(self, project_id, user_id, filename='nova.zip'):
-        """exports credentials for project to a zip file
+    def create_zip(self, project_id, user_id, filename='nova.zip'):
+        """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
-        zip = self.manager.get_credentials(project_id, user_id)
+        zip_file = self.manager.get_credentials(project_id, user_id)
         with open(filename, 'w') as f:
-            f.write(zip)
-
-
-def usage(script_name):
-    print script_name + " category action [<args>]"
+            f.write(zip_file)
 
 
 categories = [
@@ -205,62 +220,61 @@ categories = [
 
 
 def lazy_match(name, key_value_tuples):
-    """finds all objects that have a key that case insensitively contains [name]
-    key_value_tuples is a list of tuples of the form (key, value)
+    """Finds all objects that have a key that case insensitively contains
+    [name] key_value_tuples is a list of tuples of the form (key, value)
     returns a list of tuples of the form (key, value)"""
-    return [(k, v) for (k, v) in key_value_tuples if k.lower().find(name.lower()) == 0]
+    result = []
+    for (k, v) in key_value_tuples:
+        if k.lower().find(name.lower()) == 0:
+            result.append((k, v))
+    if len(result) == 0:
+        print "%s does not match any options:" % name
+        for k, _v in key_value_tuples:
+            print "\t%s" % k
+        sys.exit(2)
+    if len(result) > 1:
+        print "%s matched multiple options:" % name
+        for k, _v in result:
+            print "\t%s" % k
+        sys.exit(2)
+    return result
 
 
 def methods_of(obj):
-    """get all callable methods of an object that don't start with underscore
+    """Get all callable methods of an object that don't start with underscore
     returns a list of tuples of the form (method_name, method)"""
-    return [(i, getattr(obj, i)) for i in dir(obj) if callable(getattr(obj, i)) and not i.startswith('_')]
+    result = []
+    for i in dir(obj):
+        if callable(getattr(obj, i)) and not i.startswith('_'):
+            result.append((i, getattr(obj, i)))
+    return result
 
 
-if __name__ == '__main__':
+def main():
+    """Parse options and call the appropriate class/method."""
     utils.default_flagfile('/etc/nova/nova-manage.conf')
     argv = FLAGS(sys.argv)
     script_name = argv.pop(0)
     if len(argv) < 1:
-        usage(script_name)
+        print script_name + " category action [<args>]"
         print "Available categories:"
-        for k, v in categories:
+        for k, _ in categories:
             print "\t%s" % k
         sys.exit(2)
     category = argv.pop(0)
     matches = lazy_match(category, categories)
-    if len(matches) == 0:
-        print "%s does not match any categories:" % category
-        for k, v in categories:
-            print "\t%s" % k
-        sys.exit(2)
-    if len(matches) > 1:
-        print "%s matched multiple categories:" % category
-        for k, v in matches:
-            print "\t%s" % k
-        sys.exit(2)
     # instantiate the command group object
     category, fn = matches[0]
     command_object = fn()
     actions = methods_of(command_object)
     if len(argv) < 1:
-        usage(script_name)
+        print script_name + " category action [<args>]"
         print "Available actions for %s category:" % category
-        for k, v in actions:
+        for k, _v in actions:
             print "\t%s" % k
         sys.exit(2)
     action = argv.pop(0)
     matches = lazy_match(action, actions)
-    if len(matches) == 0:
-        print "%s does not match any actions" % action
-        for k, v in actions:
-            print "\t%s" % k
-        sys.exit(2)
-    if len(matches) > 1:
-        print "%s matched multiple actions:" % action
-        for k, v in matches:
-            print "\t%s" % k
-        sys.exit(2)
     action, fn = matches[0]
     # call the action with the remaining arguments
     try:
@@ -271,3 +285,5 @@ if __name__ == '__main__':
         print "%s %s: %s" % (category, action, fn.__doc__)
         sys.exit(2)
 
+if __name__ == '__main__':
+    main()

@@ -135,9 +135,17 @@ class AuthTestCase(test.BaseTestCase):
         self.manager.add_to_project('test2', 'testproj')
         self.assertTrue(self.manager.get_project('testproj').has_member('test2'))
 
-    def test_208_can_remove_user_from_project(self):
+    def test_207_can_remove_user_from_project(self):
         self.manager.remove_from_project('test2', 'testproj')
         self.assertFalse(self.manager.get_project('testproj').has_member('test2'))
+
+    def test_208_can_remove_add_user_with_role(self):
+        self.manager.add_to_project('test2', 'testproj')
+        self.manager.add_role('test2', 'developer', 'testproj')
+        self.manager.remove_from_project('test2', 'testproj')
+        self.assertFalse(self.manager.has_role('test2', 'developer', 'testproj'))
+        self.manager.add_to_project('test2', 'testproj')
+        self.manager.remove_from_project('test2', 'testproj')
 
     def test_209_can_generate_x509(self):
         # MUST HAVE RUN CLOUD SETUP BY NOW

@@ -266,7 +266,8 @@ class ImagesResource(Resource):
         """ returns a json listing of all images
             that a user has permissions to see """
 
-        images = [i for i in image.Image.all() if i.is_authorized(request.context)]
+        images = [i for i in image.Image.all() \
+                  if i.is_authorized(request.context, readonly=True)]
 
         request.write(json.dumps([i.metadata for i in images]))
         request.finish()

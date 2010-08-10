@@ -235,7 +235,7 @@ class BaseNetwork(datastore.BasicModel):
             self.express(address=address)
             return address
         raise exception.NoMoreAddresses("Project %s with network %s" %
-                                                (project_id, str(self.network)))
+                                        (project_id, str(self.network)))
 
     def lease_ip(self, ip_str):
         logging.debug("Leasing allocated IP %s" % (ip_str))
@@ -247,8 +247,10 @@ class BaseNetwork(datastore.BasicModel):
         self.deexpress(address=ip_str)
 
     def deallocate_ip(self, ip_str):
-       # go ahead and remove ip
-        self.release_ip(ip_str)
+        # NOTE(vish): Perhaps we should put the ip into an intermediate
+        #             state, so we know that we are pending waiting for
+        #             dnsmasq to confirm that it has been released.
+        pass
 
     def list_addresses(self):
         for address in self.hosts:

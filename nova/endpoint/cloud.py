@@ -699,6 +699,8 @@ class CloudController(object):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
+        if not 'user_group' in kwargs:
+            raise exception.ApiError('user or group not specified')
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
             raise exception.ApiError('only group "all" is supported')
         if not operation_type in ['add', 'remove']:
