@@ -36,6 +36,7 @@ def die(message, *args):
   print >>sys.stderr, message % args
   sys.exit(1)
 
+
 def run_command(cmd, redirect_output=True, error_ok=False):
   """Runs a command in an out-of-process shell, returning the
   output of that command
@@ -51,8 +52,10 @@ def run_command(cmd, redirect_output=True, error_ok=False):
     die('Command "%s" failed.\n%s', ' '.join(cmd), output)
   return output
 
+
 HAS_EASY_INSTALL = bool(run_command(['which', 'easy_install']).strip())
 HAS_VIRTUALENV = bool(run_command(['which', 'virtualenv']).strip())
+
 
 def check_dependencies():
   """Make sure virtualenv is in the path."""
@@ -62,8 +65,8 @@ def check_dependencies():
     print 'not found.'
     # Try installing it via easy_install...
     if HAS_EASY_INSTALL:
+      print 'Installing virtualenv via easy_install...',
       if not run_command(['which', 'easy_install']):
-        print 'Installing virtualenv via easy_install...',
         die('ERROR: virtualenv not found.\n\nNova development requires virtualenv,'
             ' please install it using your favorite package management tool')
       print 'done.'
