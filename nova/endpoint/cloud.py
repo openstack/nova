@@ -103,7 +103,7 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], 
+                line = '%s slots=%d' % (instance['private_dns_name'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
@@ -423,7 +423,7 @@ class CloudController(object):
             i['key_name'] = instance.get('key_name', None)
             if context.user.is_admin():
                 i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.get('project_id', None), 
+                    instance.get('project_id', None),
                     instance.get('node_name', ''))
             i['product_codes_set'] = self._convert_to_set(
                 instance.get('product_codes', None), 'product_code')
@@ -560,15 +560,15 @@ class CloudController(object):
         # TODO: Get the real security group of launch in here
         security_group = "default"
         for num in range(int(kwargs['max_count'])):
-            vpn = False
+            is_vpn = False
             if image_id  == FLAGS.vpn_image_id:
-                vpn = True
+                is_vpn = True
             allocate_result = yield rpc.call(network_topic,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
                                "security_group": security_group,
-                               "vpn": vpn}})
+                               "is_vpn": is_vpn}})
             allocate_data = allocate_result['result']
             inst = self.instdir.new()
             inst['image_id'] = image_id
