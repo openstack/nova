@@ -170,6 +170,9 @@ class BasicModel(object):
     def setdefault(self, item, default):
         return self.state.setdefault(item, default)
 
+    def __contains__(self, item):
+        return item in self.state
+
     def __getitem__(self, item):
         return self.state[item]
 
