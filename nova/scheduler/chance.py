@@ -29,5 +29,9 @@ class ChanceScheduler(Scheduler):
     """
 
     def pick_node(self, instance_id, **_kwargs):
+        """
+        Picks a node that is up at random
+        """
+
         nodes = self.compute_nodes_up()
         return nodes[int(random.random() * len(nodes))]

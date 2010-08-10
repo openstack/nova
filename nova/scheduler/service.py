@@ -49,7 +49,8 @@ class SchedulerService(service.Service):
                                       FLAGS.scheduler_type)
         self._scheduler_class = SCHEDULER_CLASSES[FLAGS.scheduler_type]
 
-    def noop(self):
+    @staticmethod
+    def noop():
         """ simple test of an AMQP message call """
         return defer.succeed('PONG')
 

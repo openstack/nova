@@ -35,13 +35,23 @@ class Scheduler(object):
     The base class that all Scheduler clases should inherit from
     """
 
-    @property
-    def compute_nodes(self):
+    @staticmethod
+    def compute_nodes():
+        """
+        Return a list of compute nodes
+        """
+
         return [identifier.split(':')[0]
                    for identifier in Redis.instance().smembers("daemons")
                        if (identifier.split(':')[1] == "nova-compute")]
 
-    def compute_node_is_up(self, node):
+    @staticmethod
+    def compute_node_is_up(node):
+        """
+        Given a node name, return whether the node is considered 'up' by
+        if it's sent a heartbeat recently
+        """
+
         time_str = Redis.instance().hget('%s:%s:%s' %
                                             ('daemon', node, 'nova-compute'),
                                          'updated_at')
@@ -57,9 +67,14 @@ class Scheduler(object):
         return (time.time() - epoch_time) < FLAGS.node_down_time
 
     def compute_nodes_up(self):
-        return [node for node in self.compute_nodes
+        """
+        Return the list of compute nodes that are considered 'up'
+        """
+        
+        return [node for node in self.compute_nodes()
                    if self.compute_node_is_up(node)]
 
     def pick_node(self, instance_id, **_kwargs):
         """You DEFINITELY want to define this in your subclass"""
+
         raise NotImplementedError("Your subclass should define pick_node")

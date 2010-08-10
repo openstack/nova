@@ -27,4 +27,8 @@ class BestFitScheduler(Scheduler):
     """
 
     def pick_node(self, instance_id, **_kwargs):
+        """
+        Picks a node that is up and is a best fit for the new instance
+        """
+
         raise NotImplementedError("BestFitScheduler is not done yet")
