@@ -97,11 +97,11 @@ class Vlan(datastore.BasicModel):
     def dict_by_vlan(cls):
         """a hash of vlan:project"""
         set_name = cls._redis_set_name(cls.__name__)
-        rv = {}
-        h = datastore.Redis.instance().hgetall(set_name)
-        for v in h.keys():
-            rv[h[v]] = v
-        return rv
+        retvals = {}
+        hashset = datastore.Redis.instance().hgetall(set_name)
+        for val in hashset.keys():
+            retvals[hashset[val]] = val
+        return retvals
 
     @classmethod
     @datastore.absorb_connection_error
@@ -136,7 +136,8 @@ class Vlan(datastore.BasicModel):
 
 # CLEANUP:
 # TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
-# TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
+# TODO(ja): does vlanpool "keeper" need to know the min/max -
+#           shouldn't FLAGS always win?
 # TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
 
 class BaseNetwork(datastore.BasicModel):
@@ -352,8 +353,9 @@ class DHCPNetwork(BridgedNetwork):
         private_ip = str(self.network[2])
         linux_net.confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT"
                                % (private_ip, ))
-        linux_net.confirm_rule("PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
-                               % (self.project.vpn_ip, self.project.vpn_port, private_ip))
+        linux_net.confirm_rule(
+            "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+            % (self.project.vpn_ip, self.project.vpn_port, private_ip))
 
     def deexpress(self, address=None):
         # if this is the last address, stop dns
@@ -388,13 +390,14 @@ class PublicAddress(datastore.BasicModel):
         return addr
 
 
-DEFAULT_PORTS = [("tcp",80), ("tcp",22), ("udp",1194), ("tcp",443)]
+DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 class PublicNetworkController(BaseNetwork):
     override_type = 'network'
 
     def __init__(self, *args, **kwargs):
         network_id = "public:default"
-        super(PublicNetworkController, self).__init__(network_id, FLAGS.public_range)
+        super(PublicNetworkController, self).__init__(network_id,
+            FLAGS.public_range)
         self['user_id'] = "public"
         self['project_id'] = "public"
         self["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -468,8 +471,9 @@ class PublicNetworkController(BaseNetwork):
             linux_net.confirm_rule("FORWARD -d %s -p icmp -j ACCEPT"
                                    % (private_ip))
             for (protocol, port) in DEFAULT_PORTS:
-                linux_net.confirm_rule("FORWARD -d %s -p %s --dport %s -j ACCEPT"
-                                       % (private_ip, protocol, port))
+                linux_net.confirm_rule(
+                    "FORWARD -d %s -p %s --dport %s -j ACCEPT"
+                    % (private_ip, protocol, port))
 
     def deexpress(self, address=None):
         addr = self.get_host(address)

@@ -29,14 +29,12 @@ import uuid
 import zipfile
 
 from nova import crypto
-from nova import datastore
 from nova import exception
 from nova import flags
-from nova import objectstore # for flags
 from nova import utils
-from nova.auth import ldapdriver # for flags
 from nova.auth import signer
 from nova.network import vpn
+
 
 FLAGS = flags.FLAGS
 
@@ -99,6 +97,7 @@ class AuthBase(object):
 class User(AuthBase):
     """Object representing a user"""
     def __init__(self, id, name, access, secret, admin):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.access = access
@@ -159,6 +158,7 @@ class KeyPair(AuthBase):
     fingerprint is stored. The user's private key is not saved.
     """
     def __init__(self, id, name, owner_id, public_key, fingerprint):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.owner_id = owner_id
@@ -176,6 +176,7 @@ class KeyPair(AuthBase):
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
     def __init__(self, id, name, project_manager_id, description, member_ids):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.project_manager_id = project_manager_id
@@ -234,7 +235,7 @@ class AuthManager(object):
     AuthManager also manages associated data related to Auth objects that
     need to be more accessible, such as vpn ips and ports.
     """
-    _instance=None
+    _instance = None
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:
@@ -248,7 +249,7 @@ class AuthManager(object):
         reset the driver if it is not set or a new driver is specified.
         """
         if driver or not getattr(self, 'driver', None):
-           self.driver = utils.import_class(driver or FLAGS.auth_driver)
+            self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
