@@ -1,6 +1,4 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# pylint: disable-msg=C0103
-# pylint: disable-msg=W0511
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -55,7 +53,7 @@ def skip_if_fake(func):
 
 class TrialTestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
-    def setUp(self):
+    def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(TrialTestCase, self).setUp()
 
@@ -65,7 +63,7 @@ class TrialTestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
 
-    def tearDown(self):
+    def tearDown(self): # pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(TrialTestCase, self).tearDown()
         self.reset_flags()
@@ -97,7 +95,7 @@ class TrialTestCase(unittest.TestCase):
 class BaseTestCase(TrialTestCase):
     # TODO(jaypipes): Can this be moved into the TrialTestCase class?
     """Base test case class for all unit tests."""
-    def setUp(self): # pylint: disable-msg=W0511
+    def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
@@ -109,7 +107,7 @@ class BaseTestCase(TrialTestCase):
         self._done_waiting = False
         self._timed_out = False
 
-    def tearDown(self):
+    def tearDown(self):# pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(BaseTestCase, self).tearDown()
         for x in self.injected:
@@ -117,7 +115,7 @@ class BaseTestCase(TrialTestCase):
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
 
-    def _waitForTest(self, timeout=60):
+    def _wait_for_test(self, timeout=60):
         """ Push the ioloop along to wait for our test to complete. """
         self._waiting = self.ioloop.add_timeout(time.time() + timeout,
                                                 self._timeout)
@@ -147,7 +145,7 @@ class BaseTestCase(TrialTestCase):
             self._waiting = None
         self._done_waiting = True
 
-    def _maybeInlineCallbacks(self, f):
+    def _maybe_inline_callbacks(self, func):
         """ If we're doing async calls in our tests, wait on them.
 
         This is probably the most complicated hunk of code we have so far.
@@ -170,7 +168,7 @@ class BaseTestCase(TrialTestCase):
         d.addCallback(_describe)
         d.addCallback(_checkDescribe)
         d.addCallback(lambda x: self._done())
-        self._waitForTest()
+        self._wait_for_test()
 
         Example (inline callbacks! yay!):
 
@@ -184,16 +182,16 @@ class BaseTestCase(TrialTestCase):
         # TODO(termie): this can be a wrapper function instead and
         #               and we can make a metaclass so that we don't
         #               have to copy all that "run" code below.
-        g = f()
+        g = func()
         if not hasattr(g, 'send'):
             self._done()
             return defer.succeed(g)
 
-        inlined = defer.inlineCallbacks(f)
+        inlined = defer.inlineCallbacks(func)
         d = inlined()
         return d
 
-    def _catchExceptions(self, result, failure):
+    def _catch_exceptions(self, result, failure):
         """Catches all exceptions and handles keyboard interrupts."""
         exc = (failure.type, failure.value, failure.getTracebackObject())
         if isinstance(failure.value, self.failureException):
@@ -214,7 +212,7 @@ class BaseTestCase(TrialTestCase):
         """Runs the test case"""
 
         result.startTest(self)
-        testMethod = getattr(self, self._testMethodName)
+        test_method = getattr(self, self._testMethodName)
         try:
             try:
                 self.setUp()
@@ -226,10 +224,10 @@ class BaseTestCase(TrialTestCase):
 
             ok = False
             try:
-                d = self._maybeInlineCallbacks(testMethod)
-                d.addErrback(lambda x: self._catchExceptions(result, x))
+                d = self._maybe_inline_callbacks(test_method)
+                d.addErrback(lambda x: self._catch_exceptions(result, x))
                 d.addBoth(lambda x: self._done() and x)
-                self._waitForTest()
+                self._wait_for_test()
                 ok = True
             except self.failureException:
                 result.addFailure(self, sys.exc_info())
