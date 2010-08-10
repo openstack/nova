@@ -35,10 +35,6 @@ from nova import utils
 from nova.auth import signer
 from nova.network import vpn
 
-#unused imports
-#from nova import datastore
-#from nova.auth import ldapdriver # for flags
-#from nova import objectstore # for flags
 
 FLAGS = flags.FLAGS
 
