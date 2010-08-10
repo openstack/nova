@@ -17,6 +17,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""Abstraction of the underlying virtualization API"""
+
+import logging
+import sys
+
 from nova import flags
 from nova.virt import fake
 from nova.virt import libvirt_conn
@@ -27,6 +32,11 @@ FLAGS = flags.FLAGS
 
 
 def get_connection(read_only=False):
+    """Returns a connection to the underlying virtualization API
+    
+    The read_only parameter is passed through to the underlying API's
+    get_connection() method if applicable
+    """
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
     t = FLAGS.connection_type
