@@ -118,7 +118,7 @@ def _dnsmasq_cmd(net):
         ' --pid-file=%s' % dhcp_file(net['vlan'], 'pid'),
         ' --listen-address=%s' % net.dhcp_listen_address,
         ' --except-interface=lo',
-        ' --dhcp-range=%s,static,600s' % (net.dhcp_range_start),
+        ' --dhcp-range=%s,static,600s' % net.dhcp_range_start,
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
         ' --dhcp-script=%s' % bin_file('nova-dhcpbridge'),
         ' --leasefile-ro']
