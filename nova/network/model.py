@@ -243,12 +243,12 @@ class BaseNetwork(datastore.BasicModel):
     def release_ip(self, ip_str):
         if not ip_str in self.assigned:
             raise exception.AddressNotAllocated()
-        self.deexpress(address=ip_str)
         self._rem_host(ip_str)
+        self.deexpress(address=ip_str)
 
     def deallocate_ip(self, ip_str):
-        # Do nothing for now, cleanup on ip release
-        pass
+       # go ahead and remove ip
+        self.release_ip(ip_str)
 
     def list_addresses(self):
         for address in self.hosts:
