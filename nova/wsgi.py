@@ -40,6 +40,7 @@ def run_server(application, port):
     eventlet.wsgi.server(sock, application)
 
 
+# TODO(gundlach): I think we should toss this class, now that it has no purpose.
 class Application(object):
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
 
@@ -140,6 +141,81 @@ class ParsedRoutes(Middleware):
         app = environ['wsgiorg.routing_args'][1]['controller']
         return app(environ, start_response)
 
+class MichaelRouter(object):
+    """
+    My attempt at a routing class.  Just override __init__ to call
+    super, then set up routes in self.map.
+    """
+    
+    def __init__(self):
+        self.map = routes.Mapper()
+        self._router = routes.middleware.RoutesMiddleware(self._proceed, self.map)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """
+        Route the incoming request to a controller based on self.map.
+        If no match, return a 404.
+        """
+        return self._router
+
+    @webob.dec.wsgify
+    def _proceed(self, req):
+        """
+        Called by self._router after matching the incoming request to a route
+        and putting the information into req.environ.
+        """
+        if req.environ['routes.route'] is None:
+            return webob.exc.HTTPNotFound()
+        match = environ['wsgiorg.routing_args'][1]
+        if match.get('_is_wsgi', False):
+            wsgiapp = match['controller']
+            return req.get_response(wsgiapp)
+        else:
+            # TODO(gundlach): doubt this is the right way -- and it really
+            # feels like this code should exist somewhere already on the
+            # internet
+            controller, action = match['controller'], match['action']
+            delete match['controller']
+            delete match['action']
+            return _as_response(getattr(controller, action)(**match))
+
+        controller = environ['wsgiorg.routing_args'][1]['controller']
+        self._dispatch(controller)
+
+    def _as_response(self, result):
+        """
+        When routing to a non-wsgi controller+action, its result will
+        be passed here before returning up the WSGI chain to be converted
+        into a webob.Response
+
+
+
+
+
+class ApiVersionRouter(MichaelRouter):
+    
+    def __init__(self):
+        super(ApiVersionRouter, self).__init__(self)
+
+        self.map.connect(None, "/v1.0/{path_info:.*}", controller=RsApiRouter())
+        self.map.connect(None, "/ec2/{path_info:.*}", controller=Ec2ApiRouter())
+
+class RsApiRouter(MichaelRouter):
+    def __init__(self):
+        super(RsApiRouter, self).__init__(self)
+
+        self.map.resource("server", "servers", controller=CloudServersServerApi())
+        self.map.resource("image", "images", controller=CloudServersImageApi())
+        self.map.resource("flavor", "flavors", controller=CloudServersFlavorApi())
+        self.map.resource("sharedipgroup", "sharedipgroups",
+                          controller=CloudServersSharedIpGroupApi())
+
+class Ec2ApiRouter(object):
+    def __getattr__(self, key):
+        return lambda *x: {'dummy response': 'i am a dummy response'}
+CloudServersServerApi = CloudServersImageApi = CloudServersFlavorApi = \
+        CloudServersSharedIpGroupApi = Ec2ApiRouter
 
 class Router(Middleware): # pylint: disable-msg=R0921
     """Wrapper to help setup routes.middleware.RoutesMiddleware."""

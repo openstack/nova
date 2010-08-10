@@ -45,18 +45,20 @@ class API(wsgi.Middleware):
     def __init__(self):
         super(API, self).__init__(Router(webob.exc.HTTPNotFound()))
 
-    def __call__(self, environ, start_response):
+    @webob.dec.wsgify
+    def __call__(self, req):
+        return self.application
         context = {}
-        if "HTTP_X_AUTH_TOKEN" in environ:
+        if "HTTP_X_AUTH_TOKEN" in req.environ:
             context['user'] = manager.AuthManager().get_user_from_access_key(
-                              environ['HTTP_X_AUTH_TOKEN'])
+                              req.environ['HTTP_X_AUTH_TOKEN'])
             if context['user']:
                 context['project'] = manager.AuthManager().get_project(
                                      context['user'].name)
         if "user" not in context:
-            return webob.exc.HTTPForbidden()(environ, start_response)
+            return webob.exc.HTTPForbidden()
         environ['nova.context'] = context
-        return self.application(environ, start_response)
+        return self.application
 
 
 class Router(wsgi.Router):
@@ -64,13 +66,14 @@ class Router(wsgi.Router):
 
     def _build_map(self):
         """Build routing map for authentication and cloud."""
-        self._connect("/v1.0", controller=AuthenticationAPI())
-        cloud = CloudServerAPI()
-        self._connect("/servers", controller=cloud.launch_server,
-                      conditions={"method": ["POST"]})
-        self._connect("/servers/{server_id}", controller=cloud.delete_server,
-                      conditions={'method': ["DELETE"]})
-        self._connect("/servers", controller=cloud)
+        self.map.resource("server", "servers", controller=CloudServerAPI())
+        #self._connect("/v1.0", controller=AuthenticationAPI())
+        #cloud = CloudServerAPI()
+        #self._connect("/servers", controller=cloud.launch_server,
+        #              conditions={"method": ["POST"]})
+        #self._connect("/servers/{server_id}", controller=cloud.delete_server,
+        #              conditions={'method': ["DELETE"]})
+        #self._connect("/servers", controller=cloud)
 
 
 class AuthenticationAPI(wsgi.Application):
