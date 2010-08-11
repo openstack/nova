@@ -181,8 +181,9 @@ class LdapDriver(object):
         if member_uids != None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
-                            raise exception.NotFound("Project can't be created "
-                            "because user %s doesn't exist" % member_uid)
+                    raise exception.NotFound("Project can't be created "
+                                             "because user %s doesn't exist"
+                                             % member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         # always add the manager as a member because members is required
         if not manager_dn in members:
