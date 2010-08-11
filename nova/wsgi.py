@@ -141,15 +141,24 @@ class ParsedRoutes(Middleware):
         app = environ['wsgiorg.routing_args'][1]['controller']
         return app(environ, start_response)
 
-class MichaelRouter(object):
+class MichaelRouterMiddleware(object):
     """
-    My attempt at a routing class.  Just override __init__ to call
-    super, then set up routes in self.map.
+    Router that maps incoming requests to WSGI apps or to standard
+    controllers+actions.  The response will be a WSGI response; standard
+    controllers+actions will by default have their results serialized
+    to the requested Content Type, or you can subclass and override
+    _to_webob_response to customize this.
     """
     
-    def __init__(self):
-        self.map = routes.Mapper()
-        self._router = routes.middleware.RoutesMiddleware(self._proceed, self.map)
+    def __init__(self, map):
+        """
+        Create a router for the given routes.Mapper.  It may contain standard
+        routes (i.e. specifying controllers and actions), or may route to a
+        WSGI app by instead specifying a wsgi_app=SomeApp() parameter in
+        map.connect().
+        """
+        self.map = map
+        self._router = routes.middleware.RoutesMiddleware(self.__proceed, self.map)
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -160,62 +169,84 @@ class MichaelRouter(object):
         return self._router
 
     @webob.dec.wsgify
-    def _proceed(self, req):
-        """
-        Called by self._router after matching the incoming request to a route
-        and putting the information into req.environ.
-        """
+    @staticmethod
+    def __proceed(req):
+        # Called by self._router after matching the incoming request to a route
+        # and putting the information into req.environ.  Either returns 404, the
+        # routed WSGI app, or _to_webob_response(the action result).
+
         if req.environ['routes.route'] is None:
             return webob.exc.HTTPNotFound()
         match = environ['wsgiorg.routing_args'][1]
-        if match.get('_is_wsgi', False):
-            wsgiapp = match['controller']
-            return req.get_response(wsgiapp)
+        if 'wsgi_app' in match:
+            return match['wsgi_app']
         else:
-            # TODO(gundlach): doubt this is the right way -- and it really
-            # feels like this code should exist somewhere already on the
-            # internet
+            kwargs = match.copy()
             controller, action = match['controller'], match['action']
-            delete match['controller']
-            delete match['action']
-            return _as_response(getattr(controller, action)(**match))
+            delete kwargs['controller']
+            delete kwargs['action']
+            return _to_webob_response(req, getattr(controller, action)(**kwargs))
 
-        controller = environ['wsgiorg.routing_args'][1]['controller']
-        self._dispatch(controller)
-
-    def _as_response(self, result):
+    def _to_webob_response(self, req, result):
         """
-        When routing to a non-wsgi controller+action, its result will
-        be passed here before returning up the WSGI chain to be converted
-        into a webob.Response
+        When routing to a non-WSGI controller+action, the webob.Request and the
+        action's result will be passed here to be converted into a
+        webob.Response before returning up the WSGI chain.  By default it
+        serializes to the requested Content Type.
+        """
+        return Serializer(req).serialize(result)
+
+class Serializer(object):
+    """
+    Serializes a dictionary to a Content Type specified by a WSGI environment.
+    """
+
+    def __init__(self, environ):
+        """Create a serializer based on the given WSGI environment."""
+        self.environ = environ
+
+    def serialize(self, data):
+        req = webob.Request(environ)
+        # TODO(gundlach): temp
+        if 'applicatio/json' in req.accept):
+            import json
+            return json.dumps(result)
+        else:
+            return '<xmlified_yeah_baby>' + repr(data) + '</xmlified_yeah_baby>'
 
 
-
-
-
-class ApiVersionRouter(MichaelRouter):
+class ApiVersionRouter(MichaelRouterMiddleware):
     
     def __init__(self):
-        super(ApiVersionRouter, self).__init__(self)
+        map = routes.Mapper()
 
-        self.map.connect(None, "/v1.0/{path_info:.*}", controller=RsApiRouter())
-        self.map.connect(None, "/ec2/{path_info:.*}", controller=Ec2ApiRouter())
+        map.connect(None, "/v1.0/{path_info:.*}", wsgi_app=RsApiRouter())
+        map.connect(None, "/ec2/{path_info:.*}", wsgi_app=Ec2ApiRouter())
 
-class RsApiRouter(MichaelRouter):
+        super(ApiVersionRouter, self).__init__(self, map)
+
+class RsApiRouter(MichaelRouterMiddleware):
     def __init__(self):
-        super(RsApiRouter, self).__init__(self)
+        map = routes.Mapper()
 
-        self.map.resource("server", "servers", controller=CloudServersServerApi())
-        self.map.resource("image", "images", controller=CloudServersImageApi())
-        self.map.resource("flavor", "flavors", controller=CloudServersFlavorApi())
-        self.map.resource("sharedipgroup", "sharedipgroups",
-                          controller=CloudServersSharedIpGroupApi())
+        map.resource("server", "servers", controller=ServerController())
+        map.resource("image", "images", controller=ImageController())
+        map.resource("flavor", "flavors", controller=FlavorController())
+        map.resource("sharedipgroup", "sharedipgroups",
+                          controller=SharedIpGroupController())
+
+        super(RsApiRouter, self).__init__(self, map)
 
 class Ec2ApiRouter(object):
+    @webob.dec.wsgify
+    def __call__(self, req):
+        return 'dummy response'
+
+class ServerController(object):
     def __getattr__(self, key):
-        return lambda *x: {'dummy response': 'i am a dummy response'}
-CloudServersServerApi = CloudServersImageApi = CloudServersFlavorApi = \
-        CloudServersSharedIpGroupApi = Ec2ApiRouter
+        return {'dummy': 'dummy response'}
+ImageController = FlavorController = SharedIpGroupController = ServerController
+
 
 class Router(Middleware): # pylint: disable-msg=R0921
     """Wrapper to help setup routes.middleware.RoutesMiddleware."""
