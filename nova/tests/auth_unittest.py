@@ -179,7 +179,23 @@ class AuthTestCase(test.BaseTestCase):
         project.add_role('test1', 'sysadmin')
         self.assertTrue(project.has_role('test1', 'sysadmin'))
 
-    def test_211_can_remove_project_role(self):
+    def test_211_can_list_project_roles(self):
+        project = self.manager.get_project('testproj')
+        user = self.manager.get_user('test1')
+        self.manager.add_role(user, 'netadmin', project)
+        roles = self.manager.get_user_roles(user)
+        self.assertTrue('sysadmin' in roles)
+        self.assertFalse('netadmin' in roles)
+        self.assertFalse('projectmanager' in roles)
+        project_roles = self.manager.get_user_roles(user, project)
+        self.assertTrue('sysadmin' in project_roles)
+        self.assertTrue('netadmin' in project_roles)
+        self.assertTrue('projectmanager' in project_roles)
+        # has role should be false because global role is missing
+        self.assertFalse(self.manager.has_role(user, 'netadmin', project))
+
+
+    def test_212_can_remove_project_role(self):
         project = self.manager.get_project('testproj')
         self.assertTrue(project.has_role('test1', 'sysadmin'))
         project.remove_role('test1', 'sysadmin')
