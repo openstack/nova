@@ -48,7 +48,8 @@ import hashlib
 import hmac
 import logging
 import urllib
-import boto
+import boto       # NOTE(vish): for new boto
+import boto.utils # NOTE(vish): for old boto
 
 from nova.exception import Error
 
