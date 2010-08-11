@@ -186,11 +186,9 @@ class AuthTestCase(test.BaseTestCase):
         roles = self.manager.get_user_roles(user)
         self.assertTrue('sysadmin' in roles)
         self.assertFalse('netadmin' in roles)
-        self.assertFalse('projectmanager' in roles)
         project_roles = self.manager.get_user_roles(user, project)
         self.assertTrue('sysadmin' in project_roles)
         self.assertTrue('netadmin' in project_roles)
-        self.assertTrue('projectmanager' in project_roles)
         # has role should be false because global role is missing
         self.assertFalse(self.manager.has_role(user, 'netadmin', project))
 

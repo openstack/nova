@@ -463,19 +463,18 @@ class AuthManager(object):
         with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
-    def get_roles(self):
+    def get_roles(self, project_roles=True):
         """Get list of allowed roles"""
-        return FLAGS.allowed_roles
+        if project_roles:
+            return list(set(FLAGS.allowed_roles) - set(FLAGS.global_roles))
+        else:
+            return FLAGS.allowed_roles
 
     def get_user_roles(self, user, project=None):
         """Get user global or per-project roles"""
-        roles = []
         with self.driver() as drv:
-            roles = drv.get_user_roles(User.safe_id(user),
-                                       Project.safe_id(project))
-        if project is not None and self.is_project_manager(user, project):
-            roles.append('projectmanager')
-        return roles
+            return drv.get_user_roles(User.safe_id(user),
+                                      Project.safe_id(project))
 
     def get_project(self, pid):
         """Get project object by id"""
