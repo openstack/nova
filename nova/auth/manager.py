@@ -436,6 +436,10 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to add local role.
         """
+        if role not in FLAGS.allowed_roles:
+            raise exception.NotFound("The %s role can not be found" % role)
+        if project is not None and role in FLAGS.global_roles:
+            raise exception.NotFound("The %s role is global only" % role)
         with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
