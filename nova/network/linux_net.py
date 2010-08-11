@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -27,7 +25,6 @@ import os
 
 from nova import flags
 from nova import utils
-from nova.compute import model
 
 FLAGS = flags.FLAGS
 
@@ -126,14 +123,11 @@ def _dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
-def host_dhcp(fixed_ip, mac):
-    """Return a host string for a fixed_ip and mac"""
-    instance = model.InstanceDirectory().by_ip(fixed_ip)
-    if instance is None:
-        hostname = 'ip-%s' % fixed_ip.replace('.', '-')
-    else:
-        hostname = instance.hostname
-    return "%s,%s.novalocal,%s" % (mac, hostname, fixed_ip)
+def host_dhcp(address):
+    """Return a host string for an address object"""
+    return "%s,%s.novalocal,%s" % (address['mac'],
+                                   address['hostname'],
+                                   address.address)
 
 
 # TODO(ja): if the system has restarted or pid numbers have wrapped
@@ -148,8 +142,8 @@ def start_dnsmasq(network):
     signal causing it to reload, otherwise spawn a new instance
     """
     with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        for fixed_ip in network.hosts:
-            f.write("%s\n" % host_dhcp(fixed_ip, network.hosts[fixed_ip]))
+        for address in network.assigned_objs:
+            f.write("%s\n" % host_dhcp(address))
 
     pid = dnsmasq_pid_for(network)
 

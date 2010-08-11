@@ -202,8 +202,8 @@ class NetworkTestCase(test.TrialTestCase):
         secondmac = result['mac_address']
         secondaddress = result['private_dns_name']
         self.assertEqual(address, secondaddress)
-        self.service.deallocate_fixed_ip(secondaddress)
         issue_ip(secondmac, secondaddress, hostname, net.bridge_name)
+        self.service.deallocate_fixed_ip(secondaddress)
         release_ip(secondmac, secondaddress, hostname, net.bridge_name)
 
     def test_available_ips(self):
@@ -218,7 +218,7 @@ class NetworkTestCase(test.TrialTestCase):
         services (network, gateway, CloudPipe, broadcast)
         """
         net = model.get_project_network(self.projects[0].id, "default")
-        num_preallocated_ips = len(net.hosts.keys())
+        num_preallocated_ips = len(net.assigned)
         net_size = flags.FLAGS.network_size
         num_available_ips = net_size - (net.num_bottom_reserved_ips +
                                         num_preallocated_ips +
@@ -254,7 +254,7 @@ class NetworkTestCase(test.TrialTestCase):
 
 def is_in_project(address, project_id):
     """Returns true if address is in specified project"""
-    return address in model.get_project_network(project_id).list_addresses()
+    return address in model.get_project_network(project_id).assigned
 
 
 def binpath(script):
@@ -271,6 +271,7 @@ def issue_ip(mac, private_ip, hostname, interface):
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
     logging.debug("ISSUE_IP: %s, %s ", out, err)
+
 
 def release_ip(mac, private_ip, hostname, interface):
     """Run del command on dhcpbridge"""

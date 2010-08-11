@@ -123,15 +123,7 @@ class Instance(datastore.BasicModel):
                 'node_name': 'unassigned',
                 'project_id': 'unassigned',
                 'user_id': 'unassigned',
-                'private_dns_name': 'unassigned',
-                'hostname': self.instance_id}
-
-
-    @property
-    def hostname(self):
-        # NOTE(vish): this is to be backward compatible with instances that may
-        #             not have been created with a hostname
-        return self.get('hostname', self.instance_id)
+                'private_dns_name': 'unassigned'}
 
     @property
     def identifier(self):

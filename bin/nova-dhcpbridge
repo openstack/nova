@@ -69,8 +69,8 @@ def init_leases(interface):
     """Get the list of hosts for an interface."""
     net = model.get_network_by_interface(interface)
     res = ""
-    for fixed_ip in net.hosts:
-        res += "%s\n" % linux_net.host_dhcp(fixed_ip, net.hosts[fixed_ip])
+    for address in net.address_objs:
+        res += "%s\n" % linux_net.host_dhcp(address)
     return res
 
 

@@ -152,7 +152,9 @@ class FlatNetworkService(BaseNetworkService):
         """Network is created manually"""
         pass
 
-    def allocate_fixed_ip(self, user_id, project_id,
+    def allocate_fixed_ip(self,
+                          user_id,
+                          project_id,
                           security_group='default',
                           *args, **kwargs):
         """Gets a fixed ip from the pool
@@ -161,7 +163,7 @@ class FlatNetworkService(BaseNetworkService):
         """
         # NOTE(vish): Some automation could be done here.  For example,
         #             creating the flat_network_bridge and setting up
-        #             a gateway.  This is all done manually atm
+        #             a gateway.  This is all done manually atm.
         redis = datastore.Redis.instance()
         if not redis.exists('ips') and not len(redis.keys('instances:*')):
             for fixed_ip in FLAGS.flat_network_ips:
@@ -169,6 +171,8 @@ class FlatNetworkService(BaseNetworkService):
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
             raise exception.NoMoreAddresses()
+        # TODO(vish): some sort of dns handling for hostname should
+        #             probably be done here.
         return {'inject_network': True,
                 'network_type': FLAGS.network_type,
                 'mac_address': utils.generate_mac(),
@@ -192,16 +196,26 @@ class VlanNetworkService(BaseNetworkService):
     #             to support vlans separately from dhcp, instead of having
     #             both of them together in this class.
     # pylint: disable=W0221
-    def allocate_fixed_ip(self, user_id, project_id,
+    def allocate_fixed_ip(self,
+                          user_id,
+                          project_id,
                           security_group='default',
-                          is_vpn=False, *args, **kwargs):
+                          is_vpn=False,
+                          hostname=None,
+                          *args, **kwargs):
         """Gets a fixed ip from the pool"""
         mac = utils.generate_mac()
         net = model.get_project_network(project_id)
         if is_vpn:
-            fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
+            fixed_ip = net.allocate_vpn_ip(user_id,
+                                           project_id,
+                                           mac,
+                                           hostname)
         else:
-            fixed_ip = net.allocate_ip(user_id, project_id, mac)
+            fixed_ip = net.allocate_ip(user_id,
+                                       project_id,
+                                       mac,
+                                       hostname)
         return {'network_type': FLAGS.network_type,
                 'bridge_name': net['bridge_name'],
                 'mac_address': mac,
