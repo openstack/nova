@@ -226,13 +226,13 @@ class VlanNetworkService(BaseNetworkService):
         """Returns an ip to the pool"""
         return model.get_network_by_address(fixed_ip).deallocate_ip(fixed_ip)
 
-    def lease_ip(self, address):
+    def lease_ip(self, fixed_ip):
         """Called by bridge when ip is leased"""
-        return model.get_network_by_address(address).lease_ip(address)
+        return model.get_network_by_address(fixed_ip).lease_ip(fixed_ip)
 
-    def release_ip(self, address):
+    def release_ip(self, fixed_ip):
         """Called by bridge when ip is released"""
-        return model.get_network_by_address(address).release_ip(address)
+        return model.get_network_by_address(fixed_ip).release_ip(fixed_ip)
 
     def restart_nets(self):
         """Ensure the network for each user is enabled"""
