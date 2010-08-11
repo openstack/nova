@@ -105,7 +105,8 @@ class AdminController(object):
     @admin_only
     def describe_roles(self, context, project_roles=True, **kwargs):
         """Returns a list of allowed roles."""
-        return manager.AuthManager().get_roles(project_roles)
+        roles = manager.AuthManager().get_roles(project_roles)
+        return { 'roles': [{'role': r} for r in roles]}
 
     @admin_only
     def describe_user_roles(self, context, user, project=None, **kwargs):
@@ -113,7 +114,8 @@ class AdminController(object):
            Omitting project will return any global roles that the user has.
            Specifying project will return only project specific roles.
         """
-        return manager.AuthManager().get_user_roles(user, project=project)
+        roles = manager.AuthManager().get_user_roles(user, project=project)
+        return { 'roles': [{'role': r} for r in roles]}
 
     @admin_only
     def modify_user_role(self, context, user, role, project=None,

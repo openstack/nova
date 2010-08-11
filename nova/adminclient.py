@@ -217,11 +217,16 @@ class NovaAdminClient(object):
         """ deletes a user """
         return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
 
+    def get_roles(self, project_roles=True):
+        """Returns a list of available roles."""
+        return self.apiconn.get_list('DescribeRoles',
+                                     {'ProjectRoles': project_roles},
+                                     [('item', UserRole)])
+
     def get_user_roles(self, user, project=None):
-        """
-        Returns a list of roles for the given user.
-        Omitting project will return any global roles that the user has.
-        Specifying project will return only project specific roles.
+        """Returns a list of roles for the given user.
+           Omitting project will return any global roles that the user has.
+           Specifying project will return only project specific roles.
         """
         params = {'User':user}
         if project:
