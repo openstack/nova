@@ -27,6 +27,7 @@ import os
 
 from nova import flags
 from nova import utils
+from nova.compute import model
 
 FLAGS = flags.FLAGS
 
@@ -125,12 +126,14 @@ def _dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
-def host_dhcp(network, host, mac):
-    """Return a host string for a network, host, and mac"""
-    # Logically, the idx of instances they've launched in this net
-    idx = host.split(".")[-1]
-    return "%s,%s-%s-%s.novalocal,%s" % \
-        (mac, network['user_id'], network['vlan'], idx, host)
+def host_dhcp(fixed_ip, mac):
+    """Return a host string for a fixed_ip and mac"""
+    instance = model.InstanceDirectory().by_ip(fixed_ip)
+    if instance is None:
+        hostname = 'ip-%s' % fixed_ip.replace('.', '-')
+    else:
+        hostname = instance.hostname
+    return "%s,%s.novalocal,%s" % (mac, hostname, fixed_ip)
 
 
 # TODO(ja): if the system has restarted or pid numbers have wrapped
@@ -145,10 +148,8 @@ def start_dnsmasq(network):
     signal causing it to reload, otherwise spawn a new instance
     """
     with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        for host_name in network.hosts:
-            f.write("%s\n" % host_dhcp(network,
-                                      host_name,
-                                      network.hosts[host_name]))
+        for fixed_ip in network.hosts:
+            f.write("%s\n" % host_dhcp(fixed_ip, network.hosts[fixed_ip]))
 
     pid = dnsmasq_pid_for(network)
 

@@ -137,17 +137,17 @@ class CloudController(object):
                     'root': '/dev/sda1',
                     'swap': 'sda3'
                 },
-                'hostname': i['private_dns_name'], # is this public sometimes?
+                'hostname': i.hostname,
                 'instance-action': 'none',
                 'instance-id': i['instance_id'],
                 'instance-type': i.get('instance_type', ''),
-                'local-hostname': i['private_dns_name'],
+                'local-hostname': i.hostname,
                 'local-ipv4': i['private_dns_name'], # TODO: switch to IP
                 'kernel-id': i.get('kernel_id', ''),
                 'placement': {
                     'availaibility-zone': i.get('availability_zone', 'nova'),
                 },
-                'public-hostname': i.get('dns_name', ''),
+                'public-hostname': i.hostname,
                 'public-ipv4': i.get('dns_name', ''), # TODO: switch to IP
                 'public-keys': keys,
                 'ramdisk-id': i.get('ramdisk_id', ''),
