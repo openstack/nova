@@ -143,13 +143,12 @@ class Vlan(datastore.BasicModel):
                           network[start + FLAGS.network_size - 1])
 
 
-class Address(datastore.BasicModel):
+class FixedIp(datastore.BasicModel):
     """Represents a fixed ip in the datastore"""
-    override_type = "address"
 
     def __init__(self, address):
         self.address = address
-        super(Address, self).__init__()
+        super(FixedIp, self).__init__()
 
     @property
     def identifier(self):
@@ -163,7 +162,7 @@ class Address(datastore.BasicModel):
     @classmethod
     # pylint: disable=R0913
     def create(cls, user_id, project_id, address, mac, hostname, network_id):
-        """Creates an Address object"""
+        """Creates an FixedIp object"""
         addr = cls(address)
         addr['user_id'] = user_id
         addr['project_id'] = project_id
@@ -178,16 +177,16 @@ class Address(datastore.BasicModel):
 
     def save(self):
         is_new = self.is_new_record()
-        success = super(Address, self).save()
+        success = super(FixedIp, self).save()
         if success and is_new:
             self.associate_with("network", self['network_id'])
 
     def destroy(self):
         self.unassociate_with("network", self['network_id'])
-        super(Address, self).destroy()
+        super(FixedIp, self).destroy()
 
 
-class PublicAddress(Address):
+class ElasticIp(FixedIp):
     """Represents an elastic ip in the datastore"""
     override_type = "address"
 
@@ -203,7 +202,7 @@ class PublicAddress(Address):
 class BaseNetwork(datastore.BasicModel):
     """Implements basic logic for allocating ips in a network"""
     override_type = 'network'
-    address_class = Address
+    address_class = FixedIp
 
     @property
     def identifier(self):
@@ -271,12 +270,12 @@ class BaseNetwork(datastore.BasicModel):
     # pylint: disable=R0913
     def _add_host(self, user_id, project_id, ip_address, mac, hostname):
         """Add a host to the datastore"""
-        Address.create(user_id, project_id, ip_address,
+        self.address_class.create(user_id, project_id, ip_address,
                        mac, hostname, self.identifier)
 
     def _rem_host(self, ip_address):
         """Remove a host from the datastore"""
-        Address(ip_address).destroy()
+        self.address_class(ip_address).destroy()
 
     @property
     def assigned(self):
@@ -288,6 +287,7 @@ class BaseNetwork(datastore.BasicModel):
         """Returns a list of all assigned addresses as objects"""
         return self.address_class.associated_to('network', self.identifier)
 
+    @classmethod
     def get_address(self, ip_address):
         """Returns a specific ip as an object"""
         if ip_address in self.assigned:
@@ -349,7 +349,7 @@ class BaseNetwork(datastore.BasicModel):
             raise exception.AddressNotAllocated()
         address = self.get_address(ip_str)
         if address:
-            if address['state'] != 'allocated':
+            if address['state'] != 'leased':
                 # NOTE(vish): address hasn't been leased, so release it
                 self.release_ip(ip_str)
             else:
@@ -478,7 +478,7 @@ DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 class PublicNetworkController(BaseNetwork):
     """Handles elastic ips"""
     override_type = 'network'
-    address_class = PublicAddress
+    address_class = ElasticIp
 
     def __init__(self, *args, **kwargs):
         network_id = "public:default"
@@ -613,7 +613,7 @@ def get_project_network(project_id, security_group='default'):
 
 def get_network_by_address(address):
     """Gets the network for a given private ip"""
-    address_record = Address.lookup(address)
+    address_record = FixedIp.lookup(address)
     if not address_record:
         raise exception.AddressNotAllocated()
     return get_project_network(address_record['project_id'])
@@ -629,6 +629,6 @@ def get_network_by_interface(iface, security_group='default'):
 def get_public_ip_for_instance(instance_id):
     """Gets the public ip for a given instance"""
     # FIXME(josh): this should be a lookup - iteration won't scale
-    for address_record in PublicAddress.all():
+    for address_record in ElasticIp.all():
         if address_record.get('instance_id', 'available') == instance_id:
             return address_record['address']
