@@ -126,7 +126,7 @@ class CloudController(object):
         else:
             keys = ''
 
-        address_record = network_model.Address(i['private_dns_name'])
+        address_record = network_model.FixedIp(i['private_dns_name'])
         if address_record:
             hostname = address_record['hostname']
         else:
