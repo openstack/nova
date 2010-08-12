@@ -1,9 +1,12 @@
+pep8==0.5.0
+pylint==0.21.1
 IPy==0.70
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
 boto==2.0b1
 carrot==0.10.5
+eventlet==0.9.10
 lockfile==0.8
 python-daemon==1.5.5
 python-gflags==1.3

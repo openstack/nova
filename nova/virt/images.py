@@ -66,7 +66,7 @@ def _fetch_s3_image(image, path, user, project):
     cmd += ['-o', path]
     return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
-def _fetch_local_image(image, path, _):
+def _fetch_local_image(image, path, user, project):
     source = _image_path('%s/image' % image)
     return process.simple_execute('cp %s %s' % (source, path))
 

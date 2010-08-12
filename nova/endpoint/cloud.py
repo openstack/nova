@@ -36,16 +36,17 @@ from nova import utils
 from nova.auth import rbac
 from nova.auth import manager
 from nova.compute import model
-from nova.compute import network
 from nova.compute.instance_types import INSTANCE_TYPES
-from nova.compute import service as compute_service
 from nova.endpoint import images
-from nova.volume import service as volume_service
+from nova.network import service as network_service
+from nova.network import model as network_model
+from nova.volume import service
 
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
+
 
 def _gen_key(user_id, key_name):
     """ Tuck this into AuthManager """
@@ -64,7 +65,6 @@ class CloudController(object):
 """
     def __init__(self):
         self.instdir = model.InstanceDirectory()
-        self.network = network.PublicNetworkController()
         self.setup()
 
     @property
@@ -76,7 +76,7 @@ class CloudController(object):
     def volumes(self):
         """ returns a list of all volumes """
         for volume_id in datastore.Redis.instance().smembers("volumes"):
-            volume = volume_service.get_volume(volume_id)
+            volume = service.get_volume(volume_id)
             yield volume
 
     def __str__(self):
@@ -103,15 +103,16 @@ class CloudController(object):
         result = {}
         for instance in self.instdir.all:
             if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'], INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                line = '%s slots=%d' % (instance['private_dns_name'], 
+                    INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
                 else:
                     result[instance['key_name']] = [line]
         return result
 
-    def get_metadata(self, ip):
-        i = self.get_instance_by_ip(ip)
+    def get_metadata(self, ipaddress):
+        i = self.get_instance_by_ip(ipaddress)
         if i is None:
             return None
         mpi = self._get_mpi_data(i['project_id'])
@@ -148,7 +149,7 @@ class CloudController(object):
                 },
                 'public-hostname': i.get('dns_name', ''),
                 'public-ipv4': i.get('dns_name', ''), # TODO: switch to IP
-                'public-keys' : keys,
+                'public-keys': keys,
                 'ramdisk-id': i.get('ramdisk_id', ''),
                 'reservation-id': i['reservation_id'],
                 'security-groups': i.get('groups', ''),
@@ -204,26 +205,22 @@ class CloudController(object):
                     'keyFingerprint': key_pair.fingerprint,
                 })
 
-        return { 'keypairsSet': result }
+        return {'keypairsSet': result}
 
     @rbac.allow('all')
     def create_key_pair(self, context, key_name, **kwargs):
-        try:
-            d = defer.Deferred()
-            p = context.handler.application.settings.get('pool')
-            def _complete(kwargs):
-                if 'exception' in kwargs:
-                    d.errback(kwargs['exception'])
-                    return
-                d.callback({'keyName': key_name,
-                    'keyFingerprint': kwargs['fingerprint'],
-                    'keyMaterial': kwargs['private_key']})
-            p.apply_async(_gen_key, [context.user.id, key_name],
-                callback=_complete)
-            return d
-
-        except users.UserError, e:
-            raise
+        dcall = defer.Deferred()
+        pool = context.handler.application.settings.get('pool')
+        def _complete(kwargs):
+            if 'exception' in kwargs:
+                dcall.errback(kwargs['exception'])
+                return
+            dcall.callback({'keyName': key_name,
+                'keyFingerprint': kwargs['fingerprint'],
+                'keyMaterial': kwargs['private_key']})
+        pool.apply_async(_gen_key, [context.user.id, key_name],
+            callback=_complete)
+        return dcall
 
     @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
@@ -233,7 +230,7 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_security_groups(self, context, group_names, **kwargs):
-        groups = { 'securityGroupSet': [] }
+        groups = {'securityGroupSet': []}
 
         # Stubbed for now to unblock other things.
         return groups
@@ -252,7 +249,7 @@ class CloudController(object):
         instance = self._get_instance(context, instance_id[0])
         return rpc.call('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
             {"method": "get_console_output",
-             "args" : {"instance_id": instance_id[0]}})
+             "args": {"instance_id": instance_id[0]}})
 
     def _get_user_id(self, context):
         if context and context.user:
@@ -286,30 +283,29 @@ class CloudController(object):
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': volume['delete_on_termination'],
-                                   'device' : volume['mountpoint'],
-                                   'instanceId' : volume['instance_id'],
-                                   'status' : 'attached',
-                                   'volume_id' : volume['volume_id']}]
+                                   'device': volume['mountpoint'],
+                                   'instanceId': volume['instance_id'],
+                                   'status': 'attached',
+                                   'volume_id': volume['volume_id']}]
         else:
             v['attachmentSet'] = [{}]
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
+    @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
-        res = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
-                                 "args" : {"size": size,
+        result = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
+                                 "args": {"size": size,
                                            "user_id": context.user.id,
                                            "project_id": context.project.id}})
-        def _format_result(result):
-            volume = self._get_volume(context, result['result'])
-            return {'volumeSet': [self.format_volume(context, volume)]}
-        res.addCallback(_format_result)
-        return res
+        # NOTE(vish): rpc returned value is in the result key in the dictionary
+        volume = self._get_volume(context, result['result'])
+        defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        address = self.network.get_host(public_ip)
+        address = network_model.PublicAddress.lookup(public_ip)
         if address and (context.user.is_admin() or address['project_id'] == context.project.id):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -331,7 +327,7 @@ class CloudController(object):
         raise exception.NotFound('Instance %s could not be found' % instance_id)
 
     def _get_volume(self, context, volume_id):
-        volume = volume_service.get_volume(volume_id)
+        volume = service.get_volume(volume_id)
         if context.user.is_admin() or volume['project_id'] == context.project.id:
             return volume
         raise exception.NotFound('Volume %s could not be found' % volume_id)
@@ -350,15 +346,15 @@ class CloudController(object):
         compute_node = instance['node_name']
         rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
                                 {"method": "attach_volume",
-                                 "args" : {"volume_id": volume_id,
-                                           "instance_id" : instance_id,
-                                           "mountpoint" : device}})
-        return defer.succeed({'attachTime' : volume['attach_time'],
-                              'device' : volume['mountpoint'],
-                              'instanceId' : instance_id,
-                              'requestId' : context.request_id,
-                              'status' : volume['attach_status'],
-                              'volumeId' : volume_id})
+                                 "args": {"volume_id": volume_id,
+                                           "instance_id": instance_id,
+                                           "mountpoint": device}})
+        return defer.succeed({'attachTime': volume['attach_time'],
+                              'device': volume['mountpoint'],
+                              'instanceId': instance_id,
+                              'requestId': context.request_id,
+                              'status': volume['attach_status'],
+                              'volumeId': volume_id})
 
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -374,18 +370,18 @@ class CloudController(object):
             instance = self._get_instance(context, instance_id)
             rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                                 {"method": "detach_volume",
-                                 "args" : {"instance_id": instance_id,
+                                 "args": {"instance_id": instance_id,
                                            "volume_id": volume_id}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
             volume.finish_detach()
-        return defer.succeed({'attachTime' : volume['attach_time'],
-                              'device' : volume['mountpoint'],
-                              'instanceId' : instance_id,
-                              'requestId' : context.request_id,
-                              'status' : volume['attach_status'],
-                              'volumeId' : volume_id})
+        return defer.succeed({'attachTime': volume['attach_time'],
+                              'device': volume['mountpoint'],
+                              'instanceId': instance_id,
+                              'requestId': context.request_id,
+                              'status': volume['attach_status'],
+                              'volumeId': volume_id})
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
@@ -418,7 +414,7 @@ class CloudController(object):
                 'code': instance.get('state', 0),
                 'name': instance.get('state_description', 'pending')
             }
-            i['public_dns_name'] = self.network.get_public_ip_for_instance(
+            i['public_dns_name'] = network_model.get_public_ip_for_instance(
                                                         i['instance_id'])
             i['private_dns_name'] = instance.get('private_dns_name', None)
             if not i['public_dns_name']:
@@ -427,7 +423,8 @@ class CloudController(object):
             i['key_name'] = instance.get('key_name', None)
             if context.user.is_admin():
                 i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.get('project_id', None), instance.get('node_name',''))
+                    instance.get('project_id', None), 
+                    instance.get('node_name', ''))
             i['product_codes_set'] = self._convert_to_set(
                 instance.get('product_codes', None), 'product_code')
             i['instance_type'] = instance.get('instance_type', None)
@@ -444,7 +441,7 @@ class CloudController(object):
                 reservations[res_id] = r
             reservations[res_id]['instances_set'].append(i)
 
-        instance_response = {'reservationSet' : list(reservations.values()) }
+        instance_response = {'reservationSet': list(reservations.values())}
         return instance_response
 
     @rbac.allow('all')
@@ -453,13 +450,13 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in self.network.host_objs:
+        for address in network_model.PublicAddress.all():
             # TODO(vish): implement a by_project iterator for addresses
             if (context.user.is_admin() or
-                address['project_id'] == self.project.id):
+                address['project_id'] == context.project.id):
                 address_rv = {
                     'public_ip': address['address'],
-                    'instance_id' : address.get('instance_id', 'free')
+                    'instance_id': address.get('instance_id', 'free')
                 }
                 if context.user.is_admin():
                     address_rv['instance_id'] = "%s (%s, %s)" % (
@@ -471,41 +468,63 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
-        address = self.network.allocate_ip(
-                                context.user.id, context.project.id, 'public')
-        return defer.succeed({'addressSet': [{'publicIp' : address}]})
+        network_topic = yield self._get_network_topic(context)
+        alloc_result = yield rpc.call(network_topic,
+                         {"method": "allocate_elastic_ip",
+                          "args": {"user_id": context.user.id,
+                                   "project_id": context.project.id}})
+        public_ip = alloc_result['result']
+        defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
-        self.network.deallocate_ip(public_ip)
-        return defer.succeed({'releaseResponse': ["Address released."]})
+        # NOTE(vish): Should we make sure this works?
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
+                         {"method": "deallocate_elastic_ip",
+                          "args": {"elastic_ip": public_ip}})
+        defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
-    def associate_address(self, context, instance_id, **kwargs):
+    @defer.inlineCallbacks
+    def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance = self._get_instance(context, instance_id)
-        self.network.associate_address(
-                            kwargs['public_ip'],
-                            instance['private_dns_name'],
-                            instance_id)
-        return defer.succeed({'associateResponse': ["Address associated."]})
+        address = self._get_address(context, public_ip)
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
+                         {"method": "associate_elastic_ip",
+                          "args": {"elastic_ip": address['address'],
+                                   "fixed_ip": instance['private_dns_name'],
+                                   "instance_id": instance['instance_id']}})
+        defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
+    @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(context, public_ip)
-        self.network.disassociate_address(public_ip)
-        # TODO - Strip the IP from the instance
-        return defer.succeed({'disassociateResponse': ["Address disassociated."]})
+        network_topic = yield self._get_network_topic(context)
+        rpc.cast(network_topic,
+                         {"method": "disassociate_elastic_ip",
+                          "args": {"elastic_ip": address['address']}})
+        defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
-    def release_ip(self, context, private_ip, **kwargs):
-        self.network.release_ip(private_ip)
-        return defer.succeed({'releaseResponse': ["Address released."]})
-
-    def lease_ip(self, context, private_ip, **kwargs):
-        self.network.lease_ip(private_ip)
-        return defer.succeed({'leaseResponse': ["Address leased."]})
+    @defer.inlineCallbacks
+    def _get_network_topic(self, context):
+        """Retrieves the network host for a project"""
+        host = network_service.get_host_for_project(context.project.id)
+        if not host:
+            result = yield rpc.call(FLAGS.network_topic,
+                                    {"method": "set_network_host",
+                                     "args": {"user_id": context.user.id,
+                                              "project_id": context.project.id}})
+            host = result['result']
+        defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
+    @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
@@ -537,15 +556,20 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
+        network_topic = yield self._get_network_topic(context)
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        if FLAGS.simple_network:
-            bridge_name = FLAGS.simple_network_bridge
-        else:
-            net = network.BridgedNetwork.get_network_for_project(
-                    context.user.id, context.project.id, security_group)
-            bridge_name = net['bridge_name']
         for num in range(int(kwargs['max_count'])):
+            vpn = False
+            if image_id  == FLAGS.vpn_image_id:
+                vpn = True
+            allocate_result = yield rpc.call(network_topic,
+                     {"method": "allocate_fixed_ip",
+                      "args": {"user_id": context.user.id,
+                               "project_id": context.project.id,
+                               "security_group": security_group,
+                               "vpn": vpn}})
+            allocate_data = allocate_result['result']
             inst = self.instdir.new()
             inst['image_id'] = image_id
             inst['kernel_id'] = kernel_id
@@ -558,65 +582,61 @@ class CloudController(object):
             inst['key_name'] = kwargs.get('key_name', '')
             inst['user_id'] = context.user.id
             inst['project_id'] = context.project.id
-            inst['mac_address'] = utils.generate_mac()
             inst['ami_launch_index'] = num
-            inst['bridge_name'] = bridge_name
-            if FLAGS.simple_network:
-                address = network.allocate_simple_ip()
-            else:
-                if inst['image_id'] == FLAGS.vpn_image_id:
-                    address = network.allocate_vpn_ip(
-                            inst['user_id'],
-                            inst['project_id'],
-                            mac=inst['mac_address'])
-                else:
-                    address = network.allocate_ip(
-                            inst['user_id'],
-                            inst['project_id'],
-                            mac=inst['mac_address'])
-            inst['private_dns_name'] = str(address)
-            # TODO: allocate expresses on the router node
+            inst['security_group'] = security_group
+            for (key, value) in allocate_data.iteritems():
+                inst[key] = value
+
             inst.save()
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
-                  "args": {"instance_id" : inst.instance_id}})
+                  "args": {"instance_id": inst.instance_id}})
             logging.debug("Casting to node for %s's instance with IP of %s" %
                       (context.user.name, inst['private_dns_name']))
         # TODO: Make Network figure out the network name from ip.
-        return defer.succeed(self._format_instances(
-                                context, reservation_id))
+        defer.returnValue(self._format_instances(context, reservation_id))
 
     @rbac.allow('projectmanager', 'sysadmin')
+    @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
+        network_topic = yield self._get_network_topic(context)
         for i in instance_id:
             logging.debug("Going to try and terminate %s" % i)
             try:
                 instance = self._get_instance(context, i)
             except exception.NotFound:
-                logging.warning("Instance %s was not found during terminate" % i)
+                logging.warning("Instance %s was not found during terminate"
+                                % i)
                 continue
-            try:
-                self.network.disassociate_address(
-                    instance.get('public_dns_name', 'bork'))
-            except:
-                pass
-            if instance.get('private_dns_name', None):
-                logging.debug("Deallocating address %s" % instance.get('private_dns_name', None))
-                if FLAGS.simple_network:
-                    network.deallocate_simple_ip(instance.get('private_dns_name', None))
-                else:
-                    try:
-                        self.network.deallocate_ip(instance.get('private_dns_name', None))
-                    except Exception, _err:
-                        pass
-            if instance.get('node_name', 'unassigned') != 'unassigned':  #It's also internal default
+            elastic_ip = network_model.get_public_ip_for_instance(i)
+            if elastic_ip:
+                logging.debug("Disassociating address %s" % elastic_ip)
+                # NOTE(vish): Right now we don't really care if the ip is
+                #             disassociated.  We may need to worry about
+                #             checking this later.  Perhaps in the scheduler?
+                rpc.cast(network_topic,
+                         {"method": "disassociate_elastic_ip",
+                          "args": {"elastic_ip": elastic_ip}})
+
+            fixed_ip = instance.get('private_dns_name', None)
+            if fixed_ip:
+                logging.debug("Deallocating address %s" % fixed_ip)
+                # NOTE(vish): Right now we don't really care if the ip is
+                #             actually removed.  We may need to worry about
+                #             checking this later.  Perhaps in the scheduler?
+                rpc.cast(network_topic,
+                         {"method": "deallocate_fixed_ip",
+                          "args": {"fixed_ip": fixed_ip}})
+
+            if instance.get('node_name', 'unassigned') != 'unassigned':
+                # NOTE(joshua?): It's also internal default
                 rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
-                             {"method": "terminate_instance",
-                              "args" : {"instance_id": i}})
+                         {"method": "terminate_instance",
+                          "args": {"instance_id": i}})
             else:
                 instance.destroy()
-        return defer.succeed(True)
+        defer.returnValue(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):
@@ -625,7 +645,7 @@ class CloudController(object):
             instance = self._get_instance(context, i)
             rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "reboot_instance",
-                              "args" : {"instance_id": i}})
+                              "args": {"instance_id": i}})
         return defer.succeed(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -635,7 +655,7 @@ class CloudController(object):
         volume_node = volume['node_name']
         rpc.cast('%s.%s' % (FLAGS.volume_topic, volume_node),
                             {"method": "delete_volume",
-                             "args" : {"volume_id": volume_id}})
+                             "args": {"volume_id": volume_id}})
         return defer.succeed(True)
 
     @rbac.allow('all')
@@ -668,9 +688,9 @@ class CloudController(object):
             image = images.list(context, image_id)[0]
         except IndexError:
             raise exception.ApiError('invalid id: %s' % image_id)
-        result = { 'image_id': image_id, 'launchPermission': [] }
+        result = {'image_id': image_id, 'launchPermission': []}
         if image['isPublic']:
-            result['launchPermission'].append({ 'group': 'all' })
+            result['launchPermission'].append({'group': 'all'})
         return defer.succeed(result)
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -678,6 +698,8 @@ class CloudController(object):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
+        if not 'user_group' in kwargs:
+            raise exception.ApiError('user or group not specified')
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
             raise exception.ApiError('only group "all" is supported')
         if not operation_type in ['add', 'remove']:

@@ -54,6 +54,7 @@ from nova.tests.auth_unittest import *
 from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
 from nova.tests.compute_unittest import *
+from nova.tests.flags_unittest import *
 from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
 from nova.tests.objectstore_unittest import *
@@ -68,7 +69,8 @@ flags.DEFINE_bool('flush_db', True,
                   'Flush the database before running fake tests')
 
 flags.DEFINE_string('tests_stderr', 'run_tests.err.log',
-                    'Path to where to pipe STDERR during test runs. Default = "run_tests.err.log"')
+                    'Path to where to pipe STDERR during test runs. '
+                    'Default = "run_tests.err.log"')
 
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)

@@ -46,6 +46,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('compute/interfaces.template'),
+                    'Template file for injected network')
 
 flags.DEFINE_string('libvirt_type',
                     'kvm',
@@ -111,7 +114,8 @@ class LibvirtConnection(object):
     def _cleanup(self, instance):
         target = os.path.abspath(instance.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
-        shutil.rmtree(target)
+        if os.path.exists(target):
+            shutil.rmtree(target)
 
 
     @defer.inlineCallbacks
@@ -205,14 +209,14 @@ class LibvirtConnection(object):
 
         key = data['key_data']
         net = None
-        if FLAGS.simple_network:
-            with open(FLAGS.simple_network_template) as f:
+        if data.get('inject_network', False):
+            with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': data['private_dns_name'],
-                                  'network': FLAGS.simple_network_network,
-                                  'netmask': FLAGS.simple_network_netmask,
-                                  'gateway': FLAGS.simple_network_gateway,
-                                  'broadcast': FLAGS.simple_network_broadcast,
-                                  'dns': FLAGS.simple_network_dns}
+                                  'network': data['network_network'],
+                                  'netmask': data['network_netmask'],
+                                  'gateway': data['network_gateway'],
+                                  'broadcast': data['network_broadcast'],
+                                  'dns': data['network_dns']}
         if key or net:
             logging.info('Injecting data into image %s', data['image_id'])
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)

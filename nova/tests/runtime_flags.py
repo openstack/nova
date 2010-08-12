@@ -16,25 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Exceptions for Compute Node errors, mostly network addressing.
-"""
+from nova import flags
 
-from nova.exception import Error
+FLAGS = flags.FLAGS
 
-
-class NoMoreAddresses(Error):
-    pass
-
-class AddressNotAllocated(Error):
-    pass
-
-class AddressAlreadyAssociated(Error):
-    pass
-
-class AddressNotAssociated(Error):
-    pass
-
-class NotValidNetworkSize(Error):
-    pass
-
+flags.DEFINE_integer('runtime_answer', 54, 'test flag')

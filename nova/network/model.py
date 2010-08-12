@@ -17,7 +17,7 @@
 #    under the License.
 
 """
-Classes for network control, including VLANs, DHCP, and IP allocation.
+Model Classes for network control, including VLANs, DHCP, and IP allocation.
 """
 
 import IPy
@@ -26,12 +26,12 @@ import os
 import time
 
 from nova import datastore
-from nova import exception
+from nova import exception as nova_exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
-from nova.compute import exception as compute_exception
-from nova.compute import linux_net
+from nova.network import exception
+from nova.network import linux_net
 
 
 FLAGS = flags.FLAGS
@@ -52,26 +52,6 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
                         'Number of addresses reserved for vpn clients')
 flags.DEFINE_integer('cloudpipe_start_port', 12000,
                         'Starting port for mapped CloudPipe external ports')
-
-flags.DEFINE_boolean('simple_network', False,
-                       'Use simple networking instead of vlans')
-flags.DEFINE_string('simple_network_bridge', 'br100',
-                       'Bridge for simple network instances')
-flags.DEFINE_list('simple_network_ips', ['192.168.0.2'],
-                       'Available ips for simple network')
-flags.DEFINE_string('simple_network_template',
-                    utils.abspath('compute/interfaces.template'),
-                    'Template file for simple network')
-flags.DEFINE_string('simple_network_netmask', '255.255.255.0',
-                       'Netmask for simple network')
-flags.DEFINE_string('simple_network_network', '192.168.0.0',
-                       'Network for simple network')
-flags.DEFINE_string('simple_network_gateway', '192.168.0.1',
-                       'Broadcast for simple network')
-flags.DEFINE_string('simple_network_broadcast', '192.168.0.255',
-                       'Broadcast for simple network')
-flags.DEFINE_string('simple_network_dns', '8.8.4.4',
-                       'Dns for simple network')
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -117,11 +97,11 @@ class Vlan(datastore.BasicModel):
     def dict_by_vlan(cls):
         """a hash of vlan:project"""
         set_name = cls._redis_set_name(cls.__name__)
-        rv = {}
-        h = datastore.Redis.instance().hgetall(set_name)
-        for v in h.keys():
-            rv[h[v]] = v
-        return rv
+        retvals = {}
+        hashset = datastore.Redis.instance().hgetall(set_name)
+        for val in hashset.keys():
+            retvals[hashset[val]] = val
+        return retvals
 
     @classmethod
     @datastore.absorb_connection_error
@@ -156,8 +136,8 @@ class Vlan(datastore.BasicModel):
 
 # CLEANUP:
 # TODO(ja): Save the IPs at the top of each subnet for cloudpipe vpn clients
-# TODO(ja): use singleton for usermanager instead of self.manager in vlanpool et al
-# TODO(ja): does vlanpool "keeper" need to know the min/max - shouldn't FLAGS always win?
+# TODO(ja): does vlanpool "keeper" need to know the min/max - 
+#           shouldn't FLAGS always win?
 # TODO(joshua): Save the IPs at the top of each subnet for cloudpipe vpn clients
 
 class BaseNetwork(datastore.BasicModel):
@@ -238,10 +218,12 @@ class BaseNetwork(datastore.BasicModel):
     def available(self):
         # the .2 address is always CloudPipe
         # and the top <n> are for vpn clients
-        for idx in range(self.num_static_ips, len(self.network)-(1 + FLAGS.cnt_vpn_clients)):
+        num_ips = self.num_static_ips
+        num_clients = FLAGS.cnt_vpn_clients
+        for idx in range(num_ips, len(self.network)-(1 + num_clients)):
             address = str(self.network[idx])
             if not address in self.hosts.keys():
-                yield str(address)
+                yield address
 
     @property
     def num_static_ips(self):
@@ -253,7 +235,7 @@ class BaseNetwork(datastore.BasicModel):
             self._add_host(user_id, project_id, address, mac)
             self.express(address=address)
             return address
-        raise compute_exception.NoMoreAddresses("Project %s with network %s" %
+        raise exception.NoMoreAddresses("Project %s with network %s" %
                                                 (project_id, str(self.network)))
 
     def lease_ip(self, ip_str):
@@ -261,7 +243,7 @@ class BaseNetwork(datastore.BasicModel):
 
     def release_ip(self, ip_str):
         if not ip_str in self.assigned:
-            raise compute_exception.AddressNotAllocated()
+            raise exception.AddressNotAllocated()
         self.deexpress(address=ip_str)
         self._rem_host(ip_str)
 
@@ -349,18 +331,19 @@ class DHCPNetwork(BridgedNetwork):
             logging.debug("Not launching dnsmasq: no hosts.")
         self.express_cloudpipe()
 
-    def allocate_vpn_ip(self, mac):
+    def allocate_vpn_ip(self, user_id, project_id, mac):
         address = str(self.network[2])
-        self._add_host(self['user_id'], self['project_id'], address, mac)
+        self._add_host(user_id, project_id, address, mac)
         self.express(address=address)
         return address
 
     def express_cloudpipe(self):
-        private_ip = self.network[2]
+        private_ip = str(self.network[2])
         linux_net.confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT"
                                % (private_ip, ))
-        linux_net.confirm_rule("PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
-                               % (self.project.vpn_ip, self.project.vpn_port, private_ip))
+        linux_net.confirm_rule(
+            "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+            % (self.project.vpn_ip, self.project.vpn_port, private_ip))
 
     def deexpress(self, address=None):
         # if this is the last address, stop dns
@@ -394,13 +377,15 @@ class PublicAddress(datastore.BasicModel):
         addr.save()
         return addr
 
-DEFAULT_PORTS = [("tcp",80), ("tcp",22), ("udp",1194), ("tcp",443)]
+
+DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 class PublicNetworkController(BaseNetwork):
     override_type = 'network'
 
     def __init__(self, *args, **kwargs):
         network_id = "public:default"
-        super(PublicNetworkController, self).__init__(network_id, FLAGS.public_range)
+        super(PublicNetworkController, self).__init__(network_id, 
+            FLAGS.public_range)
         self['user_id'] = "public"
         self['project_id'] = "public"
         self["create_time"] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -420,12 +405,6 @@ class PublicNetworkController(BaseNetwork):
         for address in self.assigned:
             yield PublicAddress(address)
 
-    def get_public_ip_for_instance(self, instance_id):
-        # FIXME: this should be a lookup - iteration won't scale
-        for address_record in self.host_objs:
-            if address_record.get('instance_id', 'available') == instance_id:
-                return address_record['address']
-
     def get_host(self, host):
         if host in self.assigned:
             return PublicAddress(host)
@@ -439,16 +418,20 @@ class PublicNetworkController(BaseNetwork):
         PublicAddress(host).destroy()
         datastore.Redis.instance().hdel(self._hosts_key, host)
 
+    def deallocate_ip(self, ip_str):
+        # NOTE(vish): cleanup is now done on release by the parent class
+        self.release_ip(ip_str)
+
     def associate_address(self, public_ip, private_ip, instance_id):
         if not public_ip in self.assigned:
-            raise compute_exception.AddressNotAllocated()
+            raise exception.AddressNotAllocated()
         # TODO(joshua): Keep an index going both ways
         for addr in self.host_objs:
             if addr.get('private_ip', None) == private_ip:
-                raise compute_exception.AddressAlreadyAssociated()
+                raise exception.AddressAlreadyAssociated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') != 'available':
-            raise compute_exception.AddressAlreadyAssociated()
+            raise exception.AddressAlreadyAssociated()
         addr['private_ip'] = private_ip
         addr['instance_id'] = instance_id
         addr.save()
@@ -456,10 +439,10 @@ class PublicNetworkController(BaseNetwork):
 
     def disassociate_address(self, public_ip):
         if not public_ip in self.assigned:
-            raise compute_exception.AddressNotAllocated()
+            raise exception.AddressNotAllocated()
         addr = self.get_host(public_ip)
         if addr.get('private_ip', 'available') == 'available':
-            raise compute_exception.AddressNotAssociated()
+            raise exception.AddressNotAssociated()
         self.deexpress(address=public_ip)
         addr['private_ip'] = 'available'
         addr['instance_id'] = 'available'
@@ -483,8 +466,9 @@ class PublicNetworkController(BaseNetwork):
             linux_net.confirm_rule("FORWARD -d %s -p icmp -j ACCEPT"
                                    % (private_ip))
             for (protocol, port) in DEFAULT_PORTS:
-                linux_net.confirm_rule("FORWARD -d %s -p %s --dport %s -j ACCEPT"
-                                       % (private_ip, protocol, port))
+                linux_net.confirm_rule(
+                    "FORWARD -d %s -p %s --dport %s -j ACCEPT"
+                    % (private_ip, protocol, port))
 
     def deexpress(self, address=None):
         addr = self.get_host(address)
@@ -535,63 +519,42 @@ def get_vlan_for_project(project_id):
                 return vlan
             else:
                 return Vlan.create(project_id, vnum)
-    raise compute_exception.AddressNotAllocated("Out of VLANs")
+    raise exception.AddressNotAllocated("Out of VLANs")
 
-def get_network_by_interface(iface, security_group='default'):
-    vlan = iface.rpartition("br")[2]
-    return get_project_network(Vlan.dict_by_vlan().get(vlan), security_group)
+def get_project_network(project_id, security_group='default'):
+    """ get a project's private network, allocating one if needed """
+    project = manager.AuthManager().get_project(project_id)
+    if not project:
+        raise nova_exception.NotFound("Project %s doesn't exist." % project_id)
+    manager_id = project.project_manager_id
+    return DHCPNetwork.get_network_for_project(manager_id,
+                                               project.id,
+                                               security_group)
+
 
 def get_network_by_address(address):
+    # TODO(vish): This is completely the wrong way to do this, but
+    #             I'm getting the network binary working before I
+    #             tackle doing this the right way.
     logging.debug("Get Network By Address: %s" % address)
     for project in manager.AuthManager().get_projects():
         net = get_project_network(project.id)
         if address in net.assigned:
             logging.debug("Found %s in %s" % (address, project.id))
             return net
-    raise compute_exception.AddressNotAllocated()
-
-def allocate_simple_ip():
-    redis = datastore.Redis.instance()
-    if not redis.exists('ips') and not len(redis.keys('instances:*')):
-        for address in FLAGS.simple_network_ips:
-            redis.sadd('ips', address)
-    address = redis.spop('ips')
-    if not address:
-        raise exception.NoMoreAddresses()
-    return address
-
-def deallocate_simple_ip(address):
-    datastore.Redis.instance().sadd('ips', address)
+    raise exception.AddressNotAllocated()
 
 
-def allocate_vpn_ip(user_id, project_id, mac):
-    return get_project_network(project_id).allocate_vpn_ip(mac)
-
-def allocate_ip(user_id, project_id, mac):
-    return get_project_network(project_id).allocate_ip(user_id, project_id, mac)
-
-def deallocate_ip(address):
-    return get_network_by_address(address).deallocate_ip(address)
-
-def release_ip(address):
-    return get_network_by_address(address).release_ip(address)
-
-def lease_ip(address):
-    return get_network_by_address(address).lease_ip(address)
-
-def get_project_network(project_id, security_group='default'):
-    """ get a project's private network, allocating one if needed """
-    # TODO(todd): It looks goofy to get a project from a UserManager.
-    #             Refactor to still use the LDAP backend, but not User specific.
-    project = manager.AuthManager().get_project(project_id)
-    if not project:
-        raise exception.Error("Project %s doesn't exist, uhoh." %
-                                   project_id)
-    return DHCPNetwork.get_network_for_project(project.project_manager_id,
-                                               project.id, security_group)
+def get_network_by_interface(iface, security_group='default'):
+    vlan = iface.rpartition("br")[2]
+    project_id = Vlan.dict_by_vlan().get(vlan)
+    return get_project_network(project_id, security_group)
 
 
-def restart_nets():
-    """ Ensure the network for each user is enabled"""
-    for project in manager.AuthManager().get_projects():
-        get_project_network(project.id).express()
+
+def get_public_ip_for_instance(instance_id):
+    # FIXME: this should be a lookup - iteration won't scale
+    for address_record in PublicAddress.all():
+        if address_record.get('instance_id', 'available') == instance_id:
+            return address_record['address']
+
