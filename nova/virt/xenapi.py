@@ -92,12 +92,13 @@ class XenAPIConnection(object):
             mac_address = ''
 
         user = AuthManager().get_user(instance.datamodel['user_id'])
+        project = AuthManager().get_project(instance.datamodel['project_id'])
         vdi_uuid = yield self.fetch_image(
-            instance.datamodel['image_id'], user, True)
+            instance.datamodel['image_id'], user, project, True)
         kernel = yield self.fetch_image(
-            instance.datamodel['kernel_id'], user, False)
+            instance.datamodel['kernel_id'], user, project, False)
         ramdisk = yield self.fetch_image(
-            instance.datamodel['ramdisk_id'], user, False)
+            instance.datamodel['ramdisk_id'], user, project, False)
         vdi_ref = yield self._conn.xenapi.VDI.get_by_uuid(vdi_uuid)
 
         vm_ref = yield self.create_vm(instance, kernel, ramdisk)
@@ -195,17 +196,18 @@ class XenAPIConnection(object):
             raise Exception('Found no network for bridge %s' % bridge)
 
 
-    def fetch_image(self, image, user, use_sr):
+    def fetch_image(self, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
         its kernel and ramdisk (if external kernels are being used)."""
 
         url = images.image_url(image)
-        logging.debug("Asking xapi to fetch %s as %s" % (url, user.access))
+        access = AuthManager().get_access_key(user, project)
+        logging.debug("Asking xapi to fetch %s as %s" % (url, access))
         fn = use_sr and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
-        args['username'] = user.access
+        args['username'] = access
         args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
