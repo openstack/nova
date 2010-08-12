@@ -43,6 +43,9 @@ libvirt = None
 libxml2 = None
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('libvirt_uri',
+                    'qemu:///system',
+                    'Libvirt connection URI')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -72,9 +75,9 @@ class LibvirtConnection(object):
                 'root',
                 None]
         if read_only:
-            self._conn = libvirt.openReadOnly('qemu:///system')
+            self._conn = libvirt.openReadOnly(FLAGS.libvirt_uri)
         else:
-            self._conn = libvirt.openAuth('qemu:///system', auth, 0)
+            self._conn = libvirt.openAuth(FLAGS.libvirt_uri, auth, 0)
 
 
     def list_instances(self):
