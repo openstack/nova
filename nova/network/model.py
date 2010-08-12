@@ -349,7 +349,7 @@ class BaseNetwork(datastore.BasicModel):
             raise exception.AddressNotAllocated()
         address = self.get_address(ip_str)
         if address:
-            if address['state'] != 'allocated':
+            if address['state'] != 'leased':
                 # NOTE(vish): address hasn't been leased, so release it
                 self.release_ip(ip_str)
             else:
