@@ -155,8 +155,10 @@ class Address(datastore.BasicModel):
     def identifier(self):
         return self.address
 
+    # NOTE(vish): address states allocated, leased, deallocated
     def default_state(self):
-        return {'address': self.address}
+        return {'address': self.address,
+                'state': 'none'}
 
     @classmethod
     # pylint: disable=R0913
@@ -170,6 +172,7 @@ class Address(datastore.BasicModel):
             hostname = "ip-%s" % address.replace('.', '-')
         addr['hostname'] = hostname
         addr['network_id'] = network_id
+        addr['state'] = 'allocated'
         addr.save()
         return addr
 
@@ -322,7 +325,13 @@ class BaseNetwork(datastore.BasicModel):
 
     def lease_ip(self, ip_str):
         """Called when DHCP lease is activated"""
-        logging.debug("Leasing allocated IP %s", ip_str)
+        if not ip_str in self.assigned:
+            raise exception.AddressNotAllocated()
+        address = self.get_address(ip_str)
+        if address:
+            logging.debug("Leasing allocated IP %s", ip_str)
+            address['state'] = 'leased'
+            address.save()
 
     def release_ip(self, ip_str):
         """Called when DHCP lease expires
@@ -330,16 +339,23 @@ class BaseNetwork(datastore.BasicModel):
         Removes the ip from the assigned list"""
         if not ip_str in self.assigned:
             raise exception.AddressNotAllocated()
+        logging.debug("Releasing IP %s", ip_str)
         self._rem_host(ip_str)
         self.deexpress(address=ip_str)
-        logging.debug("Releasing IP %s", ip_str)
 
     def deallocate_ip(self, ip_str):
         """Deallocates an allocated ip"""
-        # NOTE(vish): Perhaps we should put the ip into an intermediate
-        #             state, so we know that we are pending waiting for
-        #             dnsmasq to confirm that it has been released.
-        logging.debug("Deallocating allocated IP %s", ip_str)
+        if not ip_str in self.assigned:
+            raise exception.AddressNotAllocated()
+        address = self.get_address(ip_str)
+        if address:
+            if address['state'] != 'allocated':
+                # NOTE(vish): address hasn't been leased, so release it
+                self.release_ip(ip_str)
+            else:
+                logging.debug("Deallocating allocated IP %s", ip_str)
+                address['state'] == 'deallocated'
+                address.save()
 
     def express(self, address=None):
         """Set up network.  Implemented in subclasses"""
