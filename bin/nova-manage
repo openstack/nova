@@ -203,7 +203,7 @@ class ProjectCommands(object):
         arguments: project user"""
         self.manager.remove_from_project(user, project)
 
-    def create_zip(self, project_id, user_id, filename='nova.zip'):
+    def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
         zip_file = self.manager.get_credentials(project_id, user_id)

@@ -21,14 +21,15 @@
   Daemon for the Rackspace API endpoint.
 """
 
+import nova.endpoint
+
 from nova import flags
 from nova import utils
 from nova import wsgi
-from nova.endpoint import rackspace
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    wsgi.run_server(rackspace.API(), FLAGS.cc_port)
+    wsgi.run_server(nova.endpoint.ApiVersionRouter(), FLAGS.cc_port)

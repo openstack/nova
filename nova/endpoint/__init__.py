@@ -30,3 +30,22 @@
 .. moduleauthor:: Manish Singh <yosh@gimp.org>
 .. moduleauthor:: Andy Smith <andy@anarkystic.com>
 """
+
+from nova import wsgi
+import routes
+from nova.endpoint import rackspace
+from nova.endpoint import aws
+
+class ApiVersionRouter(wsgi.Router):
+    """Routes top-level requests to the appropriate API."""
+
+    def __init__(self):
+        mapper = routes.Mapper()
+
+        mapper.connect(None, "/v1.0/{path_info:.*}", controller="rs")
+        mapper.connect(None, "/ec2/{path_info:.*}", controller="ec2")
+
+        targets = {"rs": rackspace.Api(), "ec2": aws.Api()}
+
+        super(ApiVersionRouter, self).__init__(mapper, targets)
+

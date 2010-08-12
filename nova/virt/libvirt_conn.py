@@ -114,7 +114,8 @@ class LibvirtConnection(object):
     def _cleanup(self, instance):
         target = os.path.abspath(instance.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
-        shutil.rmtree(target)
+        if os.path.exists(target):
+            shutil.rmtree(target)
 
 
     @defer.inlineCallbacks
