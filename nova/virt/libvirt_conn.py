@@ -50,7 +50,7 @@ flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('compute/libvirt.xml.template'),
                     'Libvirt XML Template')
 flags.DEFINE_string('injected_network_template',
-                    utils.abspath('compute/interfaces.template'),
+                    utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
 
 flags.DEFINE_string('libvirt_type',
