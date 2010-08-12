@@ -17,6 +17,10 @@
 #    under the License.
 
 import logging
+import shutil
+import tempfile
+
+from twisted.internet import defer
 
 from nova import compute
 from nova import exception
@@ -34,10 +38,16 @@ class VolumeTestCase(test.TrialTestCase):
         super(VolumeTestCase, self).setUp()
         self.compute = compute.service.ComputeService()
         self.volume = None
+        self.tempdir = tempfile.mkdtemp()
         self.flags(connection_type='fake',
-                   fake_storage=True)
+                   fake_storage=True,
+                   aoe_export_dir=self.tempdir)
         self.volume = volume_service.VolumeService()
 
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    @defer.inlineCallbacks
     def test_run_create_volume(self):
         vol_size = '0'
         user_id = 'fake'
@@ -48,34 +58,40 @@ class VolumeTestCase(test.TrialTestCase):
                          volume_service.get_volume(volume_id)['volume_id'])
 
         rv = self.volume.delete_volume(volume_id)
-        self.assertFailure(volume_service.get_volume(volume_id),
-                           exception.Error)
+        self.assertRaises(exception.Error, volume_service.get_volume, volume_id)
 
+    @defer.inlineCallbacks
     def test_too_big_volume(self):
         vol_size = '1001'
         user_id = 'fake'
         project_id = 'fake'
-        self.assertRaises(TypeError,
-                          self.volume.create_volume,
-                          vol_size, user_id, project_id)
+        try:
+            yield self.volume.create_volume(vol_size, user_id, project_id)
+            self.fail("Should have thrown TypeError")
+        except TypeError:
+            pass
 
+    @defer.inlineCallbacks
     def test_too_many_volumes(self):
         vol_size = '1'
         user_id = 'fake'
         project_id = 'fake'
         num_shelves = FLAGS.last_shelf_id - FLAGS.first_shelf_id + 1
-        total_slots = FLAGS.slots_per_shelf * num_shelves
+        total_slots = FLAGS.blades_per_shelf * num_shelves
         vols = []
+        from nova import datastore
+        redis = datastore.Redis.instance()
         for i in xrange(total_slots):
             vid = yield self.volume.create_volume(vol_size, user_id, project_id)
             vols.append(vid)
         self.assertFailure(self.volume.create_volume(vol_size,
                                                      user_id,
                                                      project_id),
-                           volume_service.NoMoreVolumes)
+                           volume_service.NoMoreBlades)
         for id in vols:
             yield self.volume.delete_volume(id)
 
+    @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
         # Create one volume and one compute to test with
         instance_id = "storage-test"
@@ -84,22 +100,26 @@ class VolumeTestCase(test.TrialTestCase):
         project_id = 'fake'
         mountpoint = "/dev/sdf"
         volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
-
         volume_obj = volume_service.get_volume(volume_id)
         volume_obj.start_attach(instance_id, mountpoint)
-        rv = yield self.compute.attach_volume(volume_id,
-                                          instance_id,
-                                          mountpoint)
+        if FLAGS.fake_tests:
+            volume_obj.finish_attach()
+        else:
+            rv = yield self.compute.attach_volume(instance_id,
+                                                  volume_id,
+                                                  mountpoint)
         self.assertEqual(volume_obj['status'], "in-use")
-        self.assertEqual(volume_obj['attachStatus'], "attached")
+        self.assertEqual(volume_obj['attach_status'], "attached")
         self.assertEqual(volume_obj['instance_id'], instance_id)
         self.assertEqual(volume_obj['mountpoint'], mountpoint)
 
-        self.assertRaises(exception.Error,
-                          self.volume.delete_volume,
-                          volume_id)
-
-        rv = yield self.volume.detach_volume(volume_id)
+        self.assertFailure(self.volume.delete_volume(volume_id), exception.Error)
+        volume_obj.start_detach()
+        if FLAGS.fake_tests:
+            volume_obj.finish_detach()
+        else:
+            rv = yield self.volume.detach_volume(instance_id,
+                                                 volume_id)
         volume_obj = volume_service.get_volume(volume_id)
         self.assertEqual(volume_obj['status'], "available")
 
@@ -107,6 +127,27 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertRaises(exception.Error,
                           volume_service.get_volume,
                           volume_id)
+
+    @defer.inlineCallbacks
+    def test_multiple_volume_race_condition(self):
+        vol_size = "5"
+        user_id = "fake"
+        project_id = 'fake'
+        shelf_blades = []
+        def _check(volume_id):
+            vol = volume_service.get_volume(volume_id)
+            shelf_blade = '%s.%s' % (vol['shelf_id'], vol['blade_id'])
+            self.assert_(shelf_blade not in shelf_blades)
+            shelf_blades.append(shelf_blade)
+            logging.debug("got %s" % shelf_blade)
+            vol.destroy()
+        deferreds = []
+        for i in range(5):
+            d = self.volume.create_volume(vol_size, user_id, project_id)
+            d.addCallback(_check)
+            d.addErrback(self.fail)
+            deferreds.append(d)
+        yield defer.DeferredList(deferreds)
 
     def test_multi_node(self):
         # TODO(termie): Figure out how to test with two nodes,
