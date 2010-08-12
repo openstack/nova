@@ -287,7 +287,6 @@ class BaseNetwork(datastore.BasicModel):
         """Returns a list of all assigned addresses as objects"""
         return self.address_class.associated_to('network', self.identifier)
 
-    @classmethod
     def get_address(self, ip_address):
         """Returns a specific ip as an object"""
         if ip_address in self.assigned:
