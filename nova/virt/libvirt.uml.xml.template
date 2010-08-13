@@ -2,7 +2,7 @@
     <name>%(name)s</name>
     <memory>%(memory_kb)s</memory>
     <os>
-        <type>%(type)suml</type>
+        <type>%(type)s</type>
         <kernel>/usr/bin/linux</kernel>
         <root>/dev/ubda1</root>
     </os>
