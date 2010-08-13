@@ -15,7 +15,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+"""
+Unit Tests for remote procedure calls using queue
+"""
 import logging
 
 from twisted.internet import defer
@@ -29,7 +31,8 @@ FLAGS = flags.FLAGS
 
 
 class RpcTestCase(test.BaseTestCase):
-    def setUp(self):
+    """Test cases for rpc"""
+    def setUp(self):  # pylint: disable=C0103
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance()
         self.receiver = TestReceiver()
@@ -40,23 +43,43 @@ class RpcTestCase(test.BaseTestCase):
         self.injected.append(self.consumer.attach_to_tornado(self.ioloop))
 
     def test_call_succeed(self):
+        """Get a value through rpc call"""
         value = 42
-        result = yield rpc.call('test', {"method": "echo", "args": {"value": value}})
+        result = yield rpc.call('test', {"method": "echo",
+                                         "args": {"value": value}})
         self.assertEqual(value, result)
 
     def test_call_exception(self):
+        """Test that exception gets passed back properly
+
+        rpc.call returns a RemoteError object.  The value of the
+        exception is converted to a string, so we convert it back
+        to an int in the test.
+        """
         value = 42
-        self.assertFailure(rpc.call('test', {"method": "fail", "args": {"value": value}}), rpc.RemoteError)
+        self.assertFailure(rpc.call('test', {"method": "fail",
+                                             "args": {"value": value}}),
+                           rpc.RemoteError)
         try:
-            yield rpc.call('test', {"method": "fail", "args": {"value": value}})
+            yield rpc.call('test', {"method": "fail",
+                                    "args": {"value": value}})
             self.fail("should have thrown rpc.RemoteError")
         except rpc.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
 
+
 class TestReceiver(object):
-    def echo(self, value):
+    """Simple Proxy class so the consumer has methods to call
+
+    Uses static methods because we aren't actually storing any state"""
+
+    @staticmethod
+    def echo(value):
+        """Simply returns whatever value is sent in"""
         logging.debug("Received %s", value)
         return defer.succeed(value)
 
-    def fail(self, value):
+    @staticmethod
+    def fail(value):
+        """Raises an exception with the value sent in"""
         raise Exception(value)
