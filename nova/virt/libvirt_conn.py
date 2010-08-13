@@ -44,10 +44,10 @@ libxml2 = None
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
-                    utils.abspath('compute/libvirt.qemu.xml.template'),
+                    utils.abspath('virt/libvirt.qemu.xml.template'),
                     'Libvirt XML Template for QEmu/KVM')
 flags.DEFINE_string('libvirt_uml_xml_template',
-                    utils.abspath('compute/libvirt.uml.xml.template'),
+                    utils.abspath('virt/libvirt.uml.xml.template'),
                     'Libvirt XML Template for user-mode-linux')
 flags.DEFINE_string('injected_network_template',
                     utils.abspath('virt/interfaces.template'),
@@ -70,25 +70,42 @@ def get_connection(read_only):
         libxml2 = __import__('libxml2')
     return LibvirtConnection(read_only)
 
-
 class LibvirtConnection(object):
     def __init__(self, read_only):
-        auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
-                'root',
-                None]
+        self.libvirt_uri, template_file = self.get_uri_and_template()
 
+        self.libvirt_xml = open(template_file).read()
+        self._wrapped_conn = None
+        self.read_only = read_only
+
+
+    @property
+    def _conn(self):
+        if not self._wrapped_conn:
+            self._wrapped_conn = self._connect(self.libvirt_uri, self.read_only)
+        return self._wrapped_conn
+
+
+    def get_uri_and_template(self):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
             template_file = FLAGS.libvirt_uml_xml_template
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
             template_file = FLAGS.libvirt_xml_template
-        self.libvirt_xml = open(template_file).read()
+        return uri, template_file
+
+
+    def _connect(self, uri, read_only):
+        auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
+                'root',
+                None]
 
         if read_only:
-            self._conn = libvirt.openReadOnly(uri)
+            return libvirt.openReadOnly(uri)
         else:
-            self._conn = libvirt.openAuth(uri, auth, 0)
+            return libvirt.openAuth(uri, auth, 0)
+
 
 
     def list_instances(self):
