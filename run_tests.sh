@@ -25,12 +25,9 @@ function process_options {
 function process_option {
   option=$1
   case $option in
-    --help) usage;;
-    -h) usage;;
-    -V) let always_venv=1; let never_venv=0;;
-    --virtual-env) let always_venv=1; let never_venv=0;;
-    -N) let always_venv=0; let never_venv=1;;
-    --no-virtual-env) let always_venv=0; let never_venv=1;;
+    -h|--help) usage;;
+    -V|--virtual-env) let always_venv=1; let never_venv=0;;
+    -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
   esac
 }
 
