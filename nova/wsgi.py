@@ -218,23 +218,59 @@ class Serializer(object):
     Serializes a dictionary to a Content Type specified by a WSGI environment.
     """
 
-    def __init__(self, environ):
-        """Create a serializer based on the given WSGI environment."""
+    def __init__(self, environ, metadata=None):
+        """
+        Create a serializer based on the given WSGI environment.
+        'metadata' is an optional dict mapping MIME types to information
+        needed to serialize a dictionary to that type.
+        """
         self.environ = environ
+        self.metadata = metadata or {}
 
-    def serialize(self, data):
+    def to_content_type(self, data):
         """
         Serialize a dictionary into a string.  The format of the string
         will be decided based on the Content Type requested in self.environ:
         by Accept: header, or by URL suffix.
         """
-        req = webob.Request(self.environ)
-        # TODO(gundlach): do XML correctly and be more robust
-        if req.accept and 'application/json' in req.accept:
+        mimetype = 'application/xml'
+        # TODO(gundlach): determine mimetype from request
+
+        if mimetype == 'application/json':
             import json
             return json.dumps(data)
+        elif mimetype == 'application/xml':
+            metadata = self.metadata.get('application/xml', {})
+            # We expect data to contain a single key which is the XML root.
+            root_key = data.keys()[0]
+            from xml.dom import minidom
+            doc = minidom.Document()
+            node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+            return node.toprettyxml(indent='    ')
         else:
-            return '<xmlified_yeah_baby>' + repr(data) + \
-                   '</xmlified_yeah_baby>'
+            return repr(data)
 
-
+    def _to_xml_node(self, doc, metadata, nodename, data):
+        result = doc.createElement(nodename)
+        if type(data) is list:
+            singular = metadata.get('plurals', {}).get(nodename, None)
+            if singular is None:
+                if nodename.endswith('s'):
+                    singular = nodename[:-1]
+                else:
+                    singular = 'item'
+            for item in data:
+                node = self._to_xml_node(doc, metadata, singular, item)
+                result.appendChild(node)
+        elif type(data) is dict:
+            attrs = metadata.get('attributes', {}).get(nodename, {})
+            for k,v in data.items():
+                if k in attrs:
+                    result.setAttribute(k, str(v))
+                else:
+                    node = self._to_xml_node(doc, metadata, k, v)
+                    result.appendChild(node)
+        else: # atom
+            node = doc.createTextNode(str(data))
+            result.appendChild(node)
+        return result
