@@ -261,12 +261,6 @@ class LibvirtConnection(object):
 
 
     def get_disks(self, instance_id):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-
-        Returns a list of all block devices for this domain.
-        """
         domain = self._conn.lookupByName(instance_id)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
@@ -304,12 +298,6 @@ class LibvirtConnection(object):
 
 
     def get_interfaces(self, instance_id):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-
-        Returns a list of all network interfaces for this instance.
-        """
         domain = self._conn.lookupByName(instance_id)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
@@ -347,18 +335,10 @@ class LibvirtConnection(object):
 
 
     def block_stats(self, instance_id, disk):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-        """
         domain = self._conn.lookupByName(instance_id)
         return domain.blockStats(disk)
 
 
     def interface_stats(self, instance_id, interface):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-        """
         domain = self._conn.lookupByName(instance_id)
         return domain.interfaceStats(interface)
