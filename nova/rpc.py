@@ -40,7 +40,7 @@ FLAGS = flags.FLAGS
 
 
 _log = logging.getLogger('amqplib')
-_log.setLevel(logging.WARN)
+_log.setLevel(logging.DEBUG)
 
 
 class Connection(connection.BrokerConnection):
@@ -141,8 +141,8 @@ class AdapterConsumer(TopicConsumer):
         node_args = dict((str(k), v) for k, v in args.iteritems())
         d = defer.maybeDeferred(node_func, **node_args)
         if msg_id:
-            d.addCallback(lambda rval: msg_reply(msg_id, rval))
-            d.addErrback(lambda e: msg_reply(msg_id, str(e)))
+            d.addCallback(lambda rval: msg_reply(msg_id, rval, None))
+            d.addErrback(lambda e: msg_reply(msg_id, None, e))
         return
 
 
@@ -174,18 +174,35 @@ class DirectPublisher(Publisher):
         super(DirectPublisher, self).__init__(connection=connection)
 
 
-def msg_reply(msg_id, reply):
+def msg_reply(msg_id, reply=None, failure=None):
+    if failure:
+        message = failure.getErrorMessage()
+        traceback = failure.getTraceback()
+        logging.error("Returning exception %s to caller", message)
+        logging.error(traceback)
+        failure =  (failure.type.__name__, str(failure.value), traceback)
     conn = Connection.instance()
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
-
     try:
-        publisher.send({'result': reply})
-    except TypeError:
+        publisher.send({'result': reply, 'failure': failure})
+    except Exception, exc:
         publisher.send(
                 {'result': dict((k, repr(v))
-                                for k, v in reply.__dict__.iteritems())
+                                for k, v in reply.__dict__.iteritems()),
+                 'failure': failure
                  })
     publisher.close()
+
+
+class RemoteError(exception.Error):
+    """signifies that a remote class has raised an exception"""
+    def __init__(self, type, value, traceback):
+        self.type = type
+        self.value = value
+        self.traceback = traceback
+        super(RemoteError, self).__init__("%s %s\n%s" % (type,
+                                                         value,
+                                                         traceback))
 
 
 def call(topic, msg):
@@ -199,7 +216,10 @@ def call(topic, msg):
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
     def deferred_receive(data, message):
         message.ack()
-        d.callback(data)
+        if data['failure']:
+            return d.errback(RemoteError(*data['failure']))
+        else:
+            return d.callback(data['result'])
     consumer.register_callback(deferred_receive)
     injected = consumer.attach_to_tornado()
 
