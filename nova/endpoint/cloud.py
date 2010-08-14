@@ -306,7 +306,7 @@ class CloudController(object):
                                            "user_id": context.user.id,
                                            "project_id": context.project.id}})
         # NOTE(vish): rpc returned value is in the result key in the dictionary
-        volume = self._get_volume(context, result['result'])
+        volume = self._get_volume(context, result)
         defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
@@ -477,11 +477,10 @@ class CloudController(object):
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
         network_topic = yield self._get_network_topic(context)
-        alloc_result = yield rpc.call(network_topic,
+        public_ip = yield rpc.call(network_topic,
                          {"method": "allocate_elastic_ip",
                           "args": {"user_id": context.user.id,
                                    "project_id": context.project.id}})
-        public_ip = alloc_result['result']
         defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
 
     @rbac.allow('netadmin')
@@ -522,11 +521,10 @@ class CloudController(object):
         """Retrieves the network host for a project"""
         host = network_service.get_host_for_project(context.project.id)
         if not host:
-            result = yield rpc.call(FLAGS.network_topic,
+            host = yield rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
                                      "args": {"user_id": context.user.id,
                                               "project_id": context.project.id}})
-            host = result['result']
         defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -570,14 +568,13 @@ class CloudController(object):
             if image_id  == FLAGS.vpn_image_id:
                 is_vpn = True
             inst = self.instdir.new()
-            allocate_result = yield rpc.call(network_topic,
+            allocate_data = yield rpc.call(network_topic,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
                                "security_group": security_group,
                                "is_vpn": is_vpn,
                                "hostname": inst.instance_id}})
-            allocate_data = allocate_result['result']
             inst['image_id'] = image_id
             inst['kernel_id'] = kernel_id
             inst['ramdisk_id'] = ramdisk_id
