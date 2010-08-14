@@ -25,7 +25,8 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
-from nova.compute import model
+from nova import models
+from nova.auth import manager
 from nova.compute import service
 
 
@@ -60,51 +61,51 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    fake_storage=True)
         self.compute = service.ComputeService()
+        self.manager = manager.AuthManager()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+    def tearDown(self):
+        self.manager.delete_user('fake')
+        self.manager.delete_project('fake')
 
     def create_instance(self):
-        instdir = model.InstanceDirectory()
-        inst = instdir.new()
+        inst = models.Instance(user_id='fake', project_id='fake', image_id='ami-test')
+        inst.save();
         # TODO(ja): add ami, ari, aki, user_data
-        inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
-        inst['user_id'] = 'fake'
-        inst['project_id'] = 'fake'
-        inst['instance_type'] = 'm1.tiny'
-        inst['node_name'] = FLAGS.node_name
-        inst['mac_address'] = utils.generate_mac()
-        inst['ami_launch_index'] = 0
-        inst.save()
-        return inst['instance_id']
+        # inst['reservation_id'] = 'r-fakeres'
+        # inst['launch_time'] = '10'
+        #inst['user_id'] = 'fake'
+        #inst['project_id'] = 'fake'
+        #inst['instance_type'] = 'm1.tiny'
+        #inst['node_name'] = FLAGS.node_name
+        #inst['mac_address'] = utils.generate_mac()
+        #inst['ami_launch_index'] = 0
+        #inst.save()
+        return inst.id
 
     @defer.inlineCallbacks
     def test_run_describe_terminate(self):
         instance_id = self.create_instance()
 
-        rv = yield self.compute.run_instance(instance_id)
+        yield self.compute.run_instance(instance_id)
 
-        rv = yield self.compute.describe_instances()
-        logging.info("Running instances: %s", rv)
-        self.assertEqual(rv[instance_id].name, instance_id)
+        instances = models.Instance.all()
+        logging.info("Running instances: %s", instances)
+        self.assertEqual(len(instances), 1)
 
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.terminate_instance(instance_id)
 
-        rv = yield self.compute.describe_instances()
-        logging.info("After terminating instances: %s", rv)
-        self.assertEqual(rv, {})
+        instances = models.Instance.all()
+        logging.info("After terminating instances: %s", instances)
+        self.assertEqual(len(instances), 0)
 
     @defer.inlineCallbacks
     def test_reboot(self):
         instance_id = self.create_instance()
-        rv = yield self.compute.run_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-
+        yield self.compute.run_instance(instance_id)
         yield self.compute.reboot_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.terminate_instance(instance_id)
 
     @defer.inlineCallbacks
     def test_console_output(self):
@@ -118,10 +119,6 @@ class ComputeConnectionTestCase(test.TrialTestCase):
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
         instance_id = self.create_instance()
-        rv = yield self.compute.run_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-
-        self.assertRaises(exception.Error, self.compute.run_instance, instance_id)
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.run_instance(instance_id)
+        self.assertFailure(self.compute.run_instance(instance_id), exception.Error)
+        yield self.compute.terminate_instance(instance_id)

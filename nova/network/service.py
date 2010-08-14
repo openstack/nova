@@ -29,6 +29,7 @@ from nova.exception import NotFound
 from nova.network import exception
 from nova.network import model
 from nova.network import vpn
+from nova.network import linux_net
 
 FLAGS = flags.FLAGS
 
@@ -61,13 +62,10 @@ def type_to_class(network_type):
     raise NotFound("Couldn't find %s network type" % network_type)
 
 
-def setup_compute_network(network_type, user_id, project_id, security_group):
+def setup_compute_network(instance):
     """Sets up the network on a compute host"""
-    srv = type_to_class(network_type)
-    srv.setup_compute_network(network_type,
-                              user_id,
-                              project_id,
-                              security_group)
+    srv = type_to_class(instance.project.network.kind)
+    srv.setup_compute_network(instance)
 
 
 def get_host_for_project(project_id):
@@ -118,8 +116,7 @@ class BaseNetworkService(service.Service):
         pass
 
     @classmethod
-    def setup_compute_network(cls, user_id, project_id, security_group,
-                              *args, **kwargs):
+    def setup_compute_network(cls, instance, *args, **kwargs):
         """Sets up matching network for compute hosts"""
         raise NotImplementedError()
 
@@ -147,8 +144,7 @@ class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
     @classmethod
-    def setup_compute_network(cls, user_id, project_id, security_group,
-                              *args, **kwargs):
+    def setup_compute_network(cls, instance, *args, **kwargs):
         """Network is created manually"""
         pass
 
@@ -245,13 +241,11 @@ class VlanNetworkService(BaseNetworkService):
         vpn.NetworkData.create(project_id)
 
     @classmethod
-    def setup_compute_network(cls, user_id, project_id, security_group,
-                              *args, **kwargs):
+    def setup_compute_network(cls, instance, *args, **kwargs):
         """Sets up matching network for compute hosts"""
         # NOTE(vish): Use BridgedNetwork instead of DHCPNetwork because
         #             we don't want to run dnsmasq on the client machines
-        net = model.BridgedNetwork.get_network_for_project(
-                                            user_id,
-                                            project_id,
-                                            security_group)
-        net.express()
+        net = instance.project.network
+        # FIXME(ja): hack - uncomment this:
+        #linux_net.vlan_create(net)
+        #linux_net.bridge_create(net)

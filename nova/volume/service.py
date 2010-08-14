@@ -142,7 +142,7 @@ class VolumeService(service.Service):
                 "sudo vgcreate %s %s" % (FLAGS.volume_group,
                                          FLAGS.storage_dev))
 
-class Volume(datastore.BasicModel):
+class Volume():
 
     def __init__(self, volume_id=None):
         self.volume_id = volume_id

@@ -63,13 +63,11 @@ class InstanceDirectory(object):
     def __getitem__(self, item):
         return self.get(item)
 
-    @datastore.absorb_connection_error
     def by_project(self, project):
         """returns a list of instance objects for a project"""
         for instance_id in datastore.Redis.instance().smembers('project:%s:instances' % project):
             yield Instance(instance_id)
 
-    @datastore.absorb_connection_error
     def by_node(self, node):
         """returns a list of instances for a node"""
         for instance_id in datastore.Redis.instance().smembers('node:%s:instances' % node):
@@ -90,12 +88,10 @@ class InstanceDirectory(object):
         """returns the instance a volume is attached to"""
         pass
 
-    @datastore.absorb_connection_error
     def exists(self, instance_id):
         return datastore.Redis.instance().sismember('instances', instance_id)
 
     @property
-    @datastore.absorb_connection_error
     def all(self):
         """returns a list of all instances"""
         for instance_id in datastore.Redis.instance().smembers('instances'):
@@ -107,7 +103,7 @@ class InstanceDirectory(object):
         return self.get(instance_id)
 
 
-class Instance(datastore.BasicModel):
+class Instance():
     """Wrapper around stored properties of an instance"""
 
     def __init__(self, instance_id):
@@ -168,7 +164,7 @@ class Instance(datastore.BasicModel):
         self.unassociate_with("ip", self.state['private_dns_name'])
         return super(Instance, self).destroy()
 
-class Host(datastore.BasicModel):
+class Host():
     """A Host is the machine where a Daemon is running."""
 
     def __init__(self, hostname):
@@ -185,7 +181,7 @@ class Host(datastore.BasicModel):
         return self.hostname
 
 
-class Daemon(datastore.BasicModel):
+class Daemon():
     """A Daemon is a job (compute, api, network, ...) that runs on a host."""
 
     def __init__(self, host_or_combined, binpath=None):
@@ -235,7 +231,7 @@ class Daemon(datastore.BasicModel):
         for x in cls.associated_to("host", hostname):
             yield x
 
-class SessionToken(datastore.BasicModel):
+class SessionToken():
     """This is a short-lived auth token that is passed through web requests"""
 
     def __init__(self, session_token):

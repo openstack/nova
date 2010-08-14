@@ -31,6 +31,7 @@ import zipfile
 from nova import crypto
 from nova import exception
 from nova import flags
+from nova import models
 from nova import utils
 from nova.auth import signer
 from nova.network import vpn
@@ -200,6 +201,11 @@ class Project(AuthBase):
     def vpn_port(self):
         ip, port = AuthManager().get_project_vpn_data(self)
         return port
+
+    @property
+    def network(self):
+        session = models.create_session()
+        return session.query(models.Network).filter_by(project_id=self.id).first()
 
     def has_manager(self, user):
         return AuthManager().is_project_manager(user, self)
@@ -521,7 +527,13 @@ class AuthManager(object):
                                                description,
                                                member_users)
             if project_dict:
-                return Project(**project_dict)
+                project = Project(**project_dict)
+                # FIXME(ja): EVIL HACK - this should poll from a pool
+                session = models.create_session()
+                net = models.Network(project_id=project.id, kind='vlan')
+                session.add(net)
+                session.commit()
+                return project
 
     def add_to_project(self, user, project):
         """Add user to project"""

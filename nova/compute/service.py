@@ -38,7 +38,7 @@ from nova import process
 from nova import service
 from nova import utils
 from nova.compute import disk
-from nova.compute import model
+from nova import models
 from nova.compute import power_state
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.network import service as network_service
@@ -61,7 +61,6 @@ class ComputeService(service.Service):
         super(ComputeService, self).__init__()
         self._instances = {}
         self._conn = virt_connection.get_connection()
-        self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
 
     def noop(self):
@@ -69,11 +68,15 @@ class ComputeService(service.Service):
         return defer.succeed('PONG')
 
     def get_instance(self, instance_id):
-        # inst = self.instdir.get(instance_id)
-        # return inst
-        if self.instdir.exists(instance_id):
-            return Instance.fromName(self._conn, instance_id)
-        return None
+        session = models.create_session()
+        return session.query(models.Instance).filter_by(id=instance_id).one()
+
+    def update_state(self, instance_id):
+        session = models.create_session()
+        inst = session.query(models.Instance).filter_by(id=instance_id).one()
+        # FIXME(ja): include other fields from state?
+        inst.state = self._conn.get_info(instance_id)['state'] 
+        session.flush()
 
     @exception.wrap_exception
     def adopt_instances(self):
@@ -87,14 +90,6 @@ class ComputeService(service.Service):
             except:
                 pass
         return defer.succeed(len(self._instances))
-
-    @exception.wrap_exception
-    def describe_instances(self):
-        retval = {}
-        for inst in self.instdir.by_node(FLAGS.node_name):
-            retval[inst['instance_id']] = (
-                    Instance.fromName(self._conn, inst['instance_id']))
-        return retval
 
     @defer.inlineCallbacks
     def report_state(self, nodename, daemon):
@@ -112,71 +107,93 @@ class ComputeService(service.Service):
                 logging.exception("model server went away")
         yield
 
+    @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
-        inst = self.instdir.get(instance_id)
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
+        session = models.create_session()
+        inst = session.query(models.Instance).filter_by(id=instance_id).first()
         # NOTE(vish): passing network type allows us to express the
         #             network without making a call to network to find
         #             out which type of network to setup
-        network_service.setup_compute_network(
-                                           inst.get('network_type', 'vlan'),
-                                           inst['user_id'],
-                                           inst['project_id'],
-                                           security_group)
+        network_service.setup_compute_network(inst)
+        inst.node_name = FLAGS.node_name
+        session.commit()
 
-        inst['node_name'] = FLAGS.node_name
-        inst.save()
         # TODO(vish) check to make sure the availability zone matches
-        new_inst = Instance(self._conn, name=instance_id, data=inst)
-        logging.info("Instances current state is %s", new_inst.state)
-        if new_inst.is_running():
-            raise exception.Error("Instance is already running")
-        new_inst.spawn()
+        inst.set_state(power_state.NOSTATE, 'spawning')
+        session.commit()
 
+        try:
+            yield self._conn.spawn(inst)
+        except Exception, ex:
+            logging.debug(ex)
+            inst.set_state(power_state.SHUTDOWN)
+
+        self.update_state(instance_id)
+
+    @defer.inlineCallbacks
     @exception.wrap_exception
     def terminate_instance(self, instance_id):
         """ terminate an instance on this machine """
         logging.debug("Got told to terminate instance %s" % instance_id)
-        instance = self.get_instance(instance_id)
-        # inst = self.instdir.get(instance_id)
-        if not instance:
-            raise exception.Error(
-                    'trying to terminate unknown instance: %s' % instance_id)
-        d = instance.destroy()
-        # d.addCallback(lambda x: inst.destroy())
-        return d
+        session = models.create_session()
+        instance = session.query(models.Instance).filter_by(id=instance_id).one()
 
+        if instance.state == power_state.SHUTOFF:
+            # self.datamodel.destroy() FIXME: RE-ADD ?????
+            raise exception.Error('trying to destroy already destroyed'
+                                  ' instance: %s' % instance_id)
+
+        instance.set_state(power_state.NOSTATE, 'shutting_down')
+        yield self._conn.destroy(instance)
+        # FIXME(ja): should we keep it in a terminated state for a bit?
+        session.delete(instance)
+        session.flush()
+
+    @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot_instance(self, instance_id):
         """ reboot an instance on this server
         KVM doesn't support reboot, so we terminate and restart """
+        self.update_state(instance_id)
         instance = self.get_instance(instance_id)
-        if not instance:
-            raise exception.Error(
-                    'trying to reboot unknown instance: %s' % instance_id)
-        return instance.reboot()
 
-    @defer.inlineCallbacks
+        # FIXME(ja): this is only checking the model state - not state on disk?
+        if instance.state != power_state.RUNNING:
+            raise exception.Error(
+                    'trying to reboot a non-running'
+                    'instance: %s (state: %s excepted: %s)' % (instance.id, instance.state, power_state.RUNNING))
+
+        logging.debug('rebooting instance %s' % instance.id)
+        instance.set_state(power_state.NOSTATE, 'rebooting')
+        yield self._conn.reboot(instance)
+        self.update_state(instance_id)
+
     @exception.wrap_exception
     def get_console_output(self, instance_id):
         """ send the console output for an instance """
+        # FIXME: Abstract this for Xen
+
         logging.debug("Getting console output for %s" % (instance_id))
-        inst = self.instdir.get(instance_id)
-        instance = self.get_instance(instance_id)
-        if not instance:
-            raise exception.Error(
-                    'trying to get console log for unknown: %s' % instance_id)
-        rv = yield instance.console_output()
+        session = models.create_session()
+        inst = self.get_instance(instance_id)
+
+        if FLAGS.connection_type == 'libvirt':
+            fname = os.path.abspath(
+                    os.path.join(FLAGS.instances_path, inst.id, 'console.log'))
+            with open(fname, 'r') as f:
+                output = f.read()
+        else:
+            output = 'FAKE CONSOLE OUTPUT'
+
         # TODO(termie): this stuff belongs in the API layer, no need to
         #               munge the data we send to ourselves
         output = {"InstanceId" : instance_id,
                   "Timestamp" : "2",
-                  "output" : base64.b64encode(rv)}
-        defer.returnValue(output)
+                  "output" : base64.b64encode(output)}
+        return output
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -270,29 +287,6 @@ class Instance(object):
         self.datamodel.save()
         logging.debug("Finished init of Instance with id of %s" % name)
 
-    @classmethod
-    def fromName(cls, conn, name):
-        """ use the saved data for reloading the instance """
-        instdir = model.InstanceDirectory()
-        instance = instdir.get(name)
-        return cls(conn=conn, name=name, data=instance)
-
-    def set_state(self, state_code, state_description=None):
-        self.datamodel['state'] = state_code
-        if not state_description:
-            state_description = power_state.name(state_code)
-        self.datamodel['state_description'] = state_description
-        self.datamodel.save()
-
-    @property
-    def state(self):
-        # it is a string in datamodel
-        return int(self.datamodel['state'])
-
-    @property
-    def name(self):
-        return self.datamodel['name']
-
     def is_pending(self):
         return (self.state == power_state.NOSTATE or self.state == 'pending')
 
@@ -303,64 +297,3 @@ class Instance(object):
         logging.debug("Instance state is: %s" % self.state)
         return (self.state == power_state.RUNNING or self.state == 'running')
 
-    def describe(self):
-        return self.datamodel
-
-    def info(self):
-        result = self._conn.get_info(self.name)
-        result['node_name'] = FLAGS.node_name
-        return result
-
-    def update_state(self):
-        self.datamodel.update(self.info())
-        self.set_state(self.state)
-        self.datamodel.save() # Extra, but harmless
-
-    @defer.inlineCallbacks
-    @exception.wrap_exception
-    def destroy(self):
-        if self.is_destroyed():
-            self.datamodel.destroy()
-            raise exception.Error('trying to destroy already destroyed'
-                                  ' instance: %s' % self.name)
-
-        self.set_state(power_state.NOSTATE, 'shutting_down')
-        yield self._conn.destroy(self)
-        self.datamodel.destroy()
-
-    @defer.inlineCallbacks
-    @exception.wrap_exception
-    def reboot(self):
-        if not self.is_running():
-            raise exception.Error(
-                    'trying to reboot a non-running'
-                    'instance: %s (state: %s)' % (self.name, self.state))
-
-        logging.debug('rebooting instance %s' % self.name)
-        self.set_state(power_state.NOSTATE, 'rebooting')
-        yield self._conn.reboot(self)
-        self.update_state()
-
-    @defer.inlineCallbacks
-    @exception.wrap_exception
-    def spawn(self):
-        self.set_state(power_state.NOSTATE, 'spawning')
-        logging.debug("Starting spawn in Instance")
-        try:
-            yield self._conn.spawn(self)
-        except Exception, ex:
-            logging.debug(ex)
-            self.set_state(power_state.SHUTDOWN)
-        self.update_state()
-
-    @exception.wrap_exception
-    def console_output(self):
-        # FIXME: Abstract this for Xen
-        if FLAGS.connection_type == 'libvirt':
-            fname = os.path.abspath(
-                    os.path.join(self.datamodel['basepath'], 'console.log'))
-            with open(fname, 'r') as f:
-                console = f.read()
-        else:
-            console = 'FAKE CONSOLE OUTPUT'
-        return defer.succeed(console)
