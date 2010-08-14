@@ -269,7 +269,23 @@ class ImagesResource(Resource):
         images = [i for i in image.Image.all() \
                   if i.is_authorized(request.context, readonly=True)]
 
-        request.write(json.dumps([i.metadata for i in images]))
+        # Bug #617776:
+        # We used to have 'type' in the image metadata, but this field
+        # should be called 'imageType', as per the EC2 specification.
+        # For compat with old metadata files we copy type to imageType if
+        # imageType is not present.
+        # For compat with euca2ools (and any other clients using the
+        # incorrect name) we copy imageType to type.
+        # imageType is primary if we end up with both in the metadata file
+        # (which should never happen).
+        def decorate(m):
+            if 'imageType' not in m and 'type' in m:
+                m[u'imageType'] = m['type']
+            elif 'imageType' in m:
+                m[u'type'] = m['imageType']
+            return m
+
+        request.write(json.dumps([decorate(i.metadata) for i in images]))
         request.finish()
         return server.NOT_DONE_YET
 
