@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -125,12 +123,11 @@ def _dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
-def host_dhcp(network, host, mac):
-    """Return a host string for a network, host, and mac"""
-    # Logically, the idx of instances they've launched in this net
-    idx = host.split(".")[-1]
-    return "%s,%s-%s-%s.novalocal,%s" % \
-        (mac, network['user_id'], network['vlan'], idx, host)
+def host_dhcp(address):
+    """Return a host string for an address object"""
+    return "%s,%s.novalocal,%s" % (address['mac'],
+                                   address['hostname'],
+                                   address.address)
 
 
 # TODO(ja): if the system has restarted or pid numbers have wrapped
@@ -145,10 +142,8 @@ def start_dnsmasq(network):
     signal causing it to reload, otherwise spawn a new instance
     """
     with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        for host_name in network.hosts:
-            f.write("%s\n" % host_dhcp(network,
-                                      host_name,
-                                      network.hosts[host_name]))
+        for address in network.assigned_objs:
+            f.write("%s\n" % host_dhcp(address))
 
     pid = dnsmasq_pid_for(network)
 
