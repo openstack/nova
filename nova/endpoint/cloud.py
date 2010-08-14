@@ -86,7 +86,7 @@ class CloudController(object):
         """ Ensure the keychains and folders exist. """
         # Create keys folder, if it doesn't exist
         if not os.path.exists(FLAGS.keys_path):
-            os.makedirs(os.path.abspath(FLAGS.keys_path))
+            os.makedirs(FLAGS.keys_path)
         # Gen root CA, if we don't have one
         root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
         if not os.path.exists(root_ca_path):
