@@ -33,6 +33,12 @@ class NovaBase(object):
         session = NovaBase.get_session()
         return session.query(cls).all()
 
+    @classmethod
+    def find(cls, obj_id):
+        session = NovaBase.get_session()
+        #print cls
+        return session.query(cls).filter_by(id=obj_id).one()
+
     def save(self):
         session = NovaBase.get_session()
         session.add(self)
@@ -144,15 +150,13 @@ class Volume(Base):
     blade_id = Column(Integer)
 
 
-def create_engine():
-    return NovaBase.get_engine();
 
 def create_session(engine=None):
     return NovaBase.get_session()
 
 if __name__ == '__main__':
-    engine = create_engine()
-    session = create_session(engine)
+    engine = NovasBase.create_engine()
+    session = NovasBase.create_session(engine)
 
     instance = Instance(image_id='as', ramdisk_id='AS', user_id='anthony')
     user = User(id='anthony')

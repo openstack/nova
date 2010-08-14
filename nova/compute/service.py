@@ -68,15 +68,13 @@ class ComputeService(service.Service):
         return defer.succeed('PONG')
 
     def get_instance(self, instance_id):
-        session = models.create_session()
-        return session.query(models.Instance).filter_by(id=instance_id).one()
+        return models.Instance.find(instance_id)
 
     def update_state(self, instance_id):
-        session = models.create_session()
-        inst = session.query(models.Instance).filter_by(id=instance_id).one()
+        inst = models.Instance.find(instance_id)
         # FIXME(ja): include other fields from state?
         inst.state = self._conn.get_info(instance_id)['state'] 
-        session.flush()
+        inst.save()
 
     @exception.wrap_exception
     def adopt_instances(self):
@@ -112,18 +110,17 @@ class ComputeService(service.Service):
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
-        session = models.create_session()
-        inst = session.query(models.Instance).filter_by(id=instance_id).first()
+        inst = models.Instance.find(instance_id)
         # NOTE(vish): passing network type allows us to express the
         #             network without making a call to network to find
         #             out which type of network to setup
         network_service.setup_compute_network(inst)
         inst.node_name = FLAGS.node_name
-        session.commit()
+        inst.save()
 
         # TODO(vish) check to make sure the availability zone matches
         inst.set_state(power_state.NOSTATE, 'spawning')
-        session.commit()
+        inst.save()
 
         try:
             yield self._conn.spawn(inst)
@@ -177,7 +174,6 @@ class ComputeService(service.Service):
         # FIXME: Abstract this for Xen
 
         logging.debug("Getting console output for %s" % (instance_id))
-        session = models.create_session()
         inst = self.get_instance(instance_id)
 
         if FLAGS.connection_type == 'libvirt':
