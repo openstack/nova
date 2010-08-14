@@ -17,7 +17,7 @@
 #    under the License.
 
 """
-Network Nodes are responsible for allocating ips and setting up network
+Network Hosts are responsible for allocating ips and setting up network
 """
 
 from nova import datastore
@@ -38,7 +38,7 @@ flags.DEFINE_string('network_type',
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
 flags.DEFINE_list('flat_network_ips',
-                  ['192.168.0.2','192.168.0.3','192.168.0.4'],
+                  ['192.168.0.2', '192.168.0.3', '192.168.0.4'],
                   'Available ips for simple network')
 flags.DEFINE_string('flat_network_network', '192.168.0.0',
                        'Network for simple network')
@@ -51,26 +51,34 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
+
 def type_to_class(network_type):
+    """Convert a network_type string into an actual Python class"""
     if network_type == 'flat':
         return FlatNetworkService
-    elif network_type  == 'vlan':
+    elif network_type == 'vlan':
         return VlanNetworkService
     raise NotFound("Couldn't find %s network type" % network_type)
 
 
 def setup_compute_network(network_type, user_id, project_id, security_group):
+    """Sets up the network on a compute host"""
     srv = type_to_class(network_type)
-    srv.setup_compute_network(network_type, user_id, project_id, security_group)
+    srv.setup_compute_network(network_type,
+                              user_id,
+                              project_id,
+                              security_group)
 
 
 def get_host_for_project(project_id):
+    """Get host allocated to project from datastore"""
     redis = datastore.Redis.instance()
     return redis.get(_host_key(project_id))
 
 
 def _host_key(project_id):
-    return "network_host:%s" % project_id
+    """Returns redis host key for network"""
+    return "networkhost:%s" % project_id
 
 
 class BaseNetworkService(service.Service):
@@ -80,6 +88,7 @@ class BaseNetworkService(service.Service):
     """
     def __init__(self, *args, **kwargs):
         self.network = model.PublicNetworkController()
+        super(BaseNetworkService, self).__init__(*args, **kwargs)
 
     def set_network_host(self, user_id, project_id, *args, **kwargs):
         """Safely sets the host of the projects network"""
@@ -109,7 +118,7 @@ class BaseNetworkService(service.Service):
         pass
 
     @classmethod
-    def setup_compute_network(self, user_id, project_id, security_group,
+    def setup_compute_network(cls, user_id, project_id, security_group,
                               *args, **kwargs):
         """Sets up matching network for compute hosts"""
         raise NotImplementedError()
@@ -138,7 +147,7 @@ class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
     @classmethod
-    def setup_compute_network(self, user_id, project_id, security_group,
+    def setup_compute_network(cls, user_id, project_id, security_group,
                               *args, **kwargs):
         """Network is created manually"""
         pass
@@ -175,26 +184,28 @@ class FlatNetworkService(BaseNetworkService):
         """Returns an ip to the pool"""
         datastore.Redis.instance().sadd('ips', fixed_ip)
 
+
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
     # NOTE(vish): A lot of the interactions with network/model.py can be
     #             simplified and improved.  Also there it may be useful
     #             to support vlans separately from dhcp, instead of having
     #             both of them together in this class.
+    # pylint: disable=W0221
     def allocate_fixed_ip(self, user_id, project_id,
                           security_group='default',
-                          vpn=False, *args, **kwargs):
-        """Gets a fixed ip from the pool """
+                          is_vpn=False, *args, **kwargs):
+        """Gets a fixed ip from the pool"""
         mac = utils.generate_mac()
         net = model.get_project_network(project_id)
-        if vpn:
+        if is_vpn:
             fixed_ip = net.allocate_vpn_ip(user_id, project_id, mac)
         else:
             fixed_ip = net.allocate_ip(user_id, project_id, mac)
         return {'network_type': FLAGS.network_type,
                 'bridge_name': net['bridge_name'],
                 'mac_address': mac,
-                'private_dns_name' : fixed_ip}
+                'private_dns_name': fixed_ip}
 
     def deallocate_fixed_ip(self, fixed_ip,
                             *args, **kwargs):
@@ -202,9 +213,11 @@ class VlanNetworkService(BaseNetworkService):
         return model.get_network_by_address(fixed_ip).deallocate_ip(fixed_ip)
 
     def lease_ip(self, address):
+        """Called by bridge when ip is leased"""
         return model.get_network_by_address(address).lease_ip(address)
 
     def release_ip(self, address):
+        """Called by bridge when ip is released"""
         return model.get_network_by_address(address).release_ip(address)
 
     def restart_nets(self):
@@ -218,7 +231,7 @@ class VlanNetworkService(BaseNetworkService):
         vpn.NetworkData.create(project_id)
 
     @classmethod
-    def setup_compute_network(self, user_id, project_id, security_group,
+    def setup_compute_network(cls, user_id, project_id, security_group,
                               *args, **kwargs):
         """Sets up matching network for compute hosts"""
         # NOTE(vish): Use BridgedNetwork instead of DHCPNetwork because
