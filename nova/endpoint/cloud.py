@@ -125,6 +125,12 @@ class CloudController(object):
             }
         else:
             keys = ''
+
+        address_record = network_model.Address(i['private_dns_name'])
+        if address_record:
+            hostname = address_record['hostname']
+        else:
+            hostname = 'ip-%s' % i['private_dns_name'].replace('.', '-')
         data = {
             'user-data': base64.b64decode(i['user_data']),
             'meta-data': {
@@ -137,17 +143,17 @@ class CloudController(object):
                     'root': '/dev/sda1',
                     'swap': 'sda3'
                 },
-                'hostname': i['private_dns_name'], # is this public sometimes?
+                'hostname': hostname,
                 'instance-action': 'none',
                 'instance-id': i['instance_id'],
                 'instance-type': i.get('instance_type', ''),
-                'local-hostname': i['private_dns_name'],
+                'local-hostname': hostname,
                 'local-ipv4': i['private_dns_name'], # TODO: switch to IP
                 'kernel-id': i.get('kernel_id', ''),
                 'placement': {
                     'availaibility-zone': i.get('availability_zone', 'nova'),
                 },
-                'public-hostname': i.get('dns_name', ''),
+                'public-hostname': hostname,
                 'public-ipv4': i.get('dns_name', ''), # TODO: switch to IP
                 'public-keys': keys,
                 'ramdisk-id': i.get('ramdisk_id', ''),
@@ -558,16 +564,17 @@ class CloudController(object):
         # TODO: Get the real security group of launch in here
         security_group = "default"
         for num in range(int(kwargs['max_count'])):
-            vpn = False
+            is_vpn = False
             if image_id  == FLAGS.vpn_image_id:
-                vpn = True
+                is_vpn = True
+            inst = self.instdir.new()
             allocate_data = yield rpc.call(network_topic,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
                                "security_group": security_group,
-                               "vpn": vpn}})
-            inst = self.instdir.new()
+                               "is_vpn": is_vpn,
+                               "hostname": inst.instance_id}})
             inst['image_id'] = image_id
             inst['kernel_id'] = kernel_id
             inst['ramdisk_id'] = ramdisk_id
@@ -581,6 +588,7 @@ class CloudController(object):
             inst['project_id'] = context.project.id
             inst['ami_launch_index'] = num
             inst['security_group'] = security_group
+            inst['hostname'] = inst.instance_id
             for (key, value) in allocate_data.iteritems():
                 inst[key] = value
 
