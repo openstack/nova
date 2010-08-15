@@ -528,7 +528,11 @@ class AuthManager(object):
                                                member_users)
             if project_dict:
                 project = Project(**project_dict)
-                # FIXME(ja): create network?
+                # FIXME(ja): EVIL HACK - this should poll from a pool
+                session = models.create_session()
+                net = models.Network(project_id=project.id, kind='vlan')
+                session.add(net)
+                session.commit()
                 return project
 
     def add_to_project(self, user, project):

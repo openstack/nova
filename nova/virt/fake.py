@@ -46,14 +46,14 @@ class FakeConnection(object):
 
     def spawn(self, instance):
         fake_instance = FakeInstance()
-        self.instances[instance.name] = fake_instance
+        self.instances[instance.id] = fake_instance
         fake_instance._state = power_state.RUNNING
 
     def reboot(self, instance):
         pass
        
     def destroy(self, instance):
-        del self.instances[instance.name]
+        del self.instances[instance.id]
 
     def get_info(self, instance_id):
         i = self.instances[instance_id]

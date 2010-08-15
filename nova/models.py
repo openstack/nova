@@ -22,7 +22,6 @@ class Image(Base):
     created_at = Column(DateTime)
     updated_at = Column(DateTime) # auto update on change FIXME
 
-
     @validates('image_type')
     def validate_image_type(self, key, image_type):
         assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
@@ -46,6 +45,7 @@ class Network(Base):
     id = Column(Integer, primary_key=True)
     bridge = Column(String)
     vlan = Column(String)
+    kind = Column(String)
     #vpn_port = Column(Integer)
     project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
 
@@ -77,7 +77,8 @@ class Instance(Base):
     key_data = Column(Text)
     security_group = Column(String)
 
-    state = Column(String)
+    state = Column(Integer)
+    state_description = Column(String)
 
     hostname = Column(String)
     physical_node_id = Column(Integer)
@@ -85,6 +86,13 @@ class Instance(Base):
     instance_type = Column(Integer)
 
     user_data = Column(Text)
+
+    def set_state(self, state_code, state_description=None):
+        from nova.compute import power_state
+        self.state = state_code
+        if not state_description:
+            state_description = power_state.name(state_code)
+        self.state_description = state_description
 
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
@@ -95,9 +103,9 @@ class Instance(Base):
     # power_state = what we have
     # task_state = transitory and may trigger power state transition
 
-    @validates('state')
-    def validate_state(self, key, state):
-        assert(state in ['nostate', 'running', 'blocked', 'paused', 'shutdown', 'shutoff', 'crashed'])
+    #@validates('state')
+    #def validate_state(self, key, state):
+    #    assert(state in ['nostate', 'running', 'blocked', 'paused', 'shutdown', 'shutoff', 'crashed'])
 
 class Volume(Base):
     __tablename__ = 'volumes'

@@ -91,31 +91,25 @@ class ComputeConnectionTestCase(test.TrialTestCase):
     def test_run_describe_terminate(self):
         instance_id = self.create_instance()
 
-        rv = yield self.compute.run_instance(instance_id)
+        yield self.compute.run_instance(instance_id)
 
-        rv = yield self.compute.describe_instances()
-        logging.info("Running instances: %s", rv)
-        self.assertEqual(rv[instance_id].name, instance_id)
+        session = models.create_session()
+        instances = session.query(models.Instance).all()
+        logging.info("Running instances: %s", instances)
+        self.assertEqual(len(instances), 1)
 
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.terminate_instance(instance_id)
 
-        rv = yield self.compute.describe_instances()
-        logging.info("After terminating instances: %s", rv)
-        self.assertEqual(rv, {})
+        instances = session.query(models.Instance).all()
+        logging.info("After terminating instances: %s", instances)
+        self.assertEqual(len(instances), 0)
 
     @defer.inlineCallbacks
     def test_reboot(self):
         instance_id = self.create_instance()
-        rv = yield self.compute.run_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-
+        yield self.compute.run_instance(instance_id)
         yield self.compute.reboot_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.terminate_instance(instance_id)
 
     @defer.inlineCallbacks
     def test_console_output(self):
@@ -129,10 +123,6 @@ class ComputeConnectionTestCase(test.TrialTestCase):
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
         instance_id = self.create_instance()
-        rv = yield self.compute.run_instance(instance_id)
-
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv[instance_id].name, instance_id)
-
-        self.assertRaises(exception.Error, self.compute.run_instance, instance_id)
-        rv = yield self.compute.terminate_instance(instance_id)
+        yield self.compute.run_instance(instance_id)
+        self.assertFailure(self.compute.run_instance(instance_id), exception.Error)
+        yield self.compute.terminate_instance(instance_id)
