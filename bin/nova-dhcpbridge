@@ -69,7 +69,7 @@ def init_leases(interface):
     """Get the list of hosts for an interface."""
     net = model.get_network_by_interface(interface)
     res = ""
-    for address in net.address_objs:
+    for address in net.assigned_objs:
         res += "%s\n" % linux_net.host_dhcp(address)
     return res
 

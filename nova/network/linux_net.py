@@ -116,7 +116,7 @@ def _dnsmasq_cmd(net):
         ' --pid-file=%s' % dhcp_file(net['vlan'], 'pid'),
         ' --listen-address=%s' % net.dhcp_listen_address,
         ' --except-interface=lo',
-        ' --dhcp-range=%s,static,600s' % net.dhcp_range_start,
+        ' --dhcp-range=%s,static,120s' % net.dhcp_range_start,
         ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
         ' --dhcp-script=%s' % bin_file('nova-dhcpbridge'),
         ' --leasefile-ro']
@@ -153,13 +153,9 @@ def start_dnsmasq(network):
         #           correct dnsmasq process
         try:
             os.kill(pid, signal.SIGHUP)
+            return
         except Exception as exc:  # pylint: disable=W0703
             logging.debug("Hupping dnsmasq threw %s", exc)
-
-    # otherwise delete the existing leases file and start dnsmasq
-    lease_file = dhcp_file(network['vlan'], 'leases')
-    if os.path.exists(lease_file):
-        os.unlink(lease_file)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,

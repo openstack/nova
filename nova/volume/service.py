@@ -23,13 +23,12 @@ Currently uses Ata-over-Ethernet.
 """
 
 import logging
-import os
 
 from twisted.internet import defer
 
-from nova import datastore
 from nova import exception
 from nova import flags
+from nova import models
 from nova import process
 from nova import service
 from nova import utils
@@ -65,15 +64,6 @@ flags.DEFINE_boolean('fake_storage', False,
 class NoMoreBlades(exception.Error):
     pass
 
-def get_volume(volume_id):
-    """ Returns a redis-backed volume object """
-    volume_class = Volume
-    if FLAGS.fake_storage:
-        volume_class = FakeVolume
-    vol = volume_class.lookup(volume_id)
-    if vol:
-        return vol
-    raise exception.Error("Volume does not exist")
 
 class VolumeService(service.Service):
     """
@@ -83,10 +73,7 @@ class VolumeService(service.Service):
     """
     def __init__(self):
         super(VolumeService, self).__init__()
-        self.volume_class = Volume
-        if FLAGS.fake_storage:
-            self.volume_class = FakeVolume
-        self._init_volume_group()
+        self._exec_init_volumes()
 
     @defer.inlineCallbacks
     @validate.rangetest(size=(0, 1000))
@@ -97,35 +84,105 @@ class VolumeService(service.Service):
         Volume at this point has size, owner, and zone.
         """
         logging.debug("Creating volume of size: %s" % (size))
-        vol = yield self.volume_class.create(size, user_id, project_id)
+
+        vol = models.Volume()
+        vol.volume_id = utils.generate_uid('vol')
+        vol.node_name = FLAGS.node_name
+        vol.size = size
+        vol.user_id = user_id
+        vol.project_id = project_id
+        vol.availability_zone = FLAGS.storage_availability_zone
+        vol.status = "creating" # creating | available | in-use
+        vol.attach_status = "detached"  # attaching | attached | detaching | detached
+        vol.save()
+        yield self._exec_create_volume(vol)
+        yield self._setup_export(vol)
+        # TODO(joshua): We need to trigger a fanout message
+        #               for aoe-discover on all the nodes
+        vol.status = "available"
+        vol.save()
         logging.debug("restarting exports")
-        yield self._restart_exports()
-        defer.returnValue(vol['volume_id'])
-
-    def by_node(self, node_id):
-        """ returns a list of volumes for a node """
-        for volume_id in datastore.Redis.instance().smembers('volumes:%s' % (node_id)):
-            yield self.volume_class(volume_id=volume_id)
-
-    @property
-    def all(self):
-        """ returns a list of all volumes """
-        for volume_id in datastore.Redis.instance().smembers('volumes'):
-            yield self.volume_class(volume_id=volume_id)
+        yield self._exec_ensure_exports()
+        defer.returnValue(vol.id)
 
     @defer.inlineCallbacks
     def delete_volume(self, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
-        vol = get_volume(volume_id)
-        if vol['attach_status'] == "attached":
+        vol = models.Volume.find(volume_id)
+        if vol.attach_status == "attached":
             raise exception.Error("Volume is still attached")
-        if vol['node_name'] != FLAGS.node_name:
+        if vol.node_name != FLAGS.node_name:
             raise exception.Error("Volume is not local to this node")
-        yield vol.destroy()
+        yield self._exec_delete_volume(vol)
+        yield vol.delete()
         defer.returnValue(True)
 
     @defer.inlineCallbacks
-    def _restart_exports(self):
+    def _exec_create_volume(self, vol):
+        if FLAGS.fake_storage:
+            return
+        if str(vol.size) == '0':
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % vol.size
+        yield process.simple_execute(
+                "sudo lvcreate -L %s -n %s %s" % (sizestr,
+                                                  vol.volume_id,
+                                                  FLAGS.volume_group),
+                error_ok=1)
+
+    @defer.inlineCallbacks
+    def _exec_delete_volume(self, vol):
+        if FLAGS.fake_storage:
+            return
+        yield process.simple_execute(
+                "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
+                                            vol.volume_id), error_ok=1)
+
+    @defer.inlineCallbacks
+    def _setup_export(self, vol):
+        # FIXME: device needs to be a pool
+        device = "1.1"
+        if not device:
+            raise NoMoreBlades()
+        (shelf_id, blade_id) = device.split('.')
+        vol.aoe_device = "e%s.%s" % (shelf_id, blade_id)
+        vol.shelf_id = shelf_id
+        vol.blade_id = blade_id
+        vol.save()
+        yield self._exec_setup_export(vol)
+
+    @defer.inlineCallbacks
+    def _exec_setup_export(self, vol):
+        if FLAGS.fake_storage:
+            return
+        yield process.simple_execute(
+                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
+                (self, vol['shelf_id'],
+                 vol.blade_id,
+                 FLAGS.aoe_eth_dev,
+                 FLAGS.volume_group,
+                 vol.volume_id), error_ok=1)
+
+    @defer.inlineCallbacks
+    def _remove_export(self, vol):
+        if not vol.shelf_id or not vol.blade_id:
+            defer.returnValue(False)
+        yield self._exec_remove_export(vol)
+        defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def _exec_remove_export(self, vol):
+        if FLAGS.fake_storage:
+            return
+        yield process.simple_execute(
+                "sudo vblade-persist stop %s %s" % (self, vol.shelf_id,
+                                                    vol.blade_id), error_ok=1)
+        yield process.simple_execute(
+                "sudo vblade-persist destroy %s %s" % (self, vol.shelf_id,
+                                                       vol.blade_id), error_ok=1)
+    @defer.inlineCallbacks
+    def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
             return
         # NOTE(vish): these commands sometimes sends output to stderr for warnings
@@ -133,7 +190,7 @@ class VolumeService(service.Service):
         yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
 
     @defer.inlineCallbacks
-    def _init_volume_group(self):
+    def _exec_init_volumes(self):
         if FLAGS.fake_storage:
             return
         yield process.simple_execute(
@@ -142,173 +199,29 @@ class VolumeService(service.Service):
                 "sudo vgcreate %s %s" % (FLAGS.volume_group,
                                          FLAGS.storage_dev))
 
-class Volume():
-
-    def __init__(self, volume_id=None):
-        self.volume_id = volume_id
-        super(Volume, self).__init__()
-
-    @property
-    def identifier(self):
-        return self.volume_id
-
-    def default_state(self):
-        return {"volume_id": self.volume_id,
-                "node_name": "unassigned"}
-
-    @classmethod
-    @defer.inlineCallbacks
-    def create(cls, size, user_id, project_id):
-        volume_id = utils.generate_uid('vol')
-        vol = cls(volume_id)
-        vol['node_name'] = FLAGS.node_name
-        vol['size'] = size
-        vol['user_id'] = user_id
-        vol['project_id'] = project_id
-        vol['availability_zone'] = FLAGS.storage_availability_zone
-        vol["instance_id"] = 'none'
-        vol["mountpoint"] = 'none'
-        vol['attach_time'] = 'none'
-        vol['status'] = "creating" # creating | available | in-use
-        vol['attach_status'] = "detached"  # attaching | attached | detaching | detached
-        vol['delete_on_termination'] = 'False'
+    def start_attach(self, volume_id, instance_id, mountpoint):
+        vol = models.Volume.find(volume_id)
+        vol.instance_id = instance_id
+        vol.mountpoint = mountpoint
+        vol.status = "in-use"
+        vol.attach_status = "attaching"
+        vol.attach_time = utils.isotime()
         vol.save()
-        yield vol._create_lv()
-        yield vol._setup_export()
-        # TODO(joshua) - We need to trigger a fanout message for aoe-discover on all the nodes
-        vol['status'] = "available"
+
+    def finish_attach(self, volume_id):
+        vol = models.Volume.find(volume_id)
+        vol.attach_status = "attached"
         vol.save()
-        defer.returnValue(vol)
 
-    def start_attach(self, instance_id, mountpoint):
-        """ """
-        self['instance_id'] = instance_id
-        self['mountpoint'] = mountpoint
-        self['status'] = "in-use"
-        self['attach_status'] = "attaching"
-        self['attach_time'] = utils.isotime()
-        self['delete_on_termination'] = 'False'
-        self.save()
+    def start_detach(self, volume_id):
+        vol = models.Volume.find(volume_id)
+        vol.attach_status = "detaching"
+        vol.save()
 
-    def finish_attach(self):
-        """ """
-        self['attach_status'] = "attached"
-        self.save()
-
-    def start_detach(self):
-        """ """
-        self['attach_status'] = "detaching"
-        self.save()
-
-    def finish_detach(self):
-        self['instance_id'] = None
-        self['mountpoint'] = None
-        self['status'] = "available"
-        self['attach_status'] = "detached"
-        self.save()
-
-    def save(self):
-        is_new = self.is_new_record()
-        super(Volume, self).save()
-        if is_new:
-            redis = datastore.Redis.instance()
-            key = self.__devices_key
-            # TODO(vish): these should be added by admin commands
-            more = redis.scard(self._redis_association_name("node",
-                                                            self['node_name']))
-            if (not redis.exists(key) and not more):
-                for shelf_id in range(FLAGS.first_shelf_id,
-                                      FLAGS.last_shelf_id + 1):
-                    for blade_id in range(FLAGS.blades_per_shelf):
-                        redis.sadd(key, "%s.%s" % (shelf_id, blade_id))
-            self.associate_with("node", self['node_name'])
-
-    @defer.inlineCallbacks
-    def destroy(self):
-        yield self._remove_export()
-        yield self._delete_lv()
-        self.unassociate_with("node", self['node_name'])
-        if self.get('shelf_id', None) and self.get('blade_id', None):
-            redis = datastore.Redis.instance()
-            key = self.__devices_key
-            redis.sadd(key, "%s.%s" % (self['shelf_id'], self['blade_id']))
-        super(Volume, self).destroy()
-
-    @defer.inlineCallbacks
-    def _create_lv(self):
-        if str(self['size']) == '0':
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % self['size']
-        yield process.simple_execute(
-                "sudo lvcreate -L %s -n %s %s" % (sizestr,
-                                                  self['volume_id'],
-                                                  FLAGS.volume_group),
-                error_ok=1)
-
-    @defer.inlineCallbacks
-    def _delete_lv(self):
-        yield process.simple_execute(
-                "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            self['volume_id']), error_ok=1)
-
-    @property
-    def __devices_key(self):
-        return 'volume_devices:%s' % FLAGS.node_name
-
-    @defer.inlineCallbacks
-    def _setup_export(self):
-        redis = datastore.Redis.instance()
-        key = self.__devices_key
-        device = redis.spop(key)
-        if not device:
-            raise NoMoreBlades()
-        (shelf_id, blade_id) = device.split('.')
-        self['aoe_device'] = "e%s.%s" % (shelf_id, blade_id)
-        self['shelf_id'] = shelf_id
-        self['blade_id'] = blade_id
-        self.save()
-        yield self._exec_setup_export()
-
-    @defer.inlineCallbacks
-    def _exec_setup_export(self):
-        yield process.simple_execute(
-                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (self['shelf_id'],
-                 self['blade_id'],
-                 FLAGS.aoe_eth_dev,
-                 FLAGS.volume_group,
-                 self['volume_id']), error_ok=1)
-
-    @defer.inlineCallbacks
-    def _remove_export(self):
-        if not self.get('shelf_id', None) or not self.get('blade_id', None):
-            defer.returnValue(False)
-        yield self._exec_remove_export()
-        defer.returnValue(True)
-
-    @defer.inlineCallbacks
-    def _exec_remove_export(self):
-        yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (self['shelf_id'],
-                                                    self['blade_id']), error_ok=1)
-        yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
-                                                       self['blade_id']), error_ok=1)
-
-
-
-class FakeVolume(Volume):
-    def _create_lv(self):
-        pass
-
-    def _exec_setup_export(self):
-        fname = os.path.join(FLAGS.aoe_export_dir, self['aoe_device'])
-        f = file(fname, "w")
-        f.close()
-
-    def _exec_remove_export(self):
-        os.unlink(os.path.join(FLAGS.aoe_export_dir, self['aoe_device']))
-
-    def _delete_lv(self):
-        pass
+    def finish_detach(self, volume_id):
+        vol = models.Volume.find(volume_id)
+        vol.instance_id = None
+        vol.mountpoint = None
+        vol.status = "available"
+        vol.attach_status = "detached"
+        vol.save()

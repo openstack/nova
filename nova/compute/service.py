@@ -67,13 +67,10 @@ class ComputeService(service.Service):
         """ simple test of an AMQP message call """
         return defer.succeed('PONG')
 
-    def get_instance(self, instance_id):
-        return models.Instance.find(instance_id)
-
     def update_state(self, instance_id):
         inst = models.Instance.find(instance_id)
         # FIXME(ja): include other fields from state?
-        inst.state = self._conn.get_info(instance_id)['state'] 
+        inst.state = self._conn.get_info(inst.name)['state']
         inst.save()
 
     @exception.wrap_exception
@@ -109,6 +106,8 @@ class ComputeService(service.Service):
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
+        if str(instance_id) in self._conn.list_instances():
+            raise exception.Error("Instance has already been created")
         logging.debug("Starting instance %s..." % (instance_id))
         inst = models.Instance.find(instance_id)
         # NOTE(vish): passing network type allows us to express the
@@ -120,12 +119,11 @@ class ComputeService(service.Service):
 
         # TODO(vish) check to make sure the availability zone matches
         inst.set_state(power_state.NOSTATE, 'spawning')
-        inst.save()
 
         try:
             yield self._conn.spawn(inst)
-        except Exception, ex:
-            logging.debug(ex)
+        except:
+            logging.exception("Failed to spawn instance %s" % inst.name)
             inst.set_state(power_state.SHUTDOWN)
 
         self.update_state(instance_id)
@@ -135,19 +133,17 @@ class ComputeService(service.Service):
     def terminate_instance(self, instance_id):
         """ terminate an instance on this machine """
         logging.debug("Got told to terminate instance %s" % instance_id)
-        session = models.create_session()
-        instance = session.query(models.Instance).filter_by(id=instance_id).one()
+        inst = models.Instance.find(instance_id)
 
-        if instance.state == power_state.SHUTOFF:
+        if inst.state == power_state.SHUTOFF:
             # self.datamodel.destroy() FIXME: RE-ADD ?????
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        instance.set_state(power_state.NOSTATE, 'shutting_down')
-        yield self._conn.destroy(instance)
+        inst.set_state(power_state.NOSTATE, 'shutting_down')
+        yield self._conn.destroy(inst)
         # FIXME(ja): should we keep it in a terminated state for a bit?
-        session.delete(instance)
-        session.flush()
+        inst.delete()
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -155,15 +151,15 @@ class ComputeService(service.Service):
         """ reboot an instance on this server
         KVM doesn't support reboot, so we terminate and restart """
         self.update_state(instance_id)
-        instance = self.get_instance(instance_id)
+        instance = models.Instance.find(instance_id)
 
         # FIXME(ja): this is only checking the model state - not state on disk?
         if instance.state != power_state.RUNNING:
             raise exception.Error(
                     'trying to reboot a non-running'
-                    'instance: %s (state: %s excepted: %s)' % (instance.id, instance.state, power_state.RUNNING))
+                    'instance: %s (state: %s excepted: %s)' % (instance.name, instance.state, power_state.RUNNING))
 
-        logging.debug('rebooting instance %s' % instance.id)
+        logging.debug('rebooting instance %s' % instance.name)
         instance.set_state(power_state.NOSTATE, 'rebooting')
         yield self._conn.reboot(instance)
         self.update_state(instance_id)
@@ -174,11 +170,11 @@ class ComputeService(service.Service):
         # FIXME: Abstract this for Xen
 
         logging.debug("Getting console output for %s" % (instance_id))
-        inst = self.get_instance(instance_id)
+        inst = models.Instance.find(instance_id)
 
         if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(
-                    os.path.join(FLAGS.instances_path, inst.id, 'console.log'))
+                    os.path.join(FLAGS.instances_path, inst.name, 'console.log'))
             with open(fname, 'r') as f:
                 output = f.read()
         else:
@@ -232,64 +228,3 @@ class Group(object):
 class ProductCode(object):
     def __init__(self, product_code):
         self.product_code = product_code
-
-
-class Instance(object):
-
-    NOSTATE = 0x00
-    RUNNING = 0x01
-    BLOCKED = 0x02
-    PAUSED = 0x03
-    SHUTDOWN = 0x04
-    SHUTOFF = 0x05
-    CRASHED = 0x06
-
-    def __init__(self, conn, name, data):
-        """ spawn an instance with a given name """
-        self._conn = conn
-        # TODO(vish): this can be removed after data has been updated
-        # data doesn't seem to have a working iterator so in doesn't work
-        if data.get('owner_id', None) is not None:
-            data['user_id'] = data['owner_id']
-            data['project_id'] = data['owner_id']
-        self.datamodel = data
-
-        size = data.get('instance_type', FLAGS.default_instance_type)
-        if size not in INSTANCE_TYPES:
-            raise exception.Error('invalid instance type: %s' % size)
-
-        self.datamodel.update(INSTANCE_TYPES[size])
-
-        self.datamodel['name'] = name
-        self.datamodel['instance_id'] = name
-        self.datamodel['basepath'] = data.get(
-                'basepath', os.path.abspath(
-                os.path.join(FLAGS.instances_path, self.name)))
-        self.datamodel['memory_kb'] = int(self.datamodel['memory_mb']) * 1024
-        self.datamodel.setdefault('image_id', FLAGS.default_image)
-        self.datamodel.setdefault('kernel_id', FLAGS.default_kernel)
-        self.datamodel.setdefault('ramdisk_id', FLAGS.default_ramdisk)
-        self.datamodel.setdefault('project_id', self.datamodel['user_id'])
-        self.datamodel.setdefault('bridge_name', None)
-        #self.datamodel.setdefault('key_data', None)
-        #self.datamodel.setdefault('key_name', None)
-        #self.datamodel.setdefault('addressing_type', None)
-
-        # TODO(joshua) - The ugly non-flat ones
-        self.datamodel['groups'] = data.get('security_group', 'default')
-        # TODO(joshua): Support product codes somehow
-        self.datamodel.setdefault('product_codes', None)
-
-        self.datamodel.save()
-        logging.debug("Finished init of Instance with id of %s" % name)
-
-    def is_pending(self):
-        return (self.state == power_state.NOSTATE or self.state == 'pending')
-
-    def is_destroyed(self):
-        return self.state == power_state.SHUTOFF
-
-    def is_running(self):
-        logging.debug("Instance state is: %s" % self.state)
-        return (self.state == power_state.RUNNING or self.state == 'running')
-
