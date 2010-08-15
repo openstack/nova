@@ -120,6 +120,8 @@ class VolumeService(service.Service):
 
     @defer.inlineCallbacks
     def _exec_create_volume(self, vol):
+        if FLAGS.fake_storage:
+            return
         if str(vol.size) == '0':
             sizestr = '100M'
         else:
@@ -132,6 +134,8 @@ class VolumeService(service.Service):
 
     @defer.inlineCallbacks
     def _exec_delete_volume(self, vol):
+        if FLAGS.fake_storage:
+            return
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             vol.volume_id), error_ok=1)
