@@ -67,13 +67,10 @@ class ComputeService(service.Service):
         """ simple test of an AMQP message call """
         return defer.succeed('PONG')
 
-    def get_instance(self, instance_id):
-        return models.Instance.find(instance_id)
-
     def update_state(self, instance_id):
         inst = models.Instance.find(instance_id)
         # FIXME(ja): include other fields from state?
-        inst.state = self._conn.get_info(instance_id)['state'] 
+        inst.state = self._conn.get_info(instance_id)['state']
         inst.save()
 
     @exception.wrap_exception
@@ -109,6 +106,8 @@ class ComputeService(service.Service):
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
+        if instance_id in self._conn.list_instances():
+            raise exception.Error("Instance has already been created")
         logging.debug("Starting instance %s..." % (instance_id))
         inst = models.Instance.find(instance_id)
         # NOTE(vish): passing network type allows us to express the
@@ -135,19 +134,18 @@ class ComputeService(service.Service):
     def terminate_instance(self, instance_id):
         """ terminate an instance on this machine """
         logging.debug("Got told to terminate instance %s" % instance_id)
-        session = models.create_session()
-        instance = session.query(models.Instance).filter_by(id=instance_id).one()
+        inst = models.Instance.find(instance_id)
 
-        if instance.state == power_state.SHUTOFF:
+        if inst.state == power_state.SHUTOFF:
             # self.datamodel.destroy() FIXME: RE-ADD ?????
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        instance.set_state(power_state.NOSTATE, 'shutting_down')
-        yield self._conn.destroy(instance)
+        inst.set_state(power_state.NOSTATE, 'shutting_down')
+        inst.save()
+        yield self._conn.destroy(inst)
         # FIXME(ja): should we keep it in a terminated state for a bit?
-        session.delete(instance)
-        session.flush()
+        inst.delete()
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -155,7 +153,7 @@ class ComputeService(service.Service):
         """ reboot an instance on this server
         KVM doesn't support reboot, so we terminate and restart """
         self.update_state(instance_id)
-        instance = self.get_instance(instance_id)
+        instance = models.Instance.find(instance_id)
 
         # FIXME(ja): this is only checking the model state - not state on disk?
         if instance.state != power_state.RUNNING:
@@ -174,7 +172,7 @@ class ComputeService(service.Service):
         # FIXME: Abstract this for Xen
 
         logging.debug("Getting console output for %s" % (instance_id))
-        inst = self.get_instance(instance_id)
+        inst = models.Instance.find(instance_id)
 
         if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(

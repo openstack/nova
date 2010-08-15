@@ -17,15 +17,14 @@
 #    under the License.
 
 import logging
-import shutil
-import tempfile
 
 from twisted.internet import defer
 
-from nova import compute
 from nova import exception
 from nova import flags
+from nova import models
 from nova import test
+from nova.compute import service as compute_service
 from nova.volume import service as volume_service
 
 
@@ -36,16 +35,10 @@ class VolumeTestCase(test.TrialTestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
-        self.compute = compute.service.ComputeService()
-        self.volume = None
-        self.tempdir = tempfile.mkdtemp()
+        self.compute = compute_service.ComputeService()
         self.flags(connection_type='fake',
-                   fake_storage=True,
-                   aoe_export_dir=self.tempdir)
+                   fake_storage=True)
         self.volume = volume_service.VolumeService()
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
 
     @defer.inlineCallbacks
     def test_run_create_volume(self):
@@ -53,12 +46,11 @@ class VolumeTestCase(test.TrialTestCase):
         user_id = 'fake'
         project_id = 'fake'
         volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
-        # TODO(termie): get_volume returns differently than create_volume
         self.assertEqual(volume_id,
-                         volume_service.get_volume(volume_id)['volume_id'])
+                         models.Volume.find(volume_id).id)
 
-        rv = self.volume.delete_volume(volume_id)
-        self.assertRaises(exception.Error, volume_service.get_volume, volume_id)
+        yield self.volume.delete_volume(volume_id)
+        self.assertRaises(exception.NotFound, models.Volume.find, volume_id)
 
     @defer.inlineCallbacks
     def test_too_big_volume(self):
@@ -100,32 +92,31 @@ class VolumeTestCase(test.TrialTestCase):
         project_id = 'fake'
         mountpoint = "/dev/sdf"
         volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
-        volume_obj = volume_service.get_volume(volume_id)
-        volume_obj.start_attach(instance_id, mountpoint)
+        vol = models.Volume.find(volume_id)
+        self.volume.start_attach(volume_id, instance_id, mountpoint)
         if FLAGS.fake_tests:
-            volume_obj.finish_attach()
+            self.volume.finish_attach(volume_id)
         else:
             rv = yield self.compute.attach_volume(instance_id,
                                                   volume_id,
                                                   mountpoint)
-        self.assertEqual(volume_obj['status'], "in-use")
-        self.assertEqual(volume_obj['attach_status'], "attached")
-        self.assertEqual(volume_obj['instance_id'], instance_id)
-        self.assertEqual(volume_obj['mountpoint'], mountpoint)
+        self.assertEqual(vol.status, "in-use")
+        self.assertEqual(vol.attach_status, "attached")
+        self.assertEqual(vol.instance_id, instance_id)
+        self.assertEqual(vol.mountpoint, mountpoint)
 
         self.assertFailure(self.volume.delete_volume(volume_id), exception.Error)
-        volume_obj.start_detach()
+        self.volume.start_detach(volume_id)
         if FLAGS.fake_tests:
-            volume_obj.finish_detach()
+            self.volume.finish_detach(volume_id)
         else:
             rv = yield self.volume.detach_volume(instance_id,
                                                  volume_id)
-        volume_obj = volume_service.get_volume(volume_id)
-        self.assertEqual(volume_obj['status'], "available")
+        self.assertEqual(vol.status, "available")
 
         rv = self.volume.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          volume_service.get_volume,
+                          models.Volume.find,
                           volume_id)
 
     @defer.inlineCallbacks
@@ -135,7 +126,7 @@ class VolumeTestCase(test.TrialTestCase):
         project_id = 'fake'
         shelf_blades = []
         def _check(volume_id):
-            vol = volume_service.get_volume(volume_id)
+            vol = models.Volume.find(volume_id)
             shelf_blade = '%s.%s' % (vol['shelf_id'], vol['blade_id'])
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
