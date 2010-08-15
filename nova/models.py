@@ -53,6 +53,10 @@ class NovaBase(object):
         session.delete(self)
         session.flush()
 
+    def refresh(self):
+        session = NovaBase.get_session()
+        session.refresh(self)
+
 class Image(Base, NovaBase):
     __tablename__ = 'images'
     user_id = Column(String)#, ForeignKey('users.id'), nullable=False)
