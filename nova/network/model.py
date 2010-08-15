@@ -56,7 +56,7 @@ flags.DEFINE_integer('cloudpipe_start_port', 12000,
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-class Vlan(datastore.BasicModel):
+class Vlan():
     """Tracks vlans assigned to project it the datastore"""
     def __init__(self, project, vlan):  # pylint: disable=W0231
         """
@@ -79,7 +79,6 @@ class Vlan(datastore.BasicModel):
         return instance
 
     @classmethod
-    @datastore.absorb_connection_error
     def lookup(cls, project):
         """Returns object by project if it exists in datastore or None"""
         set_name = cls._redis_set_name(cls.__name__)
@@ -90,14 +89,12 @@ class Vlan(datastore.BasicModel):
             return None
 
     @classmethod
-    @datastore.absorb_connection_error
     def dict_by_project(cls):
         """A hash of project:vlan"""
         set_name = cls._redis_set_name(cls.__name__)
         return datastore.Redis.instance().hgetall(set_name) or {}
 
     @classmethod
-    @datastore.absorb_connection_error
     def dict_by_vlan(cls):
         """A hash of vlan:project"""
         set_name = cls._redis_set_name(cls.__name__)
@@ -108,14 +105,12 @@ class Vlan(datastore.BasicModel):
         return retvals
 
     @classmethod
-    @datastore.absorb_connection_error
     def all(cls):
         set_name = cls._redis_set_name(cls.__name__)
         elements = datastore.Redis.instance().hgetall(set_name)
         for project in elements:
             yield cls(project, elements[project])
 
-    @datastore.absorb_connection_error
     def save(self):
         """
         Vlan saves state into a giant hash named "vlans", with keys of
@@ -127,7 +122,6 @@ class Vlan(datastore.BasicModel):
                                         self.project_id,
                                         self.vlan_id)
 
-    @datastore.absorb_connection_error
     def destroy(self):
         """Removes the object from the datastore"""
         set_name = self._redis_set_name(self.__class__.__name__)
@@ -143,7 +137,7 @@ class Vlan(datastore.BasicModel):
                           network[start + FLAGS.network_size - 1])
 
 
-class Address(datastore.BasicModel):
+class Address():
     """Represents a fixed ip in the datastore"""
     override_type = "address"
 
@@ -197,7 +191,7 @@ class PublicAddress(Address):
 # CLEANUP:
 # TODO(ja): does vlanpool "keeper" need to know the min/max -
 #           shouldn't FLAGS always win?
-class BaseNetwork(datastore.BasicModel):
+class BaseNetwork():
     """Implements basic logic for allocating ips in a network"""
     override_type = 'network'
     address_class = Address

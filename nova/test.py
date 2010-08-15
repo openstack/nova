@@ -39,6 +39,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+
+engine = create_engine('sqlite:///:memory:', echo=True)
+Base = declarative_base()
+Base.metadata.create_all(engine)
 
 def skip_if_fake(func):
     """Decorator that skips a test if running in fake mode"""

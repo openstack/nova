@@ -84,11 +84,11 @@ if __name__ == '__main__':
     if FLAGS.fake_tests:
         from nova.tests.fake_flags import *
         # use db 8 for fake tests
-        FLAGS.redis_db = 8
-        if FLAGS.flush_db:
-            logging.info("Flushing redis datastore")
-            r = datastore.Redis.instance()
-            r.flushdb()
+        #FLAGS.redis_db = 8
+        #if FLAGS.flush_db:
+        #    logging.info("Flushing redis datastore")
+        #    r = datastore.Redis.instance()
+        #    r.flushdb()
     else:
         from nova.tests.real_flags import *
 

@@ -39,7 +39,7 @@ class NoMorePorts(exception.Error):
     pass
 
 
-class NetworkData(datastore.BasicModel):
+class NetworkData():
     """Manages network host, and vpn ip and port for projects"""
     def __init__(self, project_id):
         self.project_id = project_id
