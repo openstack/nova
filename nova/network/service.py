@@ -61,13 +61,10 @@ def type_to_class(network_type):
     raise NotFound("Couldn't find %s network type" % network_type)
 
 
-def setup_compute_network(network_type, user_id, project_id, security_group):
+def setup_compute_network(instance):
     """Sets up the network on a compute host"""
-    srv = type_to_class(network_type)
-    srv.setup_compute_network(network_type,
-                              user_id,
-                              project_id,
-                              security_group)
+    srv = type_to_class(instance.project.network.kind)
+    srv.setup_compute_network(inst)
 
 
 def get_host_for_project(project_id):

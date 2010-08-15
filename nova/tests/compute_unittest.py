@@ -25,7 +25,8 @@ from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
-from nova.compute import model
+from nova import models
+from nova.auth import manager
 from nova.compute import service
 
 
@@ -60,21 +61,31 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    fake_storage=True)
         self.compute = service.ComputeService()
+        self.manager = manager.AuthManager()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+    def tearDown(self):
+        self.manager.delete_user('fake')
+        self.manager.delete_project('fake')
 
     def create_instance(self):
-        instdir = model.InstanceDirectory()
-        inst = instdir.new()
+        session = models.create_session()
+         
+        inst = models.Instance(user_id='fake', project_id='fake', image_id='ami-test')
+        session.add(inst)
+        session.commit()
         # TODO(ja): add ami, ari, aki, user_data
-        inst['reservation_id'] = 'r-fakeres'
-        inst['launch_time'] = '10'
-        inst['user_id'] = 'fake'
-        inst['project_id'] = 'fake'
-        inst['instance_type'] = 'm1.tiny'
-        inst['node_name'] = FLAGS.node_name
-        inst['mac_address'] = utils.generate_mac()
-        inst['ami_launch_index'] = 0
-        inst.save()
-        return inst['instance_id']
+        # inst['reservation_id'] = 'r-fakeres'
+        # inst['launch_time'] = '10'
+        #inst['user_id'] = 'fake'
+        #inst['project_id'] = 'fake'
+        #inst['instance_type'] = 'm1.tiny'
+        #inst['node_name'] = FLAGS.node_name
+        #inst['mac_address'] = utils.generate_mac()
+        #inst['ami_launch_index'] = 0
+        #inst.save()
+        return inst.id
 
     @defer.inlineCallbacks
     def test_run_describe_terminate(self):

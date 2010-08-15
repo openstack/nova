@@ -1,107 +1,23 @@
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
-from auth import *
+from nova import auth
 
 Base = declarative_base()
 
-class User(Base):
-    # sqlalchemy
-    __tablename__ = 'users'
-    sid = Column(String, primary_key=True)
-
-    # backwards compatibility
-    @classmethod
-    def safe_id(cls, obj):
-        """Safe get object id
-
-        This method will return the id of the object if the object
-        is of this class, otherwise it will return the original object.
-        This allows methods to accept objects or ids as paramaters.
-
-        """
-        if isinstance(obj, cls):
-            return obj.id
-        else:
-            return obj
-
-#    def __init__(self, id, name, access, secret, admin):
-#        self.id = id
-#        self.name = name
-#        self.access = access
-#        self.secret = secret
-#        self.admin = admin
-
-    def __getattr__(self, name):
-        if name == 'id':
-            return self.uid
-        else:  raise AttributeError, name
-    
-    def is_superuser(self):
-        return AuthManager().is_superuser(self)
-
-    def is_admin(self):
-        return AuthManager().is_admin(self)
-
-    def has_role(self, role):
-        return AuthManager().has_role(self, role)
-
-    def add_role(self, role):
-        return AuthManager().add_role(self, role)
-
-    def remove_role(self, role):
-        return AuthManager().remove_role(self, role)
-
-    def is_project_member(self, project):
-        return AuthManager().is_project_member(self, project)
-
-    def is_project_manager(self, project):
-        return AuthManager().is_project_manager(self, project)
-
-    def generate_key_pair(self, name):
-        return AuthManager().generate_key_pair(self.id, name)
-
-    def create_key_pair(self, name, public_key, fingerprint):
-        return AuthManager().create_key_pair(self.id,
-                                             name,
-                                             public_key,
-                                             fingerprint)
-
-    def get_key_pair(self, name):
-        return AuthManager().get_key_pair(self.id, name)
-
-    def delete_key_pair(self, name):
-        return AuthManager().delete_key_pair(self.id, name)
-
-    def get_key_pairs(self):
-        return AuthManager().get_key_pairs(self.id)
-
-    def __repr__(self):
-        return "User('%s', '%s', '%s', '%s', %s)" % (self.id,
-                                                     self.name,
-                                                     self.access,
-                                                     self.secret,
-                                                     self.admin)
-
-
-
-class Project(Base):
-    __tablename__ = 'projects'
-    sid = Column(String, primary_key=True)
-
 class Image(Base):
     __tablename__ = 'images'
-    user_sid = Column(String, ForeignKey('users.sid'), nullable=False)
-    project_sid = Column(String, ForeignKey('projects.sid'), nullable=False)
+    user_id = Column(String)#, ForeignKey('users.id'), nullable=False)
+    project_id = Column(String)#, ForeignKey('projects.id'), nullable=False)
 
-    sid = Column(String, primary_key=True)
+    id = Column(String, primary_key=True)
     image_type = Column(String)
     public = Column(Boolean, default=False)
     state = Column(String)
     location = Column(String)
     arch = Column(String)
-    default_kernel_sid = Column(String)
-    default_ramdisk_sid = Column(String)
+    default_kernel_id = Column(String)
+    default_ramdisk_id = Column(String)
 
     created_at = Column(DateTime)
     updated_at = Column(DateTime) # auto update on change FIXME
@@ -115,13 +31,13 @@ class Image(Base):
     def validate_state(self, key, state):
         assert(state in ['available', 'pending', 'disabled'])
 
-    @validates('default_kernel_sid')
-    def validate_kernel_sid(self, key, val):
+    @validates('default_kernel_id')
+    def validate_kernel_id(self, key, val):
         if val != 'machine':
             assert(val is None)
 
-    @validates('default_ramdisk_sid')
-    def validate_ramdisk_sid(self, key, val):
+    @validates('default_ramdisk_id')
+    def validate_ramdisk_id(self, key, val):
         if val != 'machine':
             assert(val is None)
 
@@ -131,7 +47,7 @@ class Network(Base):
     bridge = Column(String)
     vlan = Column(String)
     #vpn_port = Column(Integer)
-    project_sid = Column(String, ForeignKey('projects.sid'), nullable=False)
+    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
 
 class PhysicalNode(Base):
     __tablename__ = 'physical_nodes'
@@ -141,16 +57,25 @@ class Instance(Base):
     __tablename__ = 'instances'
     id = Column(Integer, primary_key=True)
 
-    user_sid = Column(String, ForeignKey('users.sid'), nullable=False)
-    project_sid = Column(String, ForeignKey('projects.sid'))
+    user_id = Column(String) #, ForeignKey('users.id'), nullable=False)
+    project_id = Column(String) #, ForeignKey('projects.id'))
 
-    image_sid = Column(Integer, ForeignKey('images.sid'), nullable=False)
-    kernel_sid = Column(String, ForeignKey('images.sid'), nullable=True)
-    ramdisk_sid = Column(String, ForeignKey('images.sid'), nullable=True)
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+    image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
+    kernel_id = Column(String, ForeignKey('images.id'), nullable=True)
+    ramdisk_id = Column(String, ForeignKey('images.id'), nullable=True)
 
     launch_index = Column(Integer)
     key_name = Column(String)
     key_data = Column(Text)
+    security_group = Column(String)
 
     state = Column(String)
 
@@ -161,7 +86,6 @@ class Instance(Base):
 
     user_data = Column(Text)
 
-#    user = relationship(User, backref=backref('instances', order_by=id))
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
 #    project = relationship(Project, backref=backref('instances', order_by=id))
@@ -182,17 +106,29 @@ class Volume(Base):
     blade_id = Column(Integer)
 
 
-if __name__ == '__main__':
+engine = None
+def create_engine():
+    global engine
+    if engine is not None:
+       return engine
     from sqlalchemy import create_engine
     engine = create_engine('sqlite:///:memory:', echo=True)
-    Base.metadata.create_all(engine) 
+    Base.metadata.create_all(engine)
+    return engine
 
+def create_session(engine=None):
+    if engine is None:
+        engine = create_engine()
     from sqlalchemy.orm import sessionmaker
     Session = sessionmaker(bind=engine)
-    session = Session()
+    return Session()
 
-    instance = Instance(image_sid='as', ramdisk_sid='AS', user_sid='anthony')
-    user = User(sid='anthony')
+if __name__ == '__main__':
+    engine = create_engine()
+    session = create_session(engine)
+
+    instance = Instance(image_id='as', ramdisk_id='AS', user_id='anthony')
+    user = User(id='anthony')
     session.add(instance)
     session.commit()
 

@@ -38,7 +38,7 @@ from nova import process
 from nova import service
 from nova import utils
 from nova.compute import disk
-from nova.compute import model
+from nova import models
 from nova.compute import power_state
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.network import service as network_service
@@ -61,7 +61,6 @@ class ComputeService(service.Service):
         super(ComputeService, self).__init__()
         self._instances = {}
         self._conn = virt_connection.get_connection()
-        self.instdir = model.InstanceDirectory()
         # TODO(joshua): This needs to ensure system state, specifically: modprobe aoe
 
     def noop(self):
@@ -116,19 +115,14 @@ class ComputeService(service.Service):
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
         logging.debug("Starting instance %s..." % (instance_id))
-        inst = self.instdir.get(instance_id)
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
+        session = models.create_session()
+        inst = session.query(models.Instance).filter_by(id=instance_id).first()
         # NOTE(vish): passing network type allows us to express the
         #             network without making a call to network to find
         #             out which type of network to setup
-        network_service.setup_compute_network(
-                                           inst.get('network_type', 'vlan'),
-                                           inst['user_id'],
-                                           inst['project_id'],
-                                           security_group)
+        network_service.setup_compute_network(inst)
 
-        inst['node_name'] = FLAGS.node_name
+        inst.node_name = FLAGS.node_name
         inst.save()
         # TODO(vish) check to make sure the availability zone matches
         new_inst = Instance(self._conn, name=instance_id, data=inst)
