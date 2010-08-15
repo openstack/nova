@@ -127,11 +127,11 @@ class VolumeTestCase(test.TrialTestCase):
         shelf_blades = []
         def _check(volume_id):
             vol = models.Volume.find(volume_id)
-            shelf_blade = '%s.%s' % (vol['shelf_id'], vol['blade_id'])
+            shelf_blade = '%s.%s' % (vol.shelf_id, vol.blade_id)
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)
-            vol.destroy()
+            vol.delete()
         deferreds = []
         for i in range(5):
             d = self.volume.create_volume(vol_size, user_id, project_id)
