@@ -5,7 +5,7 @@ from nova.endpoint.rackspace.controllers.base import BaseController
 class ServersController(BaseController):
     entity_name = 'servers'
 
-    def index(cls):
+    def index(self, **kwargs):
         return [instance_details(inst) for inst in compute.InstanceDirectory().all]
 
     def show(self, **kwargs):

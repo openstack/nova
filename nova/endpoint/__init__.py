@@ -36,16 +36,16 @@ import routes
 from nova.endpoint import rackspace
 from nova.endpoint import aws
 
-class ApiVersionRouter(wsgi.Router):
+class APIVersionRouter(wsgi.Router):
     """Routes top-level requests to the appropriate API."""
 
     def __init__(self):
         mapper = routes.Mapper()
 
-        mapper.connect(None, "/v1.0/{path_info:.*}", controller="rs")
-        mapper.connect(None, "/ec2/{path_info:.*}", controller="ec2")
+        rsapi = rackspace.API()
+        mapper.connect(None, "/v1.0/{path_info:.*}", controller=rsapi)
 
-        targets = {"rs": rackspace.Api(), "ec2": aws.Api()}
+        mapper.connect(None, "/ec2/{path_info:.*}", controller=aws.API())
 
-        super(ApiVersionRouter, self).__init__(mapper, targets)
+        super(APIVersionRouter, self).__init__(mapper)
 

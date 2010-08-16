@@ -140,34 +140,31 @@ class Router(object):
     WSGI middleware that maps incoming requests to WSGI apps.
     """
 
-    def __init__(self, mapper, targets):
+    def __init__(self, mapper):
         """
         Create a router for the given routes.Mapper.
 
-        Each route in `mapper` must specify a 'controller' string, which is
-        a key into the 'targets' dictionary whose value is a WSGI app to
-        run.  If routing to a wsgi.Controller, you'll want to specify
-        'action' as well so the controller knows what method to call on
-        itself.
+        Each route in `mapper` must specify a 'controller', which is a
+        WSGI app to call.  You'll probably want to specify an 'action' as
+        well and have your controller be a wsgi.Controller, who will route
+        the request to the action method.
 
         Examples:
           mapper = routes.Mapper()
-          targets = { "servers": ServerController(), "blog": BlogWsgiApp() }
+          sc = ServerController()
 
           # Explicit mapping of one route to a controller+action
-          mapper.connect(None, "/svrlist", controller="servers", action="list")
+          mapper.connect(None, "/svrlist", controller=sc, action="list")
 
-          # Controller string is implicitly equal to 2nd param here, and
-          # actions are all implicitly defined
-          mapper.resource("server", "servers")
+          # Actions are all implicitly defined
+          mapper.resource("server", "servers", controller=sc)
 
           # Pointing to an arbitrary WSGI app.  You can specify the
           # {path_info:.*} parameter so the target app can be handed just that
           # section of the URL.
-          mapper.connect(None, "/v1.0/{path_info:.*}", controller="blog")
+          mapper.connect(None, "/v1.0/{path_info:.*}", controller=BlogApp())
         """
         self.map = mapper
-        self.targets = targets
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           self.map)
 
@@ -186,31 +183,32 @@ class Router(object):
         and putting the information into req.environ.  Either returns 404
         or the routed WSGI app's response.
         """
-        if req.environ['routes.route'] is None:
-            return webob.exc.HTTPNotFound()
         match = req.environ['wsgiorg.routing_args'][1]
-        app_name = match['controller']
-
-        app = self.targets[app_name]
+        if not match:
+            return webob.exc.HTTPNotFound()
+        app = match['controller']
         return app
 
 
 class Controller(object):
     """
     WSGI app that reads routing information supplied by RoutesMiddleware
-    and calls the requested action method on itself.
+    and calls the requested action method upon itself.  All action methods
+    must, in addition to their normal parameters, accept a 'req' argument
+    which is the incoming webob.Request.
     """
     @webob.dec.wsgify
     def __call__(self, req):
         """
-        Call the method on self specified in req.environ by RoutesMiddleware.
+        Call the method specified in req.environ by RoutesMiddleware.
         """
-        routes_dict = req.environ['wsgiorg.routing_args'][1]
-        action = routes_dict['action']
+        arg_dict = req.environ['wsgiorg.routing_args'][1]
+        action = arg_dict['action']
         method = getattr(self, action)
-        del routes_dict['controller']
-        del routes_dict['action']
-        return method(**routes_dict)
+        del arg_dict['controller']
+        del arg_dict['action']
+        arg_dict['req'] = req
+        return method(**arg_dict)
 
 
 class Serializer(object):

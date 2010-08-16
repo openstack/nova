@@ -10,11 +10,9 @@ class API(wsgi.Router):
     def __init__(self):
         mapper = routes.Mapper()
 
-        mapper.connect(None, "{all:.*}", controller="dummy")
+        mapper.connect(None, "{all:.*}", controller=self.dummy)
 
-        targets = {"dummy": self.dummy }
-
-        super(API, self).__init__(mapper, targets)
+        super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
     def dummy(self, req):
