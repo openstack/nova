@@ -19,10 +19,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Disabling pylint's R0201 (Method could be a function) because
-# the API of render_GET, render_PUT, etc is Twisted's, not ours.
-# pylint: disable-msg=R0201
-
 """
 Implementation of an S3-like storage server based on local files.
 
@@ -168,7 +164,7 @@ class S3(ErrorHandlingResource):
         else:
             return BucketResource(name)
 
-    def render_GET(self, request):
+    def render_GET(self, request): # pylint: disable-msg=R0201
         """Renders the GET request for a list of buckets as XML"""
         logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() \
@@ -325,7 +321,7 @@ class ImagesResource(Resource):
         else:
             return ImageResource(name)
 
-    def render_GET(self, request):
+    def render_GET(self, request): # pylint: disable-msg=R0201
         """ returns a json listing of all images
             that a user has permissions to see """
 
@@ -336,7 +332,7 @@ class ImagesResource(Resource):
         request.finish()
         return server.NOT_DONE_YET
 
-    def render_PUT(self, request):
+    def render_PUT(self, request): # pylint: disable-msg=R0201
         """ create a new registered image """
 
         image_id = get_argument(request, 'image_id', u'')
@@ -357,8 +353,8 @@ class ImagesResource(Resource):
         p.start()
         return ''
 
-    def render_POST(self, request):
-        """ update image attributes: public/private """
+    def render_POST(self, request): # pylint: disable-msg=R0201
+        """Update image attributes: public/private"""
 
         image_id = get_argument(request, 'image_id', u'')
         operation = get_argument(request, 'operation', u'')
@@ -372,8 +368,8 @@ class ImagesResource(Resource):
 
         return ''
 
-    def render_DELETE(self, request):
-        """ delete a registered image """
+    def render_DELETE(self, request): # pylint: disable-msg=R0201
+        """Delete a registered image"""
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
