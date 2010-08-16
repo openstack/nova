@@ -146,7 +146,7 @@ class Router(object):
 
         Each route in `mapper` must specify a 'controller' string, which is
         a key into the 'targets' dictionary whose value is a WSGI app to
-        run.  If routing to a WSGIController, you'll want to specify
+        run.  If routing to a wsgi.Controller, you'll want to specify
         'action' as well so the controller knows what method to call on
         itself.
 
@@ -195,7 +195,7 @@ class Router(object):
         return app
 
 
-class WSGIController(object):
+class Controller(object):
     """
     WSGI app that reads routing information supplied by RoutesMiddleware
     and calls the requested action method on itself.

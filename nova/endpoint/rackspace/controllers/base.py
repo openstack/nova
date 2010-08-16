@@ -1,6 +1,6 @@
-from nova.wsgi import WSGIController
+from nova import wsgi
 
-class BaseController(WSGIController):
+class BaseController(wsgi.Controller):
     @classmethod
     def render(cls, instance):
         if isinstance(instance, list):

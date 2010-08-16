@@ -32,4 +32,4 @@ flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    wsgi.run_server(nova.endpoint.ApiVersionRouter(), FLAGS.cc_port)
+    wsgi.run_server(nova.endpoint.APIVersionRouter(), FLAGS.cc_port)

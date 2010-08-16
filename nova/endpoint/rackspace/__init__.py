@@ -37,12 +37,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 
 
-class Api(wsgi.Middleware):
+class API(wsgi.Middleware):
     """WSGI entry point for all Rackspace API requests."""
 
     def __init__(self):
-        app = AuthMiddleware(ApiRouter())
-        super(Api, self).__init__(app)
+        app = AuthMiddleware(APIRouter())
+        super(API, self).__init__(app)
 
 
 class AuthMiddleware(wsgi.Middleware):
@@ -66,7 +66,7 @@ class AuthMiddleware(wsgi.Middleware):
         return self.application
 
 
-class ApiRouter(wsgi.Router):
+class APIRouter(wsgi.Router):
     """
     Routes requests on the Rackspace API to the appropriate controller
     and method.
@@ -87,4 +87,4 @@ class ApiRouter(wsgi.Router):
                 'sharedipgroups': controllers.SharedIpGroupsController()
                 }
 
-        super(ApiRouter, self).__init__(mapper, targets)
+        super(APIRouter, self).__init__(mapper, targets)

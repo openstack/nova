@@ -4,7 +4,7 @@ import webob.dec
 from nova import wsgi
 
 # TODO(gundlach): temp
-class Api(wsgi.Router):
+class API(wsgi.Router):
     """WSGI entry point for all AWS API requests."""
 
     def __init__(self):
@@ -14,7 +14,7 @@ class Api(wsgi.Router):
 
         targets = {"dummy": self.dummy }
 
-        super(Api, self).__init__(mapper, targets)
+        super(API, self).__init__(mapper, targets)
 
     @webob.dec.wsgify
     def dummy(self, req):
