@@ -31,6 +31,7 @@ from twisted.internet import defer
 from nova import datastore
 from nova import exception
 from nova import flags
+from nova import models
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
@@ -403,46 +404,43 @@ class CloudController(object):
     def _format_instances(self, context, reservation_id = None):
         reservations = {}
         if context.user.is_admin():
-            instgenerator = self.instdir.all
+            instgenerator = models.Instance.all()
         else:
-            instgenerator = self.instdir.by_project(context.project.id)
+            instgenerator = models.Instance.all() # FIXME
         for instance in instgenerator:
-            res_id = instance.get('reservation_id', 'Unknown')
+            res_id = instance.reservation_id
             if reservation_id != None and reservation_id != res_id:
                 continue
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            i['instance_id'] = instance.get('instance_id', None)
-            i['image_id'] = instance.get('image_id', None)
-            i['instance_state'] = {
-                'code': instance.get('state', 0),
-                'name': instance.get('state_description', 'pending')
+            i['instanceId'] = instance.name
+            i['imageId'] = instance.image_id
+            i['instanceState'] = {
+                'code': instance.state,
+                'name': instance.state_description
             }
-            i['public_dns_name'] = network_model.get_public_ip_for_instance(
-                                                        i['instance_id'])
-            i['private_dns_name'] = instance.get('private_dns_name', None)
+            i['public_dns_name'] = None #network_model.get_public_ip_for_instance(
+            #              i['instance_id'])
+            i['private_dns_name'] = instance.fixed_ip
             if not i['public_dns_name']:
                 i['public_dns_name'] = i['private_dns_name']
-            i['dns_name'] = instance.get('dns_name', None)
-            i['key_name'] = instance.get('key_name', None)
+            i['dns_name'] = None
+            i['key_name'] = instance.key_name
             if context.user.is_admin():
                 i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.get('project_id', None),
-                    instance.get('node_name', ''))
-            i['product_codes_set'] = self._convert_to_set(
-                instance.get('product_codes', None), 'product_code')
-            i['instance_type'] = instance.get('instance_type', None)
-            i['launch_time'] = instance.get('launch_time', None)
-            i['ami_launch_index'] = instance.get('ami_launch_index',
-                                                 None)
+                    instance.project_id,
+                    'node_name') # FIXME
+            i['product_codes_set'] = self._convert_to_set([], 'product_codes')
+            i['instance_type'] = instance.instance_type
+            i['launch_time'] = instance.created_at
+            i['ami_launch_index'] = instance.launch_index
             if not reservations.has_key(res_id):
                 r = {}
                 r['reservation_id'] = res_id
-                r['owner_id'] = instance.get('project_id', None)
-                r['group_set'] = self._convert_to_set(
-                    instance.get('groups', None), 'group_id')
+                r['owner_id'] = instance.project_id
+                r['group_set'] = self._convert_to_set([], 'groups')
                 r['instances_set'] = []
                 reservations[res_id] = r
             reservations[res_id]['instances_set'].append(i)
@@ -528,7 +526,7 @@ class CloudController(object):
         defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
+    #@defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
@@ -560,46 +558,46 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-        network_topic = yield self._get_network_topic(context)
+        # network_topic = yield self._get_network_topic(context)
         # TODO: Get the real security group of launch in here
         security_group = "default"
         for num in range(int(kwargs['max_count'])):
             is_vpn = False
             if image_id  == FLAGS.vpn_image_id:
                 is_vpn = True
-            inst = self.instdir.new()
-            allocate_data = yield rpc.call(network_topic,
-                     {"method": "allocate_fixed_ip",
-                      "args": {"user_id": context.user.id,
-                               "project_id": context.project.id,
-                               "security_group": security_group,
-                               "is_vpn": is_vpn,
-                               "hostname": inst.instance_id}})
-            inst['image_id'] = image_id
-            inst['kernel_id'] = kernel_id
-            inst['ramdisk_id'] = ramdisk_id
-            inst['user_data'] = kwargs.get('user_data', '')
-            inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
-            inst['reservation_id'] = reservation_id
-            inst['launch_time'] = launch_time
-            inst['key_data'] = key_data or ''
-            inst['key_name'] = kwargs.get('key_name', '')
-            inst['user_id'] = context.user.id
-            inst['project_id'] = context.project.id
-            inst['ami_launch_index'] = num
-            inst['security_group'] = security_group
-            inst['hostname'] = inst.instance_id
+            inst = models.Instance()
+            #allocate_data = yield rpc.call(network_topic,
+            #         {"method": "allocate_fixed_ip",
+            #          "args": {"user_id": context.user.id,
+            #                   "project_id": context.project.id,
+            #                   "security_group": security_group,
+            #                   "is_vpn": is_vpn,
+            #                   "hostname": inst.instance_id}})
+            allocate_data = {'mac_address': utils.generate_mac(),
+                             'fixed_ip': '192.168.0.100'}
+            inst.image_id = image_id
+            inst.kernel_id = kernel_id
+            inst.ramdisk_id = ramdisk_id
+            inst.user_data = kwargs.get('user_data', '')
+            inst.instance_type = kwargs.get('instance_type', 'm1.small')
+            inst.reservation_id = reservation_id
+            inst.key_data = key_data
+            inst.key_name = kwargs.get('key_name', None)
+            inst.user_id = context.user.id
+            inst.project_id = context.project.id
+            inst.launch_index = num
+            inst.security_group = security_group
+            inst.hostname = inst.id
             for (key, value) in allocate_data.iteritems():
-                inst[key] = value
-
+                setattr(inst, key, value)
             inst.save()
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
-                  "args": {"instance_id": inst.instance_id}})
+                  "args": {"instance_id": inst.id}})
             logging.debug("Casting to node for %s's instance with IP of %s" %
-                      (context.user.name, inst['private_dns_name']))
-        # TODO: Make Network figure out the network name from ip.
-        defer.returnValue(self._format_instances(context, reservation_id))
+                      (context.user.name, inst.fixed_ip))
+        # defer.returnValue(self._format_instances(context, reservation_id))
+        return self._format_instances(context, reservation_id)
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks

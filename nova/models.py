@@ -17,7 +17,7 @@ class NovaBase(object):
         if NovaBase._engine is not None:
            return NovaBase._engine
         from sqlalchemy import create_engine
-        NovaBase._engine = create_engine('sqlite:///:memory:', echo=False)
+        NovaBase._engine = create_engine('sqlite:////root/nova.sqlite', echo=False)
         Base.metadata.create_all(NovaBase._engine)
         return NovaBase._engine
 
@@ -91,6 +91,11 @@ class Network(Base):
     bridge = Column(String)
     vlan = Column(String)
     kind = Column(String)
+
+    @property
+    def bridge_name(self):
+        # HACK: this should be set on creation
+        return 'br100'
     #vpn_port = Column(Integer)
     project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
 
@@ -113,6 +118,12 @@ class Instance(Base, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
+    # FIXME: make this opaque somehow
+    @property
+    def name(self):
+        return "i-%s" % self.id
+
+
     image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
     kernel_id = Column(String, ForeignKey('images.id'), nullable=True)
     ramdisk_id = Column(String, ForeignKey('images.id'), nullable=True)
@@ -132,12 +143,17 @@ class Instance(Base, NovaBase):
 
     user_data = Column(Text)
 
+    reservation_id = Column(String)
+    mac_address = Column(String)
+    fixed_ip = Column(String)
+
     def set_state(self, state_code, state_description=None):
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
             state_description = power_state.name(state_code)
         self.state_description = state_description
+        self.save()
 
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))

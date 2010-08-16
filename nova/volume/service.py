@@ -23,7 +23,6 @@ Currently uses Ata-over-Ethernet.
 """
 
 import logging
-import os
 
 from twisted.internet import defer
 
