@@ -16,25 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-'''
-Utility methods for working with WSGI servers
-'''
+from nova import flags
 
-class Util(object):
+FLAGS = flags.FLAGS
 
-    @staticmethod
-    def route(reqstr, controllers):
-        if len(reqstr) == 0:
-            return Util.select_root_controller(controllers), []
-        parts = [x for x in reqstr.split("/") if len(x) > 0]
-        if len(parts) == 0:
-            return Util.select_root_controller(controllers), []
-        return controllers[parts[0]], parts[1:]
-
-    @staticmethod
-    def select_root_controller(controllers):
-        if '' in controllers:
-            return controllers['']
-        else:
-            return None
-
+flags.DEFINE_integer('answer', 42, 'test flag')

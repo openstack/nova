@@ -29,16 +29,18 @@ import uuid
 import zipfile
 
 from nova import crypto
-from nova import datastore
 from nova import exception
 from nova import flags
-from nova import objectstore # for flags
 from nova import utils
-from nova.auth import ldapdriver # for flags
 from nova.auth import signer
 from nova.network import vpn
 
+
 FLAGS = flags.FLAGS
+
+flags.DEFINE_list('allowed_roles',
+                  ['cloudadmin', 'itsec', 'sysadmin', 'netadmin', 'developer'],
+                  'Allowed roles for project')
 
 # NOTE(vish): a user with one of these roles will be a superuser and
 #             have access to all api commands
@@ -99,6 +101,7 @@ class AuthBase(object):
 class User(AuthBase):
     """Object representing a user"""
     def __init__(self, id, name, access, secret, admin):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.access = access
@@ -159,6 +162,7 @@ class KeyPair(AuthBase):
     fingerprint is stored. The user's private key is not saved.
     """
     def __init__(self, id, name, owner_id, public_key, fingerprint):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.owner_id = owner_id
@@ -176,6 +180,7 @@ class KeyPair(AuthBase):
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
     def __init__(self, id, name, project_manager_id, description, member_ids):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.project_manager_id = project_manager_id
@@ -234,7 +239,7 @@ class AuthManager(object):
     AuthManager also manages associated data related to Auth objects that
     need to be more accessible, such as vpn ips and ports.
     """
-    _instance=None
+    _instance = None
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:
@@ -248,7 +253,7 @@ class AuthManager(object):
         reset the driver if it is not set or a new driver is specified.
         """
         if driver or not getattr(self, 'driver', None):
-           self.driver = utils.import_class(driver or FLAGS.auth_driver)
+            self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
@@ -431,6 +436,10 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to add local role.
         """
+        if role not in FLAGS.allowed_roles:
+            raise exception.NotFound("The %s role can not be found" % role)
+        if project is not None and role in FLAGS.global_roles:
+            raise exception.NotFound("The %s role is global only" % role)
         with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
@@ -453,6 +462,19 @@ class AuthManager(object):
         """
         with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
+
+    def get_roles(self, project_roles=True):
+        """Get list of allowed roles"""
+        if project_roles:
+            return list(set(FLAGS.allowed_roles) - set(FLAGS.global_roles))
+        else:
+            return FLAGS.allowed_roles
+
+    def get_user_roles(self, user, project=None):
+        """Get user global or per-project roles"""
+        with self.driver() as drv:
+            return drv.get_user_roles(User.safe_id(user),
+                                      Project.safe_id(project))
 
     def get_project(self, pid):
         """Get project object by id"""

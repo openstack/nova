@@ -18,8 +18,6 @@
 #    under the License.
 
 """
-nova-dhcpbridge
-
 Handle lease database updates from DHCP servers.
 """
 
@@ -42,34 +40,42 @@ from nova.network import service
 FLAGS = flags.FLAGS
 
 
-def add_lease(mac, ip, hostname, interface):
+def add_lease(_mac, ip, _hostname, _interface):
+    """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         service.VlanNetworkService().lease_ip(ip)
     else:
-        rpc.cast("%s.%s" (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "lease_ip",
-                  "args" : {"fixed_ip": ip}})
+                  "args": {"fixed_ip": ip}})
 
-def old_lease(mac, ip, hostname, interface):
+
+def old_lease(_mac, _ip, _hostname, _interface):
+    """Do nothing, just an old lease update."""
     logging.debug("Adopted old lease or got a change of mac/hostname")
 
-def del_lease(mac, ip, hostname, interface):
+
+def del_lease(_mac, ip, _hostname, _interface):
+    """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         service.VlanNetworkService().release_ip(ip)
     else:
-        rpc.cast("%s.%s" (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "release_ip",
-                  "args" : {"fixed_ip": ip}})
+                  "args": {"fixed_ip": ip}})
+
 
 def init_leases(interface):
+    """Get the list of hosts for an interface."""
     net = model.get_network_by_interface(interface)
     res = ""
-    for host_name in net.hosts:
-        res += "%s\n" % linux_net.hostDHCP(net, host_name, net.hosts[host_name])
+    for address in net.assigned_objs:
+        res += "%s\n" % linux_net.host_dhcp(address)
     return res
 
 
 def main():
+    """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
@@ -79,18 +85,19 @@ def main():
         FLAGS.redis_db = 8
         FLAGS.network_size = 32
         FLAGS.connection_type = 'fake'
-        FLAGS.fake_network=True
-        FLAGS.auth_driver='nova.auth.ldapdriver.FakeLdapDriver'
+        FLAGS.fake_network = True
+        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
     action = argv[1]
-    if action in ['add','del','old']:
+    if action in ['add', 'del', 'old']:
         mac = argv[2]
         ip = argv[3]
         hostname = argv[4]
-        logging.debug("Called %s for mac %s with ip %s and hostname %s on interface %s" % (action, mac, ip, hostname, interface))
-        globals()[action+'_lease'](mac, ip, hostname, interface)
+        logging.debug("Called %s for mac %s with ip %s and "
+                      "hostname %s on interface %s",
+                      action, mac, ip, hostname, interface)
+        globals()[action + '_lease'](mac, ip, hostname, interface)
     else:
         print init_leases(interface)
-    exit(0)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

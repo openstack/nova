@@ -57,6 +57,28 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+class UserRole(object):
+    """
+    Information about a Nova user's role, as parsed through SAX.
+    Fields include:
+        role
+    """
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.role = None
+    
+    def __repr__(self):
+        return 'UserRole:%s' % self.role
+
+    def startElement(self, name, attrs, connection):
+        return None
+        
+    def endElement(self, name, value, connection):
+        if name == 'role':
+            self.role = value
+        else:
+            setattr(self, name, str(value))
+
 class ProjectInfo(object):
     """
     Information about a Nova project, as parsed through SAX
@@ -114,7 +136,6 @@ class ProjectMember(object):
         else:
             setattr(self, name, str(value))
             
-
 class HostInfo(object):
     """
     Information about a Nova Host, as parsed through SAX:
@@ -195,6 +216,24 @@ class NovaAdminClient(object):
     def delete_user(self, username):
         """ deletes a user """
         return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
+
+    def get_roles(self, project_roles=True):
+        """Returns a list of available roles."""
+        return self.apiconn.get_list('DescribeRoles',
+                                     {'ProjectRoles': project_roles},
+                                     [('item', UserRole)])
+
+    def get_user_roles(self, user, project=None):
+        """Returns a list of roles for the given user.
+           Omitting project will return any global roles that the user has.
+           Specifying project will return only project specific roles.
+        """
+        params = {'User':user}
+        if project:
+            params['Project'] = project
+        return self.apiconn.get_list('DescribeUserRoles',
+                                     params,
+                                     [('item', UserRole)])
 
     def add_user_role(self, user, role, project=None):
         """

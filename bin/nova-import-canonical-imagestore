@@ -37,20 +37,17 @@ FLAGS = flags.FLAGS
 
 api_url = 'https://imagestore.canonical.com/api/dashboard'
 
-image_cache = None
-def images():
-    global image_cache
-    if not image_cache:
-        try:
-            images = json.load(urllib2.urlopen(api_url))['images']
-            image_cache = [i for i in images if i['title'].find('amd64') > -1]
-        except Exception:
-            print 'unable to download canonical image list'
-            sys.exit(1)
-    return image_cache
 
-# FIXME(ja): add checksum/signature checks
+def get_images():
+    """Get a list of the images from the imagestore URL."""
+    images = json.load(urllib2.urlopen(api_url))['images']
+    images = [img for img in images if img['title'].find('amd64') > -1]
+    return images
+
+
 def download(img):
+    """Download an image to the local filesystem."""
+    # FIXME(ja): add checksum/signature checks
     tempdir = tempfile.mkdtemp(prefix='cis-')
 
     kernel_id = None
@@ -79,20 +76,22 @@ def download(img):
 
     shutil.rmtree(tempdir)
 
+
 def main():
+    """Main entry point."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
+    images = get_images()
 
     if len(argv) == 2:
-        for img in images():
+        for img in images:
             if argv[1] == 'all' or argv[1] == img['title']:
                 download(img)
     else:
         print 'usage: %s (title|all)'
         print 'available images:'
-        for image in images():
-            print image['title']
+        for img in images:
+            print img['title']
 
 if __name__ == '__main__':
     main()
-
