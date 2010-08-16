@@ -132,7 +132,7 @@ class CloudTestCase(test.BaseTestCase):
                 'state': 0x01,
                 'user_data': ''
             }
-        rv = self.cloud._format_instances(self.context)
+        rv = self.cloud._format_describe_instances(self.context)
         self.assert_(len(rv['reservationSet']) == 0)
 
         # simulate launch of 5 instances

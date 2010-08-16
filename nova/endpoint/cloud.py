@@ -398,7 +398,15 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_instances(self, context, **kwargs):
-        return defer.succeed(self._format_instances(context))
+        return defer.succeed(self._format_describe_instances(context))
+
+    def _format_describe_instances(self, context):
+        return { 'reservationSet': self._format_instances(context) }
+
+    def _format_run_instances(self, context, reservation_id):
+        i = self._format_instances(context, reservation_id)
+        assert len(i) == 1
+        return i[0]
 
     def _format_instances(self, context, reservation_id = None):
         reservations = {}
@@ -447,8 +455,7 @@ class CloudController(object):
                 reservations[res_id] = r
             reservations[res_id]['instances_set'].append(i)
 
-        instance_response = {'reservationSet': list(reservations.values())}
-        return instance_response
+        return list(reservations.values())
 
     @rbac.allow('all')
     def describe_addresses(self, context, **kwargs):
@@ -599,7 +606,7 @@ class CloudController(object):
             logging.debug("Casting to node for %s's instance with IP of %s" %
                       (context.user.name, inst['private_dns_name']))
         # TODO: Make Network figure out the network name from ip.
-        defer.returnValue(self._format_instances(context, reservation_id))
+        defer.returnValue(self._format_run_instances(context, reservation_id))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
