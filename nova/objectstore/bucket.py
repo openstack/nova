@@ -36,6 +36,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),
                     'path to s3 buckets')
 
+
 class Bucket(object):
     def __init__(self, name):
         self.name = name

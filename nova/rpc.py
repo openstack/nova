@@ -21,12 +21,13 @@ AMQP-based RPC. Queues have consumers and publishers.
 No fan-out support yet.
 """
 
-from carrot import connection as carrot_connection
-from carrot import messaging
 import json
 import logging
 import sys
 import uuid
+
+from carrot import connection as carrot_connection
+from carrot import messaging
 from twisted.internet import defer
 from twisted.internet import task
 

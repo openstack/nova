@@ -37,6 +37,7 @@ def user_dict(user, base64_file=None):
     else:
         return {}
 
+
 def project_dict(project):
     """Convert the project object to a result dict"""
     if project:
@@ -47,12 +48,14 @@ def project_dict(project):
     else:
         return {}
 
+
 def host_dict(host):
     """Convert a host model object to a result dict"""
     if host:
         return host.state
     else:
         return {}
+
 
 def admin_only(target):
     """Decorator for admin-only API calls"""
@@ -65,6 +68,7 @@ def admin_only(target):
             return {}
 
     return wrapper
+
 
 class AdminController(object):
     """

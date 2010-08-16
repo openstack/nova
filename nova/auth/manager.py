@@ -37,7 +37,6 @@ from nova.network import vpn
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_list('allowed_roles',
                   ['cloudadmin', 'itsec', 'sysadmin', 'netadmin', 'developer'],
                   'Allowed roles for project')
@@ -51,7 +50,6 @@ flags.DEFINE_list('superuser_roles', ['cloudadmin'],
 #             project, even if he or she is not a member of the project
 flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
                   'Roles that apply to all projects')
-
 
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
@@ -67,14 +65,13 @@ flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
-
 flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
-
 flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
                     'Driver that auth manager uses')
+
 
 class AuthBase(object):
     """Base class for objects relating to auth
@@ -83,6 +80,7 @@ class AuthBase(object):
     an id member. They may optionally contain methods that delegate to
     AuthManager, but should not implement logic themselves.
     """
+
     @classmethod
     def safe_id(cls, obj):
         """Safe get object id
@@ -100,6 +98,7 @@ class AuthBase(object):
 
 class User(AuthBase):
     """Object representing a user"""
+
     def __init__(self, id, name, access, secret, admin):
         AuthBase.__init__(self)
         self.id = id
@@ -161,6 +160,7 @@ class KeyPair(AuthBase):
     Even though this object is named KeyPair, only the public key and
     fingerprint is stored. The user's private key is not saved.
     """
+
     def __init__(self, id, name, owner_id, public_key, fingerprint):
         AuthBase.__init__(self)
         self.id = id
@@ -179,6 +179,7 @@ class KeyPair(AuthBase):
 
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
+
     def __init__(self, id, name, project_manager_id, description, member_ids):
         AuthBase.__init__(self)
         self.id = id
@@ -227,7 +228,6 @@ class Project(AuthBase):
                                                         self.member_ids)
 
 
-
 class AuthManager(object):
     """Manager Singleton for dealing with Users, Projects, and Keypairs
 
@@ -239,7 +239,9 @@ class AuthManager(object):
     AuthManager also manages associated data related to Auth objects that
     need to be more accessible, such as vpn ips and ports.
     """
+
     _instance = None
+
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:

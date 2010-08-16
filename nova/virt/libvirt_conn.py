@@ -42,6 +42,7 @@ from nova.virt import images
 libvirt = None
 libxml2 = None
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.qemu.xml.template'),
@@ -57,7 +58,9 @@ flags.DEFINE_string('libvirt_type',
                     'Libvirt domain type (valid options are: kvm, qemu, uml)')
 flags.DEFINE_string('libvirt_uri',
                     '',
-                    'Override the default libvirt URI (which is dependent on libvirt_type)')
+                    'Override the default libvirt URI (which is dependent'
+                    ' on libvirt_type)')
+
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
@@ -70,6 +73,7 @@ def get_connection(read_only):
         libxml2 = __import__('libxml2')
     return LibvirtConnection(read_only)
 
+
 class LibvirtConnection(object):
     def __init__(self, read_only):
         self.libvirt_uri, template_file = self.get_uri_and_template()
@@ -78,13 +82,11 @@ class LibvirtConnection(object):
         self._wrapped_conn = None
         self.read_only = read_only
 
-
     @property
     def _conn(self):
         if not self._wrapped_conn:
             self._wrapped_conn = self._connect(self.libvirt_uri, self.read_only)
         return self._wrapped_conn
-
 
     def get_uri_and_template(self):
         if FLAGS.libvirt_type == 'uml':
@@ -94,7 +96,6 @@ class LibvirtConnection(object):
             uri = FLAGS.libvirt_uri or 'qemu:///system'
             template_file = FLAGS.libvirt_xml_template
         return uri, template_file
-
 
     def _connect(self, uri, read_only):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
@@ -106,12 +107,9 @@ class LibvirtConnection(object):
         else:
             return libvirt.openAuth(uri, auth, 0)
 
-
-
     def list_instances(self):
         return [self._conn.lookupByID(x).name()
                 for x in self._conn.listDomainsID()]
-
 
     def destroy(self, instance):
         try:
@@ -141,13 +139,11 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
         return d
 
-
     def _cleanup(self, instance):
         target = os.path.abspath(instance.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
         if os.path.exists(target):
             shutil.rmtree(target)
-
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -173,7 +169,6 @@ class LibvirtConnection(object):
         timer.f = _wait_for_reboot
         timer.start(interval=0.5, now=True)
         yield d
-
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -204,7 +199,6 @@ class LibvirtConnection(object):
         timer.f = _wait_for_boot
         timer.start(interval=0.5, now=True)
         yield local_d
-
 
     @defer.inlineCallbacks
     def _create_image(self, instance, libvirt_xml):
@@ -260,10 +254,8 @@ class LibvirtConnection(object):
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
 
-
     def basepath(self, instance, path=''):
         return os.path.abspath(os.path.join(instance.datamodel['basepath'], path))
-
 
     def toXml(self, instance):
         # TODO(termie): cache?
@@ -279,7 +271,6 @@ class LibvirtConnection(object):
 
         return libvirt_xml
 
-
     def get_info(self, instance_id):
         virt_dom = self._conn.lookupByName(instance_id)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
@@ -288,7 +279,6 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
-
 
     def get_disks(self, instance_id):
         """
@@ -332,7 +322,6 @@ class LibvirtConnection(object):
 
         return disks
 
-
     def get_interfaces(self, instance_id):
         """
         Note that this function takes an instance ID, not an Instance, so
@@ -375,7 +364,6 @@ class LibvirtConnection(object):
 
         return interfaces
 
-
     def block_stats(self, instance_id, disk):
         """
         Note that this function takes an instance ID, not an Instance, so
@@ -383,7 +371,6 @@ class LibvirtConnection(object):
         """
         domain = self._conn.lookupByName(instance_id)
         return domain.blockStats(disk)
-
 
     def interface_stats(self, instance_id, interface):
         """

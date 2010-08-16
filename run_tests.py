@@ -38,10 +38,10 @@ Due to our use of multiprocessing it we frequently get some ignorable
 'Interrupted system call' exceptions after test completion.
 
 """
+
 import __main__
 import os
 import sys
-
 
 from twisted.scripts import trial as trial_script
 
@@ -65,13 +65,12 @@ from nova.tests.volume_unittest import *
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_bool('flush_db', True,
                   'Flush the database before running fake tests')
-
 flags.DEFINE_string('tests_stderr', 'run_tests.err.log',
-                    'Path to where to pipe STDERR during test runs. '
-                    'Default = "run_tests.err.log"')
+                    'Path to where to pipe STDERR during test runs.'
+                    ' Default = "run_tests.err.log"')
+
 
 if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)

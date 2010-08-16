@@ -33,16 +33,29 @@ from nova.virt import images
 
 XenAPI = None
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('xenapi_connection_url',
                     None,
-                    'URL for connection to XenServer/Xen Cloud Platform.  Required if connection_type=xenapi.')
+                    'URL for connection to XenServer/Xen Cloud Platform.'
+                    ' Required if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_connection_username',
                     'root',
-                    'Username for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+                    'Username for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_connection_password',
                     None,
-                    'Password for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+                    'Password for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
+
+
+XENAPI_POWER_STATE = {
+    'Halted'   : power_state.SHUTDOWN,
+    'Running'  : power_state.RUNNING,
+    'Paused'   : power_state.PAUSED,
+    'Suspended': power_state.SHUTDOWN, # FIXME
+    'Crashed'  : power_state.CRASHED
+}
 
 
 def get_connection(_):
@@ -62,7 +75,6 @@ def get_connection(_):
 
 
 class XenAPIConnection(object):
-
     def __init__(self, url, user, pw):
         self._conn = XenAPI.Session(url)
         self._conn.login_with_password(user, pw)
@@ -107,7 +119,6 @@ class XenAPIConnection(object):
             yield self._create_vif(vm_ref, network_ref, mac_address)
         yield self._conn.xenapi.VM.start(vm_ref, False, False)
 
-
     def create_vm(self, instance, kernel, ramdisk):
         mem = str(long(instance.datamodel['memory_kb']) * 1024)
         vcpus = str(instance.datamodel['vcpus'])
@@ -145,7 +156,6 @@ class XenAPIConnection(object):
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
         return vm_ref
 
-
     def create_vbd(self, vm_ref, vdi_ref, userdevice, bootable):
         vbd_rec = {}
         vbd_rec['VM'] = vm_ref
@@ -166,7 +176,6 @@ class XenAPIConnection(object):
                       vdi_ref)
         return vbd_ref
 
-
     def _create_vif(self, vm_ref, network_ref, mac_address):
         vif_rec = {}
         vif_rec['device'] = '0'
@@ -184,7 +193,6 @@ class XenAPIConnection(object):
                       vm_ref, network_ref)
         return vif_ref
 
-
     def _find_network_with_bridge(self, bridge):
         expr = 'field "bridge" = "%s"' % bridge
         networks = self._conn.xenapi.network.get_all_records_where(expr)
@@ -194,7 +202,6 @@ class XenAPIConnection(object):
             raise Exception('Found non-unique network for bridge %s' % bridge)
         else:
             raise Exception('Found no network for bridge %s' % bridge)
-
 
     def fetch_image(self, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
@@ -213,7 +220,6 @@ class XenAPIConnection(object):
             args['add_partition'] = 'true'
         return self._call_plugin('objectstore', fn, args)
 
-
     def reboot(self, instance):
         vm = self.lookup(instance.name)
         if vm is None:
@@ -231,7 +237,7 @@ class XenAPIConnection(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_id)
         rec = self._conn.xenapi.VM.get_record(vm)
-        return {'state': power_state_from_xenapi[rec['power_state']],
+        return {'state': XENAPI_POWER_STATE[rec['power_state']],
                 'max_mem': long(rec['memory_static_max']) >> 10,
                 'mem': long(rec['memory_dynamic_max']) >> 10,
                 'num_cpu': rec['VCPUs_max'],
@@ -247,24 +253,13 @@ class XenAPIConnection(object):
         else:
             return vms[0]
 
-
     def _call_plugin(self, plugin, fn, args):
         return _unwrap_plugin_exceptions(
             self._conn.xenapi.host.call_plugin,
             self._get_xenapi_host(), plugin, fn, args)
 
-
     def _get_xenapi_host(self):
         return self._conn.xenapi.session.get_this_host(self._conn.handle)
-
-
-power_state_from_xenapi = {
-    'Halted'   : power_state.SHUTDOWN,
-    'Running'  : power_state.RUNNING,
-    'Paused'   : power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN, # FIXME
-    'Crashed'  : power_state.CRASHED
-}
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):

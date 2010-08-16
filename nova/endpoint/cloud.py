@@ -26,6 +26,7 @@ import base64
 import logging
 import os
 import time
+
 from twisted.internet import defer
 
 from nova import datastore
@@ -44,7 +45,6 @@ from nova.volume import service
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 
 
@@ -361,7 +361,6 @@ class CloudController(object):
                               'requestId': context.request_id,
                               'status': volume['attach_status'],
                               'volumeId': volume_id})
-
 
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):

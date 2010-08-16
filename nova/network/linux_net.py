@@ -18,16 +18,16 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 """
 
 import logging
-import signal
 import os
+import signal
 
-# todo(ja): does the definition of network_path belong here?
+# TODO(ja): does the definition of network_path belong here?
 
 from nova import flags
 from nova import utils
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')

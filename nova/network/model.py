@@ -20,11 +20,11 @@
 Model Classes for network control, including VLANs, DHCP, and IP allocation.
 """
 
-import IPy
 import logging
 import os
 import time
 
+import IPy
 from nova import datastore
 from nova import exception as nova_exception
 from nova import flags
@@ -52,6 +52,7 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
                         'Number of addresses reserved for vpn clients')
 flags.DEFINE_integer('cloudpipe_start_port', 12000,
                         'Starting port for mapped CloudPipe external ports')
+
 
 logging.getLogger().setLevel(logging.DEBUG)
 
