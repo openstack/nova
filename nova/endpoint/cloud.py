@@ -126,7 +126,7 @@ class CloudController(object):
         else:
             keys = ''
 
-        address_record = network_model.Address(i['private_dns_name'])
+        address_record = network_model.FixedIp(i['private_dns_name'])
         if address_record:
             hostname = address_record['hostname']
         else:
@@ -311,7 +311,7 @@ class CloudController(object):
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        address = network_model.PublicAddress.lookup(public_ip)
+        address = network_model.ElasticIp.lookup(public_ip)
         if address and (context.user.is_admin() or address['project_id'] == context.project.id):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -463,7 +463,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in network_model.PublicAddress.all():
+        for address in network_model.ElasticIp.all():
             # TODO(vish): implement a by_project iterator for addresses
             if (context.user.is_admin() or
                 address['project_id'] == context.project.id):
