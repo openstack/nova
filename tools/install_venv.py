@@ -38,15 +38,16 @@ def die(message, *args):
 
 
 def run_command(cmd, redirect_output=True, error_ok=False):
-  """Runs a command in an out-of-process shell, returning the
-  output of that command
+  """
+  Runs a command in an out-of-process shell, returning the
+  output of that command.  Working directory is ROOT.
   """
   if redirect_output:
     stdout = subprocess.PIPE
   else:
     stdout = None
 
-  proc = subprocess.Popen(cmd, stdout=stdout)
+  proc = subprocess.Popen(cmd, cwd=ROOT, stdout=stdout)
   output = proc.communicate()[0]
   if not error_ok and proc.returncode != 0:
     die('Command "%s" failed.\n%s', ' '.join(cmd), output)
@@ -92,6 +93,12 @@ def install_dependencies(venv=VENV):
               redirect_output=False)
   run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv, TWISTED_NOVA],
               redirect_output=False)
+
+
+  # Tell the virtual env how to "import nova"
+  pathfile=os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
+  f=open(pathfile, 'w')
+  f.write("%s\n" % ROOT)
 
 
 def print_help():
