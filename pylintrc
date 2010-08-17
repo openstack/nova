@@ -1,5 +1,9 @@
 [Messages Control]
-disable-msg=C0103
+disable=C0103
+# TODOs in code comments are fine...
+disable=W0511
+# *args and **kwargs are fine
+disable=W0142
 
 [Basic]
 # Variables can be 1 to 31 characters long, with
@@ -9,10 +13,6 @@ variable-rgx=[a-z_][a-z0-9_]{0,30}$
 # Method names should be at least 3 characters long
 # and be lowecased with underscores
 method-rgx=[a-z_][a-z0-9_]{2,50}$
-
-[MESSAGES CONTROL]
-# TODOs in code comments are fine...
-disable-msg=W0511
 
 [Design]
 max-public-methods=100

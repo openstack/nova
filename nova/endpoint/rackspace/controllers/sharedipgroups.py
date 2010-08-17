@@ -1,0 +1,1 @@
+class SharedIpGroupsController(object): pass
