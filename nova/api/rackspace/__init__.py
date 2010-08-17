@@ -17,20 +17,23 @@
 #    under the License.
 
 """
-Rackspace API Endpoint
+WSGI middleware for Rackspace API controllers.
 """
 
 import json
 import time
 
+import routes
 import webob.dec
 import webob.exc
-import routes
 
 from nova import flags
 from nova import wsgi
+from nova.api.rackspace.controllers import flavors
+from nova.api.rackspace.controllers import images
+from nova.api.rackspace.controllers import servers
+from nova.api.rackspace.controllers import sharedipgroups
 from nova.auth import manager
-from nova.endpoint.rackspace import controllers
 
 
 class API(wsgi.Middleware):
@@ -70,14 +73,9 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-
-        mapper.resource("server", "servers",
-                controller=controllers.ServersController())
-        mapper.resource("image", "images",
-                controller=controllers.ImagesController())
-        mapper.resource("flavor", "flavors",
-                controller=controllers.FlavorsController())
+        mapper.resource("server", "servers", controller=servers.Controller())
+        mapper.resource("image", "images", controller=images.Controller())
+        mapper.resource("flavor", "flavors", controller=flavors.Controller())
         mapper.resource("sharedipgroup", "sharedipgroups",
-                controller=controllers.SharedIpGroupsController())
-
+                        controller=sharedipgroups.Controller())
         super(APIRouter, self).__init__(mapper)
