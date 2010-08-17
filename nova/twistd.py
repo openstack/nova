@@ -48,6 +48,13 @@ class TwistdServerOptions(ServerOptions):
     def parseArgs(self, *args):
         return
 
+class FlagParser(object):
+    def __init__(self, parser):
+        self.parser = parser
+
+    def Parse(self, s):
+        return self.parser(s)
+
 
 def WrapTwistedOptions(wrapped):
     class TwistedOptionsToFlags(wrapped):
@@ -79,7 +86,10 @@ def WrapTwistedOptions(wrapped):
             reflect.accumulateClassList(self.__class__, 'optParameters', twistd_params)
             for param in twistd_params:
                 key = param[0].replace('-', '_')
-                flags.DEFINE_string(key, param[2], str(param[-1]))
+                if len(param) > 4:
+                    flags.DEFINE(FlagParser(param[4]), key, param[2], str(param[3]), serializer=flags.ArgumentSerializer())
+                else:
+                    flags.DEFINE_string(key, param[2], str(param[3]))
 
         def _absorbHandlers(self):
             twistd_handlers = {}

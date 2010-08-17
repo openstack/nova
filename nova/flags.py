@@ -141,6 +141,7 @@ def _wrapper(func):
     return _wrapped
 
 
+DEFINE = _wrapper(gflags.DEFINE)
 DEFINE_string = _wrapper(gflags.DEFINE_string)
 DEFINE_integer = _wrapper(gflags.DEFINE_integer)
 DEFINE_bool = _wrapper(gflags.DEFINE_bool)
@@ -151,6 +152,8 @@ DEFINE_list = _wrapper(gflags.DEFINE_list)
 DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
+
+ArgumentSerializer = gflags.ArgumentSerializer
 
 
 def DECLARE(name, module_string, flag_values=FLAGS):
