@@ -33,10 +33,6 @@ from nova.auth import manager
 from nova.endpoint.rackspace import controllers
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
-
-
 class API(wsgi.Middleware):
     """WSGI entry point for all Rackspace API requests."""
 
