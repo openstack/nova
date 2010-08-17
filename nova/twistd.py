@@ -21,6 +21,7 @@ Twisted daemon helpers, specifically to parse out gFlags from twisted flags,
 manage pid files and support syslogging.
 """
 
+import gflags
 import logging
 import os
 import signal
@@ -47,6 +48,7 @@ FLAGS = flags.FLAGS
 class TwistdServerOptions(ServerOptions):
     def parseArgs(self, *args):
         return
+
 
 class FlagParser(object):
     def __init__(self, parser):
@@ -87,7 +89,9 @@ def WrapTwistedOptions(wrapped):
             for param in twistd_params:
                 key = param[0].replace('-', '_')
                 if len(param) > 4:
-                    flags.DEFINE(FlagParser(param[4]), key, param[2], str(param[3]), serializer=flags.ArgumentSerializer())
+                    flags.DEFINE(FlagParser(param[4]),
+                                 key, param[2], str(param[3]),
+                                 serializer=gflags.ArgumentSerializer())
                 else:
                     flags.DEFINE_string(key, param[2], str(param[3]))
 

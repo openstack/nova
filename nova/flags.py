@@ -153,8 +153,6 @@ DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
 
-ArgumentSerializer = gflags.ArgumentSerializer
-
 
 def DECLARE(name, module_string, flag_values=FLAGS):
     if module_string not in sys.modules:
