@@ -56,7 +56,7 @@ def old_lease(_mac, _ip, _hostname, _interface):
 
 
 def del_lease(_mac, ip, _hostname, _interface):
-    """Remove the leased IP from the databases."""
+    """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         service.VlanNetworkService().release_ip(ip)
     else:
@@ -69,9 +69,8 @@ def init_leases(interface):
     """Get the list of hosts for an interface."""
     net = model.get_network_by_interface(interface)
     res = ""
-    for host_name in net.hosts:
-        res += "%s\n" % linux_net.hostDHCP(net, host_name,
-                                           net.hosts[host_name])
+    for address in net.assigned_objs:
+        res += "%s\n" % linux_net.host_dhcp(address)
     return res
 
 

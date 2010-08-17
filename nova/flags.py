@@ -175,29 +175,25 @@ DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
-DEFINE_bool('fake_network', False, 'should we use fake network devices and addresses')
+DEFINE_bool('fake_network', False,
+            'should we use fake network devices and addresses')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
-DEFINE_string('ec2_url',
-                'http://127.0.0.1:8773/services/Cloud',
-                'Url to ec2 api server')
+DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
+              'Url to ec2 api server')
 
-DEFINE_string('default_image',
-                    'ami-11111',
-                    'default image to use, testing only')
-DEFINE_string('default_kernel',
-                    'aki-11111',
-                    'default kernel to use, testing only')
-DEFINE_string('default_ramdisk',
-                    'ari-11111',
-                    'default ramdisk to use, testing only')
-DEFINE_string('default_instance_type',
-                    'm1.small',
-                    'default instance type to use, testing only')
+DEFINE_string('default_image', 'ami-11111',
+              'default image to use, testing only')
+DEFINE_string('default_kernel', 'aki-11111',
+              'default kernel to use, testing only')
+DEFINE_string('default_ramdisk', 'ari-11111',
+              'default ramdisk to use, testing only')
+DEFINE_string('default_instance_type', 'm1.small',
+              'default instance type to use, testing only')
 
 DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
@@ -207,10 +203,8 @@ DEFINE_string('vpn_key_suffix',
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 # UNUSED
-DEFINE_string('node_availability_zone',
-                    'nova',
-                    'availability zone of this node')
-DEFINE_string('node_name',
-                    socket.gethostname(),
-                    'name of this node')
+DEFINE_string('node_availability_zone', 'nova',
+              'availability zone of this node')
+DEFINE_string('node_name', socket.gethostname(),
+              'name of this node')
 

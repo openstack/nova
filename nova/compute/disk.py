@@ -24,6 +24,7 @@ Includes injection of SSH PGP keys into authorized_keys file.
 import logging
 import os
 import tempfile
+
 from twisted.internet import defer
 
 from nova import exception
@@ -84,6 +85,7 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     yield execute('dd if=%s of=%s bs=%d seek=%d conv=notrunc,fsync'
                   % (infile, outfile, sector_size, primary_first))
 
+
 @defer.inlineCallbacks
 def inject_data(image, key=None, net=None, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
@@ -137,6 +139,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
         # remove loopback
         yield execute('sudo losetup -d %s' % device)
 
+
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
     sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
@@ -145,6 +148,7 @@ def _inject_key_into_fs(key, fs, execute=None):
     yield execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
     yield execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
+
 
 @defer.inlineCallbacks
 def _inject_net_into_fs(net, fs, execute=None):

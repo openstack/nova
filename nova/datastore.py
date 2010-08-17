@@ -124,11 +124,15 @@ class BasicModel(object):
             yield cls(identifier)
 
     @classmethod
-    @absorb_connection_error
     def associated_to(cls, foreign_type, foreign_id):
-        redis_set = cls._redis_association_name(foreign_type, foreign_id)
-        for identifier in Redis.instance().smembers(redis_set):
+        for identifier in cls.associated_keys(foreign_type, foreign_id):
             yield cls(identifier)
+
+    @classmethod
+    @absorb_connection_error
+    def associated_keys(cls, foreign_type, foreign_id):
+        redis_set = cls._redis_association_name(foreign_type, foreign_id)
+        return Redis.instance().smembers(redis_set) or []
 
     @classmethod
     def _redis_set_name(cls, kls_name):
@@ -138,7 +142,7 @@ class BasicModel(object):
     @classmethod
     def _redis_association_name(cls, foreign_type, foreign_id):
         return cls._redis_set_name("%s:%s:%s" %
-                                   (foreign_type, foreign_id, cls.__name__))
+                                   (foreign_type, foreign_id, cls._redis_name()))
 
     @property
     def identifier(self):

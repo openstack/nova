@@ -65,6 +65,7 @@ flags.DEFINE_boolean('fake_storage', False,
 class NoMoreBlades(exception.Error):
     pass
 
+
 def get_volume(volume_id):
     """ Returns a redis-backed volume object """
     volume_class = Volume
@@ -74,6 +75,7 @@ def get_volume(volume_id):
     if vol:
         return vol
     raise exception.Error("Volume does not exist")
+
 
 class VolumeService(service.Service):
     """
@@ -141,6 +143,7 @@ class VolumeService(service.Service):
         yield process.simple_execute(
                 "sudo vgcreate %s %s" % (FLAGS.volume_group,
                                          FLAGS.storage_dev))
+
 
 class Volume(datastore.BasicModel):
 
@@ -295,7 +298,6 @@ class Volume(datastore.BasicModel):
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
                                                        self['blade_id']), error_ok=1)
-
 
 
 class FakeVolume(Volume):

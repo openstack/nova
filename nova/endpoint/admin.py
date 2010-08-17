@@ -37,6 +37,7 @@ def user_dict(user, base64_file=None):
     else:
         return {}
 
+
 def project_dict(project):
     """Convert the project object to a result dict"""
     if project:
@@ -47,12 +48,14 @@ def project_dict(project):
     else:
         return {}
 
+
 def host_dict(host):
     """Convert a host model object to a result dict"""
     if host:
         return host.state
     else:
         return {}
+
 
 def admin_only(target):
     """Decorator for admin-only API calls"""
@@ -65,6 +68,7 @@ def admin_only(target):
             return {}
 
     return wrapper
+
 
 class AdminController(object):
     """
@@ -101,6 +105,21 @@ class AdminController(object):
         manager.AuthManager().delete_user(name)
 
         return True
+
+    @admin_only
+    def describe_roles(self, context, project_roles=True, **kwargs):
+        """Returns a list of allowed roles."""
+        roles = manager.AuthManager().get_roles(project_roles)
+        return { 'roles': [{'role': r} for r in roles]}
+
+    @admin_only
+    def describe_user_roles(self, context, user, project=None, **kwargs):
+        """Returns a list of roles for the given user.
+           Omitting project will return any global roles that the user has.
+           Specifying project will return only project specific roles.
+        """
+        roles = manager.AuthManager().get_user_roles(user, project=project)
+        return { 'roles': [{'role': r} for r in roles]}
 
     @admin_only
     def modify_user_role(self, context, user, role, project=None,

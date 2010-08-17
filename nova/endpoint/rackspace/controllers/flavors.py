@@ -1,0 +1,1 @@
+class FlavorsController(object): pass

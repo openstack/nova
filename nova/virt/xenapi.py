@@ -51,19 +51,34 @@ from nova.virt import images
 
 XenAPI = None
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('xenapi_connection_url',
                     None,
-                    'URL for connection to XenServer/Xen Cloud Platform.  Required if connection_type=xenapi.')
+                    'URL for connection to XenServer/Xen Cloud Platform.'
+                    ' Required if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_connection_username',
                     'root',
-                    'Username for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+                    'Username for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
 flags.DEFINE_string('xenapi_connection_password',
                     None,
-                    'Password for connection to XenServer/Xen Cloud Platform.  Used only if connection_type=xenapi.')
+                    'Password for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
 flags.DEFINE_float('xenapi_task_poll_interval',
                    0.5,
-                   'The interval used for polling of remote tasks (Async.VM.start, etc).  Used only if connection_type=xenapi.')
+                   'The interval used for polling of remote tasks '
+                   '(Async.VM.start, etc).  Used only if '
+                   'connection_type=xenapi.')
+
+
+XENAPI_POWER_STATE = {
+    'Halted'   : power_state.SHUTDOWN,
+    'Running'  : power_state.RUNNING,
+    'Paused'   : power_state.PAUSED,
+    'Suspended': power_state.SHUTDOWN, # FIXME
+    'Crashed'  : power_state.CRASHED
+}
 
 
 def get_connection(_):
@@ -89,7 +104,6 @@ def deferredToThread(f):
 
 
 class XenAPIConnection(object):
-
     def __init__(self, url, user, pw):
         self._conn = XenAPI.Session(url)
         self._conn.login_with_password(user, pw)
@@ -283,7 +297,7 @@ class XenAPIConnection(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_id)
         rec = self._conn.xenapi.VM.get_record(vm)
-        return {'state': power_state_from_xenapi[rec['power_state']],
+        return {'state': XENAPI_POWER_STATE[rec['power_state']],
                 'max_mem': long(rec['memory_static_max']) >> 10,
                 'mem': long(rec['memory_dynamic_max']) >> 10,
                 'num_cpu': rec['VCPUs_max'],
@@ -360,15 +374,6 @@ class XenAPIConnection(object):
 
     def _get_xenapi_host(self):
         return self._conn.xenapi.session.get_this_host(self._conn.handle)
-
-
-power_state_from_xenapi = {
-    'Halted'   : power_state.SHUTDOWN,
-    'Running'  : power_state.RUNNING,
-    'Paused'   : power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN, # FIXME
-    'Crashed'  : power_state.CRASHED
-}
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):
