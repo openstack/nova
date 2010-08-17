@@ -28,30 +28,12 @@ import time
 from nova import datastore
 from nova import exception as nova_exception
 from nova import flags
-from nova import utils
 from nova.auth import manager
 from nova.network import exception
 from nova.network import linux_net
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('networks_path', utils.abspath('../networks'),
-                    'Location to keep network config files')
-flags.DEFINE_integer('public_vlan', 1, 'VLAN for public IP addresses')
-flags.DEFINE_string('public_interface', 'vlan1',
-                        'Interface for public IP addresses')
-flags.DEFINE_string('bridge_dev', 'eth1',
-                        'network device for bridges')
-flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_integer('vlan_end', 4093, 'Last VLAN for private networks')
-flags.DEFINE_integer('network_size', 256,
-                        'Number of addresses in each private subnet')
-flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
-flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
-                        'Number of addresses reserved for vpn clients')
-flags.DEFINE_integer('cloudpipe_start_port', 12000,
-                        'Starting port for mapped CloudPipe external ports')
 
 logging.getLogger().setLevel(logging.DEBUG)
 

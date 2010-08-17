@@ -20,15 +20,18 @@
 Network Hosts are responsible for allocating ips and setting up network
 """
 
-from nova import datastore
+import logging
+
+import IPy
+from sqlalchemy.orm import exc
+
 from nova import flags
+from nova import models
 from nova import service
 from nova import utils
 from nova.auth import manager
 from nova.exception import NotFound
 from nova.network import exception
-from nova.network import model
-from nova.network import vpn
 from nova.network import linux_net
 
 FLAGS = flags.FLAGS
@@ -54,12 +57,18 @@ flags.DEFINE_string('flat_network_dns', '8.8.4.4',
 
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('vlan_end', 4093, 'Last VLAN for private networks')
+flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
+                    'Public IP for the cloudpipe VPN servers')
+flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
 flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
 flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
 flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
 flags.DEFINE_integer('cnt_vpn_clients', 5,
                         'Number of addresses reserved for vpn clients')
+
+# TODO(vish): some better type of dependency injection?
+_driver = linux_net
 
 def type_to_class(network_type):
     """Convert a network_type string into an actual Python class"""
@@ -70,16 +79,24 @@ def type_to_class(network_type):
     raise NotFound("Couldn't find %s network type" % network_type)
 
 
-def setup_compute_network(instance):
+def setup_compute_network(project_id):
     """Sets up the network on a compute host"""
-    srv = type_to_class(instance.project.network.kind)
-    srv.setup_compute_network(instance)
+    network = get_network_for_project(project_id)
+    srv = type_to_class(network.kind)
+    srv.setup_compute_network(network)
+
+
+def get_network_for_project(project_id):
+    """Get network allocated to project from datastore"""
+    project = manager.AuthManager().get_project(project_id)
+    if not project:
+        raise exception.NotFound()
+    return project.network
 
 
 def get_host_for_project(project_id):
     """Get host allocated to project from datastore"""
-    redis = datastore.Redis.instance()
-    return redis.get(_host_key(project_id))
+    return get_network_for_project(project_id).node_name
 
 
 class BaseNetworkService(service.Service):
@@ -87,169 +104,238 @@ class BaseNetworkService(service.Service):
 
     This class must be subclassed.
     """
-    def __init__(self, *args, **kwargs):
-        self.network = model.PublicNetworkController()
-        super(BaseNetworkService, self).__init__(*args, **kwargs)
 
-    def set_network_host(self, user_id, project_id, *args, **kwargs):
+    def set_network_host(self, project_id):
         """Safely sets the host of the projects network"""
-        redis = datastore.Redis.instance()
-        key = _host_key(project_id)
-        if redis.setnx(key, FLAGS.node_name):
-            self._on_set_network_host(user_id, project_id,
-                                      security_group='default',
-                                      *args, **kwargs)
-            return FLAGS.node_name
-        else:
-            return redis.get(key)
+        network = get_network_for_project(project_id)
+        if network.node_name:
+            return network.node_name
+        network.node_name = FLAGS.node_name
+        network.kind = FLAGS.network_type
+        try:
+            network.save()
+            self._on_set_network_host(network)
+        except exc.ConcurrentModificationError:
+            network.refresh() # FIXME is this implemented?
+        return network.node_name
 
-    def allocate_fixed_ip(self, user_id, project_id,
-                          security_group='default',
-                          *args, **kwargs):
-        """Subclass implements getting fixed ip from the pool"""
-        raise NotImplementedError()
+    def allocate_fixed_ip(self, project_id, instance_id, *args, **kwargs):
+        """Gets fixed ip from the pool"""
+        session = models.NovaBase.get_session()
+        query = session.query(models.FixedIp).filter_by(project_id=project_id)
+        query = query.filter_by(allocated=False).filter_by(reserved=False)
+        query = query.filter_by(leased=False)
+        while(True):
+            try:
+                fixed_ip = query.first()
+            except exc.NoResultFound:
+                raise exception.NoMoreAddresses()
+            # FIXME will this set backreference?
+            fixed_ip.instance_id = instance_id
+            fixed_ip.allocated = True
+            session.add(fixed_ip)
+            try:
+                fixed_ip.save()
+                return fixed_ip.ip_str
+            except exc.ConcurrentModificationError:
+                pass
 
-    def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
-        """Subclass implements return of ip to the pool"""
-        raise NotImplementedError()
+    def deallocate_fixed_ip(self, fixed_ip_str, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
+        fixed_ip.instance = None
+        fixed_ip.allocated = False
+        fixed_ip.save()
 
-    def _on_set_network_host(self, user_id, project_id,
-                              *args, **kwargs):
+
+    def _on_set_network_host(self, network, *args, **kwargs):
         """Called when this host becomes the host for a project"""
         pass
 
     @classmethod
-    def setup_compute_network(cls, instance, *args, **kwargs):
+    def setup_compute_network(cls, network):
         """Sets up matching network for compute hosts"""
         raise NotImplementedError()
 
-    def allocate_elastic_ip(self, user_id, project_id):
-        """Gets a elastic ip from the pool"""
-        # NOTE(vish): Replicating earlier decision to use 'public' as
-        #             mac address name, although this should probably
-        #             be done inside of the PublicNetworkController
-        return self.network.allocate_ip(user_id, project_id, 'public')
+    def allocate_elastic_ip(self, project_id):
+        """Gets an elastic ip from the pool"""
+        # FIXME: add elastic ips through manage command
+        session = models.NovaBase.get_session()
+        node_name = FLAGS.node_name
+        query = session.query(models.ElasticIp).filter_by(node_name=node_name)
+        query = query.filter_by(fixed_ip_id=None)
+        while(True):
+            try:
+                elastic_ip = query.first()
+            except exc.NoResultFound:
+                raise exception.NoMoreAddresses()
+            elastic_ip.project_id = project_id
+            session.add(elastic_ip)
+            try:
+                elastic_ip.save()
+                return elastic_ip.ip_str
+            except exc.ConcurrentModificationError:
+                pass
 
-    def associate_elastic_ip(self, elastic_ip, fixed_ip, instance_id):
+    def associate_elastic_ip(self, elastic_ip_str, fixed_ip_str):
         """Associates an elastic ip to a fixed ip"""
-        self.network.associate_address(elastic_ip, fixed_ip, instance_id)
+        elastic_ip = models.ElasticIp.find_by_ip_str(elastic_ip_str)
+        fixed_ip = models.FixedIp.find_by_ip_str(elastic_ip_str)
+        elastic_ip.fixed_ip = fixed_ip
+        _driver.bind_elastic_ip(elastic_ip_str)
+        _driver.ensure_elastic_forward(elastic_ip_str, fixed_ip_str)
+        elastic_ip.save()
 
-    def disassociate_elastic_ip(self, elastic_ip):
+    def disassociate_elastic_ip(self, elastic_ip_str):
         """Disassociates a elastic ip"""
-        self.network.disassociate_address(elastic_ip)
+        elastic_ip = models.ElasticIp.find_by_ip_str(elastic_ip_str)
+        fixed_ip_str = elastic_ip.fixed_ip.ip_str
+        elastic_ip.fixed_ip = None
+        _driver.unbind_elastic_ip(elastic_ip_str)
+        _driver.remove_elastic_forward(elastic_ip_str, fixed_ip_str)
+        elastic_ip.save()
 
-    def deallocate_elastic_ip(self, elastic_ip):
-        """Returns a elastic ip to the pool"""
-        self.network.deallocate_ip(elastic_ip)
+    def deallocate_elastic_ip(self, elastic_ip_str):
+        """Returns an elastic ip to the pool"""
+        elastic_ip = models.ElasticIp.find_by_ip_str(elastic_ip_str)
+        elastic_ip.project_id = None
+        elastic_ip.save()
 
 
 class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
     @classmethod
-    def setup_compute_network(cls, instance, *args, **kwargs):
+    def setup_compute_network(cls, network):
         """Network is created manually"""
         pass
 
-    def allocate_fixed_ip(self,
-                          user_id,
-                          project_id,
-                          security_group='default',
-                          *args, **kwargs):
-        """Gets a fixed ip from the pool
-
-        Flat network just grabs the next available ip from the pool
-        """
-        # NOTE(vish): Some automation could be done here.  For example,
-        #             creating the flat_network_bridge and setting up
-        #             a gateway.  This is all done manually atm.
-        redis = datastore.Redis.instance()
-        if not redis.exists('ips') and not len(redis.keys('instances:*')):
-            for fixed_ip in FLAGS.flat_network_ips:
-                redis.sadd('ips', fixed_ip)
-        fixed_ip = redis.spop('ips')
-        if not fixed_ip:
-            raise exception.NoMoreAddresses()
-        # TODO(vish): some sort of dns handling for hostname should
-        #             probably be done here.
-        return {'inject_network': True,
-                'network_type': FLAGS.network_type,
-                'mac_address': utils.generate_mac(),
-                'private_dns_name': str(fixed_ip),
-                'bridge_name': FLAGS.flat_network_bridge,
-                'network_network': FLAGS.flat_network_network,
-                'network_netmask': FLAGS.flat_network_netmask,
-                'network_gateway': FLAGS.flat_network_gateway,
-                'network_broadcast': FLAGS.flat_network_broadcast,
-                'network_dns': FLAGS.flat_network_dns}
-
-    def deallocate_fixed_ip(self, fixed_ip, *args, **kwargs):
-        """Returns an ip to the pool"""
-        datastore.Redis.instance().sadd('ips', fixed_ip)
-
+    def _on_set_network_host(self, network, *args, **kwargs):
+        """Called when this host becomes the host for a project"""
+        # FIXME should there be two types of network objects in the database?
+        network.injected = True
+        network.network_str=FLAGS.flat_network_network
+        network.netmask=FLAGS.flat_network_netmask
+        network.bridge=FLAGS.flat_network_bridge
+        network.gateway=FLAGS.flat_network_gateway
+        network.broadcast=FLAGS.flat_network_broadcast
+        network.dns=FLAGS.flat_network_dns
+        network.save()
+        # FIXME add public ips from flags to the datastore
 
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
-    def __init__(self, *args, **kwargs):
-        super(VlanNetworkService, self).__init__(*args, **kwargs)
-        # TODO(vish): some better type of dependency injection?
-        self.driver = linux_net
 
-    # pylint: disable=W0221
-    def allocate_fixed_ip(self,
-                          user_id,
-                          project_id,
-                          security_group='default',
-                          is_vpn=False,
-                          hostname=None,
+    def allocate_fixed_ip(self, project_id, instance_id,  is_vpn=False,
                           *args, **kwargs):
         """Gets a fixed ip from the pool"""
-        mac = utils.generate_mac()
-        net = model.get_project_network(project_id)
+        network = get_network_for_project(project_id)
         if is_vpn:
-            fixed_ip = net.allocate_vpn_ip(user_id,
-                                           project_id,
-                                           mac,
-                                           hostname)
+            fixed_ip = models.FixedIp.find_by_ip_str(network.vpn_private_ip_str)
+            if fixed_ip.allocated:
+                raise exception.AddressAlreadyAllocated()
+            # FIXME will this set backreference?
+            fixed_ip.instance_id = instance_id
+            fixed_ip.allocated = True
+            fixed_ip.save()
+            _driver.ensure_vlan_forward(network.vpn_public_ip_str,
+                                        network.vpn_public_port,
+                                        network.vpn_private_ip_str)
+            ip_str = fixed_ip.ip_str
         else:
-            fixed_ip = net.allocate_ip(user_id,
-                                       project_id,
-                                       mac,
-                                       hostname)
-        return {'network_type': FLAGS.network_type,
-                'bridge_name': net['bridge_name'],
-                'mac_address': mac,
-                'private_dns_name': fixed_ip}
+            parent = super(VlanNetworkService, self)
+            ip_str = parent.allocate_fixed_ip(project_id, instance_id)
+        _driver.ensure_vlan_bridge(network.vlan, network.bridge)
+        return ip_str
 
-    def deallocate_fixed_ip(self, fixed_ip,
-                            *args, **kwargs):
+    def deallocate_fixed_ip(self, fixed_ip_str):
         """Returns an ip to the pool"""
-        return model.get_network_by_address(fixed_ip).deallocate_ip(fixed_ip)
+        fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
+        if fixed_ip.leased:
+            logging.debug("Deallocating IP %s", fixed_ip_str)
+            fixed_ip.allocated = False
+            # keep instance id until release occurs
+            fixed_ip.save()
+        else:
+            self.release_ip(fixed_ip_str)
 
-    def lease_ip(self, fixed_ip):
+    def lease_ip(self, fixed_ip_str):
         """Called by bridge when ip is leased"""
-        return model.get_network_by_address(fixed_ip).lease_ip(fixed_ip)
+        fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
+        if not fixed_ip.allocated:
+            raise exception.AddressNotAllocated(fixed_ip_str)
+        logging.debug("Leasing IP %s", fixed_ip_str)
+        fixed_ip.leased = True
+        fixed_ip.save()
 
-    def release_ip(self, fixed_ip):
+    def release_ip(self, fixed_ip_str):
         """Called by bridge when ip is released"""
-        return model.get_network_by_address(fixed_ip).release_ip(fixed_ip)
+        fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
+        logging.debug("Releasing IP %s", fixed_ip_str)
+        fixed_ip.leased = False
+        fixed_ip.allocated = False
+        fixed_ip.instance = None
+        fixed_ip.save()
+
 
     def restart_nets(self):
         """Ensure the network for each user is enabled"""
-        for project in manager.AuthManager().get_projects():
-            model.get_project_network(project.id).express()
+        # FIXME
+        pass
 
-    def _on_set_network_host(self, user_id, project_id,
-                             *args, **kwargs):
+    def _on_set_network_host(self, network):
         """Called when this host becomes the host for a project"""
-        vpn.NetworkData.create(project_id)
+        # FIXME add indexes to datastore
+        # index = self._get_network_index(network)
+        index = 0
+        private_net = IPy.IP(FLAGS.private_range)
+        start = index * FLAGS.network_size
+        # minus one for the gateway.
+        network_str = "%s-%s" % (private_net[start],
+                                 private_net[start + FLAGS.network_size - 1])
+        vlan = FLAGS.vlan_start + index
+        project_net = IPy.IP(network_str)
+        network.network_str = network_str
+        network.netmask = project_net.netmask()
+        network.vlan = vlan
+        network.bridge = 'br%s' % vlan
+        network.gateway = project_net.gateway()
+        network.broadcast = project_net.broadast()
+        network.vpn_private_ip_str = project_net[2]
+        network.vpn_public_ip_str = FLAGS.vpn_ip
+        network.vpn_public_port = FLAGS.vpn_start + index
+        # create network fixed ips
+        BOTTOM_RESERVED = 3
+        TOP_RESERVED = 1 + FLAGS.vpn_client_cnt
+        for i in range(len(project_net)):
+            fixed_ip = models.FixedIp()
+            fixed_ip.ip_str = project_net[i]
+            if i < BOTTOM_RESERVED or i > TOP_RESERVED:
+                fixed_ip.reserved = True
+            fixed_ip.network = network
+            fixed_ip.save()
+
+
+    def _get_network_index(self, network):
+        """Get non-conflicting index for network"""
+        session = models.NovaBase.get_session()
+        node_name = FLAGS.node_name
+        query = session.query(models.NetworkIndex).filter_by(network_id=None)
+        while(True):
+            try:
+                network_index = query.first()
+            except exc.NoResultFound:
+                raise exception.NoMoreNetworks()
+            network_index.network = network
+            session.add(network_index)
+            try:
+                network_index.save()
+                return network_index.index
+            except exc.ConcurrentModificationError:
+                pass
+
 
     @classmethod
-    def setup_compute_network(cls, instance, *args, **kwargs):
+    def setup_compute_network(cls, network):
         """Sets up matching network for compute hosts"""
-        # NOTE(vish): Use BridgedNetwork instead of DHCPNetwork because
-        #             we don't want to run dnsmasq on the client machines
-        net = instance.project.network
-        # FIXME(ja): hack - uncomment this:
-        #linux_net.vlan_create(net)
-        #linux_net.bridge_create(net)
+        _driver.ensure_vlan_bridge(network.vlan, network.bridge)

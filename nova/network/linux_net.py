@@ -47,7 +47,7 @@ def bind_elastic_ip(elastic_ip):
 
 
 def unbind_elastic_ip(elastic_ip):
-    """Unbind a public ip from an interface"""
+    """Unbind a public ip from public interface"""
     _execute("sudo ip addr del %s dev %s" % (elastic_ip,
                                              FLAGS.public_interface))
 
@@ -87,8 +87,13 @@ def remove_elastic_forward(elastic_ip, fixed_ip):
         _remove_rule("FORWARD -d %s -p %s --dport %s -j ACCEPT"
                               % (fixed_ip, protocol, port))
 
-def vlan_create(vlan_num):
-    """Create a vlan on on a bridge device unless vlan already exists"""
+
+def ensure_vlan_bridge(vlan_num, bridge, network=None):
+    """Create a vlan and bridge unless they already exist"""
+    interface = ensure_vlan(vlan_num)
+    ensure_bridge(bridge, interface)
+
+def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
@@ -98,8 +103,7 @@ def vlan_create(vlan_num):
     return interface
 
 
-def bridge_create(interface, bridge, network=None):
-    """Create a bridge on an bridge unless it already exists"""
+def ensure_bridge(bridge, interface, network=None):
     if not _device_exists(bridge):
         logging.debug("Starting Bridge inteface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)

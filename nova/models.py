@@ -89,19 +89,6 @@ class Image(Base, NovaBase):
         if val != 'machine':
             assert(val is None)
 
-class Network(Base):
-    __tablename__ = 'networks'
-    id = Column(Integer, primary_key=True)
-    bridge = Column(String)
-    vlan = Column(String)
-    kind = Column(String)
-
-    @property
-    def bridge_name(self):
-        # HACK: this should be set on creation
-        return 'br100'
-    #vpn_port = Column(Integer)
-    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
 
 class PhysicalNode(Base):
     __tablename__ = 'physical_nodes'
@@ -186,24 +173,89 @@ class Volume(Base, NovaBase):
     node_name = Column(String)
     size = Column(Integer)
     alvailability_zone = Column(String) # FIXME foreign key?
-    instance_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     mountpoint = Column(String)
     attach_time = Column(String) # FIXME datetime
     status = Column(String) # FIXME enum?
     attach_status = Column(String) # FIXME enum
     delete_on_termination = Column(Boolean)
 
+
 class Network(Base, NovaBase):
     __tablename__ = 'networks'
+    id = Column(Integer, primary_key=True)
+    kind = Column(String)
 
+    injected = Column(Boolean)
+    network_str = Column(String)
+    netmask = Column(String)
+    bridge = Column(String)
+    gateway = Column(String)
+    broadcast = Column(String)
+    dns = Column(String)
+
+    vlan = Column(Integer)
+    vpn_public_ip_str = Column(String)
+    vpn_public_port = Column(Integer)
+    vpn_private_ip_str = Column(String)
+
+    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
+    # FIXME: should be physical_node_id = Column(Integer)
+    node_name = Column(String)
+
+
+class NetworkIndex(Base, NovaBase):
+    __tablename__ = 'network_indexes'
+    id = Column(Integer, primary_key=True)
+    index = Column(Integer)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
+    network = relationship(Network, backref=backref('vpn',
+                                                      uselist=False))
+
+
+#FIXME can these both come from the same baseclass?
 class FixedIp(Base, NovaBase):
     __tablename__ = 'fixed_ips'
+    id = Column(Integer, primary_key=True)
+    ip_str = Column(String, unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    network = relationship(Network, backref=backref('fixed_ips'))
+    instance = relationship(Instance, backref=backref('fixed_ip',
+                                                      uselist=False))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance, backref=backref('fixed_ip',
+                                                      uselist=False))
+    allocated = Column(Boolean)
+    leased = Column(Boolean)
+    reserved = Column(Boolean)
+
+    @classmethod
+    def find_by_ip_str(cls, ip_str):
+        session = NovaBase.get_session()
+        try:
+            return session.query(cls).filter_by(ip_str=ip_str).one()
+        except exc.NoResultFound:
+            raise exception.NotFound("No model for ip str %s" % ip_str)
 
 class ElasticIp(Base, NovaBase):
     __tablename__ = 'elastic_ips'
+    id = Column(Integer, primary_key=True)
+    ip_str = Column(String, unique=True)
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ip.id'), nullable=True)
+    fixed_ip = relationship(Network, backref=backref('elastic_ips'))
 
-class Vpn(Base, NovaBase):
-    __tablename__ = 'vpns'
+    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
+    # FIXME: should be physical_node_id = Column(Integer)
+    node_name = Column(String)
+
+    @classmethod
+    def find_by_ip_str(cls, ip_str):
+        session = NovaBase.get_session()
+        try:
+            return session.query(cls).filter_by(ip_str=ip_str).one()
+        except exc.NoResultFound:
+            raise exception.NotFound("No model for ip str %s" % ip_str)
+
 
 def create_session(engine=None):
     return NovaBase.get_session()
