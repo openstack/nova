@@ -23,9 +23,8 @@ from nova import exception
 from nova import flags
 from nova import utils
 
+
 FLAGS = flags.FLAGS
-
-
 flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
                     'Public IP for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_start_port', 1000,

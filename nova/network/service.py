@@ -21,17 +21,17 @@ Network Hosts are responsible for allocating ips and setting up network
 """
 
 from nova import datastore
+from nova import exception
 from nova import flags
 from nova import service
 from nova import utils
 from nova.auth import manager
-from nova.exception import NotFound
 from nova.network import exception
 from nova.network import model
 from nova.network import vpn
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 flags.DEFINE_string('network_type',
                     'flat',
                     'Service Class for Networking')
@@ -41,15 +41,15 @@ flags.DEFINE_list('flat_network_ips',
                   ['192.168.0.2', '192.168.0.3', '192.168.0.4'],
                   'Available ips for simple network')
 flags.DEFINE_string('flat_network_network', '192.168.0.0',
-                       'Network for simple network')
+                    'Network for simple network')
 flags.DEFINE_string('flat_network_netmask', '255.255.255.0',
-                       'Netmask for simple network')
+                    'Netmask for simple network')
 flags.DEFINE_string('flat_network_gateway', '192.168.0.1',
-                       'Broadcast for simple network')
+                    'Broadcast for simple network')
 flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
-                       'Broadcast for simple network')
+                    'Broadcast for simple network')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
-                       'Dns for simple network')
+                    'Dns for simple network')
 
 
 def type_to_class(network_type):
@@ -58,7 +58,7 @@ def type_to_class(network_type):
         return FlatNetworkService
     elif network_type == 'vlan':
         return VlanNetworkService
-    raise NotFound("Couldn't find %s network type" % network_type)
+    raise exception.NotFound("Couldn't find %s network type" % network_type)
 
 
 def setup_compute_network(network_type, user_id, project_id, security_group):

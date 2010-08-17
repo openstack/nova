@@ -36,10 +36,10 @@ from nova.endpoint import api
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string('boot_script_template',
                     utils.abspath('cloudpipe/bootscript.sh'),
                     'Template for script to run on cloudpipe instance boot')
+
 
 class CloudPipe(object):
     def __init__(self, cloud_controller):

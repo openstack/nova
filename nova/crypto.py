@@ -24,13 +24,14 @@ SSH keypairs and x509 certificates.
 import base64
 import hashlib
 import logging
-import M2Crypto
 import os
 import shutil
 import struct
 import tempfile
 import time
 import utils
+
+import M2Crypto
 
 from nova import exception
 from nova import flags
@@ -42,10 +43,12 @@ flags.DEFINE_string('keys_path', utils.abspath('../keys'), 'Where we keep our ke
 flags.DEFINE_string('ca_path', utils.abspath('../CA'), 'Where we keep our root CA')
 flags.DEFINE_boolean('use_intermediate_ca', False, 'Should we use intermediate CAs for each project?')
 
+
 def ca_path(project_id):
     if project_id:
         return "%s/INTER/%s/cacert.pem" % (FLAGS.ca_path, project_id)
     return "%s/cacert.pem" % (FLAGS.ca_path)
+
 
 def fetch_ca(project_id=None, chain=True):
     if not FLAGS.use_intermediate_ca:
@@ -59,6 +62,7 @@ def fetch_ca(project_id=None, chain=True):
     with open(ca_path(None),"r") as cafile:
         buffer += cafile.read()
     return buffer
+
 
 def generate_key_pair(bits=1024):
     # what is the magic 65537?
@@ -109,6 +113,7 @@ def generate_x509_cert(subject, bits=1024):
     shutil.rmtree(tmpdir)
     return (private_key, csr)
 
+
 def sign_csr(csr_text, intermediate=None):
     if not FLAGS.use_intermediate_ca:
         intermediate = None
@@ -121,6 +126,7 @@ def sign_csr(csr_text, intermediate=None):
         utils.runthis("Generating intermediate CA: %s", "sh geninter.sh %s" % (intermediate))
         os.chdir(start)
     return _sign_csr(csr_text, user_ca)
+
 
 def _sign_csr(csr_text, ca_folder):
     tmpfolder = tempfile.mkdtemp()

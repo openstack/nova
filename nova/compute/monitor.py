@@ -24,14 +24,15 @@ Instance Monitoring:
     in the object store.
 """
 
-import boto
-import boto.s3
 import datetime
 import logging
 import os
-import rrdtool
 import sys
 import time
+
+import boto
+import boto.s3
+import rrdtool
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
@@ -41,13 +42,12 @@ from nova.virt import connection as virt_connection
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer(
-    'monitoring_instances_delay', 5, 'Sleep time between updates')
-flags.DEFINE_integer(
-    'monitoring_instances_step', 300, 'Interval of RRD updates')
-flags.DEFINE_string(
-    'monitoring_rrd_path', '/var/nova/monitor/instances',
-    'Location of RRD files')
+flags.DEFINE_integer('monitoring_instances_delay', 5,
+                     'Sleep time between updates')
+flags.DEFINE_integer('monitoring_instances_step', 300,
+                     'Interval of RRD updates')
+flags.DEFINE_string('monitoring_rrd_path', '/var/nova/monitor/instances',
+                    'Location of RRD files')
 
 
 RRD_VALUES = {
@@ -61,7 +61,7 @@ RRD_VALUES = {
         'RRA:MAX:0.5:6:800',
         'RRA:MAX:0.5:24:800',
         'RRA:MAX:0.5:288:800',
-    ],
+        ],
     'net': [
         'DS:rx:COUNTER:600:0:1250000',
         'DS:tx:COUNTER:600:0:1250000',
@@ -73,7 +73,7 @@ RRD_VALUES = {
         'RRA:MAX:0.5:6:800',
         'RRA:MAX:0.5:24:800',
         'RRA:MAX:0.5:288:800',
-    ],
+        ],
     'disk': [
         'DS:rd:COUNTER:600:U:U',
         'DS:wr:COUNTER:600:U:U',
@@ -85,11 +85,12 @@ RRD_VALUES = {
         'RRA:MAX:0.5:6:800',
         'RRA:MAX:0.5:24:800',
         'RRA:MAX:0.5:444:800',
-    ]
-}
+        ]
+    }
 
 
 utcnow = datetime.datetime.utcnow
+
 
 def update_rrd(instance, name, data):
     """
@@ -105,6 +106,7 @@ def update_rrd(instance, name, data):
         filename,
         '%d:%s' % (timestamp, data)
     )
+
 
 def init_rrd(instance, name):
     """
@@ -124,6 +126,7 @@ def init_rrd(instance, name):
             '--start', '0',
             *RRD_VALUES[name]
         )
+
         
 def graph_cpu(instance, duration):
     """
@@ -147,6 +150,7 @@ def graph_cpu(instance, duration):
     )
     
     store_graph(instance.instance_id, filename)
+
 
 def graph_net(instance, duration):
     """
@@ -174,6 +178,7 @@ def graph_net(instance, duration):
     )
     
     store_graph(instance.instance_id, filename)
+
     
 def graph_disk(instance, duration):
     """
@@ -201,6 +206,7 @@ def graph_disk(instance, duration):
     )
     
     store_graph(instance.instance_id, filename)
+
 
 def store_graph(instance_id, filename):
     """
@@ -387,6 +393,7 @@ class InstanceMonitor(object, service.Service):
     """
     Monitors the running instances of the current machine.
     """
+
     def __init__(self):
         """
         Initialize the monitoring loop.

@@ -27,11 +27,11 @@ import urlparse
 
 from nova import flags
 from nova import process
-from nova.auth import signer
 from nova.auth import manager
+from nova.auth import signer
+
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_bool('use_s3', True,
                   'whether to get images from s3 or use local copy')
 
@@ -42,6 +42,7 @@ def fetch(image, path, user, project):
     else:
         f = _fetch_local_image
     return f(image, path, user, project)
+
 
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
@@ -66,12 +67,15 @@ def _fetch_s3_image(image, path, user, project):
     cmd += ['-o', path]
     return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
+
 def _fetch_local_image(image, path, user, project):
     source = _image_path('%s/image' % image)
     return process.simple_execute('cp %s %s' % (source, path))
 
+
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)
+
 
 def image_url(image):
     return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
