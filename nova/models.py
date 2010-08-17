@@ -193,6 +193,18 @@ class Volume(Base, NovaBase):
     attach_status = Column(String) # FIXME enum
     delete_on_termination = Column(Boolean)
 
+class Network(Base, NovaBase):
+    __tablename__ = 'networks'
+
+class FixedIp(Base, NovaBase):
+    __tablename__ = 'fixed_ips'
+
+class ElasticIp(Base, NovaBase):
+    __tablename__ = 'elastic_ips'
+
+class Vpn(Base, NovaBase):
+    __tablename__ = 'vpns'
+
 def create_session(engine=None):
     return NovaBase.get_session()
 
