@@ -24,6 +24,7 @@ import os
 # todo(ja): does the definition of network_path belong here?
 
 from nova import flags
+from nova import models
 from nova import utils
 
 FLAGS = flags.FLAGS
@@ -32,102 +33,96 @@ flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
+flags.DEFINE_string('networks_path', utils.abspath('../networks'),
+                    'Location to keep network config files')
+flags.DEFINE_string('public_interface', 'vlan1',
+                        'Interface for public IP addresses')
+flags.DEFINE_string('bridge_dev', 'eth0',
+                        'network device for bridges')
 
-def execute(cmd, addl_env=None):
-    """Wrapper around utils.execute for fake_network"""
-    if FLAGS.fake_network:
-        logging.debug("FAKE NET: %s", cmd)
-        return "fake", 0
-    else:
-        return utils.execute(cmd, addl_env=addl_env)
-
-
-def runthis(desc, cmd):
-    """Wrapper around utils.runthis for fake_network"""
-    if FLAGS.fake_network:
-        return execute(cmd)
-    else:
-        return utils.runthis(desc, cmd)
+def bind_elastic_ip(elastic_ip):
+    """Bind ip to public interface"""
+    _execute("sudo ip addr add %s dev %s" % (elastic_ip,
+                                             FLAGS.public_interface))
 
 
-def device_exists(device):
-    """Check if ethernet device exists"""
-    (_out, err) = execute("ifconfig %s" % device)
-    return not err
-
-
-def confirm_rule(cmd):
-    """Delete and re-add iptables rule"""
-    execute("sudo iptables --delete %s" % (cmd))
-    execute("sudo iptables -I %s" % (cmd))
-
-
-def remove_rule(cmd):
-    """Remove iptables rule"""
-    execute("sudo iptables --delete %s" % (cmd))
-
-
-def bind_public_ip(public_ip, interface):
-    """Bind ip to an interface"""
-    runthis("Binding IP to interface: %s",
-            "sudo ip addr add %s dev %s" % (public_ip, interface))
-
-
-def unbind_public_ip(public_ip, interface):
+def unbind_elastic_ip(elastic_ip):
     """Unbind a public ip from an interface"""
-    runthis("Binding IP to interface: %s",
-            "sudo ip addr del %s dev %s" % (public_ip, interface))
+    _execute("sudo ip addr del %s dev %s" % (elastic_ip,
+                                             FLAGS.public_interface))
 
 
-def vlan_create(net):
+def ensure_vlan_forward(public_ip, port, private_ip):
+    """Sets up forwarding rules for vlan"""
+    _confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT" % private_ip)
+    _confirm_rule(
+        "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+            % (public_ip, port, private_ip))
+
+DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
+
+def ensure_elastic_forward(elastic_ip, fixed_ip):
+    """Ensure elastic ip forwarding rule"""
+    _confirm_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
+                           % (elastic_ip, fixed_ip))
+    _confirm_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
+                           % (fixed_ip, elastic_ip))
+    # TODO(joshua): Get these from the secgroup datastore entries
+    _confirm_rule("FORWARD -d %s -p icmp -j ACCEPT"
+                           % (fixed_ip))
+    for (protocol, port) in DEFAULT_PORTS:
+        _confirm_rule(
+            "FORWARD -d %s -p %s --dport %s -j ACCEPT"
+            % (fixed_ip, protocol, port))
+
+def remove_elastic_forward(elastic_ip, fixed_ip):
+    """Remove forwarding for elastic ip"""
+    _remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
+                          % (elastic_ip, fixed_ip))
+    _remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
+                          % (fixed_ip, elastic_ip))
+    _remove_rule("FORWARD -d %s -p icmp -j ACCEPT"
+                          % (fixed_ip))
+    for (protocol, port) in DEFAULT_PORTS:
+        _remove_rule("FORWARD -d %s -p %s --dport %s -j ACCEPT"
+                              % (fixed_ip, protocol, port))
+
+def vlan_create(vlan_num):
     """Create a vlan on on a bridge device unless vlan already exists"""
-    if not device_exists("vlan%s" % net['vlan']):
-        logging.debug("Starting VLAN inteface for %s network", (net['vlan']))
-        execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, net['vlan']))
-        execute("sudo ifconfig vlan%s up" % (net['vlan']))
+    interface = "vlan%s" % vlan_num
+    if not _device_exists(interface):
+        logging.debug("Starting VLAN inteface %s", interface)
+        _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
+        _execute("sudo vconfig add %s %s" % (FLAGS.bridge.dev, vlan_num))
+        _execute("sudo ifconfig %s up" % interface)
+    return interface
 
 
-def bridge_create(net):
-    """Create a bridge on a vlan unless it already exists"""
-    if not device_exists(net['bridge_name']):
-        logging.debug("Starting Bridge inteface for %s network", (net['vlan']))
-        execute("sudo brctl addbr %s" % (net['bridge_name']))
-        execute("sudo brctl setfd %s 0" % (net.bridge_name))
-        # execute("sudo brctl setageing %s 10" % (net.bridge_name))
-        execute("sudo brctl stp %s off" % (net['bridge_name']))
-        execute("sudo brctl addif %s vlan%s" % (net['bridge_name'],
-                                                net['vlan']))
-        if net.bridge_gets_ip:
-            execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                (net['bridge_name'], net.gateway, net.broadcast, net.netmask))
-            confirm_rule("FORWARD --in-interface %s -j ACCEPT" %
-                         (net['bridge_name']))
+def bridge_create(interface, bridge, network=None):
+    """Create a bridge on an bridge unless it already exists"""
+    if not _device_exists(bridge):
+        logging.debug("Starting Bridge inteface for %s", interface)
+        _execute("sudo brctl addbr %s" % bridge)
+        _execute("sudo brctl setfd %s 0" % bridge)
+        # _execute("sudo brctl setageing %s 10" % bridge)
+        _execute("sudo brctl stp %s off" % bridge)
+        _execute("sudo brctl addif %s %s" % (bridge, interface))
+        if network:
+            _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
+                    (bridge,
+                     network.gateway,
+                     network.broadcast,
+                     network.netmask))
+            _confirm_rule("FORWARD --in-bridge %s -j ACCEPT" % bridge)
         else:
-            execute("sudo ifconfig %s up" % net['bridge_name'])
+            _execute("sudo ifconfig %s up" % bridge)
 
 
-def _dnsmasq_cmd(net):
-    """Builds dnsmasq command"""
-    cmd = ['sudo -E dnsmasq',
-        ' --strict-order',
-        ' --bind-interfaces',
-        ' --conf-file=',
-        ' --pid-file=%s' % dhcp_file(net['vlan'], 'pid'),
-        ' --listen-address=%s' % net.dhcp_listen_address,
-        ' --except-interface=lo',
-        ' --dhcp-range=%s,static,120s' % net.dhcp_range_start,
-        ' --dhcp-hostsfile=%s' % dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-script=%s' % bin_file('nova-dhcpbridge'),
-        ' --leasefile-ro']
-    return ''.join(cmd)
-
-
-def host_dhcp(address):
-    """Return a host string for an address object"""
-    return "%s,%s.novalocal,%s" % (address['mac'],
-                                   address['hostname'],
-                                   address.address)
+def host_dhcp(fixed_ip):
+    """Return a host string for a fixed ip"""
+    return "%s,%s.novalocal,%s" % (fixed_ip.instance.mac_address,
+                                   fixed_ip.instance.host_name,
+                                   fixed_ip.ip_str)
 
 
 # TODO(ja): if the system has restarted or pid numbers have wrapped
@@ -135,17 +130,21 @@ def host_dhcp(address):
 #           dnsmasq.  As well, sending a HUP only reloads the hostfile,
 #           so any configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded
-def start_dnsmasq(network):
+def update_dhcp(network):
     """(Re)starts a dnsmasq server for a given network
 
     if a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance
     """
-    with open(dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        for address in network.assigned_objs:
-            f.write("%s\n" % host_dhcp(address))
+    # FIXME abstract this
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(allocated=True)
+    fixed_ips = query.filter_by(network_id=network.id)
+    with open(_dhcp_file(network['vlan'], 'conf'), 'w') as f:
+        for fixed_ip in fixed_ips:
+            f.write("%s\n" % host_dhcp(fixed_ip))
 
-    pid = dnsmasq_pid_for(network)
+    pid = _dnsmasq_pid_for(network)
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
@@ -159,13 +158,55 @@ def start_dnsmasq(network):
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
-           'DNSMASQ_INTERFACE': network['bridge_name']}
-    execute(_dnsmasq_cmd(network), addl_env=env)
+           'DNSMASQ_INTERFACE': network.bridge_name}
+    _execute(_dnsmasq_cmd(network), addl_env=env)
 
 
-def stop_dnsmasq(network):
+def _execute(cmd, addl_env=None):
+    """Wrapper around utils._execute for fake_network"""
+    if FLAGS.fake_network:
+        logging.debug("FAKE NET: %s", cmd)
+        return "fake", 0
+    else:
+        return utils._execute(cmd, addl_env=addl_env)
+
+
+def _device_exists(device):
+    """Check if ethernet device exists"""
+    (_out, err) = _execute("ifconfig %s" % device)
+    return not err
+
+
+def _confirm_rule(cmd):
+    """Delete and re-add iptables rule"""
+    _execute("sudo iptables --delete %s" % (cmd))
+    _execute("sudo iptables -I %s" % (cmd))
+
+
+def _remove_rule(cmd):
+    """Remove iptables rule"""
+    _execute("sudo iptables --delete %s" % (cmd))
+
+
+def _dnsmasq_cmd(net):
+    """Builds dnsmasq command"""
+    cmd = ['sudo -E dnsmasq',
+        ' --strict-order',
+        ' --bind-interfaces',
+        ' --conf-file=',
+        ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
+        ' --listen-address=%s' % net.dhcp_listen_address,
+        ' --except-interface=lo',
+        ' --dhcp-range=%s,static,120s' % net.dhcp_range_start,
+        ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
+        ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
+        ' --leasefile-ro']
+    return ''.join(cmd)
+
+
+def _stop_dnsmasq(network):
     """Stops the dnsmasq instance for a given network"""
-    pid = dnsmasq_pid_for(network)
+    pid = _dnsmasq_pid_for(network)
 
     if pid:
         try:
@@ -174,18 +215,18 @@ def stop_dnsmasq(network):
             logging.debug("Killing dnsmasq threw %s", exc)
 
 
-def dhcp_file(vlan, kind):
+def _dhcp_file(vlan, kind):
     """Return path to a pid, leases or conf file for a vlan"""
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
 
 
-def bin_file(script):
+def _bin_file(script):
     """Return the absolute path to scipt in the bin directory"""
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
-def dnsmasq_pid_for(network):
+def _dnsmasq_pid_for(network):
     """Returns he pid for prior dnsmasq instance for a vlan
 
     Returns None if no pid file exists
@@ -193,7 +234,7 @@ def dnsmasq_pid_for(network):
     If machine has rebooted pid might be incorrect (caller should check)
     """
 
-    pid_file = dhcp_file(network['vlan'], 'pid')
+    pid_file = _dhcp_file(network.vlan, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

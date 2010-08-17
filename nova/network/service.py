@@ -52,6 +52,14 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                        'Dns for simple network')
 
+flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
+flags.DEFINE_integer('vlan_end', 4093, 'Last VLAN for private networks')
+flags.DEFINE_integer('network_size', 256,
+                        'Number of addresses in each private subnet')
+flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
+flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
+flags.DEFINE_integer('cnt_vpn_clients', 5,
+                        'Number of addresses reserved for vpn clients')
 
 def type_to_class(network_type):
     """Convert a network_type string into an actual Python class"""
@@ -72,11 +80,6 @@ def get_host_for_project(project_id):
     """Get host allocated to project from datastore"""
     redis = datastore.Redis.instance()
     return redis.get(_host_key(project_id))
-
-
-def _host_key(project_id):
-    """Returns redis host key for network"""
-    return "networkhost:%s" % project_id
 
 
 class BaseNetworkService(service.Service):
@@ -187,10 +190,11 @@ class FlatNetworkService(BaseNetworkService):
 
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
-    # NOTE(vish): A lot of the interactions with network/model.py can be
-    #             simplified and improved.  Also there it may be useful
-    #             to support vlans separately from dhcp, instead of having
-    #             both of them together in this class.
+    def __init__(self, *args, **kwargs):
+        super(VlanNetworkService, self).__init__(*args, **kwargs)
+        # TODO(vish): some better type of dependency injection?
+        self.driver = linux_net
+
     # pylint: disable=W0221
     def allocate_fixed_ip(self,
                           user_id,
