@@ -166,7 +166,6 @@ class NetworkTestCase(test.TrialTestCase):
             release_ip(mac3, address3, hostname, net.bridge_name)
         net = model.get_project_network(self.projects[0].id, "default")
         self.service.deallocate_fixed_ip(firstaddress)
-        release_ip(mac, firstaddress, hostname, net.bridge_name)
 
     def test_vpn_ip_and_port_looks_valid(self):
         """Ensure the vpn ip and port are reasonable"""
