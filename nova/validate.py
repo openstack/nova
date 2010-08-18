@@ -57,6 +57,7 @@ def rangetest(**argchecks):                 # validate ranges for both+defaults
         return onCall
     return onDecorator
 
+
 def typetest(**argchecks):
     def onDecorator(func):
         import sys

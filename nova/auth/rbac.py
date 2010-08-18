@@ -32,6 +32,7 @@ def allow(*roles):
         return wrapped_f
     return wrap
 
+
 def deny(*roles):
     def wrap(f):
         def wrapped_f(self, context, *args, **kwargs):
@@ -43,6 +44,7 @@ def deny(*roles):
             return f(self, context, *args, **kwargs)
         return wrapped_f
     return wrap
+
 
 def __matches_role(context, role):
     if role == 'all':

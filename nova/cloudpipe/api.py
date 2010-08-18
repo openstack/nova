@@ -21,8 +21,9 @@ Tornado REST API Request Handlers for CloudPipe
 """
 
 import logging
-import tornado.web
 import urllib
+
+import tornado.web
 
 from nova import crypto
 from nova.auth import manager

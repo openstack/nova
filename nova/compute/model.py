@@ -168,6 +168,7 @@ class Instance(datastore.BasicModel):
         self.unassociate_with("ip", self.state['private_dns_name'])
         return super(Instance, self).destroy()
 
+
 class Host(datastore.BasicModel):
     """A Host is the machine where a Daemon is running."""
 
@@ -234,6 +235,7 @@ class Daemon(datastore.BasicModel):
     def by_host(cls, hostname):
         for x in cls.associated_to("host", hostname):
             yield x
+
 
 class SessionToken(datastore.BasicModel):
     """This is a short-lived auth token that is passed through web requests"""

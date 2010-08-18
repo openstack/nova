@@ -20,7 +20,7 @@
 System-level utilities and helper functions.
 """
 
-from datetime import datetime, timedelta
+import datetime
 import inspect
 import logging
 import os
@@ -32,8 +32,10 @@ import sys
 from nova import exception
 from nova import flags
 
+
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
 
 def import_class(import_str):
     """Returns a class from a string including module and class"""
@@ -43,6 +45,7 @@ def import_class(import_str):
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError):
         raise exception.NotFound('Class %s cannot be found' % class_str)
+
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
@@ -126,16 +129,22 @@ def get_my_ip():
     '''
     if getattr(FLAGS, 'fake_tests', None):
         return '127.0.0.1'
-    csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    csock.connect(('www.google.com', 80))
-    (addr, port) = csock.getsockname()
-    csock.close()
-    return addr
+    try:
+        csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        csock.connect(('www.google.com', 80))
+        (addr, port) = csock.getsockname()
+        csock.close()
+        return addr
+    except socket.gaierror as ex:
+        logging.warn("Couldn't get IP, using 127.0.0.1 %s", ex)
+        return "127.0.0.1"
+
 
 def isotime(at=None):
     if not at:
-        at = datetime.utcnow()
+        at = datetime.datetime.utcnow()
     return at.strftime(TIME_FORMAT)
 
+
 def parse_isotime(timestr):
-    return datetime.strptime(timestr, TIME_FORMAT)
+    return datetime.datetime.strptime(timestr, TIME_FORMAT)

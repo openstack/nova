@@ -22,6 +22,7 @@ Process pool, still buggy right now.
 """
 
 import StringIO
+
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import protocol
@@ -190,6 +191,7 @@ class ProcessPool(object):
         self._pool.release()
         return retval
 
+
 class SharedPool(object):
     _instance = None
     def __init__(self):
@@ -197,6 +199,7 @@ class SharedPool(object):
             self.__class__._instance = ProcessPool()
     def __getattr__(self, key):
         return getattr(self._instance, key)
+
 
 def simple_execute(cmd, **kwargs):
     return SharedPool().simple_execute(cmd, **kwargs)

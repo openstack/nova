@@ -42,6 +42,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', utils.abspath('../images'),
                         'path to decrypted images')
 
+
 class Image(object):
     def __init__(self, image_id):
         self.image_id = image_id
@@ -148,7 +149,7 @@ class Image(object):
             'imageOwnerId': 'system',
             'isPublic': public,
             'architecture': 'x86_64',
-            'type': image_type,
+            'imageType': image_type,
             'state': 'available'
         }
         
@@ -195,7 +196,7 @@ class Image(object):
             'imageOwnerId': context.project.id,
             'isPublic': False, # FIXME: grab public from manifest
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
-            'type' : image_type
+            'imageType' : image_type
         }
 
         def write_state(state):

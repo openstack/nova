@@ -1,0 +1,6 @@
+This directory contains files that are required for the XenAPI support.  They
+should be installed in the XenServer / Xen Cloud Platform domain 0.
+
+Also, you need to
+
+chmod u+x /etc/xapi.d/plugins/objectstore

@@ -48,10 +48,14 @@ import hashlib
 import hmac
 import logging
 import urllib
-import boto       # NOTE(vish): for new boto
-import boto.utils # NOTE(vish): for old boto
+
+# NOTE(vish): for new boto
+import boto       
+# NOTE(vish): for old boto
+import boto.utils 
 
 from nova.exception import Error
+
 
 class Signer(object):
     """ hacked up code from boto/connection.py """
@@ -76,7 +80,6 @@ class Signer(object):
         if params['SignatureVersion'] == '2':
             return self._calc_signature_2(params, verb, server_string, path)
         raise Error('Unknown Signature Version: %s' % self.SignatureVersion)
-
 
     def _get_utf8_value(self, value):
         if not isinstance(value, str) and not isinstance(value, unicode):
@@ -132,6 +135,7 @@ class Signer(object):
         logging.debug('len(b64)=%d' % len(b64))
         logging.debug('base64 encoded digest: %s' % b64)
         return b64
+
 
 if __name__ == '__main__':
     print Signer('foo').generate({"SignatureMethod": 'HmacSHA256', 'SignatureVersion': '2'}, "get", "server", "/foo")
