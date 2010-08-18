@@ -25,6 +25,7 @@ Currently uses Ata-over-Ethernet.
 import logging
 
 from twisted.internet import defer
+from sqlalchemy.orm import exc
 
 from nova import exception
 from nova import flags
@@ -42,12 +43,6 @@ flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
 flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
-flags.DEFINE_integer('first_shelf_id',
-                    utils.last_octet(utils.get_my_ip()) * 10,
-                    'AoE starting shelf_id for this service')
-flags.DEFINE_integer('last_shelf_id',
-                    utils.last_octet(utils.get_my_ip()) * 10 + 9,
-                    'AoE starting shelf_id for this service')
 flags.DEFINE_string('aoe_export_dir',
                     '/var/lib/vblade-persist/vblades',
                     'AoE directory where exports are created')
@@ -120,7 +115,7 @@ class VolumeService(service.Service):
     @defer.inlineCallbacks
     def _exec_create_volume(self, vol):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         if str(vol.size) == '0':
             sizestr = '100M'
         else:
@@ -134,39 +129,52 @@ class VolumeService(service.Service):
     @defer.inlineCallbacks
     def _exec_delete_volume(self, vol):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             vol.volume_id), error_ok=1)
 
     @defer.inlineCallbacks
     def _setup_export(self, vol):
-        # FIXME: device needs to be a pool
-        device = "1.1"
-        if not device:
-            raise NoMoreBlades()
-        (shelf_id, blade_id) = device.split('.')
-        vol.aoe_device = "e%s.%s" % (shelf_id, blade_id)
-        vol.shelf_id = shelf_id
-        vol.blade_id = blade_id
+        # FIXME: abstract this. also remove vol.export_device.xxx cheat
+        session = models.NovaBase.get_session()
+        query = session.query(models.ExportDevice)
+        query = query.filter_by(volume=None)
+        print 'free devices', query.count()
+        while(True):
+            export_device = query.first()
+            if not export_device:
+                raise NoMoreBlades()
+            print 'volume id', vol.id
+            export_device.volume_id = vol.id
+            session.add(export_device)
+            try:
+                session.commit()
+                break
+            except exc.ConcurrentModificationError:
+                print 'concur'
+                pass
+        vol.aoe_device = "e%s.%s" % (export_device.shelf_id,
+                                     export_device.blade_id)
+        print 'id is', vol.export_device.volume_id
         vol.save()
         yield self._exec_setup_export(vol)
 
     @defer.inlineCallbacks
     def _exec_setup_export(self, vol):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (self, vol['shelf_id'],
-                 vol.blade_id,
+                (self, vol.export_device.shelf_id,
+                 vol.export_device.blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
                  vol.volume_id), error_ok=1)
 
     @defer.inlineCallbacks
     def _remove_export(self, vol):
-        if not vol.shelf_id or not vol.blade_id:
+        if not vol.export_device:
             defer.returnValue(False)
         yield self._exec_remove_export(vol)
         defer.returnValue(True)
@@ -174,17 +182,17 @@ class VolumeService(service.Service):
     @defer.inlineCallbacks
     def _exec_remove_export(self, vol):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (self, vol.shelf_id,
-                                                    vol.blade_id), error_ok=1)
+                "sudo vblade-persist stop %s %s" % (self, vol.export_device.shelf_id,
+                                                    vol.export_device.blade_id), error_ok=1)
         yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (self, vol.shelf_id,
-                                                       vol.blade_id), error_ok=1)
+                "sudo vblade-persist destroy %s %s" % (self, vol.export_device.shelf_id,
+                                                       vol.export_device.blade_id), error_ok=1)
     @defer.inlineCallbacks
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         # NOTE(vish): these commands sometimes sends output to stderr for warnings
         yield process.simple_execute("sudo vblade-persist auto all", error_ok=1)
         yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
@@ -192,7 +200,7 @@ class VolumeService(service.Service):
     @defer.inlineCallbacks
     def _exec_init_volumes(self):
         if FLAGS.fake_storage:
-            return
+            defer.returnValue(None)
         yield process.simple_execute(
                 "sudo pvcreate %s" % (FLAGS.storage_dev))
         yield process.simple_execute(

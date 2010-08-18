@@ -135,7 +135,7 @@ class BaseNetworkService(service.Service):
             fixed_ip.allocated = True
             session.add(fixed_ip)
             try:
-                fixed_ip.save()
+                session.commit()
                 return fixed_ip.ip_str
             except exc.ConcurrentModificationError:
                 pass
@@ -171,7 +171,7 @@ class BaseNetworkService(service.Service):
             elastic_ip.project_id = project_id
             session.add(elastic_ip)
             try:
-                elastic_ip.save()
+                session.commit()
                 return elastic_ip.ip_str
             except exc.ConcurrentModificationError:
                 pass
@@ -341,7 +341,7 @@ class VlanNetworkService(BaseNetworkService):
             network_index.network = network
             session.add(network_index)
             try:
-                network_index.save()
+                session.commit()
                 return network_index.index
             except exc.ConcurrentModificationError:
                 pass

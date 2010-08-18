@@ -199,8 +199,6 @@ class Volume(Base, NovaBase):
     __tablename__ = 'volumes'
     id = Column(Integer, primary_key=True)
     volume_id = Column(String)
-    shelf_id = Column(Integer)
-    blade_id = Column(Integer)
 
     user_id = Column(String) #, ForeignKey('users.id'), nullable=False)
     project_id = Column(String) #, ForeignKey('projects.id'))
@@ -215,6 +213,14 @@ class Volume(Base, NovaBase):
     status = Column(String) # FIXME enum?
     attach_status = Column(String) # FIXME enum
 
+class ExportDevice(Base, NovaBase):
+    __tablename__ = 'export_devices'
+    id = Column(Integer, primary_key=True)
+    shelf_id = Column(Integer)
+    blade_id = Column(Integer)
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume, backref=backref('export_device',
+                                                  uselist=False))
 
 class Network(Base, NovaBase):
     __tablename__ = 'networks'

@@ -39,6 +39,20 @@ class VolumeTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    fake_storage=True)
         self.volume = volume_service.VolumeService()
+        self.total_slots = 10
+        # FIXME this should test actual creation method
+        self.devices = []
+        for i in xrange(self.total_slots):
+            export_device = models.ExportDevice()
+            export_device.shelf_id = 0
+            export_device.blade_id = i
+            export_device.save()
+            self.devices.append(export_device)
+
+    def tearDown(self):
+        super(VolumeTestCase, self).tearDown()
+        for device in self.devices:
+            device.delete()
 
     @defer.inlineCallbacks
     def test_run_create_volume(self):
@@ -68,14 +82,11 @@ class VolumeTestCase(test.TrialTestCase):
         vol_size = '1'
         user_id = 'fake'
         project_id = 'fake'
-        num_shelves = FLAGS.last_shelf_id - FLAGS.first_shelf_id + 1
-        total_slots = FLAGS.blades_per_shelf * num_shelves
         vols = []
-        from nova import datastore
-        redis = datastore.Redis.instance()
-        for i in xrange(total_slots):
+        for i in xrange(self.total_slots):
             vid = yield self.volume.create_volume(vol_size, user_id, project_id)
             vols.append(vid)
+            print models.Volume.find(vid).export_device.volume_id
         self.assertFailure(self.volume.create_volume(vol_size,
                                                      user_id,
                                                      project_id),
@@ -127,13 +138,14 @@ class VolumeTestCase(test.TrialTestCase):
         shelf_blades = []
         def _check(volume_id):
             vol = models.Volume.find(volume_id)
-            shelf_blade = '%s.%s' % (vol.shelf_id, vol.blade_id)
+            shelf_blade = '%s.%s' % (vol.export_device.shelf_id,
+                                     vol.export_device.blade_id)
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)
             vol.delete()
         deferreds = []
-        for i in range(5):
+        for i in range(self.total_slots):
             d = self.volume.create_volume(vol_size, user_id, project_id)
             d.addCallback(_check)
             d.addErrback(self.fail)
