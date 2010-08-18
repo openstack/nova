@@ -122,11 +122,15 @@ def ensure_bridge(bridge, interface, network=None):
             _execute("sudo ifconfig %s up" % bridge)
 
 
-def host_dhcp(fixed_ip):
-    """Return a host string for a fixed ip"""
-    return "%s,%s.novalocal,%s" % (fixed_ip.instance.mac_address,
-                                   fixed_ip.instance.host_name,
-                                   fixed_ip.ip_str)
+def get_dhcp_hosts(network):
+    hosts = []
+    # FIXME abstract this
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(allocated=True)
+    fixed_ips = query.filter_by(network_id=network.id)
+    for fixed_ip in network.fixed_ips:
+        hosts.append(_host_dhcp(fixed_ip))
+    return '\n'.join(hosts)
 
 
 # TODO(ja): if the system has restarted or pid numbers have wrapped
@@ -140,13 +144,8 @@ def update_dhcp(network):
     if a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance
     """
-    # FIXME abstract this
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(allocated=True)
-    fixed_ips = query.filter_by(network_id=network.id)
     with open(_dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        for fixed_ip in fixed_ips:
-            f.write("%s\n" % host_dhcp(fixed_ip))
+        f.write(get_dhcp_hosts(network))
 
     pid = _dnsmasq_pid_for(network)
 
@@ -164,6 +163,13 @@ def update_dhcp(network):
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
            'DNSMASQ_INTERFACE': network.bridge_name}
     _execute(_dnsmasq_cmd(network), addl_env=env)
+
+
+def _host_dhcp(fixed_ip):
+    """Return a host string for a fixed ip"""
+    return "%s,%s.novalocal,%s" % (fixed_ip.instance.mac_address,
+                                   fixed_ip.instance.host_name,
+                                   fixed_ip.ip_str)
 
 
 def _execute(cmd, addl_env=None):

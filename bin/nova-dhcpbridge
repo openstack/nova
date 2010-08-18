@@ -34,7 +34,6 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova.network import linux_net
-from nova.network import model
 from nova.network import service
 
 FLAGS = flags.FLAGS
@@ -43,11 +42,12 @@ FLAGS = flags.FLAGS
 def add_lease(_mac, ip, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
+        logging.debug("leasing_ip")
         service.VlanNetworkService().lease_ip(ip)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "lease_ip",
-                  "args": {"fixed_ip": ip}})
+                  "args": {"fixed_ip_str": ip}})
 
 
 def old_lease(_mac, _ip, _hostname, _interface):
@@ -58,20 +58,18 @@ def old_lease(_mac, _ip, _hostname, _interface):
 def del_lease(_mac, ip, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
+        logging.debug("releasing_ip")
         service.VlanNetworkService().release_ip(ip)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "release_ip",
-                  "args": {"fixed_ip": ip}})
+                  "args": {"fixed_ip_str": ip}})
 
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
-    net = model.get_network_by_interface(interface)
-    res = ""
-    for address in net.assigned_objs:
-        res += "%s\n" % linux_net.host_dhcp(address)
-    return res
+    network = service.get_network_by_interface(interface)
+    return linux_net.get_dhcp_hosts(network)
 
 
 def main():
@@ -80,6 +78,9 @@ def main():
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
+    LOG_FILENAME = 'example.log'
+    logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+    logging.debug("this is a test")
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8

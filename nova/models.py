@@ -214,7 +214,6 @@ class Volume(Base, NovaBase):
     attach_time = Column(String) # FIXME datetime
     status = Column(String) # FIXME enum?
     attach_status = Column(String) # FIXME enum
-    delete_on_termination = Column(Boolean)
 
 
 class Network(Base, NovaBase):
@@ -222,7 +221,7 @@ class Network(Base, NovaBase):
     id = Column(Integer, primary_key=True)
     kind = Column(String)
 
-    injected = Column(Boolean)
+    injected = Column(Boolean, default=False)
     network_str = Column(String)
     netmask = Column(String)
     bridge = Column(String)
@@ -259,9 +258,9 @@ class FixedIp(Base, NovaBase):
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance, backref=backref('fixed_ip',
                                                       uselist=False))
-    allocated = Column(Boolean)
-    leased = Column(Boolean)
-    reserved = Column(Boolean)
+    allocated = Column(Boolean, default=False)
+    leased = Column(Boolean, default=False)
+    reserved = Column(Boolean, default=False)
 
     @classmethod
     def find_by_ip_str(cls, ip_str):

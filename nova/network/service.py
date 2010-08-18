@@ -121,11 +121,10 @@ class BaseNetworkService(service.Service):
 
     def allocate_fixed_ip(self, project_id, instance_id, *args, **kwargs):
         """Gets fixed ip from the pool"""
-        print "allocating", project_id, instance_id
         network = get_network_for_project(project_id)
         session = models.NovaBase.get_session()
         query = session.query(models.FixedIp).filter_by(network_id=network.id)
-        query = query.filter_by(allocated=False).filter_by(reserved=False)
+        query = query.filter_by(reserved=False).filter_by(allocated=False)
         query = query.filter_by(leased=False)
         while(True):
             fixed_ip = query.first()
