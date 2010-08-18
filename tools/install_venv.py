@@ -37,7 +37,7 @@ def die(message, *args):
   sys.exit(1)
 
 
-def run_command(cmd, redirect_output=True, check_exit_code=False):
+def run_command(cmd, redirect_output=True, check_exit_code=True):
   """
   Runs a command in an out-of-process shell, returning the
   output of that command.  Working directory is ROOT.

@@ -249,14 +249,14 @@ class Volume(datastore.BasicModel):
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   self['volume_id'],
                                                   FLAGS.volume_group),
-                check_exit_code=True)
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _delete_lv(self):
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
                                             self['volume_id']), 
-                check_exit_code=True)
+                terminate_on_stderr=False)
 
     @property
     def __devices_key(self):
@@ -285,7 +285,7 @@ class Volume(datastore.BasicModel):
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
                  self['volume_id']), 
-                 check_exit_code=True)
+                 terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _remove_export(self):
@@ -299,11 +299,11 @@ class Volume(datastore.BasicModel):
         yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self['shelf_id'],
                                                     self['blade_id']), 
-                check_exit_code=True)
+                terminate_on_stderr=False)
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
                                                        self['blade_id']), 
-                check_exit_code=True)
+                terminate_on_stderr=False)
 
 
 class FakeVolume(Volume):
