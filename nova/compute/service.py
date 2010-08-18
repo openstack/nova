@@ -25,25 +25,19 @@ Compute Service:
 """
 
 import base64
-import json
 import logging
 import os
-import sys
 
 from twisted.internet import defer
-from twisted.internet import task
 
 from nova import exception
 from nova import flags
 from nova import process
 from nova import service
 from nova import utils
-from nova.compute import disk
 from nova import models
 from nova.compute import power_state
-from nova.compute.instance_types import INSTANCE_TYPES
 from nova.network import service as network_service
-from nova.objectstore import image # for image_path flag
 from nova.virt import connection as virt_connection
 from nova.volume import service as volume_service
 
@@ -107,14 +101,15 @@ class ComputeService(service.Service):
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
-        if str(instance_id) in self._conn.list_instances():
+        inst = models.Instance.find(instance_id)
+        if inst.name in self._conn.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("Starting instance %s..." % (instance_id))
         inst = models.Instance.find(instance_id)
         # NOTE(vish): passing network type allows us to express the
         #             network without making a call to network to find
         #             out which type of network to setup
-        network_service.setup_compute_network(inst)
+        network_service.setup_compute_network(inst.project_id)
         inst.node_name = FLAGS.node_name
         inst.save()
 

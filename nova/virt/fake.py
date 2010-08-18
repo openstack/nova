@@ -103,7 +103,7 @@ class FakeConnection(object):
         """
 
         fake_instance = FakeInstance()
-        self.instances[instance.id] = fake_instance
+        self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
         return defer.succeed(None)
 
@@ -132,7 +132,7 @@ class FakeConnection(object):
         del self.instances[instance.name]
         return defer.succeed(None)
 
-    def get_info(self, instance_id):
+    def get_info(self, instance_name):
         """
         Get a block of information about the given instance.  This is returned
         as a dictionary containing 'state': The power_state of the instance,
@@ -141,14 +141,14 @@ class FakeConnection(object):
         of virtual CPUs the instance has, 'cpu_time': The total CPU time used
         by the instance, in nanoseconds.
         """
-        i = self.instances[instance_id]
+        i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
                 'mem': 0,
                 'num_cpu': 2,
                 'cpu_time': 0}
 
-    def list_disks(self, instance_id):
+    def list_disks(self, instance_name):
         """
         Return the IDs of all the virtual disks attached to the specified
         instance, as a list.  These IDs are opaque to the caller (they are
@@ -160,7 +160,7 @@ class FakeConnection(object):
         """
         return ['A_DISK']
 
-    def list_interfaces(self, instance_id):
+    def list_interfaces(self, instance_name):
         """
         Return the IDs of all the virtual network interfaces attached to the
         specified instance, as a list.  These IDs are opaque to the caller
@@ -173,10 +173,10 @@ class FakeConnection(object):
         """
         return ['A_VIF']
 
-    def block_stats(self, instance_id, disk_id):
+    def block_stats(self, instance_name, disk_id):
         """
         Return performance counters associated with the given disk_id on the
-        given instance_id.  These are returned as [rd_req, rd_bytes, wr_req,
+        given instance_name.  These are returned as [rd_req, rd_bytes, wr_req,
         wr_bytes, errs], where rd indicates read, wr indicates write, req is
         the total number of I/O requests made, bytes is the total number of
         bytes transferred, and errs is the number of requests held up due to a
@@ -194,7 +194,7 @@ class FakeConnection(object):
         """
         return [0L, 0L, 0L, 0L, null]
 
-    def interface_stats(self, instance_id, iface_id):
+    def interface_stats(self, instance_name, iface_id):
         """
         Return performance counters associated with the given iface_id on the
         given instance_id.  These are returned as [rx_bytes, rx_packets,

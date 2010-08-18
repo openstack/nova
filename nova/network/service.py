@@ -56,7 +56,7 @@ flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
 
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_integer('vlan_end', 4093, 'Last VLAN for private networks')
+flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
                     'Public IP for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
@@ -90,7 +90,7 @@ def get_network_for_project(project_id):
     """Get network allocated to project from datastore"""
     project = manager.AuthManager().get_project(project_id)
     if not project:
-        raise exception.NotFound()
+        raise exception.NotFound("Couldn't find project %s" % project_id)
     return project.network
 
 
@@ -121,14 +121,15 @@ class BaseNetworkService(service.Service):
 
     def allocate_fixed_ip(self, project_id, instance_id, *args, **kwargs):
         """Gets fixed ip from the pool"""
+        print "allocating", project_id, instance_id
+        network = get_network_for_project(project_id)
         session = models.NovaBase.get_session()
-        query = session.query(models.FixedIp).filter_by(project_id=project_id)
+        query = session.query(models.FixedIp).filter_by(network_id=network.id)
         query = query.filter_by(allocated=False).filter_by(reserved=False)
         query = query.filter_by(leased=False)
         while(True):
-            try:
-                fixed_ip = query.first()
-            except exc.NoResultFound:
+            fixed_ip = query.first()
+            if not fixed_ip:
                 raise network_exception.NoMoreAddresses()
             # FIXME will this set backreference?
             fixed_ip.instance_id = instance_id
@@ -225,6 +226,18 @@ class FlatNetworkService(BaseNetworkService):
 
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
+    def __init__(self, *args, **kwargs):
+        super(VlanNetworkService, self).__init__(*args, **kwargs)
+        self._ensure_network_indexes()
+
+    def _ensure_network_indexes(self):
+        # NOTE(vish): this should probably be removed and added via
+        #             admin command or fixtures
+        if models.NetworkIndex.count() == 0:
+            for i in range(FLAGS.num_networks):
+                network_index = models.NetworkIndex()
+                network_index.index = i
+                network_index.save()
 
     def allocate_fixed_ip(self, project_id, instance_id,  is_vpn=False,
                           *args, **kwargs):
@@ -285,9 +298,7 @@ class VlanNetworkService(BaseNetworkService):
 
     def _on_set_network_host(self, network):
         """Called when this host becomes the host for a project"""
-        # FIXME add indexes to datastore
-        # index = self._get_network_index(network)
-        index = 0
+        index = self._get_network_index(network)
         private_net = IPy.IP(FLAGS.private_range)
         start = index * FLAGS.network_size
         # minus one for the gateway.
@@ -296,21 +307,22 @@ class VlanNetworkService(BaseNetworkService):
         vlan = FLAGS.vlan_start + index
         project_net = IPy.IP(network_str)
         network.network_str = network_str
-        network.netmask = project_net.netmask()
+        network.netmask = str(project_net.netmask())
         network.vlan = vlan
         network.bridge = 'br%s' % vlan
-        network.gateway = project_net.gateway()
-        network.broadcast = project_net.broadast()
-        network.vpn_private_ip_str = project_net[2]
+        network.gateway = str(project_net[1])
+        network.broadcast = str(project_net.broadcast())
+        network.vpn_private_ip_str = str(project_net[2])
         network.vpn_public_ip_str = FLAGS.vpn_ip
         network.vpn_public_port = FLAGS.vpn_start + index
         # create network fixed ips
         BOTTOM_RESERVED = 3
-        TOP_RESERVED = 1 + FLAGS.vpn_client_cnt
-        for i in range(len(project_net)):
+        TOP_RESERVED = 1 + FLAGS.cnt_vpn_clients
+        num_ips = len(project_net)
+        for i in range(num_ips):
             fixed_ip = models.FixedIp()
-            fixed_ip.ip_str = project_net[i]
-            if i < BOTTOM_RESERVED or i > TOP_RESERVED:
+            fixed_ip.ip_str = str(project_net[i])
+            if i < BOTTOM_RESERVED or num_ips - i < TOP_RESERVED:
                 fixed_ip.reserved = True
             fixed_ip.network = network
             fixed_ip.save()

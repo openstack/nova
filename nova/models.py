@@ -1,10 +1,42 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""
+SQLAlchemy models for nova data
+"""
+import os
+
 from sqlalchemy.orm import relationship, backref, validates, exc
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import Table, Column, Integer, String
+from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
+
 from nova import auth
 from nova import exception
+from nova import flags
+
+FLAGS=flags.FLAGS
 
 Base = declarative_base()
+
+flags.DEFINE_string('sql_connection',
+                    'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+                    'connection string for sql database')
 
 class NovaBase(object):
     created_at = Column(DateTime)
@@ -17,7 +49,7 @@ class NovaBase(object):
         if NovaBase._engine is not None:
            return NovaBase._engine
         from sqlalchemy import create_engine
-        NovaBase._engine = create_engine('sqlite:////root/nova.sqlite', echo=False)
+        NovaBase._engine = create_engine(FLAGS.sql_connection, echo=False)
         Base.metadata.create_all(NovaBase._engine)
         return NovaBase._engine
 
@@ -33,6 +65,11 @@ class NovaBase(object):
     def all(cls):
         session = NovaBase.get_session()
         return session.query(cls).all()
+
+    @classmethod
+    def count(cls):
+        session = NovaBase.get_session()
+        return session.query(cls).count()
 
     @classmethod
     def find(cls, obj_id):
@@ -136,7 +173,6 @@ class Instance(Base, NovaBase):
 
     reservation_id = Column(String)
     mac_address = Column(String)
-    fixed_ip = Column(String)
 
     def set_state(self, state_code, state_description=None):
         from nova.compute import power_state
@@ -209,7 +245,7 @@ class NetworkIndex(Base, NovaBase):
     id = Column(Integer, primary_key=True)
     index = Column(Integer)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('vpn',
+    network = relationship(Network, backref=backref('network_index',
                                                       uselist=False))
 
 
@@ -220,8 +256,6 @@ class FixedIp(Base, NovaBase):
     ip_str = Column(String, unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
     network = relationship(Network, backref=backref('fixed_ips'))
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance, backref=backref('fixed_ip',
                                                       uselist=False))
@@ -241,8 +275,8 @@ class ElasticIp(Base, NovaBase):
     __tablename__ = 'elastic_ips'
     id = Column(Integer, primary_key=True)
     ip_str = Column(String, unique=True)
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ip.id'), nullable=True)
-    fixed_ip = relationship(Network, backref=backref('elastic_ips'))
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
+    fixed_ip = relationship(FixedIp, backref=backref('elastic_ips'))
 
     project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
     # FIXME: should be physical_node_id = Column(Integer)
