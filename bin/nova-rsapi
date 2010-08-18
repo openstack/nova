@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
