@@ -23,7 +23,7 @@ Properties of an object stored within a bucket.
 import os
 
 import nova.crypto
-from nova.exception import NotFound, NotAuthorized
+from nova import exception
 
 
 class Object(object):
@@ -33,7 +33,7 @@ class Object(object):
         self.key = key
         self.path = bucket._object_path(key)
         if not os.path.isfile(self.path):
-            raise NotFound
+            raise exception.NotFound
 
     def __repr__(self):
         return "<Object %s/%s>" % (self.bucket, self.key)

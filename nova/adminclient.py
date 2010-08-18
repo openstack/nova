@@ -20,6 +20,7 @@ Nova User API client library.
 """
 
 import base64
+
 import boto
 from boto.ec2.regioninfo import RegionInfo
 
@@ -57,6 +58,30 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+
+class UserRole(object):
+    """
+    Information about a Nova user's role, as parsed through SAX.
+    Fields include:
+        role
+    """
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.role = None
+    
+    def __repr__(self):
+        return 'UserRole:%s' % self.role
+
+    def startElement(self, name, attrs, connection):
+        return None
+        
+    def endElement(self, name, value, connection):
+        if name == 'role':
+            self.role = value
+        else:
+            setattr(self, name, str(value))
+
+
 class ProjectInfo(object):
     """
     Information about a Nova project, as parsed through SAX
@@ -92,12 +117,14 @@ class ProjectInfo(object):
         else:
             setattr(self, name, str(value))
 
+
 class ProjectMember(object):
     """
     Information about a Nova project member, as parsed through SAX.
     Fields include:
         memberId
     """
+
     def __init__(self, connection=None):
         self.connection = connection
         self.memberId = None
@@ -113,8 +140,8 @@ class ProjectMember(object):
             self.memberId = value
         else:
             setattr(self, name, str(value))
-            
 
+            
 class HostInfo(object):
     """
     Information about a Nova Host, as parsed through SAX:
@@ -141,6 +168,7 @@ class HostInfo(object):
     # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
         setattr(self, name, value)
+
 
 class NovaAdminClient(object):
     def __init__(self, clc_ip='127.0.0.1', region='nova', access_key='admin',
@@ -195,6 +223,24 @@ class NovaAdminClient(object):
     def delete_user(self, username):
         """ deletes a user """
         return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
+
+    def get_roles(self, project_roles=True):
+        """Returns a list of available roles."""
+        return self.apiconn.get_list('DescribeRoles',
+                                     {'ProjectRoles': project_roles},
+                                     [('item', UserRole)])
+
+    def get_user_roles(self, user, project=None):
+        """Returns a list of roles for the given user.
+           Omitting project will return any global roles that the user has.
+           Specifying project will return only project specific roles.
+        """
+        params = {'User':user}
+        if project:
+            params['Project'] = project
+        return self.apiconn.get_list('DescribeUserRoles',
+                                     params,
+                                     [('item', UserRole)])
 
     def add_user_role(self, user, role, project=None):
         """
@@ -292,9 +338,13 @@ class NovaAdminClient(object):
                   'Operation': operation}
         return self.apiconn.get_status('ModifyProjectMember', params)
 
-    def get_zip(self, username):
-        """ returns the content of a zip file containing novarc and access credentials. """
-        return self.apiconn.get_object('GenerateX509ForUser', {'Name': username}, UserInfo).file
+    def get_zip(self, user, project):
+        """
+        Returns the content of a zip file containing novarc and access credentials.
+        """
+        params = {'Name': user, 'Project': project}
+        zip = self.apiconn.get_object('GenerateX509ForUser', params, UserInfo)
+        return zip.file
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])

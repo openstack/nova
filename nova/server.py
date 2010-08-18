@@ -52,13 +52,8 @@ def stop(pidfile):
     """
     # Get the pid from the pidfile
     try:
-        pf = file(pidfile,'r')
-        pid = int(pf.read().strip())
-        pf.close()
+        pid = int(open(pidfile,'r').read().strip())
     except IOError:
-        pid = None
-
-    if not pid:
         message = "pidfile %s does not exist. Daemon not running?\n"
         sys.stderr.write(message % pidfile)
         return # not an error in a restart
@@ -79,14 +74,15 @@ def stop(pidfile):
 
 
 def serve(name, main):
+    """Controller for server"""
     argv = FLAGS(sys.argv)
 
     if not FLAGS.pidfile:
         FLAGS.pidfile = '%s.pid' % name
 
-    logging.debug("Full set of FLAGS: \n\n\n" )
+    logging.debug("Full set of FLAGS: \n\n\n")
     for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None) ))
+        logging.debug("%s : %s", flag, FLAGS.get(flag, None))
 
     action = 'start'
     if len(argv) > 1:
@@ -102,7 +98,11 @@ def serve(name, main):
     else:
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
+    daemonize(argv, name, main)
 
+
+def daemonize(args, name, main):
+    """Does the work of daemonizing the process"""
     logging.getLogger('amqplib').setLevel(logging.WARN)
     if FLAGS.daemonize:
         logger = logging.getLogger()
@@ -115,7 +115,7 @@ def serve(name, main):
         else:
             if not FLAGS.logfile:
                 FLAGS.logfile = '%s.log' % name
-            logfile = logging.handlers.FileHandler(FLAGS.logfile)
+            logfile = logging.FileHandler(FLAGS.logfile)
             logfile.setFormatter(formatter)
             logger.addHandler(logfile)
         stdin, stdout, stderr = None, None, None
@@ -137,4 +137,4 @@ def serve(name, main):
             stdout=stdout,
             stderr=stderr
             ):
-        main(argv)
+        main(args)

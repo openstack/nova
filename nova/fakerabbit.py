@@ -16,11 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" Based a bit on the carrot.backeds.queue backend... but a lot better """
+"""Based a bit on the carrot.backeds.queue backend... but a lot better."""
 
-from carrot.backends import base
 import logging
 import Queue as queue
+
+from carrot.backends import base
 
 
 class Message(base.BaseMessage):

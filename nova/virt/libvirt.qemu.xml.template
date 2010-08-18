@@ -1,4 +1,4 @@
-<domain type='kvm'>
+<domain type='${type}'>
     <name>${name}</name>
     <os>
         <type>hvm</type>
@@ -16,8 +16,6 @@
     <memory>${memory_kb}</memory>
     <vcpu>${vcpus}</vcpu>
     <devices>
-        <graphics type='vnc' port='-1' autoport='yes' />
-        <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
             <source file='${disk}'/>
             <target dev='vda' bus='virtio'/>

@@ -28,6 +28,8 @@ import json
 from nova import datastore
 
 
+SCOPE_BASE = 0
+SCOPE_ONELEVEL = 1 # not implemented
 SCOPE_SUBTREE  = 2
 MOD_ADD = 0
 MOD_DELETE = 1
@@ -188,15 +190,18 @@ class FakeLDAP(object):
 
         Args:
         dn -- dn to search under
-        scope -- only SCOPE_SUBTREE is supported
+        scope -- only SCOPE_BASE and SCOPE_SUBTREE are supported
         query -- query to filter objects by
         fields -- fields to return. Returns all fields if not specified
 
         """
-        if scope != SCOPE_SUBTREE:
+        if scope != SCOPE_BASE and scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
         redis = datastore.Redis.instance()
-        keys = redis.keys("%s*%s" % (self.__redis_prefix, dn))
+        if scope == SCOPE_BASE:
+            keys = ["%s%s" % (self.__redis_prefix, dn)]
+        else:
+            keys = redis.keys("%s*%s" % (self.__redis_prefix, dn))
         objects = []
         for key in keys:
             # get the attributes from redis
@@ -213,7 +218,6 @@ class FakeLDAP(object):
         if objects == []:
             raise NO_SUCH_OBJECT()
         return objects
-
 
     @property
     def __redis_prefix(self):

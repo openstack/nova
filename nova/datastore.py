@@ -90,12 +90,14 @@ class BasicModel(object):
 
     @absorb_connection_error
     def __init__(self):
-        self.initial_state = {}
-        self.state = Redis.instance().hgetall(self.__redis_key)
-        if self.state:
-            self.initial_state = self.state
+        state = Redis.instance().hgetall(self.__redis_key)
+        if state:
+            self.initial_state = state
+            self.state = dict(self.initial_state)
         else:
+            self.initial_state = {}
             self.state = self.default_state()
+
 
     def default_state(self):
         """You probably want to define this in your subclass"""
@@ -122,11 +124,15 @@ class BasicModel(object):
             yield cls(identifier)
 
     @classmethod
-    @absorb_connection_error
     def associated_to(cls, foreign_type, foreign_id):
-        redis_set = cls._redis_association_name(foreign_type, foreign_id)
-        for identifier in Redis.instance().smembers(redis_set):
+        for identifier in cls.associated_keys(foreign_type, foreign_id):
             yield cls(identifier)
+
+    @classmethod
+    @absorb_connection_error
+    def associated_keys(cls, foreign_type, foreign_id):
+        redis_set = cls._redis_association_name(foreign_type, foreign_id)
+        return Redis.instance().smembers(redis_set) or []
 
     @classmethod
     def _redis_set_name(cls, kls_name):
@@ -136,7 +142,7 @@ class BasicModel(object):
     @classmethod
     def _redis_association_name(cls, foreign_type, foreign_id):
         return cls._redis_set_name("%s:%s:%s" %
-                                   (foreign_type, foreign_id, cls.__name__))
+                                   (foreign_type, foreign_id, cls._redis_name()))
 
     @property
     def identifier(self):
@@ -167,6 +173,9 @@ class BasicModel(object):
 
     def setdefault(self, item, default):
         return self.state.setdefault(item, default)
+
+    def __contains__(self, item):
+        return item in self.state
 
     def __getitem__(self, item):
         return self.state[item]
@@ -239,7 +248,7 @@ class BasicModel(object):
         for key, val in self.state.iteritems():
             Redis.instance().hset(self.__redis_key, key, val)
         self.add_to_index()
-        self.initial_state = self.state
+        self.initial_state = dict(self.state)
         return True
 
     @absorb_connection_error

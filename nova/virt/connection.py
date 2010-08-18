@@ -27,6 +27,15 @@ FLAGS = flags.FLAGS
 
 
 def get_connection(read_only=False):
+    """Returns an object representing the connection to a virtualization
+    platform.  This could be nova.virt.fake.FakeConnection in test mode,
+    a connection to KVM or QEMU via libvirt, or a connection to XenServer
+    or Xen Cloud Platform via XenAPI.
+
+    Any object returned here must conform to the interface documented by
+    FakeConnection.
+    """
+
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
     t = FLAGS.connection_type

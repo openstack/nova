@@ -30,6 +30,7 @@ import sys
 from nova import exception
 from nova import flags
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ldap_url', 'ldap://localhost',
                     'Point this at your ldap server')
@@ -182,7 +183,8 @@ class LdapDriver(object):
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
                     raise exception.NotFound("Project can't be created "
-                            "because user %s doesn't exist" % member_uid)
+                                             "because user %s doesn't exist"
+                                             % member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         # always add the manager as a member because members is required
         if not manager_dn in members:
@@ -236,6 +238,26 @@ class LdapDriver(object):
         role_dn = self.__role_to_dn(role, project_id)
         return self.__remove_from_group(uid, role_dn)
 
+    def get_user_roles(self, uid, project_id=None):
+        """Retrieve list of roles for user (or user and project)"""
+        if project_id is None:
+            # NOTE(vish): This is unneccesarily slow, but since we can't
+            #             guarantee that the global roles are located
+            #             together in the ldap tree, we're doing this version.
+            roles = []
+            for role in FLAGS.allowed_roles:
+                role_dn = self.__role_to_dn(role)
+                if self.__is_in_group(uid, role_dn):
+                    roles.append(role)
+            return roles
+        else:
+            project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+            roles = self.__find_objects(project_dn,
+                                        '(&(&(objectclass=groupOfNames)'
+                                        '(!(objectclass=novaProject)))'
+                                        '(member=%s))' % self.__uid_to_dn(uid))
+            return [role['cn'][0] for role in roles]
+
     def delete_user(self, uid):
         """Delete a user"""
         if not self.__user_exists(uid):
@@ -253,45 +275,49 @@ class LdapDriver(object):
         self.conn.delete_s('cn=%s,uid=%s,%s' % (key_name, uid,
                                           FLAGS.ldap_user_subtree))
 
-    def delete_project(self, name):
+    def delete_project(self, project_id):
         """Delete a project"""
-        project_dn = 'cn=%s,%s' % (name, FLAGS.ldap_project_subtree)
+        project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
         self.__delete_roles(project_dn)
         self.__delete_group(project_dn)
 
-    def __user_exists(self, name):
+    def __user_exists(self, uid):
         """Check if user exists"""
-        return self.get_user(name) != None
+        return self.get_user(uid) != None
 
     def __key_pair_exists(self, uid, key_name):
         """Check if key pair exists"""
         return self.get_user(uid) != None
         return self.get_key_pair(uid, key_name) != None
 
-    def __project_exists(self, name):
+    def __project_exists(self, project_id):
         """Check if project exists"""
-        return self.get_project(name) != None
+        return self.get_project(project_id) != None
 
-    def __find_object(self, dn, query = None):
+    def __find_object(self, dn, query=None, scope=None):
         """Find an object by dn and query"""
-        objects = self.__find_objects(dn, query)
+        objects = self.__find_objects(dn, query, scope)
         if len(objects) == 0:
             return None
         return objects[0]
 
-    def __find_dns(self, dn, query=None):
+    def __find_dns(self, dn, query=None, scope=None):
         """Find dns by query"""
+        if scope is None: # one of the flags is 0!!
+            scope = self.ldap.SCOPE_SUBTREE
         try:
-            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
+            res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
         # just return the DNs
         return [dn for dn, attributes in res]
 
-    def __find_objects(self, dn, query = None):
+    def __find_objects(self, dn, query=None, scope=None):
         """Find objects by query"""
+        if scope is None: # one of the flags is 0!!
+            scope = self.ldap.SCOPE_SUBTREE
         try:
-            res = self.conn.search_s(dn, self.ldap.SCOPE_SUBTREE, query)
+            res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
         # just return the attributes
@@ -361,7 +387,8 @@ class LdapDriver(object):
         if not self.__group_exists(group_dn):
             return False
         res = self.__find_object(group_dn,
-                               '(member=%s)' % self.__uid_to_dn(uid))
+                                 '(member=%s)' % self.__uid_to_dn(uid),
+                                 self.ldap.SCOPE_BASE)
         return res != None
 
     def __add_to_group(self, uid, group_dn):
@@ -391,7 +418,11 @@ class LdapDriver(object):
         if not self.__is_in_group(uid, group_dn):
             raise exception.NotFound("User %s is not a member of the group" %
                                      (uid,))
-        self.__safe_remove_from_group(uid, group_dn)
+        # NOTE(vish): remove user from group and any sub_groups
+        sub_dns = self.__find_group_dns_with_member(
+                group_dn, uid)
+        for sub_dn in sub_dns:
+            self.__safe_remove_from_group(uid, sub_dn)
 
     def __safe_remove_from_group(self, uid, group_dn):
         """Remove user from group, deleting group if user is last member"""

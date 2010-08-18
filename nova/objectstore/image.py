@@ -42,6 +42,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', utils.abspath('../images'),
                         'path to decrypted images')
 
+
 class Image(object):
     def __init__(self, image_id):
         self.image_id = image_id
@@ -65,9 +66,13 @@ class Image(object):
         except:
             pass
 
-    def is_authorized(self, context):
+    def is_authorized(self, context, readonly=False):
+        # NOTE(devcamcar): Public images can be read by anyone,
+        #                  but only modified by admin or owner.
         try:
-            return self.metadata['isPublic'] or context.user.is_admin() or self.metadata['imageOwnerId'] == context.project.id
+            return (self.metadata['isPublic'] and readonly) or \
+                   context.user.is_admin() or \
+                   self.metadata['imageOwnerId'] == context.project.id
         except:
             return False
 
@@ -144,7 +149,7 @@ class Image(object):
             'imageOwnerId': 'system',
             'isPublic': public,
             'architecture': 'x86_64',
-            'type': image_type,
+            'imageType': image_type,
             'state': 'available'
         }
         
@@ -191,7 +196,7 @@ class Image(object):
             'imageOwnerId': context.project.id,
             'isPublic': False, # FIXME: grab public from manifest
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
-            'type' : image_type
+            'imageType' : image_type
         }
 
         def write_state(state):
@@ -227,13 +232,22 @@ class Image(object):
 
     @staticmethod
     def decrypt_image(encrypted_filename, encrypted_key, encrypted_iv, cloud_private_key, decrypted_filename):
-        key, err = utils.execute('openssl rsautl -decrypt -inkey %s' % cloud_private_key, encrypted_key)
+        key, err = utils.execute(
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                process_input=encrypted_key,
+                check_exit_code=False)
         if err:
             raise exception.Error("Failed to decrypt private key: %s" % err)
-        iv, err = utils.execute('openssl rsautl -decrypt -inkey %s' % cloud_private_key, encrypted_iv)
+        iv, err = utils.execute(
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                process_input=encrypted_iv,
+                check_exit_code=False)
         if err:
             raise exception.Error("Failed to decrypt initialization vector: %s" % err)
-        out, err = utils.execute('openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s' % (encrypted_filename, key, iv, decrypted_filename))
+        _out, err = utils.execute(
+                'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'
+                 % (encrypted_filename, key, iv, decrypted_filename),
+                 check_exit_code=False)
         if err:
             raise exception.Error("Failed to decrypt image file %s : %s" % (encrypted_filename, err))
 

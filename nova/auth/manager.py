@@ -24,21 +24,22 @@ import logging
 import os
 import shutil
 import string
-import sys
 import tempfile
 import uuid
 import zipfile
 
 from nova import crypto
-from nova import datastore
 from nova import exception
 from nova import flags
-from nova import objectstore # for flags
 from nova import utils
-from nova.auth import ldapdriver # for flags
 from nova.auth import signer
+from nova.network import vpn
+
 
 FLAGS = flags.FLAGS
+flags.DEFINE_list('allowed_roles',
+                  ['cloudadmin', 'itsec', 'sysadmin', 'netadmin', 'developer'],
+                  'Allowed roles for project')
 
 # NOTE(vish): a user with one of these roles will be a superuser and
 #             have access to all api commands
@@ -50,36 +51,27 @@ flags.DEFINE_list('superuser_roles', ['cloudadmin'],
 flags.DEFINE_list('global_roles', ['cloudadmin', 'itsec'],
                   'Roles that apply to all projects')
 
-
-flags.DEFINE_bool('use_vpn', True, 'Support per-project vpns')
 flags.DEFINE_string('credentials_template',
                     utils.abspath('auth/novarc.template'),
                     'Template for creating users rc file')
 flags.DEFINE_string('vpn_client_template',
                     utils.abspath('cloudpipe/client.ovpn.template'),
                     'Template for creating users vpn file')
+flags.DEFINE_string('credential_vpn_file', 'nova-vpn.conf',
+                    'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_key_file', 'pk.pem',
                     'Filename of private key in credentials zip')
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', 'novarc',
                     'Filename of rc in credentials zip')
-
-flags.DEFINE_integer('vpn_start_port', 1000,
-                    'Start port for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_end_port', 2000,
-                    'End port for the cloudpipe VPN servers')
-
 flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
-
-flags.DEFINE_string('vpn_ip', '127.0.0.1',
-                    'Public IP for the cloudpipe VPN servers')
-
 flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
                     'Driver that auth manager uses')
+
 
 class AuthBase(object):
     """Base class for objects relating to auth
@@ -88,6 +80,7 @@ class AuthBase(object):
     an id member. They may optionally contain methods that delegate to
     AuthManager, but should not implement logic themselves.
     """
+
     @classmethod
     def safe_id(cls, obj):
         """Safe get object id
@@ -105,7 +98,9 @@ class AuthBase(object):
 
 class User(AuthBase):
     """Object representing a user"""
+
     def __init__(self, id, name, access, secret, admin):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.access = access
@@ -165,7 +160,9 @@ class KeyPair(AuthBase):
     Even though this object is named KeyPair, only the public key and
     fingerprint is stored. The user's private key is not saved.
     """
+
     def __init__(self, id, name, owner_id, public_key, fingerprint):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.owner_id = owner_id
@@ -182,7 +179,9 @@ class KeyPair(AuthBase):
 
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
+
     def __init__(self, id, name, project_manager_id, description, member_ids):
+        AuthBase.__init__(self)
         self.id = id
         self.name = name
         self.project_manager_id = project_manager_id
@@ -229,87 +228,6 @@ class Project(AuthBase):
                                                         self.member_ids)
 
 
-class NoMorePorts(exception.Error):
-    pass
-
-
-class Vpn(datastore.BasicModel):
-    """Manages vpn ips and ports for projects"""
-    def __init__(self, project_id):
-        self.project_id = project_id
-        super(Vpn, self).__init__()
-
-    @property
-    def identifier(self):
-        """Identifier used for key in redis"""
-        return self.project_id
-
-    @classmethod
-    def create(cls, project_id):
-        """Creates a vpn for project
-
-        This method finds a free ip and port and stores the associated
-        values in the datastore.
-        """
-        # TODO(vish): get list of vpn ips from redis
-        port = cls.find_free_port_for_ip(FLAGS.vpn_ip)
-        vpn = cls(project_id)
-        # save ip for project
-        vpn['project'] = project_id
-        vpn['ip'] = FLAGS.vpn_ip
-        vpn['port'] = port
-        vpn.save()
-        return vpn
-
-    @classmethod
-    def find_free_port_for_ip(cls, ip):
-        """Finds a free port for a given ip from the redis set"""
-        # TODO(vish): these redis commands should be generalized and
-        #             placed into a base class. Conceptually, it is
-        #             similar to an association, but we are just
-        #             storing a set of values instead of keys that
-        #             should be turned into objects.
-        redis = datastore.Redis.instance()
-        key = 'ip:%s:ports' % ip
-        # TODO(vish): these ports should be allocated through an admin
-        #             command instead of a flag
-        if (not redis.exists(key) and
-            not redis.exists(cls._redis_association_name('ip', ip))):
-            for i in range(FLAGS.vpn_start_port, FLAGS.vpn_end_port + 1):
-                redis.sadd(key, i)
-
-        port = redis.spop(key)
-        if not port:
-            raise NoMorePorts()
-        return port
-
-    @classmethod
-    def num_ports_for_ip(cls, ip):
-        """Calculates the number of free ports for a given ip"""
-        return datastore.Redis.instance().scard('ip:%s:ports' % ip)
-
-    @property
-    def ip(self):
-        """The ip assigned to the project"""
-        return self['ip']
-
-    @property
-    def port(self):
-        """The port assigned to the project"""
-        return int(self['port'])
-
-    def save(self):
-        """Saves the association to the given ip"""
-        self.associate_with('ip', self.ip)
-        super(Vpn, self).save()
-
-    def destroy(self):
-        """Cleans up datastore and adds port back to pool"""
-        self.unassociate_with('ip', self.ip)
-        datastore.Redis.instance().sadd('ip:%s:ports' % self.ip, self.port)
-        super(Vpn, self).destroy()
-
-
 class AuthManager(object):
     """Manager Singleton for dealing with Users, Projects, and Keypairs
 
@@ -321,12 +239,13 @@ class AuthManager(object):
     AuthManager also manages associated data related to Auth objects that
     need to be more accessible, such as vpn ips and ports.
     """
-    _instance=None
+
+    _instance = None
+
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
         if not cls._instance:
-            cls._instance = super(AuthManager, cls).__new__(
-                    cls, *args, **kwargs)
+            cls._instance = super(AuthManager, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, driver=None, *args, **kwargs):
@@ -336,7 +255,7 @@ class AuthManager(object):
         reset the driver if it is not set or a new driver is specified.
         """
         if driver or not getattr(self, 'driver', None):
-           self.driver = utils.import_class(driver or FLAGS.auth_driver)
+            self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
@@ -418,6 +337,12 @@ class AuthManager(object):
             if signature != expected_signature:
                 raise exception.NotAuthorized('Signature does not match')
         return (user, project)
+
+    def get_access_key(self, user, project):
+        """Get an access key that includes user and project"""
+        if not isinstance(user, User):
+            user = self.get_user(user)
+        return "%s:%s" % (user.access, Project.safe_id(project))
 
     def is_superuser(self, user):
         """Checks for superuser status, allowing user to bypass rbac
@@ -513,6 +438,10 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to add local role.
         """
+        if role not in FLAGS.allowed_roles:
+            raise exception.NotFound("The %s role can not be found" % role)
+        if project is not None and role in FLAGS.global_roles:
+            raise exception.NotFound("The %s role is global only" % role)
         with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
@@ -535,6 +464,19 @@ class AuthManager(object):
         """
         with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
+
+    def get_roles(self, project_roles=True):
+        """Get list of allowed roles"""
+        if project_roles:
+            return list(set(FLAGS.allowed_roles) - set(FLAGS.global_roles))
+        else:
+            return FLAGS.allowed_roles
+
+    def get_user_roles(self, user, project=None):
+        """Get user global or per-project roles"""
+        with self.driver() as drv:
+            return drv.get_user_roles(User.safe_id(user),
+                                      Project.safe_id(project))
 
     def get_project(self, pid):
         """Get project object by id"""
@@ -581,8 +523,6 @@ class AuthManager(object):
                                                description,
                                                member_users)
             if project_dict:
-                if FLAGS.use_vpn:
-                    Vpn.create(project_dict['id'])
                 return Project(**project_dict)
 
     def add_to_project(self, user, project):
@@ -619,10 +559,10 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        vpn = Vpn.lookup(Project.safe_id(project))
-        if not vpn:
-            return None, None
-        return (vpn.ip, vpn.port)
+        network_data = vpn.NetworkData.lookup(Project.safe_id(project))
+        if not network_data:
+            raise exception.NotFound('project network data has not been set')
+        return (network_data.ip, network_data.port)
 
     def delete_project(self, project):
         """Deletes a project"""
@@ -753,25 +693,27 @@ class AuthManager(object):
         rc = self.__generate_rc(user.access, user.secret, pid)
         private_key, signed_cert = self._generate_x509_cert(user.id, pid)
 
-        vpn = Vpn.lookup(pid)
-        if not vpn:
-            raise exception.Error("No vpn data allocated for project %s" %
-                                  project.name)
-        configfile = open(FLAGS.vpn_client_template,"r")
-        s = string.Template(configfile.read())
-        configfile.close()
-        config = s.substitute(keyfile=FLAGS.credential_key_file,
-                              certfile=FLAGS.credential_cert_file,
-                              ip=vpn.ip,
-                              port=vpn.port)
-
         tmpdir = tempfile.mkdtemp()
         zf = os.path.join(tmpdir, "temp.zip")
         zippy = zipfile.ZipFile(zf, 'w')
         zippy.writestr(FLAGS.credential_rc_file, rc)
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
-        zippy.writestr("nebula-client.conf", config)
+
+        network_data = vpn.NetworkData.lookup(pid)
+        if network_data:
+            configfile = open(FLAGS.vpn_client_template,"r")
+            s = string.Template(configfile.read())
+            configfile.close()
+            config = s.substitute(keyfile=FLAGS.credential_key_file,
+                                  certfile=FLAGS.credential_cert_file,
+                                  ip=network_data.ip,
+                                  port=network_data.port)
+            zippy.writestr(FLAGS.credential_vpn_file, config)
+        else:
+            logging.warn("No vpn data for project %s" %
+                                  pid)
+
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(user.id))
         zippy.close()
         with open(zf, 'rb') as f:
@@ -779,6 +721,15 @@ class AuthManager(object):
 
         shutil.rmtree(tmpdir)
         return buffer
+
+    def get_environment_rc(self, user, project=None):
+        """Get credential zip for user in project"""
+        if not isinstance(user, User):
+            user = self.get_user(user)
+        if project is None:
+            project = user.id
+        pid = Project.safe_id(project)
+        return self.__generate_rc(user.access, user.secret, pid)
 
     def __generate_rc(self, access, secret, pid):
         """Generate rc file for user"""
