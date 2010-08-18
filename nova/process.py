@@ -23,6 +23,7 @@ Process pool, still buggy right now.
 import logging
 import multiprocessing
 import StringIO
+
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import process
@@ -205,6 +206,7 @@ class ProcessPool(object):
         self._pool.release()
         return rv
 
+
 class SharedPool(object):
     _instance = None
     def __init__(self):
@@ -212,6 +214,7 @@ class SharedPool(object):
             self.__class__._instance = ProcessPool()
     def __getattr__(self, key):
         return getattr(self._instance, key)
+
 
 def simple_execute(cmd, **kwargs):
     return SharedPool().simple_execute(cmd, **kwargs)

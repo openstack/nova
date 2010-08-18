@@ -219,7 +219,6 @@ class FakeLDAP(object):
             raise NO_SUCH_OBJECT()
         return objects
 
-
     @property
     def __redis_prefix(self):
         return 'ldap:'

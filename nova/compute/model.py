@@ -231,6 +231,7 @@ class Daemon():
         for x in cls.associated_to("host", hostname):
             yield x
 
+
 class SessionToken():
     """This is a short-lived auth token that is passed through web requests"""
 

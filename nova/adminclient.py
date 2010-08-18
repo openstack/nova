@@ -20,6 +20,7 @@ Nova User API client library.
 """
 
 import base64
+
 import boto
 from boto.ec2.regioninfo import RegionInfo
 
@@ -57,6 +58,7 @@ class UserInfo(object):
         elif name == 'secretkey':
             self.secretkey = str(value)
 
+
 class UserRole(object):
     """
     Information about a Nova user's role, as parsed through SAX.
@@ -78,6 +80,7 @@ class UserRole(object):
             self.role = value
         else:
             setattr(self, name, str(value))
+
 
 class ProjectInfo(object):
     """
@@ -114,12 +117,14 @@ class ProjectInfo(object):
         else:
             setattr(self, name, str(value))
 
+
 class ProjectMember(object):
     """
     Information about a Nova project member, as parsed through SAX.
     Fields include:
         memberId
     """
+
     def __init__(self, connection=None):
         self.connection = connection
         self.memberId = None
@@ -135,6 +140,7 @@ class ProjectMember(object):
             self.memberId = value
         else:
             setattr(self, name, str(value))
+
             
 class HostInfo(object):
     """
@@ -162,6 +168,7 @@ class HostInfo(object):
     # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
         setattr(self, name, value)
+
 
 class NovaAdminClient(object):
     def __init__(self, clc_ip='127.0.0.1', region='nova', access_key='admin',

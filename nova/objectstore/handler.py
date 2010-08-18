@@ -38,17 +38,19 @@ S3 client with this module::
 """
 
 import datetime
-import logging
 import json
+import logging
 import multiprocessing
 import os
-from tornado import escape
 import urllib
 
-from twisted.application import internet, service
-from twisted.web.resource import Resource
-from twisted.web import server, static, error
-
+from tornado import escape
+from twisted.application import internet
+from twisted.application import service
+from twisted.web import error
+from twisted.web import resource
+from twisted.web import server
+from twisted.web import static
 
 from nova import exception
 from nova import flags
@@ -59,6 +61,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+
 
 def render_xml(request, value):
     assert isinstance(value, dict) and len(value) == 1
@@ -72,10 +75,12 @@ def render_xml(request, value):
     request.write('</' + escape.utf8(name) + '>')
     request.finish()
 
+
 def finish(request, content=None):
     if content:
         request.write(content)
     request.finish()
+
 
 def _render_parts(value, write_cb):
     if isinstance(value, basestring):
@@ -95,10 +100,12 @@ def _render_parts(value, write_cb):
     else:
         raise Exception("Unknown S3 value type %r", value)
 
+
 def get_argument(request, key, default_value):
     if key in request.args:
         return request.args[key][0]
     return default_value
+
 
 def get_context(request):
     try:
@@ -120,19 +127,21 @@ def get_context(request):
         logging.debug("Authentication Failure: %s" % ex)
         raise exception.NotAuthorized
 
-class ErrorHandlingResource(Resource):
+
+class ErrorHandlingResource(resource.Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for exceptions thrown after NOT_DONE_YET is returned."""
     # TODO(unassigned) (calling-all-twisted-experts): This needs to be plugged in to the right place in twisted...
     #   This doesn't look like it's the right place (consider exceptions in getChild; or after NOT_DONE_YET is returned     
     def render(self, request):
         try:
-            return Resource.render(self, request)
+            return resource.Resource.render(self, request)
         except exception.NotFound:
             request.setResponseCode(404)
             return ''
         except exception.NotAuthorized:
             request.setResponseCode(403)
             return ''
+
 
 class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
@@ -154,9 +163,10 @@ class S3(ErrorHandlingResource):
         }})
         return server.NOT_DONE_YET
 
+
 class BucketResource(ErrorHandlingResource):
     def __init__(self, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.name = name
 
     def getChild(self, name, request):
@@ -206,7 +216,7 @@ class BucketResource(ErrorHandlingResource):
 
 class ObjectResource(ErrorHandlingResource):
     def __init__(self, bucket, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.bucket = bucket
         self.name = name
 
@@ -245,17 +255,19 @@ class ObjectResource(ErrorHandlingResource):
         request.setResponseCode(204)
         return ''
 
+
 class ImageResource(ErrorHandlingResource):
     isLeaf = True
 
     def __init__(self, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.img = image.Image(name)
 
     def render_GET(self, request):
         return static.File(self.img.image_path, defaultType='application/octet-stream').render_GET(request)
 
-class ImagesResource(Resource):
+
+class ImagesResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
@@ -339,10 +351,12 @@ class ImagesResource(Resource):
         request.setResponseCode(204)
         return ''
 
+
 def get_site():
     root = S3()
     site = server.Site(root)
     return site
+
 
 def get_application():
     factory = get_site()

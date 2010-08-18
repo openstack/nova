@@ -42,6 +42,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', utils.abspath('../images'),
                         'path to decrypted images')
 
+
 class Image(object):
     def __init__(self, image_id):
         self.image_id = image_id

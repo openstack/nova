@@ -25,11 +25,12 @@ import logging
 import multiprocessing
 import random
 import re
-import tornado.web
-from twisted.internet import defer
 import urllib
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
+
+import tornado.web
+from twisted.internet import defer
 
 from nova import crypto
 from nova import exception
@@ -42,6 +43,7 @@ from nova.endpoint import cloud
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
+
 
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
@@ -226,6 +228,7 @@ class MetadataRequestHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(404)
         self.print_data(data)
         self.finish()
+
 
 class APIRequestHandler(tornado.web.RequestHandler):
     def get(self, controller_name):

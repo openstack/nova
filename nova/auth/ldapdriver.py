@@ -30,6 +30,7 @@ import sys
 from nova import exception
 from nova import flags
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ldap_url', 'ldap://localhost',
                     'Point this at your ldap server')

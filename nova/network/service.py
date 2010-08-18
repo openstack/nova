@@ -25,17 +25,17 @@ import logging
 import IPy
 from sqlalchemy.orm import exc
 
+from nova import exception
 from nova import flags
 from nova import models
 from nova import service
 from nova import utils
 from nova.auth import manager
-from nova.exception import NotFound
-from nova.network import exception
+from nova.network import exception as network_exception
 from nova.network import linux_net
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 flags.DEFINE_string('network_type',
                     'flat',
                     'Service Class for Networking')
@@ -45,15 +45,15 @@ flags.DEFINE_list('flat_network_ips',
                   ['192.168.0.2', '192.168.0.3', '192.168.0.4'],
                   'Available ips for simple network')
 flags.DEFINE_string('flat_network_network', '192.168.0.0',
-                       'Network for simple network')
+                    'Network for simple network')
 flags.DEFINE_string('flat_network_netmask', '255.255.255.0',
-                       'Netmask for simple network')
+                    'Netmask for simple network')
 flags.DEFINE_string('flat_network_gateway', '192.168.0.1',
-                       'Broadcast for simple network')
+                    'Broadcast for simple network')
 flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
-                       'Broadcast for simple network')
+                    'Broadcast for simple network')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
-                       'Dns for simple network')
+                    'Dns for simple network')
 
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('vlan_end', 4093, 'Last VLAN for private networks')
@@ -76,7 +76,7 @@ def type_to_class(network_type):
         return FlatNetworkService
     elif network_type == 'vlan':
         return VlanNetworkService
-    raise NotFound("Couldn't find %s network type" % network_type)
+    raise exception.NotFound("Couldn't find %s network type" % network_type)
 
 
 def setup_compute_network(project_id):
@@ -129,7 +129,7 @@ class BaseNetworkService(service.Service):
             try:
                 fixed_ip = query.first()
             except exc.NoResultFound:
-                raise exception.NoMoreAddresses()
+                raise network_exception.NoMoreAddresses()
             # FIXME will this set backreference?
             fixed_ip.instance_id = instance_id
             fixed_ip.allocated = True
@@ -168,7 +168,7 @@ class BaseNetworkService(service.Service):
             try:
                 elastic_ip = query.first()
             except exc.NoResultFound:
-                raise exception.NoMoreAddresses()
+                raise network_exception.NoMoreAddresses()
             elastic_ip.project_id = project_id
             session.add(elastic_ip)
             try:
@@ -233,7 +233,7 @@ class VlanNetworkService(BaseNetworkService):
         if is_vpn:
             fixed_ip = models.FixedIp.find_by_ip_str(network.vpn_private_ip_str)
             if fixed_ip.allocated:
-                raise exception.AddressAlreadyAllocated()
+                raise network_exception.AddressAlreadyAllocated()
             # FIXME will this set backreference?
             fixed_ip.instance_id = instance_id
             fixed_ip.allocated = True
@@ -263,7 +263,7 @@ class VlanNetworkService(BaseNetworkService):
         """Called by bridge when ip is leased"""
         fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
         if not fixed_ip.allocated:
-            raise exception.AddressNotAllocated(fixed_ip_str)
+            raise network_exception.AddressNotAllocated(fixed_ip_str)
         logging.debug("Leasing IP %s", fixed_ip_str)
         fixed_ip.leased = True
         fixed_ip.save()
@@ -325,7 +325,7 @@ class VlanNetworkService(BaseNetworkService):
             try:
                 network_index = query.first()
             except exc.NoResultFound:
-                raise exception.NoMoreNetworks()
+                raise network_exception.NoMoreNetworks()
             network_index.network = network
             session.add(network_index)
             try:

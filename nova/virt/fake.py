@@ -24,6 +24,8 @@ This module also documents the semantics of real hypervisor connections.
 
 import logging
 
+from twisted.internet import defer
+
 from nova.compute import power_state
 
 
@@ -89,10 +91,13 @@ class FakeConnection(object):
         This function should use the data there to guide the creation of
         the new instance.
 
-        Once this function successfully completes, the instance should be
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+
+        Once this successfully completes, the instance should be
         running (power_state.RUNNING).
 
-        If this function fails, any partial instance should be completely
+        If this fails, any partial instance should be completely
         cleaned up, and the virtualization platform should be in the state
         that it was before this call began.
         """
@@ -100,6 +105,7 @@ class FakeConnection(object):
         fake_instance = FakeInstance()
         self.instances[instance.id] = fake_instance
         fake_instance._state = power_state.RUNNING
+        return defer.succeed(None)
 
     def reboot(self, instance):
         """
@@ -107,8 +113,11 @@ class FakeConnection(object):
 
         The given parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
         """
-        pass
+        return defer.succeed(None)
 
     def destroy(self, instance):
         """
@@ -116,8 +125,12 @@ class FakeConnection(object):
 
         The given parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
+        return defer.succeed(None)
 
     def get_info(self, instance_id):
         """
