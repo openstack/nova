@@ -41,11 +41,7 @@ class APIVersionRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-
         rsapi = rackspace.API()
         mapper.connect(None, "/v1.0/{path_info:.*}", controller=rsapi)
-
         mapper.connect(None, "/ec2/{path_info:.*}", controller=aws.API())
-
         super(APIVersionRouter, self).__init__(mapper)
-
