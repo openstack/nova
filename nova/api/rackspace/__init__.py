@@ -29,10 +29,10 @@ import webob.exc
 
 from nova import flags
 from nova import wsgi
-from nova.api.rackspace.controllers import flavors
-from nova.api.rackspace.controllers import images
-from nova.api.rackspace.controllers import servers
-from nova.api.rackspace.controllers import sharedipgroups
+from nova.api.rackspace import flavors
+from nova.api.rackspace import images
+from nova.api.rackspace import servers
+from nova.api.rackspace import sharedipgroups
 from nova.auth import manager
 
 

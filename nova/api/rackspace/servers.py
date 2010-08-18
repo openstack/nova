@@ -17,14 +17,14 @@
 
 from nova import rpc
 from nova.compute import model as compute
-from nova.api.rackspace.controllers import base
+from nova.api.rackspace import base
 
 
 class Controller(base.Controller):
     entity_name = 'servers'
 
     def index(self, **kwargs):
-        instanmces = []
+        instances = []
         for inst in compute.InstanceDirectory().all:
             instances.append(instance_details(inst))
 
