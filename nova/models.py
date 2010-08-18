@@ -39,6 +39,7 @@ flags.DEFINE_string('sql_connection',
                     'connection string for sql database')
 
 class NovaBase(object):
+    __table_args__ = {'mysql_engine':'InnoDB'}
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
@@ -96,17 +97,17 @@ class NovaBase(object):
 
 class Image(Base, NovaBase):
     __tablename__ = 'images'
-    user_id = Column(String)#, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String)#, ForeignKey('projects.id'), nullable=False)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String(255))#, ForeignKey('users.id'), nullable=False)
+    project_id = Column(String(255))#, ForeignKey('projects.id'), nullable=False)
 
-    id = Column(String, primary_key=True)
-    image_type = Column(String)
+    image_type = Column(String(255))
     public = Column(Boolean, default=False)
-    state = Column(String)
-    location = Column(String)
-    arch = Column(String)
-    default_kernel_id = Column(String)
-    default_ramdisk_id = Column(String)
+    state = Column(String(255))
+    location = Column(String(255))
+    arch = Column(String(255))
+    default_kernel_id = Column(String(255))
+    default_ramdisk_id = Column(String(255))
 
     @validates('image_type')
     def validate_image_type(self, key, image_type):
@@ -135,8 +136,8 @@ class Instance(Base, NovaBase):
     __tablename__ = 'instances'
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(String) #, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String) #, ForeignKey('projects.id'))
+    user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
+    project_id = Column(String(255)) #, ForeignKey('projects.id'))
 
     @property
     def user(self):
@@ -153,26 +154,26 @@ class Instance(Base, NovaBase):
 
 
     image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
-    kernel_id = Column(String, ForeignKey('images.id'), nullable=True)
-    ramdisk_id = Column(String, ForeignKey('images.id'), nullable=True)
+    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 
     launch_index = Column(Integer)
-    key_name = Column(String)
+    key_name = Column(String(255))
     key_data = Column(Text)
-    security_group = Column(String)
+    security_group = Column(String(255))
 
     state = Column(Integer)
-    state_description = Column(String)
+    state_description = Column(String(255))
 
-    hostname = Column(String)
+    hostname = Column(String(255))
     physical_node_id = Column(Integer)
 
     instance_type = Column(Integer)
 
     user_data = Column(Text)
 
-    reservation_id = Column(String)
-    mac_address = Column(String)
+    reservation_id = Column(String(255))
+    mac_address = Column(String(255))
 
     def set_state(self, state_code, state_description=None):
         from nova.compute import power_state
@@ -198,20 +199,20 @@ class Instance(Base, NovaBase):
 class Volume(Base, NovaBase):
     __tablename__ = 'volumes'
     id = Column(Integer, primary_key=True)
-    volume_id = Column(String)
+    volume_id = Column(String(255))
 
-    user_id = Column(String) #, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String) #, ForeignKey('projects.id'))
+    user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
+    project_id = Column(String(255)) #, ForeignKey('projects.id'))
 
     # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String)
+    node_name = Column(String(255))
     size = Column(Integer)
-    alvailability_zone = Column(String) # FIXME foreign key?
+    alvailability_zone = Column(String(255)) # FIXME foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    mountpoint = Column(String)
-    attach_time = Column(String) # FIXME datetime
-    status = Column(String) # FIXME enum?
-    attach_status = Column(String) # FIXME enum
+    mountpoint = Column(String(255))
+    attach_time = Column(String(255)) # FIXME datetime
+    status = Column(String(255)) # FIXME enum?
+    attach_status = Column(String(255)) # FIXME enum
 
 class ExportDevice(Base, NovaBase):
     __tablename__ = 'export_devices'
@@ -225,24 +226,24 @@ class ExportDevice(Base, NovaBase):
 class Network(Base, NovaBase):
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
-    kind = Column(String)
+    kind = Column(String(255))
 
     injected = Column(Boolean, default=False)
-    network_str = Column(String)
-    netmask = Column(String)
-    bridge = Column(String)
-    gateway = Column(String)
-    broadcast = Column(String)
-    dns = Column(String)
+    network_str = Column(String(255))
+    netmask = Column(String(255))
+    bridge = Column(String(255))
+    gateway = Column(String(255))
+    broadcast = Column(String(255))
+    dns = Column(String(255))
 
     vlan = Column(Integer)
-    vpn_public_ip_str = Column(String)
+    vpn_public_ip_str = Column(String(255))
     vpn_public_port = Column(Integer)
-    vpn_private_ip_str = Column(String)
+    vpn_private_ip_str = Column(String(255))
 
-    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
+    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
     # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String)
+    node_name = Column(String(255))
 
 
 class NetworkIndex(Base, NovaBase):
@@ -258,7 +259,7 @@ class NetworkIndex(Base, NovaBase):
 class FixedIp(Base, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String, unique=True)
+    ip_str = Column(String(255), unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
     network = relationship(Network, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
@@ -279,13 +280,13 @@ class FixedIp(Base, NovaBase):
 class ElasticIp(Base, NovaBase):
     __tablename__ = 'elastic_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String, unique=True)
+    ip_str = Column(String(255), unique=True)
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
     fixed_ip = relationship(FixedIp, backref=backref('elastic_ips'))
 
-    project_id = Column(String) #, ForeignKey('projects.id'), nullable=False)
+    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
     # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String)
+    node_name = Column(String(255))
 
     @classmethod
     def find_by_ip_str(cls, ip_str):

@@ -131,19 +131,20 @@ class VolumeTestCase(test.TrialTestCase):
                           volume_id)
 
     @defer.inlineCallbacks
-    def test_multiple_volume_race_condition(self):
+    def test_concurrent_volumes_get_different_blades(self):
         vol_size = "5"
         user_id = "fake"
         project_id = 'fake'
         shelf_blades = []
+        volume_ids = []
         def _check(volume_id):
+            volume_ids.append(volume_id)
             vol = models.Volume.find(volume_id)
             shelf_blade = '%s.%s' % (vol.export_device.shelf_id,
                                      vol.export_device.blade_id)
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)
-            vol.delete()
         deferreds = []
         for i in range(self.total_slots):
             d = self.volume.create_volume(vol_size, user_id, project_id)
@@ -151,6 +152,9 @@ class VolumeTestCase(test.TrialTestCase):
             d.addErrback(self.fail)
             deferreds.append(d)
         yield defer.DeferredList(deferreds)
+        for volume_id in volume_ids:
+            vol = models.Volume.find(volume_id)
+            vol.delete()
 
     def test_multi_node(self):
         # TODO(termie): Figure out how to test with two nodes,

@@ -25,7 +25,6 @@ Currently uses Ata-over-Ethernet.
 import logging
 
 from twisted.internet import defer
-from sqlalchemy.orm import exc
 
 from nova import exception
 from nova import flags
@@ -138,25 +137,18 @@ class VolumeService(service.Service):
     def _setup_export(self, vol):
         # FIXME: abstract this. also remove vol.export_device.xxx cheat
         session = models.NovaBase.get_session()
-        query = session.query(models.ExportDevice)
-        query = query.filter_by(volume=None)
-        print 'free devices', query.count()
-        while(True):
-            export_device = query.first()
-            if not export_device:
-                raise NoMoreBlades()
-            print 'volume id', vol.id
-            export_device.volume_id = vol.id
-            session.add(export_device)
-            try:
-                session.commit()
-                break
-            except exc.ConcurrentModificationError:
-                print 'concur'
-                pass
+        query = session.query(models.ExportDevice).filter_by(volume=None)
+        export_device = query.with_lockmode("update").first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not export_device:
+            raise NoMoreBlades()
+        export_device.volume_id = vol.id
+        session.add(export_device)
+        session.commit()
+        # FIXME: aoe_device is redundant, should be turned into a method
         vol.aoe_device = "e%s.%s" % (export_device.shelf_id,
                                      export_device.blade_id)
-        print 'id is', vol.export_device.volume_id
         vol.save()
         yield self._exec_setup_export(vol)
 

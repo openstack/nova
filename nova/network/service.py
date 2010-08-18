@@ -107,38 +107,42 @@ class BaseNetworkService(service.Service):
 
     def set_network_host(self, project_id):
         """Safely sets the host of the projects network"""
-        network = get_network_for_project(project_id)
+        # FIXME abstract this
+        session = models.NovaBase.get_session()
+        # FIXME will a second request fail or wait for first to finish?
+        query = session.query(models.Network).filter_by(project_id=project_id)
+        network = query.with_lockmode("update").first()
+        if not network:
+            raise exception.NotFound("Couldn't find network for %s" %
+                                     project_id)
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
         if network.node_name:
             return network.node_name
         network.node_name = FLAGS.node_name
         network.kind = FLAGS.network_type
-        try:
-            network.save()
-            self._on_set_network_host(network)
-        except exc.ConcurrentModificationError:
-            network.refresh() # FIXME is this implemented?
-        return network.node_name
+        session.add(network)
+        session.commit()
+        self._on_set_network_host(network)
 
     def allocate_fixed_ip(self, project_id, instance_id, *args, **kwargs):
         """Gets fixed ip from the pool"""
+        # FIXME abstract this
         network = get_network_for_project(project_id)
         session = models.NovaBase.get_session()
         query = session.query(models.FixedIp).filter_by(network_id=network.id)
         query = query.filter_by(reserved=False).filter_by(allocated=False)
-        query = query.filter_by(leased=False)
-        while(True):
-            fixed_ip = query.first()
-            if not fixed_ip:
-                raise network_exception.NoMoreAddresses()
-            # FIXME will this set backreference?
-            fixed_ip.instance_id = instance_id
-            fixed_ip.allocated = True
-            session.add(fixed_ip)
-            try:
-                session.commit()
-                return fixed_ip.ip_str
-            except exc.ConcurrentModificationError:
-                pass
+        fixed_ip = query.filter_by(leased=False).with_lockmode("update").first
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not fixed_ip:
+            raise network_exception.NoMoreAddresses()
+        # FIXME will this set backreference?
+        fixed_ip.instance_id = instance_id
+        fixed_ip.allocated = True
+        session.add(fixed_ip)
+        session.commit()
+        return fixed_ip.ip_str
 
     def deallocate_fixed_ip(self, fixed_ip_str, *args, **kwargs):
         """Returns a fixed ip to the pool"""
@@ -160,21 +164,18 @@ class BaseNetworkService(service.Service):
     def allocate_elastic_ip(self, project_id):
         """Gets an elastic ip from the pool"""
         # FIXME: add elastic ips through manage command
+        # FIXME: abstract this
         session = models.NovaBase.get_session()
         node_name = FLAGS.node_name
         query = session.query(models.ElasticIp).filter_by(node_name=node_name)
-        query = query.filter_by(fixed_ip_id=None)
-        while(True):
-            elastic_ip = query.first()
-            if not elastic_ip:
-                raise network_exception.NoMoreAddresses()
-            elastic_ip.project_id = project_id
-            session.add(elastic_ip)
-            try:
-                session.commit()
-                return elastic_ip.ip_str
-            except exc.ConcurrentModificationError:
-                pass
+        query = query.filter_by(fixed_ip_id=None).with_lockmode("update")
+        elastic_ip = query.first()
+        if not elastic_ip:
+            raise network_exception.NoMoreAddresses()
+        elastic_ip.project_id = project_id
+        session.add(elastic_ip)
+        session.commit()
+        return elastic_ip.ip_str
 
     def associate_elastic_ip(self, elastic_ip_str, fixed_ip_str):
         """Associates an elastic ip to a fixed ip"""
@@ -334,17 +335,13 @@ class VlanNetworkService(BaseNetworkService):
         session = models.NovaBase.get_session()
         node_name = FLAGS.node_name
         query = session.query(models.NetworkIndex).filter_by(network_id=None)
-        while(True):
-            network_index = query.first()
-            if not network_index:
-                raise network_exception.NoMoreNetworks()
-            network_index.network = network
-            session.add(network_index)
-            try:
-                session.commit()
-                return network_index.index
-            except exc.ConcurrentModificationError:
-                pass
+        network_index = query.with_lockmode("update").first()
+        if not network_index:
+            raise network_exception.NoMoreNetworks()
+        network_index.network = network
+        session.add(network_index)
+        session.commit()
+        return network_index.index
 
 
     @classmethod
