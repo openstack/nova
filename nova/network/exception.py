@@ -23,6 +23,11 @@ Exceptions for network errors.
 from nova import exception
 
 
+class NoMoreNetworks(exception.Error):
+    """No More Networks are available"""
+    pass
+
+
 class NoMoreAddresses(exception.Error):
     """No More Addresses are available in the network"""
     pass

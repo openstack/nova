@@ -165,9 +165,8 @@ class BaseNetworkService(service.Service):
         query = session.query(models.ElasticIp).filter_by(node_name=node_name)
         query = query.filter_by(fixed_ip_id=None)
         while(True):
-            try:
-                elastic_ip = query.first()
-            except exc.NoResultFound:
+            elastic_ip = query.first()
+            if not elastic_ip:
                 raise network_exception.NoMoreAddresses()
             elastic_ip.project_id = project_id
             session.add(elastic_ip)
@@ -180,7 +179,7 @@ class BaseNetworkService(service.Service):
     def associate_elastic_ip(self, elastic_ip_str, fixed_ip_str):
         """Associates an elastic ip to a fixed ip"""
         elastic_ip = models.ElasticIp.find_by_ip_str(elastic_ip_str)
-        fixed_ip = models.FixedIp.find_by_ip_str(elastic_ip_str)
+        fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
         elastic_ip.fixed_ip = fixed_ip
         _driver.bind_elastic_ip(elastic_ip_str)
         _driver.ensure_elastic_forward(elastic_ip_str, fixed_ip_str)
@@ -254,9 +253,11 @@ class VlanNetworkService(BaseNetworkService):
                                         network.vpn_public_port,
                                         network.vpn_private_ip_str)
             ip_str = fixed_ip.ip_str
+            logging.debug("Allocating vpn IP %s", ip_str)
         else:
             parent = super(VlanNetworkService, self)
             ip_str = parent.allocate_fixed_ip(project_id, instance_id)
+        logging.debug("sql %s", FLAGS.sql_connection)
         _driver.ensure_vlan_bridge(network.vlan, network.bridge)
         return ip_str
 
@@ -273,6 +274,7 @@ class VlanNetworkService(BaseNetworkService):
 
     def lease_ip(self, fixed_ip_str):
         """Called by bridge when ip is leased"""
+        logging.debug("sql %s", FLAGS.sql_connection)
         fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
         if not fixed_ip.allocated:
             raise network_exception.AddressNotAllocated(fixed_ip_str)
@@ -333,9 +335,8 @@ class VlanNetworkService(BaseNetworkService):
         node_name = FLAGS.node_name
         query = session.query(models.NetworkIndex).filter_by(network_id=None)
         while(True):
-            try:
-                network_index = query.first()
-            except exc.NoResultFound:
+            network_index = query.first()
+            if not network_index:
                 raise network_exception.NoMoreNetworks()
             network_index.network = network
             session.add(network_index)

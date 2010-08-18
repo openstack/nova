@@ -81,13 +81,17 @@ def main():
     LOG_FILENAME = 'example.log'
     logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
     logging.debug("this is a test")
+    sqlfile = os.environ.get('SQL_DB', '')
     if int(os.environ.get('TESTING', '0')):
+        logging.debug("fake rabbit is true")
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8
-        FLAGS.network_size = 32
+        FLAGS.network_size = 16
         FLAGS.connection_type = 'fake'
         FLAGS.fake_network = True
         FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+        FLAGS.num_networks = 5
+        FLAGS.sql_connection = 'sqlite:///%s' % sqlfile
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]

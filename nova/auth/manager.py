@@ -573,9 +573,10 @@ class AuthManager(object):
         # FIXME(vish): this shouldn't be messing with the datamodel directly
         if not isinstance(project, Project):
             project = self.get_project(project)
-        if not project.network:
+        if not project.network.vpn_public_port:
             raise exception.NotFound('project network data has not been set')
-        return (project.network.vpn_ip_str, project.network.vpn_port)
+        return (project.network.vpn_public_ip_str,
+                project.network.vpn_public_port)
 
     def delete_project(self, project):
         """Deletes a project"""
