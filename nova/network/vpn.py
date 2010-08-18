@@ -105,7 +105,7 @@ class NetworkData(datastore.BasicModel):
         return datastore.Redis.instance().scard('ip:%s:ports' % vpn_ip)
 
     @property
-    def ip(self):  # pylint: disable=C0103
+    def ip(self):  # pylint: disable-msg=C0103
         """The ip assigned to the project"""
         return self['ip']
 

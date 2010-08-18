@@ -1,5 +1,5 @@
 pep8==0.5.0
-pylint==0.21.1
+pylint==0.19
 IPy==0.70
 M2Crypto==0.20.2
 amqplib==0.6.1
