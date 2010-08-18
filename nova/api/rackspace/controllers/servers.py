@@ -24,7 +24,7 @@ class Controller(base.Controller):
     entity_name = 'servers'
 
     def index(self, **kwargs):
-        instanmces = []
+        instances = []
         for inst in compute.InstanceDirectory().all:
             instances.append(instance_details(inst))
 
