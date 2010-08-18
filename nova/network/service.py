@@ -195,7 +195,7 @@ class VlanNetworkService(BaseNetworkService):
     #             simplified and improved.  Also there it may be useful
     #             to support vlans separately from dhcp, instead of having
     #             both of them together in this class.
-    # pylint: disable=W0221
+    # pylint: disable-msg=W0221
     def allocate_fixed_ip(self,
                           user_id,
                           project_id,

@@ -36,7 +36,7 @@ FLAGS = flags.FLAGS
 
 class NetworkTestCase(test.TrialTestCase):
     """Test cases for network code"""
-    def setUp(self):  # pylint: disable=C0103
+    def setUp(self):  # pylint: disable-msg=C0103
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
@@ -60,7 +60,7 @@ class NetworkTestCase(test.TrialTestCase):
             vpn.NetworkData.create(self.projects[i].id)
         self.service = service.VlanNetworkService()
 
-    def tearDown(self):  # pylint: disable=C0103
+    def tearDown(self):  # pylint: disable-msg=C0103
         super(NetworkTestCase, self).tearDown()
         for project in self.projects:
             self.manager.delete_project(project)
