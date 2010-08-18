@@ -17,7 +17,7 @@
 
 from nova import rpc
 from nova.compute import model as compute
-from nova.api.rackspace.controllers import base
+from nova.api.rackspace import base
 
 
 class Controller(base.Controller):
