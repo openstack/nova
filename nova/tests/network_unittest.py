@@ -26,9 +26,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.network import model
 from nova.network import service
-from nova.network import vpn
 from nova.network.exception import NoMoreAddresses
 
 FLAGS = flags.FLAGS

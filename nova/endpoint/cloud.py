@@ -41,7 +41,6 @@ from nova.compute import model
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.endpoint import images
 from nova.network import service as network_service
-from nova.network import model as network_model
 from nova.volume import service
 
 
