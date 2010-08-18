@@ -83,7 +83,7 @@ class Application(object):
         raise NotImplementedError("You must implement __call__")
 
 
-class Middleware(Application): # pylint: disable=W0223
+class Middleware(Application): # pylint: disable-msg=W0223
     """
     Base WSGI middleware wrapper. These classes require an application to be
     initialized that will be called next.  By default the middleware will
@@ -91,7 +91,7 @@ class Middleware(Application): # pylint: disable=W0223
     behavior.
     """
 
-    def __init__(self, application): # pylint: disable=W0231
+    def __init__(self, application): # pylint: disable-msg=W0231
         self.application = application
 
     @webob.dec.wsgify

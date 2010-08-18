@@ -53,7 +53,7 @@ def skip_if_fake(func):
 
 class TrialTestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
-    def setUp(self): # pylint: disable=C0103
+    def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(TrialTestCase, self).setUp()
 
@@ -63,7 +63,7 @@ class TrialTestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
 
-    def tearDown(self): # pylint: disable=C0103
+    def tearDown(self): # pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(TrialTestCase, self).tearDown()
         self.reset_flags()
@@ -94,7 +94,7 @@ class TrialTestCase(unittest.TestCase):
 class BaseTestCase(TrialTestCase):
     # TODO(jaypipes): Can this be moved into the TrialTestCase class?
     """Base test case class for all unit tests."""
-    def setUp(self): # pylint: disable=C0103
+    def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
@@ -106,7 +106,7 @@ class BaseTestCase(TrialTestCase):
         self._done_waiting = False
         self._timed_out = False
 
-    def tearDown(self):# pylint: disable=C0103
+    def tearDown(self):# pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(BaseTestCase, self).tearDown()
         for x in self.injected:
@@ -137,7 +137,7 @@ class BaseTestCase(TrialTestCase):
         if self._waiting:
             try:
                 self.ioloop.remove_timeout(self._waiting)
-            except Exception: # pylint: disable=W0703
+            except Exception: # pylint: disable-msg=W0703
                 # TODO(jaypipes): This produces a pylint warning.  Should
                 # we really be catching Exception and then passing here?
                 pass

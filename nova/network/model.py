@@ -59,7 +59,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 class Vlan(datastore.BasicModel):
     """Tracks vlans assigned to project it the datastore"""
-    def __init__(self, project, vlan):  # pylint: disable=W0231
+    def __init__(self, project, vlan):  # pylint: disable-msg=W0231
         """
         Since we don't want to try and find a vlan by its identifier,
         but by a project id, we don't call super-init.
@@ -161,7 +161,7 @@ class FixedIp(datastore.BasicModel):
                 'state': 'none'}
 
     @classmethod
-    # pylint: disable=R0913
+    # pylint: disable-msg=R0913
     def create(cls, user_id, project_id, address, mac, hostname, network_id):
         """Creates an FixedIp object"""
         addr = cls(address)
@@ -215,7 +215,7 @@ class BaseNetwork(datastore.BasicModel):
         return {'network_id': self.network_id, 'network_str': self.network_str}
 
     @classmethod
-    # pylint: disable=R0913
+    # pylint: disable-msg=R0913
     def create(cls, user_id, project_id, security_group, vlan, network_str):
         """Create a BaseNetwork object"""
         network_id = "%s:%s" % (project_id, security_group)
@@ -268,7 +268,7 @@ class BaseNetwork(datastore.BasicModel):
         """Returns the project associated with this network"""
         return manager.AuthManager().get_project(self['project_id'])
 
-    # pylint: disable=R0913
+    # pylint: disable-msg=R0913
     def _add_host(self, user_id, project_id, ip_address, mac, hostname):
         """Add a host to the datastore"""
         self.address_class.create(user_id, project_id, ip_address,
