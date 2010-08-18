@@ -34,7 +34,6 @@ from nova import flags
 from nova import models
 from nova import utils
 from nova.auth import signer
-from nova.network import vpn
 
 
 FLAGS = flags.FLAGS
@@ -571,10 +570,12 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        network_data = vpn.NetworkData.lookup(Project.safe_id(project))
-        if not network_data:
+        # FIXME(vish): this shouldn't be messing with the datamodel directly
+        if not isinstance(project, Project):
+            project = self.get_project(project)
+        if not project.network:
             raise exception.NotFound('project network data has not been set')
-        return (network_data.ip, network_data.port)
+        return (project.network.vpn_ip_str, project.network.vpn_port)
 
     def delete_project(self, project):
         """Deletes a project"""
