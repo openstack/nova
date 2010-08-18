@@ -22,49 +22,40 @@ Test for the root WSGI middleware for all API controllers.
 import unittest
 
 import stubout
+import webob
+import webob.dec
 
 from nova import api
-from nova import wsgi_test
 
 
 class Test(unittest.TestCase):
 
     def setUp(self): # pylint: disable-msg=C0103
-        self.called = False
         self.stubs = stubout.StubOutForTesting()
 
     def tearDown(self): # pylint: disable-msg=C0103
         self.stubs.UnsetAll()
 
     def test_rackspace(self):
-        self.stubs.Set(api.rackspace, 'API', get_api_stub(self))
-        api.API()(wsgi_test.get_environ({'PATH_INFO': '/v1.0/cloud'}),
-                  wsgi_test.start_response)
-        self.assertTrue(self.called)
+        self.stubs.Set(api.rackspace, 'API', APIStub)
+        result = webob.Request.blank('/v1.0/cloud').get_response(api.API())
+        self.assertEqual(result.body, "/cloud")
 
     def test_ec2(self):
-        self.stubs.Set(api.ec2, 'API', get_api_stub(self))
-        api.API()(wsgi_test.get_environ({'PATH_INFO': '/ec2/cloud'}),
-                  wsgi_test.start_response)
-        self.assertTrue(self.called)
+        self.stubs.Set(api.ec2, 'API', APIStub)
+        result = webob.Request.blank('/ec2/cloud').get_response(api.API())
+        self.assertEqual(result.body, "/cloud")
 
     def test_not_found(self):
-        self.stubs.Set(api.ec2, 'API', get_api_stub(self))
-        self.stubs.Set(api.rackspace, 'API', get_api_stub(self))
-        api.API()(wsgi_test.get_environ({'PATH_INFO': '/'}),
-                  wsgi_test.start_response)
-        self.assertFalse(self.called)
+        self.stubs.Set(api.ec2, 'API', APIStub)
+        self.stubs.Set(api.rackspace, 'API', APIStub)
+        result = webob.Request.blank('/test/cloud').get_response(api.API())
+        self.assertNotEqual(result.body, "/cloud")
 
 
-def get_api_stub(test_object):
-    """Get a stub class that verifies next part of the request."""
+class APIStub(object):
+    """Class to verify request and mark it was called."""
 
-    class APIStub(object):
-        """Class to verify request and mark it was called."""
-        test = test_object
-
-        def __call__(self, environ, start_response):
-            self.test.assertEqual(environ['PATH_INFO'], '/cloud')
-            self.test.called = True
-
-    return APIStub
+    @webob.dec.wsgify
+    def __call__(self, req):
+        return req.path_info

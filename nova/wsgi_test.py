@@ -24,41 +24,34 @@ Test WSGI basics and provide some helper functions for other WSGI tests.
 import unittest
 
 import routes
+import webob
 
 from nova import wsgi
 
 
 class Test(unittest.TestCase):
 
-    def setUp(self): # pylint: disable-msg=C0103
-        self.called = False
-
     def test_debug(self):
 
         class Application(wsgi.Application):
             """Dummy application to test debug."""
-            test = self
 
-            def __call__(self, environ, test_start_response):
-                test_start_response("200", [("X-Test", "checking")])
-                self.test.called = True
-                return ['Test response']
+            def __call__(self, environ, start_response):
+                start_response("200", [("X-Test", "checking")])
+                return ['Test result']
 
-        app = wsgi.Debug(Application())(get_environ(), start_response)
-        self.assertTrue(self.called)
-        for _ in app:
-            pass
+        application = wsgi.Debug(Application())
+        result = webob.Request.blank('/').get_response(application)
+        self.assertEqual(result.body, "Test result")
 
     def test_router(self):
 
         class Application(wsgi.Application):
             """Test application to call from router."""
-            test = self
 
-            def __call__(self, environ, test_start_response):
-                test_start_response("200", [])
-                self.test.called = True
-                return []
+            def __call__(self, environ, start_response):
+                start_response("200", [])
+                return ['Router result']
 
         class Router(wsgi.Router):
             """Test router."""
@@ -68,11 +61,10 @@ class Test(unittest.TestCase):
                 mapper.connect("/test", controller=Application())
                 super(Router, self).__init__(mapper)
 
-        Router()(get_environ({'PATH_INFO': '/test'}), start_response)
-        self.assertTrue(self.called)
-        self.called = False
-        Router()(get_environ({'PATH_INFO': '/bad'}), start_response)
-        self.assertFalse(self.called)
+        result = webob.Request.blank('/test').get_response(Router())
+        self.assertEqual(result.body, "Router result")
+        result = webob.Request.blank('/bad').get_response(Router())
+        self.assertNotEqual(result.body, "Router result")
 
     def test_controller(self):
 
@@ -80,11 +72,11 @@ class Test(unittest.TestCase):
             """Test controller to call from router."""
             test = self
 
-            def show(self, **kwargs):
-                """Mark that this has been called."""
-                self.test.called = True
-                self.test.assertEqual(kwargs['id'], '123')
-                return "Test"
+            def show(self, req, id): # pylint: disable-msg=W0622,C0103
+                """Default action called for requests with an ID."""
+                self.test.assertEqual(req.path_info, '/tests/123')
+                self.test.assertEqual(id, '123')
+                return id
 
         class Router(wsgi.Router):
             """Test router."""
@@ -94,40 +86,11 @@ class Test(unittest.TestCase):
                 mapper.resource("test", "tests", controller=Controller())
                 super(Router, self).__init__(mapper)
 
-        Router()(get_environ({'PATH_INFO': '/tests/123'}), start_response)
-        self.assertTrue(self.called)
-        self.called = False
-        Router()(get_environ({'PATH_INFO': '/test/123'}), start_response)
-        self.assertFalse(self.called)
+        result = webob.Request.blank('/tests/123').get_response(Router())
+        self.assertEqual(result.body, "123")
+        result = webob.Request.blank('/test/123').get_response(Router())
+        self.assertNotEqual(result.body, "123")
 
     def test_serializer(self):
         # TODO(eday): Placeholder for serializer testing.
         pass
-
-
-def get_environ(overwrite={}): # pylint: disable-msg=W0102
-    """Get a WSGI environment, overwriting any entries given."""
-    environ = {'SERVER_PROTOCOL': 'HTTP/1.1',
-               'GATEWAY_INTERFACE': 'CGI/1.1',
-               'wsgi.version': (1, 0),
-               'SERVER_PORT': '443',
-               'SERVER_NAME': '127.0.0.1',
-               'REMOTE_ADDR': '127.0.0.1',
-               'wsgi.run_once': False,
-               'wsgi.errors': None,
-               'wsgi.multiprocess': False,
-               'SCRIPT_NAME': '',
-               'wsgi.url_scheme': 'https',
-               'wsgi.input': None,
-               'REQUEST_METHOD': 'GET',
-               'PATH_INFO': '/',
-               'CONTENT_TYPE': 'text/plain',
-               'wsgi.multithread': True,
-               'QUERY_STRING': '',
-               'eventlet.input': None}
-    return dict(environ, **overwrite)
-
-
-def start_response(_status, _headers):
-    """Dummy start_response to use with WSGI tests."""
-    pass
