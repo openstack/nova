@@ -21,6 +21,7 @@ import logging
 from twisted.internet import defer
 
 from nova import exception
+from nova import db
 from nova import flags
 from nova import models
 from nova import test
@@ -89,7 +90,7 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertFailure(self.volume.create_volume(vol_size,
                                                      user_id,
                                                      project_id),
-                           volume_service.NoMoreBlades)
+                           db.sqlalchemy.api.NoMoreBlades)
         for id in vols:
             yield self.volume.delete_volume(id)
 
@@ -102,23 +103,21 @@ class VolumeTestCase(test.TrialTestCase):
         project_id = 'fake'
         mountpoint = "/dev/sdf"
         volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
-        vol = models.Volume.find(volume_id)
-        self.volume.start_attach(volume_id, instance_id, mountpoint)
         if FLAGS.fake_tests:
-            self.volume.finish_attach(volume_id)
+            db.volume_attached(None, volume_id, instance_id, mountpoint)
         else:
             rv = yield self.compute.attach_volume(instance_id,
                                                   volume_id,
                                                   mountpoint)
+        vol = db.volume_get(None, volume_id)
         self.assertEqual(vol.status, "in-use")
         self.assertEqual(vol.attach_status, "attached")
         self.assertEqual(vol.instance_id, instance_id)
         self.assertEqual(vol.mountpoint, mountpoint)
 
         self.assertFailure(self.volume.delete_volume(volume_id), exception.Error)
-        self.volume.start_detach(volume_id)
         if FLAGS.fake_tests:
-            self.volume.finish_detach(volume_id)
+            db.volume_detached(None, volume_id)
         else:
             rv = yield self.volume.detach_volume(instance_id,
                                                  volume_id)

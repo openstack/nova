@@ -36,11 +36,9 @@ from nova import flags
 from nova import process
 from nova import service
 from nova import utils
-from nova import models
 from nova.compute import power_state
 from nova.network import service as network_service
 from nova.virt import connection as virt_connection
-from nova.volume import service as volume_service
 
 
 FLAGS = flags.FLAGS
@@ -122,7 +120,7 @@ class ComputeService(service.Service):
         """Reboot an instance on this server.
 
         KVM doesn't support reboot, so we terminate and restart.
-        
+
         """
         self.update_state(instance_id, context)
         instance_ref = db.instance_get(context, instance_id)
@@ -172,14 +170,14 @@ class ComputeService(service.Service):
                       context=None):
         """Attach a volume to an instance."""
         # TODO(termie): check that instance_id exists
-        volume_ref = volume_get(context, volume_id)
+        volume_ref = db.volume_get(context, volume_id)
         yield self._init_aoe()
         yield process.simple_execute(
                 "sudo virsh attach-disk %s /dev/etherd/%s %s" %
                 (instance_id,
-                 volume['aoe_device'],
+                 volume_ref['aoe_device'],
                  mountpoint.rpartition('/dev/')[2]))
-        volume_attached(context, volume_id)
+        db.volume_attached(context, volume_id)
         defer.returnValue(True)
 
     @defer.inlineCallbacks
@@ -189,14 +187,15 @@ class ComputeService(service.Service):
         # despite the documentation, virsh detach-disk just wants the device
         # name without the leading /dev/
         # TODO(termie): check that instance_id exists
-        volume_ref = volume_get(context, volume_id)
-        target = volume['mountpoint'].rpartition('/dev/')[2]
+        volume_ref = db.volume_get(context, volume_id)
+        target = volume_ref['mountpoint'].rpartition('/dev/')[2]
         yield process.simple_execute(
                 "sudo virsh detach-disk %s %s " % (instance_id, target))
-        volume_detached(context, volume_id)
+        db.volume_detached(context, volume_id)
         defer.returnValue(True)
 
     @defer.inlineCallbacks
     def _init_aoe(self):
+        # TODO(vish): these shell calls should move into a different layer.
         yield process.simple_execute("sudo aoe-discover")
         yield process.simple_execute("sudo aoe-stat")

@@ -26,12 +26,11 @@ import logging
 
 from twisted.internet import defer
 
+from nova import db
 from nova import exception
 from nova import flags
-from nova import models
 from nova import process
 from nova import service
-from nova import utils
 from nova import validate
 
 
@@ -55,10 +54,6 @@ flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
 
 
-class NoMoreBlades(exception.Error):
-    pass
-
-
 class VolumeService(service.Service):
     """
     There is one VolumeNode running on each host.
@@ -71,7 +66,7 @@ class VolumeService(service.Service):
 
     @defer.inlineCallbacks
     @validate.rangetest(size=(0, 1000))
-    def create_volume(self, size, user_id, project_id):
+    def create_volume(self, size, user_id, project_id, context=None):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
@@ -79,108 +74,88 @@ class VolumeService(service.Service):
         """
         logging.debug("Creating volume of size: %s" % (size))
 
-        vol = models.Volume()
-        vol.volume_id = utils.generate_uid('vol')
-        vol.node_name = FLAGS.node_name
-        vol.size = size
-        vol.user_id = user_id
-        vol.project_id = project_id
-        vol.availability_zone = FLAGS.storage_availability_zone
-        vol.status = "creating" # creating | available | in-use
-        vol.attach_status = "detached"  # attaching | attached | detaching | detached
-        vol.save()
-        yield self._exec_create_volume(vol)
-        yield self._setup_export(vol)
+        vol = {}
+        vol['node_name'] = FLAGS.node_name
+        vol['size'] = size
+        vol['user_id'] = user_id
+        vol['project_id'] = project_id
+        vol['availability_zone'] = FLAGS.storage_availability_zone
+        vol['status'] = "creating" # creating | available | in-use
+        # attaching | attached | detaching | detached
+        vol['attach_status'] = "detached"
+        volume_id = db.volume_create(context, vol)
+        yield self._exec_create_volume(volume_id, size)
+        (shelf_id, blade_id) = db.volume_allocate_shelf_and_blade(context,
+                                                                  volume_id)
+        yield self._exec_create_export(volume_id, shelf_id, blade_id)
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
-        vol.status = "available"
-        vol.save()
-        logging.debug("restarting exports")
         yield self._exec_ensure_exports()
-        defer.returnValue(vol.id)
+        db.volume_update(context, volume_id, {'status': 'available'})
+        logging.debug("restarting exports")
+        defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
-    def delete_volume(self, volume_id):
+    def delete_volume(self, volume_id, context=None):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
-        vol = models.Volume.find(volume_id)
-        if vol.attach_status == "attached":
+        volume_ref = db.volume_get(context, volume_id)
+        if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
-        if vol.node_name != FLAGS.node_name:
+        if volume_ref['node_name'] != FLAGS.node_name:
             raise exception.Error("Volume is not local to this node")
-        yield self._exec_delete_volume(vol)
-        yield vol.delete()
+        shelf_id, blade_id = db.volume_get_shelf_and_blade(context,
+                                                           volume_id)
+        yield self._exec_remove_export(volume_id, shelf_id, blade_id)
+        yield self._exec_delete_volume(volume_id)
+        db.volume_destroy(context, volume_id)
         defer.returnValue(True)
 
     @defer.inlineCallbacks
-    def _exec_create_volume(self, vol):
+    def _exec_create_volume(self, volume_id, size):
         if FLAGS.fake_storage:
             defer.returnValue(None)
-        if str(vol.size) == '0':
+        if int(size) == 0:
             sizestr = '100M'
         else:
-            sizestr = '%sG' % vol.size
+            sizestr = '%sG' % size
         yield process.simple_execute(
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
-                                                  vol.volume_id,
+                                                  volume_id,
                                                   FLAGS.volume_group),
                 error_ok=1)
 
     @defer.inlineCallbacks
-    def _exec_delete_volume(self, vol):
+    def _exec_delete_volume(self, volume_id):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            vol.volume_id), error_ok=1)
+                                            volume_id), error_ok=1)
 
     @defer.inlineCallbacks
-    def _setup_export(self, vol):
-        # FIXME: abstract this. also remove vol.export_device.xxx cheat
-        session = models.NovaBase.get_session()
-        query = session.query(models.ExportDevice).filter_by(volume=None)
-        export_device = query.with_lockmode("update").first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if not export_device:
-            raise NoMoreBlades()
-        export_device.volume_id = vol.id
-        session.add(export_device)
-        session.commit()
-        # FIXME: aoe_device is redundant, should be turned into a method
-        vol.aoe_device = "e%s.%s" % (export_device.shelf_id,
-                                     export_device.blade_id)
-        vol.save()
-        yield self._exec_setup_export(vol)
-
-    @defer.inlineCallbacks
-    def _exec_setup_export(self, vol):
+    def _exec_create_export(self, volume_id, shelf_id, blade_id):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (self, vol.export_device.shelf_id,
-                 vol.export_device.blade_id,
+                (self,
+                 shelf_id,
+                 blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
-                 vol.volume_id), error_ok=1)
+                 volume_id), error_ok=1)
+
 
     @defer.inlineCallbacks
-    def _remove_export(self, vol):
-        if not vol.export_device:
-            defer.returnValue(False)
-        yield self._exec_remove_export(vol)
-        defer.returnValue(True)
-
-    @defer.inlineCallbacks
-    def _exec_remove_export(self, vol):
+    def _exec_remove_export(self, _volume_id, shelf_id, blade_id):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (self, vol.export_device.shelf_id,
-                                                    vol.export_device.blade_id), error_ok=1)
+                "sudo vblade-persist stop %s %s" % (self, shelf_id,
+                                                    blade_id), error_ok=1)
         yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (self, vol.export_device.shelf_id,
-                                                       vol.export_device.blade_id), error_ok=1)
+                "sudo vblade-persist destroy %s %s" % (self, shelf_id,
+                                                       blade_id), error_ok=1)
     @defer.inlineCallbacks
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
@@ -198,30 +173,3 @@ class VolumeService(service.Service):
         yield process.simple_execute(
                 "sudo vgcreate %s %s" % (FLAGS.volume_group,
                                          FLAGS.storage_dev))
-
-    def start_attach(self, volume_id, instance_id, mountpoint):
-        vol = models.Volume.find(volume_id)
-        vol.instance_id = instance_id
-        vol.mountpoint = mountpoint
-        vol.status = "in-use"
-        vol.attach_status = "attaching"
-        vol.attach_time = utils.isotime()
-        vol.save()
-
-    def finish_attach(self, volume_id):
-        vol = models.Volume.find(volume_id)
-        vol.attach_status = "attached"
-        vol.save()
-
-    def start_detach(self, volume_id):
-        vol = models.Volume.find(volume_id)
-        vol.attach_status = "detaching"
-        vol.save()
-
-    def finish_detach(self, volume_id):
-        vol = models.Volume.find(volume_id)
-        vol.instance_id = None
-        vol.mountpoint = None
-        vol.status = "available"
-        vol.attach_status = "detached"
-        vol.save()

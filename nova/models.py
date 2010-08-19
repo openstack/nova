@@ -231,7 +231,6 @@ class Instance(Base, NovaBase):
 class Volume(Base, NovaBase):
     __tablename__ = 'volumes'
     id = Column(Integer, primary_key=True)
-    volume_id = Column(String(255))
 
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255)) #, ForeignKey('projects.id'))
