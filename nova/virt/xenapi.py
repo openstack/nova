@@ -19,7 +19,7 @@ A connection to XenServer or Xen Cloud Platform.
 
 The concurrency model for this class is as follows:
 
-All XenAPI calls are on a thread (using t.i.t.deferToThread, or the decorator
+All XenAPI calls are on a thread (using t.i.t.deferToThread, via the decorator
 deferredToThread).  They are remote calls, and so may hang for the usual
 reasons.  They should not be allowed to block the reactor thread.
 
@@ -41,10 +41,10 @@ import xmlrpclib
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
-from twisted.internet.threads import deferToThread
 
 from nova import flags
 from nova import process
+from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
 from nova.virt import images
@@ -95,12 +95,6 @@ def get_connection(_):
     if not url or password is None:
         raise Exception('Must specify xenapi_connection_url, xenapi_connection_username (optionally), and xenapi_connection_password to use connection_type=xenapi') 
     return XenAPIConnection(url, username, password)
-
-
-def deferredToThread(f):
-    def g(*args, **kwargs):
-        return deferToThread(f, *args, **kwargs)
-    return g
 
 
 class XenAPIConnection(object):
@@ -295,7 +289,7 @@ class XenAPIConnection(object):
                 'num_cpu': rec['VCPUs_max'],
                 'cpu_time': 0}
 
-    @deferredToThread
+    @utils.deferredToThread
     def _lookup(self, i):
         return self._lookup_blocking(i)
 
@@ -316,7 +310,7 @@ class XenAPIConnection(object):
         reactor.callLater(0, self._poll_task, task, d)
         return d
 
-    @deferredToThread
+    @utils.deferredToThread
     def _poll_task(self, task, deferred):
         """Poll the given XenAPI task, and fire the given Deferred if we
         get a result."""
@@ -340,7 +334,7 @@ class XenAPIConnection(object):
             logging.warn(exn)
             deferred.errback(exn)
 
-    @deferredToThread
+    @utils.deferredToThread
     def _call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread.  Returns
         a Deferred for the result."""
@@ -349,7 +343,7 @@ class XenAPIConnection(object):
             f = f.__getattr__(m)
         return f(*args)
 
-    @deferredToThread
+    @utils.deferredToThread
     def _async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
         Deferred with the task reference."""
