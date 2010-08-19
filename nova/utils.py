@@ -142,3 +142,36 @@ def isotime(at=None):
 
 def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
+
+
+	
+class LazyPluggable(object):
+    """A pluggable backend loaded lazily based on some value."""
+        
+    def __init__(self, pivot, **backends):
+        self.__backends = backends
+        self.__pivot = pivot
+        self.__backend = None
+        
+    def __get_backend(self):
+        if not self.__backend:
+            backend_name = self.__pivot.value
+            if backend_name not in self.__backends:
+                raise exception.Error('Invalid backend: %s' % backend_name)
+        
+            backend = self.__backends[backend_name]
+            if type(backend) == type(tuple()):
+                name = backend[0]
+                fromlist = backend[1]
+            else:
+                name = backend
+                fromlist = backend
+        
+            self.__backend = __import__(name, None, None, fromlist)
+            logging.error('backend %s', self.__backend)
+        return self.__backend
+        
+    def __getattr__(self, key):
+        backend = self.__get_backend()
+        return getattr(backend, key)
+
