@@ -83,7 +83,7 @@ class Application(object):
         raise NotImplementedError("You must implement __call__")
 
 
-class Middleware(Application): # pylint: disable-msg=W0223
+class Middleware(Application):
     """
     Base WSGI middleware wrapper. These classes require an application to be
     initialized that will be called next.  By default the middleware will
@@ -95,7 +95,7 @@ class Middleware(Application): # pylint: disable-msg=W0223
         self.application = application
 
     @webob.dec.wsgify
-    def __call__(self, req):
+    def __call__(self, req): # pylint: disable-msg=W0221
         """Override to implement middleware behavior."""
         return self.application
 
@@ -113,7 +113,7 @@ class Debug(Middleware):
         resp = req.get_response(self.application)
 
         print ("*" * 40) + " RESPONSE HEADERS"
-        for (key, value) in resp.headers:
+        for (key, value) in resp.headers.iteritems():
             print key, "=", value
         print
 
@@ -127,7 +127,7 @@ class Debug(Middleware):
         Iterator that prints the contents of a wrapper string iterator
         when iterated.
         """
-        print ("*" * 40) + "BODY"
+        print ("*" * 40) + " BODY"
         for part in app_iter:
             sys.stdout.write(part)
             sys.stdout.flush()
@@ -176,8 +176,9 @@ class Router(object):
         """
         return self._router
 
+    @staticmethod
     @webob.dec.wsgify
-    def _dispatch(self, req):
+    def _dispatch(req):
         """
         Called by self._router after matching the incoming request to a route
         and putting the information into req.environ.  Either returns 404
@@ -197,6 +198,7 @@ class Controller(object):
     must, in addition to their normal parameters, accept a 'req' argument
     which is the incoming webob.Request.
     """
+
     @webob.dec.wsgify
     def __call__(self, req):
         """
@@ -249,6 +251,7 @@ class Serializer(object):
             return repr(data)
 
     def _to_xml_node(self, doc, metadata, nodename, data):
+        """Recursive method to convert data members to XML nodes."""
         result = doc.createElement(nodename)
         if type(data) is list:
             singular = metadata.get('plurals', {}).get(nodename, None)
@@ -262,7 +265,7 @@ class Serializer(object):
                 result.appendChild(node)
         elif type(data) is dict:
             attrs = metadata.get('attributes', {}).get(nodename, {})
-            for k,v in data.items():
+            for k, v in data.items():
                 if k in attrs:
                     result.setAttribute(k, str(v))
                 else:
