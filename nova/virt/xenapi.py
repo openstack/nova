@@ -149,7 +149,6 @@ class XenAPIConnection(object):
         yield self._call_xenapi('VM.start', vm_ref, False, False)
         logging.info('Spawning VM %s created %s.', instance.name, vm_ref)
 
-
     @defer.inlineCallbacks
     def _create_vm(self, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
@@ -191,7 +190,6 @@ class XenAPIConnection(object):
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
         defer.returnValue(vm_ref)
 
-
     @defer.inlineCallbacks
     def _create_vbd(self, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
@@ -216,7 +214,6 @@ class XenAPIConnection(object):
                       vdi_ref)
         defer.returnValue(vbd_ref)
 
-
     @defer.inlineCallbacks
     def _create_vif(self, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
@@ -238,7 +235,6 @@ class XenAPIConnection(object):
                       vm_ref, network_ref)
         defer.returnValue(vif_ref)
 
-
     @defer.inlineCallbacks
     def _find_network_with_bridge(self, bridge):
         expr = 'field "bridge" = "%s"' % bridge
@@ -250,7 +246,6 @@ class XenAPIConnection(object):
             raise Exception('Found non-unique network for bridge %s' % bridge)
         else:
             raise Exception('Found no network for bridge %s' % bridge)
-
 
     @defer.inlineCallbacks
     def _fetch_image(self, image, user, project, use_sr):
@@ -273,7 +268,6 @@ class XenAPIConnection(object):
         uuid = yield self._wait_for_task(task)
         defer.returnValue(uuid)
 
-
     @defer.inlineCallbacks
     def reboot(self, instance):
         vm = yield self._lookup(instance.name)
@@ -282,7 +276,6 @@ class XenAPIConnection(object):
         task = yield self._call_xenapi('Async.VM.clean_reboot', vm)
         yield self._wait_for_task(task)
 
-
     @defer.inlineCallbacks
     def destroy(self, instance):
         vm = yield self._lookup(instance.name)
@@ -290,7 +283,6 @@ class XenAPIConnection(object):
             raise Exception('instance not present %s' % instance.name)
         task = yield self._call_xenapi('Async.VM.destroy', vm)
         yield self._wait_for_task(task)
-
 
     def get_info(self, instance_id):
         vm = self._lookup_blocking(instance_id)
@@ -303,11 +295,9 @@ class XenAPIConnection(object):
                 'num_cpu': rec['VCPUs_max'],
                 'cpu_time': 0}
 
-
     @deferredToThread
     def _lookup(self, i):
         return self._lookup_blocking(i)
-
 
     def _lookup_blocking(self, i):
         vms = self._conn.xenapi.VM.get_by_name_label(i)
@@ -319,14 +309,12 @@ class XenAPIConnection(object):
         else:
             return vms[0]
 
-
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
         d = defer.Deferred()
         reactor.callLater(0, self._poll_task, task, d)
         return d
-
 
     @deferredToThread
     def _poll_task(self, task, deferred):
@@ -352,7 +340,6 @@ class XenAPIConnection(object):
             logging.warn(exn)
             deferred.errback(exn)
 
-
     @deferredToThread
     def _call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread.  Returns
@@ -362,7 +349,6 @@ class XenAPIConnection(object):
             f = f.__getattr__(m)
         return f(*args)
 
-
     @deferredToThread
     def _async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
@@ -370,7 +356,6 @@ class XenAPIConnection(object):
         return _unwrap_plugin_exceptions(
             self._conn.xenapi.Async.host.call_plugin,
             self._get_xenapi_host(), plugin, fn, args)
-
 
     def _get_xenapi_host(self):
         return self._conn.xenapi.session.get_this_host(self._conn.handle)
