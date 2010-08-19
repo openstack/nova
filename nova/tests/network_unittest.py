@@ -41,10 +41,7 @@ class NetworkTestCase(test.TrialTestCase):
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
-        self.sqlfile = 'test.sqlite'
         self.flags(connection_type='fake',
-                   #sql_connection='sqlite:///%s' % self.sqlfile,
-                   sql_connection='mysql://root@localhost/test',
                    fake_storage=True,
                    fake_network=True,
                    auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
@@ -54,7 +51,6 @@ class NetworkTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
-        print FLAGS.sql_connection
         self.service = service.VlanNetworkService()
         for i in range(5):
             name = 'project%s' % i
@@ -105,17 +101,13 @@ class NetworkTestCase(test.TrialTestCase):
                                                  self.instance_id)
         net = service.get_network_for_project(self.projects[0].id)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
-        print 'I just got allocated'
-        issue_ip(address, net.bridge, self.sqlfile)
-        obj = models.FixedIp.find_by_ip_str(address)
-        obj.refresh()
-        print obj.leased
+        issue_ip(address, net.bridge)
         self.service.deallocate_fixed_ip(address)
 
         # Doesn't go away until it's dhcp released
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
 
-        release_ip(address, net.bridge, self.sqlfile)
+        release_ip(address, net.bridge)
         self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
     def test_side_effects(self):
@@ -133,19 +125,19 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertFalse(is_allocated_in_project(address, self.projects[1].id))
 
         # Addresses are allocated before they're issued
-        issue_ip(address, net.bridge, self.sqlfile)
-        issue_ip(address2, net2.bridge, self.sqlfile)
+        issue_ip(address, net.bridge)
+        issue_ip(address2, net2.bridge)
 
         self.service.deallocate_fixed_ip(address)
-        release_ip(address, net.bridge, self.sqlfile)
+        release_ip(address, net.bridge)
         self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
         # First address release shouldn't affect the second
         self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
 
         self.service.deallocate_fixed_ip(address2)
-        issue_ip(address2, net.bridge, self.sqlfile)
-        release_ip(address2, net2.bridge, self.sqlfile)
+        issue_ip(address2, net.bridge)
+        release_ip(address2, net2.bridge)
         self.assertFalse(is_allocated_in_project(address2, self.projects[1].id))
 
     def test_subnet_edge(self):
@@ -158,9 +150,9 @@ class NetworkTestCase(test.TrialTestCase):
             address2 = self.service.allocate_fixed_ip(project_id, self.instance_id)
             address3 = self.service.allocate_fixed_ip(project_id, self.instance_id)
             net = service.get_network_for_project(project_id)
-            issue_ip(address, net.bridge, self.sqlfile)
-            issue_ip(address2, net.bridge, self.sqlfile)
-            issue_ip(address3, net.bridge, self.sqlfile)
+            issue_ip(address, net.bridge)
+            issue_ip(address2, net.bridge)
+            issue_ip(address3, net.bridge)
             self.assertFalse(is_allocated_in_project(address,
                                                      self.projects[0].id))
             self.assertFalse(is_allocated_in_project(address2,
@@ -170,9 +162,9 @@ class NetworkTestCase(test.TrialTestCase):
             self.service.deallocate_fixed_ip(address)
             self.service.deallocate_fixed_ip(address2)
             self.service.deallocate_fixed_ip(address3)
-            release_ip(address, net.bridge, self.sqlfile)
-            release_ip(address2, net.bridge, self.sqlfile)
-            release_ip(address3, net.bridge, self.sqlfile)
+            release_ip(address, net.bridge)
+            release_ip(address2, net.bridge)
+            release_ip(address3, net.bridge)
         net = service.get_network_for_project(self.projects[0].id)
         self.service.deallocate_fixed_ip(first)
 
@@ -205,9 +197,9 @@ class NetworkTestCase(test.TrialTestCase):
         address = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
         net = service.get_network_for_project(self.projects[0].id)
-        issue_ip(address, net.bridge, self.sqlfile)
+        issue_ip(address, net.bridge)
         self.service.deallocate_fixed_ip(address)
-        release_ip(address, net.bridge, self.sqlfile)
+        release_ip(address, net.bridge)
 
         address2 = self.service.allocate_fixed_ip(self.projects[0].id,
                                                   self.instance_id)
@@ -245,7 +237,7 @@ class NetworkTestCase(test.TrialTestCase):
             project_id = self.projects[0].id
             addresses.append(self.service.allocate_fixed_ip(project_id,
                                                             self.instance_id))
-            issue_ip(addresses[i],network.bridge, self.sqlfile)
+            issue_ip(addresses[i],network.bridge)
 
         self.assertEqual(available_ips(network), 0)
         self.assertRaises(NoMoreAddresses,
@@ -255,7 +247,7 @@ class NetworkTestCase(test.TrialTestCase):
 
         for i in range(len(addresses)):
             self.service.deallocate_fixed_ip(addresses[i])
-            release_ip(addresses[i],network.bridge, self.sqlfile)
+            release_ip(addresses[i],network.bridge)
         self.assertEqual(available_ips(network), num_available_ips)
 
 
@@ -291,22 +283,20 @@ def binpath(script):
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
-def issue_ip(private_ip, interface, sqlfile):
+def issue_ip(private_ip, interface):
     """Run add command on dhcpbridge"""
     cmd = "%s add fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
     env = {'DNSMASQ_INTERFACE': interface,
            'TESTING': '1',
-           'SQL_DB': sqlfile,
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
     logging.debug("ISSUE_IP: %s, %s ", out, err)
 
 
-def release_ip(private_ip, interface, sqlfile):
+def release_ip(private_ip, interface):
     """Run del command on dhcpbridge"""
     cmd = "%s del fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
     env = {'DNSMASQ_INTERFACE': interface,
-           'SQL_DB': sqlfile,
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)

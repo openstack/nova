@@ -23,7 +23,6 @@ Network Hosts are responsible for allocating ips and setting up network
 import logging
 
 import IPy
-from sqlalchemy.orm import exc
 
 from nova import exception
 from nova import flags
@@ -72,6 +71,10 @@ _driver = linux_net
 
 def type_to_class(network_type):
     """Convert a network_type string into an actual Python class"""
+    if not network_type:
+        logging.warn("Network type couldn't be determined, using %s" %
+                      FLAGS.network_type)
+        network_type = FLAGS.network_type
     if network_type == 'flat':
         return FlatNetworkService
     elif network_type == 'vlan':
@@ -286,10 +289,6 @@ class VlanNetworkService(BaseNetworkService):
         logging.debug("Leasing IP %s", fixed_ip_str)
         fixed_ip.leased = True
         fixed_ip.save()
-        print fixed_ip.allocated
-        print fixed_ip.leased
-        print fixed_ip.instance_id
-        print 'ip %s leased' % fixed_ip_str
 
     def release_ip(self, fixed_ip_str):
         """Called by bridge when ip is released"""

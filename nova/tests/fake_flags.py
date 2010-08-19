@@ -26,4 +26,5 @@ FLAGS.fake_rabbit = True
 FLAGS.fake_network = True
 FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 FLAGS.verbose = True
-FLAGS.sql_connection = 'sqlite:///:memory:'
+FLAGS.sql_connection = 'sqlite:///nova.sqlite'
+#FLAGS.sql_connection = 'mysql://root@localhost/test'

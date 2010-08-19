@@ -44,7 +44,9 @@ def add_lease(_mac, ip, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         logging.debug("leasing_ip")
-        print FLAGS.redis_db
+        from nova import models
+        print models.FixedIp.count()
+        print models.Network.count()
         print FLAGS.sql_connection
         service.VlanNetworkService().lease_ip(ip)
     else:
@@ -81,7 +83,6 @@ def main():
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
-    sqlfile = os.environ.get('SQL_DB', '')
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8
@@ -90,8 +91,13 @@ def main():
         FLAGS.fake_network = True
         FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
         FLAGS.num_networks = 5
-        FLAGS.sql_connection = 'mysql://root@localhost/test'
-        #FLAGS.sql_connection = 'sqlite:///%s' % sqlfile
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                            '..',
+                                            '_trial_temp',
+                                            'nova.sqlite'))
+        print path
+        FLAGS.sql_connection = 'sqlite:///%s' % path
+        #FLAGS.sql_connection = 'mysql://root@localhost/test'
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]
