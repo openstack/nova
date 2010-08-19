@@ -13,7 +13,7 @@ variable-rgx=[a-z_][a-z0-9_]{0,30}$
 method-rgx=[a-z_][a-z0-9_]{2,50}$
 
 # Module names matching nova-* are ok (files in bin/)
-module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+)|(nova-[a-z0-9_]+))$
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+)|(nova-[a-z0-9_-]+))$
 
 # Don't require docstrings on tests.
 no-docstring-rgx=((__.*__)|([tT]est.*)|setUp|tearDown)$
