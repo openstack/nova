@@ -15,12 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.endpoint.rackspace.controllers.base import BaseController
-from nova.endpoint import images
+from nova import datastore
+from nova.api.rackspace import base
+from nova.api.services.image import ImageService
 from webob import exc
 
 #TODO(gundlach): Serialize return values
-class Controller(BaseController):
+class Controller(base.Controller):
 
     _serialization_metadata = {
         'application/xml': {
@@ -31,34 +32,62 @@ class Controller(BaseController):
         }
     }
 
+    def __init__(self):
+        self._svc = ImageService.load()
+        self._id_xlator = RackspaceApiImageIdTranslator()
+
+    def _to_rs_id(self, image_id):
+        """
+        Convert an image id from the format of our ImageService strategy
+        to the Rackspace API format (an int).
+        """
+        strategy = self._svc.__class__.__name__
+        return self._id_xlator.to_rs_id(strategy, image_id)
+
     def index(self, req):
-        context = req.environ['nova.api_request_context']
-        return images.list(context)
+        """Return all public images."""
+        data = self._svc.list()
+        for img in data:
+            img['id'] = self._to_rs_id(img['id'])
+        return dict(images=result)
 
     def show(self, req, id):
-        context = req.environ['nova.api_request_context']
-        return images.list(context, filter_list=[id])
+        """Return data about the given image id."""
+        img = self._svc.show(id)
+        img['id'] = self._to_rs_id(img['id'])
+        return dict(image=img)
 
     def delete(self, req, id):
-        context = req.environ['nova.api_request_context']
-        # TODO(gundlach): make sure it's an image they may delete?
-        return images.deregister(context, id)
+        # Only public images are supported for now.
+        raise exc.HTTPNotFound()
 
-    def create(self, **kwargs):
-        # TODO(gundlach): no idea how to hook this up.  code below
-        # is from servers.py.
-        inst = self.build_server_instance(kwargs['server'])
-        rpc.cast(
-            FLAGS.compute_topic, {
-                "method": "run_instance",
-                "args": {"instance_id": inst.instance_id}})
+    def create(self, req):
+        # Only public images are supported for now, so a request to
+        # make a backup of a server cannot be supproted.
+        raise exc.HTTPNotFound()
 
-    def update(self, **kwargs):
-        # TODO (gundlach): no idea how to hook this up.  code below
-        # is from servers.py.
-        instance_id = kwargs['id']
-        instance = compute.InstanceDirectory().get(instance_id)
-        if not instance:
-            raise ServerNotFound("The requested server was not found")
-        instance.update(kwargs['server'])
-        instance.save()
+    def update(self, req, id):
+        # Users may not modify public images, and that's all that 
+        # we support for now.
+        raise exc.HTTPNotFound()
+
+
+class RackspaceApiImageIdTranslator(object):
+    """
+    Converts Rackspace API image ids to and from the id format for a given
+    strategy.
+    """
+
+    def __init__(self):
+        self._store = datastore.Redis.instance()
+
+    def to_rs_id(self, strategy_name, opaque_id):
+        """Convert an id from a strategy-specific one to a Rackspace one."""
+        key = "rsapi.idstrategies.image.%s" % strategy_name
+        result = self._store.hget(key, str(opaque_id))
+        if result: # we have a mapping from opaque to RS for this strategy
+            return int(result)
+        else:
+            nextid = self._store.incr("%s.lastid" % key)
+            self._store.hsetnx(key, str(opaque_id), nextid)
+            return nextid
