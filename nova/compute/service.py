@@ -82,22 +82,6 @@ class ComputeService(service.Service):
         return defer.succeed(len(self._instances))
 
     @defer.inlineCallbacks
-    def report_state(self, nodename, daemon):
-        # TODO(termie): make this pattern be more elegant. -todd
-        try:
-            record = model.Daemon(nodename, daemon)
-            record.heartbeat()
-            if getattr(self, "model_disconnected", False):
-                self.model_disconnected = False
-                logging.error("Recovered model server connection!")
-
-        except model.ConnectionError, ex:
-            if not getattr(self, "model_disconnected", False):
-                self.model_disconnected = True
-                logging.exception("model server went away")
-        yield
-
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, instance_id, **_kwargs):
         """ launch a new instance with specified options """
@@ -214,13 +198,3 @@ class ComputeService(service.Service):
                 "sudo virsh detach-disk %s %s " % (instance_id, target))
         volume.finish_detach()
         defer.returnValue(True)
-
-
-class Group(object):
-    def __init__(self, group_id):
-        self.group_id = group_id
-
-
-class ProductCode(object):
-    def __init__(self, product_code):
-        self.product_code = product_code

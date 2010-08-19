@@ -93,12 +93,13 @@ class Service(object, service.Service):
         try:
             try:
                 #FIXME abstract this
-                daemon = models.find_by_args(node_name, binary)
-            except exception.NotFound():
+                daemon = models.Daemon.find_by_args(node_name, binary)
+            except exception.NotFound:
                 daemon = models.Daemon(node_name=node_name,
-                                       binary=binary)
-            self._update_daemon()
-            self.commit()
+                                       binary=binary,
+                                       report_count=0)
+            self._update_daemon(daemon)
+            daemon.save()
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
                 logging.error("Recovered model server connection!")
@@ -109,6 +110,6 @@ class Service(object, service.Service):
                 logging.exception("model server went away")
         yield
 
-    def _update_daemon(daemon):
+    def _update_daemon(self, daemon):
         """Set any extra daemon data here"""
         daemon.report_count = daemon.report_count + 1

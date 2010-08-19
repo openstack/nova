@@ -143,7 +143,7 @@ class Daemon(Base, NovaBase):
     id = Column(Integer, primary_key=True)
     node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
     binary = Column(String(255))
-    report_count = Column(Integer)
+    report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
     def find_by_args(cls, node_name, binary):
