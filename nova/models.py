@@ -100,6 +100,12 @@ class NovaBase(object):
         session = NovaBase.get_session()
         session.refresh(self)
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
 
 class Image(Base, NovaBase):
     __tablename__ = 'images'
