@@ -45,7 +45,6 @@ from nova.volume import service
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 
 
 def _gen_key(user_id, key_name):
