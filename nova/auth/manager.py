@@ -529,11 +529,9 @@ class AuthManager(object):
                                                member_users)
             if project_dict:
                 project = Project(**project_dict)
-                # FIXME(ja): EVIL HACK - this should poll from a pool
-                session = models.create_session()
-                net = models.Network(project_id=project.id, kind='vlan')
-                session.add(net)
-                session.commit()
+                # FIXME(ja): EVIL HACK
+                net = models.Network(project_id=project.id)
+                net.save()
                 return project
 
     def add_to_project(self, user, project):
@@ -580,6 +578,10 @@ class AuthManager(object):
 
     def delete_project(self, project):
         """Deletes a project"""
+        # FIXME(ja): EVIL HACK
+        if not isinstance(project, Project):
+            project = self.get_project(project)
+        project.network.delete()
         with self.driver() as drv:
             return drv.delete_project(Project.safe_id(project))
 
@@ -714,15 +716,15 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        network_data = vpn.NetworkData.lookup(pid)
-        if network_data:
+        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        if vpn_ip:
             configfile = open(FLAGS.vpn_client_template,"r")
             s = string.Template(configfile.read())
             configfile.close()
             config = s.substitute(keyfile=FLAGS.credential_key_file,
                                   certfile=FLAGS.credential_cert_file,
-                                  ip=network_data.ip,
-                                  port=network_data.port)
+                                  ip=vpn_ip,
+                                  port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
             logging.warn("No vpn data for project %s" %

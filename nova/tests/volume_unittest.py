@@ -86,7 +86,6 @@ class VolumeTestCase(test.TrialTestCase):
         for i in xrange(self.total_slots):
             vid = yield self.volume.create_volume(vol_size, user_id, project_id)
             vols.append(vid)
-            print models.Volume.find(vid).export_device.volume_id
         self.assertFailure(self.volume.create_volume(vol_size,
                                                      user_id,
                                                      project_id),

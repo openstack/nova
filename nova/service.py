@@ -28,10 +28,10 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
-from nova import datastore
+from nova import exception
 from nova import flags
+from nova import models
 from nova import rpc
-from nova.compute import model
 
 
 FLAGS = flags.FLAGS
@@ -87,17 +87,28 @@ class Service(object, service.Service):
         return application
 
     @defer.inlineCallbacks
-    def report_state(self, nodename, daemon):
+    def report_state(self, node_name, binary):
+        """Update the state of this daemon in the datastore"""
         # TODO(termie): make this pattern be more elegant. -todd
         try:
-            record = model.Daemon(nodename, daemon)
-            record.heartbeat()
+            try:
+                #FIXME abstract this
+                daemon = models.find_by_args(node_name, binary)
+            except exception.NotFound():
+                daemon = models.Daemon(node_name=node_name,
+                                       binary=binary)
+            self._update_daemon()
+            self.commit()
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
                 logging.error("Recovered model server connection!")
 
-        except datastore.ConnectionError, ex:
+        except Exception, ex: #FIXME this should only be connection error
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception("model server went away")
         yield
+
+    def _update_daemon(daemon):
+        """Set any extra daemon data here"""
+        daemon.report_count = daemon.report_count + 1

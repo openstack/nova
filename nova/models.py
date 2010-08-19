@@ -65,19 +65,24 @@ class NovaBase(object):
     @classmethod
     def all(cls):
         session = NovaBase.get_session()
-        return session.query(cls).all()
+        result = session.query(cls).all()
+        session.commit()
+        return result
 
     @classmethod
     def count(cls):
         session = NovaBase.get_session()
-        return session.query(cls).count()
+        result = session.query(cls).count()
+        session.commit()
+        return result
 
     @classmethod
     def find(cls, obj_id):
         session = NovaBase.get_session()
-        #print cls
         try:
-            return session.query(cls).filter_by(id=obj_id).one()
+            result = session.query(cls).filter_by(id=obj_id).one()
+            session.commit()
+            return result
         except exc.NoResultFound:
             raise exception.NotFound("No model for id %s" % obj_id)
 
@@ -89,11 +94,12 @@ class NovaBase(object):
     def delete(self):
         session = NovaBase.get_session()
         session.delete(self)
-        session.flush()
+        session.commit()
 
     def refresh(self):
         session = NovaBase.get_session()
         session.refresh(self)
+
 
 class Image(Base, NovaBase):
     __tablename__ = 'images'
@@ -128,9 +134,29 @@ class Image(Base, NovaBase):
             assert(val is None)
 
 
-class PhysicalNode(Base):
+class PhysicalNode(Base, NovaBase):
     __tablename__ = 'physical_nodes'
+    id = Column(String(255), primary_key=True)
+
+class Daemon(Base, NovaBase):
+    __tablename__ = 'daemons'
     id = Column(Integer, primary_key=True)
+    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    binary = Column(String(255))
+    report_count = Column(Integer)
+
+    @classmethod
+    def find_by_args(cls, node_name, binary):
+        session = NovaBase.get_session()
+        try:
+            query = session.query(cls).filter_by(node_name=node_name)
+            result = query.filter_by(binary=binary).one()
+            session.commit()
+            return result
+        except exc.NoResultFound:
+            raise exception.NotFound("No model for %s, %s" % (node_name,
+                                                              binary))
+
 
 class Instance(Base, NovaBase):
     __tablename__ = 'instances'
@@ -153,7 +179,7 @@ class Instance(Base, NovaBase):
         return "i-%s" % self.id
 
 
-    image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
+    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 
@@ -204,8 +230,7 @@ class Volume(Base, NovaBase):
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255)) #, ForeignKey('projects.id'))
 
-    # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String(255))
+    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
     size = Column(Integer)
     alvailability_zone = Column(String(255)) # FIXME foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
@@ -222,6 +247,52 @@ class ExportDevice(Base, NovaBase):
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume, backref=backref('export_device',
                                                   uselist=False))
+
+
+#FIXME can these both come from the same baseclass?
+class FixedIp(Base, NovaBase):
+    __tablename__ = 'fixed_ips'
+    id = Column(Integer, primary_key=True)
+    ip_str = Column(String(255), unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance, backref=backref('fixed_ip',
+                                                      uselist=False))
+    allocated = Column(Boolean, default=False)
+    leased = Column(Boolean, default=False)
+    reserved = Column(Boolean, default=False)
+
+    @classmethod
+    def find_by_ip_str(cls, ip_str):
+        session = NovaBase.get_session()
+        try:
+            result = session.query(cls).filter_by(ip_str=ip_str).one()
+            session.commit()
+            return result
+        except exc.NoResultFound:
+            raise exception.NotFound("No model for ip str %s" % ip_str)
+
+
+class ElasticIp(Base, NovaBase):
+    __tablename__ = 'elastic_ips'
+    id = Column(Integer, primary_key=True)
+    ip_str = Column(String(255), unique=True)
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
+    fixed_ip = relationship(FixedIp, backref=backref('elastic_ips'))
+
+    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
+    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+
+    @classmethod
+    def find_by_ip_str(cls, ip_str):
+        session = NovaBase.get_session()
+        try:
+            result = session.query(cls).filter_by(ip_str=ip_str).one()
+            session.commit()
+            return result
+        except exc.NoResultFound:
+            raise exception.NotFound("No model for ip str %s" % ip_str)
+
 
 class Network(Base, NovaBase):
     __tablename__ = 'networks'
@@ -242,8 +313,12 @@ class Network(Base, NovaBase):
     vpn_private_ip_str = Column(String(255))
 
     project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
-    # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String(255))
+    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+
+    fixed_ips = relationship(FixedIp,
+                             single_parent=True,
+                             backref=backref('network'),
+                             cascade='all, delete, delete-orphan')
 
 
 class NetworkIndex(Base, NovaBase):
@@ -255,46 +330,6 @@ class NetworkIndex(Base, NovaBase):
                                                       uselist=False))
 
 
-#FIXME can these both come from the same baseclass?
-class FixedIp(Base, NovaBase):
-    __tablename__ = 'fixed_ips'
-    id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
-    network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
-    allocated = Column(Boolean, default=False)
-    leased = Column(Boolean, default=False)
-    reserved = Column(Boolean, default=False)
-
-    @classmethod
-    def find_by_ip_str(cls, ip_str):
-        session = NovaBase.get_session()
-        try:
-            return session.query(cls).filter_by(ip_str=ip_str).one()
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % ip_str)
-
-class ElasticIp(Base, NovaBase):
-    __tablename__ = 'elastic_ips'
-    id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('elastic_ips'))
-
-    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
-    # FIXME: should be physical_node_id = Column(Integer)
-    node_name = Column(String(255))
-
-    @classmethod
-    def find_by_ip_str(cls, ip_str):
-        session = NovaBase.get_session()
-        try:
-            return session.query(cls).filter_by(ip_str=ip_str).one()
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % ip_str)
 
 
 def create_session(engine=None):

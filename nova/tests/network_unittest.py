@@ -23,6 +23,7 @@ import os
 import logging
 import tempfile
 
+from nova import exception
 from nova import flags
 from nova import models
 from nova import test
@@ -40,10 +41,10 @@ class NetworkTestCase(test.TrialTestCase):
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
-        fd, sqlfile = tempfile.mkstemp()
-        self.sqlfile = os.path.abspath(sqlfile)
+        self.sqlfile = 'test.sqlite'
         self.flags(connection_type='fake',
-                   sql_connection='sqlite:///%s' % self.sqlfile,
+                   #sql_connection='sqlite:///%s' % self.sqlfile,
+                   sql_connection='mysql://root@localhost/test',
                    fake_storage=True,
                    fake_network=True,
                    auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
@@ -53,6 +54,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
+        print FLAGS.sql_connection
         self.service = service.VlanNetworkService()
         for i in range(5):
             name = 'project%s' % i
@@ -64,7 +66,6 @@ class NetworkTestCase(test.TrialTestCase):
         instance = models.Instance()
         instance.mac_address = utils.generate_mac()
         instance.hostname = 'fake'
-        instance.image_id = 'fake'
         instance.save()
         self.instance_id = instance.id
 
@@ -73,16 +74,19 @@ class NetworkTestCase(test.TrialTestCase):
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
-        os.unlink(self.sqlfile)
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
         # FIXME better way of adding elastic ips
         pubnet = IPy.IP(flags.FLAGS.public_range)
-        elastic_ip = models.ElasticIp()
-        elastic_ip.ip_str = str(pubnet[0])
-        elastic_ip.node_name = FLAGS.node_name
-        elastic_ip.save()
+        ip_str = str(pubnet[0])
+        try:
+            elastic_ip = models.ElasticIp.find_by_ip_str(ip_str)
+        except exception.NotFound:
+            elastic_ip = models.ElasticIp()
+            elastic_ip.ip_str = ip_str
+            elastic_ip.node_name = FLAGS.node_name
+            elastic_ip.save()
         eaddress = self.service.allocate_elastic_ip(self.projects[0].id)
         faddress = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
@@ -101,7 +105,11 @@ class NetworkTestCase(test.TrialTestCase):
                                                  self.instance_id)
         net = service.get_network_for_project(self.projects[0].id)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
+        print 'I just got allocated'
         issue_ip(address, net.bridge, self.sqlfile)
+        obj = models.FixedIp.find_by_ip_str(address)
+        obj.refresh()
+        print obj.leased
         self.service.deallocate_fixed_ip(address)
 
         # Doesn't go away until it's dhcp released
@@ -178,7 +186,7 @@ class NetworkTestCase(test.TrialTestCase):
     def test_too_many_networks(self):
         """Ensure error is raised if we run out of vpn ports"""
         projects = []
-        networks_left = FLAGS.num_networks - len(self.projects)
+        networks_left = FLAGS.num_networks - models.Network.count()
         for i in range(networks_left):
             project = self.manager.create_project('many%s' % i, self.user)
             self.service.set_network_host(project.id)

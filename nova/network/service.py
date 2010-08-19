@@ -118,12 +118,14 @@ class BaseNetworkService(service.Service):
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if network.node_name:
+            session.commit()
             return network.node_name
         network.node_name = FLAGS.node_name
         network.kind = FLAGS.network_type
         session.add(network)
         session.commit()
         self._on_set_network_host(network)
+        return network.node_name
 
     def allocate_fixed_ip(self, project_id, instance_id, *args, **kwargs):
         """Gets fixed ip from the pool"""
@@ -132,7 +134,8 @@ class BaseNetworkService(service.Service):
         session = models.NovaBase.get_session()
         query = session.query(models.FixedIp).filter_by(network_id=network.id)
         query = query.filter_by(reserved=False).filter_by(allocated=False)
-        fixed_ip = query.filter_by(leased=False).with_lockmode("update").first
+        query = query.filter_by(leased=False).with_lockmode("update")
+        fixed_ip = query.first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip:
@@ -233,16 +236,19 @@ class VlanNetworkService(BaseNetworkService):
         # NOTE(vish): this should probably be removed and added via
         #             admin command or fixtures
         if models.NetworkIndex.count() == 0:
+            session = models.NovaBase.get_session()
             for i in range(FLAGS.num_networks):
                 network_index = models.NetworkIndex()
                 network_index.index = i
-                network_index.save()
+                session.add(network_index)
+            session.commit()
 
     def allocate_fixed_ip(self, project_id, instance_id,  is_vpn=False,
                           *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network = get_network_for_project(project_id)
         if is_vpn:
+            # FIXME concurrency issue?
             fixed_ip = models.FixedIp.find_by_ip_str(network.vpn_private_ip_str)
             if fixed_ip.allocated:
                 raise network_exception.AddressAlreadyAllocated()
@@ -258,7 +264,6 @@ class VlanNetworkService(BaseNetworkService):
         else:
             parent = super(VlanNetworkService, self)
             ip_str = parent.allocate_fixed_ip(project_id, instance_id)
-        logging.debug("sql %s", FLAGS.sql_connection)
         _driver.ensure_vlan_bridge(network.vlan, network.bridge)
         return ip_str
 
@@ -275,13 +280,16 @@ class VlanNetworkService(BaseNetworkService):
 
     def lease_ip(self, fixed_ip_str):
         """Called by bridge when ip is leased"""
-        logging.debug("sql %s", FLAGS.sql_connection)
         fixed_ip = models.FixedIp.find_by_ip_str(fixed_ip_str)
         if not fixed_ip.allocated:
             raise network_exception.AddressNotAllocated(fixed_ip_str)
         logging.debug("Leasing IP %s", fixed_ip_str)
         fixed_ip.leased = True
         fixed_ip.save()
+        print fixed_ip.allocated
+        print fixed_ip.leased
+        print fixed_ip.instance_id
+        print 'ip %s leased' % fixed_ip_str
 
     def release_ip(self, fixed_ip_str):
         """Called by bridge when ip is released"""
@@ -321,13 +329,15 @@ class VlanNetworkService(BaseNetworkService):
         BOTTOM_RESERVED = 3
         TOP_RESERVED = 1 + FLAGS.cnt_vpn_clients
         num_ips = len(project_net)
+        session = models.NovaBase.get_session()
         for i in range(num_ips):
             fixed_ip = models.FixedIp()
             fixed_ip.ip_str = str(project_net[i])
             if i < BOTTOM_RESERVED or num_ips - i < TOP_RESERVED:
                 fixed_ip.reserved = True
             fixed_ip.network = network
-            fixed_ip.save()
+            session.add(fixed_ip)
+        session.commit()
 
 
     def _get_network_index(self, network):
