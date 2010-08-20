@@ -37,7 +37,7 @@ def die(message, *args):
   sys.exit(1)
 
 
-def run_command(cmd, redirect_output=True, error_ok=False):
+def run_command(cmd, redirect_output=True, check_exit_code=True):
   """
   Runs a command in an out-of-process shell, returning the
   output of that command.  Working directory is ROOT.
@@ -49,19 +49,18 @@ def run_command(cmd, redirect_output=True, error_ok=False):
 
   proc = subprocess.Popen(cmd, cwd=ROOT, stdout=stdout)
   output = proc.communicate()[0]
-  if not error_ok and proc.returncode != 0:
+  if check_exit_code and proc.returncode != 0:
     die('Command "%s" failed.\n%s', ' '.join(cmd), output)
   return output
 
 
-HAS_EASY_INSTALL = bool(run_command(['which', 'easy_install']).strip())
-HAS_VIRTUALENV = bool(run_command(['which', 'virtualenv']).strip())
+HAS_EASY_INSTALL = bool(run_command(['which', 'easy_install'], check_exit_code=False).strip())
+HAS_VIRTUALENV = bool(run_command(['which', 'virtualenv'], check_exit_code=False).strip())
 
 
 def check_dependencies():
   """Make sure virtualenv is in the path."""
 
-  print 'Checking for virtualenv...',
   if not HAS_VIRTUALENV:
     print 'not found.'
     # Try installing it via easy_install...

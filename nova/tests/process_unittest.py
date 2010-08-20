@@ -48,7 +48,7 @@ class ProcessTestCase(test.TrialTestCase):
 
     def test_execute_stderr(self):
         pool = process.ProcessPool(2)
-        d = pool.simple_execute('cat BAD_FILE', error_ok=1)
+        d = pool.simple_execute('cat BAD_FILE', check_exit_code=False)
         def _check(rv):
             self.assertEqual(rv[0], '')
             self.assert_('No such file' in rv[1])
