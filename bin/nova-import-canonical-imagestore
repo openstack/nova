@@ -35,12 +35,12 @@ from nova.objectstore import image
 
 FLAGS = flags.FLAGS
 
-api_url = 'https://imagestore.canonical.com/api/dashboard'
+API_URL = 'https://imagestore.canonical.com/api/dashboard'
 
 
 def get_images():
     """Get a list of the images from the imagestore URL."""
-    images = json.load(urllib2.urlopen(api_url))['images']
+    images = json.load(urllib2.urlopen(API_URL))['images']
     images = [img for img in images if img['title'].find('amd64') > -1]
     return images
 
