@@ -87,7 +87,9 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
 
 
 @defer.inlineCallbacks
-def inject_data(image, key=None, net=None, dns=None, remove_network_udev=False, partition=None, execute=None):
+def inject_data(    image, key=None, net=None, dns=None, 
+                    remove_network_udev=False, 
+                    partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -111,8 +113,12 @@ def inject_data(image, key=None, net=None, dns=None, remove_network_udev=False, 
         else:
             mapped_device = device
 
+        # We can only loopback mount raw images.  If the device isn't there,
+        #  it's normally because it's a .vmdk or a .vdi etc
         if not os.path.exists(mapped_device):
-            raise exception.Error('Mapped device was not found: %s' % mapped_device)
+            raise exception.Error(
+                'Mapped device was not found (we can only inject raw disk images): %s'
+                % mapped_device)
 
         # Configure ext2fs so that it doesn't auto-check every N boots
         out, err = yield execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
@@ -172,7 +178,9 @@ def _inject_dns_into_fs(dns, fs, execute=None):
 
 @defer.inlineCallbacks
 def _remove_network_udev(fs, execute=None):
-    # This is correct for Ubuntu, but might not be right for other distros
+    # TODO(justinsb): This is correct for Ubuntu, but might not be right for
+    #  other distros.  There is a much bigger discussion to be had about what
+    #  we inject and how we inject it.
     rulesfile = os.path.join(fs, 'etc', 'udev', 'rules.d', '70-persistent-net.rules')
     yield execute('rm -f %s' % rulesfile)
 
