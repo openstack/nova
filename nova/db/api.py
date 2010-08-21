@@ -37,6 +37,21 @@ class NoMoreBlades(exception.Error):
 ###################
 
 
+def daemon_get(context, node_name, binary):
+    return _impl.daemon_get(context, node_name, binary)
+    
+
+def daemon_create(context, values):
+    return _impl.daemon_create(context, values)
+
+
+def daemon_update(context, values):
+    return _impl.daemon_update(context, values)
+
+
+###################
+
+
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return _impl.instance_create(context, values)

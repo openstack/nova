@@ -28,31 +28,34 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
+from nova import db
 from nova import exception
 from nova import flags
-from nova import models
 from nova import rpc
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_integer('report_interval', 10,
                      'seconds between nodes reporting state to cloud',
                      lower_bound=1)
 
+
 class Service(object, service.Service):
-    """Base class for workers that run on hosts"""
+    """Base class for workers that run on hosts."""
 
     @classmethod
-    def create(cls,
-               report_interval=None, # defaults to flag
-               bin_name=None, # defaults to basename of executable
-               topic=None): # defaults to basename - "nova-" part
-        """Instantiates class and passes back application object"""
+    def create(cls, report_interval=None, bin_name=None, topic=None):
+        """Instantiates class and passes back application object.
+        
+        Args:
+            report_interval, defaults to flag
+            bin_name, defaults to basename of executable
+            topic, defaults to basename - "nova-" part
+        
+        """
         if not report_interval:
-            # NOTE(vish): set here because if it is set to flag in the
-            #             parameter list, it wrongly uses the default
             report_interval = FLAGS.report_interval
+
         # NOTE(vish): magic to automatically determine bin_name and topic
         if not bin_name:
             bin_name = os.path.basename(inspect.stack()[-1][1])
@@ -81,25 +84,27 @@ class Service(object, service.Service):
         consumer_node.attach_to_twisted()
 
         # This is the parent service that twistd will be looking for when it
-        # parses this file, return it so that we can get it into globals below
+        # parses this file, return it so that we can get it into globals.
         application = service.Application(bin_name)
         node_instance.setServiceParent(application)
         return application
 
     @defer.inlineCallbacks
-    def report_state(self, node_name, binary):
-        """Update the state of this daemon in the datastore"""
-        # TODO(termie): make this pattern be more elegant. -todd
+    def report_state(self, node_name, binary, context=None):
+        """Update the state of this daemon in the datastore."""
         try:
             try:
-                #FIXME abstract this
-                daemon = models.Daemon.find_by_args(node_name, binary)
+                daemon_ref = db.daemon_get(context, node_name, binary)
             except exception.NotFound:
-                daemon = models.Daemon(node_name=node_name,
-                                       binary=binary,
-                                       report_count=0)
-            self._update_daemon(daemon)
-            daemon.save()
+                daemon_ref = db.daemon_create(context, {'node_name': node_name,
+                                                        'binary': binary,
+                                                        'report_count': 0})
+            
+            # TODO(termie): I don't think this is really needed, consider
+            #               removing it.
+            self._update_daemon(daemon_ref, context)
+
+            # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
                 logging.error("Recovered model server connection!")
@@ -110,6 +115,10 @@ class Service(object, service.Service):
                 logging.exception("model server went away")
         yield
 
-    def _update_daemon(self, daemon):
+    def _update_daemon(self, daemon_ref, context):
         """Set any extra daemon data here"""
-        daemon.report_count = daemon.report_count + 1
+        # FIXME(termie): the following is in no way atomic
+        db.daemon_update(context, 
+                         daemon_ref['node_name'],
+                         daemon_ref['binary'],
+                         {'report_count': daemon_ref['report_count'] + 1})

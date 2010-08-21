@@ -21,6 +21,30 @@ from nova import exception
 from nova import models
 
 
+###################
+
+
+def daemon_get(context, node_name, binary):
+    return None
+    return models.Daemon.find_by_args(node_name, binary)
+    
+
+def daemon_create(context, values):
+    daemon_ref = models.Daemon(**values)
+    daemon_ref.save()
+    return daemon_ref
+
+
+def daemon_update(context, node_name, binary, values):
+    daemon_ref = daemon_get(context, node_name, binary)
+    for (key, value) in values.iteritems():
+        daemon_ref[key] = value
+    daemon_ref.save()
+
+
+###################
+
+
 def instance_create(context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
@@ -50,7 +74,7 @@ def instance_update(context, instance_id, values):
     instance_ref.save()
 
 
-#####################
+###################
 
 
 def network_create(context, values):
@@ -77,7 +101,7 @@ def network_update(context, network_id, values):
     network_ref.save()
 
 
-######################
+###################
 
 
 def volume_allocate_shelf_and_blade(context, volume_id):
