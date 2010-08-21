@@ -90,7 +90,7 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertFailure(self.volume.create_volume(vol_size,
                                                      user_id,
                                                      project_id),
-                           db.sqlalchemy.api.NoMoreBlades)
+                           db.NoMoreBlades)
         for id in vols:
             yield self.volume.delete_volume(id)
 

@@ -179,7 +179,7 @@ class Instance(Base, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    # FIXME: make this opaque somehow
+    # TODO(vish): make this opaque somehow
     @property
     def name(self):
         return "i-%s" % self.id
@@ -237,12 +237,12 @@ class Volume(Base, NovaBase):
 
     node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
     size = Column(Integer)
-    alvailability_zone = Column(String(255)) # FIXME foreign key?
+    availability_zone = Column(String(255)) # TODO(vish) foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     mountpoint = Column(String(255))
-    attach_time = Column(String(255)) # FIXME datetime
-    status = Column(String(255)) # FIXME enum?
-    attach_status = Column(String(255)) # FIXME enum
+    attach_time = Column(String(255)) # TODO(vish) datetime
+    status = Column(String(255)) # TODO(vish) enum?
+    attach_status = Column(String(255)) # TODO(vish) enum
 
 class ExportDevice(Base, NovaBase):
     __tablename__ = 'export_devices'
@@ -254,7 +254,7 @@ class ExportDevice(Base, NovaBase):
                                                   uselist=False))
 
 
-#FIXME can these both come from the same baseclass?
+# TODO(vish): can these both come from the same baseclass?
 class FixedIp(Base, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)

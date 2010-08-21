@@ -145,7 +145,6 @@ class VolumeService(service.Service):
                  FLAGS.volume_group,
                  volume_id), error_ok=1)
 
-
     @defer.inlineCallbacks
     def _exec_remove_export(self, _volume_id, shelf_id, blade_id):
         if FLAGS.fake_storage:
@@ -156,6 +155,7 @@ class VolumeService(service.Service):
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self, shelf_id,
                                                        blade_id), error_ok=1)
+
     @defer.inlineCallbacks
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
