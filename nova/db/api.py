@@ -111,6 +111,14 @@ def network_update(context, network_id, values):
 ###################
 
 
+def project_get_network(context, project_id):
+    """Return the network associated with the project."""
+    return _impl.project_get_network(context, project_id)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""
     return _impl.volume_allocate_shelf_and_blade(context, volume_id)

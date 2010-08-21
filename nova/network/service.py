@@ -24,6 +24,7 @@ import logging
 
 import IPy
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import models
@@ -89,12 +90,12 @@ def setup_compute_network(project_id):
     srv.setup_compute_network(network)
 
 
-def get_network_for_project(project_id):
+def get_network_for_project(project_id, context=None):
     """Get network allocated to project from datastore"""
     project = manager.AuthManager().get_project(project_id)
     if not project:
         raise exception.NotFound("Couldn't find project %s" % project_id)
-    return project.network
+    return db.project_get_network(context, project_id)
 
 
 def get_host_for_project(project_id):
@@ -246,7 +247,7 @@ class VlanNetworkService(BaseNetworkService):
                 session.add(network_index)
             session.commit()
 
-    def allocate_fixed_ip(self, project_id, instance_id,  is_vpn=False,
+    def allocate_fixed_ip(self, project_id, instance_id, is_vpn=False,
                           *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network = get_network_for_project(project_id)

@@ -82,7 +82,7 @@ def network_create(context, values):
     for (key, value) in values.iteritems():
         network_ref[key] = value
     network_ref.save()
-    return network_ref.id
+    return network_ref
 
 
 def network_destroy(context, network_id):
@@ -100,6 +100,17 @@ def network_update(context, network_id, values):
         network_ref[key] = value
     network_ref.save()
 
+
+###################
+
+
+def project_get_network(context, project_id):
+    session = models.create_session()
+    rv = session.query(models.Network).filter_by(project_id=project_id).first()
+    if not rv:
+        raise exception.NotFound('No network for project: %s' % project_id)
+    return rv
+    
 
 ###################
 

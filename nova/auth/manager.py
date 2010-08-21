@@ -29,6 +29,7 @@ import uuid
 import zipfile
 
 from nova import crypto
+from nova import db
 from nova import exception
 from nova import flags
 from nova import models
@@ -201,11 +202,6 @@ class Project(AuthBase):
     def vpn_port(self):
         ip, port = AuthManager().get_project_vpn_data(self)
         return port
-
-    @property
-    def network(self):
-        session = models.create_session()
-        return session.query(models.Network).filter_by(project_id=self.id).first()
 
     def has_manager(self, user):
         return AuthManager().is_project_manager(user, self)
@@ -498,8 +494,8 @@ class AuthManager(object):
                 return []
             return [Project(**project_dict) for project_dict in project_list]
 
-    def create_project(self, name, manager_user,
-                       description=None, member_users=None):
+    def create_project(self, name, manager_user, description=None,
+                       member_users=None, context=None):
         """Create a project
 
         @type name: str
@@ -530,8 +526,7 @@ class AuthManager(object):
             if project_dict:
                 project = Project(**project_dict)
                 # FIXME(ja): EVIL HACK
-                net = models.Network(project_id=project.id)
-                net.save()
+                db.network_create(context, {'project_id': project.id})
                 return project
 
     def add_to_project(self, user, project):
@@ -558,7 +553,7 @@ class AuthManager(object):
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
 
-    def get_project_vpn_data(self, project):
+    def get_project_vpn_data(self, project, context=None):
         """Gets vpn ip and port for project
 
         @type project: Project or project_id
@@ -571,19 +566,27 @@ class AuthManager(object):
         # FIXME(vish): this shouldn't be messing with the datamodel directly
         if not isinstance(project, Project):
             project = self.get_project(project)
-        if not project.network.vpn_public_port:
-            raise exception.NotFound('project network data has not been set')
-        return (project.network.vpn_public_ip_str,
-                project.network.vpn_public_port)
+        
+        network_ref = db.project_get_network(context, project.id)
 
-    def delete_project(self, project):
+        if not network_ref['vpn_public_port']:
+            raise exception.NotFound('project network data has not been set')
+        return (network_ref['vpn_public_ip_str'],
+                network_ref['vpn_public_port'])
+
+    def delete_project(self, project, context=None):
         """Deletes a project"""
         # FIXME(ja): EVIL HACK
         if not isinstance(project, Project):
             project = self.get_project(project)
-        project.network.delete()
+        network_ref = db.project_get_network(context, project.id)
+        try:
+            db.network_destroy(context, network_ref['id'])
+        except:
+            logging.exception('Could not destroy network: %s',
+                              network_ref['id'])
         with self.driver() as drv:
-            return drv.delete_project(Project.safe_id(project))
+            drv.delete_project(Project.safe_id(project))
 
     def get_user(self, uid):
         """Retrieves a user by id"""

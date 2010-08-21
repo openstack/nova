@@ -67,6 +67,8 @@ class NetworkTestCase(test.TrialTestCase):
 
     def tearDown(self):  # pylint: disable=C0103
         super(NetworkTestCase, self).tearDown()
+        # TODO(termie): this should really be instantiating clean datastores
+        #               in between runs, one failure kills all the tests
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
@@ -275,6 +277,8 @@ def is_allocated_in_project(address, project_id):
     fixed_ip = models.FixedIp.find_by_ip_str(address)
     project_net = service.get_network_for_project(project_id)
     # instance exists until release
+    logging.error('fixed_ip.instance: %s', fixed_ip.instance)
+    logging.error('project_net: %s', project_net)
     return fixed_ip.instance is not None and fixed_ip.network == project_net
 
 

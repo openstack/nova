@@ -43,6 +43,8 @@ class ServiceTestCase(test.BaseTestCase):
 
     def test_create(self):
         self.mox.StubOutWithMock(rpc, 'AdapterConsumer', use_mock_anything=True)
+        self.mox.StubOutWithMock(
+                service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
                             topic='run_tests.py',
                             proxy=mox.IsA(service.Service)
@@ -52,6 +54,15 @@ class ServiceTestCase(test.BaseTestCase):
                             topic='run_tests.py.%s' % FLAGS.node_name,
                             proxy=mox.IsA(service.Service)
                             ).AndReturn(rpc.AdapterConsumer)
+
+        # Stub out looping call a bit needlessly since we don't have an easy
+        # way to cancel it (yet) when the tests finishes
+        service.task.LoopingCall(
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
+                        service.task.LoopingCall)
+        service.task.LoopingCall.start(interval=mox.IgnoreArg(),
+                                       now=mox.IgnoreArg())
+
         rpc.AdapterConsumer.attach_to_twisted()
         rpc.AdapterConsumer.attach_to_twisted()
         self.mox.ReplayAll()
