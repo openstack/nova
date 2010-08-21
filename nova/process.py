@@ -103,7 +103,7 @@ class BackRelayWithInput(protocol.ProcessProtocol):
                     # NOTE(justinsb): This logic is a little suspicious to me...
                     # If the callback throws an exception, then errback will be 
                     # called also. However, this is what the unit tests test for...
-                    self.deferred.errback(_build_execution_error(exit_code))
+                    self.deferred.errback(self._build_execution_error(exit_code))
         elif self.on_process_ended is not None:
             self.on_process_ended.errback(reason)
 
