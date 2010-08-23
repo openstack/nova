@@ -36,4 +36,5 @@ class Controller(wsgi.Controller):
         MIME types to information needed to serialize to that type.
         """
         _metadata = getattr(type(self), "_serialization_metadata", {})
-        return Serializer(request.environ, _metadata).to_content_type(data)
+        serializer = wsgi.Serializer(request.environ, _metadata)
+        return serializer.to_content_type(data)

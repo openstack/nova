@@ -56,12 +56,12 @@ class Controller(base.Controller):
         """Return all public images."""
         data = dict((self._to_rs_id(id), val) 
                     for id, val in self._svc.index().iteritems())
-        return dict(images=data)
+        return self.serialize(dict(images=data), req)
 
     def show(self, req, id):
         """Return data about the given image id."""
         opaque_id = self._from_rs_id(id)
-        return dict(image=self._svc.show(opaque_id))
+        return self.serialize(dict(image=self._svc.show(opaque_id)), req)
 
     def delete(self, req, id):
         # Only public images are supported for now.
