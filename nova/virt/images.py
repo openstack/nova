@@ -60,7 +60,7 @@ def _fetch_s3_image(image, path, user, project):
                                                                      url_path)
     headers['Authorization'] = 'AWS %s:%s' % (access, signature)
 
-    cmd = ['/usr/bin/curl', '--silent', url]
+    cmd = ['/usr/bin/curl', '--fail', '--silent', url]
     for (k,v) in headers.iteritems():
         cmd += ['-H', '%s: %s' % (k,v)]
 

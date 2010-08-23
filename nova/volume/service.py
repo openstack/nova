@@ -131,8 +131,10 @@ class VolumeService(service.Service):
         if FLAGS.fake_storage:
             return
         # NOTE(vish): these commands sometimes sends output to stderr for warnings
-        yield process.simple_execute("sudo vblade-persist auto all", error_ok=1)
-        yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
+        yield process.simple_execute(   "sudo vblade-persist auto all", 
+                                        terminate_on_stderr=False)
+        yield process.simple_execute(   "sudo vblade-persist start all",
+                                        terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _init_volume_group(self):
@@ -247,13 +249,14 @@ class Volume(datastore.BasicModel):
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   self['volume_id'],
                                                   FLAGS.volume_group),
-                error_ok=1)
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _delete_lv(self):
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            self['volume_id']), error_ok=1)
+                                            self['volume_id']), 
+                terminate_on_stderr=False)
 
     @property
     def __devices_key(self):
@@ -281,7 +284,8 @@ class Volume(datastore.BasicModel):
                  self['blade_id'],
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
-                 self['volume_id']), error_ok=1)
+                 self['volume_id']), 
+                 terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _remove_export(self):
@@ -294,10 +298,12 @@ class Volume(datastore.BasicModel):
     def _exec_remove_export(self):
         yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self['shelf_id'],
-                                                    self['blade_id']), error_ok=1)
+                                                    self['blade_id']), 
+                terminate_on_stderr=False)
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self['shelf_id'],
-                                                       self['blade_id']), error_ok=1)
+                                                       self['blade_id']), 
+                terminate_on_stderr=False)
 
 
 class FakeVolume(Volume):

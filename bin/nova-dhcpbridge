@@ -40,29 +40,29 @@ from nova.network import service
 FLAGS = flags.FLAGS
 
 
-def add_lease(_mac, ip, _hostname, _interface):
+def add_lease(_mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
-        service.VlanNetworkService().lease_ip(ip)
+        service.VlanNetworkService().lease_ip(ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "lease_ip",
-                  "args": {"fixed_ip": ip}})
+                  "args": {"fixed_ip": ip_address}})
 
 
-def old_lease(_mac, _ip, _hostname, _interface):
+def old_lease(_mac, _ip_address, _hostname, _interface):
     """Do nothing, just an old lease update."""
     logging.debug("Adopted old lease or got a change of mac/hostname")
 
 
-def del_lease(_mac, ip, _hostname, _interface):
+def del_lease(_mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
-        service.VlanNetworkService().release_ip(ip)
+        service.VlanNetworkService().release_ip(ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "release_ip",
-                  "args": {"fixed_ip": ip}})
+                  "args": {"fixed_ip": ip_address}})
 
 
 def init_leases(interface):

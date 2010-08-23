@@ -35,12 +35,12 @@ from nova.objectstore import image
 
 FLAGS = flags.FLAGS
 
-api_url = 'https://imagestore.canonical.com/api/dashboard'
+API_URL = 'https://imagestore.canonical.com/api/dashboard'
 
 
 def get_images():
     """Get a list of the images from the imagestore URL."""
-    images = json.load(urllib2.urlopen(api_url))['images']
+    images = json.load(urllib2.urlopen(API_URL))['images']
     images = [img for img in images if img['title'].find('amd64') > -1]
     return images
 
@@ -56,21 +56,21 @@ def download(img):
     for f in img['files']:
         if f['kind'] == 'kernel':
             dest = os.path.join(tempdir, 'kernel')
-            subprocess.call(['curl', f['url'], '-o', dest])
+            subprocess.call(['curl', '--fail', f['url'], '-o', dest])
             kernel_id = image.Image.add(dest,
                 description='kernel/' + img['title'], kernel=True)
 
     for f in img['files']:
         if f['kind'] == 'ramdisk':
             dest = os.path.join(tempdir, 'ramdisk')
-            subprocess.call(['curl', f['url'], '-o', dest])
+            subprocess.call(['curl', '--fail', f['url'], '-o', dest])
             ramdisk_id = image.Image.add(dest,
                 description='ramdisk/' + img['title'], ramdisk=True)
 
     for f in img['files']:
         if f['kind'] == 'image':
             dest = os.path.join(tempdir, 'image')
-            subprocess.call(['curl', f['url'], '-o', dest])
+            subprocess.call(['curl', '--fail', f['url'], '-o', dest])
             ramdisk_id = image.Image.add(dest,
                 description=img['title'], kernel=kernel_id, ramdisk=ramdisk_id)
 

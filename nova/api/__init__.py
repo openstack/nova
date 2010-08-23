@@ -32,7 +32,6 @@ class API(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        mapper.connect(None, "/v1.0/{path_info:.*}",
-                       controller=rackspace.API())
-        mapper.connect(None, "/ec2/{path_info:.*}", controller=ec2.API())
+        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
+        mapper.connect("/ec2/{path_info:.*}", controller=ec2.API())
         super(API, self).__init__(mapper)
