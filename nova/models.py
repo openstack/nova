@@ -278,12 +278,12 @@ class FixedIp(Base, NovaBase):
             raise exception.NotFound("No model for ip str %s" % ip_str)
 
 
-class ElasticIp(Base, NovaBase):
-    __tablename__ = 'elastic_ips'
+class FloatingIp(Base, NovaBase):
+    __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
     ip_str = Column(String(255), unique=True)
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('elastic_ips'))
+    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
     project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
     node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
@@ -305,7 +305,7 @@ class Network(Base, NovaBase):
     kind = Column(String(255))
 
     injected = Column(Boolean, default=False)
-    network_str = Column(String(255))
+    cidr = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))

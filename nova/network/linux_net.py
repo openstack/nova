@@ -40,15 +40,15 @@ flags.DEFINE_string('public_interface', 'vlan1',
 flags.DEFINE_string('bridge_dev', 'eth0',
                         'network device for bridges')
 
-def bind_elastic_ip(elastic_ip):
+def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
-    _execute("sudo ip addr add %s dev %s" % (elastic_ip,
+    _execute("sudo ip addr add %s dev %s" % (floating_ip,
                                              FLAGS.public_interface))
 
 
-def unbind_elastic_ip(elastic_ip):
+def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface"""
-    _execute("sudo ip addr del %s dev %s" % (elastic_ip,
+    _execute("sudo ip addr del %s dev %s" % (floating_ip,
                                              FLAGS.public_interface))
 
 
@@ -61,12 +61,12 @@ def ensure_vlan_forward(public_ip, port, private_ip):
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
-def ensure_elastic_forward(elastic_ip, fixed_ip):
-    """Ensure elastic ip forwarding rule"""
+def ensure_floating_forward(floating_ip, fixed_ip):
+    """Ensure floating ip forwarding rule"""
     _confirm_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
-                           % (elastic_ip, fixed_ip))
+                           % (floating_ip, fixed_ip))
     _confirm_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
-                           % (fixed_ip, elastic_ip))
+                           % (fixed_ip, floating_ip))
     # TODO(joshua): Get these from the secgroup datastore entries
     _confirm_rule("FORWARD -d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
@@ -75,12 +75,12 @@ def ensure_elastic_forward(elastic_ip, fixed_ip):
             "FORWARD -d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
-def remove_elastic_forward(elastic_ip, fixed_ip):
-    """Remove forwarding for elastic ip"""
+def remove_floating_forward(floating_ip, fixed_ip):
+    """Remove forwarding for floating ip"""
     _remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
-                          % (elastic_ip, fixed_ip))
+                          % (floating_ip, fixed_ip))
     _remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
-                          % (fixed_ip, elastic_ip))
+                          % (fixed_ip, floating_ip))
     _remove_rule("FORWARD -d %s -p icmp -j ACCEPT"
                           % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:

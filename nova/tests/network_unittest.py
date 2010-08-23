@@ -21,8 +21,8 @@ Unit Tests for network code
 import IPy
 import os
 import logging
-import tempfile
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import models
@@ -30,7 +30,6 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.network import service
-from nova.network.exception import NoMoreAddresses, NoMoreNetworks
 
 FLAGS = flags.FLAGS
 
@@ -59,49 +58,52 @@ class NetworkTestCase(test.TrialTestCase):
                                                              name))
             # create the necessary network data for the project
             self.service.set_network_host(self.projects[i].id)
-        instance = models.Instance()
-        instance.mac_address = utils.generate_mac()
-        instance.hostname = 'fake'
-        instance.save()
-        self.instance_id = instance.id
+        instance_id = db.instance_create(None,
+                                         {'mac_address': utils.generate_mac()})
+        self.instance_id = instance_id
+        instance_id = db.instance_create(None,
+                                         {'mac_address': utils.generate_mac()})
+        self.instance2_id = instance_id
 
     def tearDown(self):  # pylint: disable=C0103
         super(NetworkTestCase, self).tearDown()
         # TODO(termie): this should really be instantiating clean datastores
         #               in between runs, one failure kills all the tests
+        db.instance_destroy(None, self.instance_id)
+        db.instance_destroy(None, self.instance2_id)
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
-        # FIXME better way of adding elastic ips
+        # TODO(vish): better way of adding floating ips
         pubnet = IPy.IP(flags.FLAGS.public_range)
         ip_str = str(pubnet[0])
         try:
-            elastic_ip = models.ElasticIp.find_by_ip_str(ip_str)
+            floating_ip = models.FloatingIp.find_by_ip_str(ip_str)
         except exception.NotFound:
-            elastic_ip = models.ElasticIp()
-            elastic_ip.ip_str = ip_str
-            elastic_ip.node_name = FLAGS.node_name
-            elastic_ip.save()
-        eaddress = self.service.allocate_elastic_ip(self.projects[0].id)
+            floating_ip = models.FloatingIp()
+            floating_ip.ip_str = ip_str
+            floating_ip.node_name = FLAGS.node_name
+            floating_ip.save()
+        eaddress = self.service.allocate_floating_ip(self.projects[0].id)
         faddress = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
         self.assertEqual(eaddress, str(pubnet[0]))
-        self.service.associate_elastic_ip(eaddress, faddress)
+        self.service.associate_floating_ip(eaddress, faddress)
         # FIXME datamodel abstraction
-        self.assertEqual(elastic_ip.fixed_ip.ip_str, faddress)
-        self.service.disassociate_elastic_ip(eaddress)
-        self.assertEqual(elastic_ip.fixed_ip, None)
-        self.service.deallocate_elastic_ip(eaddress)
+        self.assertEqual(floating_ip.fixed_ip.ip_str, faddress)
+        self.service.disassociate_floating_ip(eaddress)
+        self.assertEqual(floating_ip.fixed_ip, None)
+        self.service.deallocate_floating_ip(eaddress)
         self.service.deallocate_fixed_ip(faddress)
 
     def test_allocate_deallocate_fixed_ip(self):
         """Makes sure that we can allocate and deallocate a fixed ip"""
         address = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
-        net = service.get_network_for_project(self.projects[0].id)
+        net = db.project_get_network(None, self.projects[0].id)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
         issue_ip(address, net.bridge)
         self.service.deallocate_fixed_ip(address)
@@ -117,10 +119,10 @@ class NetworkTestCase(test.TrialTestCase):
         address = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
         address2 = self.service.allocate_fixed_ip(self.projects[1].id,
-                                                  self.instance_id)
+                                                  self.instance2_id)
 
-        net = service.get_network_for_project(self.projects[0].id)
-        net2 = service.get_network_for_project(self.projects[1].id)
+        net = db.project_get_network(None, self.projects[0].id)
+        net2 = db.project_get_network(None, self.projects[1].id)
 
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
         self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
@@ -151,7 +153,7 @@ class NetworkTestCase(test.TrialTestCase):
             address = self.service.allocate_fixed_ip(project_id, self.instance_id)
             address2 = self.service.allocate_fixed_ip(project_id, self.instance_id)
             address3 = self.service.allocate_fixed_ip(project_id, self.instance_id)
-            net = service.get_network_for_project(project_id)
+            net = db.project_get_network(None, project_id)
             issue_ip(address, net.bridge)
             issue_ip(address2, net.bridge)
             issue_ip(address3, net.bridge)
@@ -167,7 +169,7 @@ class NetworkTestCase(test.TrialTestCase):
             release_ip(address, net.bridge)
             release_ip(address2, net.bridge)
             release_ip(address3, net.bridge)
-        net = service.get_network_for_project(self.projects[0].id)
+        net = db.project_get_network(None, self.projects[0].id)
         self.service.deallocate_fixed_ip(first)
 
     def test_vpn_ip_and_port_looks_valid(self):
@@ -186,7 +188,7 @@ class NetworkTestCase(test.TrialTestCase):
             self.service.set_network_host(project.id)
             projects.append(project)
         project = self.manager.create_project('boom' , self.user)
-        self.assertRaises(NoMoreNetworks,
+        self.assertRaises(db.NoMoreNetworks,
                           self.service.set_network_host,
                           project.id)
         self.manager.delete_project(project)
@@ -198,7 +200,7 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that ip addresses that are deallocated get reused"""
         address = self.service.allocate_fixed_ip(self.projects[0].id,
                                                  self.instance_id)
-        net = service.get_network_for_project(self.projects[0].id)
+        net = db.project_get_network(None, self.projects[0].id)
         issue_ip(address, net.bridge)
         self.service.deallocate_fixed_ip(address)
         release_ip(address, net.bridge)
@@ -219,7 +221,7 @@ class NetworkTestCase(test.TrialTestCase):
         There are ips reserved at the bottom and top of the range.
         services (network, gateway, CloudPipe, broadcast)
         """
-        network = service.get_network_for_project(self.projects[0].id)
+        network = db.project_get_network(None, self.projects[0].id)
         net_size = flags.FLAGS.network_size
         total_ips = (available_ips(network) +
                      reserved_ips(network) +
@@ -229,7 +231,7 @@ class NetworkTestCase(test.TrialTestCase):
     def test_too_many_addresses(self):
         """Test for a NoMoreAddresses exception when all fixed ips are used.
         """
-        network = service.get_network_for_project(self.projects[0].id)
+        network = db.project_get_network(None, self.projects[0].id)
 
         # Number of availaible ips is len of the available list
 
@@ -242,7 +244,7 @@ class NetworkTestCase(test.TrialTestCase):
             issue_ip(addresses[i],network.bridge)
 
         self.assertEqual(available_ips(network), 0)
-        self.assertRaises(NoMoreAddresses,
+        self.assertRaises(db.NoMoreAddresses,
                           self.service.allocate_fixed_ip,
                           self.projects[0].id,
                           self.instance_id)
@@ -274,11 +276,11 @@ def reserved_ips(network):
 
 def is_allocated_in_project(address, project_id):
     """Returns true if address is in specified project"""
-    fixed_ip = models.FixedIp.find_by_ip_str(address)
-    project_net = service.get_network_for_project(project_id)
+    fixed_ip = db.fixed_ip_get_by_address(None, address)
+    project_net = db.project_get_network(None, project_id)
     # instance exists until release
-    logging.error('fixed_ip.instance: %s', fixed_ip.instance)
-    logging.error('project_net: %s', project_net)
+    logging.debug('fixed_ip.instance: %s', fixed_ip.instance)
+    logging.debug('project_net: %s', project_net)
     return fixed_ip.instance is not None and fixed_ip.network == project_net
 
 

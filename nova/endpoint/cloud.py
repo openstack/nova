@@ -311,7 +311,7 @@ class CloudController(object):
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
-        address = network_model.ElasticIp.lookup(public_ip)
+        address = network_model.FloatingIp.lookup(public_ip)
         if address and (context.user.is_admin() or address['project_id'] == context.project.id):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
@@ -459,7 +459,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in network_model.ElasticIp.all():
+        for address in network_model.FloatingIp.all():
             # TODO(vish): implement a by_project iterator for addresses
             if (context.user.is_admin() or
                 address['project_id'] == context.project.id):
@@ -481,7 +481,7 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
-                         {"method": "allocate_elastic_ip",
+                         {"method": "allocate_floating_ip",
                           "args": {"user_id": context.user.id,
                                    "project_id": context.project.id}})
         defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
@@ -492,8 +492,8 @@ class CloudController(object):
         # NOTE(vish): Should we make sure this works?
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_elastic_ip",
-                          "args": {"elastic_ip": public_ip}})
+                         {"method": "deallocate_floating_ip",
+                          "args": {"floating_ip": public_ip}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -503,8 +503,8 @@ class CloudController(object):
         address = self._get_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_elastic_ip",
-                          "args": {"elastic_ip": address['address'],
+                         {"method": "associate_floating_ip",
+                          "args": {"floating_ip": address['address'],
                                    "fixed_ip": instance['private_dns_name'],
                                    "instance_id": instance['instance_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
@@ -515,8 +515,8 @@ class CloudController(object):
         address = self._get_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_elastic_ip",
-                          "args": {"elastic_ip": address['address']}})
+                         {"method": "disassociate_floating_ip",
+                          "args": {"floating_ip": address['address']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
@@ -617,15 +617,15 @@ class CloudController(object):
                 logging.warning("Instance %s was not found during terminate"
                                 % i)
                 continue
-            elastic_ip = network_model.get_public_ip_for_instance(i)
-            if elastic_ip:
-                logging.debug("Disassociating address %s" % elastic_ip)
+            floating_ip = network_model.get_public_ip_for_instance(i)
+            if floating_ip:
+                logging.debug("Disassociating address %s" % floating_ip)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
                 rpc.cast(network_topic,
-                         {"method": "disassociate_elastic_ip",
-                          "args": {"elastic_ip": elastic_ip}})
+                         {"method": "disassociate_floating_ip",
+                          "args": {"floating_ip": floating_ip}})
 
             fixed_ip = instance.get('private_dns_name', None)
             if fixed_ip:

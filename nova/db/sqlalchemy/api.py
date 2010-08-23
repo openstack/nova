@@ -16,6 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import IPy
+
 from nova import db
 from nova import exception
 from nova import models
@@ -27,7 +29,7 @@ from nova import models
 def daemon_get(context, node_name, binary):
     return None
     return models.Daemon.find_by_args(node_name, binary)
-    
+
 
 def daemon_create(context, values):
     daemon_ref = models.Daemon(**values)
@@ -40,6 +42,99 @@ def daemon_update(context, node_name, binary, values):
     for (key, value) in values.iteritems():
         daemon_ref[key] = value
     daemon_ref.save()
+
+
+###################
+
+
+def floating_ip_allocate_address(context, node_name, project_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FloatingIp).filter_by(node_name=node_name)
+    query = query.filter_by(fixed_ip_id=None).with_lockmode("update")
+    floating_ip_ref = query.first()
+    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+    #             then this has concurrency issues
+    if not floating_ip_ref:
+        raise db.NoMoreAddresses()
+    floating_ip_ref['project_id'] = project_id
+    session.add(floating_ip_ref)
+    session.commit()
+    return floating_ip_ref['ip_str']
+
+
+def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+    floating_ip_ref = models.FloatingIp.find_by_ip_str(floating_address)
+    fixed_ip_ref = models.FixedIp.find_by_ip_str(fixed_address)
+    floating_ip_ref.fixed_ip = fixed_ip_ref
+    floating_ip_ref.save()
+
+
+def floating_ip_disassociate(context, address):
+    floating_ip_ref = models.FloatingIp.find_by_ip_str(address)
+    fixed_ip_address = floating_ip_ref.fixed_ip['ip_str']
+    floating_ip_ref['fixed_ip'] = None
+    floating_ip_ref.save()
+    return fixed_ip_address
+
+def floating_ip_deallocate(context, address):
+    floating_ip_ref = models.FloatingIp.find_by_ip_str(address)
+    floating_ip_ref['project_id'] = None
+    floating_ip_ref.save()
+
+###################
+
+
+def fixed_ip_allocate_address(context, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(network_id=network_id)
+    query = query.filter_by(reserved=False).filter_by(allocated=False)
+    query = query.filter_by(leased=False).with_lockmode("update")
+    fixed_ip_ref = query.first()
+    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+    #             then this has concurrency issues
+    if not fixed_ip_ref:
+        raise db.NoMoreAddresses()
+    fixed_ip_ref['allocated'] = True
+    session.add(fixed_ip_ref)
+    session.commit()
+    return fixed_ip_ref['ip_str']
+
+
+def fixed_ip_get_by_address(context, address):
+    return models.FixedIp.find_by_ip_str(address)
+
+
+def fixed_ip_lease(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    if not fixed_ip_ref['allocated']:
+        raise db.AddressNotAllocated(address)
+    fixed_ip_ref['leased'] = True
+    fixed_ip_ref.save()
+
+
+def fixed_ip_release(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    fixed_ip_ref['allocated'] = False
+    fixed_ip_ref['leased'] = False
+    fixed_ip_ref.save()
+
+
+def fixed_ip_deallocate(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    fixed_ip_ref['allocated'] = False
+    fixed_ip_ref.save()
+
+
+def fixed_ip_instance_associate(context, address, instance_id):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    fixed_ip_ref.instance = instance_get(context, instance_id)
+    fixed_ip_ref.save()
+
+
+def fixed_ip_instance_disassociate(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    fixed_ip_ref.instance = None
+    fixed_ip_ref.save()
 
 
 ###################
@@ -85,13 +180,99 @@ def network_create(context, values):
     return network_ref
 
 
+def network_create_fixed_ips(context, network_id, num_vpn_clients):
+    network_ref = network_get(context, network_id)
+    # NOTE(vish): should these be properties of the network as opposed
+    #             to constants?
+    BOTTOM_RESERVED = 3
+    TOP_RESERVED = 1 + num_vpn_clients
+    project_net = IPy.IP(network_ref['cidr'])
+    num_ips = len(project_net)
+    session = models.NovaBase.get_session()
+    for i in range(num_ips):
+        fixed_ip = models.FixedIp()
+        fixed_ip.ip_str = str(project_net[i])
+        if i < BOTTOM_RESERVED or num_ips - i < TOP_RESERVED:
+            fixed_ip['reserved'] = True
+        fixed_ip['network'] = network_get(context, network_id)
+        session.add(fixed_ip)
+    session.commit()
+
+
+def network_ensure_indexes(context, num_networks):
+    if models.NetworkIndex.count() == 0:
+        session = models.NovaBase.get_session()
+        for i in range(num_networks):
+            network_index = models.NetworkIndex()
+            network_index.index = i
+            session.add(network_index)
+            session.commit()
+
+
 def network_destroy(context, network_id):
     network_ref = network_get(context, network_id)
     network_ref.delete()
 
 
 def network_get(context, network_id):
-    return models.Instance.find(network_id)
+    return models.Network.find(network_id)
+
+
+def network_get_vpn_ip(context, network_id):
+    # TODO(vish): possible concurrency issue here
+    network = network_get(context, network_id)
+    address = network['vpn_private_ip_str']
+    fixed_ip = fixed_ip_get_by_address(context, address)
+    if fixed_ip['allocated']:
+        raise db.AddressAlreadyAllocated()
+    db.fixed_ip_allocate(context, {'allocated': True})
+
+
+def network_get_host(context, network_id):
+    network_ref = network_get(context, network_id)
+    return network_ref['node_name']
+
+
+def network_get_index(context, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.NetworkIndex).filter_by(network_id=None)
+    network_index = query.with_lockmode("update").first()
+    if not network_index:
+        raise db.NoMoreNetworks()
+    network_index['network'] = network_get(context, network_id)
+    session.add(network_index)
+    session.commit()
+    return network_index['index']
+
+
+def network_set_cidr(context, network_id, cidr):
+    network_ref = network_get(context, network_id)
+    project_net = IPy.IP(cidr)
+    network_ref['cidr'] = cidr
+    # FIXME we can turn these into properties
+    network_ref['netmask'] = str(project_net.netmask())
+    network_ref['gateway'] = str(project_net[1])
+    network_ref['broadcast'] = str(project_net.broadcast())
+    network_ref['vpn_private_ip_str'] = str(project_net[2])
+
+
+def network_set_host(context, network_id, host_id):
+    session = models.NovaBase.get_session()
+    # FIXME will a second request fail or wait for first to finish?
+    query = session.query(models.Network).filter_by(id=network_id)
+    network = query.with_lockmode("update").first()
+    if not network:
+        raise exception.NotFound("Couldn't find network with %s" %
+                                 network_id)
+    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+    #             then this has concurrency issues
+    if network.node_name:
+        session.commit()
+        return network['node_name']
+    network['node_name'] = host_id
+    session.add(network)
+    session.commit()
+    return network['node_name']
 
 
 def network_update(context, network_id, values):
@@ -110,7 +291,7 @@ def project_get_network(context, project_id):
     if not rv:
         raise exception.NotFound('No network for project: %s' % project_id)
     return rv
-    
+
 
 ###################
 

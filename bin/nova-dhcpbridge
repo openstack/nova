@@ -25,9 +25,9 @@ import logging
 import os
 import sys
 
-#TODO(joshua): there is concern that the user dnsmasq runs under will not
-#              have nova in the path. This should be verified and if it is
-#              not true the ugly line below can be removed
+# TODO(joshua): there is concern that the user dnsmasq runs under will not
+#               have nova in the path. This should be verified and if it is
+#               not true the ugly line below can be removed
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 
 from nova import flags
@@ -36,6 +36,7 @@ from nova import utils
 from nova.network import linux_net
 from nova.network import service
 from nova import datastore # for redis_db flag
+from nova.auth import manager # for auth flags
 
 FLAGS = flags.FLAGS
 
@@ -43,16 +44,16 @@ FLAGS = flags.FLAGS
 def add_lease(_mac, ip, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
-        logging.debug("leasing_ip")
+        logging.debug("leasing ip")
         from nova import models
         print models.FixedIp.count()
         print models.Network.count()
         print FLAGS.sql_connection
-        service.VlanNetworkService().lease_ip(ip)
+        service.VlanNetworkService().lease_fixed_ip(ip)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
-                 {"method": "lease_ip",
-                  "args": {"fixed_ip_str": ip}})
+                 {"method": "lease_fixed_ip",
+                  "args": {"address": ip}})
 
 
 def old_lease(_mac, _ip, _hostname, _interface):
@@ -63,12 +64,12 @@ def old_lease(_mac, _ip, _hostname, _interface):
 def del_lease(_mac, ip, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
-        logging.debug("releasing_ip")
-        service.VlanNetworkService().release_ip(ip)
+        logging.debug("releasing ip")
+        service.VlanNetworkService().release_fixed_ip(ip)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
-                 {"method": "release_ip",
-                  "args": {"fixed_ip_str": ip}})
+                 {"method": "release_fixed_ip",
+                  "args": {"address": ip}})
 
 
 def init_leases(interface):
