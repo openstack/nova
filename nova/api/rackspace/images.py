@@ -53,14 +53,17 @@ class Controller(base.Controller):
 
     def index(self, req):
         """Return all public images."""
-        data = dict((self._to_rs_id(id), val) 
-                    for id, val in self._svc.index().iteritems())
+        data = self._svc.index()
+        for img in data:
+            img['id'] = self._to_rs_id(img['id'])
         return dict(images=data)
 
     def show(self, req, id):
         """Return data about the given image id."""
         opaque_id = self._from_rs_id(id)
-        return dict(image=self._svc.show(opaque_id))
+        img = self._svc.show(opaque_id)
+        img['id'] = id
+        return dict(image=img)
 
     def delete(self, req, id):
         # Only public images are supported for now.

@@ -65,7 +65,7 @@ class LocalImageService(ImageService):
         return os.listdir(self._path)
 
     def index(self):
-        return dict((id, self.show(id)) for id in self._ids())
+        return [ self.show(id) for id in self._ids() ]
 
     def show(self, id):
         return pickle.load(open(self._path_to(id))) 
@@ -75,6 +75,7 @@ class LocalImageService(ImageService):
         Store the image data and return the new image id.
         """
         id = ''.join(random.choice(string.letters) for _ in range(20))
+        data['id'] = id
         self.update(id, data)
         return id
 
