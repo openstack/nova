@@ -44,18 +44,24 @@ class Controller(base.Controller):
         strategy = self._svc.__class__.__name__
         return self._id_xlator.to_rs_id(strategy, image_id)
 
+    def _from_rs_id(self, rs_image_id):
+        """
+        Convert an image id from the Rackspace API format (an int) to the
+        format of our ImageService strategy.
+        """
+        strategy = self._svc.__class__.__name__
+        return self._id_xlator.from_rs_id(strategy, rs_image_id)
+
     def index(self, req):
         """Return all public images."""
-        data = self._svc.list()
-        for img in data:
-            img['id'] = self._to_rs_id(img['id'])
-        return dict(images=result)
+        data = dict((self._to_rs_id(id), val) 
+                    for id, val in self._svc.index().iteritems())
+        return dict(images=data)
 
     def show(self, req, id):
         """Return data about the given image id."""
-        img = self._svc.show(id)
-        img['id'] = self._to_rs_id(img['id'])
-        return dict(image=img)
+        opaque_id = self._from_rs_id(id)
+        return dict(image=self._svc.show(opaque_id))
 
     def delete(self, req, id):
         # Only public images are supported for now.
@@ -80,14 +86,30 @@ class RackspaceApiImageIdTranslator(object):
 
     def __init__(self):
         self._store = datastore.Redis.instance()
+        self._key_template = "rsapi.idstrategies.image.%s.%s"
 
     def to_rs_id(self, strategy_name, opaque_id):
         """Convert an id from a strategy-specific one to a Rackspace one."""
-        key = "rsapi.idstrategies.image.%s" % strategy_name
+        key = self._key_template % (strategy_name, "fwd")
         result = self._store.hget(key, str(opaque_id))
         if result: # we have a mapping from opaque to RS for this strategy
             return int(result)
         else:
+            # Store the mapping.
             nextid = self._store.incr("%s.lastid" % key)
-            self._store.hsetnx(key, str(opaque_id), nextid)
-            return nextid
+            if self._store.hsetnx(key, str(opaque_id), nextid):
+                # If someone else didn't beat us to it, store the reverse
+                # mapping as well.
+                key = self._key_template % (strategy_name, "rev")
+                self._store.hset(key, nextid, str(opaque_id))
+                return nextid
+            else:
+                # Someone beat us to it; use their number instead, and
+                # discard nextid (which is OK -- we don't require that
+                # every int id be used.)
+                return int(self._store.hget(key, str(opaque_id)))
+
+    def from_rs_id(self, strategy_name, rs_id):
+        """Convert a Rackspace id to a strategy-specific one."""
+        key = self._key_template % (strategy_name, "rev")
+        return self._store.hget(key, rs_id)

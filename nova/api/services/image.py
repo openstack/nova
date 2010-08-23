@@ -17,6 +17,7 @@
 
 import cPickle as pickle
 import os.path
+import random
 import string
 
 class ImageService(object):
@@ -31,8 +32,7 @@ class ImageService(object):
 
     def index(self):
         """
-        Return a list of image data dicts.  Each dict will contain an
-        id key whose value is an opaque image id.
+        Return a dict from opaque image id to image data.
         """
 
     def show(self, id):
@@ -62,10 +62,10 @@ class LocalImageService(ImageService):
 
     def _ids(self):
         """The list of all image ids."""
-        return os.path.listdir(self._path)
+        return os.listdir(self._path)
 
     def index(self):
-        return [ self.show(id) for id in self._ids() ]
+        return dict((id, self.show(id)) for id in self._ids())
 
     def show(self, id):
         return pickle.load(open(self._path_to(id))) 
