@@ -196,7 +196,8 @@ class Controller(object):
     WSGI app that reads routing information supplied by RoutesMiddleware
     and calls the requested action method upon itself.  All action methods
     must, in addition to their normal parameters, accept a 'req' argument
-    which is the incoming webob.Request.
+    which is the incoming webob.Request.  They raise a webob.exc exception,
+    or return a dict which will be serialized by requested content type.
     """
 
     @webob.dec.wsgify
@@ -210,7 +211,18 @@ class Controller(object):
         del arg_dict['controller']
         del arg_dict['action']
         arg_dict['req'] = req
-        return method(**arg_dict)
+        result = method(**arg_dict)
+        return self._serialize(result, req) if type(result) is dict else result
+
+    def _serialize(self, data, request):
+        """
+        Serialize the given dict to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = wsgi.Serializer(request.environ, _metadata)
+        return serializer.to_content_type(data)
 
 
 class Serializer(object):
