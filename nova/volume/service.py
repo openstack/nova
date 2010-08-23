@@ -122,7 +122,7 @@ class VolumeService(service.Service):
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   volume_id,
                                                   FLAGS.volume_group),
-                error_ok=1)
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_delete_volume(self, volume_id):
@@ -130,7 +130,8 @@ class VolumeService(service.Service):
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            volume_id), error_ok=1)
+                                            volume_id),
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_create_export(self, volume_id, shelf_id, blade_id):
@@ -143,7 +144,8 @@ class VolumeService(service.Service):
                  blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
-                 volume_id), error_ok=1)
+                 volume_id),
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_remove_export(self, _volume_id, shelf_id, blade_id):
@@ -151,18 +153,22 @@ class VolumeService(service.Service):
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo vblade-persist stop %s %s" % (self, shelf_id,
-                                                    blade_id), error_ok=1)
+                                                    blade_id),
+                terminate_on_stderr=False)
         yield process.simple_execute(
                 "sudo vblade-persist destroy %s %s" % (self, shelf_id,
-                                                       blade_id), error_ok=1)
+                                                       blade_id),
+                terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         # NOTE(vish): these commands sometimes sends output to stderr for warnings
-        yield process.simple_execute("sudo vblade-persist auto all", error_ok=1)
-        yield process.simple_execute("sudo vblade-persist start all", error_ok=1)
+        yield process.simple_execute("sudo vblade-persist auto all",
+                                     terminate_on_stderr=False)
+        yield process.simple_execute("sudo vblade-persist start all",
+                                     terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_init_volumes(self):

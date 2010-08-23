@@ -30,6 +30,9 @@ _impl = utils.LazyPluggable(FLAGS['db_backend'],
                             sqlalchemy='nova.db.sqlalchemy.api')
 
 
+class AddressNotAllocated(exception.Error):
+    pass
+
 class NoMoreAddresses(exception.Error):
     pass
 

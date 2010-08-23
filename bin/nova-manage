@@ -56,7 +56,8 @@ class VpnCommands(object):
             vpn = self._vpn_for(project.id)
             if vpn:
                 command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                out, _err = utils.execute(command % vpn['private_dns_name'])
+                out, _err = utils.execute(  command % vpn['private_dns_name'],
+                                            check_exit_code=False)
                 if out.strip() == '0':
                     net = 'up'
                 else:
@@ -211,7 +212,7 @@ class ProjectCommands(object):
             f.write(zip_file)
 
 
-categories = [
+CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
@@ -258,11 +259,11 @@ def main():
     if len(argv) < 1:
         print script_name + " category action [<args>]"
         print "Available categories:"
-        for k, _ in categories:
+        for k, _ in CATEGORIES:
             print "\t%s" % k
         sys.exit(2)
     category = argv.pop(0)
-    matches = lazy_match(category, categories)
+    matches = lazy_match(category, CATEGORIES)
     # instantiate the command group object
     category, fn = matches[0]
     command_object = fn()

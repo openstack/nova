@@ -225,10 +225,10 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('ramdisk')):
            yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user, project)
 
-        execute = lambda cmd, input=None: \
+        execute = lambda cmd, process_input=None: \
                   process.simple_execute(cmd=cmd,
-                                         input=input,
-                                         error_ok=1)
+                                         process_input=process_input,
+                                         check_exit_code=True)
 
         key = inst.key_data
         net = None

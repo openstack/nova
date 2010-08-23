@@ -17,37 +17,21 @@
 #    under the License.
 
 """
-Exceptions for network errors.
+Root WSGI middleware for all API controllers.
 """
 
-from nova import exception
+import routes
+
+from nova import wsgi
+from nova.api import ec2
+from nova.api import rackspace
 
 
-class NoMoreNetworks(exception.Error):
-    """No More Networks are available"""
-    pass
+class API(wsgi.Router):
+    """Routes top-level requests to the appropriate controller."""
 
-
-class NoMoreAddresses(exception.Error):
-    """No More Addresses are available in the network"""
-    pass
-
-
-class AddressNotAllocated(exception.Error):
-    """The specified address has not been allocated"""
-    pass
-
-
-class AddressAlreadyAssociated(exception.Error):
-    """The specified address has already been associated"""
-    pass
-
-
-class AddressNotAssociated(exception.Error):
-    """The specified address is not associated"""
-    pass
-
-
-class NotValidNetworkSize(exception.Error):
-    """The network size is not valid"""
-    pass
+    def __init__(self):
+        mapper = routes.Mapper()
+        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
+        mapper.connect("/ec2/{path_info:.*}", controller=ec2.API())
+        super(API, self).__init__(mapper)

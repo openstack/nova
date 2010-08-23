@@ -23,7 +23,7 @@ Nova authentication management
 import logging
 import os
 import shutil
-import string
+import string # pylint: disable-msg=W0402
 import tempfile
 import uuid
 import zipfile
@@ -32,7 +32,6 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import models
 from nova import utils
 from nova.auth import signer
 
@@ -195,12 +194,12 @@ class Project(AuthBase):
 
     @property
     def vpn_ip(self):
-        ip, port = AuthManager().get_project_vpn_data(self)
+        ip, _port = AuthManager().get_project_vpn_data(self)
         return ip
 
     @property
     def vpn_port(self):
-        ip, port = AuthManager().get_project_vpn_data(self)
+        _ip, port = AuthManager().get_project_vpn_data(self)
         return port
 
     def has_manager(self, user):
@@ -222,11 +221,9 @@ class Project(AuthBase):
         return AuthManager().get_credentials(user, self)
 
     def __repr__(self):
-        return "Project('%s', '%s', '%s', '%s', %s)" % (self.id,
-                                                        self.name,
-                                                        self.project_manager_id,
-                                                        self.description,
-                                                        self.member_ids)
+        return "Project('%s', '%s', '%s', '%s', %s)" % \
+            (self.id, self.name, self.project_manager_id, self.description,
+             self.member_ids)
 
 
 class AuthManager(object):
@@ -298,7 +295,7 @@ class AuthManager(object):
         @return: User and project that the request represents.
         """
         # TODO(vish): check for valid timestamp
-        (access_key, sep, project_id) = access.partition(':')
+        (access_key, _sep, project_id) = access.partition(':')
 
         logging.info('Looking up user: %r', access_key)
         user = self.get_user_from_access_key(access_key)
@@ -321,7 +318,8 @@ class AuthManager(object):
             raise exception.NotFound('User %s is not a member of project %s' %
                                      (user.id, project.id))
         if check_type == 's3':
-            expected_signature = signer.Signer(user.secret.encode()).s3_authorization(headers, verb, path)
+            sign = signer.Signer(user.secret.encode())
+            expected_signature = sign.s3_authorization(headers, verb, path)
             logging.debug('user.secret: %s', user.secret)
             logging.debug('expected_signature: %s', expected_signature)
             logging.debug('signature: %s', signature)
@@ -466,7 +464,8 @@ class AuthManager(object):
         with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
-    def get_roles(self, project_roles=True):
+    @staticmethod
+    def get_roles(project_roles=True):
         """Get list of allowed roles"""
         if project_roles:
             return list(set(FLAGS.allowed_roles) - set(FLAGS.global_roles))
@@ -519,10 +518,10 @@ class AuthManager(object):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
         with self.driver() as drv:
-            project_dict =  drv.create_project(name,
-                                               User.safe_id(manager_user),
-                                               description,
-                                               member_users)
+            project_dict = drv.create_project(name,
+                                              User.safe_id(manager_user),
+                                              description,
+                                              member_users)
             if project_dict:
                 project = Project(**project_dict)
                 # FIXME(ja): EVIL HACK
@@ -553,7 +552,8 @@ class AuthManager(object):
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
 
-    def get_project_vpn_data(self, project, context=None):
+    @staticmethod
+    def get_project_vpn_data(project, context=None):
         """Gets vpn ip and port for project
 
         @type project: Project or project_id
@@ -563,11 +563,9 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        # FIXME(vish): this shouldn't be messing with the datamodel directly
-        if not isinstance(project, Project):
-            project = self.get_project(project)
-        
-        network_ref = db.project_get_network(context, project.id)
+
+        network_ref = db.project_get_network(context,
+                                             Project.safe_id(project))
 
         if not network_ref['vpn_public_port']:
             raise exception.NotFound('project network data has not been set')
@@ -577,9 +575,8 @@ class AuthManager(object):
     def delete_project(self, project, context=None):
         """Deletes a project"""
         # FIXME(ja): EVIL HACK
-        if not isinstance(project, Project):
-            project = self.get_project(project)
-        network_ref = db.project_get_network(context, project.id)
+        network_ref = db.project_get_network(context,
+                                             Project.safe_id(project))
         try:
             db.network_destroy(context, network_ref['id'])
         except:
@@ -632,8 +629,10 @@ class AuthManager(object):
         @rtype: User
         @return: The new user.
         """
-        if access == None: access = str(uuid.uuid4())
-        if secret == None: secret = str(uuid.uuid4())
+        if access == None:
+            access = str(uuid.uuid4())
+        if secret == None:
+            secret = str(uuid.uuid4())
         with self.driver() as drv:
             user_dict = drv.create_user(name, access, secret, admin)
             if user_dict:
@@ -675,10 +674,10 @@ class AuthManager(object):
     def create_key_pair(self, user, key_name, public_key, fingerprint):
         """Creates a key pair for user"""
         with self.driver() as drv:
-            kp_dict =  drv.create_key_pair(User.safe_id(user),
-                                           key_name,
-                                           public_key,
-                                           fingerprint)
+            kp_dict = drv.create_key_pair(User.safe_id(user),
+                                          key_name,
+                                          public_key,
+                                          fingerprint)
             if kp_dict:
                 return KeyPair(**kp_dict)
 
@@ -721,7 +720,7 @@ class AuthManager(object):
 
         (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
         if vpn_ip:
-            configfile = open(FLAGS.vpn_client_template,"r")
+            configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())
             configfile.close()
             config = s.substitute(keyfile=FLAGS.credential_key_file,
@@ -736,10 +735,10 @@ class AuthManager(object):
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(user.id))
         zippy.close()
         with open(zf, 'rb') as f:
-            buffer = f.read()
+            read_buffer = f.read()
 
         shutil.rmtree(tmpdir)
-        return buffer
+        return read_buffer
 
     def get_environment_rc(self, user, project=None):
         """Get credential zip for user in project"""
@@ -750,18 +749,18 @@ class AuthManager(object):
         pid = Project.safe_id(project)
         return self.__generate_rc(user.access, user.secret, pid)
 
-    def __generate_rc(self, access, secret, pid):
+    @staticmethod
+    def __generate_rc(access, secret, pid):
         """Generate rc file for user"""
         rc = open(FLAGS.credentials_template).read()
-        rc = rc % { 'access': access,
-                    'project': pid,
-                    'secret': secret,
-                    'ec2': FLAGS.ec2_url,
-                    's3': 'http://%s:%s' % (FLAGS.s3_host, FLAGS.s3_port),
-                    'nova': FLAGS.ca_file,
-                    'cert': FLAGS.credential_cert_file,
-                    'key': FLAGS.credential_key_file,
-            }
+        rc = rc % {'access': access,
+                   'project': pid,
+                   'secret': secret,
+                   'ec2': FLAGS.ec2_url,
+                   's3': 'http://%s:%s' % (FLAGS.s3_host, FLAGS.s3_port),
+                   'nova': FLAGS.ca_file,
+                   'cert': FLAGS.credential_cert_file,
+                   'key': FLAGS.credential_key_file}
         return rc
 
     def _generate_x509_cert(self, uid, pid):
@@ -772,6 +771,7 @@ class AuthManager(object):
         signed_cert = crypto.sign_csr(csr, pid)
         return (private_key, signed_cert)
 
-    def __cert_subject(self, uid):
+    @staticmethod
+    def __cert_subject(uid):
         """Helper to generate cert subject"""
         return FLAGS.credential_cert_subject % (uid, utils.isotime())

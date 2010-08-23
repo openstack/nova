@@ -1,8 +1,6 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,21 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Twistd daemon for the nova network nodes.
-"""
-
-from nova import flags
-from nova import twistd
-
-from nova.network import service
-
-FLAGS = flags.FLAGS
+from nova import wsgi
 
 
-if __name__ == '__main__':
-    twistd.serve(__file__)
+class Controller(wsgi.Controller):
+    """TODO(eday): Base controller for all rackspace controllers. What is this
+    for? Is this just Rackspace specific? """
 
-if __name__ == '__builtin__':
-    # pylint: disable-msg=C0103
-    application = service.type_to_class(FLAGS.network_type).create()
+    @classmethod
+    def render(cls, instance):
+        if isinstance(instance, list):
+            return {cls.entity_name: cls.render(instance)}
+        else:
+            return {"TODO": "TODO"}

@@ -59,7 +59,7 @@ class Connection(carrot_connection.BrokerConnection):
                 params['backend_cls'] = fakerabbit.Backend
 
             # NOTE(vish): magic is fun!
-            # pylint: disable=W0142
+            # pylint: disable-msg=W0142
             cls._instance = cls(**params)
         return cls._instance
 
@@ -104,7 +104,7 @@ class Consumer(messaging.Consumer):
             if self.failed_connection:
                 # NOTE(vish): conn is defined in the parent class, we can
                 #             recreate it as long as we create the backend too
-                # pylint: disable=W0201
+                # pylint: disable-msg=W0201
                 self.conn = Connection.recreate()
                 self.backend = self.conn.create_backend()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
@@ -114,7 +114,7 @@ class Consumer(messaging.Consumer):
         # NOTE(vish): This is catching all errors because we really don't
         #             exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
-        except Exception:  # pylint: disable=W0703
+        except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:
                 logging.exception("Failed to fetch message from queue")
                 self.failed_connection = True
@@ -178,7 +178,7 @@ class AdapterConsumer(TopicConsumer):
         node_func = getattr(self.proxy, str(method))
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
-        # pylint: disable=W0142
+        # pylint: disable-msg=W0142
         d = defer.maybeDeferred(node_func, **node_args)
         if msg_id:
             d.addCallback(lambda rval: msg_reply(msg_id, rval, None))

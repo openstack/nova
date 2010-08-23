@@ -221,7 +221,7 @@ def _stop_dnsmasq(network):
     if pid:
         try:
             os.kill(pid, signal.SIGTERM)
-        except Exception as exc:  # pylint: disable=W0703
+        except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Killing dnsmasq threw %s", exc)
 
 
