@@ -20,7 +20,6 @@ from nova.api.rackspace import base
 from nova.api.services.image import ImageService
 from webob import exc
 
-#TODO(gundlach): Serialize return values
 class Controller(base.Controller):
 
     _serialization_metadata = {
@@ -56,12 +55,12 @@ class Controller(base.Controller):
         """Return all public images."""
         data = dict((self._to_rs_id(id), val) 
                     for id, val in self._svc.index().iteritems())
-        return self.serialize(dict(images=data), req)
+        return dict(images=data)
 
     def show(self, req, id):
         """Return data about the given image id."""
         opaque_id = self._from_rs_id(id)
-        return self.serialize(dict(image=self._svc.show(opaque_id)), req)
+        return dict(image=self._svc.show(opaque_id))
 
     def delete(self, req, id):
         # Only public images are supported for now.
