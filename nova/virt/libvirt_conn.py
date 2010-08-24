@@ -29,6 +29,7 @@ import shutil
 from twisted.internet import defer
 from twisted.internet import task
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import process
@@ -232,15 +233,15 @@ class LibvirtConnection(object):
 
         key = inst.key_data
         net = None
-        network = inst.project.network
-        if False: # should be network.is_injected:
+        network_ref = db.project_get_network(None, project.id)  # FIXME
+        if network_ref['injected']:
             with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': inst.fixed_ip,
-                                  'network': network.network,
-                                  'netmask': network.netmask,
-                                  'gateway': network.gateway,
-                                  'broadcast': network.broadcast,
-                                  'dns': network.network.dns}
+                net = f.read() % {'address': inst.fixed_ip['ip_str'],  # FIXME
+                                  'network': network_ref['network'],
+                                  'netmask': network_ref['netmask'],
+                                  'gateway': network_ref['gateway'],
+                                  'broadcast': network_ref['broadcast'],
+                                  'dns': network_ref['dns']}
         if key or net:
             logging.info('Injecting data into image %s', inst.image_id)
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
@@ -256,7 +257,7 @@ class LibvirtConnection(object):
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
-        network = instance.project.network
+        network = db.project_get_network(None, instance['project_id']) # FIXME
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         xml_info = {'type': FLAGS.libvirt_type,
@@ -264,8 +265,8 @@ class LibvirtConnection(object):
                     'basepath': os.path.join(FLAGS.instances_path, instance.name),
                     'memory_kb': instance_type['memory_mb'] * 1024,
                     'vcpus': instance_type['vcpus'],
-                    'bridge_name': network.bridge_name,
-                    'mac_address': instance.mac_address}
+                    'bridge_name': network['bridge'],
+                    'mac_address': instance['mac_address']}
         libvirt_xml = self.libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 

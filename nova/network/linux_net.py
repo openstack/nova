@@ -23,8 +23,8 @@ import signal
 
 # TODO(ja): does the definition of network_path belong here?
 
+from nova import db
 from nova import flags
-from nova import models
 from nova import utils
 
 
@@ -91,14 +91,14 @@ def remove_floating_forward(floating_ip, fixed_ip):
 def ensure_vlan_bridge(vlan_num, bridge, network=None):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
-    ensure_bridge(bridge, interface)
+    ensure_bridge(bridge, interface, network)
 
 def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.bridge.dev, vlan_num))
+        _execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
     return interface
 
@@ -114,21 +114,18 @@ def ensure_bridge(bridge, interface, network=None):
         if network:
             _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                     (bridge,
-                     network.gateway,
-                     network.broadcast,
-                     network.netmask))
+                     network['gateway'],
+                     network['broadcast'],
+                     network['netmask']))
             _confirm_rule("FORWARD --in-bridge %s -j ACCEPT" % bridge)
         else:
             _execute("sudo ifconfig %s up" % bridge)
 
 
-def get_dhcp_hosts(network):
+def get_dhcp_hosts(context, network_id):
     hosts = []
-    # FIXME abstract this
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(allocated=True)
-    fixed_ips = query.filter_by(network_id=network.id)
-    for fixed_ip in network.fixed_ips:
+    for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
+        print fixed_ip['ip_str']
         hosts.append(_host_dhcp(fixed_ip))
     return '\n'.join(hosts)
 
@@ -138,16 +135,17 @@ def get_dhcp_hosts(network):
 #           dnsmasq.  As well, sending a HUP only reloads the hostfile,
 #           so any configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded
-def update_dhcp(network):
+def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
     if a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance
     """
-    with open(_dhcp_file(network['vlan'], 'conf'), 'w') as f:
-        f.write(get_dhcp_hosts(network))
+    network_ref = db.network_get(context, network_id)
+    with open(_dhcp_file(network_ref['vlan'], 'conf'), 'w') as f:
+        f.write(get_dhcp_hosts(context, network_id))
 
-    pid = _dnsmasq_pid_for(network)
+    pid = _dnsmasq_pid_for(network_ref['vlan'])
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
@@ -161,29 +159,30 @@ def update_dhcp(network):
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
-           'DNSMASQ_INTERFACE': network.bridge_name}
-    _execute(_dnsmasq_cmd(network), addl_env=env)
-
+           'DNSMASQ_INTERFACE': network_ref['bridge']}
+    command = _dnsmasq_cmd(network_ref)
+    print command
+    _execute(command, addl_env=env)
 
 def _host_dhcp(fixed_ip):
     """Return a host string for a fixed ip"""
-    return "%s,%s.novalocal,%s" % (fixed_ip.instance.mac_address,
-                                   fixed_ip.instance.host_name,
-                                   fixed_ip.ip_str)
+    return "%s,%s.novalocal,%s" % (fixed_ip.instance['mac_address'],
+                                   fixed_ip.instance['hostname'],
+                                   fixed_ip['ip_str'])
 
 
-def _execute(cmd, addl_env=None):
+def _execute(cmd, *args, **kwargs):
     """Wrapper around utils._execute for fake_network"""
     if FLAGS.fake_network:
         logging.debug("FAKE NET: %s", cmd)
         return "fake", 0
     else:
-        return utils._execute(cmd, addl_env=addl_env)
+        return utils.execute(cmd, *args, **kwargs)
 
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ifconfig %s" % device)
+    (_out, err) = _execute("ifconfig %s" % device, check_exit_code=False)
     return not err
 
 
@@ -205,9 +204,9 @@ def _dnsmasq_cmd(net):
         ' --bind-interfaces',
         ' --conf-file=',
         ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
-        ' --listen-address=%s' % net.dhcp_listen_address,
+        ' --listen-address=%s' % net['gateway'],
         ' --except-interface=lo',
-        ' --dhcp-range=%s,static,120s' % net.dhcp_range_start,
+        ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
         ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
         ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
         ' --leasefile-ro']
@@ -236,7 +235,7 @@ def _bin_file(script):
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
-def _dnsmasq_pid_for(network):
+def _dnsmasq_pid_for(vlan):
     """Returns he pid for prior dnsmasq instance for a vlan
 
     Returns None if no pid file exists
@@ -244,7 +243,7 @@ def _dnsmasq_pid_for(network):
     If machine has rebooted pid might be incorrect (caller should check)
     """
 
-    pid_file = _dhcp_file(network.vlan, 'pid')
+    pid_file = _dhcp_file(vlan, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

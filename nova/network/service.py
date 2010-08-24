@@ -97,10 +97,11 @@ class BaseNetworkService(service.Service):
         host = db.network_set_host(context,
                                    network_id,
                                    FLAGS.node_name)
+        print 'set host'
         self._on_set_network_host(context, network_id)
         return host
 
-    def setup_fixed_ip(self, fixed_ip_id):
+    def setup_fixed_ip(self, address):
         """Sets up rules for fixed ip"""
         raise NotImplementedError()
 
@@ -149,7 +150,7 @@ class FlatNetworkService(BaseNetworkService):
         """Network is created manually"""
         pass
 
-    def setup_fixed_ip(self, fixed_ip_id):
+    def setup_fixed_ip(self, address):
         """Currently no setup"""
         pass
 
@@ -171,21 +172,16 @@ class FlatNetworkService(BaseNetworkService):
 
 class VlanNetworkService(BaseNetworkService):
     """Vlan network with dhcp"""
-    def __init__(self, *args, **kwargs):
-        super(VlanNetworkService, self).__init__(*args, **kwargs)
-        # NOTE(vish): this should probably be removed and added via
-        #             admin command or fixtures
-        db.network_ensure_indexes(None, FLAGS.num_networks)
 
-    def setup_fixed_ip(self, fixed_ip_id, context=None):
+    def setup_fixed_ip(self, address, context=None):
         """Gets a fixed ip from the pool"""
-        fixed_ip_ref = db.project_get_fixed_ip(context, fixed_ip_id)
-        network_ref = db.fixed_ip_get_network(context, fixed_ip_id)
+        fixed_ip_ref = db.fixed_ip_get_by_address(context, address)
+        network_ref = db.fixed_ip_get_network(context, address)
         if db.instance_is_vpn(context, fixed_ip_ref['instance_id']):
             _driver.ensure_vlan_forward(network_ref['vpn_public_ip_str'],
                                         network_ref['vpn_public_port'],
                                         network_ref['vpn_private_ip_str'])
-        _driver.update_dhcp(network_ref)
+        _driver.update_dhcp(context, network_ref['id'])
 
     def lease_fixed_ip(self, address, context=None):
         """Called by bridge when ip is leased"""
@@ -205,7 +201,8 @@ class VlanNetworkService(BaseNetworkService):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
-        network_ref = db.network_get(network_id)
+        network_ref = db.network_get(context, network_id)
+        print 'making the bridge'
         _driver.ensure_vlan_bridge(network_ref['vlan'],
                                    network_ref['bridge'])
 

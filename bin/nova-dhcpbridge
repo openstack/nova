@@ -30,6 +30,7 @@ import sys
 #               not true the ugly line below can be removed
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 
+from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
@@ -74,8 +75,8 @@ def del_lease(_mac, ip_address, _hostname, _interface):
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
-    network = service.get_network_by_interface(interface)
-    return linux_net.get_dhcp_hosts(network)
+    network_ref = db.network_get_by_bridge(None, interface)
+    return linux_net.get_dhcp_hosts(None, network_ref['id'])
 
 
 def main():

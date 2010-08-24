@@ -577,13 +577,13 @@ class AuthManager(object):
 
     def delete_project(self, project, context=None):
         """Deletes a project"""
-        network_ref = db.project_get_network(context,
-                                             Project.safe_id(project))
         try:
+            network_ref = db.project_get_network(context,
+                                                 Project.safe_id(project))
             db.network_destroy(context, network_ref['id'])
         except:
-            logging.exception('Could not destroy network: %s',
-                              network_ref['id'])
+            logging.exception('Could not destroy network for %s',
+                              project)
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 
