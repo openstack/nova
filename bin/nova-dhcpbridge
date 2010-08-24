@@ -70,7 +70,7 @@ def del_lease(_mac, ip_address, _hostname, _interface):
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "release_fixed_ip",
-                  "args": {"fixed_ip": ip_address}})
+                  "args": {"address": ip_address}})
 
 
 def init_leases(interface):
