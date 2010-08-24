@@ -26,7 +26,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import service
-from nova import utils
 from nova.network import linux_net
 
 
@@ -81,11 +80,6 @@ def setup_compute_network(project_id):
     network = db.project_get_network(None, project_id)
     srv = type_to_class(network.kind)
     srv.setup_compute_network(network)
-
-
-def get_host_for_project(project_id):
-    """Get host allocated to project from datastore"""
-    return db.project_get_network(None, project_id).node_name
 
 
 class BaseNetworkService(service.Service):
@@ -192,6 +186,17 @@ class VlanNetworkService(BaseNetworkService):
                                         network_ref['vpn_public_port'],
                                         network_ref['vpn_private_ip_str'])
         _driver.update_dhcp(network_ref)
+
+    def lease_fixed_ip(self, address, context=None):
+        """Called by bridge when ip is leased"""
+        logging.debug("Leasing IP %s", address)
+        db.fixed_ip_lease(context, address)
+
+    def release_fixed_ip(self, address, context=None):
+        """Called by bridge when ip is released"""
+        logging.debug("Releasing IP %s", address)
+        db.fixed_ip_release(context, address)
+        db.fixed_ip_instance_disassociate(context, address)
 
     def restart_nets(self):
         """Ensure the network for each user is enabled"""
