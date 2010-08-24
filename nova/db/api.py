@@ -106,12 +106,12 @@ def floating_ip_deallocate(context, address):
 ####################
 
 
-def fixed_ip_allocate_address(context, network_id):
+def fixed_ip_allocate(context, network_id):
     """Allocate free fixed ip and return the address.
 
     Raises if one is not available.
     """
-    return _impl.fixed_ip_allocate_address(context, network_id)
+    return _impl.fixed_ip_allocate(context, network_id)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -163,18 +163,28 @@ def instance_get(context, instance_id):
 
 
 def instance_get_all(context):
-    """Gets all instances."""
+    """Get all instances."""
     return _impl.instance_get_all(context)
 
 
+def instance_get_by_name(context, name):
+    """Get an instance by name."""
+    return _impl.instance_get_by_project(context, name)
+
+
 def instance_get_by_project(context, project_id):
-    """Gets all instance belonging to a project."""
+    """Get all instance belonging to a project."""
     return _impl.instance_get_by_project(context, project_id)
 
 
 def instance_get_by_reservation(context, reservation_id):
-    """Gets all instance belonging to a reservation."""
+    """Get all instance belonging to a reservation."""
     return _impl.instance_get_by_reservation(context, reservation_id)
+
+
+def instance_get_host(context, instance_id):
+    """Get the host that the instance is running on."""
+    return _impl.instance_get_all(context, instance_id)
 
 
 def instance_state(context, instance_id, state, description=None):
@@ -232,6 +242,11 @@ def network_get_host(context, network_id):
 def network_get_index(context, network_id):
     """Gets non-conflicting index for network"""
     return _impl.network_get_index(context, network_id)
+
+
+def network_get_vpn_ip(context, network_id):
+    """Gets non-conflicting index for network"""
+    return _impl.network_get_vpn_ip(context, network_id)
 
 
 def network_set_cidr(context, network_id, cidr):

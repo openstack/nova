@@ -206,11 +206,11 @@ class VlanNetworkService(BaseNetworkService):
         #             admin command or fixtures
         db.network_ensure_indexes(None, FLAGS.num_networks)
 
-    def allocate_fixed_ip(self, project_id, instance_id, is_vpn=False,
-                          context=None, *args, **kwargs):
+    def setup_fixed_ip(self, project_id, instance_id, context=None,
+                       *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = db.project_get_network(context, project_id)
-        if is_vpn:
+        if db.instance_is_vpn(context, instance_id):
             address = db.network_get_vpn_ip_address(context,
                                                     network_ref['id'])
             logging.debug("Allocating vpn IP %s", address)
@@ -225,8 +225,6 @@ class VlanNetworkService(BaseNetworkService):
             address = parent.allocate_fixed_ip(project_id,
                                                instance_id,
                                                context)
-        _driver.ensure_vlan_bridge(network_ref['vlan'],
-                                   network_ref['bridge'])
         return address
 
     def deallocate_fixed_ip(self, address, context=None):
@@ -257,7 +255,9 @@ class VlanNetworkService(BaseNetworkService):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
-        pass
+        network_ref = db.network_get(network_id)
+        _driver.ensure_vlan_bridge(network_ref['vlan'],
+                                   network_ref['bridge'])
 
 
     @classmethod
