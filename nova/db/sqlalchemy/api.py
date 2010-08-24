@@ -164,6 +164,26 @@ def instance_get(context, instance_id):
     return models.Instance.find(instance_id)
 
 
+def instance_get_all(context):
+    return models.Instance.all()
+
+
+def instance_get_by_project(context, project_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.Instance)
+    results = query.filter_by(project_id=project_id).all()
+    session.commit()
+    return results
+
+
+def instance_get_by_reservation(context, reservation_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.Instance)
+    results = query.filter_by(reservation_id=reservation_id).all()
+    session.commit()
+    return results
+
+
 def instance_state(context, instance_id, state, description=None):
     instance_ref = instance_get(context, instance_id)
     instance_ref.set_state(state, description)
@@ -320,7 +340,13 @@ def project_get_network(context, project_id):
     if not rv:
         raise exception.NotFound('No network for project: %s' % project_id)
     return rv
+    
+    
+###################
+    
 
+def queue_get_for(context, topic, physical_node_id):
+    return "%s.%s" % (topic, physical_node_id) # FIXME(ja): this should be servername?
 
 ###################
 
