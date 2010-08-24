@@ -206,11 +206,11 @@ class VlanNetworkService(BaseNetworkService):
         #             admin command or fixtures
         db.network_ensure_indexes(None, FLAGS.num_networks)
 
-    def allocate_fixed_ip(self, project_id, instance_id, is_vpn=False,
-                          context=None, *args, **kwargs):
+    def setup_fixed_ip(self, project_id, instance_id, context=None,
+                       *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = db.project_get_network(context, project_id)
-        if is_vpn:
+        if db.instance_is_vpn(context, instance_id):
             address = db.network_get_vpn_ip_address(context,
                                                     network_ref['id'])
             logging.debug("Allocating vpn IP %s", address)
@@ -225,8 +225,6 @@ class VlanNetworkService(BaseNetworkService):
             address = parent.allocate_fixed_ip(project_id,
                                                instance_id,
                                                context)
-        _driver.ensure_vlan_bridge(network_ref['vlan'],
-                                   network_ref['bridge'])
         return address
 
     def deallocate_fixed_ip(self, address, context=None):
@@ -257,21 +255,9 @@ class VlanNetworkService(BaseNetworkService):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
-        index = db.network_get_index(context, network_id)
-        private_net = IPy.IP(FLAGS.private_range)
-        start = index * FLAGS.network_size
-        significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
-        cidr = "%s/%s" % (private_net[start], significant_bits)
-        db.network_set_cidr(context, network_id, cidr)
-        vlan = FLAGS.vlan_start + index
-        net = {}
-        net['kind'] = FLAGS.network_type
-        net['vlan'] = vlan
-        net['bridge'] = 'br%s' % vlan
-        net['vpn_public_ip_str'] = FLAGS.vpn_ip
-        net['vpn_public_port'] = FLAGS.vpn_start + index
-        db.network_update(context, network_id, net)
-        db.network_create_fixed_ips(context, network_id, FLAGS.cnt_vpn_clients)
+        network_ref = db.network_get(network_id)
+        _driver.ensure_vlan_bridge(network_ref['vlan'],
+                                   network_ref['bridge'])
 
 
     @classmethod

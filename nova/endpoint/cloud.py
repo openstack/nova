@@ -491,16 +491,16 @@ class CloudController(object):
     @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
-        host = network_service.get_host_for_project(context.project.id)
+        network_ref = db.project_get_network(context, context.project.id)
+        host = db.network_get_host(context, network_ref['id'])
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
-                                     "args": {"user_id": context.user.id,
-                                              "project_id": context.project.id}})
-        defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
+                                     "args": {"project_id": context.project.id}})
+        defer.returnValue(db.queue_get_for(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
-    #@defer.inlineCallbacks
+    @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
@@ -540,11 +540,16 @@ class CloudController(object):
 
         for num in range(int(kwargs['max_count'])):
             inst = {}
-            inst['mac_address'] = utils.generate_mac()
-            inst['fixed_ip'] = db.fixed_ip_allocate_address(context, network_ref['id'])
             inst['image_id'] = image_id
             inst['kernel_id'] = kernel_id
             inst['ramdisk_id'] = ramdisk_id
+            instance_ref = db.instance_create(context, inst)
+            inst_id = instance_ref['id']
+            if db.instance_is_vpn(instance_ref['id']):
+                fixed_ip = db.fixed_ip_allocate(context, network_ref['id'])
+            else:
+                fixed_ip = db.network_get_vpn_ip(context, network_ref['id'])
+            inst['mac_address'] = utils.generate_mac()
             inst['user_data'] = kwargs.get('user_data', '')
             inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
             inst['reservation_id'] = reservation_id
@@ -554,16 +559,23 @@ class CloudController(object):
             inst['project_id'] = context.project.id # FIXME(ja)
             inst['launch_index'] = num
             inst['security_group'] = security_group
-            # inst['hostname'] = inst.id # FIXME(ja): id isn't assigned until create
+            inst['hostname'] = inst_id # FIXME(ja): id isn't assigned until create
+            db.instance_update(context, inst_id, inst)
 
-            inst_id = db.instance_create(context, inst)
+
+            # TODO(vish): This probably should be done in the scheduler
+            #             network is setup when host is assigned
+            network_topic = yield self.get_network_topic()
+            rpc.call(network_topic,
+                     {"method": "setup_fixed_ip",
+                      "args": {"fixed_ip": fixed_ip['id']}})
+
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
                   "args": {"instance_id": inst_id}})
             logging.debug("Casting to node for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
-        # defer.returnValue(self._format_instances(context, reservation_id))
-        return self._format_run_instances(context, reservation_id)
+        defer.returnValue(self._format_instances(context, reservation_id))
 
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -574,13 +586,12 @@ class CloudController(object):
         for name in instance_id:
             logging.debug("Going to try and terminate %s" % name)
             try:
-                inst_id = name[2:] # remove the i-
-                instance_ref = db.instance_get(context, inst_id)
+                instance_ref = db.instance_get_by_name(context, name)
             except exception.NotFound:
                 logging.warning("Instance %s was not found during terminate"
                                 % name)
                 continue
-                
+
             # FIXME(ja): where should network deallocate occur?
             # floating_ip = network_model.get_public_ip_for_instance(i)
             # if floating_ip:
@@ -591,7 +602,7 @@ class CloudController(object):
             #     rpc.cast(network_topic,
             #              {"method": "disassociate_floating_ip",
             #               "args": {"floating_ip": floating_ip}})
-            # 
+            #
             # fixed_ip = instance.get('private_dns_name', None)
             # if fixed_ip:
             #     logging.debug("Deallocating address %s" % fixed_ip)
@@ -602,14 +613,14 @@ class CloudController(object):
             #              {"method": "deallocate_fixed_ip",
             #               "args": {"fixed_ip": fixed_ip}})
 
-            if instance_ref['physical_node_id'] is not None:
+            host = db.instance_get_host(context, instance_ref['id'])
+            if host is not None:
                 # NOTE(joshua?): It's also internal default
-                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, 
-                             instance_ref['physical_node_id']),
+                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
                           "args": {"instance_id": name}})
             else:
-                db.instance_destroy(context, inst_id)
+                db.instance_destroy(context, instance_ref['id'])
         # defer.returnValue(True)
         return True
 

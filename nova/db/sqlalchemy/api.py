@@ -16,18 +16,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import math
+
 import IPy
 
 from nova import db
 from nova import exception
+from nova import flags
 from nova import models
 
+FLAGS = flags.FLAGS
 
 ###################
 
 
-def daemon_get(context, node_name, binary):
-    return None
+def daemon_get(context, daemon_id):
+    return models.Daemon.find(daemon_id)
+
+
+def daemon_get_by_args(context, node_name, binary):
     return models.Daemon.find_by_args(node_name, binary)
 
 
@@ -37,8 +44,8 @@ def daemon_create(context, values):
     return daemon_ref
 
 
-def daemon_update(context, node_name, binary, values):
-    daemon_ref = daemon_get(context, node_name, binary)
+def daemon_update(context, daemon_id, values):
+    daemon_ref = daemon_get(context, daemon_id)
     for (key, value) in values.iteritems():
         daemon_ref[key] = value
     daemon_ref.save()
@@ -84,7 +91,7 @@ def floating_ip_deallocate(context, address):
 ###################
 
 
-def fixed_ip_allocate_address(context, network_id):
+def fixed_ip_allocate(context, network_id):
     session = models.NovaBase.get_session()
     query = session.query(models.FixedIp).filter_by(network_id=network_id)
     query = query.filter_by(reserved=False).filter_by(allocated=False)
@@ -97,7 +104,7 @@ def fixed_ip_allocate_address(context, network_id):
     fixed_ip_ref['allocated'] = True
     session.add(fixed_ip_ref)
     session.commit()
-    return fixed_ip_ref['ip_str']
+    fixed_ip_ref
 
 
 def fixed_ip_get_by_address(context, address):
@@ -143,6 +150,7 @@ def fixed_ip_instance_disassociate(context, address):
 def instance_create(context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
+        print key
         instance_ref[key] = value
     instance_ref.save()
     return instance_ref.id
@@ -165,6 +173,11 @@ def instance_get_by_ip(context, ip):
     raise Exception("fixme(vish): add logic here!")
 
 
+def instance_get_by_name(context, name):
+    # NOTE(vish): remove the 'i-'
+    return models.Instance.find(name[2:])
+
+
 def instance_get_by_project(context, project_id):
     session = models.NovaBase.get_session()
     query = session.query(models.Instance)
@@ -181,6 +194,11 @@ def instance_get_by_reservation(context, reservation_id):
     return results
 
 
+def instance_get_host(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
+    return instance_ref['node_name']
+
+
 def instance_state(context, instance_id, state, description=None):
     instance_ref = instance_get(context, instance_id)
     instance_ref.set_state(state, description)
@@ -194,6 +212,30 @@ def instance_update(context, instance_id, values):
 
 
 ###################
+
+
+# NOTE(vish): is there a better place for this logic?
+def network_allocate(context, project_id):
+    """Set up the network"""
+    db.network_ensure_indexes(context, FLAGS.num_networks)
+    network_ref = db.network_create(context, {'project_id': project_id})
+    network_id = network_ref['id']
+    private_net = IPy.IP(FLAGS.private_range)
+    index = db.network_get_index(context, network_id)
+    vlan = FLAGS.vlan_start + index
+    start = index * FLAGS.network_size
+    significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
+    cidr = "%s/%s" % (private_net[start], significant_bits)
+    db.network_set_cidr(context, network_id, cidr)
+    net = {}
+    net['kind'] = FLAGS.network_type
+    net['vlan'] = vlan
+    net['bridge'] = 'br%s' % vlan
+    net['vpn_public_ip_str'] = FLAGS.vpn_ip
+    net['vpn_public_port'] = FLAGS.vpn_start + index
+    db.network_update(context, network_id, net)
+    db.network_create_fixed_ips(context, network_id, FLAGS.cnt_vpn_clients)
+    return network_ref
 
 
 def network_create(context, values):
@@ -230,7 +272,7 @@ def network_ensure_indexes(context, num_networks):
             network_index = models.NetworkIndex()
             network_index.index = i
             session.add(network_index)
-            session.commit()
+        session.commit()
 
 
 def network_destroy(context, network_id):
@@ -249,7 +291,8 @@ def network_get_vpn_ip(context, network_id):
     fixed_ip = fixed_ip_get_by_address(context, address)
     if fixed_ip['allocated']:
         raise db.AddressAlreadyAllocated()
-    db.fixed_ip_allocate(context, {'allocated': True})
+    db.fixed_ip_update(context, fixed_ip['id'], {'allocated': True})
+    return fixed_ip
 
 
 def network_get_host(context, network_id):
@@ -315,10 +358,10 @@ def project_get_network(context, project_id):
     if not rv:
         raise exception.NotFound('No network for project: %s' % project_id)
     return rv
-    
-    
+
+
 ###################
-    
+
 
 def queue_get_for(context, topic, physical_node_id):
     return "%s.%s" % (topic, physical_node_id) # FIXME(ja): this should be servername?
@@ -388,15 +431,3 @@ def volume_update(context, volume_id, values):
     for (key, value) in values.iteritems():
         volume_ref[key] = value
     volume_ref.save()
-
-
-
-
-
-
-
-
-
-
-
-

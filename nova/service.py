@@ -46,12 +46,12 @@ class Service(object, service.Service):
     @classmethod
     def create(cls, report_interval=None, bin_name=None, topic=None):
         """Instantiates class and passes back application object.
-        
+
         Args:
             report_interval, defaults to flag
             bin_name, defaults to basename of executable
             topic, defaults to basename - "nova-" part
-        
+
         """
         if not report_interval:
             report_interval = FLAGS.report_interval
@@ -94,15 +94,14 @@ class Service(object, service.Service):
         """Update the state of this daemon in the datastore."""
         try:
             try:
-                daemon_ref = db.daemon_get(context, node_name, binary)
+                daemon_ref = db.daemon_get_by_args(context, node_name, binary)
             except exception.NotFound:
                 daemon_ref = db.daemon_create(context, {'node_name': node_name,
                                                         'binary': binary,
                                                         'report_count': 0})
-            
-            # TODO(termie): I don't think this is really needed, consider
-            #               removing it.
-            self._update_daemon(daemon_ref, context)
+            db.daemon_update(context,
+                             daemon_ref['id'],
+                             {'report_count': daemon_ref['report_count'] + 1})
 
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
@@ -114,11 +113,3 @@ class Service(object, service.Service):
                 self.model_disconnected = True
                 logging.exception("model server went away")
         yield
-
-    def _update_daemon(self, daemon_ref, context):
-        """Set any extra daemon data here"""
-        # FIXME(termie): the following is in no way atomic
-        db.daemon_update(context, 
-                         daemon_ref['node_name'],
-                         daemon_ref['binary'],
-                         {'report_count': daemon_ref['report_count'] + 1})
