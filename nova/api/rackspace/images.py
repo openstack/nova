@@ -17,7 +17,7 @@
 
 from nova import datastore
 from nova.api.rackspace import base
-from nova.api.services import image
+from nova import image
 from webob import exc
 
 class Controller(base.Controller):
@@ -32,7 +32,7 @@ class Controller(base.Controller):
     }
 
     def __init__(self):
-        self._service = image.ImageService.load()
+        self._service = image.service.ImageService.load()
         self._id_translator = RackspaceAPIImageIdTranslator()
 
     def _to_rs_id(self, image_id):
