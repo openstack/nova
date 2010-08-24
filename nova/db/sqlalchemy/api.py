@@ -161,6 +161,10 @@ def instance_get_all(context):
     return models.Instance.all()
 
 
+def instance_get_by_ip(context, ip):
+    raise Exception("fixme(vish): add logic here!")
+
+
 def instance_get_by_project(context, project_id):
     session = models.NovaBase.get_session()
     query = session.query(models.Instance)

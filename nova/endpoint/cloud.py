@@ -64,13 +64,12 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self.instdir = model.InstanceDirectory()
         self.setup()
 
     @property
     def instances(self):
         """ All instances in the system, as dicts """
-        return self.instdir.all
+        return db.instance_get_all(None)
 
     @property
     def volumes(self):
@@ -84,6 +83,8 @@ class CloudController(object):
 
     def setup(self):
         """ Ensure the keychains and folders exist. """
+        # FIXME(ja): this should be moved to a nova-manage command, 
+        # if not setup throw exceptions instead of running
         # Create keys folder, if it doesn't exist
         if not os.path.exists(FLAGS.keys_path):
             os.makedirs(FLAGS.keys_path)
@@ -92,27 +93,23 @@ class CloudController(object):
         if not os.path.exists(root_ca_path):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
+            # TODO: Do this with M2Crypto instead
             utils.runthis("Generating root CA: %s", "sh genrootca.sh")
             os.chdir(start)
-            # TODO: Do this with M2Crypto instead
-
-    def get_instance_by_ip(self, ip):
-        return self.instdir.by_ip(ip)
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in self.instdir.all:
-            if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'],
-                    INSTANCE_TYPES[instance['instance_type']]['vcpus'])
-                if instance['key_name'] in result:
-                    result[instance['key_name']].append(line)
-                else:
-                    result[instance['key_name']] = [line]
+        for instance in db.instance_get_by_project(project_id):
+            line = '%s slots=%d' % (instance['private_dns_name'],
+                INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+            if instance['key_name'] in result:
+                result[instance['key_name']].append(line)
+            else:
+                result[instance['key_name']] = [line]
         return result
 
     def get_metadata(self, ipaddress):
-        i = self.get_instance_by_ip(ipaddress)
+        i = db.instance_get_by_ip(ipaddress)
         if i is None:
             return None
         mpi = self._get_mpi_data(i['project_id'])
@@ -252,16 +249,10 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
-        instance = self._get_instance(context, instance_id[0])
+        instance = db.instance_get(context, instance_id[0])
         return rpc.call('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
             {"method": "get_console_output",
              "args": {"instance_id": instance_id[0]}})
-
-    def _get_user_id(self, context):
-        if context and context.user:
-            return context.user.id
-        else:
-            return None
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
@@ -301,12 +292,12 @@ class CloudController(object):
     @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
-        result = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
+        volume_id = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
                                  "args": {"size": size,
                                            "user_id": context.user.id,
                                            "project_id": context.project.id}})
         # NOTE(vish): rpc returned value is in the result key in the dictionary
-        volume = self._get_volume(context, result)
+        volume = db.volume_get(context, volume_id)
         defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
@@ -316,31 +307,9 @@ class CloudController(object):
             return address
         raise exception.NotFound("Address at ip %s not found" % public_ip)
 
-    def _get_image(self, context, image_id):
-        """passes in context because
-        objectstore does its own authorization"""
-        result = images.list(context, [image_id])
-        if not result:
-            raise exception.NotFound('Image %s could not be found' % image_id)
-        image = result[0]
-        return image
-
-    def _get_instance(self, context, instance_id):
-        for instance in self.instdir.all:
-            if instance['instance_id'] == instance_id:
-                if context.user.is_admin() or instance['project_id'] == context.project.id:
-                    return instance
-        raise exception.NotFound('Instance %s could not be found' % instance_id)
-
-    def _get_volume(self, context, volume_id):
-        volume = service.get_volume(volume_id)
-        if context.user.is_admin() or volume['project_id'] == context.project.id:
-            return volume
-        raise exception.NotFound('Volume %s could not be found' % volume_id)
-
     @rbac.allow('projectmanager', 'sysadmin')
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume = self._get_volume(context, volume_id)
+        volume = db.volume_get(context, volume_id)
         if volume['status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         # TODO(vish): looping through all volumes is slow. We should probably maintain an index
@@ -348,7 +317,7 @@ class CloudController(object):
             if vol['instance_id'] == instance_id and vol['mountpoint'] == device:
                 raise exception.ApiError("Volume %s is already attached to %s" % (vol['volume_id'], vol['mountpoint']))
         volume.start_attach(instance_id, device)
-        instance = self._get_instance(context, instance_id)
+        instance = db.instance_get(context, instance_id)
         compute_node = instance['node_name']
         rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
                                 {"method": "attach_volume",
@@ -364,7 +333,7 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
-        volume = self._get_volume(context, volume_id)
+        volume = db.volume_get(context, volume_id)
         instance_id = volume.get('instance_id', None)
         if not instance_id:
             raise exception.Error("Volume isn't attached to anything!")
@@ -372,7 +341,7 @@ class CloudController(object):
             raise exception.Error("Volume is already detached")
         try:
             volume.start_detach()
-            instance = self._get_instance(context, instance_id)
+            instance = db.instance_get(context, instance_id)
             rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                                 {"method": "detach_volume",
                                  "args": {"instance_id": instance_id,
@@ -499,7 +468,7 @@ class CloudController(object):
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        instance = self._get_instance(context, instance_id)
+        instance = db.instance_get(context, instance_id)
         address = self._get_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
@@ -536,7 +505,7 @@ class CloudController(object):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         if kwargs['image_id'] != FLAGS.vpn_image_id:
-            image = self._get_image(context, kwargs['image_id'])
+            image = images.get(context, kwargs['image_id'])
 
         # FIXME(ja): if image is cloudpipe, this breaks
 
@@ -550,8 +519,8 @@ class CloudController(object):
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
 
         # make sure we have access to kernel and ramdisk
-        self._get_image(context, kernel_id)
-        self._get_image(context, ramdisk_id)
+        images.get(context, kernel_id)
+        images.get(context, ramdisk_id)
 
         logging.debug("Going to run instances...")
         reservation_id = utils.generate_uid('r')
@@ -648,7 +617,7 @@ class CloudController(object):
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for i in instance_id:
-            instance = self._get_instance(context, i)
+            instance = db.instance_get(context, i)
             rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
                              {"method": "reboot_instance",
                               "args": {"instance_id": i}})
@@ -657,7 +626,7 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
-        volume = self._get_volume(context, volume_id)
+        volume = db.volume_get(context, volume_id)
         volume_node = volume['node_name']
         rpc.cast('%s.%s' % (FLAGS.volume_topic, volume_node),
                             {"method": "delete_volume",

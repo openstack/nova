@@ -155,6 +155,11 @@ def instance_get_all(context):
     return _impl.instance_get_all(context)
 
 
+def instance_get_by_ip(context, ip):
+    """Gets an instance by fixed ipaddress or raise if it does not exist."""
+    return _impl.instance_get_by_ip(context, ip)
+
+
 def instance_get_by_project(context, project_id):
     """Gets all instance belonging to a project."""
     return _impl.instance_get_by_project(context, project_id)

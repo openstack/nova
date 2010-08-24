@@ -26,6 +26,7 @@ import urllib
 
 import boto.s3.connection
 
+from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
@@ -55,7 +56,6 @@ def register(context, image_location):
 
     return image_id
 
-
 def list(context, filter_list=[]):
     """ return a list of all images that a user can see
 
@@ -70,6 +70,14 @@ def list(context, filter_list=[]):
     if not filter_list is None:
         return [i for i in result if i['imageId'] in filter_list]
     return result
+
+def get(context, image_id):
+    """return a image object if the context has permissions"""
+    result = list(context, [image_id])
+    if not result:
+        raise exception.NotFound('Image %s could not be found' % image_id)
+    image = result[0]
+    return image
 
 
 def deregister(context, image_id):
