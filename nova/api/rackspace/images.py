@@ -16,8 +16,8 @@
 #    under the License.
 
 from nova import datastore
-from nova.api.rackspace import base
 from nova import image
+from nova.api.rackspace import base
 from webob import exc
 
 class Controller(base.Controller):
