@@ -212,7 +212,10 @@ class Controller(object):
         del arg_dict['action']
         arg_dict['req'] = req
         result = method(**arg_dict)
-        return self._serialize(result, req) if type(result) is dict else result
+        if type(result) is dict:
+            return self._serialize(result, req) 
+        else:
+            return result
 
     def _serialize(self, data, request):
         """
