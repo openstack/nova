@@ -17,7 +17,7 @@
 
 from nova import datastore
 from nova.api.rackspace import base
-from nova.api.services.image import ImageService
+from nova.api.services import image
 from webob import exc
 
 class Controller(base.Controller):
@@ -32,28 +32,28 @@ class Controller(base.Controller):
     }
 
     def __init__(self):
-        self._svc = ImageService.load()
-        self._id_xlator = RackspaceApiImageIdTranslator()
+        self._service = image.ImageService.load()
+        self._id_translator = RackspaceAPIImageIdTranslator()
 
     def _to_rs_id(self, image_id):
         """
         Convert an image id from the format of our ImageService strategy
         to the Rackspace API format (an int).
         """
-        strategy = self._svc.__class__.__name__
-        return self._id_xlator.to_rs_id(strategy, image_id)
+        strategy = self._service.__class__.__name__
+        return self._id_translator.to_rs_id(strategy, image_id)
 
     def _from_rs_id(self, rs_image_id):
         """
         Convert an image id from the Rackspace API format (an int) to the
         format of our ImageService strategy.
         """
-        strategy = self._svc.__class__.__name__
-        return self._id_xlator.from_rs_id(strategy, rs_image_id)
+        strategy = self._service.__class__.__name__
+        return self._id_translator.from_rs_id(strategy, rs_image_id)
 
     def index(self, req):
         """Return all public images."""
-        data = self._svc.index()
+        data = self._service.index()
         for img in data:
             img['id'] = self._to_rs_id(img['id'])
         return dict(images=data)
@@ -61,7 +61,7 @@ class Controller(base.Controller):
     def show(self, req, id):
         """Return data about the given image id."""
         opaque_id = self._from_rs_id(id)
-        img = self._svc.show(opaque_id)
+        img = self._service.show(opaque_id)
         img['id'] = id
         return dict(image=img)
 
@@ -80,7 +80,7 @@ class Controller(base.Controller):
         raise exc.HTTPNotFound()
 
 
-class RackspaceApiImageIdTranslator(object):
+class RackspaceAPIImageIdTranslator(object):
     """
     Converts Rackspace API image ids to and from the id format for a given
     strategy.
