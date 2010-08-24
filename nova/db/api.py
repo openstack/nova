@@ -187,6 +187,11 @@ def instance_get_host(context, instance_id):
     return _impl.instance_get_all(context, instance_id)
 
 
+def instance_is_vpn(context, instance_id):
+    """True if instance is a vpn."""
+    return _impl.instance_is_vpn(context, instance_id)
+
+
 def instance_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
     return _impl.instance_state(context, instance_id, state, description)

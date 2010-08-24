@@ -195,6 +195,11 @@ def instance_get_host(context, instance_id):
     return instance_ref['node_name']
 
 
+def instance_is_vpn(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
+    return instance_ref['image_id'] == FLAGS.vpn_image_id
+
+
 def instance_state(context, instance_id, state, description=None):
     instance_ref = instance_get(context, instance_id)
     instance_ref.set_state(state, description)
