@@ -524,8 +524,11 @@ class AuthManager(object):
                                               member_users)
             if project_dict:
                 project = Project(**project_dict)
-                # FIXME(ja): EVIL HACK
-                db.network_create(context, {'project_id': project.id})
+                try:
+                    db.network_allocate(context, project.id)
+                except:
+                    drv.delete_project(project.id)
+                    raise
                 return project
 
     def add_to_project(self, user, project):
@@ -574,7 +577,6 @@ class AuthManager(object):
 
     def delete_project(self, project, context=None):
         """Deletes a project"""
-        # FIXME(ja): EVIL HACK
         network_ref = db.project_get_network(context,
                                              Project.safe_id(project))
         try:

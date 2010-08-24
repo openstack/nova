@@ -257,21 +257,7 @@ class VlanNetworkService(BaseNetworkService):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
-        index = db.network_get_index(context, network_id)
-        private_net = IPy.IP(FLAGS.private_range)
-        start = index * FLAGS.network_size
-        significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
-        cidr = "%s/%s" % (private_net[start], significant_bits)
-        db.network_set_cidr(context, network_id, cidr)
-        vlan = FLAGS.vlan_start + index
-        net = {}
-        net['kind'] = FLAGS.network_type
-        net['vlan'] = vlan
-        net['bridge'] = 'br%s' % vlan
-        net['vpn_public_ip_str'] = FLAGS.vpn_ip
-        net['vpn_public_port'] = FLAGS.vpn_start + index
-        db.network_update(context, network_id, net)
-        db.network_create_fixed_ips(context, network_id, FLAGS.cnt_vpn_clients)
+        pass
 
 
     @classmethod

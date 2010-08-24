@@ -179,18 +179,17 @@ class NetworkTestCase(test.TrialTestCase):
                                                   FLAGS.num_networks)
 
     def test_too_many_networks(self):
-        """Ensure error is raised if we run out of vpn ports"""
+        """Ensure error is raised if we run out of networks"""
         projects = []
+        # TODO(vish): use data layer for count
         networks_left = FLAGS.num_networks - models.Network.count()
         for i in range(networks_left):
             project = self.manager.create_project('many%s' % i, self.user)
-            self.service.set_network_host(project.id)
             projects.append(project)
-        project = self.manager.create_project('boom' , self.user)
         self.assertRaises(db.NoMoreNetworks,
-                          self.service.set_network_host,
-                          project.id)
-        self.manager.delete_project(project)
+                          self.manager.create_project,
+                          'boom',
+                          self.user)
         for project in projects:
             self.manager.delete_project(project)
 

@@ -48,16 +48,28 @@ class NoMoreNetworks(exception.Error):
 ###################
 
 
-def daemon_get(context, node_name, binary):
-    return _impl.daemon_get(context, node_name, binary)
+def daemon_get(context, daemon_id):
+    """Get an daemon or raise if it does not exist."""
+    return _impl.daemon_get(context, daemon_id)
+
+
+def daemon_get_by_args(context, node_name, binary):
+    """Get the state of an daemon by node name and binary."""
+    return _impl.daemon_get_by_args(context, node_name, binary)
 
 
 def daemon_create(context, values):
+    """Create a daemon from the values dictionary."""
     return _impl.daemon_create(context, values)
 
 
-def daemon_update(context, values):
-    return _impl.daemon_update(context, values)
+def daemon_update(context, daemon_id, values):
+    """Set the given properties on an daemon and update it.
+
+    Raises NotFound if daemon does not exist.
+
+    """
+    return _impl.daemon_update(context, daemon_id, values)
 
 
 ###################
@@ -165,6 +177,11 @@ def instance_update(context, instance_id, values):
 
 
 ####################
+
+
+def network_allocate(context, project_id):
+    """Allocate a network for a project."""
+    return _impl.network_allocate(context, project_id)
 
 
 def network_create(context, values):
