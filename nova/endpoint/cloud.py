@@ -29,7 +29,7 @@ import time
 
 from twisted.internet import defer
 
-from nova import datastore
+from nova import db
 from nova import exception
 from nova import flags
 from nova import models
@@ -407,22 +407,22 @@ class CloudController(object):
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, reservation_id = None):
+    def _format_instances(self, context, reservation_id=None):
         reservations = {}
-        if context.user.is_admin():
-            instgenerator = models.Instance.all()
+        if reservation_id:
+            instances = db.instance_get_by_reservation(context, reservation_id)
         else:
-            instgenerator = models.Instance.all() # FIXME
-        for instance in instgenerator:
-            res_id = instance.reservation_id
-            if reservation_id != None and reservation_id != res_id:
-                continue
+            if not context.user.is_admin():
+                instances = db.instance_get_all(context)
+            else:
+                instances = db.instance_get_by_project(context, context.project.id)
+        for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            i['instanceId'] = instance.name
-            i['imageId'] = instance.image_id
+            i['instanceId'] = instance['name']
+            i['imageId'] = instance['image_id']
             i['instanceState'] = {
                 'code': instance.state,
                 'name': instance.state_description
@@ -442,14 +442,14 @@ class CloudController(object):
             i['instance_type'] = instance.instance_type
             i['launch_time'] = instance.created_at
             i['ami_launch_index'] = instance.launch_index
-            if not reservations.has_key(res_id):
+            if not reservations.has_key(instance['reservation_id']):
                 r = {}
-                r['reservation_id'] = res_id
+                r['reservation_id'] = instance['reservation_id']
                 r['owner_id'] = instance.project_id
                 r['group_set'] = self._convert_to_set([], 'groups')
                 r['instances_set'] = []
-                reservations[res_id] = r
-            reservations[res_id]['instances_set'].append(i)
+                reservations[instance['reservation_id']] = r
+            reservations[instance['reservation_id']]['instances_set'].append(i)
 
         return list(reservations.values())
 
@@ -563,88 +563,86 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-        # network_topic = yield self._get_network_topic(context)
+
         # TODO: Get the real security group of launch in here
         security_group = "default"
+
+        network_ref = db.project_get_network(context, context.project.id)
+
         for num in range(int(kwargs['max_count'])):
-            is_vpn = False
-            if image_id  == FLAGS.vpn_image_id:
-                is_vpn = True
-            inst = models.Instance()
-            #allocate_data = yield rpc.call(network_topic,
-            #         {"method": "allocate_fixed_ip",
-            #          "args": {"user_id": context.user.id,
-            #                   "project_id": context.project.id,
-            #                   "security_group": security_group,
-            #                   "is_vpn": is_vpn,
-            #                   "hostname": inst.instance_id}})
-            allocate_data = {'mac_address': utils.generate_mac(),
-                             'fixed_ip': '192.168.0.100'}
-            inst.image_id = image_id
-            inst.kernel_id = kernel_id
-            inst.ramdisk_id = ramdisk_id
-            inst.user_data = kwargs.get('user_data', '')
-            inst.instance_type = kwargs.get('instance_type', 'm1.small')
-            inst.reservation_id = reservation_id
-            inst.key_data = key_data
-            inst.key_name = kwargs.get('key_name', None)
-            inst.user_id = context.user.id
-            inst.project_id = context.project.id
-            inst.launch_index = num
-            inst.security_group = security_group
-            inst.hostname = inst.id
-            for (key, value) in allocate_data.iteritems():
-                setattr(inst, key, value)
-            inst.save()
+            inst = {}
+            inst['mac_address'] = utils.generate_mac()
+            inst['fixed_ip'] = db.fixed_ip_allocate_address(context, network_ref['id'])
+            inst['image_id'] = image_id
+            inst['kernel_id'] = kernel_id
+            inst['ramdisk_id'] = ramdisk_id
+            inst['user_data'] = kwargs.get('user_data', '')
+            inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
+            inst['reservation_id'] = reservation_id
+            inst['key_data'] = key_data
+            inst['key_name'] = kwargs.get('key_name', None)
+            inst['user_id'] = context.user.id # FIXME(ja)
+            inst['project_id'] = context.project.id # FIXME(ja)
+            inst['launch_index'] = num
+            inst['security_group'] = security_group
+            # inst['hostname'] = inst.id # FIXME(ja): id isn't assigned until create
+
+            inst_id = db.instance_create(context, inst)
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
-                  "args": {"instance_id": inst.id}})
-            logging.debug("Casting to node for %s's instance with IP of %s" %
-                      (context.user.name, inst.fixed_ip))
+                  "args": {"instance_id": inst_id}})
+            logging.debug("Casting to node for %s/%s's instance %s" %
+                      (context.project.name, context.user.name, inst_id))
         # defer.returnValue(self._format_instances(context, reservation_id))
         return self._format_run_instances(context, reservation_id)
 
+
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
+    # @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        network_topic = yield self._get_network_topic(context)
-        for i in instance_id:
-            logging.debug("Going to try and terminate %s" % i)
+        # network_topic = yield self._get_network_topic(context)
+        for name in instance_id:
+            logging.debug("Going to try and terminate %s" % name)
             try:
-                instance = self._get_instance(context, i)
+                inst_id = name[2:] # remove the i-
+                instance_ref = db.instance_get(context, inst_id)
             except exception.NotFound:
                 logging.warning("Instance %s was not found during terminate"
-                                % i)
+                                % name)
                 continue
-            floating_ip = network_model.get_public_ip_for_instance(i)
-            if floating_ip:
-                logging.debug("Disassociating address %s" % floating_ip)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             disassociated.  We may need to worry about
-                #             checking this later.  Perhaps in the scheduler?
-                rpc.cast(network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_ip": floating_ip}})
+                
+            # FIXME(ja): where should network deallocate occur?
+            # floating_ip = network_model.get_public_ip_for_instance(i)
+            # if floating_ip:
+            #     logging.debug("Disassociating address %s" % floating_ip)
+            #     # NOTE(vish): Right now we don't really care if the ip is
+            #     #             disassociated.  We may need to worry about
+            #     #             checking this later.  Perhaps in the scheduler?
+            #     rpc.cast(network_topic,
+            #              {"method": "disassociate_floating_ip",
+            #               "args": {"floating_ip": floating_ip}})
+            # 
+            # fixed_ip = instance.get('private_dns_name', None)
+            # if fixed_ip:
+            #     logging.debug("Deallocating address %s" % fixed_ip)
+            #     # NOTE(vish): Right now we don't really care if the ip is
+            #     #             actually removed.  We may need to worry about
+            #     #             checking this later.  Perhaps in the scheduler?
+            #     rpc.cast(network_topic,
+            #              {"method": "deallocate_fixed_ip",
+            #               "args": {"fixed_ip": fixed_ip}})
 
-            fixed_ip = instance.get('private_dns_name', None)
-            if fixed_ip:
-                logging.debug("Deallocating address %s" % fixed_ip)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             actually removed.  We may need to worry about
-                #             checking this later.  Perhaps in the scheduler?
-                rpc.cast(network_topic,
-                         {"method": "deallocate_fixed_ip",
-                          "args": {"fixed_ip": fixed_ip}})
-
-            if instance.get('node_name', 'unassigned') != 'unassigned':
+            if instance_ref['physical_node_id'] is not None:
                 # NOTE(joshua?): It's also internal default
-                rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
+                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, 
+                             instance_ref['physical_node_id']),
                          {"method": "terminate_instance",
-                          "args": {"instance_id": i}})
+                          "args": {"instance_id": name}})
             else:
-                instance.destroy()
-        defer.returnValue(True)
+                db.instance_destroy(context, inst_id)
+        # defer.returnValue(True)
+        return True
 
     @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):

@@ -150,6 +150,21 @@ def instance_get(context, instance_id):
     return _impl.instance_get(context, instance_id)
 
 
+def instance_get_all(context):
+    """Gets all instances."""
+    return _impl.instance_get_all(context)
+
+
+def instance_get_by_project(context, project_id):
+    """Gets all instance belonging to a project."""
+    return _impl.instance_get_by_project(context, project_id)
+
+
+def instance_get_by_reservation(context, reservation_id):
+    """Gets all instance belonging to a reservation."""
+    return _impl.instance_get_by_reservation(context, reservation_id)
+
+
 def instance_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
     return _impl.instance_state(context, instance_id, state, description)
@@ -232,6 +247,14 @@ def project_get_network(context, project_id):
 ###################
 
 
+def queue_get_for(context, topic, physical_node_id):
+    """Return a channel to send a message to a node with a topic."""
+    return _impl.queue_get_for(context, topic, physical_node_id)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""
     return _impl.volume_allocate_shelf_and_blade(context, volume_id)
@@ -274,5 +297,3 @@ def volume_update(context, volume_id, values):
 
     """
     return _impl.volume_update(context, volume_id, values)
-
-
