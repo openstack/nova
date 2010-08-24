@@ -41,7 +41,7 @@ def daemon_get_by_args(context, node_name, binary):
 def daemon_create(context, values):
     daemon_ref = models.Daemon(**values)
     daemon_ref.save()
-    return daemon_ref
+    return daemon_ref.id
 
 
 def daemon_update(context, daemon_id, values):
@@ -199,6 +199,11 @@ def instance_get_host(context, instance_id):
     return instance_ref['node_name']
 
 
+def instance_is_vpn(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
+    return instance_ref['image_id'] == FLAGS.vpn_image_id
+
+
 def instance_state(context, instance_id, state, description=None):
     instance_ref = instance_get(context, instance_id)
     instance_ref.set_state(state, description)
@@ -218,8 +223,7 @@ def instance_update(context, instance_id, values):
 def network_allocate(context, project_id):
     """Set up the network"""
     db.network_ensure_indexes(context, FLAGS.num_networks)
-    network_ref = db.network_create(context, {'project_id': project_id})
-    network_id = network_ref['id']
+    network_id = db.network_create(context, {'project_id': project_id})
     private_net = IPy.IP(FLAGS.private_range)
     index = db.network_get_index(context, network_id)
     vlan = FLAGS.vlan_start + index
@@ -235,7 +239,7 @@ def network_allocate(context, project_id):
     net['vpn_public_port'] = FLAGS.vpn_start + index
     db.network_update(context, network_id, net)
     db.network_create_fixed_ips(context, network_id, FLAGS.cnt_vpn_clients)
-    return network_ref
+    return network_id
 
 
 def network_create(context, values):
@@ -243,7 +247,7 @@ def network_create(context, values):
     for (key, value) in values.iteritems():
         network_ref[key] = value
     network_ref.save()
-    return network_ref
+    return network_ref.id
 
 
 def network_create_fixed_ips(context, network_id, num_vpn_clients):

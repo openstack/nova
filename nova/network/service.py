@@ -121,25 +121,13 @@ class BaseNetworkService(service.Service):
         self._on_set_network_host(context, network_id)
         return host
 
-    def allocate_fixed_ip(self, project_id, instance_id, context=None,
-                          *args, **kwargs):
-        """Gets fixed ip from the pool"""
-        network_ref = db.project_get_network(context, project_id)
-        address = db.fixed_ip_allocate_address(context, network_ref['id'])
-        db.fixed_ip_instance_associate(context,
-                                       address,
-                                       instance_id)
-        return address
-
-    def deallocate_fixed_ip(self, address, context=None):
-        """Returns a fixed ip to the pool"""
-        db.fixed_ip_deallocate(context, address)
-        db.fixed_ip_instance_disassociate(context, address)
-
+    def setup_fixed_ip(self, fixed_ip_id):
+        """Sets up rules for fixed ip"""
+        raise NotImplementedError()
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
-        pass
+        raise NotImplementedError()
 
     @classmethod
     def setup_compute_network(cls, network):
@@ -182,6 +170,10 @@ class FlatNetworkService(BaseNetworkService):
         """Network is created manually"""
         pass
 
+    def setup_fixed_ip(self, fixed_ip_id):
+        """Currently no setup"""
+        pass
+
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
         # NOTE(vish): should there be two types of network objects
@@ -206,47 +198,15 @@ class VlanNetworkService(BaseNetworkService):
         #             admin command or fixtures
         db.network_ensure_indexes(None, FLAGS.num_networks)
 
-    def setup_fixed_ip(self, project_id, instance_id, context=None,
-                       *args, **kwargs):
+    def setup_fixed_ip(self, fixed_ip_id, context=None):
         """Gets a fixed ip from the pool"""
-        network_ref = db.project_get_network(context, project_id)
-        if db.instance_is_vpn(context, instance_id):
-            address = db.network_get_vpn_ip_address(context,
-                                                    network_ref['id'])
-            logging.debug("Allocating vpn IP %s", address)
-            db.fixed_ip_instance_associate(context,
-                                           address,
-                                           instance_id)
+        fixed_ip_ref = db.project_get_fixed_ip(context, fixed_ip_id)
+        network_ref = db.fixed_ip_get_network(context, fixed_ip_id)
+        if db.instance_is_vpn(context, fixed_ip_ref['instance_id']):
             _driver.ensure_vlan_forward(network_ref['vpn_public_ip_str'],
                                         network_ref['vpn_public_port'],
                                         network_ref['vpn_private_ip_str'])
-        else:
-            parent = super(VlanNetworkService, self)
-            address = parent.allocate_fixed_ip(project_id,
-                                               instance_id,
-                                               context)
-        return address
-
-    def deallocate_fixed_ip(self, address, context=None):
-        """Returns an ip to the pool"""
-        fixed_ip_ref = db.fixed_ip_get_by_address(context, address)
-        if fixed_ip_ref['leased']:
-            logging.debug("Deallocating IP %s", address)
-            db.fixed_ip_deallocate(context, address)
-            # NOTE(vish): we keep instance id until release occurs
-        else:
-            self.release_fixed_ip(address, context)
-
-    def lease_fixed_ip(self, address, context=None):
-        """Called by bridge when ip is leased"""
-        logging.debug("Leasing IP %s", address)
-        db.fixed_ip_lease(context, address)
-
-    def release_fixed_ip(self, address, context=None):
-        """Called by bridge when ip is released"""
-        logging.debug("Releasing IP %s", address)
-        db.fixed_ip_release(context, address)
-        db.fixed_ip_instance_disassociate(context, address)
+        _driver.update_dhcp(network_ref)
 
     def restart_nets(self):
         """Ensure the network for each user is enabled"""
@@ -261,6 +221,8 @@ class VlanNetworkService(BaseNetworkService):
 
 
     @classmethod
-    def setup_compute_network(cls, network):
+    def setup_compute_network(cls, network_id):
         """Sets up matching network for compute hosts"""
-        _driver.ensure_vlan_bridge(network.vlan, network.bridge)
+        network_ref = db.network_get(network_id)
+        _driver.ensure_vlan_bridge(network_ref['vlan'],
+                                   network_ref['bridge'])

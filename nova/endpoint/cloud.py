@@ -571,7 +571,7 @@ class CloudController(object):
             network_topic = yield self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
-                      "args": {"fixed_ip": fixed_ip['id']}})
+                      "args": {"fixed_ip_id": fixed_ip['id']}})
 
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
