@@ -95,12 +95,13 @@ class Service(object, service.Service):
         try:
             try:
                 daemon_ref = db.daemon_get_by_args(context, node_name, binary)
+                daemon_id = daemon_ref['id']
             except exception.NotFound:
-                daemon_ref = db.daemon_create(context, {'node_name': node_name,
+                daemon_id = db.daemon_create(context, {'node_name': node_name,
                                                         'binary': binary,
                                                         'report_count': 0})
             db.daemon_update(context,
-                             daemon_ref['id'],
+                             daemon_id,
                              {'report_count': daemon_ref['report_count'] + 1})
 
             # TODO(termie): make this pattern be more elegant.
