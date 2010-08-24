@@ -204,7 +204,8 @@ class VlanNetworkService(BaseNetworkService):
         network_ref = db.network_get(context, network_id)
         print 'making the bridge'
         _driver.ensure_vlan_bridge(network_ref['vlan'],
-                                   network_ref['bridge'])
+                                   network_ref['bridge'],
+                                   network_ref)
 
 
     @classmethod

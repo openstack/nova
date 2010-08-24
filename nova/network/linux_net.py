@@ -88,10 +88,10 @@ def remove_floating_forward(floating_ip, fixed_ip):
                               % (fixed_ip, protocol, port))
 
 
-def ensure_vlan_bridge(vlan_num, bridge, network=None):
+def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
-    ensure_bridge(bridge, interface, network)
+    ensure_bridge(bridge, interface, net_attrs)
 
 def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
@@ -103,7 +103,7 @@ def ensure_vlan(vlan_num):
     return interface
 
 
-def ensure_bridge(bridge, interface, network=None):
+def ensure_bridge(bridge, interface, net_attrs=None):
     if not _device_exists(bridge):
         logging.debug("Starting Bridge inteface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)
@@ -111,13 +111,13 @@ def ensure_bridge(bridge, interface, network=None):
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
         _execute("sudo brctl addif %s %s" % (bridge, interface))
-        if network:
+        if net_attrs:
             _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                     (bridge,
-                     network['gateway'],
-                     network['broadcast'],
-                     network['netmask']))
-            _confirm_rule("FORWARD --in-bridge %s -j ACCEPT" % bridge)
+                     net_attrs['gateway'],
+                     net_attrs['broadcast'],
+                     net_attrs['netmask']))
+            _confirm_rule("FORWARD --in-interface %s -j ACCEPT" % bridge)
         else:
             _execute("sudo ifconfig %s up" % bridge)
 
@@ -188,7 +188,7 @@ def _device_exists(device):
 
 def _confirm_rule(cmd):
     """Delete and re-add iptables rule"""
-    _execute("sudo iptables --delete %s" % (cmd))
+    _execute("sudo iptables --delete %s" % (cmd), check_exit_code=False)
     _execute("sudo iptables -I %s" % (cmd))
 
 
