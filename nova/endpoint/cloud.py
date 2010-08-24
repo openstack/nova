@@ -504,11 +504,12 @@ class CloudController(object):
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
-        if kwargs['image_id'] != FLAGS.vpn_image_id:
+        vpn = kwargs['image_id'] == FLAGS.vpn_image_id
+        
+        if not vpn:
             image = images.get(context, kwargs['image_id'])
 
-        # FIXME(ja): if image is cloudpipe, this breaks
-
+        # FIXME(ja): if image is vpn, this breaks
         # get defaults from imagestore
         image_id = image['imageId']
         kernel_id = image.get('kernelId', FLAGS.default_kernel)
@@ -523,7 +524,6 @@ class CloudController(object):
         images.get(context, ramdisk_id)
 
         logging.debug("Going to run instances...")
-        reservation_id = utils.generate_uid('r')
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
@@ -537,35 +537,38 @@ class CloudController(object):
         security_group = "default"
 
         network_ref = db.project_get_network(context, context.project.id)
+        
+        base_options = {}
+        base_options['image_id'] = image_id
+        base_options['kernel_id'] = kernel_id
+        base_options['ramdisk_id'] = ramdisk_id
+        base_options['reservation_id'] = utils.generate_uid('r')
+        base_options['key_data'] = key_data
+        base_options['key_name'] = kwargs.get('key_name', None)
+        base_options['user_id'] = context.user.id
+        base_options['project_id'] = context.project.id
+        base_options['user_data'] = kwargs.get('user_data', '')
+        base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
+        base_options['security_group'] = security_group
 
         for num in range(int(kwargs['max_count'])):
-            inst = {}
-            inst['image_id'] = image_id
-            inst['kernel_id'] = kernel_id
-            inst['ramdisk_id'] = ramdisk_id
-            instance_ref = db.instance_create(context, inst)
-            inst_id = instance_ref['id']
-            if db.instance_is_vpn(instance_ref['id']):
-                fixed_ip = db.fixed_ip_allocate(context, network_ref['id'])
-            else:
+            inst_id = db.instance_create(context, base_options)
+            
+            if vpn:
                 fixed_ip = db.network_get_vpn_ip(context, network_ref['id'])
+            else:
+                fixed_ip = db.fixed_ip_allocate(context, network_ref['id'])
+
+            inst = {}
             inst['mac_address'] = utils.generate_mac()
-            inst['user_data'] = kwargs.get('user_data', '')
-            inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
-            inst['reservation_id'] = reservation_id
-            inst['key_data'] = key_data
-            inst['key_name'] = kwargs.get('key_name', None)
-            inst['user_id'] = context.user.id # FIXME(ja)
-            inst['project_id'] = context.project.id # FIXME(ja)
             inst['launch_index'] = num
-            inst['security_group'] = security_group
-            inst['hostname'] = inst_id # FIXME(ja): id isn't assigned until create
+            inst['hostname'] = inst_id
             db.instance_update(context, inst_id, inst)
 
 
             # TODO(vish): This probably should be done in the scheduler
             #             network is setup when host is assigned
-            network_topic = yield self.get_network_topic()
+            network_topic = yield self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
                       "args": {"fixed_ip": fixed_ip['id']}})
