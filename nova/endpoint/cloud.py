@@ -261,11 +261,11 @@ class CloudController(object):
         else:
             volumes = db.volume_get_by_project(context, context.project.id)
 
-        volumes = [self.format_volume(context, v) for v in volumes]
+        volumes = [self._format_volume(context, v) for v in volumes]
 
         return {'volumeSet': volumes}
 
-    def format_volume(self, context, volume):
+    def _format_volume(self, context, volume):
         v = {}
         v['volumeId'] = volume['id']
         v['status'] = volume['status']
@@ -305,9 +305,8 @@ class CloudController(object):
         yield rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
                                             "args": {"volume_id": volume_id}})
 
-        # NOTE(vish): rpc returned value is in the result key in the dictionary
         volume = db.volume_get(context, volume_id)
-        defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
+        defer.returnValue({'volumeSet': [self._format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
@@ -343,8 +342,7 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
         volume = db.volume_get(context, volume_id)
-        instance_id = volume.get('instance_id', None)
-        if not instance_id:
+        if volume['instance_id'] is None:
             raise exception.Error("Volume isn't attached to anything!")
         if volume['status'] == "available":
             raise exception.Error("Volume is already detached")
