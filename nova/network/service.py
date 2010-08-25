@@ -94,7 +94,6 @@ class BaseNetworkService(service.Service):
         host = db.network_set_host(context,
                                    network_id,
                                    FLAGS.node_name)
-        print 'set host'
         self._on_set_network_host(context, network_id)
         return host
 
@@ -199,7 +198,6 @@ class VlanNetworkService(BaseNetworkService):
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
         network_ref = db.network_get(context, network_id)
-        print 'making the bridge'
         _driver.ensure_vlan_bridge(network_ref['vlan'],
                                    network_ref['bridge'],
                                    network_ref)

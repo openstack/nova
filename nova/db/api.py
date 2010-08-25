@@ -138,7 +138,7 @@ def fixed_ip_get_by_address(context, address):
 
 
 def fixed_ip_get_network(context, address):
-    """Get a fixed ip by address."""
+    """Get a network for a fixed ip by address."""
     return _impl.fixed_ip_get_network(context, address)
 
 def fixed_ip_lease(context, address):
@@ -280,10 +280,10 @@ def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return _impl.network_get_associated_fixed_ips(context, network_id)
 
+
 def network_get_by_bridge(context, bridge):
     """Get an network or raise if it does not exist."""
     return _impl.network_get_by_bridge(context, bridge)
-
 
 
 def network_get_host(context, network_id):

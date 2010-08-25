@@ -46,10 +46,6 @@ def add_lease(_mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         logging.debug("leasing ip")
-        from nova import models
-        print models.FixedIp.count()
-        print models.Network.count()
-        print FLAGS.sql_connection
         service.VlanNetworkService().lease_fixed_ip(ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),

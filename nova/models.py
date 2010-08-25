@@ -19,7 +19,6 @@
 """
 SQLAlchemy models for nova data
 """
-import os
 
 from sqlalchemy.orm import relationship, backref, validates, exc
 from sqlalchemy import Table, Column, Integer, String
@@ -33,10 +32,6 @@ from nova import flags
 FLAGS=flags.FLAGS
 
 Base = declarative_base()
-
-flags.DEFINE_string('sql_connection',
-                    'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
-                    'connection string for sql database')
 
 class NovaBase(object):
     __table_args__ = {'mysql_engine':'InnoDB'}
