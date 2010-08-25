@@ -16,11 +16,11 @@
 #    under the License.
 
 from nova.api.rackspace import base
-from nova.api.rackspace import _id_translator
-from nova import flavor
+from nova.compute import instance_types
 from webob import exc
 
 class Controller(base.Controller):
+    """Flavor controller for the Rackspace API."""
 
     _serialization_metadata = {
         'application/xml': {
@@ -30,21 +30,20 @@ class Controller(base.Controller):
         }
     }
 
-    def __init__(self):
-        self._service = flavor.service.FlavorService.load()
-        self._id_translator = self._id_translator.RackspaceAPIIdTranslator(
-                "flavor", self._service.__class__.__name__)
-
     def index(self, req):
         """Return all flavors."""
-        items = self._service.index()
-        for flavor in items:
-            flavor['id'] = self._id_translator.to_rs_id(flavor['id'])
+        items = [self.show(req, id)['flavor'] for id in self._all_ids()]
         return dict(flavors=items)
 
     def show(self, req, id):
         """Return data about the given flavor id."""
-        opaque_id = self._id_translator.from_rs_id(id)
-        item = self._service.show(opaque_id)
-        item['id'] = id
-        return dict(flavor=item)
+        for name, val in instance_types.INSTANCE_TYPES.iteritems():
+            if val['flavorid'] == int(id):
+                item = dict(ram=val['memory_mb'], disk=val['local_gb'],
+                            id=val['flavorid'], name=name)
+                return dict(flavor=item)
+        raise exc.HTTPNotFound()
+
+    def _all_ids(self):
+        """Return the list of all flavorids."""
+        return [i['flavorid'] for i in instance_types.INSTANCE_TYPES.values()]
