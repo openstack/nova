@@ -66,25 +66,20 @@ class VolumeService(service.Service):
 
     @defer.inlineCallbacks
     @validate.rangetest(size=(0, 1000))
-    def create_volume(self, size, user_id, project_id, context=None):
+    def create_volume(self, volume_id, context=None):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
-        logging.debug("Creating volume of size: %s" % (size))
+        logging.debug("Creating volume %s" % (volume_id))
 
-        vol = {}
-        vol['node_name'] = FLAGS.node_name
-        vol['size'] = size
-        vol['user_id'] = user_id
-        vol['project_id'] = project_id
-        vol['availability_zone'] = FLAGS.storage_availability_zone
-        vol['status'] = "creating" # creating | available | in-use
-        # attaching | attached | detaching | detached
-        vol['attach_status'] = "detached"
-        volume_id = db.volume_create(context, vol)
-        yield self._exec_create_volume(volume_id, size)
+        volume_ref = db.volume_get(volume_id)
+
+        # db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
+
+        yield self._exec_create_volume(volume_id, volume_ref['size'])
+        
         (shelf_id, blade_id) = db.volume_allocate_shelf_and_blade(context,
                                                                   volume_id)
         yield self._exec_create_export(volume_id, shelf_id, blade_id)
