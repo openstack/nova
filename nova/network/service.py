@@ -31,7 +31,7 @@ from nova.network import linux_net
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('network_type',
-                    'flat',
+                    'vlan',
                     'Service Class for Networking')
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
