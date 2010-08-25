@@ -141,6 +141,7 @@ def _wrapper(func):
     return _wrapped
 
 
+DEFINE = _wrapper(gflags.DEFINE)
 DEFINE_string = _wrapper(gflags.DEFINE_string)
 DEFINE_integer = _wrapper(gflags.DEFINE_integer)
 DEFINE_bool = _wrapper(gflags.DEFINE_bool)
