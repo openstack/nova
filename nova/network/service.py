@@ -75,11 +75,11 @@ def type_to_class(network_type):
     raise exception.NotFound("Couldn't find %s network type" % network_type)
 
 
-def setup_compute_network(project_id):
+def setup_compute_network(context, project_id):
     """Sets up the network on a compute host"""
-    network = db.project_get_network(None, project_id)
-    srv = type_to_class(network.kind)
-    srv.setup_compute_network(network)
+    network_ref = db.project_get_network(None, project_id)
+    srv = type_to_class(network_ref.kind)
+    srv.setup_compute_network(context, network_ref['id'])
 
 
 class BaseNetworkService(service.Service):
@@ -110,7 +110,7 @@ class BaseNetworkService(service.Service):
         raise NotImplementedError()
 
     @classmethod
-    def setup_compute_network(cls, network):
+    def setup_compute_network(cls, context, network_id):
         """Sets up matching network for compute hosts"""
         raise NotImplementedError()
 
@@ -146,7 +146,7 @@ class FlatNetworkService(BaseNetworkService):
     """Basic network where no vlans are used"""
 
     @classmethod
-    def setup_compute_network(cls, network):
+    def setup_compute_network(cls, context, network_id):
         """Network is created manually"""
         pass
 
@@ -209,8 +209,8 @@ class VlanNetworkService(BaseNetworkService):
 
 
     @classmethod
-    def setup_compute_network(cls, network_id):
+    def setup_compute_network(cls, context, network_id):
         """Sets up matching network for compute hosts"""
-        network_ref = db.network_get(network_id)
+        network_ref = db.network_get(context, network_id)
         _driver.ensure_vlan_bridge(network_ref['vlan'],
                                    network_ref['bridge'])

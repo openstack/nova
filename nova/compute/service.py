@@ -77,10 +77,7 @@ class ComputeService(service.Service):
             raise exception.Error("Instance has already been created")
         logging.debug("Starting instance %s..." % (instance_id))
 
-        # NOTE(vish): passing network type allows us to express the
-        #             network without making a call to network to find
-        #             out which type of network to setup
-        network_service.setup_compute_network(instance_ref['project_id'])
+        network_service.setup_compute_network(context, instance_ref['project_id'])
         db.instance_update(context, instance_id, {'node_name': FLAGS.node_name})
 
         # TODO(vish) check to make sure the availability zone matches
