@@ -256,11 +256,13 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
-        volumes = []
-        for volume in self.volumes:
-            if context.user.is_admin() or volume['project_id'] == context.project.id:
-                v = self.format_volume(context, volume)
-                volumes.append(v)
+        if context.user.is_admin():
+            volumes = db.volume_get_all(context)
+        else:
+            volumes = db.volume_get_by_project(context, context.project.id)
+
+        voluems = [self.format_volume(context, v) for v in volumes]
+
         return defer.succeed({'volumeSet': volumes})
 
     def format_volume(self, context, volume):

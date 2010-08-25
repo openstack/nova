@@ -195,7 +195,6 @@ def instance_get_by_name(context, name):
     return _impl.instance_get_by_project(context, name)
 
 
-
 def instance_get_by_project(context, project_id):
     """Get all instance belonging to a project."""
     return _impl.instance_get_by_project(context, project_id)
@@ -354,6 +353,16 @@ def volume_detached(context, volume_id):
 def volume_get(context, volume_id):
     """Get a volume or raise if it does not exist."""
     return _impl.volume_get(context, volume_id)
+
+
+def volume_get_all(context):
+    """Get all volumes."""
+    return _impl.volume_get_all(context)
+
+
+def volume_get_by_project(context, project_id):
+    """Get all volumes belonging to a project."""
+    return _impl.volume_get_by_project(context, project_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):
