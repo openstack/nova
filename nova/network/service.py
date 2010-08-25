@@ -26,7 +26,7 @@ from nova import flags
 from nova import service
 from nova import utils
 from nova.auth import manager
-from nova.network import exception
+from nova.network import exception as network_exception
 from nova.network import model
 from nova.network import vpn
 
@@ -64,8 +64,7 @@ def type_to_class(network_type):
 def setup_compute_network(network_type, user_id, project_id, security_group):
     """Sets up the network on a compute host"""
     srv = type_to_class(network_type)
-    srv.setup_compute_network(network_type,
-                              user_id,
+    srv.setup_compute_network(user_id,
                               project_id,
                               security_group)
 
@@ -170,7 +169,7 @@ class FlatNetworkService(BaseNetworkService):
                 redis.sadd('ips', fixed_ip)
         fixed_ip = redis.spop('ips')
         if not fixed_ip:
-            raise exception.NoMoreAddresses()
+            raise network_exception.NoMoreAddresses()
         # TODO(vish): some sort of dns handling for hostname should
         #             probably be done here.
         return {'inject_network': True,

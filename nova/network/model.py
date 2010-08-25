@@ -290,6 +290,11 @@ class BaseNetwork(datastore.BasicModel):
         return 'available:%s' % self.identifier
 
     @property
+    def num_available_ips(self):
+        redis = datastore.Redis.instance()
+        return redis.scard(self._available_key)
+
+    @property
     def assigned(self):
         """Returns a list of all assigned addresses"""
         return self.address_class.associated_keys('network', self.identifier)
