@@ -26,6 +26,9 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 
 # TODO(vish): where should these flags go
+flags.DEFINE_string('network_type',
+                    'vlan',
+                    'Service Class for Networking')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
