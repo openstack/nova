@@ -72,22 +72,33 @@ class VolumeService(service.Service):
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
-        logging.debug("Creating volume %s" % (volume_id))
+
+        logging.info("volume %s: creating" % (volume_id))
 
         volume_ref = db.volume_get(volume_id)
 
         # db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
 
+        logging.debug("volume %s: creating lv of size %sG" % (volume_id, size))
         yield self._exec_create_volume(volume_id, volume_ref['size'])
         
+        logging.debug("volume %s: allocating shelf & blade" % (volume_id))
         (shelf_id, blade_id) = db.volume_allocate_shelf_and_blade(context,
                                                                   volume_id)
+
+        logging.debug("volume %s: exporting shelf %s & blade %s" % (volume_id,
+                 shelf_id, blade_id))
+
         yield self._exec_create_export(volume_id, shelf_id, blade_id)
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
+
+        logging.debug("volume %s: re-exporting all values" % (volume_id))
         yield self._exec_ensure_exports()
+        
         db.volume_update(context, volume_id, {'status': 'available'})
-        logging.debug("restarting exports")
+
+        logging.debug("volume %s: created successfully" % (volume_id))
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
@@ -134,8 +145,7 @@ class VolumeService(service.Service):
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (self,
-                 shelf_id,
+                (shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
@@ -147,12 +157,10 @@ class VolumeService(service.Service):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (self, shelf_id,
-                                                    blade_id),
+                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id),
                 terminate_on_stderr=False)
         yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (self, shelf_id,
-                                                       blade_id),
+                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id),
                 terminate_on_stderr=False)
 
     @defer.inlineCallbacks
