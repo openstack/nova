@@ -73,7 +73,7 @@ class ComputeService(service.Service):
     def run_instance(self, instance_id, context=None, **_kwargs):
         """Launch a new instance with specified options."""
         instance_ref = db.instance_get(context, instance_id)
-        if instance_ref['name'] in self._conn.list_instances():
+        if instance_ref['str_id'] in self._conn.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("Starting instance %s..." % (instance_id))
 
@@ -87,7 +87,7 @@ class ComputeService(service.Service):
             yield self._conn.spawn(instance_ref)
         except:
             logging.exception("Failed to spawn instance %s" %
-                              instance_ref['name'])
+                              instance_ref['str_id'])
             db.instance_state(context, instance_id, power_state.SHUTDOWN)
 
         self.update_state(instance_id, context)
@@ -127,11 +127,11 @@ class ComputeService(service.Service):
             raise exception.Error(
                     'trying to reboot a non-running'
                     'instance: %s (state: %s excepted: %s)' %
-                    (instance_ref['name'],
+                    (instance_ref['str_id'],
                      instance_ref['state'],
                      power_state.RUNNING))
 
-        logging.debug('rebooting instance %s' % instance_ref['name'])
+        logging.debug('rebooting instance %s' % instance_ref['str_id'])
         db.instance_state(
                 context, instance_id, power_state.NOSTATE, 'rebooting')
         yield self._conn.reboot(instance_ref)
@@ -147,7 +147,7 @@ class ComputeService(service.Service):
 
         if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['name'],
+                                                 instance_ref['str_id'],
                                                  'console.log'))
             with open(fname, 'r') as f:
                 output = f.read()

@@ -70,21 +70,21 @@ def floating_ip_allocate_address(context, node_name, project_id):
 
 
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
-    floating_ip_ref = models.FloatingIp.find_by_ip_str(floating_address)
-    fixed_ip_ref = models.FixedIp.find_by_ip_str(fixed_address)
+    floating_ip_ref = models.FloatingIp.find_by_str(floating_address)
+    fixed_ip_ref = models.FixedIp.find_by_str(fixed_address)
     floating_ip_ref.fixed_ip = fixed_ip_ref
     floating_ip_ref.save()
 
 
 def floating_ip_disassociate(context, address):
-    floating_ip_ref = models.FloatingIp.find_by_ip_str(address)
+    floating_ip_ref = models.FloatingIp.find_by_str(address)
     fixed_ip_address = floating_ip_ref.fixed_ip['ip_str']
     floating_ip_ref['fixed_ip'] = None
     floating_ip_ref.save()
     return fixed_ip_address
 
 def floating_ip_deallocate(context, address):
-    floating_ip_ref = models.FloatingIp.find_by_ip_str(address)
+    floating_ip_ref = models.FloatingIp.find_by_str(address)
     floating_ip_ref['project_id'] = None
     floating_ip_ref.save()
 
@@ -108,11 +108,11 @@ def fixed_ip_allocate(context, network_id):
 
 
 def fixed_ip_get_by_address(context, address):
-    return models.FixedIp.find_by_ip_str(address)
+    return models.FixedIp.find_by_str(address)
 
 
 def fixed_ip_get_network(context, address):
-    return models.FixedIp.find_by_ip_str(address).network
+    return models.FixedIp.find_by_str(address).network
 
 
 def fixed_ip_lease(context, address):
@@ -172,13 +172,11 @@ def instance_get_all(context):
     return models.Instance.all()
 
 
-def instance_get_by_ip(context, ip):
-    raise Exception("fixme(vish): add logic here!")
-
-
-def instance_get_by_name(context, name):
-    # NOTE(vish): remove the 'i-'
-    return models.Instance.find(name[2:])
+def instance_get_by_address(context, address):
+    fixed_ip_ref = db.fixed_ip_get_by_address(address)
+    if not fixed_ip_ref.instance:
+        raise exception.NotFound("No instance found for address %s" % address)
+    return fixed_ip_ref.instance
 
 
 def instance_get_by_project(context, project_id):
@@ -195,6 +193,27 @@ def instance_get_by_reservation(context, reservation_id):
     results = query.filter_by(reservation_id=reservation_id).all()
     session.commit()
     return results
+
+
+def instance_get_by_str(context, str_id):
+    return models.Instance.find_by_str(str_id)
+
+
+def instance_get_fixed_address(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
+    if not instance_ref.fixed_ip:
+        return None
+    return instance_ref.fixed_ip['str_id']
+
+
+def instance_get_floating_address(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
+    if not instance_ref.fixed_ip:
+        return None
+    if not instance_ref.fixed_ip.floating_ips:
+        return None
+    # NOTE(vish): this just returns the first floating ip
+    return instance_ref.fixed_ip.floating_ips[0]['str_id']
 
 
 def instance_get_host(context, instance_id):
@@ -451,6 +470,15 @@ def volume_get_by_project(context, project_id):
     results = query.filter_by(project_id=project_id).all()
     session.commit()
     return results
+
+
+def volume_get_by_str(context, str_id):
+    return models.Volume.find_by_str(str_id)
+
+
+def volume_get_host(context, volume_id):
+    volume_ref = volume_get(context, volume_id)
+    return volume_ref['node_name']
 
 
 def volume_get_shelf_and_blade(context, volume_id):

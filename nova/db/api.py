@@ -47,6 +47,7 @@ _impl = utils.LazyPluggable(FLAGS['db_backend'],
 class AddressNotAllocated(exception.Error):
     pass
 
+
 class NoMoreAddresses(exception.Error):
     pass
 
@@ -185,14 +186,9 @@ def instance_get_all(context):
     return _impl.instance_get_all(context)
 
 
-def instance_get_by_ip(context, ip):
-    """Gets an instance by fixed ipaddress or raise if it does not exist."""
-    return _impl.instance_get_by_ip(context, ip)
-
-
-def instance_get_by_name(context, name):
-    """Get an instance by name."""
-    return _impl.instance_get_by_project(context, name)
+def instance_get_by_address(context, address):
+    """Gets an instance by fixed ip address or raise if it does not exist."""
+    return _impl.instance_get_by_address(context, address)
 
 
 def instance_get_by_project(context, project_id):
@@ -205,9 +201,24 @@ def instance_get_by_reservation(context, reservation_id):
     return _impl.instance_get_by_reservation(context, reservation_id)
 
 
+def instance_get_fixed_address(context, instance_id):
+    """Get the fixed ip address of an instance."""
+    return _impl.instance_get_fixed_address(context, instance_id)
+
+
+def instance_get_floating_address(context, instance_id):
+    """Get the first floating ip address of an instance."""
+    return _impl.instance_get_floating_address(context, instance_id)
+
+
+def instance_get_by_str(context, str_id):
+    """Get an instance by string id."""
+    return _impl.instance_get_by_str(context, str_id)
+
+
 def instance_get_host(context, instance_id):
     """Get the host that the instance is running on."""
-    return _impl.instance_get_all(context, instance_id)
+    return _impl.instance_get_host(context, instance_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -363,6 +374,16 @@ def volume_get_all(context):
 def volume_get_by_project(context, project_id):
     """Get all volumes belonging to a project."""
     return _impl.volume_get_by_project(context, project_id)
+
+
+def volume_get_by_str(context, str_id):
+    """Get a volume by string id."""
+    return _impl.volume_get_by_str(context, str_id)
+
+
+def volume_get_host(context, volume_id):
+    """Get the host that the volume is running on."""
+    return _impl.volume_get_host(context, volume_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):

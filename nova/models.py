@@ -40,6 +40,7 @@ flags.DEFINE_string('sql_connection',
 
 class NovaBase(object):
     __table_args__ = {'mysql_engine':'InnoDB'}
+    __prefix__ = 'none'
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 
@@ -86,6 +87,15 @@ class NovaBase(object):
         except exc.NoResultFound:
             raise exception.NotFound("No model for id %s" % obj_id)
 
+    @classmethod
+    def find_by_str(cls, str_id):
+        id = int(str_id.rpartition('-')[2])
+        return cls.find(id)
+
+    @property
+    def str_id(self):
+        return "%s-%s" % (self.__prefix__, self.id)
+
     def save(self):
         session = NovaBase.get_session()
         session.add(self)
@@ -109,6 +119,7 @@ class NovaBase(object):
 
 class Image(Base, NovaBase):
     __tablename__ = 'images'
+    __prefix__ = 'ami'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255))#, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255))#, ForeignKey('projects.id'), nullable=False)
@@ -166,6 +177,7 @@ class Daemon(Base, NovaBase):
 
 class Instance(Base, NovaBase):
     __tablename__ = 'instances'
+    __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
 
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
@@ -182,7 +194,7 @@ class Instance(Base, NovaBase):
     # TODO(vish): make this opaque somehow
     @property
     def name(self):
-        return "i-%s" % self.id
+        return self.str_id
 
 
     image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -198,7 +210,7 @@ class Instance(Base, NovaBase):
     state_description = Column(String(255))
 
     hostname = Column(String(255))
-    physical_node_id = Column(Integer)
+    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
 
     instance_type = Column(Integer)
 
@@ -230,6 +242,7 @@ class Instance(Base, NovaBase):
 
 class Volume(Base, NovaBase):
     __tablename__ = 'volumes'
+    __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
 
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
@@ -267,15 +280,19 @@ class FixedIp(Base, NovaBase):
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
 
+    @property
+    def str_id(self):
+        return self.ip_str
+
     @classmethod
-    def find_by_ip_str(cls, ip_str):
+    def find_by_str(cls, str_id):
         session = NovaBase.get_session()
         try:
-            result = session.query(cls).filter_by(ip_str=ip_str).one()
+            result = session.query(cls).filter_by(ip_str=str_id).one()
             session.commit()
             return result
         except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % ip_str)
+            raise exception.NotFound("No model for ip str %s" % str_id)
 
 
 class FloatingIp(Base, NovaBase):
@@ -288,15 +305,19 @@ class FloatingIp(Base, NovaBase):
     project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
     node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
 
+    @property
+    def str_id(self):
+        return self.ip_str
+
     @classmethod
-    def find_by_ip_str(cls, ip_str):
+    def find_by_str(cls, str_id):
         session = NovaBase.get_session()
         try:
-            result = session.query(cls).filter_by(ip_str=ip_str).one()
+            result = session.query(cls).filter_by(ip_str=str_id).one()
             session.commit()
             return result
         except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % ip_str)
+            raise exception.NotFound("No model for ip str %s" % str_id)
 
 
 class Network(Base, NovaBase):

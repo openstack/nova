@@ -81,7 +81,7 @@ class NetworkTestCase(test.TrialTestCase):
         pubnet = IPy.IP(flags.FLAGS.public_range)
         ip_str = str(pubnet[0])
         try:
-            floating_ip = models.FloatingIp.find_by_ip_str(ip_str)
+            floating_ip = models.FloatingIp.find_by_str(ip_str)
         except exception.NotFound:
             floating_ip = models.FloatingIp()
             floating_ip.ip_str = ip_str
