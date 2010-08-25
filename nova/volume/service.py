@@ -167,11 +167,12 @@ class VolumeService(service.Service):
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
             defer.returnValue(None)
-        # NOTE(vish): these commands sometimes sends output to stderr for warnings
+
+        yield process.simple_execute("sleep 5") # wait for blades to appear
         yield process.simple_execute("sudo vblade-persist auto all",
-                                     terminate_on_stderr=False)
+                                     check_exit_code=False)
         yield process.simple_execute("sudo vblade-persist start all",
-                                     terminate_on_stderr=False)
+                                     check_exit_code=False)
 
     @defer.inlineCallbacks
     def _exec_init_volumes(self):
