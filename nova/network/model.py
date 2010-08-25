@@ -231,7 +231,8 @@ class BaseNetwork(datastore.BasicModel):
         self.network_id = network_id
         self.network_str = network_str
         super(BaseNetwork, self).__init__()
-        self.save()
+        if self.is_new_record():
+            self._create_assigned_set()
 
     @property
     def network(self):
@@ -278,6 +279,21 @@ class BaseNetwork(datastore.BasicModel):
         """Remove a host from the datastore"""
         self.address_class(ip_address).destroy()
 
+    def _create_assigned_set(self):
+        for idx in range(self.num_bottom_reserved_ips,
+                         len(self.network) - self.num_top_reserved_ips):
+            redis = datastore.Redis.instance()
+            redis.sadd(self._available_key, str(self.network[idx]))
+
+    @property
+    def _available_key(self):
+        return 'available:%s' % self.identifier
+
+    @property
+    def num_available_ips(self):
+        redis = datastore.Redis.instance()
+        return redis.scard(self._available_key)
+
     @property
     def assigned(self):
         """Returns a list of all assigned addresses"""
@@ -295,15 +311,6 @@ class BaseNetwork(datastore.BasicModel):
         return None
 
     @property
-    def available(self):
-        """Returns a list of all available addresses in the network"""
-        for idx in range(self.num_bottom_reserved_ips,
-                         len(self.network) - self.num_top_reserved_ips):
-            address = str(self.network[idx])
-            if not address in self.assigned:
-                yield address
-
-    @property
     def num_bottom_reserved_ips(self):
         """Returns number of ips reserved at the bottom of the range"""
         return 2  # Network, Gateway
@@ -315,13 +322,14 @@ class BaseNetwork(datastore.BasicModel):
 
     def allocate_ip(self, user_id, project_id, mac, hostname=None):
         """Allocates an ip to a mac address"""
-        for address in self.available:
-            logging.debug("Allocating IP %s to %s", address, project_id)
-            self._add_host(user_id, project_id, address, mac, hostname)
-            self.express(address=address)
-            return address
-        raise exception.NoMoreAddresses("Project %s with network %s" %
-                                        (project_id, str(self.network)))
+        address = datastore.Redis.instance().spop(self._available_key)
+        if not address:
+            raise exception.NoMoreAddresses("Project %s with network %s" %
+                                            (project_id, str(self.network)))
+        logging.debug("Allocating IP %s to %s", address, project_id)
+        self._add_host(user_id, project_id, address, mac, hostname)
+        self.express(address=address)
+        return address
 
     def lease_ip(self, ip_str):
         """Called when DHCP lease is activated"""
@@ -342,6 +350,7 @@ class BaseNetwork(datastore.BasicModel):
         logging.debug("Releasing IP %s", ip_str)
         self._rem_host(ip_str)
         self.deexpress(address=ip_str)
+        datastore.Redis.instance().sadd(self._available_key, ip_str)
 
     def deallocate_ip(self, ip_str):
         """Deallocates an allocated ip"""
@@ -400,7 +409,6 @@ class BridgedNetwork(BaseNetwork):
     def __init__(self, *args, **kwargs):
         super(BridgedNetwork, self).__init__(*args, **kwargs)
         self['bridge_dev'] = FLAGS.bridge_dev
-        self.save()
 
     def express(self, address=None):
         super(BridgedNetwork, self).express(address=address)
