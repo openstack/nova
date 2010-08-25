@@ -74,8 +74,10 @@ class APIRouter(wsgi.Router):
     def __init__(self):
         mapper = routes.Mapper()
         mapper.resource("server", "servers", controller=servers.Controller())
-        mapper.resource("image", "images", controller=images.Controller())
-        mapper.resource("flavor", "flavors", controller=flavors.Controller())
+        mapper.resource("image", "images", controller=images.Controller(),
+                        collection={'detail': 'GET'})
+        mapper.resource("flavor", "flavors", controller=flavors.Controller(),
+                        collection={'detail': 'GET'})
         mapper.resource("sharedipgroup", "sharedipgroups",
                         controller=sharedipgroups.Controller())
         super(APIRouter, self).__init__(mapper)

@@ -31,7 +31,12 @@ class Controller(base.Controller):
     }
 
     def index(self, req):
-        """Return all flavors."""
+        """Return all flavors in brief."""
+        return dict(flavors=[dict(id=flavor['id'], name=flavor['name'])
+                             for flavor in self.detail(req)['flavors']])
+
+    def detail(self, req):
+        """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
         return dict(flavors=items)
 

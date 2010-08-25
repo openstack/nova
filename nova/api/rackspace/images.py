@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import image
+import nova.image.service
 from nova.api.rackspace import base
 from nova.api.rackspace import _id_translator
 from webob import exc
@@ -32,12 +32,17 @@ class Controller(base.Controller):
     }
 
     def __init__(self):
-        self._service = image.ImageService.load()
+        self._service = nova.image.service.ImageService.load()
         self._id_translator = _id_translator.RackspaceAPIIdTranslator(
                 "image", self._service.__class__.__name__)
 
     def index(self, req):
-        """Return all public images."""
+        """Return all public images in brief."""
+        return dict(images=[dict(id=img['id'], name=img['name'])
+                            for img in self.detail(req)['images']])
+
+    def detail(self, req):
+        """Return all public images in detail."""
         data = self._service.index()
         for img in data:
             img['id'] = self._id_translator.to_rs_id(img['id'])
