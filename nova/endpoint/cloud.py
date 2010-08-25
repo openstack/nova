@@ -83,7 +83,7 @@ class CloudController(object):
 
     def setup(self):
         """ Ensure the keychains and folders exist. """
-        # FIXME(ja): this should be moved to a nova-manage command, 
+        # FIXME(ja): this should be moved to a nova-manage command,
         # if not setup throw exceptions instead of running
         # Create keys folder, if it doesn't exist
         if not os.path.exists(FLAGS.keys_path):
@@ -398,7 +398,7 @@ class CloudController(object):
             }
             i['public_dns_name'] = None #network_model.get_public_ip_for_instance(
             #              i['instance_id'])
-            i['private_dns_name'] = instance.fixed_ip
+            i['private_dns_name'] = instance.fixed_ip['ip_str']
             if not i['public_dns_name']:
                 i['public_dns_name'] = i['private_dns_name']
             i['dns_name'] = None
@@ -497,7 +497,7 @@ class CloudController(object):
             host = yield rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
                                      "args": {"project_id": context.project.id}})
-        defer.returnValue(db.queue_get_for(FLAGS.network_topic, host))
+        defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
@@ -505,7 +505,7 @@ class CloudController(object):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
-        
+
         if not vpn:
             image = images.get(context, kwargs['image_id'])
 
@@ -537,12 +537,12 @@ class CloudController(object):
         security_group = "default"
 
         network_ref = db.project_get_network(context, context.project.id)
-        
+        reservation_id = utils.generate_uid('r')
         base_options = {}
         base_options['image_id'] = image_id
         base_options['kernel_id'] = kernel_id
         base_options['ramdisk_id'] = ramdisk_id
-        base_options['reservation_id'] = utils.generate_uid('r')
+        base_options['reservation_id'] = reservation_id
         base_options['key_data'] = key_data
         base_options['key_name'] = kwargs.get('key_name', None)
         base_options['user_id'] = context.user.id
@@ -553,12 +553,14 @@ class CloudController(object):
 
         for num in range(int(kwargs['max_count'])):
             inst_id = db.instance_create(context, base_options)
-            
+
             if vpn:
                 fixed_ip = db.network_get_vpn_ip(context, network_ref['id'])
             else:
                 fixed_ip = db.fixed_ip_allocate(context, network_ref['id'])
-
+            print fixed_ip['ip_str'], inst_id
+            db.fixed_ip_instance_associate(context, fixed_ip['ip_str'], inst_id)
+            print fixed_ip.instance
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
@@ -571,14 +573,15 @@ class CloudController(object):
             network_topic = yield self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
-                      "args": {"fixed_ip_id": fixed_ip['id']}})
+                      "args": {"address": fixed_ip['ip_str']}})
 
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
                   "args": {"instance_id": inst_id}})
             logging.debug("Casting to node for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
-        defer.returnValue(self._format_instances(context, reservation_id))
+        defer.returnValue(self._format_run_instances(context,
+                                                     reservation_id))
 
 
     @rbac.allow('projectmanager', 'sysadmin')

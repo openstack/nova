@@ -25,6 +25,20 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 
+# TODO(vish): where should these flags go
+flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
+flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
+flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
+                    'Public IP for the cloudpipe VPN servers')
+flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
+flags.DEFINE_integer('network_size', 256,
+                        'Number of addresses in each private subnet')
+flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
+flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
+flags.DEFINE_integer('cnt_vpn_clients', 5,
+                        'Number of addresses reserved for vpn clients')
+
+
 
 _impl = utils.LazyPluggable(FLAGS['db_backend'],
                             sqlalchemy='nova.db.sqlalchemy.api')
@@ -118,6 +132,10 @@ def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address."""
     return _impl.fixed_ip_get_by_address(context, address)
 
+
+def fixed_ip_get_network(context, address):
+    """Get a fixed ip by address."""
+    return _impl.fixed_ip_get_network(context, address)
 
 def fixed_ip_lease(context, address):
     """Lease a fixed ip by address."""
@@ -243,6 +261,16 @@ def network_ensure_indexes(context, num_networks):
 def network_get(context, network_id):
     """Get an network or raise if it does not exist."""
     return _impl.network_get(context, network_id)
+
+
+def network_get_associated_fixed_ips(context, network_id):
+    """Get all network's ips that have been associated."""
+    return _impl.network_get_associated_fixed_ips(context, network_id)
+
+def network_get_by_bridge(context, bridge):
+    """Get an network or raise if it does not exist."""
+    return _impl.network_get_by_bridge(context, bridge)
+
 
 
 def network_get_host(context, network_id):

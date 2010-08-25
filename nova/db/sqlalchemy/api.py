@@ -104,11 +104,15 @@ def fixed_ip_allocate(context, network_id):
     fixed_ip_ref['allocated'] = True
     session.add(fixed_ip_ref)
     session.commit()
-    fixed_ip_ref
+    return fixed_ip_ref
 
 
 def fixed_ip_get_by_address(context, address):
     return models.FixedIp.find_by_ip_str(address)
+
+
+def fixed_ip_get_network(context, address):
+    return models.FixedIp.find_by_ip_str(address).network
 
 
 def fixed_ip_lease(context, address):
@@ -150,7 +154,6 @@ def fixed_ip_instance_disassociate(context, address):
 def instance_create(context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
-        print key
         instance_ref[key] = value
     instance_ref.save()
     return instance_ref.id
@@ -288,6 +291,21 @@ def network_get(context, network_id):
     return models.Network.find(network_id)
 
 
+def network_get_associated_fixed_ips(contex, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp)
+    fixed_ips = query.filter(models.FixedIp.instance_id != None).all()
+    session.commit()
+    return fixed_ips
+
+def network_get_by_bridge(context, bridge):
+    session = models.NovaBase.get_session()
+    rv = session.query(models.Network).filter_by(bridge=bridge).first()
+    if not rv:
+        raise exception.NotFound('No network for bridge %s' % bridge)
+    return rv
+
+
 def network_get_vpn_ip(context, network_id):
     # TODO(vish): possible concurrency issue here
     network = network_get(context, network_id)
@@ -325,6 +343,7 @@ def network_set_cidr(context, network_id, cidr):
     network_ref['gateway'] = str(project_net[1])
     network_ref['broadcast'] = str(project_net.broadcast())
     network_ref['vpn_private_ip_str'] = str(project_net[2])
+    network_ref['dhcp_start'] = str(project_net[3])
 
 
 def network_set_host(context, network_id, host_id):

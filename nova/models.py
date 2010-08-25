@@ -316,6 +316,7 @@ class Network(Base, NovaBase):
     vpn_public_ip_str = Column(String(255))
     vpn_public_port = Column(Integer)
     vpn_private_ip_str = Column(String(255))
+    dhcp_start = Column(String(255))
 
     project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
     node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
