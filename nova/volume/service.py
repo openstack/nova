@@ -65,23 +65,23 @@ class VolumeService(service.Service):
         self._exec_init_volumes()
 
     @defer.inlineCallbacks
-    @validate.rangetest(size=(0, 1000))
+    # @validate.rangetest(size=(0, 1000))
     def create_volume(self, volume_id, context=None):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
-
         logging.info("volume %s: creating" % (volume_id))
 
-        volume_ref = db.volume_get(volume_id)
+        volume_ref = db.volume_get(context, volume_id)
 
         # db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
 
+        size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG" % (volume_id, size))
-        yield self._exec_create_volume(volume_id, volume_ref['size'])
-        
+        yield self._exec_create_volume(volume_id, size)
+
         logging.debug("volume %s: allocating shelf & blade" % (volume_id))
         (shelf_id, blade_id) = db.volume_allocate_shelf_and_blade(context,
                                                                   volume_id)
@@ -93,11 +93,11 @@ class VolumeService(service.Service):
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
 
+        db.volume_update(context, volume_id, {'status': 'available'})
+
         logging.debug("volume %s: re-exporting all values" % (volume_id))
         yield self._exec_ensure_exports()
         
-        db.volume_update(context, volume_id, {'status': 'available'})
-
         logging.debug("volume %s: created successfully" % (volume_id))
         defer.returnValue(volume_id)
 
