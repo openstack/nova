@@ -256,27 +256,29 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
-        volumes = []
-        for volume in self.volumes:
-            if context.user.is_admin() or volume['project_id'] == context.project.id:
-                v = self.format_volume(context, volume)
-                volumes.append(v)
-        return defer.succeed({'volumeSet': volumes})
+        if context.user.is_admin():
+            volumes = db.volume_get_all(context)
+        else:
+            volumes = db.volume_get_by_project(context, context.project.id)
 
-    def format_volume(self, context, volume):
+        volumes = [self._format_volume(context, v) for v in volumes]
+
+        return {'volumeSet': volumes}
+
+    def _format_volume(self, context, volume):
         v = {}
-        v['volumeId'] = volume['volume_id']
+        v['volumeId'] = volume['id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
-        v['createTime'] = volume['create_time']
+        # v['createTime'] = volume['create_time']
         if context.user.is_admin():
             v['status'] = '%s (%s, %s, %s, %s)' % (
-                volume.get('status', None),
-                volume.get('user_id', None),
-                volume.get('node_name', None),
-                volume.get('instance_id', ''),
-                volume.get('mountpoint', ''))
+                volume['status'],
+                volume['user_id'],
+                'node_name',
+                volume['instance_id'],
+                volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': volume['delete_on_termination'],
@@ -291,14 +293,20 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
-        # TODO(vish): refactor this to create the volume object here and tell service to create it
-        volume_id = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
-                                 "args": {"size": size,
-                                           "user_id": context.user.id,
-                                           "project_id": context.project.id}})
-        # NOTE(vish): rpc returned value is in the result key in the dictionary
+        vol = {}
+        vol['size'] = size
+        vol['user_id'] = context.user.id
+        vol['project_id'] = context.project.id
+        vol['availability_zone'] = FLAGS.storage_availability_zone
+        vol['status'] = "creating" 
+        vol['attach_status'] = "detached"
+        volume_id = db.volume_create(context, vol)
+
+        yield rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
+                                            "args": {"volume_id": volume_id}})
+
         volume = db.volume_get(context, volume_id)
-        defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
+        defer.returnValue({'volumeSet': [self._format_volume(context, volume)]})
 
     def _get_address(self, context, public_ip):
         # FIXME(vish) this should move into network.py
@@ -334,8 +342,7 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
         volume = db.volume_get(context, volume_id)
-        instance_id = volume.get('instance_id', None)
-        if not instance_id:
+        if volume['instance_id'] is None:
             raise exception.Error("Volume isn't attached to anything!")
         if volume['status'] == "available":
             raise exception.Error("Volume is already detached")

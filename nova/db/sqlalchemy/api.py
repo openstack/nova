@@ -441,6 +441,18 @@ def volume_get(context, volume_id):
     return models.Volume.find(volume_id)
 
 
+def volume_get_all(context):
+    return models.Volume.all()
+
+
+def volume_get_by_project(context, project_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.Volume)
+    results = query.filter_by(project_id=project_id).all()
+    session.commit()
+    return results
+
+
 def volume_get_shelf_and_blade(context, volume_id):
     volume_ref = volume_get(context, volume_id)
     export_device = volume_ref.export_device

@@ -65,34 +65,40 @@ class VolumeService(service.Service):
         self._exec_init_volumes()
 
     @defer.inlineCallbacks
-    @validate.rangetest(size=(0, 1000))
-    def create_volume(self, size, user_id, project_id, context=None):
+    # @validate.rangetest(size=(0, 1000))
+    def create_volume(self, volume_id, context=None):
         """
         Creates an exported volume (fake or real),
         restarts exports to make it available.
         Volume at this point has size, owner, and zone.
         """
-        logging.debug("Creating volume of size: %s" % (size))
+        logging.info("volume %s: creating" % (volume_id))
 
-        vol = {}
-        vol['node_name'] = FLAGS.node_name
-        vol['size'] = size
-        vol['user_id'] = user_id
-        vol['project_id'] = project_id
-        vol['availability_zone'] = FLAGS.storage_availability_zone
-        vol['status'] = "creating" # creating | available | in-use
-        # attaching | attached | detaching | detached
-        vol['attach_status'] = "detached"
-        volume_id = db.volume_create(context, vol)
+        volume_ref = db.volume_get(context, volume_id)
+
+        # db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
+
+        size = volume_ref['size']
+        logging.debug("volume %s: creating lv of size %sG" % (volume_id, size))
         yield self._exec_create_volume(volume_id, size)
+
+        logging.debug("volume %s: allocating shelf & blade" % (volume_id))
         (shelf_id, blade_id) = db.volume_allocate_shelf_and_blade(context,
                                                                   volume_id)
+
+        logging.debug("volume %s: exporting shelf %s & blade %s" % (volume_id,
+                 shelf_id, blade_id))
+
         yield self._exec_create_export(volume_id, shelf_id, blade_id)
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
-        yield self._exec_ensure_exports()
+
         db.volume_update(context, volume_id, {'status': 'available'})
-        logging.debug("restarting exports")
+
+        logging.debug("volume %s: re-exporting all values" % (volume_id))
+        yield self._exec_ensure_exports()
+        
+        logging.debug("volume %s: created successfully" % (volume_id))
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
@@ -139,8 +145,7 @@ class VolumeService(service.Service):
             defer.returnValue(None)
         yield process.simple_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (self,
-                 shelf_id,
+                (shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
@@ -152,23 +157,22 @@ class VolumeService(service.Service):
         if FLAGS.fake_storage:
             defer.returnValue(None)
         yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (self, shelf_id,
-                                                    blade_id),
+                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id),
                 terminate_on_stderr=False)
         yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (self, shelf_id,
-                                                       blade_id),
+                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id),
                 terminate_on_stderr=False)
 
     @defer.inlineCallbacks
     def _exec_ensure_exports(self):
         if FLAGS.fake_storage:
             defer.returnValue(None)
-        # NOTE(vish): these commands sometimes sends output to stderr for warnings
+
+        yield process.simple_execute("sleep 5") # wait for blades to appear
         yield process.simple_execute("sudo vblade-persist auto all",
-                                     terminate_on_stderr=False)
+                                     check_exit_code=False)
         yield process.simple_execute("sudo vblade-persist start all",
-                                     terminate_on_stderr=False)
+                                     check_exit_code=False)
 
     @defer.inlineCallbacks
     def _exec_init_volumes(self):
