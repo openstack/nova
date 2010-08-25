@@ -29,6 +29,8 @@ import subprocess
 import socket
 import sys
 
+from twisted.internet.threads import deferToThread
+
 from nova import exception
 from nova import flags
 
@@ -148,3 +150,9 @@ def isotime(at=None):
 
 def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
+
+
+def deferredToThread(f):
+    def g(*args, **kwargs):
+        return deferToThread(f, *args, **kwargs)
+    return g

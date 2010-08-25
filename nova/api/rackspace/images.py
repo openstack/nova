@@ -15,9 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import image
 from nova.api.rackspace import base
 from nova.api.rackspace import _id_translator
-from nova.api.services import image
 from webob import exc
 
 class Controller(base.Controller):
