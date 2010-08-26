@@ -36,6 +36,9 @@ class ServersTest(unittest.TestCase):
     def test_get_server_by_id(self):
         pass
 
+    def test_get_backup_schedule(self):
+        pass
+
     def test_get_server_details(self):
         pass
 
