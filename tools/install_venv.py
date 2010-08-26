@@ -95,8 +95,8 @@ def install_dependencies(venv=VENV):
 
 
   # Tell the virtual env how to "import nova"
-  pathfile=os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
-  f=open(pathfile, 'w')
+  pthfile = os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
+  f = open(pthfile, 'w')
   f.write("%s\n" % ROOT)
 
 
