@@ -80,13 +80,15 @@ class ServiceTestCase(test.BaseTestCase):
         binary = 'bar'
         daemon_ref = {'node_name': node_name,
                       'binary': binary,
-                      'report_count': 0
-                      }
+                      'report_count': 0,
+                      'id': 1}
 
-        service.db.daemon_get(None, node_name, binary).AndReturn(daemon_ref)
-        service.db.daemon_update(None, node_name, binary,
+        service.db.daemon_get_by_args(None,
+                                      node_name,
+                                      binary).AndReturn(daemon_ref)
+        service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
-        
+
         self.mox.ReplayAll()
         s = service.Service()
         rv = yield s.report_state(node_name, binary)
@@ -95,17 +97,22 @@ class ServiceTestCase(test.BaseTestCase):
     def test_report_state_no_daemon(self):
         node_name = 'foo'
         binary = 'bar'
+        daemon_create = {'node_name': node_name,
+                      'binary': binary,
+                      'report_count': 0}
         daemon_ref = {'node_name': node_name,
                       'binary': binary,
-                      'report_count': 0
-                      }
+                      'report_count': 0,
+                      'id': 1}
 
-        service.db.daemon_get(None, node_name, binary).AndRaise(
-                exception.NotFound())
-        service.db.daemon_create(None, daemon_ref).AndReturn(daemon_ref)
-        service.db.daemon_update(None, node_name, binary,
+        service.db.daemon_get_by_args(None,
+                                      node_name,
+                                      binary).AndRaise(exception.NotFound())
+        service.db.daemon_create(None, daemon_create).AndReturn(daemon_ref['id'])
+        service.db.daemon_get(None, daemon_ref['id']).AndReturn(daemon_ref)
+        service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
-        
+
         self.mox.ReplayAll()
         s = service.Service()
         rv = yield s.report_state(node_name, binary)
@@ -116,12 +123,13 @@ class ServiceTestCase(test.BaseTestCase):
         binary = 'bar'
         daemon_ref = {'node_name': node_name,
                       'binary': binary,
-                      'report_count': 0
-                      }
+                      'report_count': 0,
+                      'id': 1}
 
-        service.db.daemon_get(None, node_name, binary).AndRaise(
-                Exception())
-        
+        service.db.daemon_get_by_args(None,
+                                      node_name,
+                                      binary).AndRaise(Exception())
+
         self.mox.ReplayAll()
         s = service.Service()
         rv = yield s.report_state(node_name, binary)
@@ -134,13 +142,15 @@ class ServiceTestCase(test.BaseTestCase):
         binary = 'bar'
         daemon_ref = {'node_name': node_name,
                       'binary': binary,
-                      'report_count': 0
-                      }
+                      'report_count': 0,
+                      'id': 1}
 
-        service.db.daemon_get(None, node_name, binary).AndReturn(daemon_ref)
-        service.db.daemon_update(None, node_name, binary,
+        service.db.daemon_get_by_args(None,
+                                      node_name,
+                                      binary).AndReturn(daemon_ref)
+        service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
-        
+
         self.mox.ReplayAll()
         s = service.Service()
         s.model_disconnected = True
