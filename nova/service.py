@@ -100,6 +100,7 @@ class Service(object, service.Service):
                 daemon_id = db.daemon_create(context, {'node_name': node_name,
                                                         'binary': binary,
                                                         'report_count': 0})
+                daemon_ref = db.daemon_get(context, daemon_id)
             db.daemon_update(context,
                              daemon_id,
                              {'report_count': daemon_ref['report_count'] + 1})

@@ -19,6 +19,7 @@
 from nova import exception
 from nova import flags
 from nova import utils
+from nova import validate
 
 
 FLAGS = flags.FLAGS

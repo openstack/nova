@@ -31,7 +31,6 @@ from nova import exception
 from nova import flags
 from nova import process
 from nova import service
-from nova import validate
 
 
 FLAGS = flags.FLAGS
@@ -65,7 +64,6 @@ class VolumeService(service.Service):
         self._exec_init_volumes()
 
     @defer.inlineCallbacks
-    # @validate.rangetest(size=(0, 1000))
     def create_volume(self, volume_id, context=None):
         """
         Creates an exported volume (fake or real),
@@ -76,7 +74,7 @@ class VolumeService(service.Service):
 
         volume_ref = db.volume_get(context, volume_id)
 
-        # db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
+        db.volume_update(context, volume_id, {'node_name': FLAGS.node_name})
 
         size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG" % (volume_id, size))
@@ -97,7 +95,7 @@ class VolumeService(service.Service):
 
         logging.debug("volume %s: re-exporting all values" % (volume_id))
         yield self._exec_ensure_exports()
-        
+
         logging.debug("volume %s: created successfully" % (volume_id))
         defer.returnValue(volume_id)
 

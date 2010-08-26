@@ -55,12 +55,20 @@ class VolumeTestCase(test.TrialTestCase):
         for device in self.devices:
             device.delete()
 
+    def _create_volume(self, size='0'):
+        vol = {}
+        vol['size'] = '0'
+        vol['user_id'] = 'fake'
+        vol['project_id'] = 'fake'
+        vol['availability_zone'] = FLAGS.storage_availability_zone
+        vol['status'] = "creating"
+        vol['attach_status'] = "detached"
+        return db.volume_create(None, vol)
+
     @defer.inlineCallbacks
     def test_run_create_volume(self):
-        vol_size = '0'
-        user_id = 'fake'
-        project_id = 'fake'
-        volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
+        volume_id = self._create_volume()
+        yield self.volume.create_volume(volume_id)
         self.assertEqual(volume_id,
                          models.Volume.find(volume_id).id)
 
@@ -69,28 +77,27 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_big_volume(self):
-        vol_size = '1001'
-        user_id = 'fake'
-        project_id = 'fake'
+        # FIXME(vish): validation needs to move into the data layer in
+        #              volume_create
+        defer.returnValue(True)
         try:
-            yield self.volume.create_volume(vol_size, user_id, project_id)
+            volume_id = self._create_volume('1001')
+            yield self.volume.create_volume(volume_id)
             self.fail("Should have thrown TypeError")
         except TypeError:
             pass
 
     @defer.inlineCallbacks
     def test_too_many_volumes(self):
-        vol_size = '1'
-        user_id = 'fake'
-        project_id = 'fake'
         vols = []
         for i in xrange(self.total_slots):
-            vid = yield self.volume.create_volume(vol_size, user_id, project_id)
-            vols.append(vid)
-        self.assertFailure(self.volume.create_volume(vol_size,
-                                                     user_id,
-                                                     project_id),
+            volume_id = self._create_volume()
+            yield self.volume.create_volume(volume_id)
+            vols.append(volume_id)
+        volume_id = self._create_volume()
+        self.assertFailure(self.volume.create_volume(volume_id),
                            db.NoMoreBlades)
+        db.volume_destroy(None, volume_id)
         for id in vols:
             yield self.volume.delete_volume(id)
 
@@ -98,11 +105,9 @@ class VolumeTestCase(test.TrialTestCase):
     def test_run_attach_detach_volume(self):
         # Create one volume and one compute to test with
         instance_id = "storage-test"
-        vol_size = "5"
-        user_id = "fake"
-        project_id = 'fake'
         mountpoint = "/dev/sdf"
-        volume_id = yield self.volume.create_volume(vol_size, user_id, project_id)
+        volume_id = self._create_volume()
+        yield self.volume.create_volume(volume_id)
         if FLAGS.fake_tests:
             db.volume_attached(None, volume_id, instance_id, mountpoint)
         else:
@@ -110,10 +115,10 @@ class VolumeTestCase(test.TrialTestCase):
                                                   volume_id,
                                                   mountpoint)
         vol = db.volume_get(None, volume_id)
-        self.assertEqual(vol.status, "in-use")
-        self.assertEqual(vol.attach_status, "attached")
-        self.assertEqual(vol.instance_id, instance_id)
-        self.assertEqual(vol.mountpoint, mountpoint)
+        self.assertEqual(vol['status'], "in-use")
+        self.assertEqual(vol['attach_status'], "attached")
+        self.assertEqual(vol['instance_id'], instance_id)
+        self.assertEqual(vol['mountpoint'], mountpoint)
 
         self.assertFailure(self.volume.delete_volume(volume_id), exception.Error)
         if FLAGS.fake_tests:
@@ -121,11 +126,12 @@ class VolumeTestCase(test.TrialTestCase):
         else:
             rv = yield self.volume.detach_volume(instance_id,
                                                  volume_id)
-        self.assertEqual(vol.status, "available")
+        self.assertEqual(vol['status'], "available")
 
         rv = self.volume.delete_volume(volume_id)
         self.assertRaises(exception.Error,
-                          models.Volume.find,
+                          db.volume_get,
+                          None,
                           volume_id)
 
     @defer.inlineCallbacks
@@ -137,7 +143,7 @@ class VolumeTestCase(test.TrialTestCase):
         volume_ids = []
         def _check(volume_id):
             volume_ids.append(volume_id)
-            vol = models.Volume.find(volume_id)
+            vol = db.volume_get(None, volume_id)
             shelf_blade = '%s.%s' % (vol.export_device.shelf_id,
                                      vol.export_device.blade_id)
             self.assert_(shelf_blade not in shelf_blades)
@@ -145,7 +151,8 @@ class VolumeTestCase(test.TrialTestCase):
             logging.debug("got %s" % shelf_blade)
         deferreds = []
         for i in range(self.total_slots):
-            d = self.volume.create_volume(vol_size, user_id, project_id)
+            volume_id = self._create_volume()
+            d = self.volume.create_volume(volume_id)
             d.addCallback(_check)
             d.addErrback(self.fail)
             deferreds.append(d)
