@@ -23,7 +23,7 @@ import IPy
 from nova import db
 from nova import exception
 from nova import flags
-from nova import models
+from nova.db.sqlalchemy import models
 
 FLAGS = flags.FLAGS
 
