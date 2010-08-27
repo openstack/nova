@@ -23,7 +23,6 @@ from twisted.internet import defer
 from nova import exception
 from nova import db
 from nova import flags
-from nova import models
 from nova import test
 from nova.compute import service as compute_service
 from nova.volume import service as volume_service
@@ -40,20 +39,7 @@ class VolumeTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    fake_storage=True)
         self.volume = volume_service.VolumeService()
-        self.total_slots = 10
-        # FIXME this should test actual creation method
-        self.devices = []
-        for i in xrange(self.total_slots):
-            export_device = models.ExportDevice()
-            export_device.shelf_id = 0
-            export_device.blade_id = i
-            export_device.save()
-            self.devices.append(export_device)
 
-    def tearDown(self):
-        super(VolumeTestCase, self).tearDown()
-        for device in self.devices:
-            device.delete()
 
     def _create_volume(self, size='0'):
         vol = {}
@@ -69,11 +55,13 @@ class VolumeTestCase(test.TrialTestCase):
     def test_run_create_volume(self):
         volume_id = self._create_volume()
         yield self.volume.create_volume(volume_id)
-        self.assertEqual(volume_id,
-                         models.Volume.find(volume_id).id)
+        self.assertEqual(volume_id, db.volume_get(None, volume_id).id)
 
         yield self.volume.delete_volume(volume_id)
-        self.assertRaises(exception.NotFound, models.Volume.find, volume_id)
+        self.assertRaises(exception.NotFound,
+                          db.volume_get,
+                          None,
+                          volume_id)
 
     @defer.inlineCallbacks
     def test_too_big_volume(self):
@@ -90,7 +78,8 @@ class VolumeTestCase(test.TrialTestCase):
     @defer.inlineCallbacks
     def test_too_many_volumes(self):
         vols = []
-        for i in xrange(self.total_slots):
+        total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
+        for i in xrange(total_slots):
             volume_id = self._create_volume()
             yield self.volume.create_volume(volume_id)
             vols.append(volume_id)
@@ -150,7 +139,8 @@ class VolumeTestCase(test.TrialTestCase):
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)
         deferreds = []
-        for i in range(self.total_slots):
+        total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
+        for i in range(total_slots):
             volume_id = self._create_volume()
             d = self.volume.create_volume(volume_id)
             d.addCallback(_check)
@@ -158,7 +148,7 @@ class VolumeTestCase(test.TrialTestCase):
             deferreds.append(d)
         yield defer.DeferredList(deferreds)
         for volume_id in volume_ids:
-            vol = models.Volume.find(volume_id)
+            vol = db.volume_get(None, volume_id)
             vol.delete()
 
     def test_multi_node(self):

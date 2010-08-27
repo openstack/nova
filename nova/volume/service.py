@@ -43,9 +43,6 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
 flags.DEFINE_string('aoe_export_dir',
                     '/var/lib/vblade-persist/vblades',
                     'AoE directory where exports are created')
-flags.DEFINE_integer('blades_per_shelf',
-                    16,
-                    'Number of AoE blades per shelf')
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this service')

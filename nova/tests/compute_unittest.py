@@ -21,11 +21,11 @@ import time
 from twisted.internet import defer
 from xml.etree import ElementTree
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
-from nova import models
 from nova.auth import manager
 from nova.compute import service
 
@@ -69,47 +69,44 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         self.manager.delete_user('fake')
         self.manager.delete_project('fake')
 
-    def create_instance(self):
-        inst = models.Instance(user_id='fake', project_id='fake', image_id='ami-test')
-        inst.save();
-        # TODO(ja): add ami, ari, aki, user_data
-        # inst['reservation_id'] = 'r-fakeres'
-        # inst['launch_time'] = '10'
-        #inst['user_id'] = 'fake'
-        #inst['project_id'] = 'fake'
-        #inst['instance_type'] = 'm1.tiny'
-        #inst['node_name'] = FLAGS.node_name
-        #inst['mac_address'] = utils.generate_mac()
-        #inst['ami_launch_index'] = 0
-        #inst.save()
-        return inst.id
+    def _create_instance(self):
+        inst = {}
+        inst['image_id'] = 'ami-test'
+        inst['reservation_id'] = 'r-fakeres'
+        inst['launch_time'] = '10'
+        inst['user_id'] = 'fake'
+        inst['project_id'] = 'fake'
+        inst['instance_type'] = 'm1.tiny'
+        inst['mac_address'] = utils.generate_mac()
+        inst['ami_launch_index'] = 0
+        return db.instance_create(None, inst)
 
     @defer.inlineCallbacks
     def test_run_describe_terminate(self):
-        instance_id = self.create_instance()
+        instance_id = self._create_instance()
 
         yield self.compute.run_instance(instance_id)
 
-        instances = models.Instance.all()
+        instances = db.instance_get_all(None)
         logging.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         yield self.compute.terminate_instance(instance_id)
 
-        instances = models.Instance.all()
+        instances = db.instance_get_all(None)
         logging.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
 
     @defer.inlineCallbacks
     def test_reboot(self):
-        instance_id = self.create_instance()
+        instance_id = self._create_instance()
         yield self.compute.run_instance(instance_id)
         yield self.compute.reboot_instance(instance_id)
         yield self.compute.terminate_instance(instance_id)
 
     @defer.inlineCallbacks
     def test_console_output(self):
-        instance_id = self.create_instance()
+        instance_id = self._create_instance()
         rv = yield self.compute.run_instance(instance_id)
 
         console = yield self.compute.get_console_output(instance_id)
@@ -118,7 +115,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
-        instance_id = self.create_instance()
+        instance_id = self._create_instance()
         yield self.compute.run_instance(instance_id)
         self.assertFailure(self.compute.run_instance(instance_id), exception.Error)
         yield self.compute.terminate_instance(instance_id)

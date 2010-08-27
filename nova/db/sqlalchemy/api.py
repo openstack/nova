@@ -66,27 +66,39 @@ def floating_ip_allocate_address(context, node_name, project_id):
     floating_ip_ref['project_id'] = project_id
     session.add(floating_ip_ref)
     session.commit()
-    return floating_ip_ref['ip_str']
+    return floating_ip_ref['str_id']
+
+
+def floating_ip_create(context, address, host):
+    floating_ip_ref = models.FloatingIp()
+    floating_ip_ref['ip_str'] = address
+    floating_ip_ref['node_name'] = host
+    floating_ip_ref.save()
+    return floating_ip_ref
 
 
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
-    floating_ip_ref = models.FloatingIp.find_by_str(floating_address)
+    floating_ip_ref = db.floating_ip_get_by_address(context, floating_address)
     fixed_ip_ref = models.FixedIp.find_by_str(fixed_address)
     floating_ip_ref.fixed_ip = fixed_ip_ref
     floating_ip_ref.save()
 
 
 def floating_ip_disassociate(context, address):
-    floating_ip_ref = models.FloatingIp.find_by_str(address)
-    fixed_ip_address = floating_ip_ref.fixed_ip['ip_str']
+    floating_ip_ref = db.floating_ip_get_by_address(context, address)
+    fixed_ip_address = floating_ip_ref.fixed_ip['str_id']
     floating_ip_ref['fixed_ip'] = None
     floating_ip_ref.save()
     return fixed_ip_address
 
 def floating_ip_deallocate(context, address):
-    floating_ip_ref = models.FloatingIp.find_by_str(address)
+    floating_ip_ref = db.floating_ip_get_by_address(context, address)
     floating_ip_ref['project_id'] = None
     floating_ip_ref.save()
+
+def floating_ip_get_by_address(context, address):
+    return models.FloatingIp.find_by_str(address)
+
 
 ###################
 
@@ -264,6 +276,30 @@ def network_allocate(context, project_id):
     return network_id
 
 
+def network_count(context):
+    return models.Network.count()
+
+def network_count_allocated_ips(context, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(network_id=network_id)
+    query = query.filter_by(allocated=True)
+    return query.count()
+
+
+def network_count_available_ips(context, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(network_id=network_id)
+    query = query.filter_by(allocated=False).filter_by(reserved=False)
+    return query.count()
+
+
+def network_count_reserved_ips(context, network_id):
+    session = models.NovaBase.get_session()
+    query = session.query(models.FixedIp).filter_by(network_id=network_id)
+    query = query.filter_by(reserved=True)
+    return query.count()
+
+
 def network_create(context, values):
     network_ref = models.Network()
     for (key, value) in values.iteritems():
@@ -283,7 +319,7 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
     session = models.NovaBase.get_session()
     for i in range(num_ips):
         fixed_ip = models.FixedIp()
-        fixed_ip.ip_str = str(project_net[i])
+        fixed_ip['ip_str'] = str(project_net[i])
         if i < BOTTOM_RESERVED or num_ips - i < TOP_RESERVED:
             fixed_ip['reserved'] = True
         fixed_ip['network'] = network_get(context, network_id)
@@ -310,7 +346,7 @@ def network_get(context, network_id):
     return models.Network.find(network_id)
 
 
-def network_get_associated_fixed_ips(contex, network_id):
+def network_get_associated_fixed_ips(context, network_id):
     session = models.NovaBase.get_session()
     query = session.query(models.FixedIp)
     fixed_ips = query.filter(models.FixedIp.instance_id != None).all()
@@ -367,7 +403,6 @@ def network_set_cidr(context, network_id, cidr):
 
 def network_set_host(context, network_id, host_id):
     session = models.NovaBase.get_session()
-    # FIXME will a second request fail or wait for first to finish?
     query = session.query(models.Network).filter_by(id=network_id)
     network = query.with_lockmode("update").first()
     if not network:
@@ -412,6 +447,9 @@ def queue_get_for(context, topic, physical_node_id):
 
 
 def volume_allocate_shelf_and_blade(context, volume_id):
+    db.volume_ensure_blades(context,
+                            FLAGS.num_shelves,
+                            FLAGS.blades_per_shelf)
     session = models.NovaBase.get_session()
     query = session.query(models.ExportDevice).filter_by(volume=None)
     export_device = query.with_lockmode("update").first()
@@ -454,6 +492,18 @@ def volume_detached(context, volume_id):
     volume_ref['status'] = 'available'
     volume_ref['attach_status'] = 'detached'
     volume_ref.save()
+
+
+# NOTE(vish): should this code go up a layer?
+def volume_ensure_blades(context, num_shelves, blades_per_shelf):
+    if models.ExportDevice.count() >= num_shelves * blades_per_shelf:
+        return
+    for shelf_id in xrange(num_shelves):
+        for blade_id in xrange(blades_per_shelf):
+            export_device = models.ExportDevice()
+            export_device.shelf_id = shelf_id
+            export_device.blade_id = blade_id
+            export_device.save()
 
 
 def volume_get(context, volume_id):

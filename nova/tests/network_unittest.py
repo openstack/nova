@@ -25,7 +25,6 @@ import logging
 from nova import db
 from nova import exception
 from nova import flags
-from nova import models
 from nova import test
 from nova import utils
 from nova.auth import manager
@@ -90,17 +89,13 @@ class NetworkTestCase(test.TrialTestCase):
         pubnet = IPy.IP(flags.FLAGS.public_range)
         ip_str = str(pubnet[0])
         try:
-            floating_ip = models.FloatingIp.find_by_str(ip_str)
+            db.floating_ip_get_by_address(None, ip_str)
         except exception.NotFound:
-            floating_ip = models.FloatingIp()
-            floating_ip.ip_str = ip_str
-            floating_ip.node_name = FLAGS.node_name
-            floating_ip.save()
+            db.floating_ip_create(None, ip_str, FLAGS.node_name)
         float_addr = self.service.allocate_floating_ip(self.projects[0].id)
         fix_addr = self._create_address(0)
         self.assertEqual(float_addr, str(pubnet[0]))
         self.service.associate_floating_ip(float_addr, fix_addr)
-        # FIXME datamodel abstraction
         address = db.instance_get_floating_address(None, self.instance_id)
         self.assertEqual(address, float_addr)
         self.service.disassociate_floating_ip(float_addr)
@@ -183,8 +178,7 @@ class NetworkTestCase(test.TrialTestCase):
     def test_too_many_networks(self):
         """Ensure error is raised if we run out of networks"""
         projects = []
-        # TODO(vish): use data layer for count
-        networks_left = FLAGS.num_networks - models.Network.count()
+        networks_left = FLAGS.num_networks - db.network_count(None)
         for i in range(networks_left):
             project = self.manager.create_project('many%s' % i, self.user)
             projects.append(project)
@@ -220,9 +214,9 @@ class NetworkTestCase(test.TrialTestCase):
         """
         network = db.project_get_network(None, self.projects[0].id)
         net_size = flags.FLAGS.network_size
-        total_ips = (available_ips(network) +
-                     reserved_ips(network) +
-                     allocated_ips(network))
+        total_ips = (db.network_count_available_ips(None, network['id']) +
+                     db.network_count_reserved_ips(None, network['id']) +
+                     db.network_count_allocated_ips(None, network['id']))
         self.assertEqual(total_ips, net_size)
 
     def test_too_many_addresses(self):
@@ -230,9 +224,9 @@ class NetworkTestCase(test.TrialTestCase):
         """
         network = db.project_get_network(None, self.projects[0].id)
 
-        # Number of availaible ips is len of the available list
 
-        num_available_ips = available_ips(network)
+        num_available_ips = db.network_count_available_ips(None,
+                                                           network['id'])
         addresses = []
         for i in range(num_available_ips):
             project_id = self.projects[0].id
@@ -240,7 +234,8 @@ class NetworkTestCase(test.TrialTestCase):
             addresses.append(address)
             lease_ip(address)
 
-        self.assertEqual(available_ips(network), 0)
+        self.assertEqual(db.network_count_available_ips(None,
+                                                        network['id']), 0)
         self.assertRaises(db.NoMoreAddresses,
                           db.fixed_ip_allocate,
                           None,
@@ -249,27 +244,10 @@ class NetworkTestCase(test.TrialTestCase):
         for i in range(len(addresses)):
             db.fixed_ip_deallocate(None, addresses[i])
             release_ip(addresses[i])
-        self.assertEqual(available_ips(network), num_available_ips)
+        self.assertEqual(db.network_count_available_ips(None,
+                                                        network['id']),
+                         num_available_ips)
 
-
-# FIXME move these to abstraction layer
-def available_ips(network):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network.id)
-    query = query.filter_by(allocated=False).filter_by(reserved=False)
-    return query.count()
-
-def allocated_ips(network):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network.id)
-    query = query.filter_by(allocated=True)
-    return query.count()
-
-def reserved_ips(network):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network.id)
-    query = query.filter_by(reserved=True)
-    return query.count()
 
 def is_allocated_in_project(address, project_id):
     """Returns true if address is in specified project"""

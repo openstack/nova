@@ -26,7 +26,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 
-# TODO(vish): where should these flags go
+# TODO(vish): where should these flags go?
 flags.DEFINE_string('network_type',
                     'vlan',
                     'Service Class for Networking')
@@ -41,6 +41,12 @@ flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
 flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
 flags.DEFINE_integer('cnt_vpn_clients', 5,
                         'Number of addresses reserved for vpn clients')
+flags.DEFINE_integer('num_shelves',
+                    100,
+                    'Number of vblade shelves')
+flags.DEFINE_integer('blades_per_shelf',
+                    16,
+                    'Number of vblade blades per shelf')
 
 
 
@@ -102,11 +108,9 @@ def floating_ip_allocate_address(context, node_name, project_id):
     return _impl.floating_ip_allocate_address(context, node_name, project_id)
 
 
-def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
-    """Associate an floating ip to a fixed_ip by address."""
-    return _impl.floating_ip_fixed_ip_associate(context,
-                                               floating_address,
-                                               fixed_address)
+def floating_ip_create(context, address, host):
+    """Create a floating ip for a given address on the specified host."""
+    return _impl.floating_ip_create(context, address, host)
 
 
 def floating_ip_disassociate(context, address):
@@ -120,6 +124,18 @@ def floating_ip_disassociate(context, address):
 def floating_ip_deallocate(context, address):
     """Deallocate an floating ip by address"""
     return _impl.floating_ip_deallocate(context, address)
+
+
+def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+    """Associate an floating ip to a fixed_ip by address."""
+    return _impl.floating_ip_fixed_ip_associate(context,
+                                               floating_address,
+                                               fixed_address)
+
+
+def floating_ip_get_by_address(context, address):
+    """Get a floating ip by address."""
+    return _impl.floating_ip_get_by_address(context, address)
 
 
 ####################
@@ -252,6 +268,26 @@ def network_allocate(context, project_id):
     return _impl.network_allocate(context, project_id)
 
 
+def network_count(context):
+    """Return the number of networks."""
+    return _impl.network_count(context)
+
+
+def network_count_allocated_ips(context, network_id):
+    """Return the number of allocated non-reserved ips in the network."""
+    return _impl.network_count_allocated_ips(context, network_id)
+
+
+def network_count_available_ips(context, network_id):
+    """Return the number of available ips in the network."""
+    return _impl.network_count_available_ips(context, network_id)
+
+
+def network_count_reserved_ips(context, network_id):
+    """Return the number of reserved ips in the network."""
+    return _impl.network_count_reserved_ips(context, network_id)
+
+
 def network_create(context, values):
     """Create a network from the values dictionary."""
     return _impl.network_create(context, values)
@@ -353,6 +389,11 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return _impl.volume_create(context, values)
+
+
+def volume_ensure_blades(context, num_shelves, blades_per_shelf):
+    """Ensure shelves and blades have been created in the datastore."""
+    return _impl.volume_ensure_blades(context, num_shelves, blades_per_shelf)
 
 
 def volume_destroy(context, volume_id):
