@@ -23,7 +23,7 @@ A connection to a hypervisor (e.g. KVM) through libvirt.
 
 import json
 import logging
-import os.path
+import os
 import shutil
 
 from twisted.internet import defer
@@ -217,6 +217,8 @@ class LibvirtConnection(object):
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
+
+        os.close(os.open(basepath('console.log'), os.O_CREAT | os.O_WRONLY, 0660))
 
         user = manager.AuthManager().get_user(data['user_id'])
         project = manager.AuthManager().get_project(data['project_id'])
