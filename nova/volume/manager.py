@@ -25,12 +25,9 @@ import logging
 
 from twisted.internet import defer
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import manager
-from nova import process
-from nova import service
 from nova import utils
 from nova.volume import driver
 
@@ -72,7 +69,7 @@ class AOEManager(manager.Manager):
                 self.db.export_device_create(context, dev)
 
     @defer.inlineCallbacks
-    def create_volume(self, volume_id, context=None):
+    def create_volume(self, context, volume_id):
         """Creates and exports the volume."""
         logging.info("volume %s: creating" % (volume_id))
 
@@ -87,6 +84,7 @@ class AOEManager(manager.Manager):
         yield self.driver.create_volume(volume_id, size)
 
         logging.debug("volume %s: allocating shelf & blade" % (volume_id))
+        self._ensure_blades(context)
         rval = self.db.volume_allocate_shelf_and_blade(context, volume_id)
         (shelf_id, blade_id) = rval
 
@@ -106,7 +104,7 @@ class AOEManager(manager.Manager):
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
-    def delete_volume(self, volume_id, context=None):
+    def delete_volume(self, context, volume_id):
         logging.debug("Deleting volume with id of: %s" % (volume_id))
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":

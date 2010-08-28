@@ -282,7 +282,8 @@ class CloudController(object):
         volume_ref = db.volume_create(context, vol)
 
         rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"volume_id": volume_ref['id']}})
+                                      "args": {"context": None,
+                                               "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
@@ -633,7 +634,8 @@ class CloudController(object):
         host = db.volume_get_host(context, volume_ref['id'])
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                             {"method": "delete_volume",
-                             "args": {"volume_id": volume_id}})
+                             "args": {"context": None,
+                                      "volume_id": volume_id}})
         return defer.succeed(True)
 
     @rbac.allow('all')
