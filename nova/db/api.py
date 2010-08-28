@@ -41,13 +41,6 @@ flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
 flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
 flags.DEFINE_integer('cnt_vpn_clients', 5,
                         'Number of addresses reserved for vpn clients')
-flags.DEFINE_integer('num_shelves',
-                    100,
-                    'Number of vblade shelves')
-flags.DEFINE_integer('blades_per_shelf',
-                    16,
-                    'Number of vblade blades per shelf')
-
 
 
 _impl = utils.LazyPluggable(FLAGS['db_backend'],
@@ -376,6 +369,19 @@ def queue_get_for(context, topic, physical_node_id):
 ###################
 
 
+def export_device_count(context):
+    """Return count of export devices."""
+    return _impl.export_device_count(context)
+
+
+def export_device_create(context, values):
+    """Create an export_device from the values dictionary."""
+    return _impl.export_device_create(context, values)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""
     return _impl.volume_allocate_shelf_and_blade(context, volume_id)
@@ -389,11 +395,6 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return _impl.volume_create(context, values)
-
-
-def volume_ensure_blades(context, num_shelves, blades_per_shelf):
-    """Ensure shelves and blades have been created in the datastore."""
-    return _impl.volume_ensure_blades(context, num_shelves, blades_per_shelf)
 
 
 def volume_destroy(context, volume_id):

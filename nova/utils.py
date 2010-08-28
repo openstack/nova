@@ -46,6 +46,13 @@ def import_class(import_str):
     except (ImportError, ValueError, AttributeError):
         raise exception.NotFound('Class %s cannot be found' % class_str)
 
+def import_object(import_str):
+    """Returns an object including a module or module and class"""
+    cls = import_class(import_str)
+    try:
+        return cls()
+    except TypeError:
+        return cls
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
@@ -73,7 +80,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     if obj.returncode:
         logging.debug("Result was %s" % (obj.returncode))
         if check_exit_code and obj.returncode <> 0:
-            raise Exception(    "Unexpected exit code: %s.  result=%s" 
+            raise Exception(    "Unexpected exit code: %s.  result=%s"
                                 % (obj.returncode, result))
     return result
 
@@ -105,7 +112,7 @@ def runthis(prompt, cmd, check_exit_code = True):
     exit_code = subprocess.call(cmd.split(" "))
     logging.debug(prompt % (exit_code))
     if check_exit_code and exit_code <> 0:
-        raise Exception(    "Unexpected exit code: %s from cmd: %s" 
+        raise Exception(    "Unexpected exit code: %s from cmd: %s"
                             % (exit_code, cmd))
 
 
@@ -150,21 +157,21 @@ def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
 
-	
+
 class LazyPluggable(object):
     """A pluggable backend loaded lazily based on some value."""
-        
+
     def __init__(self, pivot, **backends):
         self.__backends = backends
         self.__pivot = pivot
         self.__backend = None
-        
+
     def __get_backend(self):
         if not self.__backend:
             backend_name = self.__pivot.value
             if backend_name not in self.__backends:
                 raise exception.Error('Invalid backend: %s' % backend_name)
-        
+
             backend = self.__backends[backend_name]
             if type(backend) == type(tuple()):
                 name = backend[0]
@@ -172,11 +179,11 @@ class LazyPluggable(object):
             else:
                 name = backend
                 fromlist = backend
-        
+
             self.__backend = __import__(name, None, None, fromlist)
             logging.error('backend %s', self.__backend)
         return self.__backend
-        
+
     def __getattr__(self, key):
         backend = self.__get_backend()
         return getattr(backend, key)

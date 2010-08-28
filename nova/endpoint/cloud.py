@@ -271,7 +271,6 @@ class CloudController(object):
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
         vol = {}
         vol['size'] = size
@@ -280,13 +279,12 @@ class CloudController(object):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        volume_id = db.volume_create(context, vol)
+        volume_ref = db.volume_create(context, vol)
 
-        yield rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                            "args": {"volume_id": volume_id}})
+        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
+                                      "args": {"volume_id": volume_ref['id']}})
 
-        volume = db.volume_get(context, volume_id)
-        defer.returnValue({'volumeSet': [self._format_volume(context, volume)]})
+        return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
 
     @rbac.allow('projectmanager', 'sysadmin')

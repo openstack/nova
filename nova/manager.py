@@ -17,21 +17,22 @@
 #    under the License.
 
 """
-Volume service allows rpc calls to the volume manager and reports state
-to the database.
+Base class for managers of different parts of the system
 """
 
+from nova import utils
 from nova import flags
-from nova import service
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('db_driver', 'nova.db.api'
+                    'driver to use for volume creation')
 
-flags.DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
-                    'Manager for volumes')
 
-class VolumeService(service.Service):
-    """
-    Volume Service automatically passes commands on to the Volume Manager
-    """
-    pass
+class Manager(object):
+    """DB driver is injected in the init method"""
+    def __init__(self, db_driver=None):
+        if not db_driver:
+            db_driver=FLAGS.db_driver
+        self.db = utils.import_object(db_driver)
+

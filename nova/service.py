@@ -32,6 +32,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import rpc
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -43,15 +44,29 @@ flags.DEFINE_integer('report_interval', 10,
 class Service(object, service.Service):
     """Base class for workers that run on hosts."""
 
+    def __init__(self, manager, *args, **kwargs):
+        self.manager = manager
+        super(self, Service).__init__(*args, **kwargs)
+
+    def __getattr__(self, key):
+        try:
+            super(Service, self).__getattr__(key)
+        except AttributeError:
+            self.manager.__getattr__(key)
+
     @classmethod
-    def create(cls, report_interval=None, bin_name=None, topic=None):
+    def create(cls,
+               report_interval=None,
+               bin_name=None,
+               topic=None,
+               manager=None):
         """Instantiates class and passes back application object.
 
         Args:
             report_interval, defaults to flag
             bin_name, defaults to basename of executable
             topic, defaults to basename - "nova-" part
-
+            manager, defaults to FLAGS.<topic>_manager
         """
         if not report_interval:
             report_interval = FLAGS.report_interval
@@ -61,21 +76,24 @@ class Service(object, service.Service):
             bin_name = os.path.basename(inspect.stack()[-1][1])
         if not topic:
             topic = bin_name.rpartition("nova-")[2]
+        if not manager:
+            manager = FLAGS.get('%s_manager' % topic)
+        manager_ref = utils.import_object(manager)
         logging.warn("Starting %s node" % topic)
-        node_instance = cls()
+        service_ref = cls(manager_ref)
 
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s' % topic,
-                proxy=node_instance)
+                proxy=service_ref)
 
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s.%s' % (topic, FLAGS.node_name),
-                proxy=node_instance)
+                proxy=service_ref)
 
-        pulse = task.LoopingCall(node_instance.report_state,
+        pulse = task.LoopingCall(service_ref.report_state,
                                  FLAGS.node_name,
                                  bin_name)
         pulse.start(interval=report_interval, now=False)
@@ -86,7 +104,7 @@ class Service(object, service.Service):
         # This is the parent service that twistd will be looking for when it
         # parses this file, return it so that we can get it into globals.
         application = service.Application(bin_name)
-        node_instance.setServiceParent(application)
+        service_ref.setServiceParent(application)
         return application
 
     @defer.inlineCallbacks

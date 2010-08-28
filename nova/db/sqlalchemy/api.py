@@ -446,10 +446,22 @@ def queue_get_for(context, topic, physical_node_id):
 ###################
 
 
+def export_device_count(context):
+    return models.ExportDevice.count()
+
+
+def export_device_create(context, values):
+    export_device_ref = models.ExportDevice()
+    for (key, value) in values.iteritems():
+        export_device_ref[key] = value
+    export_device_ref.save()
+    return export_device_ref
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(context, volume_id):
-    db.volume_ensure_blades(context,
-                            FLAGS.num_shelves,
-                            FLAGS.blades_per_shelf)
     session = models.NovaBase.get_session()
     query = session.query(models.ExportDevice).filter_by(volume=None)
     export_device = query.with_lockmode("update").first()
@@ -477,7 +489,7 @@ def volume_create(context, values):
     for (key, value) in values.iteritems():
         volume_ref[key] = value
     volume_ref.save()
-    return volume_ref.id
+    return volume_ref
 
 
 def volume_destroy(context, volume_id):
@@ -492,18 +504,6 @@ def volume_detached(context, volume_id):
     volume_ref['status'] = 'available'
     volume_ref['attach_status'] = 'detached'
     volume_ref.save()
-
-
-# NOTE(vish): should this code go up a layer?
-def volume_ensure_blades(context, num_shelves, blades_per_shelf):
-    if models.ExportDevice.count() >= num_shelves * blades_per_shelf:
-        return
-    for shelf_id in xrange(num_shelves):
-        for blade_id in xrange(blades_per_shelf):
-            export_device = models.ExportDevice()
-            export_device.shelf_id = shelf_id
-            export_device.blade_id = blade_id
-            export_device.save()
 
 
 def volume_get(context, volume_id):
