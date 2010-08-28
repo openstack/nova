@@ -26,31 +26,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 
-# TODO(vish): where should these flags go?
-flags.DEFINE_string('network_type',
-                    'vlan',
-                    'Service Class for Networking')
-flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
-flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
-                    'Public IP for the cloudpipe VPN servers')
-flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
-flags.DEFINE_integer('network_size', 256,
-                        'Number of addresses in each private subnet')
-flags.DEFINE_string('public_range', '4.4.4.0/24', 'Public IP address block')
-flags.DEFINE_string('private_range', '10.0.0.0/8', 'Private IP address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
-                        'Number of addresses reserved for vpn clients')
-
 
 _impl = utils.LazyPluggable(FLAGS['db_backend'],
                             sqlalchemy='nova.db.sqlalchemy.api')
 
 
-class AddressNotAllocated(exception.Error):
-    pass
-
-
+# TODO(vish): where should these exceptions go?
 class NoMoreAddresses(exception.Error):
     pass
 
@@ -150,6 +131,7 @@ def fixed_ip_get_by_address(context, address):
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return _impl.fixed_ip_get_network(context, address)
+
 
 def fixed_ip_lease(context, address):
     """Lease a fixed ip by address."""
@@ -256,11 +238,6 @@ def instance_update(context, instance_id, values):
 ####################
 
 
-def network_allocate(context, project_id):
-    """Allocate a network for a project."""
-    return _impl.network_allocate(context, project_id)
-
-
 def network_count(context):
     """Return the number of networks."""
     return _impl.network_count(context)
@@ -296,11 +273,6 @@ def network_destroy(context, network_id):
     return _impl.network_destroy(context, network_id)
 
 
-def network_ensure_indexes(context, num_networks):
-    """Ensure that network indexes exist, creating them if necessary."""
-    return _impl.network_ensure_indexes(context, num_networks)
-
-
 def network_get(context, network_id):
     """Get an network or raise if it does not exist."""
     return _impl.network_get(context, network_id)
@@ -322,13 +294,23 @@ def network_get_host(context, network_id):
 
 
 def network_get_index(context, network_id):
-    """Gets non-conflicting index for network"""
+    """Get non-conflicting index for network"""
     return _impl.network_get_index(context, network_id)
 
 
 def network_get_vpn_ip(context, network_id):
-    """Gets non-conflicting index for network"""
+    """Get non-conflicting index for network"""
     return _impl.network_get_vpn_ip(context, network_id)
+
+
+def network_index_count(context):
+    """Return count of network indexes"""
+    return _impl.network_index_count(context)
+
+
+def network_index_create(context, values):
+    """Create a network index from the values dict"""
+    return _impl.network_index_create(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):

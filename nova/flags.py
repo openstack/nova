@@ -213,3 +213,11 @@ DEFINE_string('sql_connection',
               'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
               'connection string for sql database')
 
+DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
+              'Manager for compute')
+DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
+              'Manager for network')
+DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+              'Manager for volume')
+
+

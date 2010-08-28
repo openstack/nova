@@ -21,14 +21,8 @@ Volume service allows rpc calls to the volume manager and reports state
 to the database.
 """
 
-from nova import flags
 from nova import service
 
-
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
-                    'Manager for volumes')
 
 class VolumeService(service.Service):
     """

@@ -60,6 +60,7 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
+        self.network_manager = utils.load_object(FLAGS.network_manager)
         self.setup()
 
     def __str__(self):
@@ -522,7 +523,6 @@ class CloudController(object):
         # TODO: Get the real security group of launch in here
         security_group = "default"
 
-        network_ref = db.project_get_network(context, context.project.id)
         reservation_id = utils.generate_uid('r')
         base_options = {}
         base_options['image_id'] = image_id
@@ -540,30 +540,27 @@ class CloudController(object):
         for num in range(int(kwargs['max_count'])):
             inst_id = db.instance_create(context, base_options)
 
-            if vpn:
-                fixed_ip = db.network_get_vpn_ip(context, network_ref['id'])
-            else:
-                fixed_ip = db.fixed_ip_allocate(context, network_ref['id'])
-            print fixed_ip['ip_str'], inst_id
-            db.fixed_ip_instance_associate(context, fixed_ip['ip_str'], inst_id)
-            print fixed_ip.instance
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
             inst['hostname'] = inst_id
             db.instance_update(context, inst_id, inst)
-
+            address = self.network_manager.allocate_fixed_ip(context,
+                                                             inst_id,
+                                                             vpn)
 
             # TODO(vish): This probably should be done in the scheduler
             #             network is setup when host is assigned
             network_topic = yield self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
-                      "args": {"address": fixed_ip['ip_str']}})
+                      "args": {"context": None,
+                               "address": address}})
 
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
-                  "args": {"instance_id": inst_id}})
+                  "args": {"context": None,
+                           "instance_id": inst_id}})
             logging.debug("Casting to node for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
         defer.returnValue(self._format_run_instances(context,

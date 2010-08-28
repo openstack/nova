@@ -16,10 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import math
-
-import IPy
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -119,27 +115,20 @@ def fixed_ip_allocate(context, network_id):
     return fixed_ip_ref
 
 
+def fixed_ip_create(context, network_id, address):
+    fixed_ip_ref = models.FixedIp()
+    fixed_ip_ref.network = db.network_get(context, network_id)
+    fixed_ip_ref['ip_str'] = address
+    fixed_ip_ref.save()
+    return fixed_ip_ref
+
+
 def fixed_ip_get_by_address(context, address):
     return models.FixedIp.find_by_str(address)
 
 
 def fixed_ip_get_network(context, address):
     return models.FixedIp.find_by_str(address).network
-
-
-def fixed_ip_lease(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    if not fixed_ip_ref['allocated']:
-        raise db.AddressNotAllocated(address)
-    fixed_ip_ref['leased'] = True
-    fixed_ip_ref.save()
-
-
-def fixed_ip_release(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    fixed_ip_ref['allocated'] = False
-    fixed_ip_ref['leased'] = False
-    fixed_ip_ref.save()
 
 
 def fixed_ip_deallocate(context, address):
@@ -253,31 +242,9 @@ def instance_update(context, instance_id, values):
 ###################
 
 
-# NOTE(vish): is there a better place for this logic?
-def network_allocate(context, project_id):
-    """Set up the network"""
-    db.network_ensure_indexes(context, FLAGS.num_networks)
-    network_id = db.network_create(context, {'project_id': project_id})
-    private_net = IPy.IP(FLAGS.private_range)
-    index = db.network_get_index(context, network_id)
-    vlan = FLAGS.vlan_start + index
-    start = index * FLAGS.network_size
-    significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
-    cidr = "%s/%s" % (private_net[start], significant_bits)
-    db.network_set_cidr(context, network_id, cidr)
-    net = {}
-    net['kind'] = FLAGS.network_type
-    net['vlan'] = vlan
-    net['bridge'] = 'br%s' % vlan
-    net['vpn_public_ip_str'] = FLAGS.vpn_ip
-    net['vpn_public_port'] = FLAGS.vpn_start + index
-    db.network_update(context, network_id, net)
-    db.network_create_fixed_ips(context, network_id, FLAGS.cnt_vpn_clients)
-    return network_id
-
-
 def network_count(context):
     return models.Network.count()
+
 
 def network_count_allocated_ips(context, network_id):
     session = models.NovaBase.get_session()
@@ -305,36 +272,7 @@ def network_create(context, values):
     for (key, value) in values.iteritems():
         network_ref[key] = value
     network_ref.save()
-    return network_ref.id
-
-
-def network_create_fixed_ips(context, network_id, num_vpn_clients):
-    network_ref = network_get(context, network_id)
-    # NOTE(vish): should these be properties of the network as opposed
-    #             to constants?
-    BOTTOM_RESERVED = 3
-    TOP_RESERVED = 1 + num_vpn_clients
-    project_net = IPy.IP(network_ref['cidr'])
-    num_ips = len(project_net)
-    session = models.NovaBase.get_session()
-    for i in range(num_ips):
-        fixed_ip = models.FixedIp()
-        fixed_ip['ip_str'] = str(project_net[i])
-        if i < BOTTOM_RESERVED or num_ips - i < TOP_RESERVED:
-            fixed_ip['reserved'] = True
-        fixed_ip['network'] = network_get(context, network_id)
-        session.add(fixed_ip)
-    session.commit()
-
-
-def network_ensure_indexes(context, num_networks):
-    if models.NetworkIndex.count() == 0:
-        session = models.NovaBase.get_session()
-        for i in range(num_networks):
-            network_index = models.NetworkIndex()
-            network_index.index = i
-            session.add(network_index)
-        session.commit()
+    return network_ref
 
 
 def network_destroy(context, network_id):
@@ -353,23 +291,13 @@ def network_get_associated_fixed_ips(context, network_id):
     session.commit()
     return fixed_ips
 
+
 def network_get_by_bridge(context, bridge):
     session = models.NovaBase.get_session()
     rv = session.query(models.Network).filter_by(bridge=bridge).first()
     if not rv:
         raise exception.NotFound('No network for bridge %s' % bridge)
     return rv
-
-
-def network_get_vpn_ip(context, network_id):
-    # TODO(vish): possible concurrency issue here
-    network = network_get(context, network_id)
-    address = network['vpn_private_ip_str']
-    fixed_ip = fixed_ip_get_by_address(context, address)
-    if fixed_ip['allocated']:
-        raise db.AddressAlreadyAllocated()
-    db.fixed_ip_update(context, fixed_ip['id'], {'allocated': True})
-    return fixed_ip
 
 
 def network_get_host(context, network_id):
@@ -389,16 +317,15 @@ def network_get_index(context, network_id):
     return network_index['index']
 
 
-def network_set_cidr(context, network_id, cidr):
-    network_ref = network_get(context, network_id)
-    project_net = IPy.IP(cidr)
-    network_ref['cidr'] = cidr
-    # FIXME we can turn these into properties
-    network_ref['netmask'] = str(project_net.netmask())
-    network_ref['gateway'] = str(project_net[1])
-    network_ref['broadcast'] = str(project_net.broadcast())
-    network_ref['vpn_private_ip_str'] = str(project_net[2])
-    network_ref['dhcp_start'] = str(project_net[3])
+def network_index_count(context):
+    return models.NetworkIndex.count()
+
+
+def network_index_create(context, values):
+    network_index_ref = models.NetworkIndex()
+    for (key, value) in values.iteritems():
+        network_index_ref[key] = value
+    network_index_ref.save()
 
 
 def network_set_host(context, network_id, host_id):
