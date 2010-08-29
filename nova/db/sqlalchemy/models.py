@@ -25,6 +25,7 @@ from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
+from nova.db.sqlalchemy import session
 from nova import auth
 from nova import exception
 from nova import flags
@@ -38,72 +39,61 @@ class NovaBase(object):
     __prefix__ = 'none'
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
-
-    _session = None
-    _engine = None
-    @classmethod
-    def create_engine(cls):
-        if NovaBase._engine is not None:
-           return NovaBase._engine
-        from sqlalchemy import create_engine
-        NovaBase._engine = create_engine(FLAGS.sql_connection, echo=False)
-        Base.metadata.create_all(NovaBase._engine)
-        return NovaBase._engine
+    deleted = Column(Boolean, default=False)
 
     @classmethod
-    def get_session(cls):
-        from sqlalchemy.orm import sessionmaker
-        if NovaBase._session == None:
-            NovaBase.create_engine()
-            NovaBase._session = sessionmaker(bind=NovaBase._engine)()
-        return NovaBase._session
+    def all(cls, session=None):
+        if session:
+            return session.query(cls) \
+                          .filter_by(deleted=False) \
+                          .all()
+        else:
+            with session.managed() as session:
+                return cls.all(session=session)
 
     @classmethod
-    def all(cls):
-        session = NovaBase.get_session()
-        result = session.query(cls).all()
-        session.commit()
-        return result
+    def count(cls, session=None):
+        if session:
+            return session.query(cls) \
+                          .filter_by(deleted=False) \
+                          .count()
+        else:
+            with session.managed() as session:
+                return cls.count(session=session)
 
     @classmethod
-    def count(cls):
-        session = NovaBase.get_session()
-        result = session.query(cls).count()
-        session.commit()
-        return result
+    def find(cls, obj_id, session=None):
+        if session:            
+            try:
+                return session.query(cls) \
+                              .filter_by(id=obj_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for id %s" % obj_id)
+        else:
+            with session.managed() as session:
+                return cls.find(obj_id, session=session)
 
     @classmethod
-    def find(cls, obj_id):
-        session = NovaBase.get_session()
-        try:
-            result = session.query(cls).filter_by(id=obj_id).one()
-            session.commit()
-            return result
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for id %s" % obj_id)
-
-    @classmethod
-    def find_by_str(cls, str_id):
+    def find_by_str(cls, str_id, session=None):
         id = int(str_id.rpartition('-')[2])
-        return cls.find(id)
+        return cls.find(id, session=session)
 
     @property
     def str_id(self):
         return "%s-%s" % (self.__prefix__, self.id)
 
-    def save(self):
-        session = NovaBase.get_session()
-        session.add(self)
-        session.commit()
+    def save(self, session=None):
+        if session:
+            session.add(self)
+        else:
+            with session.managed() as s:
+                self.save(session=s)
 
-    def delete(self):
-        session = NovaBase.get_session()
-        session.delete(self)
-        session.commit()
-
-    def refresh(self):
-        session = NovaBase.get_session()
-        session.refresh(self)
+    def delete(self, session=None):
+        self.deleted = True
+        self.save(session=session)
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
@@ -118,7 +108,6 @@ class Image(Base, NovaBase):
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255))#, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255))#, ForeignKey('projects.id'), nullable=False)
-
     image_type = Column(String(255))
     public = Column(Boolean, default=False)
     state = Column(String(255))
@@ -158,13 +147,13 @@ class Daemon(Base, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, node_name, binary):
-        session = NovaBase.get_session()
+    def find_by_args(cls, session, node_name, binary):
         try:
-            query = session.query(cls).filter_by(node_name=node_name)
-            result = query.filter_by(binary=binary).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(node_name=node_name) \
+                          .filter_by(binary=binary) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for %s, %s" % (node_name,
                                                               binary))
@@ -173,25 +162,10 @@ class Daemon(Base, NovaBase):
 class Instance(Base, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
-    id = Column(Integer, primary_key=True)
 
+    id = Column(Integer, primary_key=True)
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255)) #, ForeignKey('projects.id'))
-
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
-    # TODO(vish): make this opaque somehow
-    @property
-    def name(self):
-        return self.str_id
-
-
     image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -214,13 +188,26 @@ class Instance(Base, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
-    def set_state(self, state_code, state_description=None):
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+    # TODO(vish): make this opaque somehow
+    @property
+    def name(self):
+        return self.str_id
+
+    def set_state(self, session, state_code, state_description=None):
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
             state_description = power_state.name(state_code)
         self.state_description = state_description
-        self.save()
+        self.save(session)
 
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
@@ -280,12 +267,12 @@ class FixedIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, str_id):
-        session = NovaBase.get_session()
+    def find_by_str(cls, session, str_id):
         try:
-            result = session.query(cls).filter_by(ip_str=str_id).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(ip_str=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for ip str %s" % str_id)
 
@@ -305,12 +292,12 @@ class FloatingIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, str_id):
-        session = NovaBase.get_session()
+    def find_by_str(cls, session, str_id):
         try:
-            result = session.query(cls).filter_by(ip_str=str_id).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(ip_str=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for ip str %s" % str_id)
 
@@ -352,17 +339,9 @@ class NetworkIndex(Base, NovaBase):
                                                       uselist=False))
 
 
-
-
-def create_session(engine=None):
-    return NovaBase.get_session()
-
 if __name__ == '__main__':
-    engine = NovaBase.create_engine()
-    session = NovaBase.create_session(engine)
-
     instance = Instance(image_id='as', ramdisk_id='AS', user_id='anthony')
     user = User(id='anthony')
-    session.add(instance)
-    session.commit()
-
+    
+    with session.managed() as session:
+        session.add(instance)
