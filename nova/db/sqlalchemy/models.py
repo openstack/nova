@@ -164,10 +164,25 @@ class Daemon(Base, NovaBase):
 class Instance(Base, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
-
     id = Column(Integer, primary_key=True)
+    
     user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255)) #, ForeignKey('projects.id'))
+    
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+    # TODO(vish): make this opaque somehow
+    @property
+    def name(self):
+        return self.str_id
+    
+    
     image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -190,26 +205,13 @@ class Instance(Base, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    @property
-    def project(self):
-        return auth.manager.AuthManager().get_project(self.project_id)
-
-    # TODO(vish): make this opaque somehow
-    @property
-    def name(self):
-        return self.str_id
-
-    def set_state(self, session, state_code, state_description=None):
+    def set_state(self, state_code, state_description=None):
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
             state_description = power_state.name(state_code)
         self.state_description = state_description
-        self.save(session)
+        self.save()
 
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
