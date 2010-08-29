@@ -25,7 +25,7 @@ from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
-from nova.db.sqlalchemy import session
+from nova.db.sqlalchemy.session import managed_session
 from nova import auth
 from nova import exception
 from nova import flags
@@ -36,6 +36,7 @@ Base = declarative_base()
 
 class NovaBase(object):
     __table_args__ = {'mysql_engine':'InnoDB'}
+    __table_initialized__ = False
     __prefix__ = 'none'
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
@@ -48,7 +49,7 @@ class NovaBase(object):
                           .filter_by(deleted=False) \
                           .all()
         else:
-            with session.managed() as session:
+            with managed_session() as session:
                 return cls.all(session=session)
 
     @classmethod
@@ -58,8 +59,8 @@ class NovaBase(object):
                           .filter_by(deleted=False) \
                           .count()
         else:
-            with session.managed() as session:
-                return cls.count(session=session)
+            with managed_session() as s:
+                return cls.count(session=s)
 
     @classmethod
     def find(cls, obj_id, session=None):
@@ -72,7 +73,7 @@ class NovaBase(object):
             except exc.NoResultFound:
                 raise exception.NotFound("No model for id %s" % obj_id)
         else:
-            with session.managed() as session:
+            with managed_session() as session:
                 return cls.find(obj_id, session=session)
 
     @classmethod
@@ -87,8 +88,9 @@ class NovaBase(object):
     def save(self, session=None):
         if session:
             session.add(self)
+            session.flush()
         else:
-            with session.managed() as s:
+            with managed_session() as s:
                 self.save(session=s)
 
     def delete(self, session=None):
@@ -253,7 +255,7 @@ class ExportDevice(Base, NovaBase):
 class FixedIp(Base, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
+    ip_str = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance, backref=backref('fixed_ip',
@@ -280,7 +282,7 @@ class FixedIp(Base, NovaBase):
 class FloatingIp(Base, NovaBase):
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
+    ip_str = Column(String(255))
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
     fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
@@ -336,12 +338,21 @@ class NetworkIndex(Base, NovaBase):
     index = Column(Integer)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
-                                                      uselist=False))
+                                                    uselist=False))
 
+
+def register_models():
+    from sqlalchemy import create_engine
+    
+    models = (Image, PhysicalNode, Daemon, Instance, Volume, ExportDevice,
+              FixedIp, FloatingIp, Network, NetworkIndex)
+    engine = create_engine(FLAGS.sql_connection, echo=False)
+    for model in models:
+        model.metadata.create_all(engine)
 
 if __name__ == '__main__':
     instance = Instance(image_id='as', ramdisk_id='AS', user_id='anthony')
     user = User(id='anthony')
     
-    with session.managed() as session:
+    with managed_session() as session:
         session.add(instance)
