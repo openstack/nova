@@ -46,14 +46,14 @@ class Service(object, service.Service):
 
     def __init__(self, manager, *args, **kwargs):
         self.manager = manager
+        self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
-        print 'getattr'
         try:
-            super(Service, self).__getattr__(key)
+            return super(Service, self).__getattr__(key)
         except AttributeError:
-            self.manager.__getattr__(key)
+            return getattr(self.manager, key)
 
     @classmethod
     def create(cls,
@@ -109,7 +109,6 @@ class Service(object, service.Service):
     @defer.inlineCallbacks
     def report_state(self, node_name, binary, context=None):
         """Update the state of this daemon in the datastore."""
-        print 'report_state'
         try:
             try:
                 daemon_ref = db.daemon_get_by_args(context, node_name, binary)

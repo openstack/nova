@@ -233,7 +233,8 @@ class CloudController(object):
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
                                    instance_ref['node_name']),
                         {"method": "get_console_output",
-                         "args": {"instance_id": instance_ref['id']}})
+                         "args": {"context": None,
+                                  "instance_id": instance_ref['id']}})
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
@@ -300,9 +301,10 @@ class CloudController(object):
         host = db.instance_get_host(context, instance_ref['id'])
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
-                                 "args": {"volume_id": volume_ref['id'],
-                                           "instance_id": instance_ref['id'],
-                                           "mountpoint": device}})
+                                 "args": {"context": None,
+                                          "volume_id": volume_ref['id'],
+                                          "instance_id": instance_ref['id'],
+                                          "mountpoint": device}})
         return defer.succeed({'attachTime': volume_ref['attach_time'],
                               'device': volume_ref['mountpoint'],
                               'instanceId': instance_ref['id_str'],
@@ -324,8 +326,9 @@ class CloudController(object):
             host = db.instance_get_host(context, instance_ref['id'])
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
-                                 "args": {"instance_id": instance_ref['id'],
-                                           "volume_id": volume_ref['id']}})
+                                 "args": {"context": None,
+                                          "instance_id": instance_ref['id'],
+                                          "volume_id": volume_ref['id']}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
@@ -437,7 +440,8 @@ class CloudController(object):
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
                          {"method": "allocate_floating_ip",
-                          "args": {"project_id": context.project.id}})
+                          "args": {"context": None,
+                                   "project_id": context.project.id}})
         defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
 
     @rbac.allow('netadmin')
@@ -448,7 +452,8 @@ class CloudController(object):
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "deallocate_floating_ip",
-                          "args": {"floating_ip": floating_ip_ref['str_id']}})
+                          "args": {"context": None,
+                                   "floating_ip": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -460,7 +465,8 @@ class CloudController(object):
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "associate_floating_ip",
-                          "args": {"floating_ip": floating_ip_ref['str_id'],
+                          "args": {"context": None,
+                                   "floating_ip": floating_ip_ref['str_id'],
                                    "fixed_ip": fixed_ip_ref['str_id'],
                                    "instance_id": instance_ref['id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
@@ -472,7 +478,8 @@ class CloudController(object):
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "disassociate_floating_ip",
-                          "args": {"floating_ip": floating_ip_ref['str_id']}})
+                          "args": {"context": None,
+                                   "floating_ip": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
@@ -483,7 +490,8 @@ class CloudController(object):
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
-                                     "args": {"project_id": context.project.id}})
+                                     "args": {"context": None,
+                                              "project_id": context.project.id}})
         defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -568,7 +576,7 @@ class CloudController(object):
 
 
     @rbac.allow('projectmanager', 'sysadmin')
-    # @defer.inlineCallbacks
+    @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
         # network_topic = yield self._get_network_topic(context)
@@ -582,36 +590,37 @@ class CloudController(object):
                 continue
 
             # FIXME(ja): where should network deallocate occur?
-            # floating_ip = network_model.get_public_ip_for_instance(i)
-            # if floating_ip:
-            #     logging.debug("Disassociating address %s" % floating_ip)
-            #     # NOTE(vish): Right now we don't really care if the ip is
-            #     #             disassociated.  We may need to worry about
-            #     #             checking this later.  Perhaps in the scheduler?
-            #     rpc.cast(network_topic,
-            #              {"method": "disassociate_floating_ip",
-            #               "args": {"floating_ip": floating_ip}})
-            #
-            # fixed_ip = instance.get('private_dns_name', None)
-            # if fixed_ip:
-            #     logging.debug("Deallocating address %s" % fixed_ip)
-            #     # NOTE(vish): Right now we don't really care if the ip is
-            #     #             actually removed.  We may need to worry about
-            #     #             checking this later.  Perhaps in the scheduler?
-            #     rpc.cast(network_topic,
-            #              {"method": "deallocate_fixed_ip",
-            #               "args": {"fixed_ip": fixed_ip}})
+            address = db.instance_get_floating_address(context,
+                                                       instance_ref['id'])
+            if address:
+                logging.debug("Disassociating address %s" % address)
+                # NOTE(vish): Right now we don't really care if the ip is
+                #             disassociated.  We may need to worry about
+                #             checking this later.  Perhaps in the scheduler?
+                network_topic = yield self._get_network_topic(context)
+                rpc.cast(network_topic,
+                         {"method": "disassociate_floating_ip",
+                          "args": {"context": None,
+                                   "address": address}})
+
+            address = db.instance_get_fixed_address(context,
+                                                    instance_ref['id'])
+            if address:
+                logging.debug("Deallocating address %s" % address)
+                # NOTE(vish): Currently, nothing needs to be done on the
+                #             network node until release. If this changes,
+                #             we will need to cast here.
+                db.fixed_ip_deallocate(context, address)
 
             host = db.instance_get_host(context, instance_ref['id'])
-            if host is not None:
-                # NOTE(joshua?): It's also internal default
+            if host:
                 rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
-                          "args": {"instance_id": instance_ref['id']}})
+                          "args": {"context": None,
+                                   "instance_id": instance_ref['id']}})
             else:
                 db.instance_destroy(context, instance_ref['id'])
-        # defer.returnValue(True)
-        return True
+        defer.returnValue(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):
@@ -621,7 +630,8 @@ class CloudController(object):
             host = db.instance_get_host(context, instance_ref['id'])
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "reboot_instance",
-                      "args": {"instance_id": instance_ref['id']}})
+                      "args": {"context": None,
+                               "instance_id": instance_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('projectmanager', 'sysadmin')

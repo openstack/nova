@@ -48,11 +48,13 @@ def import_class(import_str):
 
 def import_object(import_str):
     """Returns an object including a module or module and class"""
-    cls = import_class(import_str)
     try:
+        __import__(import_str)
+        return sys.modules[import_str]
+    except ImportError:
+        cls = import_class(import_str)
+        print cls
         return cls()
-    except TypeError:
-        return cls
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)

@@ -318,7 +318,6 @@ class FloatingIp(Base, NovaBase):
 class Network(Base, NovaBase):
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
-    kind = Column(String(255))
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255))
