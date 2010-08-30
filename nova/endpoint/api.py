@@ -22,7 +22,6 @@ Most calls are proxied into the responsible controller.
 """
 
 import multiprocessing
-import random
 import re
 import urllib
 
@@ -36,17 +35,6 @@ from nova.endpoint import cloud
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
-
-
-class APIRequestContext(object):
-    def __init__(self, handler, user, project):
-        self.handler = handler
-        self.user = user
-        self.project = project
-        self.request_id = ''.join(
-                [random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-')
-                 for x in xrange(20)]
-                )
 
 
 class RootRequestHandler(tornado.web.RequestHandler):
