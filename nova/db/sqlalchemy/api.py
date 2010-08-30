@@ -143,7 +143,7 @@ def fixed_ip_allocate(context, network_id):
         fixed_ip_ref['allocated'] = True
         session.add(fixed_ip_ref)
         session.commit()
-        return fixed_ip_ref
+        return fixed_ip_ref['str_id']
 
 
 def fixed_ip_create(context, network_id, address, reserved=False):

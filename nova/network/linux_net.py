@@ -125,7 +125,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
 def get_dhcp_hosts(context, network_id):
     hosts = []
     for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
-        hosts.append(_host_dhcp(fixed_ip))
+        hosts.append(_host_dhcp(fixed_ip['str_id']))
     return '\n'.join(hosts)
 
 
@@ -162,11 +162,12 @@ def update_dhcp(context, network_id):
     command = _dnsmasq_cmd(network_ref)
     _execute(command, addl_env=env)
 
-def _host_dhcp(fixed_ip):
-    """Return a host string for a fixed ip"""
-    return "%s,%s.novalocal,%s" % (fixed_ip.instance['mac_address'],
-                                   fixed_ip.instance['hostname'],
-                                   fixed_ip['ip_str'])
+def _host_dhcp(address):
+    """Return a host string for an address"""
+    instance_ref = db.fixed_ip_get_instance(None, address)
+    return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
+                                   instance_ref['hostname'],
+                                   address)
 
 
 def _execute(cmd, *args, **kwargs):
