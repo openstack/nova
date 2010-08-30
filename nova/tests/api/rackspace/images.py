@@ -30,9 +30,6 @@ class ImagesTest(unittest.TestCase):
     def test_get_image_list(self):
         pass
 
-    def test_get_backup_schedule(self):
-        pass
-
     def test_delete_image(self):
         pass
     
