@@ -105,7 +105,6 @@ class NetworkTestCase(test.TrialTestCase):
         db.fixed_ip_deallocate(None, fix_addr)
 
     def test_allocate_deallocate_fixed_ip(self):
-        import pdb; pdb.set_trace()
         """Makes sure that we can allocate and deallocate a fixed ip"""
         address = self._create_address(0)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))

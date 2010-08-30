@@ -49,8 +49,8 @@ class NovaBase(object):
                           .filter_by(deleted=False) \
                           .all()
         else:
-            with managed_session() as session:
-                return cls.all(session=session)
+            with managed_session() as s:
+                return cls.all(session=s)
 
     @classmethod
     def count(cls, session=None):
@@ -73,8 +73,8 @@ class NovaBase(object):
             except exc.NoResultFound:
                 raise exception.NotFound("No model for id %s" % obj_id)
         else:
-            with managed_session() as session:
-                return cls.find(obj_id, session=session)
+            with managed_session() as s:
+                return cls.find(obj_id, session=s)
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
@@ -206,6 +206,7 @@ class Instance(Base, NovaBase):
     mac_address = Column(String(255))
 
     def set_state(self, state_code, state_description=None):
+        # TODO(devcamcar): Move this out of models and into api
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
@@ -345,7 +346,6 @@ class NetworkIndex(Base, NovaBase):
 
 def register_models():
     from sqlalchemy import create_engine
-    
     models = (Image, PhysicalNode, Daemon, Instance, Volume, ExportDevice,
               FixedIp, FloatingIp, Network, NetworkIndex)
     engine = create_engine(FLAGS.sql_connection, echo=False)

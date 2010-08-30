@@ -349,7 +349,8 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
 
 def network_ensure_indexes(context, num_networks):
     with managed_session(autocommit=False) as session:
-        if models.NetworkIndex.count() == 0:
+        count = models.NetworkIndex.count(session=session)
+        if count == 0:
             for i in range(num_networks):
                 network_index = models.NetworkIndex()
                 network_index.index = i
@@ -523,8 +524,12 @@ def volume_create(context, values):
 
 
 def volume_destroy(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref.delete()
+    with managed_session(autocommit=False) as session:
+        session.execute('update volumes set deleted=1 where id=:id',
+                        {'id': volume_id})
+        session.execute('update export_devices set deleted=1 where network_id=:id',
+                        {'id': volume_id})
+        session.commit()
 
 
 def volume_detached(context, volume_id):
