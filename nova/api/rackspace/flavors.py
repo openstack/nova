@@ -15,4 +15,40 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-class Controller(object): pass
+from nova.api.rackspace import base
+from nova.compute import instance_types
+from webob import exc
+
+class Controller(base.Controller):
+    """Flavor controller for the Rackspace API."""
+
+    _serialization_metadata = {
+        'application/xml': {
+            "attributes": {
+                "flavor": [ "id", "name", "ram", "disk" ]
+            }
+        }
+    }
+
+    def index(self, req):
+        """Return all flavors in brief."""
+        return dict(flavors=[dict(id=flavor['id'], name=flavor['name'])
+                             for flavor in self.detail(req)['flavors']])
+
+    def detail(self, req):
+        """Return all flavors in detail."""
+        items = [self.show(req, id)['flavor'] for id in self._all_ids()]
+        return dict(flavors=items)
+
+    def show(self, req, id):
+        """Return data about the given flavor id."""
+        for name, val in instance_types.INSTANCE_TYPES.iteritems():
+            if val['flavorid'] == int(id):
+                item = dict(ram=val['memory_mb'], disk=val['local_gb'],
+                            id=val['flavorid'], name=name)
+                return dict(flavor=item)
+        raise exc.HTTPNotFound()
+
+    def _all_ids(self):
+        """Return the list of all flavorids."""
+        return [i['flavorid'] for i in instance_types.INSTANCE_TYPES.values()]
