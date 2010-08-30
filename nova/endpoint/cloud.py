@@ -60,7 +60,7 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self.network_manager = utils.load_object(FLAGS.network_manager)
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         self.setup()
 
     def __str__(self):

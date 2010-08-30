@@ -49,14 +49,15 @@ class NetworkTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
-        self.service = service.VlanNetworkService()
+        self.network = utils.import_object(FLAGS.network_manager)
+        self.context = None
         for i in range(5):
             name = 'project%s' % i
             self.projects.append(self.manager.create_project(name,
                                                              'netuser',
                                                              name))
             # create the necessary network data for the project
-            self.service.set_network_host(self.projects[i].id)
+            self.network.set_network_host(self.context, self.projects[i].id)
         instance_id = db.instance_create(None,
                                          {'mac_address': utils.generate_mac()})
         self.instance_id = instance_id
@@ -92,16 +93,17 @@ class NetworkTestCase(test.TrialTestCase):
             db.floating_ip_get_by_address(None, ip_str)
         except exception.NotFound:
             db.floating_ip_create(None, ip_str, FLAGS.node_name)
-        float_addr = self.service.allocate_floating_ip(self.projects[0].id)
+        float_addr = self.network.allocate_floating_ip(self.context,
+                                                       self.projects[0].id)
         fix_addr = self._create_address(0)
         self.assertEqual(float_addr, str(pubnet[0]))
-        self.service.associate_floating_ip(float_addr, fix_addr)
+        self.network.associate_floating_ip(self.context, float_addr, fix_addr)
         address = db.instance_get_floating_address(None, self.instance_id)
         self.assertEqual(address, float_addr)
-        self.service.disassociate_floating_ip(float_addr)
+        self.network.disassociate_floating_ip(self.context, float_addr)
         address = db.instance_get_floating_address(None, self.instance_id)
         self.assertEqual(address, None)
-        self.service.deallocate_floating_ip(float_addr)
+        self.network.deallocate_floating_ip(self.context, float_addr)
         db.fixed_ip_deallocate(None, fix_addr)
 
     def test_allocate_deallocate_fixed_ip(self):

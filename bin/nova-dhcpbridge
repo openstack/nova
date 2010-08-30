@@ -34,23 +34,23 @@ from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.network import linux_net
-from nova.network import service
 from nova import datastore # for redis_db flag
 from nova.auth import manager # for auth flags
+from nova.network import manager # for network flags
 
 FLAGS = flags.FLAGS
-
 
 def add_lease(_mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         logging.debug("leasing ip")
-        service.VlanNetworkService().lease_fixed_ip(ip_address)
+        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager.lease_fixed_ip(None, ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "lease_fixed_ip",
-                  "args": {"address": ip_address}})
+                  "args": {"context": None,
+                           "address": ip_address}})
 
 
 def old_lease(_mac, _ip_address, _hostname, _interface):
@@ -62,20 +62,24 @@ def del_lease(_mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         logging.debug("releasing ip")
-        service.VlanNetworkService().release_fixed_ip(ip_address)
+        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager.release_fixed_ip(None, ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
                  {"method": "release_fixed_ip",
-                  "args": {"address": ip_address}})
+                  "args": {"context": None,
+                           "address": ip_address}})
 
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
     network_ref = db.network_get_by_bridge(None, interface)
-    return linux_net.get_dhcp_hosts(None, network_ref['id'])
+    network_manager = utils.import_object(FLAGS.network_manager)
+    return network_manager.driver.get_dhcp_hosts(None, network_ref['id'])
 
 
 def main():
+    global network_manager
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
@@ -93,7 +97,6 @@ def main():
                                             '..',
                                             '_trial_temp',
                                             'nova.sqlite'))
-        print path
         FLAGS.sql_connection = 'sqlite:///%s' % path
         #FLAGS.sql_connection = 'mysql://root@localhost/test'
     action = argv[1]

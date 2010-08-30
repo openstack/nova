@@ -39,25 +39,20 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
 
 
 class FakeAOEDriver(object):
-    @defer.inlineCallbacks
     def create_volume(self, volume_id, size):
         logging.debug("Fake AOE: create_volume %s, %s", volume_id, size)
 
-    @defer.inlineCallbacks
     def delete_volume(self, volume_id):
         logging.debug("Fake AOE: delete_volume %s", volume_id)
 
-    @defer.inlineCallbacks
     def create_export(self, volume_id, shelf_id, blade_id):
         logging.debug("Fake AOE: create_export %s, %s, %s",
                       volume_id, shelf_id, blade_id)
 
-    @defer.inlineCallbacks
     def remove_export(self, volume_id, shelf_id, blade_id):
         logging.debug("Fake AOE: remove_export %s, %s, %s",
                       volume_id, shelf_id, blade_id)
 
-    @defer.inlineCallbacks
     def ensure_exports(self):
         logging.debug("Fake AOE: ensure_export")
 

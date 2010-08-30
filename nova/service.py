@@ -46,9 +46,10 @@ class Service(object, service.Service):
 
     def __init__(self, manager, *args, **kwargs):
         self.manager = manager
-        super(self, Service).__init__(*args, **kwargs)
+        super(Service, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
+        print 'getattr'
         try:
             super(Service, self).__getattr__(key)
         except AttributeError:
@@ -65,7 +66,7 @@ class Service(object, service.Service):
         Args:
             report_interval, defaults to flag
             bin_name, defaults to basename of executable
-            topic, defaults to basename - "nova-" part
+            topic, defaults to bin_name - "nova-" part
             manager, defaults to FLAGS.<topic>_manager
         """
         if not report_interval:
@@ -77,17 +78,15 @@ class Service(object, service.Service):
         if not topic:
             topic = bin_name.rpartition("nova-")[2]
         if not manager:
-            manager = FLAGS.get('%s_manager' % topic)
+            manager = FLAGS.get('%s_manager' % topic, None)
         manager_ref = utils.import_object(manager)
         logging.warn("Starting %s node" % topic)
         service_ref = cls(manager_ref)
-
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s' % topic,
                 proxy=service_ref)
-
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s.%s' % (topic, FLAGS.node_name),
@@ -110,6 +109,7 @@ class Service(object, service.Service):
     @defer.inlineCallbacks
     def report_state(self, node_name, binary, context=None):
         """Update the state of this daemon in the datastore."""
+        print 'report_state'
         try:
             try:
                 daemon_ref = db.daemon_get_by_args(context, node_name, binary)

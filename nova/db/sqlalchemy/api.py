@@ -149,6 +149,13 @@ def fixed_ip_instance_disassociate(context, address):
     fixed_ip_ref.save()
 
 
+def fixed_ip_update(context, address, values):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    for (key, value) in values.iteritems():
+        fixed_ip_ref[key] = value
+    fixed_ip_ref.save()
+
+
 ###################
 
 

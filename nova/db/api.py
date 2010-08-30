@@ -123,6 +123,16 @@ def fixed_ip_allocate(context, network_id):
     return _impl.fixed_ip_allocate(context, network_id)
 
 
+def fixed_ip_create(context, network_id, address):
+    """Create a fixed ip from the values dictionary."""
+    return _impl.fixed_ip_create(context, network_id, address)
+
+
+def fixed_ip_deallocate(context, address):
+    """Deallocate a fixed ip by address."""
+    return _impl.fixed_ip_deallocate(context, address)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address."""
     return _impl.fixed_ip_get_by_address(context, address)
@@ -133,21 +143,6 @@ def fixed_ip_get_network(context, address):
     return _impl.fixed_ip_get_network(context, address)
 
 
-def fixed_ip_lease(context, address):
-    """Lease a fixed ip by address."""
-    return _impl.fixed_ip_lease(context, address)
-
-
-def fixed_ip_release(context, address):
-    """Un-Lease a fixed ip by address."""
-    return _impl.fixed_ip_release(context, address)
-
-
-def fixed_ip_deallocate(context, address):
-    """Deallocate a fixed ip by address."""
-    return _impl.fixed_ip_deallocate(context, address)
-
-
 def fixed_ip_instance_associate(context, address, instance_id):
     """Associate a fixed ip to an instance by address."""
     return _impl.fixed_ip_instance_associate(context, address, instance_id)
@@ -156,6 +151,11 @@ def fixed_ip_instance_associate(context, address, instance_id):
 def fixed_ip_instance_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
     return _impl.fixed_ip_instance_disassociate(context, address)
+
+
+def fixed_ip_update(context, address, values):
+    """Create a fixed ip from the values dictionary."""
+    return _impl.fixed_ip_update(context, address, values)
 
 
 ####################

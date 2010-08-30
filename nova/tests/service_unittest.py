@@ -30,10 +30,16 @@ from nova import flags
 from nova import rpc
 from nova import test
 from nova import service
-
+from nova import manager
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
+                    "Manager for testing")
+
+class FakeManager(manager.Manager):
+    """Fake manager for tests"""
+    pass
 
 class ServiceTestCase(test.BaseTestCase):
     """Test cases for rpc"""
@@ -46,12 +52,12 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.StubOutWithMock(
                 service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
-                            topic='run_tests.py',
+                            topic='fake',
                             proxy=mox.IsA(service.Service)
                             ).AndReturn(rpc.AdapterConsumer)
 
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
-                            topic='run_tests.py.%s' % FLAGS.node_name,
+                            topic='fake.%s' % FLAGS.node_name,
                             proxy=mox.IsA(service.Service)
                             ).AndReturn(rpc.AdapterConsumer)
 
@@ -67,7 +73,7 @@ class ServiceTestCase(test.BaseTestCase):
         rpc.AdapterConsumer.attach_to_twisted()
         self.mox.ReplayAll()
 
-        app = service.Service.create()
+        app = service.Service.create(bin_name='nova-fake')
         self.assert_(app)
 
     # We're testing sort of weird behavior in how report_state decides
@@ -82,7 +88,7 @@ class ServiceTestCase(test.BaseTestCase):
                       'binary': binary,
                       'report_count': 0,
                       'id': 1}
-
+        service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
                                       node_name,
                                       binary).AndReturn(daemon_ref)
@@ -105,6 +111,7 @@ class ServiceTestCase(test.BaseTestCase):
                       'report_count': 0,
                       'id': 1}
 
+        service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
                                       node_name,
                                       binary).AndRaise(exception.NotFound())
@@ -126,6 +133,7 @@ class ServiceTestCase(test.BaseTestCase):
                       'report_count': 0,
                       'id': 1}
 
+        service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
                                       node_name,
                                       binary).AndRaise(Exception())
@@ -145,6 +153,7 @@ class ServiceTestCase(test.BaseTestCase):
                       'report_count': 0,
                       'id': 1}
 
+        service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
                                       node_name,
                                       binary).AndReturn(daemon_ref)

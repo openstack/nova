@@ -252,6 +252,7 @@ class AuthManager(object):
         __init__ is run every time AuthManager() is called, so we only
         reset the driver if it is not set or a new driver is specified.
         """
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         if driver or not getattr(self, 'driver', None):
             self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
@@ -525,7 +526,8 @@ class AuthManager(object):
             if project_dict:
                 project = Project(**project_dict)
                 try:
-                    db.network_allocate(context, project.id)
+                    self.network_manager.allocate_network(context,
+                                                          project.id)
                 except:
                     drv.delete_project(project.id)
                     raise

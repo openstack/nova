@@ -27,7 +27,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.compute import service
 
 
 FLAGS = flags.FLAGS
@@ -60,7 +59,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         super(ComputeConnectionTestCase, self).setUp()
         self.flags(connection_type='fake',
                    fake_storage=True)
-        self.compute = service.ComputeService()
+        self.compute = utils.import_object(FLAGS.compute_manager)
         self.manager = manager.AuthManager()
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')

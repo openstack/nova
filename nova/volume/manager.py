@@ -38,7 +38,7 @@ flags.DEFINE_string('storage_availability_zone',
                     'availability zone of this service')
 flags.DEFINE_boolean('fake_storage', False,
                      'Should we make real storage volumes to attach?')
-flags.DEFINE_string('volume_driver', 'nova.volume.driver.AOEDriver'
+flags.DEFINE_string('volume_driver', 'nova.volume.driver.AOEDriver',
                     'Driver to use for volume creation')
 flags.DEFINE_integer('num_shelves',
                     100,
@@ -60,7 +60,7 @@ class AOEManager(manager.Manager):
         super(AOEManager, self).__init__(*args, **kwargs)
 
     def _ensure_blades(self, context):
-        total_blades = FLAGS.num_shelves, FLAGS.blades_per_shelf
+        total_blades = FLAGS.num_shelves * FLAGS.blades_per_shelf
         if self.db.export_device_count(context) >= total_blades:
             return
         for shelf_id in xrange(FLAGS.num_shelves):

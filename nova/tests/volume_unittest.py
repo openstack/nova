@@ -24,8 +24,7 @@ from nova import exception
 from nova import db
 from nova import flags
 from nova import test
-from nova.compute import service as compute_service
-from nova.volume import service as volume_service
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -35,10 +34,11 @@ class VolumeTestCase(test.TrialTestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
-        self.compute = compute_service.ComputeService()
+        self.compute = utils.import_object(FLAGS.compute_manager)
         self.flags(connection_type='fake',
                    fake_storage=True)
-        self.volume = volume_service.VolumeService()
+        self.volume = utils.import_object(FLAGS.volume_manager)
+        self.context = None
 
 
     def _create_volume(self, size='0'):
@@ -49,15 +49,15 @@ class VolumeTestCase(test.TrialTestCase):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        return db.volume_create(None, vol)
+        return db.volume_create(None, vol)['id']
 
     @defer.inlineCallbacks
     def test_run_create_volume(self):
         volume_id = self._create_volume()
-        yield self.volume.create_volume(volume_id)
+        yield self.volume.create_volume(self.context, volume_id)
         self.assertEqual(volume_id, db.volume_get(None, volume_id).id)
 
-        yield self.volume.delete_volume(volume_id)
+        yield self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.NotFound,
                           db.volume_get,
                           None,
@@ -70,7 +70,7 @@ class VolumeTestCase(test.TrialTestCase):
         defer.returnValue(True)
         try:
             volume_id = self._create_volume('1001')
-            yield self.volume.create_volume(volume_id)
+            yield self.volume.create_volume(self.context, volume_id)
             self.fail("Should have thrown TypeError")
         except TypeError:
             pass
@@ -81,14 +81,15 @@ class VolumeTestCase(test.TrialTestCase):
         total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
         for i in xrange(total_slots):
             volume_id = self._create_volume()
-            yield self.volume.create_volume(volume_id)
+            yield self.volume.create_volume(self.context, volume_id)
             vols.append(volume_id)
         volume_id = self._create_volume()
-        self.assertFailure(self.volume.create_volume(volume_id),
+        self.assertFailure(self.volume.create_volume(self.context,
+                                                     volume_id),
                            db.NoMoreBlades)
         db.volume_destroy(None, volume_id)
-        for id in vols:
-            yield self.volume.delete_volume(id)
+        for volume_id in vols:
+            yield self.volume.delete_volume(self.context, volume_id)
 
     @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
@@ -96,7 +97,7 @@ class VolumeTestCase(test.TrialTestCase):
         instance_id = "storage-test"
         mountpoint = "/dev/sdf"
         volume_id = self._create_volume()
-        yield self.volume.create_volume(volume_id)
+        yield self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
             db.volume_attached(None, volume_id, instance_id, mountpoint)
         else:
@@ -109,15 +110,16 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertEqual(vol['instance_id'], instance_id)
         self.assertEqual(vol['mountpoint'], mountpoint)
 
-        self.assertFailure(self.volume.delete_volume(volume_id), exception.Error)
+        self.assertFailure(self.volume.delete_volume(self.context, volume_id),
+                           exception.Error)
         if FLAGS.fake_tests:
             db.volume_detached(None, volume_id)
         else:
-            rv = yield self.volume.detach_volume(instance_id,
+            rv = yield self.compute.detach_volume(instance_id,
                                                  volume_id)
         self.assertEqual(vol['status'], "available")
 
-        rv = self.volume.delete_volume(volume_id)
+        rv = self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.Error,
                           db.volume_get,
                           None,
@@ -142,14 +144,13 @@ class VolumeTestCase(test.TrialTestCase):
         total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
         for i in range(total_slots):
             volume_id = self._create_volume()
-            d = self.volume.create_volume(volume_id)
+            d = self.volume.create_volume(self.context, volume_id)
             d.addCallback(_check)
             d.addErrback(self.fail)
             deferreds.append(d)
         yield defer.DeferredList(deferreds)
         for volume_id in volume_ids:
-            vol = db.volume_get(None, volume_id)
-            vol.delete()
+            self.volume.delete_volume(self.context, volume_id)
 
     def test_multi_node(self):
         # TODO(termie): Figure out how to test with two nodes,
