@@ -40,6 +40,7 @@ Python libraries we don't vendor
 
 * M2Crypto: python library interface for openssl
 * curl
+* XenAPI: Needed only for Xen Cloud Platform or XenServer support.  Available from http://wiki.xensource.com/xenwiki/XCP_SDK or http://community.citrix.com/cdn/xs/sdks.
 
 Vendored python libaries (don't require any installation)
 

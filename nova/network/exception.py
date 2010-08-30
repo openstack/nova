@@ -20,21 +20,29 @@
 Exceptions for network errors.
 """
 
-from nova.exception import Error
+from nova import exception
 
 
-class NoMoreAddresses(Error):
+class NoMoreAddresses(exception.Error):
+    """No More Addresses are available in the network"""
     pass
 
-class AddressNotAllocated(Error):
+
+class AddressNotAllocated(exception.Error):
+    """The specified address has not been allocated"""
     pass
 
-class AddressAlreadyAssociated(Error):
+
+class AddressAlreadyAssociated(exception.Error):
+    """The specified address has already been associated"""
     pass
 
-class AddressNotAssociated(Error):
+
+class AddressNotAssociated(exception.Error):
+    """The specified address is not associated"""
     pass
 
-class NotValidNetworkSize(Error):
-    pass
 
+class NotValidNetworkSize(exception.Error):
+    """The network size is not valid"""
+    pass

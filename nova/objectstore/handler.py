@@ -38,17 +38,19 @@ S3 client with this module::
 """
 
 import datetime
-import logging
 import json
+import logging
 import multiprocessing
 import os
-from tornado import escape
 import urllib
 
-from twisted.application import internet, service
-from twisted.web.resource import Resource
-from twisted.web import server, static, error
-
+from tornado import escape
+from twisted.application import internet
+from twisted.application import service
+from twisted.web import error
+from twisted.web import resource
+from twisted.web import server
+from twisted.web import static
 
 from nova import exception
 from nova import flags
@@ -59,6 +61,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+
 
 def render_xml(request, value):
     """Writes value as XML string to request"""
@@ -73,11 +76,13 @@ def render_xml(request, value):
     request.write('</' + escape.utf8(name) + '>')
     request.finish()
 
+
 def finish(request, content=None):
     """Finalizer method for request"""
     if content:
         request.write(content)
     request.finish()
+
 
 def _render_parts(value, write_cb):
     """Helper method to render different Python objects to XML"""
@@ -98,6 +103,7 @@ def _render_parts(value, write_cb):
     else:
         raise Exception("Unknown S3 value type %r", value)
 
+
 def get_argument(request, key, default_value):
     """Returns the request's value at key, or default_value
     if not found
@@ -105,6 +111,7 @@ def get_argument(request, key, default_value):
     if key in request.args:
         return request.args[key][0]
     return default_value
+
 
 def get_context(request):
     """Returns the supplied request's context object"""
@@ -129,7 +136,7 @@ def get_context(request):
         logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized
 
-class ErrorHandlingResource(Resource):
+class ErrorHandlingResource(resource.Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for
     exceptions thrown after NOT_DONE_YET is returned.
     """
@@ -141,13 +148,14 @@ class ErrorHandlingResource(Resource):
     def render(self, request):
         """Renders the response as XML"""
         try:
-            return Resource.render(self, request)
+            return resource.Resource.render(self, request)
         except exception.NotFound:
             request.setResponseCode(404)
             return ''
         except exception.NotAuthorized:
             request.setResponseCode(403)
             return ''
+
 
 class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
@@ -175,10 +183,11 @@ class S3(ErrorHandlingResource):
         }})
         return server.NOT_DONE_YET
 
+
 class BucketResource(ErrorHandlingResource):
     """A web resource containing an S3-like bucket"""
     def __init__(self, name):
-        ErrorHandlingResource.__init__(self)
+        resource.Resource.__init__(self)
         self.name = name
 
     def getChild(self, name, request):
@@ -239,9 +248,9 @@ class BucketResource(ErrorHandlingResource):
 
 class ObjectResource(ErrorHandlingResource):
     """The resource returned from a bucket"""
-    def __init__(self, bucket_name, name):
-        ErrorHandlingResource.__init__(self)
-        self.bucket = bucket_name
+    def __init__(self, bucket, name):
+        resource.Resource.__init__(self)
+        self.bucket = bucket
         self.name = name
 
     def render_GET(self, request):
@@ -298,12 +307,13 @@ class ObjectResource(ErrorHandlingResource):
         request.setResponseCode(204)
         return ''
 
+
 class ImageResource(ErrorHandlingResource):
     """A web resource representing a single image"""
     isLeaf = True
 
     def __init__(self, name):
-        ErrorHandlingResource.__init__(self)
+        resource.Resource.__init__(self)
         self.img = image.Image(name)
 
     def render_GET(self, request):
@@ -312,7 +322,7 @@ class ImageResource(ErrorHandlingResource):
                            defaultType='application/octet-stream'
                           ).render_GET(request)
 
-class ImagesResource(Resource):
+class ImagesResource(resource.Resource):
     """A web resource representing a list of images"""
     def getChild(self, name, _request):
         """Returns itself or an ImageResource if no name given"""
@@ -328,7 +338,23 @@ class ImagesResource(Resource):
         images = [i for i in image.Image.all() \
                   if i.is_authorized(request.context, readonly=True)]
 
-        request.write(json.dumps([i.metadata for i in images]))
+        # Bug #617776:
+        # We used to have 'type' in the image metadata, but this field
+        # should be called 'imageType', as per the EC2 specification.
+        # For compat with old metadata files we copy type to imageType if
+        # imageType is not present.
+        # For compat with euca2ools (and any other clients using the
+        # incorrect name) we copy imageType to type.
+        # imageType is primary if we end up with both in the metadata file
+        # (which should never happen).
+        def decorate(m):
+            if 'imageType' not in m and 'type' in m:
+                m[u'imageType'] = m['type']
+            elif 'imageType' in m:
+                m[u'type'] = m['imageType']
+            return m
+
+        request.write(json.dumps([decorate(i.metadata) for i in images]))
         request.finish()
         return server.NOT_DONE_YET
 
@@ -381,11 +407,13 @@ class ImagesResource(Resource):
         request.setResponseCode(204)
         return ''
 
+
 def get_site():
     """Support for WSGI-like interfaces"""
     root = S3()
     site = server.Site(root)
     return site
+
 
 def get_application():
     """Support WSGI-like interfaces"""

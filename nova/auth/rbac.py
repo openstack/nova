@@ -16,38 +16,54 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""Role-based access control decorators to use fpr wrapping other
+methods with."""
+
 from nova import exception
-from nova.auth import manager
 
 
 def allow(*roles):
-    def wrap(f):
-        def wrapped_f(self, context, *args, **kwargs):
+    """Allow the given roles access the wrapped function."""
+
+    def wrap(func): # pylint: disable-msg=C0111
+
+        def wrapped_func(self, context, *args,
+                         **kwargs): # pylint: disable-msg=C0111
             if context.user.is_superuser():
-                return f(self, context, *args, **kwargs)
+                return func(self, context, *args, **kwargs)
             for role in roles:
                 if __matches_role(context, role):
-                    return f(self, context, *args, **kwargs)
+                    return func(self, context, *args, **kwargs)
             raise exception.NotAuthorized()
-        return wrapped_f
+
+        return wrapped_func
+
     return wrap
 
+
 def deny(*roles):
-    def wrap(f):
-        def wrapped_f(self, context, *args, **kwargs):
+    """Deny the given roles access the wrapped function."""
+
+    def wrap(func): # pylint: disable-msg=C0111
+
+        def wrapped_func(self, context, *args,
+                         **kwargs): # pylint: disable-msg=C0111
             if context.user.is_superuser():
-                return f(self, context, *args, **kwargs)
+                return func(self, context, *args, **kwargs)
             for role in roles:
                 if __matches_role(context, role):
                     raise exception.NotAuthorized()
-            return f(self, context, *args, **kwargs)
-        return wrapped_f
+            return func(self, context, *args, **kwargs)
+
+        return wrapped_func
+
     return wrap
 
+
 def __matches_role(context, role):
+    """Check if a role is allowed."""
     if role == 'all':
         return True
     if role == 'none':
         return False
     return context.project.has_role(context.user.id, role)
-

@@ -29,4 +29,4 @@ if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    application = service.VolumeService.create()
+    application = service.VolumeService.create() # pylint: disable-msg=C0103

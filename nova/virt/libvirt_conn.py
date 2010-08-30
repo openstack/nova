@@ -42,17 +42,25 @@ from nova.virt import images
 libvirt = None
 libxml2 = None
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
-                    utils.abspath('compute/libvirt.xml.template'),
-                    'Libvirt XML Template')
+                    utils.abspath('virt/libvirt.qemu.xml.template'),
+                    'Libvirt XML Template for QEmu/KVM')
+flags.DEFINE_string('libvirt_uml_xml_template',
+                    utils.abspath('virt/libvirt.uml.xml.template'),
+                    'Libvirt XML Template for user-mode-linux')
 flags.DEFINE_string('injected_network_template',
-                    utils.abspath('compute/interfaces.template'),
+                    utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
-
 flags.DEFINE_string('libvirt_type',
                     'kvm',
-                    'Libvirt domain type (kvm, qemu, etc)')
+                    'Libvirt domain type (valid options are: kvm, qemu, uml)')
+flags.DEFINE_string('libvirt_uri',
+                    '',
+                    'Override the default libvirt URI (which is dependent'
+                    ' on libvirt_type)')
+
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
@@ -68,19 +76,40 @@ def get_connection(read_only):
 
 class LibvirtConnection(object):
     def __init__(self, read_only):
+        self.libvirt_uri, template_file = self.get_uri_and_template()
+
+        self.libvirt_xml = open(template_file).read()
+        self._wrapped_conn = None
+        self.read_only = read_only
+
+    @property
+    def _conn(self):
+        if not self._wrapped_conn:
+            self._wrapped_conn = self._connect(self.libvirt_uri, self.read_only)
+        return self._wrapped_conn
+
+    def get_uri_and_template(self):
+        if FLAGS.libvirt_type == 'uml':
+            uri = FLAGS.libvirt_uri or 'uml:///system'
+            template_file = FLAGS.libvirt_uml_xml_template
+        else:
+            uri = FLAGS.libvirt_uri or 'qemu:///system'
+            template_file = FLAGS.libvirt_xml_template
+        return uri, template_file
+
+    def _connect(self, uri, read_only):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
-        if read_only:
-            self._conn = libvirt.openReadOnly('qemu:///system')
-        else:
-            self._conn = libvirt.openAuth('qemu:///system', auth, 0)
 
+        if read_only:
+            return libvirt.openReadOnly(uri)
+        else:
+            return libvirt.openAuth(uri, auth, 0)
 
     def list_instances(self):
         return [self._conn.lookupByID(x).name()
                 for x in self._conn.listDomainsID()]
-
 
     def destroy(self, instance):
         try:
@@ -110,12 +139,11 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
         return d
 
-
     def _cleanup(self, instance):
         target = os.path.abspath(instance.datamodel['basepath'])
         logging.info("Deleting instance files at %s", target)
-        shutil.rmtree(target)
-
+        if os.path.exists(target):
+            shutil.rmtree(target)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -141,7 +169,6 @@ class LibvirtConnection(object):
         timer.f = _wait_for_reboot
         timer.start(interval=0.5, now=True)
         yield d
-
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -173,7 +200,6 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
         yield local_d
 
-
     @defer.inlineCallbacks
     def _create_image(self, instance, libvirt_xml):
         # syntactic nicety
@@ -201,10 +227,10 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('ramdisk')):
            yield images.fetch(data['ramdisk_id'], basepath('ramdisk'), user, project)
 
-        execute = lambda cmd, input=None: \
+        execute = lambda cmd, process_input=None: \
                   process.simple_execute(cmd=cmd,
-                                         input=input,
-                                         error_ok=1)
+                                         process_input=process_input,
+                                         check_exit_code=True)
 
         key = data['key_data']
         net = None
@@ -228,26 +254,22 @@ class LibvirtConnection(object):
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
 
-
     def basepath(self, instance, path=''):
         return os.path.abspath(os.path.join(instance.datamodel['basepath'], path))
-
 
     def toXml(self, instance):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
-        libvirt_xml = open(FLAGS.libvirt_xml_template).read()
         xml_info = instance.datamodel.copy()
         # TODO(joshua): Make this xml express the attached disks as well
 
         # TODO(termie): lazy lazy hack because xml is annoying
         xml_info['nova'] = json.dumps(instance.datamodel.copy())
         xml_info['type'] = FLAGS.libvirt_type
-        libvirt_xml = libvirt_xml % xml_info
+        libvirt_xml = self.libvirt_xml % xml_info
         logging.debug("Finished the toXML method")
 
         return libvirt_xml
-
 
     def get_info(self, instance_id):
         virt_dom = self._conn.lookupByName(instance_id)
@@ -258,14 +280,7 @@ class LibvirtConnection(object):
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
 
-
     def get_disks(self, instance_id):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-
-        Returns a list of all block devices for this domain.
-        """
         domain = self._conn.lookupByName(instance_id)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
@@ -301,14 +316,7 @@ class LibvirtConnection(object):
 
         return disks
 
-
     def get_interfaces(self, instance_id):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-
-        Returns a list of all network interfaces for this instance.
-        """
         domain = self._conn.lookupByName(instance_id)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
@@ -344,20 +352,10 @@ class LibvirtConnection(object):
 
         return interfaces
 
-
     def block_stats(self, instance_id, disk):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-        """
         domain = self._conn.lookupByName(instance_id)
         return domain.blockStats(disk)
 
-
     def interface_stats(self, instance_id, interface):
-        """
-        Note that this function takes an instance ID, not an Instance, so
-        that it can be called by monitor.
-        """
         domain = self._conn.lookupByName(instance_id)
         return domain.interfaceStats(interface)

@@ -21,6 +21,7 @@ Twisted daemon helpers, specifically to parse out gFlags from twisted flags,
 manage pid files and support syslogging.
 """
 
+import gflags
 import logging
 import os
 import signal
@@ -47,6 +48,14 @@ FLAGS = flags.FLAGS
 class TwistdServerOptions(ServerOptions):
     def parseArgs(self, *args):
         return
+
+
+class FlagParser(object):
+    def __init__(self, parser):
+        self.parser = parser
+
+    def Parse(self, s):
+        return self.parser(s)
 
 
 def WrapTwistedOptions(wrapped):
@@ -79,7 +88,12 @@ def WrapTwistedOptions(wrapped):
             reflect.accumulateClassList(self.__class__, 'optParameters', twistd_params)
             for param in twistd_params:
                 key = param[0].replace('-', '_')
-                flags.DEFINE_string(key, param[2], str(param[-1]))
+                if len(param) > 4:
+                    flags.DEFINE(FlagParser(param[4]),
+                                 key, param[2], str(param[3]),
+                                 serializer=gflags.ArgumentSerializer())
+                else:
+                    flags.DEFINE_string(key, param[2], str(param[3]))
 
         def _absorbHandlers(self):
             twistd_handlers = {}
@@ -241,15 +255,7 @@ def serve(filename):
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
 
-    class NoNewlineFormatter(logging.Formatter):
-        """Strips newlines from default formatter"""
-        def format(self, record):
-            """Grabs default formatter's output and strips newlines"""
-            data = logging.Formatter.format(self, record)
-            return data.replace("\n", "--")
-
-    # NOTE(vish): syslog-ng doesn't handle newlines from trackbacks very well
-    formatter = NoNewlineFormatter(
+    formatter = logging.Formatter(
         '(%(name)s): %(levelname)s %(message)s')
     handler = logging.StreamHandler(log.StdioOnnaStick())
     handler.setFormatter(formatter)
