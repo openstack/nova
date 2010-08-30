@@ -79,28 +79,48 @@ def floating_ip_create(context, address, host):
 
 
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
-    floating_ip_ref = db.floating_ip_get_by_address(context, floating_address)
-    fixed_ip_ref = models.FixedIp.find_by_str(fixed_address)
-    floating_ip_ref.fixed_ip = fixed_ip_ref
-    floating_ip_ref.save()
+    with managed_session(autocommit=False) as session:
+        floating_ip_ref = models.FloatingIp.find_by_str(floating_address,
+                                                        session=session)
+        fixed_ip_ref = models.FixedIp.find_by_str(fixed_address,
+                                                  session=session)
+        floating_ip_ref.fixed_ip = fixed_ip_ref
+        floating_ip_ref.save(session=session)
+        session.commit()
 
 
 def floating_ip_disassociate(context, address):
-    floating_ip_ref = db.floating_ip_get_by_address(context, address)
-    fixed_ip_address = floating_ip_ref.fixed_ip['str_id']
-    floating_ip_ref['fixed_ip'] = None
-    floating_ip_ref.save()
-    return fixed_ip_address
+    with managed_session(autocommit=False) as session:
+        floating_ip_ref = models.FloatingIp.find_by_str(address,
+                                                        session=session)
+        fixed_ip_ref = floating_ip_ref.fixed_ip
+        if fixed_ip_ref:
+            fixed_ip_address = fixed_ip_ref['str_id']
+        else:
+            fixed_ip_address = None
+        floating_ip_ref.fixed_ip = None
+        floating_ip_ref.save(session=session)
+        session.commit()
+        return fixed_ip_address
 
 
 def floating_ip_deallocate(context, address):
-    floating_ip_ref = db.floating_ip_get_by_address(context, address)
-    floating_ip_ref['project_id'] = None
-    floating_ip_ref.save()
+    with managed_session(autocommit=False) as session:
+        floating_ip_ref = models.FloatingIp.find_by_str(address,
+                                                        session=session)
+        floating_ip_ref['project_id'] = None
+        floating_ip_ref.save(session=session)
 
 
 def floating_ip_get_by_address(context, address):
     return models.FloatingIp.find_by_str(address)
+
+
+def floating_ip_get_instance(context, address):
+    with managed_session() as session:
+        floating_ip_ref = models.FloatingIp.find_by_str(address,
+                                                        session=session)
+        return floating_ip_ref.fixed_ip.instance
 
 
 ###################
@@ -139,8 +159,14 @@ def fixed_ip_get_by_address(context, address):
     return models.FixedIp.find_by_str(address)
 
 
+def fixed_ip_get_instance(context, address):
+    with managed_session() as session:
+        return models.FixedIp.find_by_str(address, session=session).instance
+
+
 def fixed_ip_get_network(context, address):
-    return models.FixedIp.find_by_str(address).network
+    with managed_session() as session:
+        return models.FixedIp.find_by_str(address, session=session).network
 
 
 def fixed_ip_deallocate(context, address):
@@ -150,15 +176,20 @@ def fixed_ip_deallocate(context, address):
 
 
 def fixed_ip_instance_associate(context, address, instance_id):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    fixed_ip_ref.instance = instance_get(context, instance_id)
-    fixed_ip_ref.save()
+    with managed_session(autocommit=False) as session:
+        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        instance_ref = models.Instance.find(instance_id, session=session)
+        fixed_ip_ref.instance = instance_ref
+        fixed_ip_ref.save(session=session)
+        session.commit()
 
 
 def fixed_ip_instance_disassociate(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    fixed_ip_ref.instance = None
-    fixed_ip_ref.save()
+    with managed_session(autocommit=False) as session:
+        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        fixed_ip_ref.instance = None
+        fixed_ip_ref.save(session=session)
+        session.commit()
 
 
 def fixed_ip_update(context, address, values):
@@ -192,13 +223,6 @@ def instance_get_all(context):
     return models.Instance.all()
 
 
-def instance_get_by_address(context, address):
-    fixed_ip_ref = db.fixed_ip_get_by_address(address)
-    if not fixed_ip_ref.instance:
-        raise exception.NotFound("No instance found for address %s" % address)
-    return fixed_ip_ref.instance
-
-
 def instance_get_by_project(context, project_id):
     with managed_session() as session:
         return session.query(models.Instance) \
@@ -220,20 +244,22 @@ def instance_get_by_str(context, str_id):
 
 
 def instance_get_fixed_address(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    if not instance_ref.fixed_ip:
-        return None
-    return instance_ref.fixed_ip['str_id']
+    with managed_session() as session:
+        instance_ref = models.Instance.find(instance_id, session=session)
+        if not instance_ref.fixed_ip:
+            return None
+        return instance_ref.fixed_ip['str_id']
 
 
 def instance_get_floating_address(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    if not instance_ref.fixed_ip:
-        return None
-    if not instance_ref.fixed_ip.floating_ips:
-        return None
-    # NOTE(vish): this just returns the first floating ip
-    return instance_ref.fixed_ip.floating_ips[0]['str_id']
+    with managed_session() as session:
+        instance_ref = models.Instance.find(instance_id, session=session)
+        if not instance_ref.fixed_ip:
+            return None
+        if not instance_ref.fixed_ip.floating_ips:
+            return None
+        # NOTE(vish): this just returns the first floating ip
+        return instance_ref.fixed_ip.floating_ips[0]['str_id']
 
 
 def instance_get_host(context, instance_id):
@@ -306,6 +332,13 @@ def network_destroy(context, network_id):
     with managed_session(autocommit=False) as session:
         # TODO(vish): do we have to use sql here?
         session.execute('update networks set deleted=1 where id=:id',
+                        {'id': network_id})
+        session.execute('update fixed_ips set deleted=1 where network_id=:id',
+                        {'id': network_id})
+        session.execute('update floating_ips set deleted=1 '
+                        'where fixed_ip_id in '
+                        '(select id from fixed_ips '
+                        'where network_id=:id)',
                         {'id': network_id})
         session.execute('update network_indexes set network_id=NULL where network_id=:id',
                         {'id': network_id})
@@ -472,7 +505,7 @@ def volume_destroy(context, volume_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update volumes set deleted=1 where id=:id',
                         {'id': volume_id})
-        session.execute('update export_devices set volume_id=NULL where network_id=:id',
+        session.execute('update export_devices set volume_id=NULL where volume_id=:id',
                         {'id': volume_id})
         session.commit()
 
@@ -512,11 +545,13 @@ def volume_get_host(context, volume_id):
 
 
 def volume_get_shelf_and_blade(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    export_device = volume_ref.export_device
-    if not export_device:
-        raise exception.NotFound()
-    return (export_device.shelf_id, export_device.blade_id)
+    with managed_session() as session:
+        export_device = session.query(models.ExportDevice) \
+                               .filter_by(volume_id=volume_id) \
+                               .first()
+        if not export_device:
+            raise exception.NotFound()
+        return (export_device.shelf_id, export_device.blade_id)
 
 
 def volume_update(context, volume_id, values):

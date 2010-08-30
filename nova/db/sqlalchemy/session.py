@@ -44,9 +44,8 @@ class SessionExecutionManager:
     def __enter__(self):
         return self._session
 
-    def __exit__(self, type, value, traceback):
-        if type:
-            logging.exception("Error in database transaction")
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type:
+            logging.exception("Rolling back due to failed transaction")
             self._session.rollback()
-        if self._session:
-            self._session.close()
+        self._session.close()

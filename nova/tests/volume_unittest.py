@@ -117,6 +117,7 @@ class VolumeTestCase(test.TrialTestCase):
         else:
             rv = yield self.compute.detach_volume(instance_id,
                                                  volume_id)
+        vol = db.volume_get(None, volume_id)
         self.assertEqual(vol['status'], "available")
 
         rv = self.volume.delete_volume(self.context, volume_id)
@@ -134,9 +135,9 @@ class VolumeTestCase(test.TrialTestCase):
         volume_ids = []
         def _check(volume_id):
             volume_ids.append(volume_id)
-            vol = db.volume_get(None, volume_id)
-            shelf_blade = '%s.%s' % (vol.export_device.shelf_id,
-                                     vol.export_device.blade_id)
+            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(None,
+                                                                 volume_id)
+            shelf_blade = '%s.%s' % (shelf_id, blade_id)
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)

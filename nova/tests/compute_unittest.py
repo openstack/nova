@@ -40,7 +40,7 @@ class InstanceXmlTestCase(test.TrialTestCase):
 
         # instance_id = 'foo'
         # first_node = node.Node()
-        # inst = yield first_node.run_instance(instance_id)
+        # inst = yield first_node.run_instance(self.context, instance_id)
         #
         # # force the state so that we can verify that it changes
         # inst._s['state'] = node.Instance.NOSTATE
@@ -50,7 +50,7 @@ class InstanceXmlTestCase(test.TrialTestCase):
         # second_node = node.Node()
         # new_inst = node.Instance.fromXml(second_node._conn, pool=second_node._pool, xml=xml)
         # self.assertEqual(new_inst.state, node.Instance.RUNNING)
-        # rv = yield first_node.terminate_instance(instance_id)
+        # rv = yield first_node.terminate_instance(self.context, instance_id)
 
 
 class ComputeConnectionTestCase(test.TrialTestCase):
@@ -63,6 +63,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
+        self.context = None
 
     def tearDown(self):
         self.manager.delete_user('fake')
@@ -84,13 +85,13 @@ class ComputeConnectionTestCase(test.TrialTestCase):
     def test_run_describe_terminate(self):
         instance_id = self._create_instance()
 
-        yield self.compute.run_instance(instance_id)
+        yield self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(None)
         logging.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
-        yield self.compute.terminate_instance(instance_id)
+        yield self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(None)
         logging.info("After terminating instances: %s", instances)
@@ -99,22 +100,25 @@ class ComputeConnectionTestCase(test.TrialTestCase):
     @defer.inlineCallbacks
     def test_reboot(self):
         instance_id = self._create_instance()
-        yield self.compute.run_instance(instance_id)
-        yield self.compute.reboot_instance(instance_id)
-        yield self.compute.terminate_instance(instance_id)
+        yield self.compute.run_instance(self.context, instance_id)
+        yield self.compute.reboot_instance(self.context, instance_id)
+        yield self.compute.terminate_instance(self.context, instance_id)
 
     @defer.inlineCallbacks
     def test_console_output(self):
         instance_id = self._create_instance()
-        rv = yield self.compute.run_instance(instance_id)
+        rv = yield self.compute.run_instance(self.context, instance_id)
 
-        console = yield self.compute.get_console_output(instance_id)
+        console = yield self.compute.get_console_output(self.context,
+                                                        instance_id)
         self.assert_(console)
-        rv = yield self.compute.terminate_instance(instance_id)
+        rv = yield self.compute.terminate_instance(self.context, instance_id)
 
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
         instance_id = self._create_instance()
-        yield self.compute.run_instance(instance_id)
-        self.assertFailure(self.compute.run_instance(instance_id), exception.Error)
-        yield self.compute.terminate_instance(instance_id)
+        yield self.compute.run_instance(self.context, instance_id)
+        self.assertFailure(self.compute.run_instance(self.context,
+                                                     instance_id),
+                           exception.Error)
+        yield self.compute.terminate_instance(self.context, instance_id)

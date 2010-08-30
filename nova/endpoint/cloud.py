@@ -94,7 +94,7 @@ class CloudController(object):
         return result
 
     def get_metadata(self, ipaddress):
-        i = db.instance_get_by_address(ipaddress)
+        i = db.fixed_ip_get_instance(ipaddress)
         if i is None:
             return None
         mpi = self._get_mpi_data(i['project_id'])
@@ -421,7 +421,7 @@ class CloudController(object):
                                                      context.project.id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['id_str']
-            instance_ref = db.instance_get_by_address(address)
+            instance_ref = db.floating_ip_get_instance(address)
             address_rv = {
                 'public_ip': address,
                 'instance_id': instance_ref['id_str']

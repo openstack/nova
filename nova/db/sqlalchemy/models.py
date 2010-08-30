@@ -274,14 +274,18 @@ class FixedIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, session, str_id):
-        try:
-            return session.query(cls) \
-                          .filter_by(ip_str=str_id) \
-                          .filter_by(deleted=False) \
-                          .one()
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % str_id)
+    def find_by_str(cls, str_id, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(ip_str=str_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for ip_str %s" % str_id)
+        else:
+            with managed_session() as s:
+                return cls.find_by_str(str_id, session=s)
 
 
 class FloatingIp(Base, NovaBase):
@@ -299,14 +303,18 @@ class FloatingIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, session, str_id):
-        try:
-            return session.query(cls) \
-                          .filter_by(ip_str=str_id) \
-                          .filter_by(deleted=False) \
-                          .one()
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for ip str %s" % str_id)
+    def find_by_str(cls, str_id, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(ip_str=str_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for ip_str %s" % str_id)
+        else:
+            with managed_session() as s:
+                return cls.find_by_str(str_id, session=s)
 
 
 class Network(Base, NovaBase):

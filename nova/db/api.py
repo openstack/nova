@@ -108,8 +108,13 @@ def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
 
 
 def floating_ip_get_by_address(context, address):
-    """Get a floating ip by address."""
+    """Get a floating ip by address or raise if it doesn't exist."""
     return _impl.floating_ip_get_by_address(context, address)
+
+
+def floating_ip_get_instance(context, address):
+    """Get an instance for a floating ip by address."""
+    return _impl.floating_ip_get_instance(context, address)
 
 
 ####################
@@ -134,8 +139,13 @@ def fixed_ip_deallocate(context, address):
 
 
 def fixed_ip_get_by_address(context, address):
-    """Get a fixed ip by address."""
+    """Get a fixed ip by address or raise if it does not exist."""
     return _impl.fixed_ip_get_by_address(context, address)
+
+
+def fixed_ip_get_instance(context, address):
+    """Get an instance for a fixed ip by address."""
+    return _impl.fixed_ip_get_instance(context, address)
 
 
 def fixed_ip_get_network(context, address):
@@ -179,11 +189,6 @@ def instance_get(context, instance_id):
 def instance_get_all(context):
     """Get all instances."""
     return _impl.instance_get_all(context)
-
-
-def instance_get_by_address(context, address):
-    """Gets an instance by fixed ip address or raise if it does not exist."""
-    return _impl.instance_get_by_address(context, address)
 
 
 def instance_get_by_project(context, project_id):

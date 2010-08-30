@@ -253,12 +253,11 @@ class NetworkTestCase(test.TrialTestCase):
 
 def is_allocated_in_project(address, project_id):
     """Returns true if address is in specified project"""
-    fixed_ip = db.fixed_ip_get_by_address(None, address)
     project_net = db.project_get_network(None, project_id)
+    network = db.fixed_ip_get_network(None, address)
+    instance = db.fixed_ip_get_instance(None, address)
     # instance exists until release
-    logging.debug('fixed_ip.instance: %s', fixed_ip.instance)
-    logging.debug('project_net: %s', project_net)
-    return fixed_ip.instance is not None and fixed_ip.network == project_net
+    return instance is not None and network['id'] == project_net['id']
 
 
 def binpath(script):
