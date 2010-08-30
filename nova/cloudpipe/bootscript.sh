@@ -44,8 +44,8 @@ CSRTEXT=$(python -c "import urllib; print urllib.quote('''$CSRTEXT''')")
 
 # SIGN the csr and save as server.crt
 # CURL fetch to the supervisor, POSTing the CSR text, saving the result as the CRT file
-curl $SUPERVISOR -d "cert=$CSRTEXT" > /etc/openvpn/server.crt
-curl $SUPERVISOR/getca/ > /etc/openvpn/ca.crt
+curl --fail $SUPERVISOR -d "cert=$CSRTEXT" > /etc/openvpn/server.crt
+curl --fail $SUPERVISOR/getca/ > /etc/openvpn/ca.crt
 
 # Customize the server.conf.template
 cd /etc/openvpn

@@ -25,9 +25,11 @@ import logging
 import sys
 import traceback
 
+
 class Error(Exception):
     def __init__(self, message=None):
         super(Error, self).__init__(message)
+
 
 class ApiError(Error):
     def __init__(self, message='Unknown', code='Unknown'):
@@ -35,20 +37,26 @@ class ApiError(Error):
         self.code = code
         super(ApiError, self).__init__('%s: %s'% (code, message))
 
+
 class NotFound(Error):
     pass
+
 
 class Duplicate(Error):
     pass
 
+
 class NotAuthorized(Error):
     pass
+
 
 class NotEmpty(Error):
     pass
 
+
 class Invalid(Error):
     pass
+
 
 def wrap_exception(f):
     def _wrap(*args, **kw):

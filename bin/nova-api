@@ -26,11 +26,8 @@ from tornado import httpserver
 from tornado import ioloop
 
 from nova import flags
-from nova import rpc
 from nova import server
 from nova import utils
-from nova.auth import manager
-from nova.compute import model
 from nova.endpoint import admin
 from nova.endpoint import api
 from nova.endpoint import cloud
@@ -39,20 +36,13 @@ FLAGS = flags.FLAGS
 
 
 def main(_argv):
+    """Load the controllers and start the tornado I/O loop."""
     controllers = {
         'Cloud': cloud.CloudController(),
-        'Admin': admin.AdminController()
-    }
+        'Admin': admin.AdminController()}
     _app = api.APIServerApplication(controllers)
 
-    conn = rpc.Connection.instance()
-    consumer = rpc.AdapterConsumer(connection=conn,
-                                       topic=FLAGS.cloud_topic,
-                                       proxy=controllers['Cloud'])
-
     io_inst = ioloop.IOLoop.instance()
-    _injected = consumer.attach_to_tornado(io_inst)
-
     http_server = httpserver.HTTPServer(_app)
     http_server.listen(FLAGS.cc_port)
     logging.debug('Started HTTP server on %s', FLAGS.cc_port)

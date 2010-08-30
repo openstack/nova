@@ -22,11 +22,11 @@ Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
-import mox
-import stubout
 import sys
 import time
 
+import mox
+import stubout
 from tornado import ioloop
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -89,7 +89,6 @@ class TrialTestCase(unittest.TestCase):
         """Resets all flag variables for the test.  Runs after each test"""
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
-
 
 
 class BaseTestCase(TrialTestCase):

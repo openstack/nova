@@ -22,7 +22,6 @@
 """
 
 import logging
-from twisted.internet import task
 from twisted.application import service
 
 from nova import twistd
@@ -30,22 +29,16 @@ from nova.compute import monitor
 
 logging.getLogger('boto').setLevel(logging.WARN)
 
-def main():
-    logging.warn('Starting instance monitor')
-    m = monitor.InstanceMonitor()
-
-    # This is the parent service that twistd will be looking for when it
-    # parses this file, return it so that we can get it into globals below
-    application = service.Application('nova-instancemonitor')
-    m.setServiceParent(application)
-    return application
 
 if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    application = main()
+    logging.warn('Starting instance monitor')
+    # pylint: disable-msg=C0103
+    monitor = monitor.InstanceMonitor()
 
-
-
-
+    # This is the parent service that twistd will be looking for when it
+    # parses this file, return it so that we can get it into globals below
+    application = service.Application('nova-instancemonitor')
+    monitor.setServiceParent(application)

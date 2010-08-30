@@ -20,7 +20,7 @@
 System-level utilities and helper functions.
 """
 
-from datetime import datetime, timedelta
+import datetime
 import inspect
 import logging
 import os
@@ -29,11 +29,15 @@ import subprocess
 import socket
 import sys
 
+from twisted.internet.threads import deferToThread
+
 from nova import exception
 from nova import flags
 
+
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
 
 def import_class(import_str):
     """Returns a class from a string including module and class"""
@@ -44,6 +48,7 @@ def import_class(import_str):
     except (ImportError, ValueError, AttributeError):
         raise exception.NotFound('Class %s cannot be found' % class_str)
 
+
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
 #    c = pycurl.Curl()
@@ -53,22 +58,25 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl %s -o %s" % (url, target))
+    execute("curl --fail %s -o %s" % (url, target))
 
-def execute(cmd, input=None, addl_env=None):
+def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
-    if input != None:
-        result = obj.communicate(input)
+    if process_input != None:
+        result = obj.communicate(process_input)
     else:
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
         logging.debug("Result was %s" % (obj.returncode))
+        if check_exit_code and obj.returncode <> 0:
+            raise Exception(    "Unexpected exit code: %s.  result=%s" 
+                                % (obj.returncode, result))
     return result
 
 
@@ -94,9 +102,13 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd):
+def runthis(prompt, cmd, check_exit_code = True):
     logging.debug("Running %s" % (cmd))
-    logging.debug(prompt % (subprocess.call(cmd.split(" "))))
+    exit_code = subprocess.call(cmd.split(" "))
+    logging.debug(prompt % (exit_code))
+    if check_exit_code and exit_code <> 0:
+        raise Exception(    "Unexpected exit code: %s from cmd: %s" 
+                            % (exit_code, cmd))
 
 
 def generate_uid(topic, size=8):
@@ -119,16 +131,28 @@ def get_my_ip():
     '''
     if getattr(FLAGS, 'fake_tests', None):
         return '127.0.0.1'
-    csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    csock.connect(('www.google.com', 80))
-    (addr, port) = csock.getsockname()
-    csock.close()
-    return addr
+    try:
+        csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        csock.connect(('www.google.com', 80))
+        (addr, port) = csock.getsockname()
+        csock.close()
+        return addr
+    except socket.gaierror as ex:
+        logging.warn("Couldn't get IP, using 127.0.0.1 %s", ex)
+        return "127.0.0.1"
+
 
 def isotime(at=None):
     if not at:
-        at = datetime.utcnow()
+        at = datetime.datetime.utcnow()
     return at.strftime(TIME_FORMAT)
 
+
 def parse_isotime(timestr):
-    return datetime.strptime(timestr, TIME_FORMAT)
+    return datetime.datetime.strptime(timestr, TIME_FORMAT)
+
+
+def deferredToThread(f):
+    def g(*args, **kwargs):
+        return deferToThread(f, *args, **kwargs)
+    return g
