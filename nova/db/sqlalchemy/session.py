@@ -16,9 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import create_session
-from sqlalchemy.ext.declarative import declarative_base
 
 from nova import flags
 
@@ -31,23 +32,21 @@ def managed_session(autocommit=True):
 class SessionExecutionManager:
     _engine = None
     _session = None
-    
+
     def __init__(self, autocommit):
         cls = SessionExecutionManager
         if not cls._engine:
             cls._engine = create_engine(FLAGS.sql_connection, echo=False)
         self._session = create_session(bind=cls._engine,
                                        autocommit=autocommit)
-                 
-        
+
+
     def __enter__(self):
         return self._session
 
     def __exit__(self, type, value, traceback):
-        import pdb
-        if type or value or traceback:
-            pdb.set_trace()
-        # TODO(devcamcar): Rollback on exception.
-        # TODO(devcamcar): Log exceptions.
+        if type:
+            logging.exception("Error in database transaction")
+            self._session.rollback()
         if self._session:
             self._session.close()
