@@ -51,8 +51,8 @@ class NovaBase(object):
                           .filter_by(deleted=False) \
                           .all()
         else:
-            with managed_session() as s:
-                return cls.all(session=s)
+            with managed_session() as sess:
+                return cls.all(session=sess)
 
     @classmethod
     def count(cls, session=None):
@@ -61,8 +61,8 @@ class NovaBase(object):
                           .filter_by(deleted=False) \
                           .count()
         else:
-            with managed_session() as s:
-                return cls.count(session=s)
+            with managed_session() as sess:
+                return cls.count(session=sess)
 
     @classmethod
     def find(cls, obj_id, session=None):
@@ -75,8 +75,8 @@ class NovaBase(object):
             except exc.NoResultFound:
                 raise exception.NotFound("No model for id %s" % obj_id)
         else:
-            with managed_session() as s:
-                return cls.find(obj_id, session=s)
+            with managed_session() as sess:
+                return cls.find(obj_id, session=sess)
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
@@ -92,8 +92,8 @@ class NovaBase(object):
             session.add(self)
             session.flush()
         else:
-            with managed_session() as s:
-                self.save(session=s)
+            with managed_session() as sess:
+                self.save(session=sess)
 
     def delete(self, session=None):
         self.deleted = True
@@ -151,16 +151,20 @@ class Daemon(Base, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, session, node_name, binary):
-        try:
-            return session.query(cls) \
-                          .filter_by(node_name=node_name) \
-                          .filter_by(binary=binary) \
-                          .filter_by(deleted=False) \
-                          .one()
-        except exc.NoResultFound:
-            raise exception.NotFound("No model for %s, %s" % (node_name,
-                                                              binary))
+    def find_by_args(cls, node_name, binary, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(node_name=node_name) \
+                              .filter_by(binary=binary) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for %s, %s" % (node_name,
+                                                                  binary))
+        else:
+            with managed_session() as sess:
+                return cls.find_by_args(node_name, binary, session=sess)
 
 
 class Instance(Base, NovaBase):
@@ -284,8 +288,8 @@ class FixedIp(Base, NovaBase):
             except exc.NoResultFound:
                 raise exception.NotFound("No model for ip_str %s" % str_id)
         else:
-            with managed_session() as s:
-                return cls.find_by_str(str_id, session=s)
+            with managed_session() as sess:
+                return cls.find_by_str(str_id, session=sess)
 
 
 class FloatingIp(Base, NovaBase):
@@ -313,8 +317,8 @@ class FloatingIp(Base, NovaBase):
             except exc.NoResultFound:
                 raise exception.NotFound("No model for ip_str %s" % str_id)
         else:
-            with managed_session() as s:
-                return cls.find_by_str(str_id, session=s)
+            with managed_session() as sess:
+                return cls.find_by_str(str_id, session=sess)
 
 
 class Network(Base, NovaBase):
