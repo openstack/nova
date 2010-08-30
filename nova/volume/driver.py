@@ -26,12 +26,9 @@ from twisted.internet import defer
 
 from nova import flags
 from nova import process
-from nova import utils
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('storage_dev', '/dev/sdb',
-                    'Physical device to use for volumes')
 flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
 flags.DEFINE_string('aoe_eth_dev', 'eth0',
@@ -60,13 +57,14 @@ class FakeAOEDriver(object):
 class AOEDriver(object):
     def __init__(self, *args, **kwargs):
         super(AOEDriver, self).__init__(*args, **kwargs)
-        # NOTE(vish): no need for thise to be async, but it may be
-        #             best to explicitly do them at some other time
-        utils.execute("sudo pvcreate %s" % (FLAGS.storage_dev))
-        utils.execute("sudo vgcreate %s %s" % (FLAGS.volume_group,
-                                               FLAGS.storage_dev))
+
+    @defer.inlineCallbacks
+    def _ensure_vg(self):
+        yield process.simple_execute("vgs | grep %s" % FLAGS.volume_group)
+
     @defer.inlineCallbacks
     def create_volume(self, volume_id, size):
+        self._ensure_vg()
         if int(size) == 0:
             sizestr = '100M'
         else:
