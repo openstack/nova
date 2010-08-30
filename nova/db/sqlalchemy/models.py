@@ -27,6 +27,7 @@ from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
+from nova.db.sqlalchemy.session import managed_session
 from nova import auth
 from nova import exception
 from nova import flags
@@ -37,84 +38,66 @@ Base = declarative_base()
 
 class NovaBase(object):
     __table_args__ = {'mysql_engine':'InnoDB'}
+    __table_initialized__ = False
     __prefix__ = 'none'
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
-
-    _session = None
-    _engine = None
-    @classmethod
-    def create_engine(cls):
-        if NovaBase._engine is not None:
-           return NovaBase._engine
-        from sqlalchemy import create_engine
-        NovaBase._engine = create_engine(FLAGS.sql_connection, echo=False)
-        Base.metadata.create_all(NovaBase._engine)
-        return NovaBase._engine
+    deleted = Column(Boolean, default=False)
 
     @classmethod
-    def get_session(cls):
-        from sqlalchemy.orm import sessionmaker
-        if NovaBase._session == None:
-            NovaBase.create_engine()
-            NovaBase._session = sessionmaker(bind=NovaBase._engine)()
-        return NovaBase._session
+    def all(cls, session=None):
+        if session:
+            return session.query(cls) \
+                          .filter_by(deleted=False) \
+                          .all()
+        else:
+            with managed_session() as s:
+                return cls.all(session=s)
 
     @classmethod
-    def all(cls):
-        session = NovaBase.get_session()
-        result = session.query(cls).all()
-        session.commit()
-        return result
+    def count(cls, session=None):
+        if session:
+            return session.query(cls) \
+                          .filter_by(deleted=False) \
+                          .count()
+        else:
+            with managed_session() as s:
+                return cls.count(session=s)
 
     @classmethod
-    def count(cls):
-        session = NovaBase.get_session()
-        result = session.query(cls).count()
-        session.commit()
-        return result
+    def find(cls, obj_id, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(id=obj_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for id %s" % obj_id)
+        else:
+            with managed_session() as s:
+                return cls.find(obj_id, session=s)
 
     @classmethod
-    def find(cls, obj_id):
-        session = NovaBase.get_session()
-        try:
-            result = session.query(cls).filter_by(id=obj_id).one()
-            session.commit()
-            return result
-        except exc.NoResultFound:
-            session.rollback()
-            raise exception.NotFound("No model for id %s" % obj_id)
-
-    @classmethod
-    def find_by_str(cls, str_id):
+    def find_by_str(cls, str_id, session=None):
         id = int(str_id.rpartition('-')[2])
-        return cls.find(id)
+        return cls.find(id, session=session)
 
     @property
     def str_id(self):
         return "%s-%s" % (self.__prefix__, self.id)
 
-    def save(self):
-        session = NovaBase.get_session()
-        session.add(self)
-        try:
-            session.commit()
-        except exc.OperationalError:
-            logging.exception("Error trying to save %s", self)
-            session.rollback()
+    def save(self, session=None):
+        if session:
+            session.add(self)
+            session.flush()
+        else:
+            with managed_session() as s:
+                self.save(session=s)
 
-    def delete(self):
-        session = NovaBase.get_session()
-        session.delete(self)
-        try:
-            session.commit()
-        except exc.OperationalError:
-            logging.exception("Error trying to delete %s", self)
-            session.rollback()
-
-    def refresh(self):
-        session = NovaBase.get_session()
-        session.refresh(self)
+    def delete(self, session=None):
+        self.deleted = True
+        self.save(session=session)
 
     def __setitem__(self, key, value):
         setattr(self, key, value)
@@ -129,7 +112,6 @@ class Image(Base, NovaBase):
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255))#, ForeignKey('users.id'), nullable=False)
     project_id = Column(String(255))#, ForeignKey('projects.id'), nullable=False)
-
     image_type = Column(String(255))
     public = Column(Boolean, default=False)
     state = Column(String(255))
@@ -169,13 +151,13 @@ class Daemon(Base, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, node_name, binary):
-        session = NovaBase.get_session()
+    def find_by_args(cls, session, node_name, binary):
         try:
-            query = session.query(cls).filter_by(node_name=node_name)
-            result = query.filter_by(binary=binary).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(node_name=node_name) \
+                          .filter_by(binary=binary) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for %s, %s" % (node_name,
                                                               binary))
@@ -226,6 +208,7 @@ class Instance(Base, NovaBase):
     mac_address = Column(String(255))
 
     def set_state(self, state_code, state_description=None):
+        # TODO(devcamcar): Move this out of models and into api
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
@@ -277,7 +260,7 @@ class ExportDevice(Base, NovaBase):
 class FixedIp(Base, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
+    ip_str = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance, backref=backref('fixed_ip',
@@ -291,12 +274,12 @@ class FixedIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, str_id):
-        session = NovaBase.get_session()
+    def find_by_str(cls, session, str_id):
         try:
-            result = session.query(cls).filter_by(ip_str=str_id).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(ip_str=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for ip str %s" % str_id)
 
@@ -304,7 +287,7 @@ class FixedIp(Base, NovaBase):
 class FloatingIp(Base, NovaBase):
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255), unique=True)
+    ip_str = Column(String(255))
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
     fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
@@ -316,12 +299,12 @@ class FloatingIp(Base, NovaBase):
         return self.ip_str
 
     @classmethod
-    def find_by_str(cls, str_id):
-        session = NovaBase.get_session()
+    def find_by_str(cls, session, str_id):
         try:
-            result = session.query(cls).filter_by(ip_str=str_id).one()
-            session.commit()
-            return result
+            return session.query(cls) \
+                          .filter_by(ip_str=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
         except exc.NoResultFound:
             raise exception.NotFound("No model for ip str %s" % str_id)
 
@@ -359,20 +342,13 @@ class NetworkIndex(Base, NovaBase):
     index = Column(Integer)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
-                                                      uselist=False))
+                                                    uselist=False))
 
 
-
-
-def create_session(engine=None):
-    return NovaBase.get_session()
-
-if __name__ == '__main__':
-    engine = NovaBase.create_engine()
-    session = NovaBase.create_session(engine)
-
-    instance = Instance(image_id='as', ramdisk_id='AS', user_id='anthony')
-    user = User(id='anthony')
-    session.add(instance)
-    session.commit()
-
+def register_models():
+    from sqlalchemy import create_engine
+    models = (Image, PhysicalNode, Daemon, Instance, Volume, ExportDevice,
+              FixedIp, FloatingIp, Network, NetworkIndex)
+    engine = create_engine(FLAGS.sql_connection, echo=False)
+    for model in models:
+        model.metadata.create_all(engine)

@@ -20,8 +20,10 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy.session import managed_session
 
 FLAGS = flags.FLAGS
+
 
 ###################
 
@@ -51,19 +53,21 @@ def daemon_update(context, daemon_id, values):
 
 
 def floating_ip_allocate_address(context, node_name, project_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FloatingIp).filter_by(node_name=node_name)
-    query = query.filter_by(fixed_ip_id=None).with_lockmode("update")
-    floating_ip_ref = query.first()
-    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-    #             then this has concurrency issues
-    if not floating_ip_ref:
-        session.rollback()
-        raise db.NoMoreAddresses()
-    floating_ip_ref['project_id'] = project_id
-    session.add(floating_ip_ref)
-    session.commit()
-    return floating_ip_ref['str_id']
+    with managed_session(autocommit=False) as session:
+        floating_ip_ref = session.query(models.FloatingIp) \
+                                 .filter_by(node_name=node_name) \
+                                 .filter_by(fixed_ip_id=None) \
+                                 .filter_by(deleted=False) \
+                                 .with_lockmode('update') \
+                                 .first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not floating_ip_ref:
+            raise db.NoMoreAddresses()
+        floating_ip_ref['project_id'] = project_id
+        session.add(floating_ip_ref)
+        session.commit()
+        return floating_ip_ref['str_id']
 
 
 def floating_ip_create(context, address, host):
@@ -88,10 +92,12 @@ def floating_ip_disassociate(context, address):
     floating_ip_ref.save()
     return fixed_ip_address
 
+
 def floating_ip_deallocate(context, address):
     floating_ip_ref = db.floating_ip_get_by_address(context, address)
     floating_ip_ref['project_id'] = None
     floating_ip_ref.save()
+
 
 def floating_ip_get_by_address(context, address):
     return models.FloatingIp.find_by_str(address)
@@ -101,20 +107,23 @@ def floating_ip_get_by_address(context, address):
 
 
 def fixed_ip_allocate(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network_id)
-    query = query.filter_by(reserved=False).filter_by(allocated=False)
-    query = query.filter_by(leased=False).with_lockmode("update")
-    fixed_ip_ref = query.first()
-    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-    #             then this has concurrency issues
-    if not fixed_ip_ref:
-        session.rollback()
-        raise db.NoMoreAddresses()
-    fixed_ip_ref['allocated'] = True
-    session.add(fixed_ip_ref)
-    session.commit()
-    return fixed_ip_ref['str_id']
+    with managed_session(autocommit=False) as session:
+        fixed_ip_ref = session.query(models.FixedIp) \
+                              .filter_by(network_id=network_id) \
+                              .filter_by(reserved=False) \
+                              .filter_by(allocated=False) \
+                              .filter_by(leased=False) \
+                              .filter_by(deleted=False) \
+                              .with_lockmode('update') \
+                              .first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not fixed_ip_ref:
+            raise db.NoMoreAddresses()
+        fixed_ip_ref['allocated'] = True
+        session.add(fixed_ip_ref)
+        session.commit()
+        return fixed_ip_ref
 
 
 def fixed_ip_create(context, network_id, address, reserved=False):
@@ -191,19 +200,19 @@ def instance_get_by_address(context, address):
 
 
 def instance_get_by_project(context, project_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.Instance)
-    results = query.filter_by(project_id=project_id).all()
-    session.commit()
-    return results
+    with managed_session() as session:
+        return session.query(models.Instance) \
+                      .filter_by(project_id=project_id) \
+                      .filter_by(deleted=False) \
+                      .all()
 
 
 def instance_get_by_reservation(context, reservation_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.Instance)
-    results = query.filter_by(reservation_id=reservation_id).all()
-    session.commit()
-    return results
+    with managed_session() as session:
+        return session.query(models.Instance) \
+                      .filter_by(reservation_id=reservation_id) \
+                      .filter_by(deleted=False) \
+                      .all()
 
 
 def instance_get_by_str(context, str_id):
@@ -257,24 +266,31 @@ def network_count(context):
 
 
 def network_count_allocated_ips(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network_id)
-    query = query.filter_by(allocated=True)
-    return query.count()
+    with managed_session() as session:
+        return session.query(models.FixedIp) \
+                      .filter_by(network_id=network_id) \
+                      .filter_by(allocated=True) \
+                      .filter_by(deleted=False) \
+                      .count()
 
 
 def network_count_available_ips(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network_id)
-    query = query.filter_by(allocated=False).filter_by(reserved=False)
-    return query.count()
+    with managed_session() as session:
+        return session.query(models.FixedIp) \
+                      .filter_by(network_id=network_id) \
+                      .filter_by(allocated=False) \
+                      .filter_by(reserved=False) \
+                      .filter_by(deleted=False) \
+                      .count()
 
 
 def network_count_reserved_ips(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp).filter_by(network_id=network_id)
-    query = query.filter_by(reserved=True)
-    return query.count()
+    with managed_session() as session:
+        return session.query(models.FixedIp) \
+                      .filter_by(network_id=network_id) \
+                      .filter_by(reserved=True) \
+                      .filter_by(deleted=False) \
+                      .count()
 
 
 def network_create(context, values):
@@ -283,33 +299,41 @@ def network_create(context, values):
         network_ref[key] = value
     network_ref.save()
     return network_ref
+    return network_ref.id
 
 
 def network_destroy(context, network_id):
-    network_ref = network_get(context, network_id)
-    network_ref.delete()
+    with managed_session(autocommit=False) as session:
+        # TODO(vish): do we have to use sql here?
+        session.execute('update networks set deleted=1 where id=:id',
+                        {'id': network_id})
+        session.execute('update network_indexes set network_id=NULL where network_id=:id',
+                        {'id': network_id})
+        session.commit()
 
 
-def network_get(context, network_id):
-    return models.Network.find(network_id)
+def network_get(context, network_id, session=None):
+    return models.Network.find(network_id, session=session)
 
 
 def network_get_associated_fixed_ips(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.FixedIp)
-    fixed_ips = query.filter(models.FixedIp.instance_id != None).all()
-    session.commit()
-    return fixed_ips
+    with managed_session() as session:
+        return session.query(models.FixedIp) \
+                      .filter(models.FixedIp.instance_id != None) \
+                      .filter_by(deleted=False) \
+                      .all()
+
 
 
 def network_get_by_bridge(context, bridge):
-    session = models.NovaBase.get_session()
-    rv = session.query(models.Network).filter_by(bridge=bridge).first()
-    if not rv:
-        session.rollback()
-        raise exception.NotFound('No network for bridge %s' % bridge)
-    session.commit()
-    return rv
+    with managed_session() as session:
+        rv = session.query(models.Network) \
+                    .filter_by(bridge=bridge) \
+                    .filter_by(deleted=False) \
+                    .first()
+        if not rv:
+            raise exception.NotFound('No network for bridge %s' % bridge)
+        return rv
 
 
 def network_get_host(context, network_id):
@@ -318,16 +342,18 @@ def network_get_host(context, network_id):
 
 
 def network_get_index(context, network_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.NetworkIndex).filter_by(network_id=None)
-    network_index = query.with_lockmode("update").first()
-    if not network_index:
-        session.rollback()
-        raise db.NoMoreNetworks()
-    network_index['network'] = network_get(context, network_id)
-    session.add(network_index)
-    session.commit()
-    return network_index['index']
+    with managed_session(autocommit=False) as session:
+        network_index = session.query(models.NetworkIndex) \
+                               .filter_by(network_id=None) \
+                               .filter_by(deleted=False) \
+                               .with_lockmode('update') \
+                               .first()
+        if not network_index:
+            raise db.NoMoreNetworks()
+        network_index['network'] = network_get(context, network_id, session=session)
+        session.add(network_index)
+        session.commit()
+        return network_index['index']
 
 
 def network_index_count(context):
@@ -342,22 +368,24 @@ def network_index_create(context, values):
 
 
 def network_set_host(context, network_id, host_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.Network).filter_by(id=network_id)
-    network = query.with_lockmode("update").first()
-    if not network:
-        session.rollback()
-        raise exception.NotFound("Couldn't find network with %s" %
-                                 network_id)
-    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-    #             then this has concurrency issues
-    if network.node_name:
+    with managed_session(autocommit=False) as session:
+        network = session.query(models.Network) \
+                         .filter_by(id=network_id) \
+                         .filter_by(deleted=False) \
+                         .with_lockmode('update') \
+                         .first()
+        if not network:
+            raise exception.NotFound("Couldn't find network with %s" %
+                                     network_id)
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if network.node_name:
+            session.commit()
+            return network['node_name']
+        network['node_name'] = host_id
+        session.add(network)
         session.commit()
         return network['node_name']
-    network['node_name'] = host_id
-    session.add(network)
-    session.commit()
-    return network['node_name']
 
 
 def network_update(context, network_id, values):
@@ -371,11 +399,14 @@ def network_update(context, network_id, values):
 
 
 def project_get_network(context, project_id):
-    session = models.create_session()
-    rv = session.query(models.Network).filter_by(project_id=project_id).first()
-    if not rv:
-        raise exception.NotFound('No network for project: %s' % project_id)
-    return rv
+    with managed_session() as session:
+        rv = session.query(models.Network) \
+                    .filter_by(project_id=project_id) \
+                    .filter_by(deleted=False) \
+                    .first()
+        if not rv:
+            raise exception.NotFound('No network for project: %s' % project_id)
+        return rv
 
 
 ###################
@@ -403,18 +434,20 @@ def export_device_create(context, values):
 
 
 def volume_allocate_shelf_and_blade(context, volume_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.ExportDevice).filter_by(volume=None)
-    export_device = query.with_lockmode("update").first()
-    # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-    #             then this has concurrency issues
-    if not export_device:
-        session.rollback()
-        raise db.NoMoreBlades()
-    export_device.volume_id = volume_id
-    session.add(export_device)
-    session.commit()
-    return (export_device.shelf_id, export_device.blade_id)
+    with managed_session(autocommit=False) as session:
+        export_device = session.query(models.ExportDevice) \
+                               .filter_by(volume=None) \
+                               .filter_by(deleted=False) \
+                               .with_lockmode('update') \
+                               .first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not export_device:
+            raise db.NoMoreBlades()
+        export_device.volume_id = volume_id
+        session.add(export_device)
+        session.commit()
+        return (export_device.shelf_id, export_device.blade_id)
 
 
 def volume_attached(context, volume_id, instance_id, mountpoint):
@@ -435,8 +468,13 @@ def volume_create(context, values):
 
 
 def volume_destroy(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref.delete()
+    with managed_session(autocommit=False) as session:
+        # TODO(vish): do we have to use sql here?
+        session.execute('update volumes set deleted=1 where id=:id',
+                        {'id': volume_id})
+        session.execute('update export_devices set volume_id=NULL where network_id=:id',
+                        {'id': volume_id})
+        session.commit()
 
 
 def volume_detached(context, volume_id):
@@ -457,11 +495,11 @@ def volume_get_all(context):
 
 
 def volume_get_by_project(context, project_id):
-    session = models.NovaBase.get_session()
-    query = session.query(models.Volume)
-    results = query.filter_by(project_id=project_id).all()
-    session.commit()
-    return results
+    with managed_session() as session:
+        return session.query(models.Volume) \
+                      .filter_by(project_id=project_id) \
+                      .filter_by(deleted=False) \
+                      .all()
 
 
 def volume_get_by_str(context, str_id):
