@@ -125,7 +125,6 @@ def ensure_bridge(bridge, interface, net_attrs=None):
 def get_dhcp_hosts(context, network_id):
     hosts = []
     for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
-        print fixed_ip['ip_str']
         hosts.append(_host_dhcp(fixed_ip))
     return '\n'.join(hosts)
 
@@ -161,7 +160,6 @@ def update_dhcp(context, network_id):
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
-    print command
     _execute(command, addl_env=env)
 
 def _host_dhcp(fixed_ip):

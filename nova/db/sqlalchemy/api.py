@@ -58,6 +58,7 @@ def floating_ip_allocate_address(context, node_name, project_id):
     # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
     #             then this has concurrency issues
     if not floating_ip_ref:
+        session.rollback()
         raise db.NoMoreAddresses()
     floating_ip_ref['project_id'] = project_id
     session.add(floating_ip_ref)
@@ -108,6 +109,7 @@ def fixed_ip_allocate(context, network_id):
     # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
     #             then this has concurrency issues
     if not fixed_ip_ref:
+        session.rollback()
         raise db.NoMoreAddresses()
     fixed_ip_ref['allocated'] = True
     session.add(fixed_ip_ref)
@@ -115,10 +117,11 @@ def fixed_ip_allocate(context, network_id):
     return fixed_ip_ref['str_id']
 
 
-def fixed_ip_create(context, network_id, address):
+def fixed_ip_create(context, network_id, address, reserved=False):
     fixed_ip_ref = models.FixedIp()
     fixed_ip_ref.network = db.network_get(context, network_id)
     fixed_ip_ref['ip_str'] = address
+    fixed_ip_ref['reserved'] = reserved
     fixed_ip_ref.save()
     return fixed_ip_ref
 
@@ -303,7 +306,9 @@ def network_get_by_bridge(context, bridge):
     session = models.NovaBase.get_session()
     rv = session.query(models.Network).filter_by(bridge=bridge).first()
     if not rv:
+        session.rollback()
         raise exception.NotFound('No network for bridge %s' % bridge)
+    session.commit()
     return rv
 
 
@@ -317,6 +322,7 @@ def network_get_index(context, network_id):
     query = session.query(models.NetworkIndex).filter_by(network_id=None)
     network_index = query.with_lockmode("update").first()
     if not network_index:
+        session.rollback()
         raise db.NoMoreNetworks()
     network_index['network'] = network_get(context, network_id)
     session.add(network_index)
@@ -340,6 +346,7 @@ def network_set_host(context, network_id, host_id):
     query = session.query(models.Network).filter_by(id=network_id)
     network = query.with_lockmode("update").first()
     if not network:
+        session.rollback()
         raise exception.NotFound("Couldn't find network with %s" %
                                  network_id)
     # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
@@ -402,6 +409,7 @@ def volume_allocate_shelf_and_blade(context, volume_id):
     # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
     #             then this has concurrency issues
     if not export_device:
+        session.rollback()
         raise db.NoMoreBlades()
     export_device.volume_id = volume_id
     session.add(export_device)

@@ -20,6 +20,8 @@
 SQLAlchemy models for nova data
 """
 
+import logging
+
 from sqlalchemy.orm import relationship, backref, validates, exc
 from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
@@ -80,6 +82,7 @@ class NovaBase(object):
             session.commit()
             return result
         except exc.NoResultFound:
+            session.rollback()
             raise exception.NotFound("No model for id %s" % obj_id)
 
     @classmethod
@@ -94,12 +97,20 @@ class NovaBase(object):
     def save(self):
         session = NovaBase.get_session()
         session.add(self)
-        session.commit()
+        try:
+            session.commit()
+        except exc.OperationalError:
+            logging.exception("Error trying to save %s", self)
+            session.rollback()
 
     def delete(self):
         session = NovaBase.get_session()
         session.delete(self)
-        session.commit()
+        try:
+            session.commit()
+        except exc.OperationalError:
+            logging.exception("Error trying to delete %s", self)
+            session.rollback()
 
     def refresh(self):
         session = NovaBase.get_session()

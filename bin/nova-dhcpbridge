@@ -36,6 +36,7 @@ from nova import rpc
 from nova import utils
 from nova import datastore # for redis_db flag
 from nova.auth import manager # for auth flags
+from nova.network import linux_net
 from nova.network import manager # for network flags
 
 FLAGS = flags.FLAGS
@@ -74,8 +75,7 @@ def del_lease(_mac, ip_address, _hostname, _interface):
 def init_leases(interface):
     """Get the list of hosts for an interface."""
     network_ref = db.network_get_by_bridge(None, interface)
-    network_manager = utils.import_object(FLAGS.network_manager)
-    return network_manager.driver.get_dhcp_hosts(None, network_ref['id'])
+    return linux_net.get_dhcp_hosts(None, network_ref['id'])
 
 
 def main():
