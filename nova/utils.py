@@ -29,6 +29,8 @@ import subprocess
 import socket
 import sys
 
+from twisted.internet.threads import deferToThread
+
 from nova import exception
 from nova import flags
 
@@ -157,7 +159,6 @@ def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
 
-
 class LazyPluggable(object):
     """A pluggable backend loaded lazily based on some value."""
 
@@ -188,3 +189,7 @@ class LazyPluggable(object):
         backend = self.__get_backend()
         return getattr(backend, key)
 
+def deferredToThread(f):
+    def g(*args, **kwargs):
+        return deferToThread(f, *args, **kwargs)
+    return g

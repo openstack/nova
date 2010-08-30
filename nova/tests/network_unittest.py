@@ -77,8 +77,7 @@ class NetworkTestCase(test.TrialTestCase):
 
     def _create_address(self, project_num, instance_id=None):
         net = db.project_get_network(None, self.projects[project_num].id)
-        fixed_ip = db.fixed_ip_allocate(None, net['id'])
-        address = fixed_ip['str_id']
+        address = db.fixed_ip_allocate(None, net['id'])
         if instance_id is None:
             instance_id = self.instance_id
         db.fixed_ip_instance_associate(None, address, instance_id)

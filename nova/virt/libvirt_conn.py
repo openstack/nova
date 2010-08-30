@@ -85,9 +85,21 @@ class LibvirtConnection(object):
 
     @property
     def _conn(self):
-        if not self._wrapped_conn:
+        if not self._wrapped_conn or not self._test_connection():
+            logging.debug('Connecting to libvirt: %s' % self.libvirt_uri)
             self._wrapped_conn = self._connect(self.libvirt_uri, self.read_only)
         return self._wrapped_conn
+
+    def _test_connection(self):
+        try:
+            libvirt.getVersion()
+            return True
+        except libvirt.libvirtError as e:
+            if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
+               e.get_error_domain() == libvirt.VIR_FROM_REMOTE:
+                logging.debug('Connection to libvirt broke')
+                return False
+            raise
 
     def get_uri_and_template(self):
         if FLAGS.libvirt_type == 'uml':
