@@ -133,9 +133,7 @@ def last_octet(address):
 
 
 def get_my_ip():
-    ''' returns the actual ip of the local machine.
-    '''
-    return '127.0.0.1'
+    """Returns the actual ip of the local machine."""
     if getattr(FLAGS, 'fake_tests', None):
         return '127.0.0.1'
     try:
