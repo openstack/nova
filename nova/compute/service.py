@@ -29,4 +29,3 @@ class ComputeService(service.Service):
     Compute Service automatically passes commands on to the Compute Manager
     """
     pass
-

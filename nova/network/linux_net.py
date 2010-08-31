@@ -40,6 +40,7 @@ flags.DEFINE_string('public_interface', 'vlan1',
 flags.DEFINE_string('bridge_dev', 'eth0',
                         'network device for bridges')
 
+
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
     _execute("sudo ip addr add %s dev %s" % (floating_ip,
@@ -59,7 +60,9 @@ def ensure_vlan_forward(public_ip, port, private_ip):
         "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
             % (public_ip, port, private_ip))
 
+
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
+
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
@@ -74,6 +77,7 @@ def ensure_floating_forward(floating_ip, fixed_ip):
         _confirm_rule(
             "FORWARD -d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
+
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
@@ -92,6 +96,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
     ensure_bridge(bridge, interface, net_attrs)
+
 
 def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
@@ -161,6 +166,7 @@ def update_dhcp(context, network_id):
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
     _execute(command, addl_env=env)
+
 
 def _host_dhcp(address):
     """Return a host string for an address"""

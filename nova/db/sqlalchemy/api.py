@@ -340,13 +340,14 @@ def network_destroy(context, network_id):
                         '(select id from fixed_ips '
                         'where network_id=:id)',
                         {'id': network_id})
-        session.execute('update network_indexes set network_id=NULL where network_id=:id',
+        session.execute('update network_indexes set network_id=NULL '
+                        'where network_id=:id',
                         {'id': network_id})
         session.commit()
 
 
-def network_get(context, network_id, session=None):
-    return models.Network.find(network_id, session=session)
+def network_get(context, network_id):
+    return models.Network.find(network_id)
 
 
 def network_get_associated_fixed_ips(context, network_id):
@@ -355,7 +356,6 @@ def network_get_associated_fixed_ips(context, network_id):
                       .filter(models.FixedIp.instance_id != None) \
                       .filter_by(deleted=False) \
                       .all()
-
 
 
 def network_get_by_bridge(context, bridge):
@@ -383,7 +383,8 @@ def network_get_index(context, network_id):
                                .first()
         if not network_index:
             raise db.NoMoreNetworks()
-        network_index['network'] = network_get(context, network_id, session=session)
+        network_index['network'] = models.Network.find(network_id,
+                                                       session=session)
         session.add(network_index)
         session.commit()
         return network_index['index']
@@ -446,7 +447,8 @@ def project_get_network(context, project_id):
 
 
 def queue_get_for(context, topic, physical_node_id):
-    return "%s.%s" % (topic, physical_node_id) # FIXME(ja): this should be servername?
+    # FIXME(ja): this should be servername?
+    return "%s.%s" % (topic, physical_node_id)
 
 ###################
 
@@ -505,7 +507,8 @@ def volume_destroy(context, volume_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update volumes set deleted=1 where id=:id',
                         {'id': volume_id})
-        session.execute('update export_devices set volume_id=NULL where volume_id=:id',
+        session.execute('update export_devices set volume_id=NULL '
+                        'where volume_id=:id',
                         {'id': volume_id})
         session.commit()
 

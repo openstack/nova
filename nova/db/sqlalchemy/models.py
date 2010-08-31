@@ -20,8 +20,6 @@
 SQLAlchemy models for nova data
 """
 
-import logging
-
 from sqlalchemy.orm import relationship, backref, validates, exc
 from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
@@ -32,12 +30,14 @@ from nova import auth
 from nova import exception
 from nova import flags
 
-FLAGS=flags.FLAGS
+FLAGS = flags.FLAGS
+
 
 Base = declarative_base()
 
+
 class NovaBase(object):
-    __table_args__ = {'mysql_engine':'InnoDB'}
+    __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
     created_at = Column(DateTime)
@@ -110,8 +110,8 @@ class Image(Base, NovaBase):
     __tablename__ = 'images'
     __prefix__ = 'ami'
     id = Column(Integer, primary_key=True)
-    user_id = Column(String(255))#, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String(255))#, ForeignKey('projects.id'), nullable=False)
+    user_id = Column(String(255))
+    project_id = Column(String(255))
     image_type = Column(String(255))
     public = Column(Boolean, default=False)
     state = Column(String(255))
@@ -143,10 +143,11 @@ class PhysicalNode(Base, NovaBase):
     __tablename__ = 'physical_nodes'
     id = Column(String(255), primary_key=True)
 
+
 class Daemon(Base, NovaBase):
     __tablename__ = 'daemons'
     id = Column(Integer, primary_key=True)
-    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
     binary = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
 
@@ -172,8 +173,8 @@ class Instance(Base, NovaBase):
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String(255)) #, ForeignKey('projects.id'))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
 
     @property
     def user(self):
@@ -183,11 +184,9 @@ class Instance(Base, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    # TODO(vish): make this opaque somehow
     @property
     def name(self):
         return self.str_id
-
 
     image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -202,7 +201,7 @@ class Instance(Base, NovaBase):
     state_description = Column(String(255))
 
     hostname = Column(String(255))
-    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
 
     instance_type = Column(Integer)
 
@@ -219,11 +218,9 @@ class Instance(Base, NovaBase):
             state_description = power_state.name(state_code)
         self.state_description = state_description
         self.save()
-
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
 #    project = relationship(Project, backref=backref('instances', order_by=id))
-
 #TODO - see Ewan's email about state improvements
     # vmstate_state = running, halted, suspended, paused
     # power_state = what we have
@@ -231,24 +228,27 @@ class Instance(Base, NovaBase):
 
     #@validates('state')
     #def validate_state(self, key, state):
-    #    assert(state in ['nostate', 'running', 'blocked', 'paused', 'shutdown', 'shutoff', 'crashed'])
+    #    assert(state in ['nostate', 'running', 'blocked', 'paused',
+    #                     'shutdown', 'shutoff', 'crashed'])
+
 
 class Volume(Base, NovaBase):
     __tablename__ = 'volumes'
     __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
 
-    user_id = Column(String(255)) #, ForeignKey('users.id'), nullable=False)
-    project_id = Column(String(255)) #, ForeignKey('projects.id'))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
 
-    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
     size = Column(Integer)
-    availability_zone = Column(String(255)) # TODO(vish) foreign key?
+    availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     mountpoint = Column(String(255))
-    attach_time = Column(String(255)) # TODO(vish) datetime
-    status = Column(String(255)) # TODO(vish) enum?
-    attach_status = Column(String(255)) # TODO(vish) enum
+    attach_time = Column(String(255))  # TODO(vish): datetime
+    status = Column(String(255))  # TODO(vish): enum?
+    attach_status = Column(String(255))  # TODO(vish): enum
+
 
 class ExportDevice(Base, NovaBase):
     __tablename__ = 'export_devices'
@@ -299,8 +299,8 @@ class FloatingIp(Base, NovaBase):
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
     fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
-    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
-    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    project_id = Column(String(255))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
 
     @property
     def str_id(self):
@@ -339,8 +339,8 @@ class Network(Base, NovaBase):
     vpn_private_ip_str = Column(String(255))
     dhcp_start = Column(String(255))
 
-    project_id = Column(String(255)) #, ForeignKey('projects.id'), nullable=False)
-    node_name = Column(String(255))  #, ForeignKey('physical_node.id'))
+    project_id = Column(String(255))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
 
     fixed_ips = relationship(FixedIp,
                              single_parent=True,

@@ -25,6 +25,7 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
+
 def managed_session(autocommit=True):
     return SessionExecutionManager(autocommit=autocommit)
 
@@ -39,7 +40,6 @@ class SessionExecutionManager:
             cls._engine = create_engine(FLAGS.sql_connection, echo=False)
         self._session = create_session(bind=cls._engine,
                                        autocommit=autocommit)
-
 
     def __enter__(self):
         return self._session

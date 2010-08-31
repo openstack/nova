@@ -110,4 +110,3 @@ class AOEDriver(object):
                                      check_exit_code=False)
         yield process.simple_execute("sudo vblade-persist start all",
                                      check_exit_code=False)
-

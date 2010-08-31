@@ -29,7 +29,6 @@ from nova import exception
 from nova import flags
 from nova import manager
 from nova import utils
-from nova.volume import driver
 
 
 FLAGS = flags.FLAGS
@@ -53,9 +52,9 @@ class AOEManager(manager.Manager):
         if not volume_driver:
             # NOTE(vish): support the legacy fake storage flag
             if FLAGS.fake_storage:
-                volume_driver='nova.volume.driver.FakeAOEDriver'
+                volume_driver = 'nova.volume.driver.FakeAOEDriver'
             else:
-                volume_driver=FLAGS.volume_driver
+                volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
         super(AOEManager, self).__init__(*args, **kwargs)
 
@@ -117,4 +116,3 @@ class AOEManager(manager.Manager):
         yield self.driver.delete_volume(volume_id)
         self.db.volume_destroy(context, volume_id)
         defer.returnValue(True)
-
