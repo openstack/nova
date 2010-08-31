@@ -29,8 +29,10 @@ class local_sdist(sdist):
     def run(self):
         if os.path.isdir('.bzr'):
             # We're in a bzr branch
-            log_cmd = subprocess.Popen(["bzr", "log", "--gnu"],
-                                       stdout=subprocess.PIPE)
+            env = os.environ.copy()
+            env['BZR_PLUGIN_PATH'] = os.path.abspath('./bzrplugins')
+            log_cmd = subprocess.Popen(["bzr", "log", "--novalog"],
+                                       stdout=subprocess.PIPE, env=env)
             changelog = log_cmd.communicate()[0]
             with open("ChangeLog", "w") as changelog_file:
                 changelog_file.write(changelog)
