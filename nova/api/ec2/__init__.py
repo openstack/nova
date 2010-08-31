@@ -122,24 +122,15 @@ class Router(wsgi.Application):
             self._error('unhandled', 'no controller named %s' % controller_name)
             return
 
-        request = APIRequest(controller, req.environ['ec2.action'])
+        api_request = APIRequest(controller, req.environ['ec2.action'])
         context = req.environ['ec2.context']
         try:
-            data = request.send(context, **args)
-            req.headers['Content-Type'] = 'text/xml'
-            return data
-        #TODO(gundlach) under what conditions would _error_callbock used to
-        #be called?  What was 'failure' that you could call .raiseException
-        #on it?
-        except Exception, ex:
-            try:
-                #TODO
-                failure.raiseException()
-            except exception.ApiError as ex:
-                self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
-            # TODO(vish): do something more useful with unknown exceptions
-            except Exception as ex:
-                self._error(type(ex).__name__, str(ex))
+            return api_request.send(context, **args)
+        except exception.ApiError as ex:
+            self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
+        # TODO(vish): do something more useful with unknown exceptions
+        except Exception as ex:
+            self._error(type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
         req.status = 400

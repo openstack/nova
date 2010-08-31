@@ -79,9 +79,10 @@ class APIRequest(object):
                     s.sort()
                     args[key] = [v for k, v in s]
 
-        d = defer.maybeDeferred(method, context, **args)
-        d.addCallback(self._render_response, context.request_id)
-        return d
+        result = method(context, **args)
+
+        req.headers['Content-Type'] = 'text/xml'
+        return self._render_response(result, context.request_id)
 
     def _render_response(self, response_data, request_id):
         xml = minidom.Document()
