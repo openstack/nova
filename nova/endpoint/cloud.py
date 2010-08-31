@@ -230,7 +230,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         instance_ref = db.instance_get_by_str(context, instance_id[0])
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
-                                   instance_ref['node_name']),
+                                   instance_ref['host']),
                         {"method": "get_console_output",
                          "args": {"context": None,
                                   "instance_id": instance_ref['id']}})
@@ -257,7 +257,7 @@ class CloudController(object):
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
-                'node_name',
+                'host',
                 volume['instance_id'],
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
@@ -391,7 +391,7 @@ class CloudController(object):
             if context.user.is_admin():
                 i['key_name'] = '%s (%s, %s)' % (i['key_name'],
                     instance.project_id,
-                    'node_name') # FIXME
+                    'host') # FIXME
             i['product_codes_set'] = self._convert_to_set([], 'product_codes')
             i['instance_type'] = instance.instance_type
             i['launch_time'] = instance.created_at

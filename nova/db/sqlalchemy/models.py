@@ -20,23 +20,25 @@
 SQLAlchemy models for nova data
 """
 
+# TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, validates, exc
-from sqlalchemy import Table, Column, Integer, String
-from sqlalchemy import MetaData, ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String
+from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
 from nova.db.sqlalchemy.session import managed_session
+
 from nova import auth
 from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
 
-
-Base = declarative_base()
+BASE = declarative_base()
 
 
 class NovaBase(object):
+    """Base class for Nova Models"""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
@@ -46,6 +48,7 @@ class NovaBase(object):
 
     @classmethod
     def all(cls, session=None):
+        """Get all objects of this type"""
         if session:
             return session.query(cls) \
                           .filter_by(deleted=False) \
@@ -56,6 +59,7 @@ class NovaBase(object):
 
     @classmethod
     def count(cls, session=None):
+        """Count objects of this type"""
         if session:
             return session.query(cls) \
                           .filter_by(deleted=False) \
@@ -66,6 +70,7 @@ class NovaBase(object):
 
     @classmethod
     def find(cls, obj_id, session=None):
+        """Find object by id"""
         if session:
             try:
                 return session.query(cls) \
@@ -80,14 +85,17 @@ class NovaBase(object):
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
-        id = int(str_id.rpartition('-')[2])
-        return cls.find(id, session=session)
+        """Find object by str_id"""
+        int_id = int(str_id.rpartition('-')[2])
+        return cls.find(int_id, session=session)
 
     @property
     def str_id(self):
+        """Get string id of object (generally prefix + '-' + id)"""
         return "%s-%s" % (self.__prefix__, self.id)
 
     def save(self, session=None):
+        """Save this object"""
         if session:
             session.add(self)
             session.flush()
@@ -96,6 +104,7 @@ class NovaBase(object):
                 self.save(session=sess)
 
     def delete(self, session=None):
+        """Delete this object"""
         self.deleted = True
         self.save(session=session)
 
@@ -106,7 +115,8 @@ class NovaBase(object):
         return getattr(self, key)
 
 
-class Image(Base, NovaBase):
+class Image(BASE, NovaBase):
+    """Represents an image in the datastore"""
     __tablename__ = 'images'
     __prefix__ = 'ami'
     id = Column(Integer, primary_key=True)
@@ -139,36 +149,39 @@ class Image(Base, NovaBase):
             assert(val is None)
 
 
-class PhysicalNode(Base, NovaBase):
-    __tablename__ = 'physical_nodes'
+class Host(BASE, NovaBase):
+    """Represents a host where services are running"""
+    __tablename__ = 'hosts'
     id = Column(String(255), primary_key=True)
 
 
-class Daemon(Base, NovaBase):
+class Daemon(BASE, NovaBase):
+    """Represents a running service on a host"""
     __tablename__ = 'daemons'
     id = Column(Integer, primary_key=True)
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+    host = Column(String(255), ForeignKey('hosts.id'))
     binary = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, node_name, binary, session=None):
+    def find_by_args(cls, host, binary, session=None):
         if session:
             try:
                 return session.query(cls) \
-                              .filter_by(node_name=node_name) \
+                              .filter_by(host=host) \
                               .filter_by(binary=binary) \
                               .filter_by(deleted=False) \
                               .one()
             except exc.NoResultFound:
-                raise exception.NotFound("No model for %s, %s" % (node_name,
+                raise exception.NotFound("No model for %s, %s" % (host,
                                                                   binary))
         else:
             with managed_session() as sess:
-                return cls.find_by_args(node_name, binary, session=sess)
+                return cls.find_by_args(host, binary, session=sess)
 
 
-class Instance(Base, NovaBase):
+class Instance(BASE, NovaBase):
+    """Represents a guest vm"""
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
@@ -191,6 +204,9 @@ class Instance(Base, NovaBase):
     image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
     ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
+#    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
+#    project = relationship(Project, backref=backref('instances', order_by=id))
 
     launch_index = Column(Integer)
     key_name = Column(String(255))
@@ -201,7 +217,7 @@ class Instance(Base, NovaBase):
     state_description = Column(String(255))
 
     hostname = Column(String(255))
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+    host = Column(String(255), ForeignKey('hosts.id'))
 
     instance_type = Column(Integer)
 
@@ -211,17 +227,17 @@ class Instance(Base, NovaBase):
     mac_address = Column(String(255))
 
     def set_state(self, state_code, state_description=None):
-        # TODO(devcamcar): Move this out of models and into api
+        """Set the code and description of an instance"""
+        # TODO(devcamcar): Move this out of models and into driver
         from nova.compute import power_state
         self.state = state_code
         if not state_description:
             state_description = power_state.name(state_code)
         self.state_description = state_description
         self.save()
-#    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
-#    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
-#    project = relationship(Project, backref=backref('instances', order_by=id))
-#TODO - see Ewan's email about state improvements
+
+    # TODO(vish): see Ewan's email about state improvements, probably
+    #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
     # power_state = what we have
     # task_state = transitory and may trigger power state transition
@@ -232,7 +248,8 @@ class Instance(Base, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
-class Volume(Base, NovaBase):
+class Volume(BASE, NovaBase):
+    """Represents a block storage device that can be attached to a vm"""
     __tablename__ = 'volumes'
     __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
@@ -240,7 +257,7 @@ class Volume(Base, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+    host = Column(String(255), ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
@@ -250,7 +267,8 @@ class Volume(Base, NovaBase):
     attach_status = Column(String(255))  # TODO(vish): enum
 
 
-class ExportDevice(Base, NovaBase):
+class ExportDevice(BASE, NovaBase):
+    """Represates a shelf and blade that a volume can be exported on"""
     __tablename__ = 'export_devices'
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
@@ -260,7 +278,8 @@ class ExportDevice(Base, NovaBase):
                                                   uselist=False))
 
 
-class Network(Base, NovaBase):
+class Network(BASE, NovaBase):
+    """Represents a network"""
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
 
@@ -279,10 +298,16 @@ class Network(Base, NovaBase):
     dhcp_start = Column(String(255))
 
     project_id = Column(String(255))
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+    host = Column(String(255), ForeignKey('hosts.id'))
 
 
-class NetworkIndex(Base, NovaBase):
+class NetworkIndex(BASE, NovaBase):
+    """Represents a unique offset for a network
+
+    Currently vlan number, vpn port, and fixed ip ranges are keyed off of
+    this index. These may ultimately need to be converted to separate
+    pools.
+    """
     __tablename__ = 'network_indexes'
     id = Column(Integer, primary_key=True)
     index = Column(Integer)
@@ -292,7 +317,8 @@ class NetworkIndex(Base, NovaBase):
 
 
 # TODO(vish): can these both come from the same baseclass?
-class FixedIp(Base, NovaBase):
+class FixedIp(BASE, NovaBase):
+    """Represents a fixed ip for an instance"""
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
@@ -324,7 +350,8 @@ class FixedIp(Base, NovaBase):
                 return cls.find_by_str(str_id, session=sess)
 
 
-class FloatingIp(Base, NovaBase):
+class FloatingIp(BASE, NovaBase):
+    """Represents a floating ip that dynamically forwards to a fixed ip"""
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
@@ -332,7 +359,7 @@ class FloatingIp(Base, NovaBase):
     fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
     project_id = Column(String(255))
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+    host = Column(String(255), ForeignKey('hosts.id'))
 
     @property
     def str_id(self):
@@ -354,8 +381,9 @@ class FloatingIp(Base, NovaBase):
 
 
 def register_models():
+    """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Image, PhysicalNode, Daemon, Instance, Volume, ExportDevice,
+    models = (Image, Host, Daemon, Instance, Volume, ExportDevice,
               FixedIp, FloatingIp, Network, NetworkIndex)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:

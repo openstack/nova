@@ -58,7 +58,7 @@ class ServiceTestCase(test.BaseTestCase):
                                     rpc.AdapterConsumer)
 
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
-                            topic='fake.%s' % FLAGS.node_name,
+                            topic='fake.%s' % FLAGS.host,
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
@@ -82,37 +82,37 @@ class ServiceTestCase(test.BaseTestCase):
     # 'model_disconnected' and report_state doesn't really do much so this
     # these are mostly just for coverage
     def test_report_state(self):
-        node_name = 'foo'
+        host = 'foo'
         binary = 'bar'
-        daemon_ref = {'node_name': node_name,
+        daemon_ref = {'host': host,
                       'binary': binary,
                       'report_count': 0,
                       'id': 1}
         service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
-                                      node_name,
+                                      host,
                                       binary).AndReturn(daemon_ref)
         service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
         s = service.Service()
-        rv = yield s.report_state(node_name, binary)
+        rv = yield s.report_state(host, binary)
 
     def test_report_state_no_daemon(self):
-        node_name = 'foo'
+        host = 'foo'
         binary = 'bar'
-        daemon_create = {'node_name': node_name,
+        daemon_create = {'host': host,
                       'binary': binary,
                       'report_count': 0}
-        daemon_ref = {'node_name': node_name,
+        daemon_ref = {'host': host,
                       'binary': binary,
                       'report_count': 0,
                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
-                                      node_name,
+                                      host,
                                       binary).AndRaise(exception.NotFound())
         service.db.daemon_create(None,
                                  daemon_create).AndReturn(daemon_ref['id'])
@@ -122,38 +122,38 @@ class ServiceTestCase(test.BaseTestCase):
 
         self.mox.ReplayAll()
         s = service.Service()
-        rv = yield s.report_state(node_name, binary)
+        rv = yield s.report_state(host, binary)
 
     def test_report_state_newly_disconnected(self):
-        node_name = 'foo'
+        host = 'foo'
         binary = 'bar'
-        daemon_ref = {'node_name': node_name,
+        daemon_ref = {'host': host,
                       'binary': binary,
                       'report_count': 0,
                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
-                                      node_name,
+                                      host,
                                       binary).AndRaise(Exception())
 
         self.mox.ReplayAll()
         s = service.Service()
-        rv = yield s.report_state(node_name, binary)
+        rv = yield s.report_state(host, binary)
 
         self.assert_(s.model_disconnected)
 
     def test_report_state_newly_connected(self):
-        node_name = 'foo'
+        host = 'foo'
         binary = 'bar'
-        daemon_ref = {'node_name': node_name,
+        daemon_ref = {'host': host,
                       'binary': binary,
                       'report_count': 0,
                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.daemon_get_by_args(None,
-                                      node_name,
+                                      host,
                                       binary).AndReturn(daemon_ref)
         service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
@@ -161,6 +161,6 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.ReplayAll()
         s = service.Service()
         s.model_disconnected = True
-        rv = yield s.report_state(node_name, binary)
+        rv = yield s.report_state(host, binary)
 
         self.assert_(not s.model_disconnected)

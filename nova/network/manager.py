@@ -93,7 +93,7 @@ class NetworkManager(manager.Manager):
         network_id = network_ref['id']
         host = self.db.network_set_host(context,
                                         network_id,
-                                        FLAGS.node_name)
+                                        FLAGS.host)
         self._on_set_network_host(context, network_id)
         return host
 
@@ -117,7 +117,7 @@ class NetworkManager(manager.Manager):
         """Gets an floating ip from the pool"""
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
-                                                    FLAGS.node_name,
+                                                    FLAGS.host,
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):

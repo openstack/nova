@@ -91,7 +91,7 @@ class NetworkTestCase(test.TrialTestCase):
         try:
             db.floating_ip_get_by_address(None, ip_str)
         except exception.NotFound:
-            db.floating_ip_create(None, ip_str, FLAGS.node_name)
+            db.floating_ip_create(None, ip_str, FLAGS.host)
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.projects[0].id)
         fix_addr = self._create_address(0)

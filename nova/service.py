@@ -89,11 +89,11 @@ class Service(object, service.Service):
                 proxy=service_ref)
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
-                topic='%s.%s' % (topic, FLAGS.node_name),
+                topic='%s.%s' % (topic, FLAGS.host),
                 proxy=service_ref)
 
         pulse = task.LoopingCall(service_ref.report_state,
-                                 FLAGS.node_name,
+                                 FLAGS.host,
                                  bin_name)
         pulse.start(interval=report_interval, now=False)
 
@@ -107,14 +107,14 @@ class Service(object, service.Service):
         return application
 
     @defer.inlineCallbacks
-    def report_state(self, node_name, binary, context=None):
+    def report_state(self, host, binary, context=None):
         """Update the state of this daemon in the datastore."""
         try:
             try:
-                daemon_ref = db.daemon_get_by_args(context, node_name, binary)
+                daemon_ref = db.daemon_get_by_args(context, host, binary)
                 daemon_id = daemon_ref['id']
             except exception.NotFound:
-                daemon_id = db.daemon_create(context, {'node_name': node_name,
+                daemon_id = db.daemon_create(context, {'host': host,
                                                         'binary': binary,
                                                         'report_count': 0})
                 daemon_ref = db.daemon_get(context, daemon_id)

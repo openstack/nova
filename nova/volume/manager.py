@@ -78,7 +78,7 @@ class AOEManager(manager.Manager):
 
         self.db.volume_update(context,
                               volume_id,
-                              {'node_name': FLAGS.node_name})
+                              {'host': FLAGS.host})
 
         size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG", volume_id, size)
@@ -111,7 +111,7 @@ class AOEManager(manager.Manager):
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
-        if volume_ref['node_name'] != FLAGS.node_name:
+        if volume_ref['host'] != FLAGS.host:
             raise exception.Error("Volume is not local to this node")
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                            volume_id)

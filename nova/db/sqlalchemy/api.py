@@ -33,8 +33,8 @@ def daemon_get(context, daemon_id):
     return models.Daemon.find(daemon_id)
 
 
-def daemon_get_by_args(context, node_name, binary):
-    return models.Daemon.find_by_args(node_name, binary)
+def daemon_get_by_args(context, host, binary):
+    return models.Daemon.find_by_args(host, binary)
 
 
 def daemon_create(context, values):
@@ -55,10 +55,10 @@ def daemon_update(context, daemon_id, values):
 ###################
 
 
-def floating_ip_allocate_address(context, node_name, project_id):
+def floating_ip_allocate_address(context, host, project_id):
     with managed_session(autocommit=False) as session:
         floating_ip_ref = session.query(models.FloatingIp) \
-                                 .filter_by(node_name=node_name) \
+                                 .filter_by(host=host) \
                                  .filter_by(fixed_ip_id=None) \
                                  .filter_by(deleted=False) \
                                  .with_lockmode('update') \
@@ -76,7 +76,7 @@ def floating_ip_allocate_address(context, node_name, project_id):
 def floating_ip_create(context, address, host):
     floating_ip_ref = models.FloatingIp()
     floating_ip_ref['address'] = address
-    floating_ip_ref['node_name'] = host
+    floating_ip_ref['host'] = host
     floating_ip_ref.save()
     return floating_ip_ref
 
@@ -131,8 +131,8 @@ def floating_ip_get_instance(context, address):
 
 def fixed_ip_allocate(context, network_id):
     with managed_session(autocommit=False) as session:
-        network_or_none = or_(models.FixedIp.network_id==network_id,
-                              models.FixedIp.network_id==None)
+        network_or_none = or_(models.FixedIp.network_id == network_id,
+                              models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp) \
                               .filter(network_or_none) \
                               .filter_by(reserved=False) \
@@ -270,7 +270,7 @@ def instance_get_floating_address(context, instance_id):
 
 def instance_get_host(context, instance_id):
     instance_ref = instance_get(context, instance_id)
-    return instance_ref['node_name']
+    return instance_ref['host']
 
 
 def instance_is_vpn(context, instance_id):
@@ -376,7 +376,7 @@ def network_get_by_bridge(context, bridge):
 
 def network_get_host(context, network_id):
     network_ref = network_get(context, network_id)
-    return network_ref['node_name']
+    return network_ref['host']
 
 
 def network_get_index(context, network_id):
@@ -418,13 +418,13 @@ def network_set_host(context, network_id, host_id):
                                      network_id)
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if network.node_name:
+        if network.host:
             session.commit()
-            return network['node_name']
-        network['node_name'] = host_id
+            return network['host']
+        network['host'] = host_id
         session.add(network)
         session.commit()
-        return network['node_name']
+        return network['host']
 
 
 def network_update(context, network_id, values):
@@ -549,7 +549,7 @@ def volume_get_by_str(context, str_id):
 
 def volume_get_host(context, volume_id):
     volume_ref = volume_get(context, volume_id)
-    return volume_ref['node_name']
+    return volume_ref['host']
 
 
 def volume_get_shelf_and_blade(context, volume_id):

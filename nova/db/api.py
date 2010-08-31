@@ -15,11 +15,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""
+Defines interface for DB access
+"""
 
 from nova import exception
 from nova import flags
 from nova import utils
-from nova import validate
 
 
 FLAGS = flags.FLAGS
@@ -33,14 +35,17 @@ _impl = utils.LazyPluggable(FLAGS['db_backend'],
 
 # TODO(vish): where should these exceptions go?
 class NoMoreAddresses(exception.Error):
+    """No more available addresses"""
     pass
 
 
 class NoMoreBlades(exception.Error):
+    """No more available blades"""
     pass
 
 
 class NoMoreNetworks(exception.Error):
+    """No more available networks"""
     pass
 
 
@@ -52,9 +57,9 @@ def daemon_get(context, daemon_id):
     return _impl.daemon_get(context, daemon_id)
 
 
-def daemon_get_by_args(context, node_name, binary):
+def daemon_get_by_args(context, host, binary):
     """Get the state of an daemon by node name and binary."""
-    return _impl.daemon_get_by_args(context, node_name, binary)
+    return _impl.daemon_get_by_args(context, host, binary)
 
 
 def daemon_create(context, values):
@@ -74,12 +79,12 @@ def daemon_update(context, daemon_id, values):
 ###################
 
 
-def floating_ip_allocate_address(context, node_name, project_id):
+def floating_ip_allocate_address(context, host, project_id):
     """Allocate free floating ip and return the address.
 
     Raises if one is not available.
     """
-    return _impl.floating_ip_allocate_address(context, node_name, project_id)
+    return _impl.floating_ip_allocate_address(context, host, project_id)
 
 
 def floating_ip_create(context, address, host):
