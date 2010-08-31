@@ -17,10 +17,7 @@
 #    under the License.
 
 """
-Compute Manager:
-
-    Handles all code relating to instances
-
+Handles all code relating to instances (guest vms)
 """
 
 import base64
@@ -57,8 +54,6 @@ class ComputeManager(manager.Manager):
         self.driver = utils.import_object(compute_driver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
         super(ComputeManager, self).__init__(*args, **kwargs)
-        # TODO(joshua): This needs to ensure system state, specifically
-        #               modprobe aoe
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info"""
@@ -103,30 +98,28 @@ class ComputeManager(manager.Manager):
         logging.debug("Got told to terminate instance %s", instance_id)
         instance_ref = db.instance_get(context, instance_id)
 
+        # TODO(vish): move this logic to layer?
         if instance_ref['state'] == power_state.SHUTOFF:
-            # self.datamodel.destroy() FIXME: RE-ADD?
+            db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        db.instance_state(
-                context, instance_id, power_state.NOSTATE, 'shutting_down')
+        db.instance_state(context,
+                          instance_id,
+                          power_state.NOSTATE,
+                          'shutting_down')
         yield self.driver.destroy(instance_ref)
 
-        # FIXME(ja): should we keep it in a terminated state for a bit?
+        # TODO(ja): should we keep it in a terminated state for a bit?
         db.instance_destroy(context, instance_id)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
-        """Reboot an instance on this server.
-
-        KVM doesn't support reboot, so we terminate and restart.
-
-        """
+        """Reboot an instance on this server."""
         self._update_state(context, instance_id)
         instance_ref = db.instance_get(context, instance_id)
 
-        # FIXME(ja): this is only checking the model state - not state on disk?
         if instance_ref['state'] != power_state.RUNNING:
             raise exception.Error(
                     'trying to reboot a non-running'
@@ -136,15 +129,17 @@ class ComputeManager(manager.Manager):
                      power_state.RUNNING))
 
         logging.debug('rebooting instance %s', instance_ref['name'])
-        db.instance_state(
-                context, instance_id, power_state.NOSTATE, 'rebooting')
+        db.instance_state(context,
+                          instance_id,
+                          power_state.NOSTATE,
+                          'rebooting')
         yield self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
-        # FIXME: Abstract this for Xen
+        # TODO(vish): Move this into the driver layer
 
         logging.debug("Getting console output for %s", (instance_id))
         instance_ref = db.instance_get(context, instance_id)
@@ -172,6 +167,7 @@ class ComputeManager(manager.Manager):
         # TODO(termie): check that instance_id exists
         volume_ref = db.volume_get(context, volume_id)
         yield self._init_aoe()
+        # TODO(vish): Move this into the driver layer
         yield process.simple_execute(
                 "sudo virsh attach-disk %s /dev/etherd/%s %s" %
                 (instance_id,
@@ -189,6 +185,7 @@ class ComputeManager(manager.Manager):
         # TODO(termie): check that instance_id exists
         volume_ref = db.volume_get(context, volume_id)
         target = volume_ref['mountpoint'].rpartition('/dev/')[2]
+        # TODO(vish): Move this into the driver layer
         yield process.simple_execute(
                 "sudo virsh detach-disk %s %s " % (instance_id, target))
         db.volume_detached(context, volume_id)
@@ -197,6 +194,6 @@ class ComputeManager(manager.Manager):
     @defer.inlineCallbacks
     def _init_aoe(self):
         """Discover aoe exported devices"""
-        # TODO(vish): these shell calls should move into a different layer.
+        # TODO(vish): these shell calls should move into volume manager.
         yield process.simple_execute("sudo aoe-discover")
         yield process.simple_execute("sudo aoe-stat")
