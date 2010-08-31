@@ -22,13 +22,12 @@ Starting point for routing EC2 requests
 
 import logging
 import routes
+import webob.dec
 import webob.exc
-from webob.dec import wsgify
 
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
 from nova import exception
-from nova import utils
 from nova.auth import manager
 
 
@@ -101,7 +100,7 @@ class Authenticate(wsgi.Middleware):
 class Router(wsgi.Application):
     """
     Finds controller for a request, executes environ['ec2.action'] upon it, and
-    returns a response.
+    returns an XML response.  If the action fails, returns a 400.
     """
     def __init__(self):
         self.map = routes.Mapper()

@@ -23,8 +23,6 @@ APIRequest class
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
-from twisted.internet import defer
-
 
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
 
