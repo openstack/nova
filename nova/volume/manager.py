@@ -116,6 +116,6 @@ class AOEManager(manager.Manager):
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                            volume_id)
         yield self.driver.remove_export(volume_id, shelf_id, blade_id)
-        yield self.driver.delete_volumevolume_id
+        yield self.driver.delete_volume(volume_id)
         self.db.volume_destroy(context, volume_id)
         defer.returnValue(True)

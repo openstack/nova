@@ -38,93 +38,68 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
 
 class AOEDriver(object):
     """Executes commands relating to AOE volumes"""
+    def __init__(self, execute=process.simple_execute, *args, **kwargs):
+        self._execute = execute
 
     @defer.inlineCallbacks
-    @staticmethod
-    def create_volume(volume_id, size):
+    def create_volume(self, volume_id, size):
         """Creates a logical volume"""
         # NOTE(vish): makes sure that the volume group exists
-        yield process.simple_execute("vgs | grep %s" % FLAGS.volume_group)
+        yield self._execute("vgs | grep %s" % FLAGS.volume_group)
         if int(size) == 0:
             sizestr = '100M'
         else:
             sizestr = '%sG' % size
-        yield process.simple_execute(
+        yield self._execute(
                 "sudo lvcreate -L %s -n %s %s" % (sizestr,
                                                   volume_id,
-                                                  FLAGS.volume_group),
-                terminate_on_stderr=False)
+                                                  FLAGS.volume_group))
 
     @defer.inlineCallbacks
-    @staticmethod
-    def delete_volume(volume_id):
+    def delete_volume(self, volume_id):
         """Deletes a logical volume"""
-        yield process.simple_execute(
+        yield self._execute(
                 "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            volume_id),
-                terminate_on_stderr=False)
+                                            volume_id))
 
     @defer.inlineCallbacks
-    @staticmethod
-    def create_export(volume_id, shelf_id, blade_id):
+    def create_export(self, volume_id, shelf_id, blade_id):
         """Creates an export for a logical volume"""
-        yield process.simple_execute(
+        yield self._execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
                  FLAGS.volume_group,
-                 volume_id),
-                terminate_on_stderr=False)
+                 volume_id))
 
     @defer.inlineCallbacks
-    @staticmethod
-    def remove_export(_volume_id, shelf_id, blade_id):
+    def remove_export(self, _volume_id, shelf_id, blade_id):
         """Removes an export for a logical volume"""
-        yield process.simple_execute(
-                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id),
-                terminate_on_stderr=False)
-        yield process.simple_execute(
-                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id),
-                terminate_on_stderr=False)
+        yield self._execute(
+                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id))
+        yield self._execute(
+                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id))
 
     @defer.inlineCallbacks
-    @staticmethod
-    def ensure_exports():
+    def ensure_exports(self):
         """Runs all existing exports"""
         # NOTE(ja): wait for blades to appear
-        yield process.simple_execute("sleep 5")
-        yield process.simple_execute("sudo vblade-persist auto all",
+        yield self._execute("sleep 5")
+        yield self._execute("sudo vblade-persist auto all",
                                      check_exit_code=False)
-        yield process.simple_execute("sudo vblade-persist start all",
+        yield self._execute("sudo vblade-persist start all",
                                      check_exit_code=False)
+
 
 
 class FakeAOEDriver(AOEDriver):
     """Logs calls instead of executing"""
-    @staticmethod
-    def create_volume(volume_id, size):
-        """Creates a logical volume"""
-        logging.debug("Fake AOE: create_volume %s, %s", volume_id, size)
+    def __init__(self, *args, **kwargs):
+        super(FakeAOEDriver, self).__init__(self.fake_execute)
 
     @staticmethod
-    def delete_volume(volume_id):
-        """Deletes a logical volume"""
-        logging.debug("Fake AOE: delete_volume %s", volume_id)
+    def fake_execute(cmd, *_args, **_kwargs):
+        """Execute that simply logs the command"""
+        logging.debug("FAKE AOE: %s", cmd)
 
-    @staticmethod
-    def create_export(volume_id, shelf_id, blade_id):
-        """Creates an export for a logical volume"""
-        logging.debug("Fake AOE: create_export %s, %s, %s",
-                      volume_id, shelf_id, blade_id)
-
-    @staticmethod
-    def remove_export(volume_id, shelf_id, blade_id):
-        """Removes an export for a logical volume"""
-        logging.debug("Fake AOE: remove_export %s, %s, %s",
-                      volume_id, shelf_id, blade_id)
-
-    @staticmethod
-    def ensure_exports():
-        """Runs all existing exports"""
-        logging.debug("Fake AOE: ensure_export")
