@@ -48,6 +48,7 @@ flags.DEFINE_integer('blades_per_shelf',
 
 
 class AOEManager(manager.Manager):
+    """Manages Ata-Over_Ethernet volumes"""
     def __init__(self, volume_driver=None, *args, **kwargs):
         if not volume_driver:
             # NOTE(vish): support the legacy fake storage flag
@@ -59,6 +60,7 @@ class AOEManager(manager.Manager):
         super(AOEManager, self).__init__(*args, **kwargs)
 
     def _ensure_blades(self, context):
+        """Ensure that blades have been created in datastore"""
         total_blades = FLAGS.num_shelves * FLAGS.blades_per_shelf
         if self.db.export_device_count(context) >= total_blades:
             return
@@ -69,8 +71,8 @@ class AOEManager(manager.Manager):
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
-        """Creates and exports the volume."""
-        logging.info("volume %s: creating" % (volume_id))
+        """Creates and exports the volume"""
+        logging.info("volume %s: creating", volume_id)
 
         volume_ref = self.db.volume_get(context, volume_id)
 
@@ -79,15 +81,15 @@ class AOEManager(manager.Manager):
                               {'node_name': FLAGS.node_name})
 
         size = volume_ref['size']
-        logging.debug("volume %s: creating lv of size %sG" % (volume_id, size))
+        logging.debug("volume %s: creating lv of size %sG", volume_id, size)
         yield self.driver.create_volume(volume_id, size)
 
-        logging.debug("volume %s: allocating shelf & blade" % (volume_id))
+        logging.debug("volume %s: allocating shelf & blade", volume_id)
         self._ensure_blades(context)
         rval = self.db.volume_allocate_shelf_and_blade(context, volume_id)
         (shelf_id, blade_id) = rval
 
-        logging.debug("volume %s: exporting shelf %s & blade %s" % (volume_id,
+        logging.debug("volume %s: exporting shelf %s & blade %s", (volume_id,
                  shelf_id, blade_id))
 
         yield self.driver.create_export(volume_id, shelf_id, blade_id)
@@ -96,15 +98,16 @@ class AOEManager(manager.Manager):
 
         self.db.volume_update(context, volume_id, {'status': 'available'})
 
-        logging.debug("volume %s: re-exporting all values" % (volume_id))
+        logging.debug("volume %s: re-exporting all values", volume_id)
         yield self.driver.ensure_exports()
 
-        logging.debug("volume %s: created successfully" % (volume_id))
+        logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
     def delete_volume(self, context, volume_id):
-        logging.debug("Deleting volume with id of: %s" % (volume_id))
+        """Deletes and unexports volume"""
+        logging.debug("Deleting volume with id of: %s", volume_id)
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
@@ -113,6 +116,6 @@ class AOEManager(manager.Manager):
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                            volume_id)
         yield self.driver.remove_export(volume_id, shelf_id, blade_id)
-        yield self.driver.delete_volume(volume_id)
+        yield self.driver.delete_volumevolume_id
         self.db.volume_destroy(context, volume_id)
         defer.returnValue(True)

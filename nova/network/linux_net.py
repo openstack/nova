@@ -99,6 +99,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
 
 
 def ensure_vlan(vlan_num):
+    """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
@@ -109,6 +110,7 @@ def ensure_vlan(vlan_num):
 
 
 def ensure_bridge(bridge, interface, net_attrs=None):
+    """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
         logging.debug("Starting Bridge inteface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)
@@ -128,6 +130,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
 
 
 def get_dhcp_hosts(context, network_id):
+    """Get a string containing a network's hosts config in dnsmasq format"""
     hosts = []
     for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
         hosts.append(_host_dhcp(fixed_ip['str_id']))
@@ -158,7 +161,7 @@ def update_dhcp(context, network_id):
         try:
             os.kill(pid, signal.SIGHUP)
             return
-        except Exception as exc:  # pylint: disable=W0703
+        except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Hupping dnsmasq threw %s", exc)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env

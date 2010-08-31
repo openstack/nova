@@ -574,7 +574,7 @@ class AuthManager(object):
 
         if not network_ref['vpn_public_port']:
             raise exception.NotFound('project network data has not been set')
-        return (network_ref['vpn_public_ip_str'],
+        return (network_ref['vpn_public_address'],
                 network_ref['vpn_public_port'])
 
     def delete_project(self, project, context=None):

@@ -28,7 +28,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.network import service
 
 FLAGS = flags.FLAGS
 

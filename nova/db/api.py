@@ -128,9 +128,9 @@ def fixed_ip_allocate(context, network_id):
     return _impl.fixed_ip_allocate(context, network_id)
 
 
-def fixed_ip_create(context, network_id, address, reserved=False):
+def fixed_ip_create(context, values):
     """Create a fixed ip from the values dictionary."""
-    return _impl.fixed_ip_create(context, network_id, address, reserved)
+    return _impl.fixed_ip_create(context, values)
 
 
 def fixed_ip_deallocate(context, address):

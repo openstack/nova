@@ -126,7 +126,7 @@ class LibvirtConnection(object):
 
     def destroy(self, instance):
         try:
-            virt_dom = self._conn.lookupByName(instance.name)
+            virt_dom = self._conn.lookupByName(instance['name'])
             virt_dom.destroy()
         except Exception as _err:
             pass
@@ -140,7 +140,7 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
             try:
-                instance.set_state(self.get_info(instance.name)['state'])
+                instance.set_state(self.get_info(instance['name'])['state'])
                 if instance.state == power_state.SHUTDOWN:
                     timer.stop()
                     d.callback(None)
@@ -153,7 +153,7 @@ class LibvirtConnection(object):
         return d
 
     def _cleanup(self, instance):
-        target = os.path.join(FLAGS.instances_path, instance.name)
+        target = os.path.join(FLAGS.instances_path, instance['name'])
         logging.info("Deleting instance files at %s", target)
         if os.path.exists(target):
             shutil.rmtree(target)
@@ -162,20 +162,20 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def reboot(self, instance):
         xml = self.to_xml(instance)
-        yield self._conn.lookupByName(instance.name).destroy()
+        yield self._conn.lookupByName(instance['name']).destroy()
         yield self._conn.createXML(xml, 0)
 
         d = defer.Deferred()
         timer = task.LoopingCall(f=None)
         def _wait_for_reboot():
             try:
-                instance.set_state(self.get_info(instance.name)['state'])
+                instance.set_state(self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
-                    logging.debug('rebooted instance %s' % instance.name)
+                    logging.debug('rebooted instance %s' % instance['name'])
                     timer.stop()
                     d.callback(None)
             except Exception, exn:
-                logging.error('_wait_for_reboot failed: %s' % exn)
+                logging.error('_wait_for_reboot failed: %s', exn)
                 instance.set_state(power_state.SHUTDOWN)
                 timer.stop()
                 d.callback(None)
@@ -198,13 +198,14 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_boot():
             try:
-                instance.set_state(self.get_info(instance.name)['state'])
+                instance.set_state(self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
-                    logging.debug('booted instance %s' % instance.name)
+                    logging.debug('booted instance %s', instance['name'])
                     timer.stop()
                     local_d.callback(None)
             except:
-                logging.exception('Failed to boot instance %s' % instance.name)
+                logging.exception('Failed to boot instance %s',
+                                  instance['name'])
                 instance.set_state(power_state.SHUTDOWN)
                 timer.stop()
                 local_d.callback(None)
@@ -215,7 +216,9 @@ class LibvirtConnection(object):
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml):
         # syntactic nicety
-        basepath = lambda x='': os.path.join(FLAGS.instances_path, inst.name, x)
+        basepath = lambda fname='': os.path.join(FLAGS.instances_path,
+                                                 inst['name'],
+                                                 fname)
 
         # ensure directories exist and are writable
         yield process.simple_execute('mkdir -p %s' % basepath())
@@ -224,7 +227,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
-        logging.info('Creating image for: %s', inst.name)
+        logging.info('Creating image for: %s', inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
@@ -245,10 +248,11 @@ class LibvirtConnection(object):
 
         key = inst.key_data
         net = None
-        network_ref = db.project_get_network(None, project.id)  # FIXME
+        network_ref = db.project_get_network(None, project.id)
         if network_ref['injected']:
+            address = db.instance_get_fixed_address(None, inst['id'])
             with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': inst.fixed_ip['ip_str'],  # FIXME
+                net = f.read() % {'address': address,
                                   'network': network_ref['network'],
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
@@ -269,12 +273,13 @@ class LibvirtConnection(object):
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug("Starting the toXML method")
-        network = db.project_get_network(None, instance['project_id']) # FIXME
+        network = db.project_get_network(None, instance['project_id'])
         # FIXME(vish): stick this in db
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
         xml_info = {'type': FLAGS.libvirt_type,
-                    'name': instance.name,
-                    'basepath': os.path.join(FLAGS.instances_path, instance.name),
+                    'name': instance['name'],
+                    'basepath': os.path.join(FLAGS.instances_path,
+                                             instance['name']),
                     'memory_kb': instance_type['memory_mb'] * 1024,
                     'vcpus': instance_type['vcpus'],
                     'bridge_name': network['bridge'],

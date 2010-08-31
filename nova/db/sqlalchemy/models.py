@@ -260,67 +260,6 @@ class ExportDevice(Base, NovaBase):
                                                   uselist=False))
 
 
-# TODO(vish): can these both come from the same baseclass?
-class FixedIp(Base, NovaBase):
-    __tablename__ = 'fixed_ips'
-    id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255))
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
-    allocated = Column(Boolean, default=False)
-    leased = Column(Boolean, default=False)
-    reserved = Column(Boolean, default=False)
-
-    @property
-    def str_id(self):
-        return self.ip_str
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(ip_str=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                raise exception.NotFound("No model for ip_str %s" % str_id)
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
-
-
-class FloatingIp(Base, NovaBase):
-    __tablename__ = 'floating_ips'
-    id = Column(Integer, primary_key=True)
-    ip_str = Column(String(255))
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
-
-    project_id = Column(String(255))
-    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
-
-    @property
-    def str_id(self):
-        return self.ip_str
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(ip_str=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                raise exception.NotFound("No model for ip_str %s" % str_id)
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
-
-
 class Network(Base, NovaBase):
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
@@ -334,18 +273,13 @@ class Network(Base, NovaBase):
     dns = Column(String(255))
 
     vlan = Column(Integer)
-    vpn_public_ip_str = Column(String(255))
+    vpn_public_address = Column(String(255))
     vpn_public_port = Column(Integer)
-    vpn_private_ip_str = Column(String(255))
+    vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
     project_id = Column(String(255))
     node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
-
-    fixed_ips = relationship(FixedIp,
-                             single_parent=True,
-                             backref=backref('network'),
-                             cascade='all, delete, delete-orphan')
 
 
 class NetworkIndex(Base, NovaBase):
@@ -355,6 +289,68 @@ class NetworkIndex(Base, NovaBase):
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
+
+
+# TODO(vish): can these both come from the same baseclass?
+class FixedIp(Base, NovaBase):
+    __tablename__ = 'fixed_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
+    network = relationship(Network, backref=backref('fixed_ips'))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance, backref=backref('fixed_ip',
+                                                      uselist=False))
+    allocated = Column(Boolean, default=False)
+    leased = Column(Boolean, default=False)
+    reserved = Column(Boolean, default=False)
+
+    @property
+    def str_id(self):
+        return self.address
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(address=str_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for address %s" % str_id)
+        else:
+            with managed_session() as sess:
+                return cls.find_by_str(str_id, session=sess)
+
+
+class FloatingIp(Base, NovaBase):
+    __tablename__ = 'floating_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
+    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
+
+    project_id = Column(String(255))
+    node_name = Column(String(255))  # , ForeignKey('physical_node.id'))
+
+    @property
+    def str_id(self):
+        return self.address
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None):
+        if session:
+            try:
+                return session.query(cls) \
+                              .filter_by(address=str_id) \
+                              .filter_by(deleted=False) \
+                              .one()
+            except exc.NoResultFound:
+                raise exception.NotFound("No model for address %s" % str_id)
+        else:
+            with managed_session() as sess:
+                return cls.find_by_str(str_id, session=sess)
 
 
 def register_models():

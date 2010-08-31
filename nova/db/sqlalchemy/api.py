@@ -21,6 +21,7 @@ from nova import exception
 from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import managed_session
+from sqlalchemy import or_
 
 FLAGS = flags.FLAGS
 
@@ -37,7 +38,9 @@ def daemon_get_by_args(context, node_name, binary):
 
 
 def daemon_create(context, values):
-    daemon_ref = models.Daemon(**values)
+    daemon_ref = models.Daemon()
+    for (key, value) in values.iteritems():
+        daemon_ref[key] = value
     daemon_ref.save()
     return daemon_ref.id
 
@@ -67,12 +70,12 @@ def floating_ip_allocate_address(context, node_name, project_id):
         floating_ip_ref['project_id'] = project_id
         session.add(floating_ip_ref)
         session.commit()
-        return floating_ip_ref['str_id']
+        return floating_ip_ref['address']
 
 
 def floating_ip_create(context, address, host):
     floating_ip_ref = models.FloatingIp()
-    floating_ip_ref['ip_str'] = address
+    floating_ip_ref['address'] = address
     floating_ip_ref['node_name'] = host
     floating_ip_ref.save()
     return floating_ip_ref
@@ -95,7 +98,7 @@ def floating_ip_disassociate(context, address):
                                                         session=session)
         fixed_ip_ref = floating_ip_ref.fixed_ip
         if fixed_ip_ref:
-            fixed_ip_address = fixed_ip_ref['str_id']
+            fixed_ip_address = fixed_ip_ref['address']
         else:
             fixed_ip_address = None
         floating_ip_ref.fixed_ip = None
@@ -128,8 +131,10 @@ def floating_ip_get_instance(context, address):
 
 def fixed_ip_allocate(context, network_id):
     with managed_session(autocommit=False) as session:
+        network_or_none = or_(models.FixedIp.network_id==network_id,
+                              models.FixedIp.network_id==None)
         fixed_ip_ref = session.query(models.FixedIp) \
-                              .filter_by(network_id=network_id) \
+                              .filter(network_or_none) \
                               .filter_by(reserved=False) \
                               .filter_by(allocated=False) \
                               .filter_by(leased=False) \
@@ -140,19 +145,20 @@ def fixed_ip_allocate(context, network_id):
         #             then this has concurrency issues
         if not fixed_ip_ref:
             raise db.NoMoreAddresses()
+        if not fixed_ip_ref.network:
+            fixed_ip_ref.network = models.Network.find(network_id)
         fixed_ip_ref['allocated'] = True
         session.add(fixed_ip_ref)
         session.commit()
-        return fixed_ip_ref['str_id']
+        return fixed_ip_ref['address']
 
 
-def fixed_ip_create(context, network_id, address, reserved=False):
+def fixed_ip_create(context, values):
     fixed_ip_ref = models.FixedIp()
-    fixed_ip_ref.network = db.network_get(context, network_id)
-    fixed_ip_ref['ip_str'] = address
-    fixed_ip_ref['reserved'] = reserved
+    for (key, value) in values.iteritems():
+        fixed_ip_ref[key] = value
     fixed_ip_ref.save()
-    return fixed_ip_ref
+    return fixed_ip_ref['address']
 
 
 def fixed_ip_get_by_address(context, address):
@@ -248,7 +254,7 @@ def instance_get_fixed_address(context, instance_id):
         instance_ref = models.Instance.find(instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
-        return instance_ref.fixed_ip['str_id']
+        return instance_ref.fixed_ip['address']
 
 
 def instance_get_floating_address(context, instance_id):
@@ -259,7 +265,7 @@ def instance_get_floating_address(context, instance_id):
         if not instance_ref.fixed_ip.floating_ips:
             return None
         # NOTE(vish): this just returns the first floating ip
-        return instance_ref.fixed_ip.floating_ips[0]['str_id']
+        return instance_ref.fixed_ip.floating_ips[0]['address']
 
 
 def instance_get_host(context, instance_id):
@@ -325,7 +331,6 @@ def network_create(context, values):
         network_ref[key] = value
     network_ref.save()
     return network_ref
-    return network_ref.id
 
 
 def network_destroy(context, network_id):
