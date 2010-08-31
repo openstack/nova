@@ -26,7 +26,6 @@ from nova import flags
 from nova import test
 from nova import utils
 
-
 FLAGS = flags.FLAGS
 
 
@@ -39,7 +38,6 @@ class VolumeTestCase(test.TrialTestCase):
                    fake_storage=True)
         self.volume = utils.import_object(FLAGS.volume_manager)
         self.context = None
-
 
     def _create_volume(self, size='0'):
         vol = {}
@@ -133,6 +131,7 @@ class VolumeTestCase(test.TrialTestCase):
         project_id = 'fake'
         shelf_blades = []
         volume_ids = []
+
         def _check(volume_id):
             volume_ids.append(volume_id)
             (shelf_id, blade_id) = db.volume_get_shelf_and_blade(None,

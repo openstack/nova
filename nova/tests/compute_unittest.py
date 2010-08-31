@@ -48,7 +48,8 @@ class InstanceXmlTestCase(test.TrialTestCase):
         # self.assert_(ElementTree.parse(StringIO.StringIO(xml)))
         #
         # second_node = node.Node()
-        # new_inst = node.Instance.fromXml(second_node._conn, pool=second_node._pool, xml=xml)
+        # new_inst = node.Instance.fromXml(second_node._conn,
+        #                                  pool=second_node._pool, xml=xml)
         # self.assertEqual(new_inst.state, node.Instance.RUNNING)
         # rv = yield first_node.terminate_instance(self.context, instance_id)
 

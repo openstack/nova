@@ -20,10 +20,7 @@
 Unit Tests for remote procedure calls using queue
 """
 
-import logging
-
 import mox
-from twisted.internet import defer
 
 from nova import exception
 from nova import flags
@@ -33,33 +30,37 @@ from nova import service
 from nova import manager
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
                     "Manager for testing")
+
 
 class FakeManager(manager.Manager):
     """Fake manager for tests"""
     pass
 
+
 class ServiceTestCase(test.BaseTestCase):
     """Test cases for rpc"""
+
     def setUp(self):  # pylint: disable=C0103
         super(ServiceTestCase, self).setUp()
         self.mox.StubOutWithMock(service, 'db')
 
     def test_create(self):
-        self.mox.StubOutWithMock(rpc, 'AdapterConsumer', use_mock_anything=True)
+        self.mox.StubOutWithMock(rpc,
+                                 'AdapterConsumer',
+                                 use_mock_anything=True)
         self.mox.StubOutWithMock(
                 service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
                             topic='fake',
-                            proxy=mox.IsA(service.Service)
-                            ).AndReturn(rpc.AdapterConsumer)
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.AdapterConsumer)
 
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
                             topic='fake.%s' % FLAGS.node_name,
-                            proxy=mox.IsA(service.Service)
-                            ).AndReturn(rpc.AdapterConsumer)
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.AdapterConsumer)
 
         # Stub out looping call a bit needlessly since we don't have an easy
         # way to cancel it (yet) when the tests finishes
@@ -80,7 +81,6 @@ class ServiceTestCase(test.BaseTestCase):
     # whether it is disconnected, it looks for a variable on itself called
     # 'model_disconnected' and report_state doesn't really do much so this
     # these are mostly just for coverage
-
     def test_report_state(self):
         node_name = 'foo'
         binary = 'bar'
@@ -99,7 +99,6 @@ class ServiceTestCase(test.BaseTestCase):
         s = service.Service()
         rv = yield s.report_state(node_name, binary)
 
-
     def test_report_state_no_daemon(self):
         node_name = 'foo'
         binary = 'bar'
@@ -115,7 +114,8 @@ class ServiceTestCase(test.BaseTestCase):
         service.db.daemon_get_by_args(None,
                                       node_name,
                                       binary).AndRaise(exception.NotFound())
-        service.db.daemon_create(None, daemon_create).AndReturn(daemon_ref['id'])
+        service.db.daemon_create(None,
+                                 daemon_create).AndReturn(daemon_ref['id'])
         service.db.daemon_get(None, daemon_ref['id']).AndReturn(daemon_ref)
         service.db.daemon_update(None, daemon_ref['id'],
                                  mox.ContainsKeyValue('report_count', 1))
@@ -123,7 +123,6 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.ReplayAll()
         s = service.Service()
         rv = yield s.report_state(node_name, binary)
-
 
     def test_report_state_newly_disconnected(self):
         node_name = 'foo'
@@ -143,7 +142,6 @@ class ServiceTestCase(test.BaseTestCase):
         rv = yield s.report_state(node_name, binary)
 
         self.assert_(s.model_disconnected)
-
 
     def test_report_state_newly_connected(self):
         node_name = 'foo'
@@ -166,4 +164,3 @@ class ServiceTestCase(test.BaseTestCase):
         rv = yield s.report_state(node_name, binary)
 
         self.assert_(not s.model_disconnected)
-

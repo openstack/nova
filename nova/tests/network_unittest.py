@@ -140,7 +140,8 @@ class NetworkTestCase(test.TrialTestCase):
 
         db.fixed_ip_deallocate(None, address2)
         release_ip(address2)
-        self.assertFalse(is_allocated_in_project(address2, self.projects[1].id))
+        self.assertFalse(is_allocated_in_project(address2,
+                                                 self.projects[1].id))
 
     def test_subnet_edge(self):
         """Makes sure that private ips don't overlap"""
@@ -190,7 +191,6 @@ class NetworkTestCase(test.TrialTestCase):
         for project in projects:
             self.manager.delete_project(project)
 
-
     def test_ips_are_reused(self):
         """Makes sure that ip addresses that are deallocated get reused"""
         address = self._create_address(0)
@@ -224,8 +224,6 @@ class NetworkTestCase(test.TrialTestCase):
         """Test for a NoMoreAddresses exception when all fixed ips are used.
         """
         network = db.project_get_network(None, self.projects[0].id)
-
-
         num_available_ips = db.network_count_available_ips(None,
                                                            network['id'])
         addresses = []
