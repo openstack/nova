@@ -32,6 +32,10 @@ class API(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
+        # TODO(gundlach): EC2 RootController is replaced by this class;
+        # MetadataRequestHandlers isn't part of the EC2 API and thus can
+        # be dropped; and I'm leaving off CloudPipeRequestHandler until
+        # I hear that we need it.
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
         mapper.connect("/ec2/{path_info:.*}", controller=ec2.API())
         super(API, self).__init__(mapper)

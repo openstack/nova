@@ -17,7 +17,9 @@ APIServerApplication(tornado.web.Application)
 APIRequestHandler
   execute:
     authenticates request
-    picks controller from APIServerApplication's list
+    picks controller from APIServerApplication's list based on name that was at the
+     start of the URL (e.g. /services/Cloud has /services mapped here via 
+     APIServerApplication then Cloud is controller_name)
     picks action from incoming request arguments
     dict = APIRequest(controller, action).send(Context(user, project))
     _write_callback(dict)
@@ -49,12 +51,10 @@ CloudController and AdminController:
 
 * apiserverapplication:
   replace with a Router to a wsgi.Controller
-    root controller all goes into a "version" action
-    ??? dunno what cloudpipes or metadatarequesthandlers do...
-    apirequesthandler stuff goes into an "ec2" action
+    apirequesthandler stuff is just an entry in api.APIRouter
 
 * apirequesthandler
-  ec2() method on wsgi.Controller
+  wsgi.Controller pointed to by api.APIRouter
     - basically it's execute() from old APIRequestHandler
   change to return data directly instead of _write_callback() and finish()
 
