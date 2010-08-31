@@ -15,11 +15,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+"""
+Tests For Compute
+"""
 import logging
-import time
+
 from twisted.internet import defer
-from xml.etree import ElementTree
 
 from nova import db
 from nova import exception
@@ -32,58 +33,39 @@ from nova.auth import manager
 FLAGS = flags.FLAGS
 
 
-class InstanceXmlTestCase(test.TrialTestCase):
-    # @defer.inlineCallbacks
-    def test_serialization(self):
-        # TODO: Reimplement this, it doesn't make sense in redis-land
-        return
-
-        # instance_id = 'foo'
-        # first_node = node.Node()
-        # inst = yield first_node.run_instance(self.context, instance_id)
-        #
-        # # force the state so that we can verify that it changes
-        # inst._s['state'] = node.Instance.NOSTATE
-        # xml = inst.toXml()
-        # self.assert_(ElementTree.parse(StringIO.StringIO(xml)))
-        #
-        # second_node = node.Node()
-        # new_inst = node.Instance.fromXml(second_node._conn,
-        #                                  pool=second_node._pool, xml=xml)
-        # self.assertEqual(new_inst.state, node.Instance.RUNNING)
-        # rv = yield first_node.terminate_instance(self.context, instance_id)
-
-
-class ComputeConnectionTestCase(test.TrialTestCase):
-    def setUp(self):
+class ComputeTestCase(test.TrialTestCase):
+    """Test case for compute"""
+    def setUp(self):  # pylint: disable-msg=C0103
         logging.getLogger().setLevel(logging.DEBUG)
-        super(ComputeConnectionTestCase, self).setUp()
+        super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
                    fake_storage=True)
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.manager = manager.AuthManager()
-        user = self.manager.create_user('fake', 'fake', 'fake')
-        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.user = self.manager.create_user('fake', 'fake', 'fake')
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = None
 
-    def tearDown(self):
-        self.manager.delete_user('fake')
-        self.manager.delete_project('fake')
+    def tearDown(self):  # pylint: disable-msg=C0103
+        self.manager.delete_user(self.user)
+        self.manager.delete_project(self.project)
 
     def _create_instance(self):
+        """Create a test instance"""
         inst = {}
         inst['image_id'] = 'ami-test'
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
-        inst['user_id'] = 'fake'
-        inst['project_id'] = 'fake'
+        inst['user_id'] = self.user.id
+        inst['project_id'] = self.project.id
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         return db.instance_create(None, inst)
 
     @defer.inlineCallbacks
-    def test_run_describe_terminate(self):
+    def test_run_terminate(self):
+        """Make sure it is possible to  run and terminate instance"""
         instance_id = self._create_instance()
 
         yield self.compute.run_instance(self.context, instance_id)
@@ -100,6 +82,7 @@ class ComputeConnectionTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_reboot(self):
+        """Ensure instance can be rebooted"""
         instance_id = self._create_instance()
         yield self.compute.run_instance(self.context, instance_id)
         yield self.compute.reboot_instance(self.context, instance_id)
@@ -107,16 +90,18 @@ class ComputeConnectionTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_console_output(self):
+        """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
-        rv = yield self.compute.run_instance(self.context, instance_id)
+        yield self.compute.run_instance(self.context, instance_id)
 
         console = yield self.compute.get_console_output(self.context,
                                                         instance_id)
         self.assert_(console)
-        rv = yield self.compute.terminate_instance(self.context, instance_id)
+        yield self.compute.terminate_instance(self.context, instance_id)
 
     @defer.inlineCallbacks
     def test_run_instance_existing(self):
+        """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
         yield self.compute.run_instance(self.context, instance_id)
         self.assertFailure(self.compute.run_instance(self.context,

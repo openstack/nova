@@ -75,6 +75,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.manager.delete_user(self.user)
 
     def _create_address(self, project_num, instance_id=None):
+        """Create an address in given project num"""
         net = db.project_get_network(None, self.projects[project_num].id)
         address = db.fixed_ip_allocate(None, net['id'])
         if instance_id is None:
@@ -147,7 +148,6 @@ class NetworkTestCase(test.TrialTestCase):
         first = self._create_address(0)
         lease_ip(first)
         for i in range(1, 5):
-            project_id = self.projects[i].id
             address = self._create_address(i)
             address2 = self._create_address(i)
             address3 = self._create_address(i)
@@ -227,7 +227,6 @@ class NetworkTestCase(test.TrialTestCase):
                                                            network['id'])
         addresses = []
         for i in range(num_available_ips):
-            project_id = self.projects[0].id
             address = self._create_address(0)
             addresses.append(address)
             lease_ip(address)

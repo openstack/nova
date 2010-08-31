@@ -15,7 +15,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+"""
+Tests for Volume Code
+"""
 import logging
 
 from twisted.internet import defer
@@ -30,7 +32,8 @@ FLAGS = flags.FLAGS
 
 
 class VolumeTestCase(test.TrialTestCase):
-    def setUp(self):
+    """Test Case for volumes"""
+    def setUp(self):  # pylint: disable-msg=C0103
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
         self.compute = utils.import_object(FLAGS.compute_manager)
@@ -39,9 +42,11 @@ class VolumeTestCase(test.TrialTestCase):
         self.volume = utils.import_object(FLAGS.volume_manager)
         self.context = None
 
-    def _create_volume(self, size='0'):
+    @staticmethod
+    def _create_volume(size='0'):
+        """Create a volume object"""
         vol = {}
-        vol['size'] = '0'
+        vol['size'] = size
         vol['user_id'] = 'fake'
         vol['project_id'] = 'fake'
         vol['availability_zone'] = FLAGS.storage_availability_zone
@@ -50,7 +55,8 @@ class VolumeTestCase(test.TrialTestCase):
         return db.volume_create(None, vol)['id']
 
     @defer.inlineCallbacks
-    def test_run_create_volume(self):
+    def test_create_delete_volume(self):
+        """Test volume can be created and deleted"""
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
         self.assertEqual(volume_id, db.volume_get(None, volume_id).id)
@@ -63,6 +69,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_big_volume(self):
+        """Ensure failure if a too large of a volume is requested"""
         # FIXME(vish): validation needs to move into the data layer in
         #              volume_create
         defer.returnValue(True)
@@ -75,9 +82,10 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_many_volumes(self):
+        """Ensure that NoMoreBlades is raised when we run out of volumes"""
         vols = []
         total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
-        for i in xrange(total_slots):
+        for _index in xrange(total_slots):
             volume_id = self._create_volume()
             yield self.volume.create_volume(self.context, volume_id)
             vols.append(volume_id)
@@ -91,7 +99,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
-        # Create one volume and one compute to test with
+        """Make sure volume can be attached and detached from instance"""
         instance_id = "storage-test"
         mountpoint = "/dev/sdf"
         volume_id = self._create_volume()
@@ -99,9 +107,9 @@ class VolumeTestCase(test.TrialTestCase):
         if FLAGS.fake_tests:
             db.volume_attached(None, volume_id, instance_id, mountpoint)
         else:
-            rv = yield self.compute.attach_volume(instance_id,
-                                                  volume_id,
-                                                  mountpoint)
+            yield self.compute.attach_volume(instance_id,
+                                             volume_id,
+                                             mountpoint)
         vol = db.volume_get(None, volume_id)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
@@ -113,12 +121,12 @@ class VolumeTestCase(test.TrialTestCase):
         if FLAGS.fake_tests:
             db.volume_detached(None, volume_id)
         else:
-            rv = yield self.compute.detach_volume(instance_id,
-                                                 volume_id)
+            yield self.compute.detach_volume(instance_id,
+                                             volume_id)
         vol = db.volume_get(None, volume_id)
         self.assertEqual(vol['status'], "available")
 
-        rv = self.volume.delete_volume(self.context, volume_id)
+        yield self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.Error,
                           db.volume_get,
                           None,
@@ -126,23 +134,22 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_concurrent_volumes_get_different_blades(self):
-        vol_size = "5"
-        user_id = "fake"
-        project_id = 'fake'
-        shelf_blades = []
+        """Ensure multiple concurrent volumes get different blades"""
         volume_ids = []
+        shelf_blades = []
 
         def _check(volume_id):
+            """Make sure blades aren't duplicated"""
             volume_ids.append(volume_id)
             (shelf_id, blade_id) = db.volume_get_shelf_and_blade(None,
                                                                  volume_id)
             shelf_blade = '%s.%s' % (shelf_id, blade_id)
             self.assert_(shelf_blade not in shelf_blades)
             shelf_blades.append(shelf_blade)
-            logging.debug("got %s" % shelf_blade)
+            logging.debug("Blade %s allocated", shelf_blade)
         deferreds = []
         total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
-        for i in range(total_slots):
+        for _index in xrange(total_slots):
             volume_id = self._create_volume()
             d = self.volume.create_volume(self.context, volume_id)
             d.addCallback(_check)
