@@ -91,7 +91,7 @@ class LibvirtConnection(object):
 
     def _test_connection(self):
         try:
-            self._wrapped_conn.getVersion()
+            self._wrapped_conn.getInfo()
             return True
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
