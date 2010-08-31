@@ -108,6 +108,7 @@ class Router(wsgi.Application):
         self.controllers = dict(Cloud=cloud.CloudController(),
                                 Admin=admin.AdminController())
 
+    @webob.dec.wsgify
     def __call__(self, req):
         # Obtain the appropriate controller for this request.
         match = self.map.match(req.path)

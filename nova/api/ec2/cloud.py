@@ -27,8 +27,6 @@ import logging
 import os
 import time
 
-from twisted.internet import defer
-
 from nova import datastore
 from nova import exception
 from nova import flags
@@ -298,10 +296,9 @@ class CloudController(object):
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
-        result = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
+        result = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
                                  "args": {"size": size,
                                            "user_id": context.user.id,
                                            "project_id": context.project.id}})
@@ -480,31 +477,28 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
-        network_topic = yield self._get_network_topic(context)
-        public_ip = yield rpc.call(network_topic,
+        network_topic = self._get_network_topic(context)
+        public_ip = rpc.call(network_topic,
                          {"method": "allocate_elastic_ip",
                           "args": {"user_id": context.user.id,
                                    "project_id": context.project.id}})
         defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
 
     @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "deallocate_elastic_ip",
                           "args": {"elastic_ip": public_ip}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance = self._get_instance(context, instance_id)
         address = self._get_address(context, public_ip)
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "associate_elastic_ip",
                           "args": {"elastic_ip": address['address'],
@@ -513,28 +507,25 @@ class CloudController(object):
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(context, public_ip)
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                          {"method": "disassociate_elastic_ip",
                           "args": {"elastic_ip": address['address']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
-    @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         host = network_service.get_host_for_project(context.project.id)
         if not host:
-            host = yield rpc.call(FLAGS.network_topic,
+            host = rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
                                      "args": {"user_id": context.user.id,
                                               "project_id": context.project.id}})
         defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
@@ -566,7 +557,7 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         # TODO: Get the real security group of launch in here
         security_group = "default"
         for num in range(int(kwargs['max_count'])):
@@ -574,7 +565,7 @@ class CloudController(object):
             if image_id  == FLAGS.vpn_image_id:
                 is_vpn = True
             inst = self.instdir.new()
-            allocate_data = yield rpc.call(network_topic,
+            allocate_data = rpc.call(network_topic,
                      {"method": "allocate_fixed_ip",
                       "args": {"user_id": context.user.id,
                                "project_id": context.project.id,
@@ -608,10 +599,9 @@ class CloudController(object):
         defer.returnValue(self._format_run_instances(context, reservation_id))
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         for i in instance_id:
             logging.debug("Going to try and terminate %s" % i)
             try:

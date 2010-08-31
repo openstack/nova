@@ -43,20 +43,20 @@ CloudController and AdminController:
 * Controllers:
   move the @rbac.allow data into an auth WSGI that is right above the call
     to the controller
-  verify @defer.inlineCallbacks is just to allow the yield statements, then
-    remove the yield statements (untangle from twisted)
+x  verify @defer.inlineCallbacks is just to allow the yield statements, then
+x    remove the yield statements (untangle from twisted)
   
 * nova-api:
   verify that cloud_topic is going away which I seem to remember, so we can ignore rpc
 
 * apiserverapplication:
-  replace with a Router to a wsgi.Controller
-    apirequesthandler stuff is just an entry in api.APIRouter
+x  replace with a Router to a wsgi.Controller
+x    apirequesthandler stuff is just an entry in api.APIRouter
 
 * apirequesthandler
-  wsgi.Controller pointed to by api.APIRouter
-    - basically it's execute() from old APIRequestHandler
-  change to return data directly instead of _write_callback() and finish()
+x  wsgi.Controller pointed to by api.APIRouter
+x    - basically it's execute() from old APIRequestHandler
+x  change to return data directly instead of _write_callback() and finish()
 
 * apirequest
-  doesn't need to change
+x  doesn't need to change
