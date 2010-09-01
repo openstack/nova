@@ -26,9 +26,11 @@ import webob
 import webob.dec
 import webob.exc
 
+from nova import exception
+from nova import wsgi
+from nova.api.ec2 import context
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
-from nova import exception
 from nova.auth import manager
 
 
@@ -74,7 +76,7 @@ class Authenticate(wsgi.Middleware):
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
-        req.environ['ec2.context'] = APIRequestContext(user, project)
+        req.environ['ec2.context'] = context.APIRequestContext(user, project)
 
         return self.application
 
@@ -188,7 +190,7 @@ class Authorization(wsgi.Middleware):
                    for role in roles)
     
 
-class Executor(wsg.Application):
+class Executor(wsgi.Application):
     """
     Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and 
     'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
@@ -217,6 +219,6 @@ class Executor(wsg.Application):
         resp.body = ('<?xml version="1.0"?>\n'
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>') % (code, message))
+                     '<RequestID>?</RequestID></Response>') % (code, message)
         return resp
 

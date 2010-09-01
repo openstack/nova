@@ -26,7 +26,7 @@ from nova import crypto
 from nova import flags
 from nova import test
 from nova.auth import manager
-from nova.endpoint import cloud
+from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 

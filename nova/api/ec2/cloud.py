@@ -357,7 +357,7 @@ class CloudController(object):
                 'instanceId': instance_id,
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': volume_id})
+                'volumeId': volume_id}
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:

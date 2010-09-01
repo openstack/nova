@@ -29,8 +29,8 @@ from nova import rpc
 from nova import test
 from nova.auth import manager
 from nova.compute import service
-from nova.endpoint import api
-from nova.endpoint import cloud
+from nova.api.ec2 import context
+from nova.api.ec2 import cloud
 
 
 FLAGS = flags.FLAGS
@@ -64,7 +64,7 @@ class CloudTestCase(test.BaseTestCase):
         except: pass
         admin = manager.AuthManager().get_user('admin')
         project = manager.AuthManager().create_project('proj', 'admin', 'proj')
-        self.context = api.APIRequestContext(handler=None,project=project,user=admin)
+        self.context = context.APIRequestContext(handler=None,project=project,user=admin)
 
     def tearDown(self):
         manager.AuthManager().delete_project('proj')
