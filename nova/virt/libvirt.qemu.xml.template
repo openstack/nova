@@ -4,7 +4,7 @@
     <type>hvm</type>
         <kernel>%(basepath)s/kernel</kernel>
         <initrd>%(basepath)s/ramdisk</initrd>
-        <cmdline>root=/dev/vda1</cmdline>
+        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
     </os>
     <features>
         <acpi/>
@@ -21,9 +21,10 @@
             <mac address='%(mac_address)s'/>
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
         </interface>
-        <console type="file">
+        <serial type="file">
             <source path='%(basepath)s/console.log'/>
-        </console>
+            <target port='1'/>
+        </serial>
     </devices>
     <nova>%(nova)s</nova>
 </domain>
