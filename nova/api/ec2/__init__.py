@@ -40,36 +40,23 @@ class API(wsgi.Middleware):
     """Routing for all EC2 API requests."""
 
     def __init__(self):
-        self.application = Authenticate(Router())
+        self.application = Authenticate(Router(Authorizer(Executor())))
 
 class Authenticate(wsgi.Middleware):
-    """Authenticates an EC2 request."""
+    """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
 
     @webob.dec.wsgify
     def __call__(self, req):
-        args = dict(req.params)
-
-        # Read request signature.
+        # Read request signature and access id.
         try:
-            signature = args.pop('Signature')[0]
+            signature = req.params['Signature']
+            access = req.params['AWSAccessKeyId']
         except:
             raise webob.exc.HTTPBadRequest()
 
         # Make a copy of args for authentication and signature verification.
-        auth_params = {}
-        for key, value in args.items():
-            auth_params[key] = value[0]
-
-        # Get requested action and remove authentication args for final request.
-        try:
-            action = args.pop('Action')[0]
-            access = args.pop('AWSAccessKeyId')[0]
-            args.pop('SignatureMethod')
-            args.pop('SignatureVersion')
-            args.pop('Version')
-            args.pop('Timestamp')
-        except:
-            raise webob.exc.HTTPBadRequest()
+        auth_params = dict(req.params)
+        auth_params.pop('Signature') # not part of authentication args
 
         # Authenticate the request.
         try:
@@ -86,22 +73,15 @@ class Authenticate(wsgi.Middleware):
             logging.debug("Authentication Failure: %s" % ex)
             raise webob.exc.HTTPForbidden()
 
-        _log.debug('action: %s' % action)
-
-        for key, value in args.items():
-            _log.debug('arg: %s\t\tval: %s' % (key, value))
-
         # Authenticated!
         req.environ['ec2.context'] = APIRequestContext(user, project)
-        req.environ['ec2.action'] = action
-        req.environ['ec2.action_args'] = args
+
         return self.application
 
 
 class Router(wsgi.Application):
     """
-    Finds controller for a request, executes environ['ec2.action'] upon it, and
-    returns an XML response.  If the action fails, returns a 400.
+    Add 'ec2.controller', 'ec2.action', and 'ec2.action_args' to WSGI environ.
     """
     def __init__(self):
         self.map = routes.Mapper()
@@ -111,21 +91,63 @@ class Router(wsgi.Application):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        # Obtain the appropriate controller for this request.
-        match = self.map.match(req.path)
-        if not match:
-            raise webob.exc.HTTPNotFound()
-        controller_name = match['controller_name']
-
+        # Obtain the appropriate controller and action for this request.
         try:
+            match = self.map.match(req.path)
+            controller_name = match['controller_name']
             controller = self.controllers[controller_name]
-        except KeyError:
-            return self._error('unhandled', 'no controller named %s' % controller_name)
-
-        api_request = APIRequest(controller, req.environ['ec2.action'])
-        context = req.environ['ec2.context']
+        except:
+            raise webob.exc.HTTPNotFound()
+        non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
+                    'SignatureVersion', 'Version', 'Timestamp']
+        args = dict(req.params)
         try:
-            return api_request.send(context, **req.environ['ec2.action_args'])
+            action = req.params['Action'] # raise KeyError if omitted
+            for non_arg in non_args:
+                args.pop(non_arg) # remove, but raise KeyError if omitted
+        except:
+            raise webob.exc.HTTPBadRequest()
+
+        _log.debug('action: %s' % action)
+        for key, value in args.items():
+            _log.debug('arg: %s\t\tval: %s' % (key, value))
+
+        # Success!
+        req.environ['ec2.controller'] = controller
+        req.environ['ec2.action'] = action
+        req.environ['ec2.action_args'] = args
+
+        return self.application
+
+
+class Authorization(wsgi.Middleware):
+    """
+    Verify that ec2.controller and ec2.action in WSGI environ may be executed
+    in ec2.context.
+    """
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        #TODO(gundlach): put rbac information here.
+        return self.application
+    
+
+class Executor(wsg.Application):
+    """
+    Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and 
+    'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
+    response, or a 400 upon failure.
+    """
+    @webob.dec.wsgify
+    def __call__(self, req):
+        context = req.environ['ec2.context']
+        controller = req.environ['ec2.controller']
+        action = req.environ['ec2.action']
+        args = req.environ['ec2.action_args']
+
+        api_request = APIRequest(controller, action)
+        try:
+            return api_request.send(context, **args)
         except exception.ApiError as ex:
             return self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
         # TODO(vish): do something more useful with unknown exceptions
@@ -141,3 +163,4 @@ class Router(wsgi.Application):
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>?</RequestID></Response>') % (code, message))
         return resp
+
