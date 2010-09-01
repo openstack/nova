@@ -22,6 +22,7 @@ Starting point for routing EC2 requests
 
 import logging
 import routes
+import webob
 import webob.dec
 import webob.exc
 
@@ -46,8 +47,7 @@ class Authenticate(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        #TODO(gundlach): where do arguments come from?
-        args = self.request.arguments
+        args = dict(req.params)
 
         # Read request signature.
         try:
@@ -92,8 +92,9 @@ class Authenticate(wsgi.Middleware):
             _log.debug('arg: %s\t\tval: %s' % (key, value))
 
         # Authenticated!
-        req.environ['ec2.action'] = action
         req.environ['ec2.context'] = APIRequestContext(user, project)
+        req.environ['ec2.action'] = action
+        req.environ['ec2.action_args'] = args
         return self.application
 
 
@@ -119,24 +120,24 @@ class Router(wsgi.Application):
         try:
             controller = self.controllers[controller_name]
         except KeyError:
-            self._error('unhandled', 'no controller named %s' % controller_name)
-            return
+            return self._error('unhandled', 'no controller named %s' % controller_name)
 
         api_request = APIRequest(controller, req.environ['ec2.action'])
         context = req.environ['ec2.context']
         try:
-            return api_request.send(context, **args)
+            return api_request.send(context, **req.environ['ec2.action_args'])
         except exception.ApiError as ex:
-            self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
+            return self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
         # TODO(vish): do something more useful with unknown exceptions
         except Exception as ex:
-            self._error(type(ex).__name__, str(ex))
+            return self._error(type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
-        req.status = 400
-        req.headers['Content-Type'] = 'text/xml'
-        req.response = ('<?xml version="1.0"?>\n'
+        resp = webob.Response()
+        resp.status = 400
+        resp.headers['Content-Type'] = 'text/xml'
+        resp.body = ('<?xml version="1.0"?>\n'
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>?</RequestID></Response>') % (code, message))
-
+        return resp
