@@ -41,8 +41,8 @@ CloudController and AdminController:
 ==== STRATEGY TO CONVERT TO EVENTLET+WSGI ====
 
 * Controllers:
-  move the @rbac.allow data into an auth WSGI that is right above the call
-    to the controller
+x  move the @rbac.allow data into an auth WSGI that is right above the call
+x    to the controller
 x  verify @defer.inlineCallbacks is just to allow the yield statements, then
 x    remove the yield statements (untangle from twisted)
   
