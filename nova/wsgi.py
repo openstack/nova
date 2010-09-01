@@ -242,8 +242,8 @@ class Serializer(object):
         self.environ = environ
         self.metadata = metadata or {}
         self._methods = {
-            'application/json', self._to_json,
-            'application/xml', self._to_xml}
+            'application/json': self._to_json,
+            'application/xml': self._to_xml}
 
     def to_content_type(self, data):
         """
