@@ -52,5 +52,5 @@ setup(name='nova',
                'bin/nova-manage',
                'bin/nova-network',
                'bin/nova-objectstore',
-               'bin/nova-rsapi',
+               'bin/nova-api-new',
                'bin/nova-volume'])

@@ -38,17 +38,19 @@ S3 client with this module::
 """
 
 import datetime
-import logging
 import json
+import logging
 import multiprocessing
 import os
-from tornado import escape
 import urllib
 
-from twisted.application import internet, service
-from twisted.web.resource import Resource
-from twisted.web import server, static, error
-
+from tornado import escape
+from twisted.application import internet
+from twisted.application import service
+from twisted.web import error
+from twisted.web import resource
+from twisted.web import server
+from twisted.web import static
 
 from nova import exception
 from nova import flags
@@ -60,7 +62,9 @@ from nova.objectstore import image
 
 FLAGS = flags.FLAGS
 
+
 def render_xml(request, value):
+    """Writes value as XML string to request"""
     assert isinstance(value, dict) and len(value) == 1
     request.setHeader("Content-Type", "application/xml; charset=UTF-8")
 
@@ -72,12 +76,16 @@ def render_xml(request, value):
     request.write('</' + escape.utf8(name) + '>')
     request.finish()
 
+
 def finish(request, content=None):
+    """Finalizer method for request"""
     if content:
         request.write(content)
     request.finish()
 
+
 def _render_parts(value, write_cb):
+    """Helper method to render different Python objects to XML"""
     if isinstance(value, basestring):
         write_cb(escape.xhtml_escape(value))
     elif isinstance(value, int) or isinstance(value, long):
@@ -95,38 +103,52 @@ def _render_parts(value, write_cb):
     else:
         raise Exception("Unknown S3 value type %r", value)
 
+
 def get_argument(request, key, default_value):
+    """Returns the request's value at key, or default_value
+    if not found
+    """
     if key in request.args:
         return request.args[key][0]
     return default_value
 
+
 def get_context(request):
+    """Returns the supplied request's context object"""
     try:
         # Authorization Header format: 'AWS <access>:<secret>'
         authorization_header = request.getHeader('Authorization')
         if not authorization_header:
             raise exception.NotAuthorized
-        access, sep, secret = authorization_header.split(' ')[1].rpartition(':')
-        (user, project) = manager.AuthManager().authenticate(access,
-                                                             secret,
-                                                             {},
-                                                             request.method,
-                                                             request.getRequestHostname(),
-                                                             request.uri,
-                                                             headers=request.getAllHeaders(),
-                                                             check_type='s3')
+        auth_header_value = authorization_header.split(' ')[1]
+        access, _ignored, secret = auth_header_value.rpartition(':')
+        am = manager.AuthManager()
+        (user, project) = am.authenticate(access,
+                                          secret,
+                                          {},
+                                          request.method,
+                                          request.getRequestHostname(),
+                                          request.uri,
+                                          headers=request.getAllHeaders(),
+                                          check_type='s3')
         return api.APIRequestContext(None, user, project)
     except exception.Error as ex:
-        logging.debug("Authentication Failure: %s" % ex)
+        logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized
 
-class ErrorHandlingResource(Resource):
-    """Maps exceptions to 404 / 401 codes.  Won't work for exceptions thrown after NOT_DONE_YET is returned."""
-    # TODO(unassigned) (calling-all-twisted-experts): This needs to be plugged in to the right place in twisted...
-    #   This doesn't look like it's the right place (consider exceptions in getChild; or after NOT_DONE_YET is returned     
+class ErrorHandlingResource(resource.Resource):
+    """Maps exceptions to 404 / 401 codes.  Won't work for
+    exceptions thrown after NOT_DONE_YET is returned.
+    """
+    # TODO(unassigned) (calling-all-twisted-experts): This needs to be
+    #                   plugged in to the right place in twisted...
+    #                   This doesn't look like it's the right place
+    #                   (consider exceptions in getChild; or after
+    #                   NOT_DONE_YET is returned     
     def render(self, request):
+        """Renders the response as XML"""
         try:
-            return Resource.render(self, request)
+            return resource.Resource.render(self, request)
         except exception.NotFound:
             request.setResponseCode(404)
             return ''
@@ -134,9 +156,14 @@ class ErrorHandlingResource(Resource):
             request.setResponseCode(403)
             return ''
 
+
 class S3(ErrorHandlingResource):
     """Implementation of an S3-like storage server based on local files."""
-    def getChild(self, name, request):
+    def __init__(self):
+        ErrorHandlingResource.__init__(self)
+
+    def getChild(self, name, request): # pylint: disable-msg=C0103
+        """Returns either the image or bucket resource"""
         request.context = get_context(request)
         if name == '':
             return self
@@ -145,32 +172,40 @@ class S3(ErrorHandlingResource):
         else:
             return BucketResource(name)
 
-    def render_GET(self, request):
+    def render_GET(self, request): # pylint: disable-msg=R0201
+        """Renders the GET request for a list of buckets as XML"""
         logging.debug('List of buckets requested')
-        buckets = [b for b in bucket.Bucket.all() if b.is_authorized(request.context)]
+        buckets = [b for b in bucket.Bucket.all() \
+                   if b.is_authorized(request.context)]
 
         render_xml(request, {"ListAllMyBucketsResult": {
             "Buckets": {"Bucket": [b.metadata for b in buckets]},
         }})
         return server.NOT_DONE_YET
 
+
 class BucketResource(ErrorHandlingResource):
+    """A web resource containing an S3-like bucket"""
     def __init__(self, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.name = name
 
     def getChild(self, name, request):
+        """Returns the bucket resource itself, or the object resource
+        the bucket contains if a name is supplied
+        """
         if name == '':
             return self
         else:
             return ObjectResource(bucket.Bucket(self.name), name)
 
     def render_GET(self, request):
-        logging.debug("List keys for bucket %s" % (self.name))
+        "Returns the keys for the bucket resource"""
+        logging.debug("List keys for bucket %s", self.name)
 
         try:
             bucket_object = bucket.Bucket(self.name)
-        except exception.NotFound, e:
+        except exception.NotFound:
             return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
@@ -181,19 +216,26 @@ class BucketResource(ErrorHandlingResource):
         max_keys = int(get_argument(request, "max-keys", 1000))
         terse = int(get_argument(request, "terse", 0))
 
-        results = bucket_object.list_keys(prefix=prefix, marker=marker, max_keys=max_keys, terse=terse)
+        results = bucket_object.list_keys(prefix=prefix,
+                                          marker=marker,
+                                          max_keys=max_keys,
+                                          terse=terse)
         render_xml(request, {"ListBucketResult": results})
         return server.NOT_DONE_YET
 
     def render_PUT(self, request):
-        logging.debug("Creating bucket %s" % (self.name))
-        logging.debug("calling bucket.Bucket.create(%r, %r)" % (self.name, request.context))
+        "Creates the bucket resource"""
+        logging.debug("Creating bucket %s", self.name)
+        logging.debug("calling bucket.Bucket.create(%r, %r)",
+                      self.name,
+                      request.context)
         bucket.Bucket.create(self.name, request.context)
         request.finish()
         return server.NOT_DONE_YET
 
     def render_DELETE(self, request):
-        logging.debug("Deleting bucket %s" % (self.name))
+        """Deletes the bucket resource"""
+        logging.debug("Deleting bucket %s", self.name)
         bucket_object = bucket.Bucket(self.name)
 
         if not bucket_object.is_authorized(request.context):
@@ -205,25 +247,37 @@ class BucketResource(ErrorHandlingResource):
 
 
 class ObjectResource(ErrorHandlingResource):
+    """The resource returned from a bucket"""
     def __init__(self, bucket, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.bucket = bucket
         self.name = name
 
     def render_GET(self, request):
-        logging.debug("Getting object: %s / %s" % (self.bucket.name, self.name))
+        """Returns the object
+        
+        Raises NotAuthorized if user in request context is not
+        authorized to delete the object.
+        """
+        logging.debug("Getting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized
 
         obj = self.bucket[urllib.unquote(self.name)]
         request.setHeader("Content-Type", "application/unknown")
-        request.setHeader("Last-Modified", datetime.datetime.utcfromtimestamp(obj.mtime))
+        request.setHeader("Last-Modified",
+                          datetime.datetime.utcfromtimestamp(obj.mtime))
         request.setHeader("Etag", '"' + obj.md5 + '"')
         return static.File(obj.path).render_GET(request)
 
     def render_PUT(self, request):
-        logging.debug("Putting object: %s / %s" % (self.bucket.name, self.name))
+        """Modifies/inserts the object and returns a result code
+        
+        Raises NotAuthorized if user in request context is not
+        authorized to delete the object.
+        """
+        logging.debug("Putting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized
@@ -236,7 +290,15 @@ class ObjectResource(ErrorHandlingResource):
         return server.NOT_DONE_YET
 
     def render_DELETE(self, request):
-        logging.debug("Deleting object: %s / %s" % (self.bucket.name, self.name))
+        """Deletes the object and returns a result code
+        
+        Raises NotAuthorized if user in request context is not
+        authorized to delete the object.
+        """
+
+        logging.debug("Deleting object: %s / %s",
+                      self.bucket.name,
+                      self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized
@@ -245,24 +307,31 @@ class ObjectResource(ErrorHandlingResource):
         request.setResponseCode(204)
         return ''
 
+
 class ImageResource(ErrorHandlingResource):
+    """A web resource representing a single image"""
     isLeaf = True
 
     def __init__(self, name):
-        Resource.__init__(self)
+        resource.Resource.__init__(self)
         self.img = image.Image(name)
 
     def render_GET(self, request):
-        return static.File(self.img.image_path, defaultType='application/octet-stream').render_GET(request)
+        """Returns the image file"""
+        return static.File(self.img.image_path,
+                           defaultType='application/octet-stream'
+                          ).render_GET(request)
 
-class ImagesResource(Resource):
-    def getChild(self, name, request):
+class ImagesResource(resource.Resource):
+    """A web resource representing a list of images"""
+    def getChild(self, name, _request):
+        """Returns itself or an ImageResource if no name given"""
         if name == '':
             return self
         else:
             return ImageResource(name)
 
-    def render_GET(self, request):
+    def render_GET(self, request): # pylint: disable-msg=R0201
         """ returns a json listing of all images
             that a user has permissions to see """
 
@@ -289,7 +358,7 @@ class ImagesResource(Resource):
         request.finish()
         return server.NOT_DONE_YET
 
-    def render_PUT(self, request):
+    def render_PUT(self, request): # pylint: disable-msg=R0201
         """ create a new registered image """
 
         image_id = get_argument(request, 'image_id', u'')
@@ -301,7 +370,6 @@ class ImagesResource(Resource):
             raise exception.NotAuthorized
 
         bucket_object = bucket.Bucket(image_location.split("/")[0])
-        manifest = image_location[len(image_location.split('/')[0])+1:]
 
         if not bucket_object.is_authorized(request.context):
             raise exception.NotAuthorized
@@ -311,8 +379,8 @@ class ImagesResource(Resource):
         p.start()
         return ''
 
-    def render_POST(self, request):
-        """ update image attributes: public/private """
+    def render_POST(self, request): # pylint: disable-msg=R0201
+        """Update image attributes: public/private"""
 
         image_id = get_argument(request, 'image_id', u'')
         operation = get_argument(request, 'operation', u'')
@@ -326,8 +394,8 @@ class ImagesResource(Resource):
 
         return ''
 
-    def render_DELETE(self, request):
-        """ delete a registered image """
+    def render_DELETE(self, request): # pylint: disable-msg=R0201
+        """Delete a registered image"""
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
@@ -339,14 +407,21 @@ class ImagesResource(Resource):
         request.setResponseCode(204)
         return ''
 
+
 def get_site():
+    """Support for WSGI-like interfaces"""
     root = S3()
     site = server.Site(root)
     return site
 
+
 def get_application():
+    """Support WSGI-like interfaces"""
     factory = get_site()
     application = service.Application("objectstore")
+    # Disabled because of lack of proper introspection in Twisted
+    # or possibly different versions of twisted?
+    # pylint: disable-msg=E1101
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
     objectStoreService.setServiceParent(application)
     return application

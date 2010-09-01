@@ -22,6 +22,7 @@ where they're used.
 """
 
 import getopt
+import os
 import socket
 import sys
 
@@ -34,7 +35,7 @@ class FlagValues(gflags.FlagValues):
     Unknown flags will be ignored when parsing the command line, but the
     command line will be kept so that it can be replayed if new flags are
     defined after the initial parsing.
-    
+
     """
 
     def __init__(self):
@@ -50,7 +51,7 @@ class FlagValues(gflags.FlagValues):
         # leftover args at the end
         sneaky_unparsed_args = {"value": None}
         original_argv = list(argv)
-        
+
         if self.IsGnuGetOpt():
             orig_getopt = getattr(getopt, 'gnu_getopt')
             orig_name = 'gnu_getopt'
@@ -74,14 +75,14 @@ class FlagValues(gflags.FlagValues):
             unparsed_args = sneaky_unparsed_args['value']
             if unparsed_args:
                 if self.IsGnuGetOpt():
-                    args = argv[:1] + unparsed
+                    args = argv[:1] + unparsed_args
                 else:
                     args = argv[:1] + original_argv[-len(unparsed_args):]
             else:
                 args = argv[:1]
         finally:
             setattr(getopt, orig_name, orig_getopt)
-        
+
         # Store the arguments for later, we'll need them for new flags
         # added at runtime
         self.__dict__['__stored_argv'] = original_argv
@@ -92,7 +93,7 @@ class FlagValues(gflags.FlagValues):
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
-    
+
     def IsDirty(self, name):
         return name in self.__dict__['__dirty']
 
@@ -113,12 +114,12 @@ class FlagValues(gflags.FlagValues):
         for k in self.__dict__['__dirty']:
             setattr(self, k, getattr(new_flags, k))
         self.ClearDirty()
-        
+
     def __setitem__(self, name, flag):
         gflags.FlagValues.__setitem__(self, name, flag)
         if self.WasAlreadyParsed():
             self.SetDirty(name)
-    
+
     def __getitem__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
@@ -141,6 +142,7 @@ def _wrapper(func):
     return _wrapped
 
 
+DEFINE = _wrapper(gflags.DEFINE)
 DEFINE_string = _wrapper(gflags.DEFINE_string)
 DEFINE_integer = _wrapper(gflags.DEFINE_integer)
 DEFINE_bool = _wrapper(gflags.DEFINE_bool)
@@ -168,7 +170,6 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
-#DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler', 'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
@@ -176,29 +177,25 @@ DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
-DEFINE_bool('fake_network', False, 'should we use fake network devices and addresses')
+DEFINE_bool('fake_network', False,
+            'should we use fake network devices and addresses')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
-DEFINE_string('ec2_url',
-                'http://127.0.0.1:8773/services/Cloud',
-                'Url to ec2 api server')
+DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
+              'Url to ec2 api server')
 
-DEFINE_string('default_image',
-                    'ami-11111',
-                    'default image to use, testing only')
-DEFINE_string('default_kernel',
-                    'aki-11111',
-                    'default kernel to use, testing only')
-DEFINE_string('default_ramdisk',
-                    'ari-11111',
-                    'default ramdisk to use, testing only')
-DEFINE_string('default_instance_type',
-                    'm1.small',
-                    'default instance type to use, testing only')
+DEFINE_string('default_image', 'ami-11111',
+              'default image to use, testing only')
+DEFINE_string('default_kernel', 'aki-11111',
+              'default kernel to use, testing only')
+DEFINE_string('default_ramdisk', 'ari-11111',
+              'default ramdisk to use, testing only')
+DEFINE_string('default_instance_type', 'm1.small',
+              'default instance type to use, testing only')
 
 DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
@@ -208,10 +205,20 @@ DEFINE_string('vpn_key_suffix',
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 # UNUSED
-DEFINE_string('node_availability_zone',
-                    'nova',
-                    'availability zone of this node')
-DEFINE_string('node_name',
-                    socket.gethostname(),
-                    'name of this node')
+DEFINE_string('node_availability_zone', 'nova',
+              'availability zone of this node')
+DEFINE_string('host', socket.gethostname(),
+              'name of this node')
+
+DEFINE_string('sql_connection',
+              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'connection string for sql database')
+
+DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
+              'Manager for compute')
+DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
+              'Manager for network')
+DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+              'Manager for volume')
+
 

@@ -24,6 +24,8 @@ This module also documents the semantics of real hypervisor connections.
 
 import logging
 
+from twisted.internet import defer
+
 from nova.compute import power_state
 
 
@@ -37,12 +39,12 @@ class FakeConnection(object):
     The interface to this class talks in terms of 'instances' (Amazon EC2 and
     internal Nova terminology), by which we mean 'running virtual machine'
     (XenAPI terminology) or domain (Xen or libvirt terminology).
-    
+
     An instance has an ID, which is the identifier chosen by Nova to represent
     the instance further up the stack.  This is unfortunately also called a
     'name' elsewhere.  As far as this layer is concerned, 'instance ID' and
     'instance name' are synonyms.
-    
+
     Note that the instance ID or name is not human-readable or
     customer-controlled -- it's an internal ID chosen by Nova.  At the
     nova.virt layer, instances do not have human-readable names at all -- such
@@ -89,17 +91,21 @@ class FakeConnection(object):
         This function should use the data there to guide the creation of
         the new instance.
 
-        Once this function successfully completes, the instance should be
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+
+        Once this successfully completes, the instance should be
         running (power_state.RUNNING).
 
-        If this function fails, any partial instance should be completely
+        If this fails, any partial instance should be completely
         cleaned up, and the virtualization platform should be in the state
         that it was before this call began.
         """
-        
+
         fake_instance = FakeInstance()
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
+        return defer.succeed(None)
 
     def reboot(self, instance):
         """
@@ -107,8 +113,11 @@ class FakeConnection(object):
 
         The given parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
         """
-        pass
+        return defer.succeed(None)
 
     def destroy(self, instance):
         """
@@ -116,10 +125,14 @@ class FakeConnection(object):
 
         The given parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
+        return defer.succeed(None)
 
-    def get_info(self, instance_id):
+    def get_info(self, instance_name):
         """
         Get a block of information about the given instance.  This is returned
         as a dictionary containing 'state': The power_state of the instance,
@@ -128,42 +141,42 @@ class FakeConnection(object):
         of virtual CPUs the instance has, 'cpu_time': The total CPU time used
         by the instance, in nanoseconds.
         """
-        i = self.instances[instance_id]
+        i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
                 'mem': 0,
                 'num_cpu': 2,
                 'cpu_time': 0}
 
-    def list_disks(self, instance_id):
+    def list_disks(self, instance_name):
         """
         Return the IDs of all the virtual disks attached to the specified
         instance, as a list.  These IDs are opaque to the caller (they are
         only useful for giving back to this layer as a parameter to
         disk_stats).  These IDs only need to be unique for a given instance.
-        
+
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """
         return ['A_DISK']
 
-    def list_interfaces(self, instance_id):
+    def list_interfaces(self, instance_name):
         """
         Return the IDs of all the virtual network interfaces attached to the
         specified instance, as a list.  These IDs are opaque to the caller
         (they are only useful for giving back to this layer as a parameter to
         interface_stats).  These IDs only need to be unique for a given
         instance.
-        
+
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """
         return ['A_VIF']
 
-    def block_stats(self, instance_id, disk_id):
+    def block_stats(self, instance_name, disk_id):
         """
         Return performance counters associated with the given disk_id on the
-        given instance_id.  These are returned as [rd_req, rd_bytes, wr_req,
+        given instance_name.  These are returned as [rd_req, rd_bytes, wr_req,
         wr_bytes, errs], where rd indicates read, wr indicates write, req is
         the total number of I/O requests made, bytes is the total number of
         bytes transferred, and errs is the number of requests held up due to a
@@ -175,13 +188,13 @@ class FakeConnection(object):
         statistics can be retrieved directly in aggregate form, without Nova
         having to do the aggregation.  On those platforms, this method is
         unused.
-        
+
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """
         return [0L, 0L, 0L, 0L, null]
 
-    def interface_stats(self, instance_id, iface_id):
+    def interface_stats(self, instance_name, iface_id):
         """
         Return performance counters associated with the given iface_id on the
         given instance_id.  These are returned as [rx_bytes, rx_packets,
@@ -196,7 +209,7 @@ class FakeConnection(object):
         statistics can be retrieved directly in aggregate form, without Nova
         having to do the aggregation.  On those platforms, this method is
         unused.
-        
+
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """

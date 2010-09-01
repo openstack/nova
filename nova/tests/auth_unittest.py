@@ -32,7 +32,6 @@ FLAGS = flags.FLAGS
 
 
 class AuthTestCase(test.BaseTestCase):
-    flush_db = False
     def setUp(self):
         super(AuthTestCase, self).setUp()
         self.flags(connection_type='fake',

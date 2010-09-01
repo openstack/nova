@@ -22,11 +22,11 @@ Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
-import mox
-import stubout
 import sys
 import time
 
+import mox
+import stubout
 from tornado import ioloop
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -39,6 +39,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+
+engine = create_engine('sqlite:///:memory:', echo=True)
+Base = declarative_base()
+Base.metadata.create_all(engine)
 
 def skip_if_fake(func):
     """Decorator that skips a test if running in fake mode"""
@@ -89,7 +95,6 @@ class TrialTestCase(unittest.TestCase):
         """Resets all flag variables for the test.  Runs after each test"""
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
-
 
 
 class BaseTestCase(TrialTestCase):

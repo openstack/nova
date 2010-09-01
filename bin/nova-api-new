@@ -18,17 +18,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 """
-  Daemon for the Rackspace API endpoint.
+Nova API daemon.
 """
 
+from nova import api
 from nova import flags
 from nova import utils
 from nova import wsgi
-from nova.endpoint import rackspace
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
+flags.DEFINE_integer('api_port', 8773, 'API port')
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    wsgi.run_server(rackspace.API(), FLAGS.cc_port)
+    wsgi.run_server(api.API(), FLAGS.api_port)

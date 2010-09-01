@@ -25,56 +25,62 @@ import logging
 import os
 import sys
 
-#TODO(joshua): there is concern that the user dnsmasq runs under will not
-#              have nova in the path. This should be verified and if it is
-#              not true the ugly line below can be removed
+# TODO(joshua): there is concern that the user dnsmasq runs under will not
+#               have nova in the path. This should be verified and if it is
+#               not true the ugly line below can be removed
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 
+from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import datastore  # for redis_db flag
+from nova.auth import manager  # for auth flags
 from nova.network import linux_net
-from nova.network import model
-from nova.network import service
+from nova.network import manager  # for network flags
 
 FLAGS = flags.FLAGS
 
 
-def add_lease(_mac, ip, _hostname, _interface):
+def add_lease(_mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
-        service.VlanNetworkService().lease_ip(ip)
+        logging.debug("leasing ip")
+        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager.lease_fixed_ip(None, ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
-                 {"method": "lease_ip",
-                  "args": {"fixed_ip": ip}})
+                 {"method": "lease_fixed_ip",
+                  "args": {"context": None,
+                           "address": ip_address}})
 
 
-def old_lease(_mac, _ip, _hostname, _interface):
+def old_lease(_mac, _ip_address, _hostname, _interface):
     """Do nothing, just an old lease update."""
     logging.debug("Adopted old lease or got a change of mac/hostname")
 
 
-def del_lease(_mac, ip, _hostname, _interface):
+def del_lease(_mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
-        service.VlanNetworkService().release_ip(ip)
+        logging.debug("releasing ip")
+        network_manager = utils.import_object(FLAGS.network_manager)
+        network_manager.release_fixed_ip(None, ip_address)
     else:
         rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
-                 {"method": "release_ip",
-                  "args": {"fixed_ip": ip}})
+                 {"method": "release_fixed_ip",
+                  "args": {"context": None,
+                           "address": ip_address}})
 
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
-    net = model.get_network_by_interface(interface)
-    res = ""
-    for address in net.assigned_objs:
-        res += "%s\n" % linux_net.host_dhcp(address)
-    return res
+    network_ref = db.network_get_by_bridge(None, interface)
+    return linux_net.get_dhcp_hosts(None, network_ref['id'])
 
 
 def main():
+    global network_manager
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
@@ -83,10 +89,17 @@ def main():
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
         FLAGS.redis_db = 8
-        FLAGS.network_size = 32
+        FLAGS.network_size = 16
         FLAGS.connection_type = 'fake'
         FLAGS.fake_network = True
         FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+        FLAGS.num_networks = 5
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                            '..',
+                                            '_trial_temp',
+                                            'nova.sqlite'))
+        FLAGS.sql_connection = 'sqlite:///%s' % path
+        #FLAGS.sql_connection = 'mysql://root@localhost/test'
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]

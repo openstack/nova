@@ -35,9 +35,10 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     logging.warn('Starting instance monitor')
-    m = monitor.InstanceMonitor()
+    # pylint: disable-msg=C0103
+    monitor = monitor.InstanceMonitor()
 
     # This is the parent service that twistd will be looking for when it
     # parses this file, return it so that we can get it into globals below
     application = service.Application('nova-instancemonitor')
-    m.setServiceParent(application)
+    monitor.setServiceParent(application)

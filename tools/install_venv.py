@@ -37,30 +37,30 @@ def die(message, *args):
   sys.exit(1)
 
 
-def run_command(cmd, redirect_output=True, error_ok=False):
-  """Runs a command in an out-of-process shell, returning the
-  output of that command
+def run_command(cmd, redirect_output=True, check_exit_code=True):
+  """
+  Runs a command in an out-of-process shell, returning the
+  output of that command.  Working directory is ROOT.
   """
   if redirect_output:
     stdout = subprocess.PIPE
   else:
     stdout = None
 
-  proc = subprocess.Popen(cmd, stdout=stdout)
+  proc = subprocess.Popen(cmd, cwd=ROOT, stdout=stdout)
   output = proc.communicate()[0]
-  if not error_ok and proc.returncode != 0:
+  if check_exit_code and proc.returncode != 0:
     die('Command "%s" failed.\n%s', ' '.join(cmd), output)
   return output
 
 
-HAS_EASY_INSTALL = bool(run_command(['which', 'easy_install']).strip())
-HAS_VIRTUALENV = bool(run_command(['which', 'virtualenv']).strip())
+HAS_EASY_INSTALL = bool(run_command(['which', 'easy_install'], check_exit_code=False).strip())
+HAS_VIRTUALENV = bool(run_command(['which', 'virtualenv'], check_exit_code=False).strip())
 
 
 def check_dependencies():
   """Make sure virtualenv is in the path."""
 
-  print 'Checking for virtualenv...',
   if not HAS_VIRTUALENV:
     print 'not found.'
     # Try installing it via easy_install...
@@ -92,6 +92,12 @@ def install_dependencies(venv=VENV):
               redirect_output=False)
   run_command(['tools/with_venv.sh', 'pip', 'install', '-E', venv, TWISTED_NOVA],
               redirect_output=False)
+
+
+  # Tell the virtual env how to "import nova"
+  pthfile = os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
+  f = open(pthfile, 'w')
+  f.write("%s\n" % ROOT)
 
 
 def print_help():

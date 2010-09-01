@@ -21,5 +21,4 @@
             <target port='1'/>
         </serial>
     </devices>
-    <nova>%(nova)s</nova>
 </domain>

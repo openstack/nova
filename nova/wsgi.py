@@ -29,6 +29,8 @@ import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True)
 import routes
 import routes.middleware
+import webob.dec
+import webob.exc
 
 
 logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
@@ -41,6 +43,8 @@ def run_server(application, port):
 
 
 class Application(object):
+# TODO(gundlach): I think we should toss this class, now that it has no
+# purpose.
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
 
     def __call__(self, environ, start_response):
@@ -79,95 +83,210 @@ class Application(object):
         raise NotImplementedError("You must implement __call__")
 
 
-class Middleware(Application): # pylint: disable-msg=W0223
-    """Base WSGI middleware wrapper. These classes require an
-    application to be initialized that will be called next."""
+class Middleware(Application):
+    """
+    Base WSGI middleware wrapper. These classes require an application to be
+    initialized that will be called next.  By default the middleware will
+    simply call its wrapped app, or you can override __call__ to customize its
+    behavior.
+    """
 
     def __init__(self, application): # pylint: disable-msg=W0231
         self.application = application
 
+    @webob.dec.wsgify
+    def __call__(self, req): # pylint: disable-msg=W0221
+        """Override to implement middleware behavior."""
+        return self.application
+
 
 class Debug(Middleware):
-    """Helper class that can be insertd into any WSGI application chain
+    """Helper class that can be inserted into any WSGI application chain
     to get information about the request and response."""
 
-    def __call__(self, environ, start_response):
-        for key, value in environ.items():
+    @webob.dec.wsgify
+    def __call__(self, req):
+        print ("*" * 40) + " REQUEST ENVIRON"
+        for key, value in req.environ.items():
             print key, "=", value
         print
-        wrapper = debug_start_response(start_response)
-        return debug_print_body(self.application(environ, wrapper))
+        resp = req.get_response(self.application)
 
-
-def debug_start_response(start_response):
-    """Wrap the start_response to capture when called."""
-
-    def wrapper(status, headers, exc_info=None):
-        """Print out all headers when start_response is called."""
-        print status
-        for (key, value) in headers:
+        print ("*" * 40) + " RESPONSE HEADERS"
+        for (key, value) in resp.headers.iteritems():
             print key, "=", value
         print
-        start_response(status, headers, exc_info)
 
-    return wrapper
+        resp.app_iter = self.print_generator(resp.app_iter)
 
+        return resp
 
-def debug_print_body(body):
-    """Print the body of the response as it is sent back."""
-
-    class Wrapper(object):
-        """Iterate through all the body parts and print before returning."""
-
-        def __iter__(self):
-            for part in body:
-                sys.stdout.write(part)
-                sys.stdout.flush()
-                yield part
-            print
-
-    return Wrapper()
+    @staticmethod
+    def print_generator(app_iter):
+        """
+        Iterator that prints the contents of a wrapper string iterator
+        when iterated.
+        """
+        print ("*" * 40) + " BODY"
+        for part in app_iter:
+            sys.stdout.write(part)
+            sys.stdout.flush()
+            yield part
+        print
 
 
-class ParsedRoutes(Middleware):
-    """Processed parsed routes from routes.middleware.RoutesMiddleware
-    and call either the controller if found or the default application
-    otherwise."""
+class Router(object):
+    """
+    WSGI middleware that maps incoming requests to WSGI apps.
+    """
 
-    def __call__(self, environ, start_response):
-        if environ['routes.route'] is None:
-            return self.application(environ, start_response)
-        app = environ['wsgiorg.routing_args'][1]['controller']
-        return app(environ, start_response)
+    def __init__(self, mapper):
+        """
+        Create a router for the given routes.Mapper.
+
+        Each route in `mapper` must specify a 'controller', which is a
+        WSGI app to call.  You'll probably want to specify an 'action' as
+        well and have your controller be a wsgi.Controller, who will route
+        the request to the action method.
+
+        Examples:
+          mapper = routes.Mapper()
+          sc = ServerController()
+
+          # Explicit mapping of one route to a controller+action
+          mapper.connect(None, "/svrlist", controller=sc, action="list")
+
+          # Actions are all implicitly defined
+          mapper.resource("server", "servers", controller=sc)
+
+          # Pointing to an arbitrary WSGI app.  You can specify the
+          # {path_info:.*} parameter so the target app can be handed just that
+          # section of the URL.
+          mapper.connect(None, "/v1.0/{path_info:.*}", controller=BlogApp())
+        """
+        self.map = mapper
+        self._router = routes.middleware.RoutesMiddleware(self._dispatch,
+                                                          self.map)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """
+        Route the incoming request to a controller based on self.map.
+        If no match, return a 404.
+        """
+        return self._router
+
+    @staticmethod
+    @webob.dec.wsgify
+    def _dispatch(req):
+        """
+        Called by self._router after matching the incoming request to a route
+        and putting the information into req.environ.  Either returns 404
+        or the routed WSGI app's response.
+        """
+        match = req.environ['wsgiorg.routing_args'][1]
+        if not match:
+            return webob.exc.HTTPNotFound()
+        app = match['controller']
+        return app
 
 
-class Router(Middleware): # pylint: disable-msg=R0921
-    """Wrapper to help setup routes.middleware.RoutesMiddleware."""
+class Controller(object):
+    """
+    WSGI app that reads routing information supplied by RoutesMiddleware
+    and calls the requested action method upon itself.  All action methods
+    must, in addition to their normal parameters, accept a 'req' argument
+    which is the incoming webob.Request.  They raise a webob.exc exception,
+    or return a dict which will be serialized by requested content type.
+    """
 
-    def __init__(self, application):
-        self.map = routes.Mapper()
-        self._build_map()
-        application = ParsedRoutes(application)
-        application = routes.middleware.RoutesMiddleware(application, self.map)
-        super(Router, self).__init__(application)
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """
+        Call the method specified in req.environ by RoutesMiddleware.
+        """
+        arg_dict = req.environ['wsgiorg.routing_args'][1]
+        action = arg_dict['action']
+        method = getattr(self, action)
+        del arg_dict['controller']
+        del arg_dict['action']
+        arg_dict['req'] = req
+        result = method(**arg_dict)
+        if type(result) is dict:
+            return self._serialize(result, req) 
+        else:
+            return result
 
-    def __call__(self, environ, start_response):
-        return self.application(environ, start_response)
+    def _serialize(self, data, request):
+        """
+        Serialize the given dict to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.to_content_type(data)
 
-    def _build_map(self):
-        """Method to create new connections for the routing map."""
-        raise NotImplementedError("You must implement _build_map")
 
-    def _connect(self, *args, **kwargs):
-        """Wrapper for the map.connect method."""
-        self.map.connect(*args, **kwargs)
+class Serializer(object):
+    """
+    Serializes a dictionary to a Content Type specified by a WSGI environment.
+    """
 
+    def __init__(self, environ, metadata=None):
+        """
+        Create a serializer based on the given WSGI environment.
+        'metadata' is an optional dict mapping MIME types to information
+        needed to serialize a dictionary to that type.
+        """
+        self.environ = environ
+        self.metadata = metadata or {}
 
-def route_args(application):
-    """Decorator to make grabbing routing args more convenient."""
+    def to_content_type(self, data):
+        """
+        Serialize a dictionary into a string.  The format of the string
+        will be decided based on the Content Type requested in self.environ:
+        by Accept: header, or by URL suffix.
+        """
+        mimetype = 'application/xml'
+        # TODO(gundlach): determine mimetype from request
 
-    def wrapper(self, req):
-        """Call application with req and parsed routing args from."""
-        return application(self, req, req.environ['wsgiorg.routing_args'][1])
+        if mimetype == 'application/json':
+            import json
+            return json.dumps(data)
+        elif mimetype == 'application/xml':
+            metadata = self.metadata.get('application/xml', {})
+            # We expect data to contain a single key which is the XML root.
+            root_key = data.keys()[0]
+            from xml.dom import minidom
+            doc = minidom.Document()
+            node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+            return node.toprettyxml(indent='    ')
+        else:
+            return repr(data)
 
-    return wrapper
+    def _to_xml_node(self, doc, metadata, nodename, data):
+        """Recursive method to convert data members to XML nodes."""
+        result = doc.createElement(nodename)
+        if type(data) is list:
+            singular = metadata.get('plurals', {}).get(nodename, None)
+            if singular is None:
+                if nodename.endswith('s'):
+                    singular = nodename[:-1]
+                else:
+                    singular = 'item'
+            for item in data:
+                node = self._to_xml_node(doc, metadata, singular, item)
+                result.appendChild(node)
+        elif type(data) is dict:
+            attrs = metadata.get('attributes', {}).get(nodename, {})
+            for k, v in data.items():
+                if k in attrs:
+                    result.setAttribute(k, str(v))
+                else:
+                    node = self._to_xml_node(doc, metadata, k, v)
+                    result.appendChild(node)
+        else: # atom
+            node = doc.createTextNode(str(data))
+            result.appendChild(node)
+        return result

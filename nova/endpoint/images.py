@@ -21,16 +21,19 @@ Proxy AMI-related calls from the cloud controller, to the running
 objectstore daemon.
 """
 
-import boto.s3.connection
 import json
 import urllib
 
+import boto.s3.connection
+
+from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+
 
 def modify(context, image_id, operation):
     conn(context).make_request(
@@ -68,12 +71,22 @@ def list(context, filter_list=[]):
         return [i for i in result if i['imageId'] in filter_list]
     return result
 
+def get(context, image_id):
+    """return a image object if the context has permissions"""
+    result = list(context, [image_id])
+    if not result:
+        raise exception.NotFound('Image %s could not be found' % image_id)
+    image = result[0]
+    return image
+
+
 def deregister(context, image_id):
     """ unregister an image """
     conn(context).make_request(
             method='DELETE',
             bucket='_images',
             query_args=qs({'image_id': image_id}))
+
 
 def conn(context):
     access = manager.AuthManager().get_access_key(context.user,

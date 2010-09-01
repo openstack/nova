@@ -35,4 +35,4 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     utils.default_flagfile()
-    application = handler.get_application()
+    application = handler.get_application()  # pylint: disable-msg=C0103

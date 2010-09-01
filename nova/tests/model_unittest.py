@@ -108,14 +108,14 @@ class ModelTestCase(test.TrialTestCase):
         self.assertEqual(x.identifier, 'i-test')
 
     def test_instance_associates_node(self):
-        """create, then check that it is listed for the node_name"""
+        """create, then check that it is listed for the host"""
         instance = self.create_instance()
         found = False
-        for x in model.InstanceDirectory().by_node(FLAGS.node_name):
+        for x in model.InstanceDirectory().by_node(FLAGS.host):
             if x.identifier == 'i-test':
                 found = True
         self.assertFalse(found)
-        instance['node_name'] = 'test_node'
+        instance['host'] = 'test_node'
         instance.save()
         for x in model.InstanceDirectory().by_node('test_node'):
             if x.identifier == 'i-test':
