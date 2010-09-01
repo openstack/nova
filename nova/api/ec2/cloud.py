@@ -32,7 +32,6 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.auth import rbac
 from nova.auth import manager
 from nova.compute import model
 from nova.compute.instance_types import INSTANCE_TYPES
@@ -163,18 +162,15 @@ class CloudController(object):
             data['product-codes'] = i['product_codes']
         return data
 
-    @rbac.allow('all')
     def describe_availability_zones(self, context, **kwargs):
         return {'availabilityZoneInfo': [{'zoneName': 'nova',
                                           'zoneState': 'available'}]}
 
-    @rbac.allow('all')
     def describe_regions(self, context, region_name=None, **kwargs):
         # TODO(vish): region_name is an array.  Support filtering
         return {'regionInfo': [{'regionName': 'nova',
                                 'regionUrl': FLAGS.ec2_url}]}
 
-    @rbac.allow('all')
     def describe_snapshots(self,
                            context,
                            snapshot_id=None,
@@ -190,7 +186,6 @@ class CloudController(object):
                                  'volumeSize': 0,
                                  'description': 'fixme'}]}
 
-    @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = context.user.get_key_pairs()
         if not key_name is None:
@@ -208,35 +203,29 @@ class CloudController(object):
 
         return {'keypairsSet': result}
 
-    @rbac.allow('all')
     def create_key_pair(self, context, key_name, **kwargs):
         data = _gen_key(context.user.id, key_name)
         return {'keyName': key_name,
             'keyFingerprint': data['fingerprint'],
             'keyMaterial': data['private_key']}
 
-    @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
         context.user.delete_key_pair(key_name)
         # aws returns true even if the key doens't exist
         return True
 
-    @rbac.allow('all')
     def describe_security_groups(self, context, group_names, **kwargs):
         groups = {'securityGroupSet': []}
 
         # Stubbed for now to unblock other things.
         return groups
 
-    @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, **kwargs):
         return True
 
-    @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):
         return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance = self._get_instance(context, instance_id[0])
@@ -250,7 +239,6 @@ class CloudController(object):
         else:
             return None
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
         volumes = []
         for volume in self.volumes:
@@ -284,7 +272,6 @@ class CloudController(object):
             v['attachmentSet'] = [{}]
         return v
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
         result = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
@@ -324,7 +311,6 @@ class CloudController(object):
             return volume
         raise exception.NotFound('Volume %s could not be found' % volume_id)
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume = self._get_volume(context, volume_id)
         if volume['status'] == "attached":
@@ -348,7 +334,6 @@ class CloudController(object):
                 'status': volume['attach_status'],
                 'volumeId': volume_id}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
         volume = self._get_volume(context, volume_id)
         instance_id = volume.get('instance_id', None)
@@ -381,7 +366,6 @@ class CloudController(object):
             lst = [lst]
         return [{label: x} for x in lst]
 
-    @rbac.allow('all')
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
 
@@ -442,7 +426,6 @@ class CloudController(object):
 
         return list(reservations.values())
 
-    @rbac.allow('all')
     def describe_addresses(self, context, **kwargs):
         return self.format_addresses(context)
 
@@ -465,7 +448,6 @@ class CloudController(object):
             addresses.append(address_rv)
         return {'addressesSet': addresses}
 
-    @rbac.allow('netadmin')
     def allocate_address(self, context, **kwargs):
         network_topic = self._get_network_topic(context)
         public_ip = rpc.call(network_topic,
@@ -474,7 +456,6 @@ class CloudController(object):
                                    "project_id": context.project.id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
-    @rbac.allow('netadmin')
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
         network_topic = self._get_network_topic(context)
@@ -483,7 +464,6 @@ class CloudController(object):
                           "args": {"elastic_ip": public_ip}})
         return {'releaseResponse': ["Address released."]}
 
-    @rbac.allow('netadmin')
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance = self._get_instance(context, instance_id)
         address = self._get_address(context, public_ip)
@@ -495,7 +475,6 @@ class CloudController(object):
                                    "instance_id": instance['instance_id']}})
         return {'associateResponse': ["Address associated."]}
 
-    @rbac.allow('netadmin')
     def disassociate_address(self, context, public_ip, **kwargs):
         address = self._get_address(context, public_ip)
         network_topic = self._get_network_topic(context)
@@ -514,7 +493,6 @@ class CloudController(object):
                                               "project_id": context.project.id}})
         return '%s.%s' %(FLAGS.network_topic, host)
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
@@ -587,7 +565,6 @@ class CloudController(object):
         # TODO: Make Network figure out the network name from ip.
         return self._format_run_instances(context, reservation_id)
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
         network_topic = self._get_network_topic(context)
@@ -628,7 +605,6 @@ class CloudController(object):
                 instance.destroy()
         return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for i in instance_id:
@@ -638,7 +614,6 @@ class CloudController(object):
                               "args": {"instance_id": i}})
         return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume = self._get_volume(context, volume_id)
@@ -648,19 +623,16 @@ class CloudController(object):
                              "args": {"volume_id": volume_id}})
         return True
 
-    @rbac.allow('all')
     def describe_images(self, context, image_id=None, **kwargs):
         # The objectstore does its own authorization for describe
         imageSet = images.list(context, image_id)
         return {'imagesSet': imageSet}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def deregister_image(self, context, image_id, **kwargs):
         # FIXME: should the objectstore be doing these authorization checks?
         images.deregister(context, image_id)
         return {'imageId': image_id}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def register_image(self, context, image_location=None, **kwargs):
         # FIXME: should the objectstore be doing these authorization checks?
         if image_location is None and kwargs.has_key('name'):
@@ -670,7 +642,6 @@ class CloudController(object):
 
         return {'imageId': image_id}
 
-    @rbac.allow('all')
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
@@ -683,7 +654,6 @@ class CloudController(object):
             result['launchPermission'].append({'group': 'all'})
         return result
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def modify_image_attribute(self, context, image_id, attribute, operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':

@@ -122,14 +122,70 @@ class Router(wsgi.Application):
 
 class Authorization(wsgi.Middleware):
     """
-    Verify that ec2.controller and ec2.action in WSGI environ may be executed
-    in ec2.context.
+    Return a 401 if ec2.controller and ec2.action in WSGI environ may not be
+    executed in ec2.context.
     """
+
+    def __init__(self, application):
+        super(Authorization, self).__init__(application)
+        self.action_roles = {
+            'CloudController': {
+                'DescribeAvailabilityzones': ['all'],
+                'DescribeRegions': ['all'],
+                'DescribeSnapshots': ['all'],
+                'DescribeKeyPairs': ['all'],
+                'CreateKeyPair': ['all'],
+                'DeleteKeyPair': ['all'],
+                'DescribeSecurityGroups': ['all'],
+                'CreateSecurityGroup': ['netadmin'],
+                'DeleteSecurityGroup': ['netadmin'],
+                'GetConsoleOutput': ['projectmanager', 'sysadmin'],
+                'DescribeVolumes': ['projectmanager', 'sysadmin'],
+                'CreateVolume': ['projectmanager', 'sysadmin'],
+                'AttachVolume': ['projectmanager', 'sysadmin'],
+                'DetachVolume': ['projectmanager', 'sysadmin'],
+                'DescribeInstances': ['all'],
+                'DescribeAddresses': ['all'],
+                'AllocateAddress': ['netadmin'],
+                'ReleaseAddress': ['netadmin'],
+                'AssociateAddress': ['netadmin'],
+                'DisassociateAddress': ['netadmin'],
+                'RunInstances': ['projectmanager', 'sysadmin'],
+                'TerminateInstances': ['projectmanager', 'sysadmin'],
+                'RebootInstances': ['projectmanager', 'sysadmin'],
+                'DeleteVolume': ['projectmanager', 'sysadmin'],
+                'DescribeImages': ['all'],
+                'DeregisterImage': ['projectmanager', 'sysadmin'],
+                'RegisterImage': ['projectmanager', 'sysadmin'],
+                'DescribeImageAttribute': ['all'],
+                'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
+            },
+            'AdminController': {
+                # All actions have the same permission: [] (the default)
+                # admins will be allowed to run them
+                # all others will get HTTPUnauthorized.
+            },
+        }
 
     @webob.dec.wsgify
     def __call__(self, req):
-        #TODO(gundlach): put rbac information here.
-        return self.application
+        context = req.environ['ec2.context']
+        controller_name = req.environ['ec2.controller'].__name__
+        action = req.environ['ec2.action']
+        allowed_roles = self.action_roles[controller_name].get(action, [])
+        if self._matches_any_role(context, allowed_roles):
+            return self.application
+        else:
+            raise webob.exc.HTTPUnauthorized()
+
+    def _matches_any_role(self, context, roles):
+        """Return True if any role in roles is allowed in context."""
+        if 'all' in roles:
+            return True
+        if 'none' in roles:
+            return False
+        return any(context.project.has_role(context.user.id, role) 
+                   for role in roles)
     
 
 class Executor(wsg.Application):
