@@ -80,7 +80,7 @@ class Service(object, service.Service):
         if not manager:
             manager = FLAGS.get('%s_manager' % topic, None)
         manager_ref = utils.import_object(manager)
-        logging.warn("Starting %s node" % topic)
+        logging.warn("Starting %s node", topic)
         service_ref = cls(manager_ref)
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
@@ -127,7 +127,8 @@ class Service(object, service.Service):
                 self.model_disconnected = False
                 logging.error("Recovered model server connection!")
 
-        except Exception, ex: #FIXME this should only be connection error
+        # TODO(vish): this should probably only catch connection errors
+        except:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception("model server went away")
