@@ -51,8 +51,8 @@ def daemon_create(_context, values):
     return daemon_ref.id
 
 
-def daemon_update(_context, daemon_id, values):
-    daemon_ref = daemon_get(_context, daemon_id)
+def daemon_update(context, daemon_id, values):
+    daemon_ref = daemon_get(context, daemon_id)
     for (key, value) in values.iteritems():
         daemon_ref[key] = value
     daemon_ref.save()
@@ -181,8 +181,8 @@ def fixed_ip_get_network(_context, address):
         return models.FixedIp.find_by_str(address, session=session).network
 
 
-def fixed_ip_deallocate(_context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(_context, address)
+def fixed_ip_deallocate(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
     fixed_ip_ref['allocated'] = False
     fixed_ip_ref.save()
 
@@ -204,8 +204,8 @@ def fixed_ip_instance_disassociate(_context, address):
         session.commit()
 
 
-def fixed_ip_update(_context, address, values):
-    fixed_ip_ref = fixed_ip_get_by_address(_context, address)
+def fixed_ip_update(context, address, values):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
     for (key, value) in values.iteritems():
         fixed_ip_ref[key] = value
     fixed_ip_ref.save()
@@ -222,8 +222,8 @@ def instance_create(_context, values):
     return instance_ref.id
 
 
-def instance_destroy(_context, instance_id):
-    instance_ref = instance_get(_context, instance_id)
+def instance_destroy(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
     instance_ref.delete()
 
 
@@ -274,23 +274,23 @@ def instance_get_floating_address(_context, instance_id):
         return instance_ref.fixed_ip.floating_ips[0]['address']
 
 
-def instance_get_host(_context, instance_id):
-    instance_ref = instance_get(_context, instance_id)
+def instance_get_host(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
     return instance_ref['host']
 
 
-def instance_is_vpn(_context, instance_id):
-    instance_ref = instance_get(_context, instance_id)
+def instance_is_vpn(context, instance_id):
+    instance_ref = instance_get(context, instance_id)
     return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
-def instance_state(_context, instance_id, state, description=None):
-    instance_ref = instance_get(_context, instance_id)
+def instance_state(context, instance_id, state, description=None):
+    instance_ref = instance_get(context, instance_id)
     instance_ref.set_state(state, description)
 
 
-def instance_update(_context, instance_id, values):
-    instance_ref = instance_get(_context, instance_id)
+def instance_update(context, instance_id, values):
+    instance_ref = instance_get(context, instance_id)
     for (key, value) in values.iteritems():
         instance_ref[key] = value
     instance_ref.save()
@@ -382,8 +382,8 @@ def network_get_by_bridge(_context, bridge):
         return rv
 
 
-def network_get_host(_context, network_id):
-    network_ref = network_get(_context, network_id)
+def network_get_host(context, network_id):
+    network_ref = network_get(context, network_id)
     return network_ref['host']
 
 
@@ -435,8 +435,8 @@ def network_set_host(_context, network_id, host_id):
         return network['host']
 
 
-def network_update(_context, network_id, values):
-    network_ref = network_get(_context, network_id)
+def network_update(context, network_id, values):
+    network_ref = network_get(context, network_id)
     for (key, value) in values.iteritems():
         network_ref[key] = value
     network_ref.save()
@@ -498,8 +498,8 @@ def volume_allocate_shelf_and_blade(_context, volume_id):
         return (export_device.shelf_id, export_device.blade_id)
 
 
-def volume_attached(_context, volume_id, instance_id, mountpoint):
-    volume_ref = volume_get(_context, volume_id)
+def volume_attached(context, volume_id, instance_id, mountpoint):
+    volume_ref = volume_get(context, volume_id)
     volume_ref.instance_id = instance_id
     volume_ref['status'] = 'in-use'
     volume_ref['mountpoint'] = mountpoint
@@ -526,8 +526,8 @@ def volume_destroy(_context, volume_id):
         session.commit()
 
 
-def volume_detached(_context, volume_id):
-    volume_ref = volume_get(_context, volume_id)
+def volume_detached(context, volume_id):
+    volume_ref = volume_get(context, volume_id)
     volume_ref['instance_id'] = None
     volume_ref['mountpoint'] = None
     volume_ref['status'] = 'available'
@@ -555,8 +555,8 @@ def volume_get_by_str(_context, str_id):
     return models.Volume.find_by_str(str_id)
 
 
-def volume_get_host(_context, volume_id):
-    volume_ref = volume_get(_context, volume_id)
+def volume_get_host(context, volume_id):
+    volume_ref = volume_get(context, volume_id)
     return volume_ref['host']
 
 
@@ -570,8 +570,8 @@ def volume_get_shelf_and_blade(_context, volume_id):
         return (export_device.shelf_id, export_device.blade_id)
 
 
-def volume_update(_context, volume_id, values):
-    volume_ref = volume_get(_context, volume_id)
+def volume_update(context, volume_id, values):
+    volume_ref = volume_get(context, volume_id)
     for (key, value) in values.iteritems():
         volume_ref[key] = value
     volume_ref.save()
