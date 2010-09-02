@@ -93,7 +93,7 @@ class ApiEc2TestCase(test.BaseTestCase):
                 aws_secret_access_key='fake',
                 is_secure=False,
                 region=regioninfo.RegionInfo(None, 'test', self.host),
-                port=0,
+                port=8773,
                 path='/services/Cloud')
 
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
@@ -101,7 +101,7 @@ class ApiEc2TestCase(test.BaseTestCase):
     def expect_http(self, host=None, is_secure=False):
         """Returns a new EC2 connection"""
         http = FakeHttplibConnection(
-                self.app, '%s:0' % (self.host), False)
+                self.app, '%s:8773' % (self.host), False)
         # pylint: disable-msg=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(http)
         return http
