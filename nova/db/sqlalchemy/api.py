@@ -35,27 +35,27 @@ FLAGS = flags.FLAGS
 ###################
 
 
-def daemon_get(_context, daemon_id):
-    return models.Daemon.find(daemon_id)
+def service_get(_context, service_id):
+    return models.Service.find(service_id)
 
 
-def daemon_get_by_args(_context, host, binary):
-    return models.Daemon.find_by_args(host, binary)
+def service_get_by_args(_context, host, binary):
+    return models.Service.find_by_args(host, binary)
 
 
-def daemon_create(_context, values):
-    daemon_ref = models.Daemon()
+def service_create(_context, values):
+    service_ref = models.Service()
     for (key, value) in values.iteritems():
-        daemon_ref[key] = value
-    daemon_ref.save()
-    return daemon_ref.id
+        service_ref[key] = value
+    service_ref.save()
+    return service_ref.id
 
 
-def daemon_update(context, daemon_id, values):
-    daemon_ref = daemon_get(context, daemon_id)
+def service_update(context, service_id, values):
+    service_ref = service_get(context, service_id)
     for (key, value) in values.iteritems():
-        daemon_ref[key] = value
-    daemon_ref.save()
+        service_ref[key] = value
+    service_ref.save()
 
 
 ###################

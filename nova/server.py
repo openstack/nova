@@ -17,11 +17,11 @@
 #    under the License.
 
 """
-Base functionality for nova daemons - gradually being replaced with twistd.py.
+Base functionality for nova services - gradually being replaced with twistd.py.
 """
 
-import daemon
-from daemon import pidlockfile
+import service
+from service import pidlockfile
 import logging
 import logging.handlers
 import os
@@ -33,14 +33,14 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('daemonize', False, 'daemonize this process')
-# NOTE(termie): right now I am defaulting to using syslog when we daemonize
+flags.DEFINE_bool('serviceize', False, 'serviceize this process')
+# NOTE(termie): right now I am defaulting to using syslog when we serviceize
 #               it may be better to do something else -shrug-
 # NOTE(Devin): I think we should let each process have its own log file
 #              and put it in /var/logs/nova/(appname).log
 #              This makes debugging much easier and cuts down on sys log
 #              clutter.
-flags.DEFINE_bool('use_syslog', True, 'output to syslog when daemonizing')
+flags.DEFINE_bool('use_syslog', True, 'output to syslog when serviceizing')
 flags.DEFINE_string('logfile', None, 'log file to output to')
 flags.DEFINE_string('pidfile', None, 'pid file to output to')
 flags.DEFINE_string('working_directory', './', 'working directory...')
@@ -50,17 +50,17 @@ flags.DEFINE_integer('gid', os.getgid(), 'gid under which to run')
 
 def stop(pidfile):
     """
-    Stop the daemon
+    Stop the service
     """
     # Get the pid from the pidfile
     try:
         pid = int(open(pidfile,'r').read().strip())
     except IOError:
-        message = "pidfile %s does not exist. Daemon not running?\n"
+        message = "pidfile %s does not exist. Service not running?\n"
         sys.stderr.write(message % pidfile)
         return # not an error in a restart
 
-    # Try killing the daemon process    
+    # Try killing the service process    
     try:
         while 1:
             os.kill(pid, signal.SIGTERM)
@@ -100,13 +100,13 @@ def serve(name, main):
     else:
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
-    daemonize(argv, name, main)
+    serviceize(argv, name, main)
 
 
-def daemonize(args, name, main):
-    """Does the work of daemonizing the process"""
+def serviceize(args, name, main):
+    """Does the work of serviceizing the process"""
     logging.getLogger('amqplib').setLevel(logging.WARN)
-    if FLAGS.daemonize:
+    if FLAGS.serviceize:
         logger = logging.getLogger()
         formatter = logging.Formatter(
                 name + '(%(name)s): %(levelname)s %(message)s')
@@ -129,8 +129,8 @@ def daemonize(args, name, main):
     else:
         logging.getLogger().setLevel(logging.WARNING)
 
-    with daemon.DaemonContext(
-            detach_process=FLAGS.daemonize,
+    with service.ServiceContext(
+            detach_process=FLAGS.serviceize,
             working_directory=FLAGS.working_directory,
             pidfile=pidlockfile.TimeoutPIDLockFile(FLAGS.pidfile,
                                                    acquire_timeout=1,
