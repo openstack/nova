@@ -27,8 +27,7 @@ import webob
 
 from nova import test
 from nova.auth import manager
-from nova.api import ec2
-from nova.api.ec2 import cloud
+from nova import api
 
 
 class FakeHttplibSocket(object):
@@ -83,11 +82,10 @@ class ApiEc2TestCase(test.BaseTestCase):
         super(ApiEc2TestCase, self).setUp()
 
         self.manager = manager.AuthManager()
-        self.cloud = cloud.CloudController()
 
         self.host = '127.0.0.1'
 
-        self.app = ec2.API()
+        self.app = api.API()
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',

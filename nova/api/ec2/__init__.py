@@ -97,7 +97,7 @@ class Router(wsgi.Middleware):
     def __call__(self, req):
         # Obtain the appropriate controller and action for this request.
         try:
-            match = self.map.match(req.path)
+            match = self.map.match(req.path_info)
             controller_name = match['controller_name']
             controller = self.controllers[controller_name]
         except:
