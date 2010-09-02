@@ -52,6 +52,16 @@ class Service(object, service.Service):
         self.manager = manager_class(host=host, *args, **kwargs)
         self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
+        try:
+            service_ref = db.service_get_by_args(None,
+                                               self.host,
+                                               self.binary)
+            self.service_id = service_ref['id']
+        except exception.NotFound:
+            self.service_id = db.service_create(None, {'host': self.host,
+                                                     'binary': self.binary,
+                                                     'topic': self.topic,
+                                                     'report_count': 0})
 
     def __getattr__(self, key):
         try:
@@ -110,24 +120,25 @@ class Service(object, service.Service):
         service_obj.setServiceParent(application)
         return application
 
+    def kill(self, context=None):
+        """Destroy the service object in the datastore"""
+        try:
+            service_ref = db.service_get_by_args(context,
+                                               self.host,
+                                               self.binary)
+            service_id = service_ref['id']
+            db.service_destroy(context, self.service_id)
+        except exception.NotFound:
+            logging.warn("Service killed that has no database entry")
+
     @defer.inlineCallbacks
     def report_state(self, context=None):
-        """Update the state of this daemon in the datastore."""
+        """Update the state of this service in the datastore."""
         try:
-            try:
-                daemon_ref = db.daemon_get_by_args(context,
-                                                   self.host,
-                                                   self.binary)
-                daemon_id = daemon_ref['id']
-            except exception.NotFound:
-                daemon_id = db.daemon_create(context, {'host': self.host,
-                                                       'binary': self.binary,
-                                                       'topic': self.topic,
-                                                       'report_count': 0})
-                daemon_ref = db.daemon_get(context, daemon_id)
-            db.daemon_update(context,
-                             daemon_id,
-                             {'report_count': daemon_ref['report_count'] + 1})
+            service_ref = db.service_get(context, self.service_id)
+            db.service_update(context,
+                             self.service_id,
+                             {'report_count': service_ref['report_count'] + 1})
 
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):

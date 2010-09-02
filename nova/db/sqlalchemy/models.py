@@ -160,9 +160,9 @@ class Host(BASE, NovaBase):
     id = Column(String(255), primary_key=True)
 
 
-class Daemon(BASE, NovaBase):
+class Service(BASE, NovaBase):
     """Represents a running service on a host"""
-    __tablename__ = 'daemons'
+    __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
     host = Column(String(255), ForeignKey('hosts.id'))
     binary = Column(String(255))
@@ -392,7 +392,7 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Image, Host, Daemon, Instance, Volume, ExportDevice,
+    models = (Image, Host, Service, Instance, Volume, ExportDevice,
               FixedIp, FloatingIp, Network, NetworkIndex)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:

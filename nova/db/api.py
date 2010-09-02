@@ -52,41 +52,46 @@ class NoMoreNetworks(exception.Error):
 ###################
 
 
-def daemon_get(context, daemon_id):
-    """Get an daemon or raise if it does not exist."""
-    return IMPL.daemon_get(context, daemon_id)
+def service_destroy(context, instance_id):
+    """Destroy the service or raise if it does not exist."""
+    return IMPL.service_destroy(context, instance_id)
 
 
-def daemon_get_by_args(context, host, binary):
-    """Get the state of an daemon by node name and binary."""
-    return IMPL.daemon_get_by_args(context, host, binary)
+def service_get(context, service_id):
+    """Get an service or raise if it does not exist."""
+    return IMPL.service_get(context, service_id)
 
 
-def daemon_get_all_by_topic(context, topic):
-    """Get all compute daemons for a given topi """
-    return IMPL.daemon_get_all_by_topic(context, topic)
+def service_get_all_by_topic(context, topic):
+    """Get all compute services for a given topic """
+    return IMPL.service_get_all_by_topic(context, topic)
 
 
-def daemon_get_all_compute_sorted(context):
-    """Get all compute daemons sorted by instance count
+def service_get_all_compute_sorted(context):
+    """Get all compute services sorted by instance count
 
-    Returns a list of (Daemon, instance_count) tuples
+    Returns a list of (Service, instance_count) tuples
     """
-    return IMPL.daemon_get_all_compute_sorted(context)
+    return IMPL.service_get_all_compute_sorted(context)
 
 
-def daemon_create(context, values):
-    """Create a daemon from the values dictionary."""
-    return IMPL.daemon_create(context, values)
+def service_get_by_args(context, host, binary):
+    """Get the state of an service by node name and binary."""
+    return IMPL.service_get_by_args(context, host, binary)
 
 
-def daemon_update(context, daemon_id, values):
-    """Set the given properties on an daemon and update it.
+def service_create(context, values):
+    """Create a service from the values dictionary."""
+    return IMPL.service_create(context, values)
 
-    Raises NotFound if daemon does not exist.
+
+def service_update(context, service_id, values):
+    """Set the given properties on an service and update it.
+
+    Raises NotFound if service does not exist.
 
     """
-    return IMPL.daemon_update(context, daemon_id, values)
+    return IMPL.service_update(context, service_id, values)
 
 
 ###################

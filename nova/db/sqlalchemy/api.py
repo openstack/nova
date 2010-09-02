@@ -36,27 +36,27 @@ FLAGS = flags.FLAGS
 ###################
 
 
-def daemon_get(_context, daemon_id):
-    return models.Daemon.find(daemon_id)
+def service_destroy(context, service_id):
+    service_ref = service_get(context, service_id)
+    service_ref.delete()
+
+def service_get(_context, service_id):
+    return models.Service.find(service_id)
 
 
-def daemon_get_by_args(_context, host, binary):
-    return models.Daemon.find_by_args(host, binary)
-
-
-def daemon_get_all_by_topic(context, topic):
+def service_get_all_by_topic(context, topic):
     with managed_session() as session:
-        return session.query(models.Daemon) \
+        return session.query(models.Service) \
                       .filter_by(deleted=False) \
                       .filter_by(topic=topic) \
                       .all()
 
 
-def daemon_get_all_compute_sorted(_context):
+def service_get_all_compute_sorted(_context):
     with managed_session() as session:
         # NOTE(vish): The intended query is below
-        #             SELECT daemons.*, inst_count.instance_count
-        #             FROM daemons LEFT OUTER JOIN
+        #             SELECT services.*, inst_count.instance_count
+        #             FROM services LEFT OUTER JOIN
         #             (SELECT host, count(*) AS instance_count
         #              FROM instances GROUP BY host) AS inst_count
         subq = session.query(models.Instance.host,
@@ -65,27 +65,31 @@ def daemon_get_all_compute_sorted(_context):
                       .group_by(models.Instance.host) \
                       .subquery()
         topic = 'compute'
-        return session.query(models.Daemon, subq.c.instance_count) \
+        return session.query(models.Service, subq.c.instance_count) \
                       .filter_by(topic=topic) \
                       .filter_by(deleted=False) \
-                      .outerjoin((subq, models.Daemon.host == subq.c.host)) \
+                      .outerjoin((subq, models.Service.host == subq.c.host)) \
                       .order_by(subq.c.instance_count) \
                       .all()
 
 
-def daemon_create(_context, values):
-    daemon_ref = models.Daemon()
-    for (key, value) in values.iteritems():
-        daemon_ref[key] = value
-    daemon_ref.save()
-    return daemon_ref.id
+def service_get_by_args(_context, host, binary):
+    return models.Service.find_by_args(host, binary)
 
 
-def daemon_update(context, daemon_id, values):
-    daemon_ref = daemon_get(context, daemon_id)
+def service_create(_context, values):
+    service_ref = models.Service()
     for (key, value) in values.iteritems():
-        daemon_ref[key] = value
-    daemon_ref.save()
+        service_ref[key] = value
+    service_ref.save()
+    return service_ref.id
+
+
+def service_update(context, service_id, values):
+    service_ref = service_get(context, service_id)
+    for (key, value) in values.iteritems():
+        service_ref[key] = value
+    service_ref.save()
 
 
 ###################

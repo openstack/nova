@@ -18,7 +18,7 @@
 
 """
 Proxy AMI-related calls from the cloud controller, to the running
-objectstore daemon.
+objectstore service.
 """
 
 import json
