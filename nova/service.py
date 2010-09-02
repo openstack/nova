@@ -44,8 +44,11 @@ flags.DEFINE_integer('report_interval', 10,
 class Service(object, service.Service):
     """Base class for workers that run on hosts."""
 
-    def __init__(self, manager, *args, **kwargs):
-        self.manager = manager
+    def __init__(self, host, binary, topic, manager, *args, **kwargs):
+        self.host = host
+        self.binary = binary
+        self.topic = topic
+        self.manager = utils.import_object(manager)
         self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
 
@@ -57,44 +60,44 @@ class Service(object, service.Service):
 
     @classmethod
     def create(cls,
-               report_interval=None,
-               bin_name=None,
+               host=None,
+               binary=None,
                topic=None,
-               manager=None):
+               manager=None,
+               report_interval=None):
         """Instantiates class and passes back application object.
 
         Args:
-            report_interval, defaults to flag
-            bin_name, defaults to basename of executable
+            host, defaults to FLAGS.host
+            binary, defaults to basename of executable
             topic, defaults to bin_name - "nova-" part
             manager, defaults to FLAGS.<topic>_manager
+            report_interval, defaults to FLAGS.report_interval
         """
         if not report_interval:
             report_interval = FLAGS.report_interval
 
-        # NOTE(vish): magic to automatically determine bin_name and topic
-        if not bin_name:
-            bin_name = os.path.basename(inspect.stack()[-1][1])
+        if not host:
+            host = FLAGS.host
+        if not binary:
+            binary = os.path.basename(inspect.stack()[-1][1])
         if not topic:
-            topic = bin_name.rpartition("nova-")[2]
+            topic = binary.rpartition("nova-")[2]
         if not manager:
             manager = FLAGS.get('%s_manager' % topic, None)
-        manager_ref = utils.import_object(manager)
         logging.warn("Starting %s node", topic)
-        service_ref = cls(manager_ref)
+        service_obj = cls(FLAGS.host, binary, topic, manager)
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s' % topic,
-                proxy=service_ref)
+                proxy=service_obj)
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
                 topic='%s.%s' % (topic, FLAGS.host),
-                proxy=service_ref)
+                proxy=service_obj)
 
-        pulse = task.LoopingCall(service_ref.report_state,
-                                 FLAGS.host,
-                                 bin_name)
+        pulse = task.LoopingCall(service_obj.report_state)
         pulse.start(interval=report_interval, now=False)
 
         consumer_all.attach_to_twisted()
@@ -102,21 +105,24 @@ class Service(object, service.Service):
 
         # This is the parent service that twistd will be looking for when it
         # parses this file, return it so that we can get it into globals.
-        application = service.Application(bin_name)
-        service_ref.setServiceParent(application)
+        application = service.Application(binary)
+        service_obj.setServiceParent(application)
         return application
 
     @defer.inlineCallbacks
-    def report_state(self, host, binary, context=None):
+    def report_state(self, context=None):
         """Update the state of this daemon in the datastore."""
         try:
             try:
-                daemon_ref = db.daemon_get_by_args(context, host, binary)
+                daemon_ref = db.daemon_get_by_args(context,
+                                                   self.host,
+                                                   self.binary)
                 daemon_id = daemon_ref['id']
             except exception.NotFound:
-                daemon_id = db.daemon_create(context, {'host': host,
-                                                        'binary': binary,
-                                                        'report_count': 0})
+                daemon_id = db.daemon_create(context, {'host': self.host,
+                                                       'binary': self.binary,
+                                                       'topic': self.topic,
+                                                       'report_count': 0})
                 daemon_ref = db.daemon_get(context, daemon_id)
             db.daemon_update(context,
                              daemon_id,

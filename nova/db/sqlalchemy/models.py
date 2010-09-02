@@ -20,8 +20,12 @@
 SQLAlchemy models for nova data
 """
 
+import sys
+import datetime
+
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, validates, exc
+from sqlalchemy.sql import func
 from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -42,8 +46,8 @@ class NovaBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
     deleted = Column(Boolean, default=False)
 
     @classmethod
@@ -78,7 +82,8 @@ class NovaBase(object):
                               .filter_by(deleted=False) \
                               .one()
             except exc.NoResultFound:
-                raise exception.NotFound("No model for id %s" % obj_id)
+                new_exc = exception.NotFound("No model for id %s" % obj_id)
+                raise new_exc.__class__, new_exc, sys.exc_info()[2]
         else:
             with managed_session() as sess:
                 return cls.find(obj_id, session=sess)
@@ -161,6 +166,7 @@ class Daemon(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     host = Column(String(255), ForeignKey('hosts.id'))
     binary = Column(String(255))
+    topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
@@ -173,8 +179,9 @@ class Daemon(BASE, NovaBase):
                               .filter_by(deleted=False) \
                               .one()
             except exc.NoResultFound:
-                raise exception.NotFound("No model for %s, %s" % (host,
+                new_exc = exception.NotFound("No model for %s, %s" % (host,
                                                                   binary))
+                raise new_exc.__class__, new_exc, sys.exc_info()[2]
         else:
             with managed_session() as sess:
                 return cls.find_by_args(host, binary, session=sess)
@@ -344,7 +351,8 @@ class FixedIp(BASE, NovaBase):
                               .filter_by(deleted=False) \
                               .one()
             except exc.NoResultFound:
-                raise exception.NotFound("No model for address %s" % str_id)
+                new_exc = exception.NotFound("No model for address %s" % str_id)
+                raise new_exc.__class__, new_exc, sys.exc_info()[2]
         else:
             with managed_session() as sess:
                 return cls.find_by_str(str_id, session=sess)
@@ -374,7 +382,8 @@ class FloatingIp(BASE, NovaBase):
                               .filter_by(deleted=False) \
                               .one()
             except exc.NoResultFound:
-                raise exception.NotFound("No model for address %s" % str_id)
+                new_exc = exception.NotFound("No model for address %s" % str_id)
+                raise new_exc.__class__, new_exc, sys.exc_info()[2]
         else:
             with managed_session() as sess:
                 return cls.find_by_str(str_id, session=sess)
