@@ -75,6 +75,22 @@ def service_get_all_compute_sorted(context):
     return IMPL.service_get_all_compute_sorted(context)
 
 
+def service_get_all_network_sorted(context):
+    """Get all network services sorted by network count
+
+    Returns a list of (Service, network_count) tuples
+    """
+    return IMPL.service_get_all_network_sorted(context)
+
+
+def service_get_all_volume_sorted(context):
+    """Get all volume services sorted by volume count
+
+    Returns a list of (Service, volume_count) tuples
+    """
+    return IMPL.service_get_all_volume_sorted(context)
+
+
 def service_get_by_args(context, host, binary):
     """Get the state of an service by node name and binary."""
     return IMPL.service_get_by_args(context, host, binary)

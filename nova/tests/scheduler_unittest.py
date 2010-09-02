@@ -19,10 +19,13 @@
 Tests For Scheduler
 """
 
+import mox
+
 from nova import db
 from nova import flags
 from nova import service
 from nova import test
+from nova import rpc
 from nova import utils
 from nova.auth import manager as auth_manager
 from nova.scheduler import manager
@@ -32,11 +35,45 @@ from nova.scheduler import driver
 FLAGS = flags.FLAGS
 flags.DECLARE('max_instances', 'nova.scheduler.simple')
 
+class TestDriver(driver.Scheduler):
+    """Scheduler Driver for Tests"""
+    def schedule(context, topic, *args, **kwargs):
+        return 'fallback_host'
 
-class SimpleSchedulerTestCase(test.TrialTestCase):
+    def schedule_named_method(context, topic, num):
+        return 'named_host'
+
+class SchedulerTestCase(test.TrialTestCase):
     """Test case for scheduler"""
+    def setUp(self):  # pylint: disable=C0103
+        super(SchedulerTestCase, self).setUp()
+        self.flags(scheduler_driver='nova.tests.scheduler_unittest.TestDriver')
+
+    def test_fallback(self):
+        scheduler = manager.SchedulerManager()
+        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
+        rpc.cast('topic.fallback_host',
+                 {'method': 'noexist',
+                  'args': {'context': None,
+                           'num': 7}})
+        self.mox.ReplayAll()
+        scheduler.noexist(None, 'topic', num=7)
+
+    def test_named_method(self):
+        scheduler = manager.SchedulerManager()
+        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
+        rpc.cast('topic.named_host',
+                 {'method': 'named_method',
+                  'args': {'context': None,
+                           'num': 7}})
+        self.mox.ReplayAll()
+        scheduler.named_method(None, 'topic', num=7)
+
+
+class SimpleDriverTestCase(test.TrialTestCase):
+    """Test case for simple driver"""
     def setUp(self):  # pylint: disable-msg=C0103
-        super(SimpleSchedulerTestCase, self).setUp()
+        super(SimpleDriverTestCase, self).setUp()
         self.flags(connection_type='fake',
                    max_instances=4,
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
@@ -83,8 +120,9 @@ class SimpleSchedulerTestCase(test.TrialTestCase):
     def test_least_busy_host_gets_instance(self):
         instance_id = self._create_instance()
         self.service1.run_instance(self.context, instance_id)
-        host = self.scheduler.driver.pick_compute_host(self.context,
-                                                       instance_id)
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           'compute',
+                                                           instance_id)
         self.assertEqual(host, 'host2')
         self.service1.terminate_instance(self.context, instance_id)
 
@@ -100,8 +138,9 @@ class SimpleSchedulerTestCase(test.TrialTestCase):
             instance_ids2.append(instance_id)
         instance_id = self._create_instance()
         self.assertRaises(driver.NoValidHost,
-                          self.scheduler.driver.pick_compute_host,
+                          self.scheduler.driver.schedule_run_instance,
                           self.context,
+                          'compute',
                           instance_id)
         for instance_id in instance_ids1:
             self.service1.terminate_instance(self.context, instance_id)

@@ -52,25 +52,67 @@ def service_get_all_by_topic(context, topic):
                       .all()
 
 
-def service_get_all_compute_sorted(_context):
+def _service_get_all_topic_subquery(_context, session, topic, subq, label):
+    sort_value = getattr(subq.c, label)
+    return session.query(models.Service, sort_value) \
+                  .filter_by(topic=topic) \
+                  .filter_by(deleted=False) \
+                  .outerjoin((subq, models.Service.host == subq.c.host)) \
+                  .order_by(sort_value) \
+                  .all()
+
+
+def service_get_all_compute_sorted(context):
     with managed_session() as session:
         # NOTE(vish): The intended query is below
         #             SELECT services.*, inst_count.instance_count
         #             FROM services LEFT OUTER JOIN
         #             (SELECT host, count(*) AS instance_count
         #              FROM instances GROUP BY host) AS inst_count
+        topic = 'compute'
+        label = 'instance_count'
         subq = session.query(models.Instance.host,
-                             func.count('*').label('instance_count')) \
+                             func.count('*').label(label)) \
                       .filter_by(deleted=False) \
                       .group_by(models.Instance.host) \
                       .subquery()
-        topic = 'compute'
-        return session.query(models.Service, subq.c.instance_count) \
-                      .filter_by(topic=topic) \
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
+
+
+def service_get_all_network_sorted(context):
+    with managed_session() as session:
+        topic = 'network'
+        label = 'network_count'
+        subq = session.query(models.Network.host,
+                             func.count('*').label(label)) \
                       .filter_by(deleted=False) \
-                      .outerjoin((subq, models.Service.host == subq.c.host)) \
-                      .order_by(subq.c.instance_count) \
-                      .all()
+                      .group_by(models.Network.host) \
+                      .subquery()
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
+
+
+def service_get_all_volume_sorted(context):
+    with managed_session() as session:
+        topic = 'volume'
+        label = 'volume_count'
+        subq = session.query(models.Volume.host,
+                             func.count('*').label(label)) \
+                      .filter_by(deleted=False) \
+                      .group_by(models.Volume.host) \
+                      .subquery()
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
 
 
 def service_get_by_args(_context, host, binary):

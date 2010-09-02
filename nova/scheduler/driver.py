@@ -61,3 +61,9 @@ class Scheduler(object):
         return [service.host
                 for service in services
                 if self.service_is_up(service)]
+
+    def schedule(self, context, topic, *_args, **_kwargs):
+        """
+        Must override at least this method for scheduler to work
+        """
+        raise NotImplementedError("Must implement a fallback schedule")

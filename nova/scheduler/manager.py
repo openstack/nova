@@ -22,6 +22,7 @@ Scheduler Service
 """
 
 import logging
+import functools
 
 from nova import db
 from nova import flags
@@ -45,16 +46,23 @@ class SchedulerManager(manager.Manager):
         self.driver = utils.import_object(scheduler_driver)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
-    def run_instance(self, context, instance_id, **_kwargs):
-        """
-        Picks a node for a running VM and casts the run_instance request
-        """
+    def __getattr__(self, key):
+        """Converts all method calls to use the schedule method"""
+        return functools.partial(self._schedule, key)
 
-        host = self.driver.pick_host(context, instance_id, **_kwargs)
+    def _schedule(self, method, context, topic, *args, **kwargs):
+        """Tries to call schedule_* method on the driver to retrieve host.
 
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "run_instance",
-                  "args": {"context": context,
-                           "instance_id": instance_id}})
-        logging.debug("Casting to compute %s for running instance %s",
-                      host, instance_id)
+        Falls back to schedule(context, topic) if method doesn't exist.
+        """
+        driver_method = 'schedule_%s' % method
+        try:
+            host = getattr(self.driver, driver_method)(context, *args, **kwargs)
+        except AttributeError:
+            host = self.driver.schedule(context, topic, *args, **kwargs)
+
+        kwargs.update({"context": None})
+        rpc.cast(db.queue_get_for(context, topic, host),
+                 {"method": method,
+                  "args": kwargs})
+        logging.debug("Casting to %s %s for %s", topic, host, self.method)

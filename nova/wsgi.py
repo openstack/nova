@@ -241,6 +241,9 @@ class Serializer(object):
         """
         self.environ = environ
         self.metadata = metadata or {}
+        self._methods = {
+            'application/json': self._to_json,
+            'application/xml': self._to_xml}
 
     def to_content_type(self, data):
         """
@@ -250,20 +253,20 @@ class Serializer(object):
         """
         mimetype = 'application/xml'
         # TODO(gundlach): determine mimetype from request
+        return self._methods.get(mimetype, repr)(data)
 
-        if mimetype == 'application/json':
-            import json
-            return json.dumps(data)
-        elif mimetype == 'application/xml':
-            metadata = self.metadata.get('application/xml', {})
-            # We expect data to contain a single key which is the XML root.
-            root_key = data.keys()[0]
-            from xml.dom import minidom
-            doc = minidom.Document()
-            node = self._to_xml_node(doc, metadata, root_key, data[root_key])
-            return node.toprettyxml(indent='    ')
-        else:
-            return repr(data)
+    def _to_json(self, data):
+        import json
+        return json.dumps(data)
+
+    def _to_xml(self, data):
+        metadata = self.metadata.get('application/xml', {})
+        # We expect data to contain a single key which is the XML root.
+        root_key = data.keys()[0]
+        from xml.dom import minidom
+        doc = minidom.Document()
+        node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+        return node.toprettyxml(indent='    ')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""

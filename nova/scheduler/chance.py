@@ -31,32 +31,12 @@ class ChanceScheduler(driver.Scheduler):
     Implements Scheduler as a random node selector
     """
 
-    def pick_compute_host(self, context, instance_id, **_kwargs):
+    def schedule(self, context, topic, *_args, **_kwargs):
         """
         Picks a host that is up at random
         """
 
-        hosts = self.hosts_up(context, 'compute')
-        if not hosts:
-            raise driver.NoValidHost("No hosts found")
-        return hosts[int(random.random() * len(hosts))]
-
-    def pick_volume_host(self, context, volume_id, **_kwargs):
-        """
-        Picks a host that is up at random
-        """
-
-        hosts = self.hosts_up(context, 'volume')
-        if not hosts:
-            raise driver.NoValidHost("No hosts found")
-        return hosts[int(random.random() * len(hosts))]
-
-    def pick_network_host(self, context, network_id, **_kwargs):
-        """
-        Picks a host that is up at random
-        """
-
-        hosts = self.hosts_up(context, 'network')
+        hosts = self.hosts_up(context, topic)
         if not hosts:
             raise driver.NoValidHost("No hosts found")
         return hosts[int(random.random() * len(hosts))]

@@ -24,6 +24,7 @@ Simple Scheduler
 from nova import db
 from nova import flags
 from nova.scheduler import driver
+from nova.scheduler import chance
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("max_instances", 16,
@@ -33,12 +34,12 @@ flags.DEFINE_integer("max_volumes", 100,
 flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
 
-class SimpleScheduler(driver.Scheduler):
+class SimpleScheduler(chance.ChanceScheduler):
     """
     Implements Naive Scheduler that tries to find least loaded host
     """
 
-    def pick_compute_host(self, context, instance_id, **_kwargs):
+    def schedule_run_instance(self, context, _instance_id, *_args, **_kwargs):
         """
         Picks a host that is up and has the fewest running instances
         """
@@ -52,7 +53,7 @@ class SimpleScheduler(driver.Scheduler):
                 return service['host']
         raise driver.NoValidHost("No hosts found")
 
-    def pick_volume_host(self, context, volume_id, **_kwargs):
+    def schedule_create_volume(self, context, _volume_id, *_args, **_kwargs):
         """
         Picks a host that is up and has the fewest volumes
         """
@@ -66,7 +67,7 @@ class SimpleScheduler(driver.Scheduler):
                 return service['host']
         raise driver.NoValidHost("No hosts found")
 
-    def pick_network_host(self, context, network_id, **_kwargs):
+    def schedule_set_network_host(self, context, _network_id, *_args, **_kwargs):
         """
         Picks a host that is up and has the fewest networks
         """
