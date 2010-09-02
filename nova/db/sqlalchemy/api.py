@@ -59,7 +59,6 @@ def daemon_get_all_compute_sorted(_context):
         #             FROM daemons LEFT OUTER JOIN
         #             (SELECT host, count(*) AS instance_count
         #              FROM instances GROUP BY host) AS inst_count
-        print 'instance', models.Instance.find(1).host
         subq = session.query(models.Instance.host,
                              func.count('*').label('instance_count')) \
                       .filter_by(deleted=False) \

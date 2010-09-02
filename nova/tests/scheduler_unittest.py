@@ -110,8 +110,9 @@ class SchedulerTestCase(test.TrialTestCase):
                                   FLAGS.compute_manager)
         instance_ids = []
         for index in xrange(FLAGS.max_instances):
-            instance_ids.append(self._create_instance())
-            service1.run_instance(self.context, instance_ids[index])
+            instance_id = self._create_instance()
+            service1.run_instance(self.context, instance_id)
+            instance_ids.append(instance_id)
         instance_id = self._create_instance()
         self.assertRaises(driver.NoValidHost,
                           self.scheduler.driver.pick_compute_host,

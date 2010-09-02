@@ -46,6 +46,7 @@ class SimpleScheduler(driver.Scheduler):
         results = db.daemon_get_all_compute_sorted(context)
         for result in results:
             (daemon, instance_count) = result
+            print daemon.host, instance_count
             if instance_count >= FLAGS.max_instances:
                 raise driver.NoValidHost("All hosts have too many instances")
             if self.daemon_is_up(daemon):

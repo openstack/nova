@@ -44,13 +44,12 @@ flags.DEFINE_integer('report_interval', 10,
 class Service(object, service.Service):
     """Base class for workers that run on hosts."""
 
-    def __init__(self, host, binary, topic, manager,
-                 db_driver=None, *args, **kwargs):
+    def __init__(self, host, binary, topic, manager, *args, **kwargs):
         self.host = host
         self.binary = binary
         self.topic = topic
         manager_class = utils.import_class(manager)
-        self.manager = manager_class(host, db_driver)
+        self.manager = manager_class(host=host, *args, **kwargs)
         self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
 
