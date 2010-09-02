@@ -1,6 +1,9 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Openstack, LLC.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -20,18 +23,40 @@ Chance (Random) Scheduler implementation
 
 import random
 
-from nova.scheduler.base import Scheduler
+from nova.scheduler import driver
 
 
-class ChanceScheduler(Scheduler):
+class ChanceScheduler(driver.Scheduler):
     """
     Implements Scheduler as a random node selector
     """
 
-    def pick_node(self, instance_id, **_kwargs):
+    def pick_compute_host(self, context, instance_id, **_kwargs):
         """
-        Picks a node that is up at random
+        Picks a host that is up at random
         """
 
-        nodes = self.compute_nodes_up()
-        return nodes[int(random.random() * len(nodes))]
+        hosts = self.hosts_up(context, 'compute')
+        if not hosts:
+            raise driver.NoValidHost("No hosts found")
+        return hosts[int(random.random() * len(hosts))]
+
+    def pick_volume_host(self, context, volume_id, **_kwargs):
+        """
+        Picks a host that is up at random
+        """
+
+        hosts = self.hosts_up(context, 'volume')
+        if not hosts:
+            raise driver.NoValidHost("No hosts found")
+        return hosts[int(random.random() * len(hosts))]
+
+    def pick_network_host(self, context, network_id, **_kwargs):
+        """
+        Picks a host that is up at random
+        """
+
+        hosts = self.hosts_up(context, 'network')
+        if not hosts:
+            raise driver.NoValidHost("No hosts found")
+        return hosts[int(random.random() * len(hosts))]

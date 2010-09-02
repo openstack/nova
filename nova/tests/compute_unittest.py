@@ -61,7 +61,7 @@ class ComputeTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
-        return db.instance_create(None, inst)
+        return db.instance_create(self.context, inst)
 
     @defer.inlineCallbacks
     def test_run_terminate(self):

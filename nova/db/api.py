@@ -62,6 +62,19 @@ def daemon_get_by_args(context, host, binary):
     return IMPL.daemon_get_by_args(context, host, binary)
 
 
+def daemon_get_all_by_topic(context, topic):
+    """Get all compute daemons for a given topi """
+    return IMPL.daemon_get_all_by_topic(context, topic)
+
+
+def daemon_get_all_compute_sorted(context):
+    """Get all compute daemons sorted by instance count
+
+    Returns a list of (Daemon, instance_count) tuples
+    """
+    return IMPL.daemon_get_all_compute_sorted(context)
+
+
 def daemon_create(context, values):
     """Create a daemon from the values dictionary."""
     return IMPL.daemon_create(context, values)

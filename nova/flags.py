@@ -220,5 +220,7 @@ DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
 DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
               'Manager for volume')
+DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
+              'Manager for scheduler')
 
 

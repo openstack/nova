@@ -488,9 +488,9 @@ class CloudController(object):
         host = db.network_get_host(context, network_ref['id'])
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "set_network_host",
-                                     "args": {"context": None,
-                                              "project_id": context.project.id}})
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": context.project.id}})
         defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')

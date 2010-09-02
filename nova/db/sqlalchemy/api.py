@@ -25,6 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import managed_session
 from sqlalchemy import or_
+from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
 
@@ -41,6 +42,36 @@ def daemon_get(_context, daemon_id):
 
 def daemon_get_by_args(_context, host, binary):
     return models.Daemon.find_by_args(host, binary)
+
+
+def daemon_get_all_by_topic(context, topic):
+    with managed_session() as session:
+        return session.query(models.Daemon) \
+                      .filter_by(deleted=False) \
+                      .filter_by(topic=topic) \
+                      .all()
+
+
+def daemon_get_all_compute_sorted(_context):
+    with managed_session() as session:
+        # NOTE(vish): The intended query is below
+        #             SELECT daemons.*, inst_count.instance_count
+        #             FROM daemons LEFT OUTER JOIN
+        #             (SELECT host, count(*) AS instance_count
+        #              FROM instances GROUP BY host) AS inst_count
+        print 'instance', models.Instance.find(1).host
+        subq = session.query(models.Instance.host,
+                             func.count('*').label('instance_count')) \
+                      .filter_by(deleted=False) \
+                      .group_by(models.Instance.host) \
+                      .subquery()
+        topic = 'compute'
+        return session.query(models.Daemon, subq.c.instance_count) \
+                      .filter_by(topic=topic) \
+                      .filter_by(deleted=False) \
+                      .outerjoin((subq, models.Daemon.host == subq.c.host)) \
+                      .order_by(subq.c.instance_count) \
+                      .all()
 
 
 def daemon_create(_context, values):
