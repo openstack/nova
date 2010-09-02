@@ -30,7 +30,10 @@ flags.DEFINE_string('db_driver', 'nova.db.api',
 
 class Manager(object):
     """DB driver is injected in the init method"""
-    def __init__(self, db_driver=None):
+    def __init__(self, host=None, db_driver=None):
+        if not host:
+            host = FLAGS.host
+        self.host = host
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103

@@ -29,9 +29,11 @@ from nova import test
 from nova import utils
 from nova.auth import manager as auth_manager
 from nova.scheduler import manager
+from nova.scheduler import driver
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('max_instances', 'nova.scheduler.simple')
 
 
 class SchedulerTestCase(test.TrialTestCase):
@@ -39,6 +41,7 @@ class SchedulerTestCase(test.TrialTestCase):
     def setUp(self):  # pylint: disable-msg=C0103
         super(SchedulerTestCase, self).setUp()
         self.flags(connection_type='fake',
+                   max_instances=4,
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
         self.context = None
@@ -75,14 +78,14 @@ class SchedulerTestCase(test.TrialTestCase):
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
+        hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
+        self.assertEqual(len(hosts), 0)
         service1.report_state()
         service2.report_state()
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(len(hosts), 2)
 
     def test_least_busy_host_gets_instance(self):
-        # NOTE(vish): constructing service without create method
-        #             because we are going to use it without queue
         service1 = service.Service('host1',
                                    'nova-compute',
                                    'compute',
@@ -94,10 +97,25 @@ class SchedulerTestCase(test.TrialTestCase):
         service1.report_state()
         service2.report_state()
         instance_id = self._create_instance()
-        FLAGS.host = 'host1'
-        service1.run_instance(self.context,
-                              instance_id)
-        print type(self.scheduler.driver)
+        service1.run_instance(self.context, instance_id)
         host = self.scheduler.driver.pick_compute_host(self.context,
                                                        instance_id)
         self.assertEqual(host, 'host2')
+        service1.terminate_instance(self.context, instance_id)
+
+    def test_too_many_instances(self):
+        service1 = service.Service('host',
+                                  'nova-compute',
+                                  'compute',
+                                  FLAGS.compute_manager)
+        instance_ids = []
+        for index in xrange(FLAGS.max_instances):
+            instance_ids.append(self._create_instance())
+            service1.run_instance(self.context, instance_ids[index])
+        instance_id = self._create_instance()
+        self.assertRaises(driver.NoValidHost,
+                          self.scheduler.driver.pick_compute_host,
+                          self.context,
+                          instance_id)
+        for instance_id in instance_ids:
+            service1.terminate_instance(self.context, instance_id)
