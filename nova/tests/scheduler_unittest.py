@@ -18,9 +18,6 @@
 """
 Tests For Scheduler
 """
-import logging
-
-from twisted.internet import defer
 
 from nova import db
 from nova import flags
@@ -36,10 +33,10 @@ FLAGS = flags.FLAGS
 flags.DECLARE('max_instances', 'nova.scheduler.simple')
 
 
-class SchedulerTestCase(test.TrialTestCase):
+class SimpleSchedulerTestCase(test.TrialTestCase):
     """Test case for scheduler"""
     def setUp(self):  # pylint: disable-msg=C0103
-        super(SchedulerTestCase, self).setUp()
+        super(SimpleSchedulerTestCase, self).setUp()
         self.flags(connection_type='fake',
                    max_instances=4,
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
@@ -49,10 +46,20 @@ class SchedulerTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = None
+        self.service1 = service.Service('host1',
+                                        'nova-compute',
+                                        'compute',
+                                        FLAGS.compute_manager)
+        self.service2 = service.Service('host2',
+                                        'nova-compute',
+                                        'compute',
+                                        FLAGS.compute_manager)
 
     def tearDown(self):  # pylint: disable-msg=C0103
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
+        self.service1.kill()
+        self.service2.kill()
 
     def _create_instance(self):
         """Create a test instance"""
@@ -70,53 +77,33 @@ class SchedulerTestCase(test.TrialTestCase):
     def test_hosts_are_up(self):
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
-        service1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        service2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
-        self.assertEqual(len(hosts), 0)
-        service1.report_state()
-        service2.report_state()
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(len(hosts), 2)
 
     def test_least_busy_host_gets_instance(self):
-        service1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        service2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        service1.report_state()
-        service2.report_state()
         instance_id = self._create_instance()
-        service1.run_instance(self.context, instance_id)
+        self.service1.run_instance(self.context, instance_id)
         host = self.scheduler.driver.pick_compute_host(self.context,
                                                        instance_id)
         self.assertEqual(host, 'host2')
-        service1.terminate_instance(self.context, instance_id)
+        self.service1.terminate_instance(self.context, instance_id)
 
     def test_too_many_instances(self):
-        service1 = service.Service('host',
-                                  'nova-compute',
-                                  'compute',
-                                  FLAGS.compute_manager)
-        instance_ids = []
+        instance_ids1 = []
+        instance_ids2 = []
         for index in xrange(FLAGS.max_instances):
             instance_id = self._create_instance()
-            service1.run_instance(self.context, instance_id)
-            instance_ids.append(instance_id)
+            self.service1.run_instance(self.context, instance_id)
+            instance_ids1.append(instance_id)
+            instance_id = self._create_instance()
+            self.service2.run_instance(self.context, instance_id)
+            instance_ids2.append(instance_id)
         instance_id = self._create_instance()
         self.assertRaises(driver.NoValidHost,
                           self.scheduler.driver.pick_compute_host,
                           self.context,
                           instance_id)
-        for instance_id in instance_ids:
-            service1.terminate_instance(self.context, instance_id)
+        for instance_id in instance_ids1:
+            self.service1.terminate_instance(self.context, instance_id)
+        for instance_id in instance_ids2:
+            self.service2.terminate_instance(self.context, instance_id)

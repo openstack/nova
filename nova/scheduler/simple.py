@@ -43,14 +43,13 @@ class SimpleScheduler(driver.Scheduler):
         Picks a host that is up and has the fewest running instances
         """
 
-        results = db.daemon_get_all_compute_sorted(context)
+        results = db.service_get_all_compute_sorted(context)
         for result in results:
-            (daemon, instance_count) = result
-            print daemon.host, instance_count
+            (service, instance_count) = result
             if instance_count >= FLAGS.max_instances:
                 raise driver.NoValidHost("All hosts have too many instances")
-            if self.daemon_is_up(daemon):
-                return daemon['host']
+            if self.service_is_up(service):
+                return service['host']
         raise driver.NoValidHost("No hosts found")
 
     def pick_volume_host(self, context, volume_id, **_kwargs):
@@ -58,13 +57,13 @@ class SimpleScheduler(driver.Scheduler):
         Picks a host that is up and has the fewest volumes
         """
 
-        results = db.daemon_get_all_volume_sorted(context)
+        results = db.service_get_all_volume_sorted(context)
         for result in results:
-            (daemon, instance_count) = result
+            (service, instance_count) = result
             if instance_count >= FLAGS.max_volumes:
                 raise driver.NoValidHost("All hosts have too many volumes")
-            if self.daemon_is_up(daemon):
-                return daemon['host']
+            if self.service_is_up(service):
+                return service['host']
         raise driver.NoValidHost("No hosts found")
 
     def pick_network_host(self, context, network_id, **_kwargs):
@@ -72,11 +71,11 @@ class SimpleScheduler(driver.Scheduler):
         Picks a host that is up and has the fewest networks
         """
 
-        results = db.daemon_get_all_network_sorted(context)
+        results = db.service_get_all_network_sorted(context)
         for result in results:
-            (daemon, instance_count) = result
+            (service, instance_count) = result
             if instance_count >= FLAGS.max_networks:
                 raise driver.NoValidHost("All hosts have too many networks")
-            if self.daemon_is_up(daemon):
-                return daemon['host']
+            if self.service_is_up(service):
+                return service['host']
         raise driver.NoValidHost("No hosts found")

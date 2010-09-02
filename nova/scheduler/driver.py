@@ -28,7 +28,7 @@ from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('daemon_down_time',
+flags.DEFINE_integer('service_down_time',
                      60,
                      'seconds without heartbeat that determines a '
                          'compute node to be down')
@@ -43,20 +43,21 @@ class Scheduler(object):
     """
 
     @staticmethod
-    def daemon_is_up(daemon):
+    def service_is_up(service):
         """
-        Given a daemon, return whether the deamon is considered 'up' by
+        Given a service, return whether the service is considered 'up' by
         if it's sent a heartbeat recently
         """
-        elapsed = datetime.datetime.now() - daemon['updated_at']
-        return elapsed < datetime.timedelta(seconds=FLAGS.daemon_down_time)
+        last_heartbeat = service['updated_at'] or service['created_at']
+        elapsed = datetime.datetime.now() - last_heartbeat
+        return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):
         """
-        Return the list of hosts that have a running daemon for topic
+        Return the list of hosts that have a running service for topic
         """
 
-        daemons = db.daemon_get_all_by_topic(context, topic)
-        return [daemon.host
-                for daemon in daemons
-                if self.daemon_is_up(daemon)]
+        services = db.service_get_all_by_topic(context, topic)
+        return [service.host
+                for service in services
+                if self.service_is_up(service)]
