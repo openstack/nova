@@ -85,9 +85,6 @@ class Service(object, service.Service):
             manager, defaults to FLAGS.<topic>_manager
             report_interval, defaults to FLAGS.report_interval
         """
-        if not report_interval:
-            report_interval = FLAGS.report_interval
-
         if not host:
             host = FLAGS.host
         if not binary:
@@ -96,16 +93,18 @@ class Service(object, service.Service):
             topic = binary.rpartition("nova-")[2]
         if not manager:
             manager = FLAGS.get('%s_manager' % topic, None)
+        if not report_interval:
+            report_interval = FLAGS.report_interval
         logging.warn("Starting %s node", topic)
-        service_obj = cls(FLAGS.host, binary, topic, manager)
+        service_obj = cls(host, binary, topic, manager)
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
                 connection=conn,
-                topic='%s' % topic,
+                topic=topic,
                 proxy=service_obj)
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
-                topic='%s.%s' % (topic, FLAGS.host),
+                topic='%s.%s' % (topic, host),
                 proxy=service_obj)
 
         pulse = task.LoopingCall(service_obj.report_state)

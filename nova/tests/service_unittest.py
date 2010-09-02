@@ -47,34 +47,50 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.StubOutWithMock(service, 'db')
 
     def test_create(self):
+        host='foo'
+        binary='nova-fake'
+        topic='fake'
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
         self.mox.StubOutWithMock(
                 service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
-                            topic='fake',
+                            topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
-                            topic='fake.%s' % FLAGS.host,
+                            topic='%s.%s' % (topic, host),
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
         # Stub out looping call a bit needlessly since we don't have an easy
         # way to cancel it (yet) when the tests finishes
-        service.task.LoopingCall(
-                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
+        service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
                         service.task.LoopingCall)
         service.task.LoopingCall.start(interval=mox.IgnoreArg(),
                                        now=mox.IgnoreArg())
 
         rpc.AdapterConsumer.attach_to_twisted()
         rpc.AdapterConsumer.attach_to_twisted()
+        service_create = {'host': host,
+                      'binary': binary,
+                      'topic': topic,
+                      'report_count': 0}
+        service_ref = {'host': host,
+                      'binary': binary,
+                      'report_count': 0,
+                      'id': 1}
+
+        service.db.service_get_by_args(None,
+                                      host,
+                                      binary).AndRaise(exception.NotFound())
+        service.db.service_create(None,
+                                 service_create).AndReturn(service_ref['id'])
         self.mox.ReplayAll()
 
-        app = service.Service.create(bin_name='nova-fake')
+        app = service.Service.create(host=host, binary=binary)
         self.assert_(app)
 
     # We're testing sort of weird behavior in how report_state decides
