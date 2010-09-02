@@ -23,8 +23,7 @@ APIRequestContext
 import random
 
 class APIRequestContext(object):
-    def __init__(self, handler, user, project):
-        self.handler = handler
+    def __init__(self, user, project):
         self.user = user
         self.project = project
         self.request_id = ''.join(
