@@ -20,8 +20,13 @@
 APIRequest class
 """
 
+import logging
+import re
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
+
+_log = logging.getLogger("api")
+_log.setLevel(logging.DEBUG)
 
 
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
@@ -79,7 +84,6 @@ class APIRequest(object):
 
         result = method(context, **args)
 
-        req.headers['Content-Type'] = 'text/xml'
         return self._render_response(result, context.request_id)
 
     def _render_response(self, response_data, request_id):

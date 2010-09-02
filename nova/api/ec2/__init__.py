@@ -28,6 +28,7 @@ import webob.exc
 
 from nova import exception
 from nova import wsgi
+from nova.api.ec2 import apirequest
 from nova.api.ec2 import context
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
@@ -174,7 +175,7 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller_name = req.environ['ec2.controller'].__name__
+        controller_name = req.environ['ec2.controller'].__class__.__name__
         action = req.environ['ec2.action']
         allowed_roles = self.action_roles[controller_name].get(action, [])
         if self._matches_any_role(context, allowed_roles):
@@ -205,14 +206,16 @@ class Executor(wsgi.Application):
         action = req.environ['ec2.action']
         args = req.environ['ec2.action_args']
 
-        api_request = APIRequest(controller, action)
+        api_request = apirequest.APIRequest(controller, action)
         try:
-            return api_request.send(context, **args)
+            result = api_request.send(context, **args)
+            req.headers['Content-Type'] = 'text/xml'
+            return result
         except exception.ApiError as ex:
             return self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
         # TODO(vish): do something more useful with unknown exceptions
         except Exception as ex:
-            return self._error(type(ex).__name__, str(ex))
+            return self._error(req, type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
         resp = webob.Response()
