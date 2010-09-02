@@ -60,7 +60,7 @@ class CloudTestCase(test.BaseTestCase):
         except: pass
         admin = manager.AuthManager().get_user('admin')
         project = manager.AuthManager().create_project('proj', 'admin', 'proj')
-        self.context = context.APIRequestContext(handler=None,project=project,user=admin)
+        self.context = context.APIRequestContext(project=project,user=admin)
 
     def tearDown(self):
         manager.AuthManager().delete_project('proj')
