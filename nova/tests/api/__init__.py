@@ -26,7 +26,7 @@ import webob
 import webob.dec
 
 from nova import api
-
+from nova.tests.api.test_helper import *
 
 class Test(unittest.TestCase):
 
@@ -52,10 +52,8 @@ class Test(unittest.TestCase):
         result = webob.Request.blank('/test/cloud').get_response(api.API())
         self.assertNotEqual(result.body, "/cloud")
 
+    def test_query_api_version(self):
+        pass
 
-class APIStub(object):
-    """Class to verify request and mark it was called."""
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        return req.path_info
+if __name__ == '__main__':
+    unittest.main()

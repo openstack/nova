@@ -47,10 +47,6 @@ class CloudTestCase(test.BaseTestCase):
 
         # set up our cloud
         self.cloud = cloud.CloudController()
-        self.cloud_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                      topic=FLAGS.cloud_topic,
-                                                      proxy=self.cloud)
-        self.injected.append(self.cloud_consumer.attach_to_tornado(self.ioloop))
 
         # set up a service
         self.compute = service.ComputeService()

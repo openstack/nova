@@ -23,7 +23,7 @@ A connection to a hypervisor (e.g. KVM) through libvirt.
 
 import json
 import logging
-import os.path
+import os
 import shutil
 
 from twisted.internet import defer
@@ -84,9 +84,21 @@ class LibvirtConnection(object):
 
     @property
     def _conn(self):
-        if not self._wrapped_conn:
+        if not self._wrapped_conn or not self._test_connection():
+            logging.debug('Connecting to libvirt: %s' % self.libvirt_uri)
             self._wrapped_conn = self._connect(self.libvirt_uri, self.read_only)
         return self._wrapped_conn
+
+    def _test_connection(self):
+        try:
+            self._wrapped_conn.getInfo()
+            return True
+        except libvirt.libvirtError as e:
+            if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
+               e.get_error_domain() == libvirt.VIR_FROM_REMOTE:
+                logging.debug('Connection to libvirt broke')
+                return False
+            raise
 
     def get_uri_and_template(self):
         if FLAGS.libvirt_type == 'uml':
@@ -217,6 +229,8 @@ class LibvirtConnection(object):
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
+
+        os.close(os.open(basepath('console.log'), os.O_CREAT | os.O_WRONLY, 0660))
 
         user = manager.AuthManager().get_user(data['user_id'])
         project = manager.AuthManager().get_project(data['project_id'])

@@ -16,6 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""Unit tests for the API endpoint"""
+
 import boto
 from boto.ec2 import regioninfo
 import httplib
@@ -30,16 +32,17 @@ from nova.api.ec2 import cloud
 
 
 class FakeHttplibSocket(object):
-    """ a fake socket implementation for httplib.HTTPResponse, trivial """
-    def __init__(self, s):
-        self.fp = StringIO.StringIO(s)
+    """a fake socket implementation for httplib.HTTPResponse, trivial"""
+    def __init__(self, response_string):
+        self._buffer = StringIO.StringIO(response_string)
 
-    def makefile(self, mode, other):
-        return self.fp
+    def makefile(self, _mode, _other):
+        """Returns the socket's internal buffer"""
+        return self._buffer
 
 
 class FakeHttplibConnection(object):
-    """ a fake httplib.HTTPConnection for boto to use
+    """A fake httplib.HTTPConnection for boto to use
 
     requests made via this connection actually get translated and routed into
     our WSGI app, we then wait for the response and turn it back into
@@ -70,11 +73,13 @@ class FakeHttplibConnection(object):
         return self.http_response
 
     def close(self):
+        """Required for compatibility with boto/tornado"""
         pass
 
 
 class ApiEc2TestCase(test.BaseTestCase):
-    def setUp(self):
+    """Unit test for the cloud controller on an EC2 API"""
+    def setUp(self): # pylint: disable-msg=C0103,C0111
         super(ApiEc2TestCase, self).setUp()
 
         self.manager = manager.AuthManager()
@@ -94,12 +99,16 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
 
     def expect_http(self, host=None, is_secure=False):
+        """Returns a new EC2 connection"""
         http = FakeHttplibConnection(
                 self.app, '%s:0' % (self.host), False)
+        # pylint: disable-msg=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(http)
         return http
 
     def test_describe_instances(self):
+        """Test that, after creating a user and a project, the describe
+        instances call to the API works properly"""
         self.expect_http()
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake')
@@ -110,14 +119,18 @@ class ApiEc2TestCase(test.BaseTestCase):
 
 
     def test_get_all_key_pairs(self):
+        """Test that, after creating a user and project and generating
+         a key pair, that the API call to list key pairs works properly"""
         self.expect_http()
         self.mox.ReplayAll()
-        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") for x in range(random.randint(4, 8)))
+        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                          for x in range(random.randint(4, 8)))
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
         self.manager.generate_key_pair(user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
-        self.assertTrue(filter(lambda k: k.name == keyname, rv))
+        results = [k for k in rv if k.name == keyname]
+        self.assertEquals(len(results), 1)
         self.manager.delete_project(project)
         self.manager.delete_user(user)
