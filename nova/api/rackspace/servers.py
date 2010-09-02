@@ -18,56 +18,76 @@
 from nova import rpc
 from nova.compute import model as compute
 from nova.api.rackspace import base
+from webob import exc
+from nova import flags
+
+FLAGS = flags.FLAGS
 
 
 class Controller(base.Controller):
-    entity_name = 'servers'
 
-    def index(self, **kwargs):
-        instances = []
-        for inst in compute.InstanceDirectory().all:
-            instances.append(instance_details(inst))
+    _serialization_metadata = {
+        'application/xml': {
+            "plurals": "servers",
+            "attributes": {
+                "server": [ "id", "imageId", "flavorId", "hostId", "status",
+                           "progress", "addresses", "metadata", "progress" ]
+            }
+        }
+    }
 
-    def show(self, **kwargs):
-        instance_id = kwargs['id']
-        return compute.InstanceDirectory().get(instance_id)
+    def __init__(self):
+        self.instdir = compute.InstanceDirectory()
 
-    def delete(self, **kwargs):
-        instance_id = kwargs['id']
-        instance = compute.InstanceDirectory().get(instance_id)
+    def index(self, req):
+        return [_entity_inst(instance_details(inst)) for inst in instdir.all]
+
+    def show(self, req, id):
+        inst = self.instdir.get(id)
+        if inst:
+            return _entity_inst(inst)
+        raise exc.HTTPNotFound()
+
+    def delete(self, req, id):
+        instance = self.instdir.get(id)
         if not instance:
-            raise ServerNotFound("The requested server was not found")
+            return exc.HTTPNotFound()
         instance.destroy()
-        return True
+        return exc.HTTPAccepted()
 
-    def create(self, **kwargs):
-        inst = self.build_server_instance(kwargs['server'])
+    def create(self, req):
+        inst = self._build_server_instance(req)
         rpc.cast(
             FLAGS.compute_topic, {
                 "method": "run_instance",
                 "args": {"instance_id": inst.instance_id}})
+        return _entity_inst(inst)
 
-    def update(self, **kwargs):
-        instance_id = kwargs['id']
-        instance = compute.InstanceDirectory().get(instance_id)
+    def update(self, req, id):
+        instance = self.instdir.get(instance_id)
         if not instance:
-            raise ServerNotFound("The requested server was not found")
+            return exc.HTTPNotFound()
         instance.update(kwargs['server'])
         instance.save()
+        return exc.HTTPNoContent()
 
-    def build_server_instance(self, env):
+    def _build_server_instance(self, req):
         """Build instance data structure and save it to the data store."""
-        reservation = utils.generate_uid('r')
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = self.instdir.new()
         inst['name'] = env['server']['name']
         inst['image_id'] = env['server']['imageId']
         inst['instance_type'] = env['server']['flavorId']
         inst['user_id'] = env['user']['id']
-        inst['project_id'] = env['project']['id']
-        inst['reservation_id'] = reservation
+
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
+
+        # TODO(dietz) Do we need any of these?
+        inst['project_id'] = env['project']['id']
+        inst['reservation_id'] = reservation
+        reservation = utils.generate_uid('r')
+
         address = self.network.allocate_ip(
                     inst['user_id'],
                     inst['project_id'],
@@ -77,7 +97,24 @@ class Controller(base.Controller):
                                 inst['user_id'],
                                 inst['project_id'],
                                 'default')['bridge_name']
-        # key_data, key_name, ami_launch_index
-        # TODO(todd): key data or root password
+
         inst.save()
-        return inst
+        return _entity_inst(inst)
+
+    def _entity_inst(self, inst):
+        """ Maps everything to Rackspace-like attributes for return"""
+
+        translated_keys = dict(metadata={}, status=state_description,
+            id=instance_id, imageId=image_id, flavorId=instance_type,)
+
+        for k,v in translated_keys.iteritems():
+            inst[k] = inst[v]
+
+        filtered_keys = ['instance_id', 'state_description', 'state',
+            'reservation_id', 'project_id', 'launch_time',
+            'bridge_name', 'mac_address', 'user_id']
+
+        for key in filtered_keys::
+            del inst[key]
+
+        return dict(server=inst)
