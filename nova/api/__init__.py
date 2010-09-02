@@ -37,5 +37,5 @@ class API(wsgi.Router):
         # be dropped; and I'm leaving off CloudPipeRequestHandler until
         # I hear that we need it.
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
-        mapper.connect("/ec2/{path_info:.*}", controller=ec2.API())
+        mapper.connect("/services/{path_info:.*}", controller=ec2.API())
         super(API, self).__init__(mapper)

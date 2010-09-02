@@ -21,51 +21,12 @@ from boto.ec2 import regioninfo
 import httplib
 import random
 import StringIO
-from tornado import httpserver
-from twisted.internet import defer
+import webob
 
-from nova import flags
 from nova import test
 from nova.auth import manager
+from nova.api import ec2
 from nova.api.ec2 import cloud
-
-
-FLAGS = flags.FLAGS
-
-
-# NOTE(termie): These are a bunch of helper methods and classes to short
-#               circuit boto calls and feed them into our tornado handlers,
-#               it's pretty damn circuitous so apologies if you have to fix
-#               a bug in it
-def boto_to_tornado(method, path, headers, data, host, connection=None):
-    """ translate boto requests into tornado requests
-
-    connection should be a FakeTornadoHttpConnection instance
-    """
-    try:
-        headers = httpserver.HTTPHeaders()
-    except AttributeError:
-        from tornado import httputil
-        headers = httputil.HTTPHeaders()
-    for k, v in headers.iteritems():
-        headers[k] = v
-
-    req = httpserver.HTTPRequest(method=method,
-                                 uri=path,
-                                 headers=headers,
-                                 body=data,
-                                 host=host,
-                                 remote_ip='127.0.0.1',
-                                 connection=connection)
-    return req
-
-
-def raw_to_httpresponse(s):
-    """ translate a raw tornado http response into an httplib.HTTPResponse """
-    sock = FakeHttplibSocket(s)
-    resp = httplib.HTTPResponse(sock)
-    resp.begin()
-    return resp
 
 
 class FakeHttplibSocket(object):
@@ -77,73 +38,36 @@ class FakeHttplibSocket(object):
         return self.fp
 
 
-class FakeTornadoStream(object):
-    """ a fake stream to satisfy tornado's assumptions, trivial """
-    def set_close_callback(self, f):
-        pass
-
-
-class FakeTornadoConnection(object):
-    """ a fake connection object for tornado to pass to its handlers
-
-    web requests are expected to write to this as they get data and call
-    finish when they are done with the request, we buffer the writes and
-    kick off a callback when it is done so that we can feed the result back
-    into boto.
-    """
-    def __init__(self, d):
-        self.d = d
-        self._buffer = StringIO.StringIO()
-
-    def write(self, chunk):
-        self._buffer.write(chunk)
-
-    def finish(self):
-        s = self._buffer.getvalue()
-        self.d.callback(s)
-
-    xheaders = None
-
-    @property
-    def stream(self):
-        return FakeTornadoStream()
-
-
 class FakeHttplibConnection(object):
     """ a fake httplib.HTTPConnection for boto to use
 
     requests made via this connection actually get translated and routed into
-    our tornado app, we then wait for the response and turn it back into
+    our WSGI app, we then wait for the response and turn it back into
     the httplib.HTTPResponse that boto expects.
     """
     def __init__(self, app, host, is_secure=False):
         self.app = app
         self.host = host
-        self.deferred = defer.Deferred()
 
     def request(self, method, path, data, headers):
-        req = boto_to_tornado
-        conn = FakeTornadoConnection(self.deferred)
-        request = boto_to_tornado(connection=conn,
-                                  method=method,
-                                  path=path,
-                                  headers=headers,
-                                  data=data,
-                                  host=self.host)
-        handler = self.app(request)
-        self.deferred.addCallback(raw_to_httpresponse)
+        req = webob.Request.blank(path)
+        req.method = method
+        req.body = data
+        req.headers = headers
+        req.headers['Accept'] = 'text/html'
+        req.host = self.host
+        # Call the WSGI app, get the HTTP response
+        resp = str(req.get_response(self.app))
+        # For some reason, the response doesn't have "HTTP/1.0 " prepended; I
+        # guess that's a function the web server usually provides.
+        resp = "HTTP/1.0 %s" % resp
+
+        sock = FakeHttplibSocket(resp)
+        self.http_response = httplib.HTTPResponse(sock)
+        self.http_response.begin()
 
     def getresponse(self):
-        @defer.inlineCallbacks
-        def _waiter():
-            result = yield self.deferred
-            defer.returnValue(result)
-        d = _waiter()
-        # NOTE(termie): defer.returnValue above should ensure that
-        #               this deferred has already been called by the time
-        #               we get here, we are going to cheat and return
-        #               the result of the callback
-        return d.result
+        return self.http_response
 
     def close(self):
         pass
@@ -158,20 +82,20 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         self.host = '127.0.0.1'
 
-        self.app = api.APIServerApplication({'Cloud': self.cloud})
+        self.app = ec2.API()
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
                 is_secure=False,
                 region=regioninfo.RegionInfo(None, 'test', self.host),
-                port=FLAGS.cc_port,
+                port=0,
                 path='/services/Cloud')
 
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
 
     def expect_http(self, host=None, is_secure=False):
         http = FakeHttplibConnection(
-                self.app, '%s:%d' % (self.host, FLAGS.cc_port), False)
+                self.app, '%s:0' % (self.host), False)
         self.ec2.new_http_connection(host, is_secure).AndReturn(http)
         return http
 

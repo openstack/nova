@@ -44,6 +44,7 @@ class API(wsgi.Middleware):
     def __init__(self):
         self.application = Authenticate(Router(Authorizer(Executor())))
 
+
 class Authenticate(wsgi.Middleware):
     """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
 
@@ -81,11 +82,12 @@ class Authenticate(wsgi.Middleware):
         return self.application
 
 
-class Router(wsgi.Application):
+class Router(wsgi.Middleware):
     """
     Add 'ec2.controller', 'ec2.action', and 'ec2.action_args' to WSGI environ.
     """
-    def __init__(self):
+    def __init__(self, application):
+        super(Router, self).__init__(application)
         self.map = routes.Mapper()
         self.map.connect("/{controller_name}/")
         self.controllers = dict(Cloud=cloud.CloudController(),
@@ -122,14 +124,14 @@ class Router(wsgi.Application):
         return self.application
 
 
-class Authorization(wsgi.Middleware):
+class Authorizer(wsgi.Middleware):
     """
     Return a 401 if ec2.controller and ec2.action in WSGI environ may not be
     executed in ec2.context.
     """
 
     def __init__(self, application):
-        super(Authorization, self).__init__(application)
+        super(Authorizer, self).__init__(application)
         self.action_roles = {
             'CloudController': {
                 'DescribeAvailabilityzones': ['all'],
