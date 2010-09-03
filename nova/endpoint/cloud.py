@@ -380,30 +380,30 @@ class CloudController(object):
             }
             floating_addr = db.instance_get_floating_address(context,
                                                              instance['id'])
-            i['public_dns_name'] = floating_addr
+            i['publicDnsName'] = floating_addr
             fixed_addr = db.instance_get_fixed_address(context,
                                                        instance['id'])
-            i['private_dns_name'] = fixed_addr
-            if not i['public_dns_name']:
-                i['public_dns_name'] = i['private_dns_name']
-            i['dns_name'] = None
-            i['key_name'] = instance.key_name
+            i['privateDnsName'] = fixed_addr
+            if not i['publicDnsName']:
+                i['publicDnsName'] = i['privateDnsName']
+            i['dnsName'] = None
+            i['keyName'] = instance['key_name']
             if context.user.is_admin():
-                i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.project_id,
-                    'host') # FIXME
-            i['product_codes_set'] = self._convert_to_set([], 'product_codes')
-            i['instance_type'] = instance.instance_type
-            i['launch_time'] = instance.created_at
-            i['ami_launch_index'] = instance.launch_index
+                i['keyName'] = '%s (%s, %s)' % (i['keyName'],
+                    instance['project_id'],
+                    instance['host'])
+            i['productCodesSet'] = self._convert_to_set([], 'product_codes')
+            i['instanceType'] = instance['instance_type']
+            i['launchTime'] = instance['created_at']
+            i['amiLaunchIndex'] = instance['launch_index']
             if not reservations.has_key(instance['reservation_id']):
                 r = {}
-                r['reservation_id'] = instance['reservation_id']
-                r['owner_id'] = instance.project_id
-                r['group_set'] = self._convert_to_set([], 'groups')
-                r['instances_set'] = []
+                r['reservationId'] = instance['reservation_id']
+                r['ownerId'] = instance['project_id']
+                r['groupSet'] = self._convert_to_set([], 'groups')
+                r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
-            reservations[instance['reservation_id']]['instances_set'].append(i)
+            reservations[instance['reservation_id']]['instancesSet'].append(i)
 
         return list(reservations.values())
 
