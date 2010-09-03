@@ -567,6 +567,7 @@ class CloudController(object):
             rpc.cast(FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"context": None,
+                               "topic": FLAGS.compute_topic,
                                "instance_id": inst_id}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
