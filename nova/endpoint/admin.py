@@ -22,8 +22,9 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 
+from nova import db
+from nova import exception
 from nova.auth import manager
-from nova.compute import model
 
 
 def user_dict(user, base64_file=None):
@@ -52,6 +53,7 @@ def project_dict(project):
 def host_dict(host):
     """Convert a host model object to a result dict"""
     if host:
+        # FIXME(vish)
         return host.state
     else:
         return {}
@@ -181,7 +183,7 @@ class AdminController(object):
         result = {
             'members': [{'member': m} for m in project.member_ids]}
         return result
-        
+
     @admin_only
     def modify_project_member(self, context, user, project, operation, **kwargs):
         """Add or remove a user from a project."""
@@ -203,9 +205,9 @@ class AdminController(object):
             * DHCP servers running
             * Iptables / bridges
         """
-        return {'hostSet': [host_dict(h) for h in model.Host.all()]}
+        return {'hostSet': [host_dict(h) for h in db.host_get_all()]}
 
     @admin_only
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
-        return host_dict(model.Host.lookup(name))
+        return host_dict(db.host_get(name))
