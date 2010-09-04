@@ -69,7 +69,7 @@ def service_get_all_compute_sorted(context):
         #             FROM services LEFT OUTER JOIN
         #             (SELECT host, count(*) AS instance_count
         #              FROM instances GROUP BY host) AS inst_count
-        #             ON services.host == inst_count.host
+        #             ON services.host = inst_count.host
         topic = 'compute'
         label = 'instance_count'
         subq = session.query(models.Instance.host,
