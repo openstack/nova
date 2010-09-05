@@ -274,9 +274,19 @@ class XenAPIConnection(object):
     def destroy(self, instance):
         vm = yield self._lookup(instance.name)
         if vm is None:
-            raise Exception('instance not present %s' % instance.name)
-        task = yield self._call_xenapi('Async.VM.destroy', vm)
-        yield self._wait_for_task(task)
+            # Don't complain, just return.  This lets us clean up instances
+            # that have already disappeared from the underlying platform.
+            defer.returnValue(None)
+        try:
+            task = yield self._call_xenapi('Async.VM.hard_shutdown', vm)
+            yield self._wait_for_task(task)
+        except Exception, exn:
+            logging.warn(exn)
+        try:
+            task = yield self._call_xenapi('Async.VM.destroy', vm)
+            yield self._wait_for_task(task)
+        except Exception, exn:
+            logging.warn(exn)
 
     def get_info(self, instance_id):
         vm = self._lookup_blocking(instance_id)
