@@ -295,6 +295,10 @@ class LibvirtConnection(object):
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
 
+        if FLAGS.libvirt_type == 'uml':
+            yield process.simple_execute('sudo chown root %s' %
+                                         basepath('disk'))
+
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug('instance %s: starting toXML method', instance['name'])
