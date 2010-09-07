@@ -637,6 +637,12 @@ def volume_get_host(context, volume_id):
     return volume_ref['host']
 
 
+def volume_get_instance(context, volume_id):
+    volume_ref = db.volume_get(context, volume_id)
+    instance_ref = db.instance_get(context, volume_ref['instance_id'])
+    return instance_ref
+
+
 def volume_get_shelf_and_blade(_context, volume_id):
     with managed_session() as session:
         export_device = session.query(models.ExportDevice) \

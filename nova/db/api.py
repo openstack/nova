@@ -444,6 +444,11 @@ def volume_get_all(context):
     return IMPL.volume_get_all(context)
 
 
+def volume_get_instance(context, volume_id):
+    """Get the instance that a volume is attached to."""
+    return IMPL.volume_get_instance(context, volume_id)
+
+
 def volume_get_by_project(context, project_id):
     """Get all volumes belonging to a project."""
     return IMPL.volume_get_by_project(context, project_id)

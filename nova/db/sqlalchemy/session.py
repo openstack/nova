@@ -50,6 +50,7 @@ class SessionExecutionManager:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type:
-            logging.exception("Rolling back due to failed transaction")
+            logging.exception("Rolling back due to failed transaction: %s",
+                exc_type)
             self._session.rollback()
         self._session.close()

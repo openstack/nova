@@ -58,10 +58,14 @@ class Service(object, service.Service):
                                                self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
-            self.service_id = db.service_create(None, {'host': self.host,
-                                                     'binary': self.binary,
-                                                     'topic': self.topic,
-                                                     'report_count': 0})
+            self._create_service_ref()
+
+
+    def _create_service_ref(self):
+        self.service_id = db.service_create(None, {'host': self.host,
+                                                 'binary': self.binary,
+                                                 'topic': self.topic,
+                                                 'report_count': 0})
 
     def __getattr__(self, key):
         try:
@@ -122,10 +126,6 @@ class Service(object, service.Service):
     def kill(self, context=None):
         """Destroy the service object in the datastore"""
         try:
-            service_ref = db.service_get_by_args(context,
-                                               self.host,
-                                               self.binary)
-            service_id = service_ref['id']
             db.service_destroy(context, self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
@@ -134,7 +134,13 @@ class Service(object, service.Service):
     def report_state(self, context=None):
         """Update the state of this service in the datastore."""
         try:
-            service_ref = db.service_get(context, self.service_id)
+            try:
+                service_ref = db.service_get(context, self.service_id)
+            except exception.NotFound:
+                logging.debug("The service database object disappeared, "
+                              "Recreating it.")
+                self._create_service_ref()
+
             db.service_update(context,
                              self.service_id,
                              {'report_count': service_ref['report_count'] + 1})
