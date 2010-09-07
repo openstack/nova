@@ -87,9 +87,9 @@ def floating_ip_allocate_address(context, host, project_id):
     return IMPL.floating_ip_allocate_address(context, host, project_id)
 
 
-def floating_ip_create(context, address, host):
-    """Create a floating ip for a given address on the specified host."""
-    return IMPL.floating_ip_create(context, address, host)
+def floating_ip_create(context, values):
+    """Create a floating ip from the values dictionary."""
+    return IMPL.floating_ip_create(context, values)
 
 
 def floating_ip_disassociate(context, address):

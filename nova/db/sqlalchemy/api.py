@@ -79,12 +79,12 @@ def floating_ip_allocate_address(_context, host, project_id):
         return floating_ip_ref['address']
 
 
-def floating_ip_create(_context, address, host):
+def floating_ip_create(_context, values):
     floating_ip_ref = models.FloatingIp()
-    floating_ip_ref['address'] = address
-    floating_ip_ref['host'] = host
+    for (key, value) in values.iteritems():
+        floating_ip_ref[key] = value
     floating_ip_ref.save()
-    return floating_ip_ref
+    return floating_ip_ref['address']
 
 
 def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
