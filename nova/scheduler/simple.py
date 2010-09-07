@@ -35,14 +35,10 @@ flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
 
 class SimpleScheduler(chance.ChanceScheduler):
-    """
-    Implements Naive Scheduler that tries to find least loaded host
-    """
+    """Implements Naive Scheduler that tries to find least loaded host."""
 
     def schedule_run_instance(self, context, _instance_id, *_args, **_kwargs):
-        """
-        Picks a host that is up and has the fewest running instances
-        """
+        """Picks a host that is up and has the fewest running instances."""
 
         results = db.service_get_all_compute_sorted(context)
         for result in results:
@@ -54,9 +50,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         raise driver.NoValidHost("No hosts found")
 
     def schedule_create_volume(self, context, _volume_id, *_args, **_kwargs):
-        """
-        Picks a host that is up and has the fewest volumes
-        """
+        """Picks a host that is up and has the fewest volumes."""
 
         results = db.service_get_all_volume_sorted(context)
         for result in results:
@@ -67,10 +61,9 @@ class SimpleScheduler(chance.ChanceScheduler):
                 return service['host']
         raise driver.NoValidHost("No hosts found")
 
-    def schedule_set_network_host(self, context, _network_id, *_args, **_kwargs):
-        """
-        Picks a host that is up and has the fewest networks
-        """
+    def schedule_set_network_host(self, context, _network_id,
+                                  *_args, **_kwargs):
+        """Picks a host that is up and has the fewest networks."""
 
         results = db.service_get_all_network_sorted(context)
         for result in results:

@@ -28,34 +28,25 @@ from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('service_down_time',
-                     60,
-                     'seconds without heartbeat that determines a '
-                         'compute node to be down')
+flags.DEFINE_integer('service_down_time', 60,
+                     'maximum time since last checkin for up service')
 
 class NoValidHost(exception.Error):
-    """There is no valid host for the command"""
+    """There is no valid host for the command."""
     pass
 
 class Scheduler(object):
-    """
-    The base class that all Scheduler clases should inherit from
-    """
+    """The base class that all Scheduler clases should inherit from."""
 
     @staticmethod
     def service_is_up(service):
-        """
-        Given a service, return whether the service is considered 'up' by
-        if it's sent a heartbeat recently
-        """
+        """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
         elapsed = datetime.datetime.now() - last_heartbeat
         return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):
-        """
-        Return the list of hosts that have a running service for topic
-        """
+        """Return the list of hosts that have a running service for topic."""
 
         services = db.service_get_all_by_topic(context, topic)
         return [service.host
@@ -63,7 +54,5 @@ class Scheduler(object):
                 if self.service_is_up(service)]
 
     def schedule(self, context, topic, *_args, **_kwargs):
-        """
-        Must override at least this method for scheduler to work
-        """
+        """Must override at least this method for scheduler to work."""
         raise NotImplementedError("Must implement a fallback schedule")

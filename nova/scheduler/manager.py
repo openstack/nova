@@ -37,9 +37,7 @@ flags.DEFINE_string('scheduler_driver',
 
 
 class SchedulerManager(manager.Manager):
-    """
-    Chooses a host to run instances on.
-    """
+    """Chooses a host to run instances on."""
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
