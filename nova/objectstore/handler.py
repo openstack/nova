@@ -131,7 +131,7 @@ def get_context(request):
                                           request.uri,
                                           headers=request.getAllHeaders(),
                                           check_type='s3')
-        return context.APIRequestContext(None, user, project)
+        return context.APIRequestContext(user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized
