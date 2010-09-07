@@ -21,7 +21,6 @@
 A connection to a hypervisor (e.g. KVM) through libvirt.
 """
 
-import json
 import logging
 import os
 import shutil
@@ -154,9 +153,27 @@ class LibvirtConnection(object):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        logging.info("Deleting instance files at %s", target)
+        logging.info('instance %s: deleting instance files %s',
+            instance['name'], target)
         if os.path.exists(target):
             shutil.rmtree(target)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def attach_volume(self, instance_name, device_path, mountpoint):
+        yield process.simple_execute("sudo virsh attach-disk %s %s %s" %
+                                     (instance_name,
+                                      device_path,
+                                      mountpoint.rpartition('/dev/')[2]))
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def detach_volume(self, instance_name, mountpoint):
+        # NOTE(vish): despite the documentation, virsh detach-disk just
+        # wants the device name without the leading /dev/
+        yield process.simple_execute("sudo virsh detach-disk %s %s" %
+                                     (instance_name,
+                                      mountpoint.rpartition('/dev/')[2]))
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -171,7 +188,7 @@ class LibvirtConnection(object):
             try:
                 instance.set_state(self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
-                    logging.debug('rebooted instance %s' % instance['name'])
+                    logging.debug('instance %s: rebooted', instance['name'])
                     timer.stop()
                     d.callback(None)
             except Exception, exn:
@@ -192,7 +209,7 @@ class LibvirtConnection(object):
         yield self._conn.createXML(xml, 0)
         # TODO(termie): this should actually register
         # a callback to check for successful boot
-        logging.debug("Instance is running")
+        logging.debug("instance %s: is running", instance['name'])
 
         local_d = defer.Deferred()
         timer = task.LoopingCall(f=None)
@@ -200,11 +217,11 @@ class LibvirtConnection(object):
             try:
                 instance.set_state(self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
-                    logging.debug('booted instance %s', instance['name'])
+                    logging.debug('instance %s: booted', instance['name'])
                     timer.stop()
                     local_d.callback(None)
             except:
-                logging.exception('Failed to boot instance %s',
+                logging.exception('instance %s: failed to boot',
                                   instance['name'])
                 instance.set_state(power_state.SHUTDOWN)
                 timer.stop()
@@ -227,7 +244,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
-        logging.info('Creating image for: %s', inst['name'])
+        logging.info('instance %s: Creating image', inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
@@ -249,7 +266,7 @@ class LibvirtConnection(object):
                                          process_input=process_input,
                                          check_exit_code=True)
 
-        key = inst.key_data
+        key = str(inst['key_data'])
         net = None
         network_ref = db.project_get_network(None, project.id)
         if network_ref['injected']:
@@ -262,7 +279,12 @@ class LibvirtConnection(object):
                                   'broadcast': network_ref['broadcast'],
                                   'dns': network_ref['dns']}
         if key or net:
-            logging.info('Injecting data into image %s', inst.image_id)
+            if key:
+                logging.info('instance %s: injecting key into image %s',
+                    inst['name'], inst.image_id)
+            if net:
+                logging.info('instance %s: injecting net into image %s',
+                    inst['name'], inst.image_id)
             yield disk.inject_data(basepath('disk-raw'), key, net, execute=execute)
 
         if os.path.exists(basepath('disk')):
@@ -275,7 +297,7 @@ class LibvirtConnection(object):
 
     def to_xml(self, instance):
         # TODO(termie): cache?
-        logging.debug("Starting the toXML method")
+        logging.debug('instance %s: starting toXML method', instance['name'])
         network = db.project_get_network(None, instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
@@ -288,7 +310,7 @@ class LibvirtConnection(object):
                     'bridge_name': network['bridge'],
                     'mac_address': instance['mac_address']}
         libvirt_xml = self.libvirt_xml % xml_info
-        logging.debug("Finished the toXML method")
+        logging.debug('instance %s: finished toXML method', instance['name'])
 
         return libvirt_xml
 

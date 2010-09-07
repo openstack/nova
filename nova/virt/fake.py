@@ -132,6 +132,14 @@ class FakeConnection(object):
         del self.instances[instance.name]
         return defer.succeed(None)
 
+    def attach_volume(self, instance_name, device_path, mountpoint):
+        """Attach the disk at device_path to the instance at mountpoint"""
+        return True
+
+    def detach_volume(self, instance_name, mountpoint):
+        """Detach the disk attached to the instance at mountpoint"""
+        return True
+
     def get_info(self, instance_name):
         """
         Get a block of information about the given instance.  This is returned

@@ -82,17 +82,17 @@ class AOEManager(manager.Manager):
 
         size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG", volume_id, size)
-        yield self.driver.create_volume(volume_id, size)
+        yield self.driver.create_volume(volume_ref['str_id'], size)
 
         logging.debug("volume %s: allocating shelf & blade", volume_id)
         self._ensure_blades(context)
         rval = self.db.volume_allocate_shelf_and_blade(context, volume_id)
         (shelf_id, blade_id) = rval
 
-        logging.debug("volume %s: exporting shelf %s & blade %s", (volume_id,
-                 shelf_id, blade_id))
+        logging.debug("volume %s: exporting shelf %s & blade %s", volume_id,
+                      shelf_id, blade_id)
 
-        yield self.driver.create_export(volume_id, shelf_id, blade_id)
+        yield self.driver.create_export(volume_ref['str_id'], shelf_id, blade_id)
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
 
@@ -114,8 +114,22 @@ class AOEManager(manager.Manager):
         if volume_ref['host'] != FLAGS.host:
             raise exception.Error("Volume is not local to this node")
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
-                                                           volume_id)
-        yield self.driver.remove_export(volume_id, shelf_id, blade_id)
-        yield self.driver.delete_volume(volume_id)
+                                                                volume_id)
+        yield self.driver.remove_export(volume_ref['str_id'],
+                                        shelf_id,
+                                        blade_id)
+        yield self.driver.delete_volume(volume_ref['str_id'])
         self.db.volume_destroy(context, volume_id)
         defer.returnValue(True)
+
+    @defer.inlineCallbacks
+    def setup_compute_volume(self, context, volume_id):
+        """Setup remote volume on compute host
+
+        Returns path to device.
+        """
+        volume_ref = self.db.volume_get(context, volume_id)
+        yield self.driver.discover_volume(volume_ref['str_id'])
+        shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
+                                                                volume_id)
+        defer.returnValue("/dev/etherd/e%s.%s" % (shelf_id, blade_id))

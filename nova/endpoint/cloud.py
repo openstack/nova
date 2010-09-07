@@ -41,6 +41,7 @@ from nova.endpoint import images
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 
 def _gen_key(user_id, key_name):
@@ -262,11 +263,11 @@ class CloudController(object):
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
-                                   'deleteOnTermination': volume['delete_on_termination'],
+                                   'deleteOnTermination': False,
                                    'device': volume['mountpoint'],
                                    'instanceId': volume['instance_id'],
                                    'status': 'attached',
-                                   'volume_id': volume['volume_id']}]
+                                   'volume_id': volume['str_id']}]
         else:
             v['attachmentSet'] = [{}]
         return v
@@ -293,7 +294,7 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
-        if volume_ref['status'] == "attached":
+        if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         #volume.start_attach(instance_id, device)
         instance_ref = db.instance_get_by_str(context, instance_id)
@@ -306,7 +307,7 @@ class CloudController(object):
                                           "mountpoint": device}})
         return defer.succeed({'attachTime': volume_ref['attach_time'],
                               'device': volume_ref['mountpoint'],
-                              'instanceId': instance_ref['id_str'],
+                              'instanceId': instance_ref['id'],
                               'requestId': context.request_id,
                               'status': volume_ref['attach_status'],
                               'volumeId': volume_ref['id']})
@@ -334,7 +335,7 @@ class CloudController(object):
             db.volume_detached(context)
         return defer.succeed({'attachTime': volume_ref['attach_time'],
                               'device': volume_ref['mountpoint'],
-                              'instanceId': instance_ref['id_str'],
+                              'instanceId': instance_ref['str_id'],
                               'requestId': context.request_id,
                               'status': volume_ref['attach_status'],
                               'volumeId': volume_ref['id']})

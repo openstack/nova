@@ -119,52 +119,56 @@ class NovaBase(object):
     def __getitem__(self, key):
         return getattr(self, key)
 
-
-class Image(BASE, NovaBase):
-    """Represents an image in the datastore"""
-    __tablename__ = 'images'
-    __prefix__ = 'ami'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    image_type = Column(String(255))
-    public = Column(Boolean, default=False)
-    state = Column(String(255))
-    location = Column(String(255))
-    arch = Column(String(255))
-    default_kernel_id = Column(String(255))
-    default_ramdisk_id = Column(String(255))
-
-    @validates('image_type')
-    def validate_image_type(self, key, image_type):
-        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-
-    @validates('state')
-    def validate_state(self, key, state):
-        assert(state in ['available', 'pending', 'disabled'])
-
-    @validates('default_kernel_id')
-    def validate_kernel_id(self, key, val):
-        if val != 'machine':
-            assert(val is None)
-
-    @validates('default_ramdisk_id')
-    def validate_ramdisk_id(self, key, val):
-        if val != 'machine':
-            assert(val is None)
-
-
-class Host(BASE, NovaBase):
-    """Represents a host where services are running"""
-    __tablename__ = 'hosts'
-    id = Column(String(255), primary_key=True)
-
-
+# TODO(vish): Store images in the database instead of file system
+#class Image(BASE, NovaBase):
+#    """Represents an image in the datastore"""
+#    __tablename__ = 'images'
+#    __prefix__ = 'ami'
+#    id = Column(Integer, primary_key=True)
+#    user_id = Column(String(255))
+#    project_id = Column(String(255))
+#    image_type = Column(String(255))
+#    public = Column(Boolean, default=False)
+#    state = Column(String(255))
+#    location = Column(String(255))
+#    arch = Column(String(255))
+#    default_kernel_id = Column(String(255))
+#    default_ramdisk_id = Column(String(255))
+#
+#    @validates('image_type')
+#    def validate_image_type(self, key, image_type):
+#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
+#
+#    @validates('state')
+#    def validate_state(self, key, state):
+#        assert(state in ['available', 'pending', 'disabled'])
+#
+#    @validates('default_kernel_id')
+#    def validate_kernel_id(self, key, val):
+#        if val != 'machine':
+#            assert(val is None)
+#
+#    @validates('default_ramdisk_id')
+#    def validate_ramdisk_id(self, key, val):
+#        if val != 'machine':
+#            assert(val is None)
+#
+#
+# TODO(vish): To make this into its own table, we need a good place to
+#             create the host entries. In config somwhere? Or the first
+#             time any object sets host? This only becomes particularly
+#             important if we need to store per-host data.
+#class Host(BASE, NovaBase):
+#    """Represents a host where services are running"""
+#    __tablename__ = 'hosts'
+#    id = Column(String(255), primary_key=True)
+#
+#
 class Service(BASE, NovaBase):
     """Represents a running service on a host"""
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
@@ -208,9 +212,12 @@ class Instance(BASE, NovaBase):
     def name(self):
         return self.str_id
 
-    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+    image_id = Column(String(255))
+    kernel_id = Column(String(255))
+    ramdisk_id = Column(String(255))
+#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
 #    project = relationship(Project, backref=backref('instances', order_by=id))
@@ -224,9 +231,9 @@ class Instance(BASE, NovaBase):
     state_description = Column(String(255))
 
     hostname = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    instance_type = Column(Integer)
+    instance_type = Column(String(255))
 
     user_data = Column(Text)
 
@@ -264,7 +271,7 @@ class Volume(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
@@ -305,7 +312,7 @@ class Network(BASE, NovaBase):
     dhcp_start = Column(String(255))
 
     project_id = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
 class NetworkIndex(BASE, NovaBase):
@@ -367,7 +374,7 @@ class FloatingIp(BASE, NovaBase):
     fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
 
     project_id = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
     @property
     def str_id(self):
@@ -392,8 +399,8 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Image, Host, Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex)
+    models = (Service, Instance, Volume, ExportDevice,
+              FixedIp, FloatingIp, Network, NetworkIndex)  # , Image, Host)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
