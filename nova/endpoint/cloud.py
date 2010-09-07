@@ -241,6 +241,10 @@ class CloudController(object):
         return groups
 
     @rbac.allow('netadmin')
+    def authorize_security_group_ingress(self, context, group_name, **kwargs):
+        return True
+
+    @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, **kwargs):
         return True
 
