@@ -29,7 +29,7 @@ from twisted.internet import protocol
 from twisted.internet import reactor
 
 from nova import flags
-from nova.utils import ProcessExecutionError
+from nova.exception import ProcessExecutionError
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('process_pool_size', 4,
@@ -126,7 +126,7 @@ def get_process_output(executable, args=None, env=None, path=None,
     deferred = defer.Deferred()
     cmd = executable
     if args:
-        cmd = cmd + " " + ' '.join(args)
+        cmd = " ".join([cmd] + args)
     process_handler = BackRelayWithInput(
             deferred,
             cmd,
