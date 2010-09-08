@@ -35,6 +35,6 @@ def get_session(autocommit=True):
     global _MAKER
     if not _MAKER:
         if not _ENGINE:
-            _ENGINE = create_engine(FLAGS.sql_connection, echo=True)
+            _ENGINE = create_engine(FLAGS.sql_connection, echo=False)
         _MAKER = sessionmaker(bind=_ENGINE, autocommit=autocommit)
     return _MAKER()
