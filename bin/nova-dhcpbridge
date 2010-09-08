@@ -25,10 +25,13 @@ import logging
 import os
 import sys
 
-# TODO(joshua): there is concern that the user dnsmasq runs under will not
-#               have nova in the path. This should be verified and if it is
-#               not true the ugly line below can be removed
-sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
 
 from nova import db
 from nova import flags
