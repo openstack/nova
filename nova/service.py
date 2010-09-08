@@ -28,75 +28,130 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
-from nova import datastore
+from nova import db
+from nova import exception
 from nova import flags
 from nova import rpc
-from nova.compute import model
+from nova import utils
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_integer('report_interval', 10,
                      'seconds between nodes reporting state to cloud',
                      lower_bound=1)
 
+
 class Service(object, service.Service):
-    """Base class for workers that run on hosts"""
+    """Base class for workers that run on hosts."""
+
+    def __init__(self, host, binary, topic, manager, *args, **kwargs):
+        self.host = host
+        self.binary = binary
+        self.topic = topic
+        manager_class = utils.import_class(manager)
+        self.manager = manager_class(host=host, *args, **kwargs)
+        self.model_disconnected = False
+        super(Service, self).__init__(*args, **kwargs)
+        try:
+            service_ref = db.service_get_by_args(None,
+                                               self.host,
+                                               self.binary)
+            self.service_id = service_ref['id']
+        except exception.NotFound:
+            self._create_service_ref()
+
+
+    def _create_service_ref(self):
+        self.service_id = db.service_create(None, {'host': self.host,
+                                                 'binary': self.binary,
+                                                 'topic': self.topic,
+                                                 'report_count': 0})
+
+    def __getattr__(self, key):
+        try:
+            return super(Service, self).__getattr__(key)
+        except AttributeError:
+            return getattr(self.manager, key)
 
     @classmethod
     def create(cls,
-               report_interval=None, # defaults to flag
-               bin_name=None, # defaults to basename of executable
-               topic=None): # defaults to basename - "nova-" part
-        """Instantiates class and passes back application object"""
-        if not report_interval:
-            # NOTE(vish): set here because if it is set to flag in the
-            #             parameter list, it wrongly uses the default
-            report_interval = FLAGS.report_interval
-        # NOTE(vish): magic to automatically determine bin_name and topic
-        if not bin_name:
-            bin_name = os.path.basename(inspect.stack()[-1][1])
-        if not topic:
-            topic = bin_name.rpartition("nova-")[2]
-        logging.warn("Starting %s node" % topic)
-        node_instance = cls()
+               host=None,
+               binary=None,
+               topic=None,
+               manager=None,
+               report_interval=None):
+        """Instantiates class and passes back application object.
 
+        Args:
+            host, defaults to FLAGS.host
+            binary, defaults to basename of executable
+            topic, defaults to bin_name - "nova-" part
+            manager, defaults to FLAGS.<topic>_manager
+            report_interval, defaults to FLAGS.report_interval
+        """
+        if not host:
+            host = FLAGS.host
+        if not binary:
+            binary = os.path.basename(inspect.stack()[-1][1])
+        if not topic:
+            topic = binary.rpartition("nova-")[2]
+        if not manager:
+            manager = FLAGS.get('%s_manager' % topic, None)
+        if not report_interval:
+            report_interval = FLAGS.report_interval
+        logging.warn("Starting %s node", topic)
+        service_obj = cls(host, binary, topic, manager)
         conn = rpc.Connection.instance()
         consumer_all = rpc.AdapterConsumer(
                 connection=conn,
-                topic='%s' % topic,
-                proxy=node_instance)
-
+                topic=topic,
+                proxy=service_obj)
         consumer_node = rpc.AdapterConsumer(
                 connection=conn,
-                topic='%s.%s' % (topic, FLAGS.node_name),
-                proxy=node_instance)
+                topic='%s.%s' % (topic, host),
+                proxy=service_obj)
 
-        pulse = task.LoopingCall(node_instance.report_state,
-                                 FLAGS.node_name,
-                                 bin_name)
+        pulse = task.LoopingCall(service_obj.report_state)
         pulse.start(interval=report_interval, now=False)
 
         consumer_all.attach_to_twisted()
         consumer_node.attach_to_twisted()
 
         # This is the parent service that twistd will be looking for when it
-        # parses this file, return it so that we can get it into globals below
-        application = service.Application(bin_name)
-        node_instance.setServiceParent(application)
+        # parses this file, return it so that we can get it into globals.
+        application = service.Application(binary)
+        service_obj.setServiceParent(application)
         return application
 
-    @defer.inlineCallbacks
-    def report_state(self, nodename, daemon):
-        # TODO(termie): make this pattern be more elegant. -todd
+    def kill(self, context=None):
+        """Destroy the service object in the datastore"""
         try:
-            record = model.Daemon(nodename, daemon)
-            record.heartbeat()
+            db.service_destroy(context, self.service_id)
+        except exception.NotFound:
+            logging.warn("Service killed that has no database entry")
+
+    @defer.inlineCallbacks
+    def report_state(self, context=None):
+        """Update the state of this service in the datastore."""
+        try:
+            try:
+                service_ref = db.service_get(context, self.service_id)
+            except exception.NotFound:
+                logging.debug("The service database object disappeared, "
+                              "Recreating it.")
+                self._create_service_ref()
+
+            db.service_update(context,
+                             self.service_id,
+                             {'report_count': service_ref['report_count'] + 1})
+
+            # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
                 logging.error("Recovered model server connection!")
 
-        except datastore.ConnectionError, ex:
+        # TODO(vish): this should probably only catch connection errors
+        except:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception("model server went away")

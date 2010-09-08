@@ -25,10 +25,10 @@
 import sys
 import time
 
+from nova import db
 from nova import flags
 from nova import utils
 from nova.auth import manager
-from nova.compute import model
 from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 
@@ -41,7 +41,6 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.instdir = model.InstanceDirectory()
         self.pipe = pipelib.CloudPipe(cloud.CloudController())
 
     def list(self):
@@ -56,8 +55,8 @@ class VpnCommands(object):
             vpn = self._vpn_for(project.id)
             if vpn:
                 command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                out, _err = utils.execute(  command % vpn['private_dns_name'],
-                                            check_exit_code=False)
+                out, _err = utils.execute(command % vpn['private_dns_name'],
+                                          check_exit_code=False)
                 if out.strip() == '0':
                     net = 'up'
                 else:
@@ -73,9 +72,8 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in self.instdir.all:
-            if ('image_id' in instance.state
-                and instance['image_id'] == FLAGS.vpn_image_id
+        for instance in db.instance_get_all():
+            if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
                 and instance['project_id'] == project_id):

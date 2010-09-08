@@ -21,12 +21,12 @@
   Twistd daemon for the nova compute nodes.
 """
 
+from nova import service
 from nova import twistd
-from nova.compute import service
 
 
 if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    application = service.ComputeService.create() # pylint: disable-msg=C0103
+    application = service.Service.create()  # pylint: disable=C0103

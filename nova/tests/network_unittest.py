@@ -22,14 +22,12 @@ import IPy
 import os
 import logging
 
+from nova import db
+from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.network import model
-from nova.network import service
-from nova.network import vpn
-from nova.network.exception import NoMoreAddresses
 
 FLAGS = flags.FLAGS
 
@@ -44,180 +42,164 @@ class NetworkTestCase(test.TrialTestCase):
                    fake_storage=True,
                    fake_network=True,
                    auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
-                   network_size=32)
+                   network_size=16,
+                   num_networks=5)
         logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
-        self.projects.append(self.manager.create_project('netuser',
-                                                         'netuser',
-                                                         'netuser'))
-        for i in range(0, 6):
+        self.network = utils.import_object(FLAGS.network_manager)
+        self.context = None
+        for i in range(5):
             name = 'project%s' % i
             self.projects.append(self.manager.create_project(name,
                                                              'netuser',
                                                              name))
-            vpn.NetworkData.create(self.projects[i].id)
-        self.service = service.VlanNetworkService()
+            # create the necessary network data for the project
+            self.network.set_network_host(self.context, self.projects[i].id)
+        instance_id = db.instance_create(None,
+                                         {'mac_address': utils.generate_mac()})
+        self.instance_id = instance_id
+        instance_id = db.instance_create(None,
+                                         {'mac_address': utils.generate_mac()})
+        self.instance2_id = instance_id
 
     def tearDown(self):  # pylint: disable-msg=C0103
         super(NetworkTestCase, self).tearDown()
+        # TODO(termie): this should really be instantiating clean datastores
+        #               in between runs, one failure kills all the tests
+        db.instance_destroy(None, self.instance_id)
+        db.instance_destroy(None, self.instance2_id)
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
 
-    def test_public_network_allocation(self):
+    def _create_address(self, project_num, instance_id=None):
+        """Create an address in given project num"""
+        net = db.project_get_network(None, self.projects[project_num].id)
+        address = db.fixed_ip_allocate(None, net['id'])
+        if instance_id is None:
+            instance_id = self.instance_id
+        db.fixed_ip_instance_associate(None, address, instance_id)
+        return address
+
+    def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
+        # TODO(vish): better way of adding floating ips
         pubnet = IPy.IP(flags.FLAGS.public_range)
-        address = self.service.allocate_elastic_ip(self.user.id,
-                                           self.projects[0].id)
-        self.assertTrue(IPy.IP(address) in pubnet)
+        ip_str = str(pubnet[0])
+        try:
+            db.floating_ip_get_by_address(None, ip_str)
+        except exception.NotFound:
+            db.floating_ip_create(None, ip_str, FLAGS.host)
+        float_addr = self.network.allocate_floating_ip(self.context,
+                                                       self.projects[0].id)
+        fix_addr = self._create_address(0)
+        self.assertEqual(float_addr, str(pubnet[0]))
+        self.network.associate_floating_ip(self.context, float_addr, fix_addr)
+        address = db.instance_get_floating_address(None, self.instance_id)
+        self.assertEqual(address, float_addr)
+        self.network.disassociate_floating_ip(self.context, float_addr)
+        address = db.instance_get_floating_address(None, self.instance_id)
+        self.assertEqual(address, None)
+        self.network.deallocate_floating_ip(self.context, float_addr)
+        db.fixed_ip_deallocate(None, fix_addr)
 
     def test_allocate_deallocate_fixed_ip(self):
         """Makes sure that we can allocate and deallocate a fixed ip"""
-        result = self.service.allocate_fixed_ip(
-                self.user.id, self.projects[0].id)
-        address = result['private_dns_name']
-        mac = result['mac_address']
-        net = model.get_project_network(self.projects[0].id, "default")
-        self.assertEqual(True, is_in_project(address, self.projects[0].id))
-        hostname = "test-host"
-        issue_ip(mac, address, hostname, net.bridge_name)
-        self.service.deallocate_fixed_ip(address)
+        address = self._create_address(0)
+        self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
+        lease_ip(address)
+        db.fixed_ip_deallocate(None, address)
 
         # Doesn't go away until it's dhcp released
-        self.assertEqual(True, is_in_project(address, self.projects[0].id))
+        self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
 
-        release_ip(mac, address, hostname, net.bridge_name)
-        self.assertEqual(False, is_in_project(address, self.projects[0].id))
+        release_ip(address)
+        self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
     def test_side_effects(self):
         """Ensures allocating and releasing has no side effects"""
-        hostname = "side-effect-host"
-        result = self.service.allocate_fixed_ip(self.user.id,
-                                                self.projects[0].id)
-        mac = result['mac_address']
-        address = result['private_dns_name']
-        result = self.service.allocate_fixed_ip(self.user,
-                                                self.projects[1].id)
-        secondmac = result['mac_address']
-        secondaddress = result['private_dns_name']
+        address = self._create_address(0)
+        address2 = self._create_address(1, self.instance2_id)
 
-        net = model.get_project_network(self.projects[0].id, "default")
-        secondnet = model.get_project_network(self.projects[1].id, "default")
-
-        self.assertEqual(True, is_in_project(address, self.projects[0].id))
-        self.assertEqual(True, is_in_project(secondaddress,
-                                             self.projects[1].id))
-        self.assertEqual(False, is_in_project(address, self.projects[1].id))
+        self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
+        self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
+        self.assertFalse(is_allocated_in_project(address, self.projects[1].id))
 
         # Addresses are allocated before they're issued
-        issue_ip(mac, address, hostname, net.bridge_name)
-        issue_ip(secondmac, secondaddress, hostname, secondnet.bridge_name)
+        lease_ip(address)
+        lease_ip(address2)
 
-        self.service.deallocate_fixed_ip(address)
-        release_ip(mac, address, hostname, net.bridge_name)
-        self.assertEqual(False, is_in_project(address, self.projects[0].id))
+        db.fixed_ip_deallocate(None, address)
+        release_ip(address)
+        self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
         # First address release shouldn't affect the second
-        self.assertEqual(True, is_in_project(secondaddress,
-                                             self.projects[1].id))
+        self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
 
-        self.service.deallocate_fixed_ip(secondaddress)
-        release_ip(secondmac, secondaddress, hostname, secondnet.bridge_name)
-        self.assertEqual(False, is_in_project(secondaddress,
-                                              self.projects[1].id))
+        db.fixed_ip_deallocate(None, address2)
+        release_ip(address2)
+        self.assertFalse(is_allocated_in_project(address2,
+                                                 self.projects[1].id))
 
     def test_subnet_edge(self):
         """Makes sure that private ips don't overlap"""
-        result = self.service.allocate_fixed_ip(self.user.id,
-                                                       self.projects[0].id)
-        firstaddress = result['private_dns_name']
-        hostname = "toomany-hosts"
+        first = self._create_address(0)
+        lease_ip(first)
         for i in range(1, 5):
-            project_id = self.projects[i].id
-            result = self.service.allocate_fixed_ip(
-                    self.user, project_id)
-            mac = result['mac_address']
-            address = result['private_dns_name']
-            result = self.service.allocate_fixed_ip(
-                    self.user, project_id)
-            mac2 = result['mac_address']
-            address2 = result['private_dns_name']
-            result = self.service.allocate_fixed_ip(
-                   self.user, project_id)
-            mac3 = result['mac_address']
-            address3 = result['private_dns_name']
-            net = model.get_project_network(project_id, "default")
-            issue_ip(mac, address, hostname, net.bridge_name)
-            issue_ip(mac2, address2, hostname, net.bridge_name)
-            issue_ip(mac3, address3, hostname, net.bridge_name)
-            self.assertEqual(False, is_in_project(address,
-                                                  self.projects[0].id))
-            self.assertEqual(False, is_in_project(address2,
-                                                  self.projects[0].id))
-            self.assertEqual(False, is_in_project(address3,
-                                                  self.projects[0].id))
-            self.service.deallocate_fixed_ip(address)
-            self.service.deallocate_fixed_ip(address2)
-            self.service.deallocate_fixed_ip(address3)
-            release_ip(mac, address, hostname, net.bridge_name)
-            release_ip(mac2, address2, hostname, net.bridge_name)
-            release_ip(mac3, address3, hostname, net.bridge_name)
-        net = model.get_project_network(self.projects[0].id, "default")
-        self.service.deallocate_fixed_ip(firstaddress)
+            address = self._create_address(i)
+            address2 = self._create_address(i)
+            address3 = self._create_address(i)
+            lease_ip(address)
+            lease_ip(address2)
+            lease_ip(address3)
+            self.assertFalse(is_allocated_in_project(address,
+                                                     self.projects[0].id))
+            self.assertFalse(is_allocated_in_project(address2,
+                                                     self.projects[0].id))
+            self.assertFalse(is_allocated_in_project(address3,
+                                                     self.projects[0].id))
+            db.fixed_ip_deallocate(None, address)
+            db.fixed_ip_deallocate(None, address2)
+            db.fixed_ip_deallocate(None, address3)
+            release_ip(address)
+            release_ip(address2)
+            release_ip(address3)
+        release_ip(first)
+        db.fixed_ip_deallocate(None, first)
 
     def test_vpn_ip_and_port_looks_valid(self):
         """Ensure the vpn ip and port are reasonable"""
         self.assert_(self.projects[0].vpn_ip)
-        self.assert_(self.projects[0].vpn_port >= FLAGS.vpn_start_port)
-        self.assert_(self.projects[0].vpn_port <= FLAGS.vpn_end_port)
+        self.assert_(self.projects[0].vpn_port >= FLAGS.vpn_start)
+        self.assert_(self.projects[0].vpn_port <= FLAGS.vpn_start +
+                                                  FLAGS.num_networks)
 
-    def test_too_many_vpns(self):
-        """Ensure error is raised if we run out of vpn ports"""
-        vpns = []
-        for i in xrange(vpn.NetworkData.num_ports_for_ip(FLAGS.vpn_ip)):
-            vpns.append(vpn.NetworkData.create("vpnuser%s" % i))
-        self.assertRaises(vpn.NoMorePorts, vpn.NetworkData.create, "boom")
-        for network_datum in vpns:
-            network_datum.destroy()
+    def test_too_many_networks(self):
+        """Ensure error is raised if we run out of networks"""
+        projects = []
+        networks_left = FLAGS.num_networks - db.network_count(None)
+        for i in range(networks_left):
+            project = self.manager.create_project('many%s' % i, self.user)
+            projects.append(project)
+        self.assertRaises(db.NoMoreNetworks,
+                          self.manager.create_project,
+                          'boom',
+                          self.user)
+        for project in projects:
+            self.manager.delete_project(project)
 
     def test_ips_are_reused(self):
         """Makes sure that ip addresses that are deallocated get reused"""
-        net = model.get_project_network(self.projects[0].id, "default")
+        address = self._create_address(0)
+        lease_ip(address)
+        db.fixed_ip_deallocate(None, address)
+        release_ip(address)
 
-        hostname = "reuse-host"
-        macs = {}
-        addresses = {}
-        num_available_ips = net.num_available_ips
-        for i in range(num_available_ips - 1):
-            result = self.service.allocate_fixed_ip(self.user.id,
-                                                    self.projects[0].id)
-            macs[i] = result['mac_address']
-            addresses[i] = result['private_dns_name']
-            issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
-
-        result = self.service.allocate_fixed_ip(self.user.id,
-                                                self.projects[0].id)
-        mac = result['mac_address']
-        address = result['private_dns_name']
-
-        issue_ip(mac, address, hostname, net.bridge_name)
-        self.service.deallocate_fixed_ip(address)
-        release_ip(mac, address, hostname, net.bridge_name)
-
-        result = self.service.allocate_fixed_ip(
-                self.user, self.projects[0].id)
-        secondmac = result['mac_address']
-        secondaddress = result['private_dns_name']
-        self.assertEqual(address, secondaddress)
-        issue_ip(secondmac, secondaddress, hostname, net.bridge_name)
-        self.service.deallocate_fixed_ip(secondaddress)
-        release_ip(secondmac, secondaddress, hostname, net.bridge_name)
-
-        for i in range(len(addresses)):
-            self.service.deallocate_fixed_ip(addresses[i])
-            release_ip(macs[i], addresses[i], hostname, net.bridge_name)
+        address2 = self._create_address(0)
+        self.assertEqual(address, address2)
+        db.fixed_ip_deallocate(None, address2)
 
     def test_available_ips(self):
         """Make sure the number of available ips for the network is correct
@@ -230,43 +212,47 @@ class NetworkTestCase(test.TrialTestCase):
         There are ips reserved at the bottom and top of the range.
         services (network, gateway, CloudPipe, broadcast)
         """
-        net = model.get_project_network(self.projects[0].id, "default")
-        num_preallocated_ips = len(net.assigned)
+        network = db.project_get_network(None, self.projects[0].id)
         net_size = flags.FLAGS.network_size
-        num_available_ips = net_size - (net.num_bottom_reserved_ips +
-                                        num_preallocated_ips +
-                                        net.num_top_reserved_ips)
-        self.assertEqual(num_available_ips, net.num_available_ips)
+        total_ips = (db.network_count_available_ips(None, network['id']) +
+                     db.network_count_reserved_ips(None, network['id']) +
+                     db.network_count_allocated_ips(None, network['id']))
+        self.assertEqual(total_ips, net_size)
 
     def test_too_many_addresses(self):
         """Test for a NoMoreAddresses exception when all fixed ips are used.
         """
-        net = model.get_project_network(self.projects[0].id, "default")
-
-        hostname = "toomany-hosts"
-        macs = {}
-        addresses = {}
-        num_available_ips = net.num_available_ips
+        network = db.project_get_network(None, self.projects[0].id)
+        num_available_ips = db.network_count_available_ips(None,
+                                                           network['id'])
+        addresses = []
         for i in range(num_available_ips):
-            result = self.service.allocate_fixed_ip(self.user.id,
-                                                    self.projects[0].id)
-            macs[i] = result['mac_address']
-            addresses[i] = result['private_dns_name']
-            issue_ip(macs[i], addresses[i], hostname, net.bridge_name)
+            address = self._create_address(0)
+            addresses.append(address)
+            lease_ip(address)
 
-        self.assertEqual(net.num_available_ips, 0)
-        self.assertRaises(NoMoreAddresses, self.service.allocate_fixed_ip,
-                          self.user.id, self.projects[0].id)
+        self.assertEqual(db.network_count_available_ips(None,
+                                                        network['id']), 0)
+        self.assertRaises(db.NoMoreAddresses,
+                          db.fixed_ip_allocate,
+                          None,
+                          network['id'])
 
         for i in range(len(addresses)):
-            self.service.deallocate_fixed_ip(addresses[i])
-            release_ip(macs[i], addresses[i], hostname, net.bridge_name)
-        self.assertEqual(net.num_available_ips, num_available_ips)
+            db.fixed_ip_deallocate(None, addresses[i])
+            release_ip(addresses[i])
+        self.assertEqual(db.network_count_available_ips(None,
+                                                        network['id']),
+                         num_available_ips)
 
 
-def is_in_project(address, project_id):
+def is_allocated_in_project(address, project_id):
     """Returns true if address is in specified project"""
-    return address in model.get_project_network(project_id).assigned
+    project_net = db.project_get_network(None, project_id)
+    network = db.fixed_ip_get_network(None, address)
+    instance = db.fixed_ip_get_instance(None, address)
+    # instance exists until release
+    return instance is not None and network['id'] == project_net['id']
 
 
 def binpath(script):
@@ -274,22 +260,22 @@ def binpath(script):
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
-def issue_ip(mac, private_ip, hostname, interface):
+def lease_ip(private_ip):
     """Run add command on dhcpbridge"""
-    cmd = "%s add %s %s %s" % (binpath('nova-dhcpbridge'),
-                               mac, private_ip, hostname)
-    env = {'DNSMASQ_INTERFACE': interface,
+    network_ref = db.fixed_ip_get_network(None, private_ip)
+    cmd = "%s add fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
+    env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
     logging.debug("ISSUE_IP: %s, %s ", out, err)
 
 
-def release_ip(mac, private_ip, hostname, interface):
+def release_ip(private_ip):
     """Run del command on dhcpbridge"""
-    cmd = "%s del %s %s %s" % (binpath('nova-dhcpbridge'),
-                               mac, private_ip, hostname)
-    env = {'DNSMASQ_INTERFACE': interface,
+    network_ref = db.fixed_ip_get_network(None, private_ip)
+    cmd = "%s del fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
+    env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)

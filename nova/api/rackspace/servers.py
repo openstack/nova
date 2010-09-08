@@ -16,9 +16,9 @@
 #    under the License.
 
 from nova import rpc
-from nova.compute import model as compute
 from nova.api.rackspace import base
 
+# FIXME(vish): convert from old usage of instance directory
 
 class Controller(base.Controller):
     entity_name = 'servers'

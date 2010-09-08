@@ -15,11 +15,8 @@
             <source bridge='%(bridge_name)s'/>
             <mac address='%(mac_address)s'/>
         </interface>
-        <console type="pty" />
-        <serial type="file">
+        <console type="file">
             <source path='%(basepath)s/console.log'/>
-            <target port='1'/>
-        </serial>
+        </console>
     </devices>
-    <nova>%(nova)s</nova>
 </domain>

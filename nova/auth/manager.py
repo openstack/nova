@@ -29,11 +29,11 @@ import uuid
 import zipfile
 
 from nova import crypto
+from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import signer
-from nova.network import vpn
 
 
 FLAGS = flags.FLAGS
@@ -252,6 +252,7 @@ class AuthManager(object):
         __init__ is run every time AuthManager() is called, so we only
         reset the driver if it is not set or a new driver is specified.
         """
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         if driver or not getattr(self, 'driver', None):
             self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
@@ -493,8 +494,8 @@ class AuthManager(object):
                 return []
             return [Project(**project_dict) for project_dict in project_list]
 
-    def create_project(self, name, manager_user,
-                       description=None, member_users=None):
+    def create_project(self, name, manager_user, description=None,
+                       member_users=None, context=None):
         """Create a project
 
         @type name: str
@@ -523,7 +524,14 @@ class AuthManager(object):
                                               description,
                                               member_users)
             if project_dict:
-                return Project(**project_dict)
+                project = Project(**project_dict)
+                try:
+                    self.network_manager.allocate_network(context,
+                                                          project.id)
+                except:
+                    drv.delete_project(project.id)
+                    raise
+                return project
 
     def add_to_project(self, user, project):
         """Add user to project"""
@@ -550,7 +558,7 @@ class AuthManager(object):
                                             Project.safe_id(project))
 
     @staticmethod
-    def get_project_vpn_data(project):
+    def get_project_vpn_data(project, context=None):
         """Gets vpn ip and port for project
 
         @type project: Project or project_id
@@ -560,15 +568,26 @@ class AuthManager(object):
         @return: A tuple containing (ip, port) or None, None if vpn has
         not been allocated for user.
         """
-        network_data = vpn.NetworkData.lookup(Project.safe_id(project))
-        if not network_data:
-            raise exception.NotFound('project network data has not been set')
-        return (network_data.ip, network_data.port)
 
-    def delete_project(self, project):
+        network_ref = db.project_get_network(context,
+                                             Project.safe_id(project))
+
+        if not network_ref['vpn_public_port']:
+            raise exception.NotFound('project network data has not been set')
+        return (network_ref['vpn_public_address'],
+                network_ref['vpn_public_port'])
+
+    def delete_project(self, project, context=None):
         """Deletes a project"""
+        try:
+            network_ref = db.project_get_network(context,
+                                                 Project.safe_id(project))
+            db.network_destroy(context, network_ref['id'])
+        except:
+            logging.exception('Could not destroy network for %s',
+                              project)
         with self.driver() as drv:
-            return drv.delete_project(Project.safe_id(project))
+            drv.delete_project(Project.safe_id(project))
 
     def get_user(self, uid):
         """Retrieves a user by id"""
@@ -703,15 +722,15 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        network_data = vpn.NetworkData.lookup(pid)
-        if network_data:
+        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        if vpn_ip:
             configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())
             configfile.close()
             config = s.substitute(keyfile=FLAGS.credential_key_file,
                                   certfile=FLAGS.credential_cert_file,
-                                  ip=network_data.ip,
-                                  port=network_data.port)
+                                  ip=vpn_ip,
+                                  port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
             logging.warn("No vpn data for project %s" %

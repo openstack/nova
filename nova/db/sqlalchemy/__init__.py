@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,15 +17,8 @@
 #    under the License.
 
 """
-  Twistd daemon for the nova network nodes.
+SQLAlchemy database backend
 """
+from nova.db.sqlalchemy import models
 
-from nova import service
-from nova import twistd
-
-
-if __name__ == '__main__':
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.Service.create()  # pylint: disable-msg=C0103
+models.register_models()
