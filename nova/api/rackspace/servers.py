@@ -14,27 +14,31 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import time
 
+from nova import db
+from nova import flags
 from nova import rpc
+from nova import utils
 from nova.api.rackspace import base
 
-# FIXME(vish): convert from old usage of instance directory
+FLAGS = flags.FLAGS
 
 class Controller(base.Controller):
     entity_name = 'servers'
 
     def index(self, **kwargs):
         instances = []
-        for inst in compute.InstanceDirectory().all:
+        for inst in db.instance_get_all(None):
             instances.append(instance_details(inst))
 
     def show(self, **kwargs):
         instance_id = kwargs['id']
-        return compute.InstanceDirectory().get(instance_id)
+        return db.instance_get(None, instance_id)
 
     def delete(self, **kwargs):
         instance_id = kwargs['id']
-        instance = compute.InstanceDirectory().get(instance_id)
+        instance = db.instance_get(None, instance_id)
         if not instance:
             raise ServerNotFound("The requested server was not found")
         instance.destroy()
@@ -45,11 +49,11 @@ class Controller(base.Controller):
         rpc.cast(
             FLAGS.compute_topic, {
                 "method": "run_instance",
-                "args": {"instance_id": inst.instance_id}})
+                "args": {"instance_id": inst['id']}})
 
     def update(self, **kwargs):
         instance_id = kwargs['id']
-        instance = compute.InstanceDirectory().get(instance_id)
+        instance = db.instance_get(None, instance_id)
         if not instance:
             raise ServerNotFound("The requested server was not found")
         instance.update(kwargs['server'])
@@ -59,7 +63,7 @@ class Controller(base.Controller):
         """Build instance data structure and save it to the data store."""
         reservation = utils.generate_uid('r')
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        inst = self.instdir.new()
+        inst = {}
         inst['name'] = env['server']['name']
         inst['image_id'] = env['server']['imageId']
         inst['instance_type'] = env['server']['flavorId']
@@ -68,15 +72,8 @@ class Controller(base.Controller):
         inst['reservation_id'] = reservation
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
-        address = self.network.allocate_ip(
-                    inst['user_id'],
-                    inst['project_id'],
-                    mac=inst['mac_address'])
-        inst['private_dns_name'] = str(address)
-        inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(
-                                inst['user_id'],
-                                inst['project_id'],
-                                'default')['bridge_name']
+        inst_id = db.instance_create(None, inst)
+        address = self.network_manager.allocate_fixed_ip(None, inst_id)
         # key_data, key_name, ami_launch_index
         # TODO(todd): key data or root password
         inst.save()
