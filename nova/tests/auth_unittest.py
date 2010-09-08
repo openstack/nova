@@ -34,8 +34,7 @@ FLAGS = flags.FLAGS
 class AuthTestCase(test.BaseTestCase):
     def setUp(self):
         super(AuthTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
         self.manager = manager.AuthManager()
 
     def test_001_can_create_users(self):

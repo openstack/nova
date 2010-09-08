@@ -83,7 +83,7 @@ class ComputeManager(manager.Manager):
 
         try:
             yield self.driver.spawn(instance_ref)
-        except:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable-msg=W0702
             logging.exception("instance %s: Failed to spawn",
                               instance_ref['name'])
             self.db.instance_state(context, instance_id, power_state.SHUTDOWN)
@@ -97,7 +97,6 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: terminating", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        # TODO(vish): move this logic to layer?
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'

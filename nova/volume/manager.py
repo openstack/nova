@@ -35,8 +35,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this service')
-flags.DEFINE_boolean('fake_storage', False,
-                     'Should we make real storage volumes to attach?')
 flags.DEFINE_string('volume_driver', 'nova.volume.driver.AOEDriver',
                     'Driver to use for volume creation')
 flags.DEFINE_integer('num_shelves',
@@ -51,11 +49,7 @@ class AOEManager(manager.Manager):
     """Manages Ata-Over_Ethernet volumes"""
     def __init__(self, volume_driver=None, *args, **kwargs):
         if not volume_driver:
-            # NOTE(vish): support the legacy fake storage flag
-            if FLAGS.fake_storage:
-                volume_driver = 'nova.volume.driver.FakeAOEDriver'
-            else:
-                volume_driver = FLAGS.volume_driver
+            volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
         super(AOEManager, self).__init__(*args, **kwargs)
 
@@ -92,7 +86,9 @@ class AOEManager(manager.Manager):
         logging.debug("volume %s: exporting shelf %s & blade %s", volume_id,
                       shelf_id, blade_id)
 
-        yield self.driver.create_export(volume_ref['str_id'], shelf_id, blade_id)
+        yield self.driver.create_export(volume_ref['str_id'],
+                                        shelf_id,
+                                        blade_id)
         # TODO(joshua): We need to trigger a fanout message
         #               for aoe-discover on all the nodes
 

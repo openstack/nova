@@ -92,9 +92,9 @@ class AOEDriver(object):
         # NOTE(ja): wait for blades to appear
         yield self._execute("sleep 5")
         yield self._execute("sudo vblade-persist auto all",
-                                     check_exit_code=False)
+                            check_exit_code=False)
         yield self._execute("sudo vblade-persist start all",
-                                     check_exit_code=False)
+                            check_exit_code=False)
 
 
 class FakeAOEDriver(AOEDriver):

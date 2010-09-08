@@ -260,6 +260,7 @@ class VlanManager(NetworkManager):
         significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
         cidr = "%s/%s" % (private_net[start], significant_bits)
         project_net = IPy.IP(cidr)
+
         net = {}
         net['cidr'] = cidr
         # NOTE(vish): we could turn these into properties

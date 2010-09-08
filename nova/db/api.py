@@ -30,10 +30,9 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
-                            sqlalchemy='nova.db.sqlalchemy.api')
+                           sqlalchemy='nova.db.sqlalchemy.api')
 
 
-# TODO(vish): where should these exceptions go?
 class NoMoreAddresses(exception.Error):
     """No more available addresses"""
     pass

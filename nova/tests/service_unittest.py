@@ -47,9 +47,9 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.StubOutWithMock(service, 'db')
 
     def test_create(self):
-        host='foo'
-        binary='nova-fake'
-        topic='fake'
+        host = 'foo'
+        binary = 'nova-fake'
+        topic = 'fake'
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
@@ -75,19 +75,19 @@ class ServiceTestCase(test.BaseTestCase):
         rpc.AdapterConsumer.attach_to_twisted()
         rpc.AdapterConsumer.attach_to_twisted()
         service_create = {'host': host,
-                      'binary': binary,
-                      'topic': topic,
-                      'report_count': 0}
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0}
         service_ref = {'host': host,
-                      'binary': binary,
-                      'report_count': 0,
-                      'id': 1}
+                       'binary': binary,
+                       'report_count': 0,
+                       'id': 1}
 
         service.db.service_get_by_args(None,
-                                      host,
-                                      binary).AndRaise(exception.NotFound())
+                                       host,
+                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(None,
-                                 service_create).AndReturn(service_ref['id'])
+                                  service_create).AndReturn(service_ref['id'])
         self.mox.ReplayAll()
 
         app = service.Service.create(host=host, binary=binary)
@@ -101,15 +101,15 @@ class ServiceTestCase(test.BaseTestCase):
         host = 'foo'
         binary = 'bar'
         service_ref = {'host': host,
-                      'binary': binary,
-                      'report_count': 0,
-                      'id': 1}
+                       'binary': binary,
+                       'report_count': 0,
+                       'id': 1}
         service.db.__getattr__('report_state')
         service.db.service_get_by_args(None,
-                                      host,
-                                      binary).AndReturn(service_ref)
+                                       host,
+                                       binary).AndReturn(service_ref)
         service.db.service_update(None, service_ref['id'],
-                                 mox.ContainsKeyValue('report_count', 1))
+                                  mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
         s = service.Service()
@@ -119,22 +119,22 @@ class ServiceTestCase(test.BaseTestCase):
         host = 'foo'
         binary = 'bar'
         service_create = {'host': host,
-                      'binary': binary,
-                      'report_count': 0}
+                          'binary': binary,
+                          'report_count': 0}
         service_ref = {'host': host,
-                      'binary': binary,
-                      'report_count': 0,
-                      'id': 1}
+                       'binary': binary,
+                       'report_count': 0,
+                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.service_get_by_args(None,
                                       host,
                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(None,
-                                 service_create).AndReturn(service_ref['id'])
+                                  service_create).AndReturn(service_ref['id'])
         service.db.service_get(None, service_ref['id']).AndReturn(service_ref)
         service.db.service_update(None, service_ref['id'],
-                                 mox.ContainsKeyValue('report_count', 1))
+                                  mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
         s = service.Service()
@@ -144,14 +144,14 @@ class ServiceTestCase(test.BaseTestCase):
         host = 'foo'
         binary = 'bar'
         service_ref = {'host': host,
-                      'binary': binary,
-                      'report_count': 0,
-                      'id': 1}
+                       'binary': binary,
+                       'report_count': 0,
+                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.service_get_by_args(None,
-                                      host,
-                                      binary).AndRaise(Exception())
+                                       host,
+                                       binary).AndRaise(Exception())
 
         self.mox.ReplayAll()
         s = service.Service()
@@ -163,16 +163,16 @@ class ServiceTestCase(test.BaseTestCase):
         host = 'foo'
         binary = 'bar'
         service_ref = {'host': host,
-                      'binary': binary,
-                      'report_count': 0,
-                      'id': 1}
+                       'binary': binary,
+                       'report_count': 0,
+                       'id': 1}
 
         service.db.__getattr__('report_state')
         service.db.service_get_by_args(None,
-                                      host,
-                                      binary).AndReturn(service_ref)
+                                       host,
+                                       binary).AndReturn(service_ref)
         service.db.service_update(None, service_ref['id'],
-                                 mox.ContainsKeyValue('report_count', 1))
+                                  mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
         s = service.Service()
