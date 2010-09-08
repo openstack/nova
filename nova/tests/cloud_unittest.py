@@ -52,7 +52,7 @@ class CloudTestCase(test.TrialTestCase):
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                     topic=FLAGS.compute_topic,
                                                     proxy=self.compute)
-        self.injected.append(self.compute_consumer.attach_to_twisted())
+        self.compute_consumer.attach_to_twisted()
 
         try:
             manager.AuthManager().create_user('admin', 'admin', 'admin')

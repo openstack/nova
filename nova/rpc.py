@@ -250,7 +250,6 @@ def call(topic, msg):
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
-
     conn = Connection.instance()
     d = defer.Deferred()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)

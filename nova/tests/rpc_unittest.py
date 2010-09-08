@@ -39,8 +39,7 @@ class RpcTestCase(test.TrialTestCase):
         self.consumer = rpc.AdapterConsumer(connection=self.conn,
                                             topic='test',
                                             proxy=self.receiver)
-
-        self.injected.append(self.consumer.attach_to_twisted())
+        self.consumer.attach_to_twisted()
 
     def test_call_succeed(self):
         """Get a value through rpc call"""
