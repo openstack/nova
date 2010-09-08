@@ -55,18 +55,18 @@ class NovaBase(object):
         """Get all objects of this type"""
         if not session:
             session = get_session()
-        return session.query(cls) \
-                      .filter_by(deleted=False) \
-                      .all()
+        return session.query(cls
+                     ).filter_by(deleted=False
+                     ).all()
 
     @classmethod
     def count(cls, session=None):
         """Count objects of this type"""
         if not session:
             session = get_session()
-        return session.query(cls) \
-                      .filter_by(deleted=False) \
-                      .count()
+        return session.query(cls
+                     ).filter_by(deleted=False
+                     ).count()
 
     @classmethod
     def find(cls, obj_id, session=None):
@@ -74,10 +74,10 @@ class NovaBase(object):
         if not session:
             session = get_session()
         try:
-            return session.query(cls) \
-                          .filter_by(id=obj_id) \
-                          .filter_by(deleted=False) \
-                          .one()
+            return session.query(cls
+                         ).filter_by(id=obj_id
+                         ).filter_by(deleted=False
+                         ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for id %s" % obj_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
@@ -170,10 +170,10 @@ class Service(BASE, NovaBase):
         if not session:
             session = get_session()
         try:
-            return session.query(cls) \
-                          .filter_by(host=host) \
-                          .filter_by(binary=binary) \
-                          .filter_by(deleted=False) \
+            return session.query(cls
+                         ).filter_by(host=host
+                         ).filter_by(binary=binary
+                         ).filter_by(deleted=False
                           .one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for %s, %s" % (host,
@@ -335,9 +335,9 @@ class FixedIp(BASE, NovaBase):
         if not session:
             session = get_session()
         try:
-            return session.query(cls) \
-                          .filter_by(address=str_id) \
-                          .filter_by(deleted=False) \
+            return session.query(cls
+                         ).filter_by(address=str_id
+                         ).filter_by(deleted=False
                           .one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % str_id)
@@ -364,9 +364,9 @@ class FloatingIp(BASE, NovaBase):
         if not session:
             session = get_session()
         try:
-            return session.query(cls) \
-                          .filter_by(address=str_id) \
-                          .filter_by(deleted=False) \
+            return session.query(cls
+                         ).filter_by(address=str_id
+                         ).filter_by(deleted=False
                           .one()
         except exc.NoResultFound:
             session.rollback()
