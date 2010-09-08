@@ -51,7 +51,7 @@ def service_create(_context, values):
     return service_ref.id
 
 
-def service_update(context, service_id, values):
+def service_update(_context, service_id, values):
     session = get_session()
     with session.begin():
         service_ref = models.Service.find(service_id, session=session)
@@ -209,7 +209,7 @@ def fixed_ip_instance_disassociate(_context, address):
         fixed_ip_ref.save(session=session)
 
 
-def fixed_ip_update(context, address, values):
+def fixed_ip_update(_context, address, values):
     session = get_session()
     with session.begin():
         fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
@@ -229,7 +229,7 @@ def instance_create(_context, values):
     return instance_ref.id
 
 
-def instance_destroy(context, instance_id):
+def instance_destroy(_context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
@@ -307,7 +307,7 @@ def instance_state(context, instance_id, state, description=None):
                         'state_description': description})
 
 
-def instance_update(context, instance_id, values):
+def instance_update(_context, instance_id, values):
     session = get_session()
     with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
@@ -455,7 +455,7 @@ def network_set_host(_context, network_id, host_id):
     return network['host']
 
 
-def network_update(context, network_id, values):
+def network_update(_context, network_id, values):
     session = get_session()
     with session.begin():
         network_ref = models.Network.find(network_id, session=session)
@@ -520,7 +520,7 @@ def volume_allocate_shelf_and_blade(_context, volume_id):
     return (export_device.shelf_id, export_device.blade_id)
 
 
-def volume_attached(context, volume_id, instance_id, mountpoint):
+def volume_attached(_context, volume_id, instance_id, mountpoint):
     session = get_session()
     with session.begin():
         volume_ref = models.Volume.find(volume_id, session=session)
@@ -551,7 +551,7 @@ def volume_destroy(_context, volume_id):
                         {'id': volume_id})
 
 
-def volume_detached(context, volume_id):
+def volume_detached(_context, volume_id):
     session = get_session()
     with session.begin():
         volume_ref = models.Volume.find(volume_id, session=session)
@@ -587,7 +587,7 @@ def volume_get_host(context, volume_id):
     return volume_ref['host']
 
 
-def volume_get_instance(context, volume_id):
+def volume_get_instance(_context, volume_id):
     session = get_session()
     with session.begin():
         return models.Volume.find(volume_id, session=session).instance
@@ -603,7 +603,7 @@ def volume_get_shelf_and_blade(_context, volume_id):
     return (export_device.shelf_id, export_device.blade_id)
 
 
-def volume_update(context, volume_id, values):
+def volume_update(_context, volume_id, values):
     session = get_session()
     with session.begin():
         volume_ref = models.Volume.find(volume_id, session=session)
