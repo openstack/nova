@@ -34,12 +34,13 @@ from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova import datastore  # for redis_db flag
-from nova.auth import manager  # for auth flags
 from nova.network import linux_net
-from nova.network import manager  # for network flags
 
 FLAGS = flags.FLAGS
+flags.DECLARE('auth_driver', 'nova.auth.manager')
+flags.DECLARE('redis_db', 'nova.datastore')
+flags.DECLARE('network_size', 'nova.network.manager')
+flags.DECLARE('num_networks', 'nova.network.manager')
 
 
 def add_lease(_mac, ip_address, _hostname, _interface):
@@ -80,7 +81,6 @@ def init_leases(interface):
 
 
 def main():
-    global network_manager
     """Parse environment and arguments and call the approproate action."""
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
@@ -99,7 +99,6 @@ def main():
                                             '_trial_temp',
                                             'nova.sqlite'))
         FLAGS.sql_connection = 'sqlite:///%s' % path
-        #FLAGS.sql_connection = 'mysql://root@localhost/test'
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]
