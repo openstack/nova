@@ -41,6 +41,9 @@ flags.DEFINE_string('bridge_dev', 'eth0',
                         'network device for bridges')
 
 
+DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
+
+
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
     _execute("sudo ip addr add %s dev %s" % (floating_ip,
@@ -59,9 +62,6 @@ def ensure_vlan_forward(public_ip, port, private_ip):
     _confirm_rule(
         "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
             % (public_ip, port, private_ip))
-
-
-DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
 
 def ensure_floating_forward(floating_ip, fixed_ip):
@@ -208,16 +208,16 @@ def _remove_rule(cmd):
 def _dnsmasq_cmd(net):
     """Builds dnsmasq command"""
     cmd = ['sudo -E dnsmasq',
-        ' --strict-order',
-        ' --bind-interfaces',
-        ' --conf-file=',
-        ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
-        ' --listen-address=%s' % net['gateway'],
-        ' --except-interface=lo',
-        ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-        ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
-        ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
-        ' --leasefile-ro']
+           ' --strict-order',
+           ' --bind-interfaces',
+           ' --conf-file=',
+           ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
+           ' --listen-address=%s' % net['gateway'],
+           ' --except-interface=lo',
+           ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
+           ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
+           ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
+           ' --leasefile-ro']
     return ''.join(cmd)
 
 
