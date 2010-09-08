@@ -188,9 +188,7 @@ def fixed_ip_get_network(_context, address):
 
 
 def fixed_ip_deallocate(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    fixed_ip_ref['allocated'] = False
-    fixed_ip_ref.save()
+    db.fixed_ip_update(context, address, {'allocated': False})
 
 
 def fixed_ip_instance_associate(_context, address, instance_id):
@@ -231,8 +229,10 @@ def instance_create(_context, values):
 
 
 def instance_destroy(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    instance_ref.delete()
+    session = get_session()
+    with session.begin():
+        instance_ref = models.Instance.find(instance_id, session=session)
+        instance_ref.delete(session=session)
 
 
 def instance_get(_context, instance_id):
