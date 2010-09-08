@@ -66,12 +66,12 @@ def service_update(context, service_id, values):
 def floating_ip_allocate_address(_context, host, project_id):
     session = get_session()
     with session.begin():
-        floating_ip_ref = session.query(models.FloatingIp) \
-                                 .filter_by(host=host) \
-                                 .filter_by(fixed_ip_id=None) \
-                                 .filter_by(deleted=False) \
-                                 .with_lockmode('update') \
-                                 .first()
+        floating_ip_ref = session.query(models.FloatingIp
+                                ).filter_by(host=host
+                                ).filter_by(fixed_ip_id=None
+                                ).filter_by(deleted=False
+                                ).with_lockmode('update'
+                                ).first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not floating_ip_ref:
@@ -144,14 +144,14 @@ def fixed_ip_allocate(_context, network_id):
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
                               models.FixedIp.network_id == None)
-        fixed_ip_ref = session.query(models.FixedIp) \
-                              .filter(network_or_none) \
-                              .filter_by(reserved=False) \
-                              .filter_by(allocated=False) \
-                              .filter_by(leased=False) \
-                              .filter_by(deleted=False) \
-                              .with_lockmode('update') \
-                              .first()
+        fixed_ip_ref = session.query(models.FixedIp
+                             ).filter(network_or_none
+                             ).filter_by(reserved=False
+                             ).filter_by(allocated=False
+                             ).filter_by(leased=False
+                             ).filter_by(deleted=False
+                             ).with_lockmode('update'
+                             ).first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip_ref:
@@ -245,18 +245,18 @@ def instance_get_all(_context):
 
 def instance_get_by_project(_context, project_id):
     session = get_session()
-    return session.query(models.Instance) \
-                  .filter_by(project_id=project_id) \
-                  .filter_by(deleted=False) \
-                  .all()
+    return session.query(models.Instance
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def instance_get_by_reservation(_context, reservation_id):
     session = get_session()
-    return session.query(models.Instance) \
-                  .filter_by(reservation_id=reservation_id) \
-                  .filter_by(deleted=False) \
-                  .all()
+    return session.query(models.Instance
+                 ).filter_by(reservation_id=reservation_id
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def instance_get_by_str(_context, str_id):
@@ -322,30 +322,30 @@ def network_count(_context):
 
 def network_count_allocated_ips(_context, network_id):
     session = get_session()
-    return session.query(models.FixedIp) \
-                  .filter_by(network_id=network_id) \
-                  .filter_by(allocated=True) \
-                  .filter_by(deleted=False) \
-                  .count()
+    return session.query(models.FixedIp
+                 ).filter_by(network_id=network_id
+                 ).filter_by(allocated=True
+                 ).filter_by(deleted=False
+                 ).count()
 
 
 def network_count_available_ips(_context, network_id):
     session = get_session()
-    return session.query(models.FixedIp) \
-                  .filter_by(network_id=network_id) \
-                  .filter_by(allocated=False) \
-                  .filter_by(reserved=False) \
-                  .filter_by(deleted=False) \
-                  .count()
+    return session.query(models.FixedIp
+                 ).filter_by(network_id=network_id
+                 ).filter_by(allocated=False
+                 ).filter_by(reserved=False
+                 ).filter_by(deleted=False
+                 ).count()
 
 
 def network_count_reserved_ips(_context, network_id):
     session = get_session()
-    return session.query(models.FixedIp) \
-                  .filter_by(network_id=network_id) \
-                  .filter_by(reserved=True) \
-                  .filter_by(deleted=False) \
-                  .count()
+    return session.query(models.FixedIp
+                 ).filter_by(network_id=network_id
+                 ).filter_by(reserved=True
+                 ).filter_by(deleted=False
+                 ).count()
 
 
 def network_create(_context, values):
@@ -378,22 +378,24 @@ def network_get(_context, network_id):
     return models.Network.find(network_id)
 
 
+# NOTE(vish): pylint complains because of the long method name, but
+#             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
 def network_get_associated_fixed_ips(_context, network_id):
     session = get_session()
-    return session.query(models.FixedIp) \
-                  .filter_by(network_id=network_id) \
-                  .filter(models.FixedIp.instance_id != None) \
-                  .filter_by(deleted=False) \
-                  .all()
+    return session.query(models.FixedIp
+                 ).filter_by(network_id=network_id
+                 ).filter(models.FixedIp.instance_id != None
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def network_get_by_bridge(_context, bridge):
     session = get_session()
-    rv = session.query(models.Network) \
-                .filter_by(bridge=bridge) \
-                .filter_by(deleted=False) \
-                .first()
+    rv = session.query(models.Network
+               ).filter_by(bridge=bridge
+               ).filter_by(deleted=False
+               ).first()
     if not rv:
         raise exception.NotFound('No network for bridge %s' % bridge)
     return rv
@@ -407,11 +409,11 @@ def network_get_host(context, network_id):
 def network_get_index(_context, network_id):
     session = get_session()
     with session.begin():
-        network_index = session.query(models.NetworkIndex) \
-                               .filter_by(network_id=None) \
-                               .filter_by(deleted=False) \
-                               .with_lockmode('update') \
-                               .first()
+        network_index = session.query(models.NetworkIndex
+                              ).filter_by(network_id=None
+                              ).filter_by(deleted=False
+                              ).with_lockmode('update'
+                              ).first()
         if not network_index:
             raise db.NoMoreNetworks()
         network_index['network'] = models.Network.find(network_id,
@@ -434,11 +436,11 @@ def network_index_create(_context, values):
 def network_set_host(_context, network_id, host_id):
     session = get_session()
     with session.begin():
-        network = session.query(models.Network) \
-                         .filter_by(id=network_id) \
-                         .filter_by(deleted=False) \
-                         .with_lockmode('update') \
-                         .first()
+        network = session.query(models.Network
+                        ).filter_by(id=network_id
+                        ).filter_by(deleted=False
+                        ).with_lockmode('update'
+                        ).first()
         if not network:
             raise exception.NotFound("Couldn't find network with %s" %
                                      network_id)
@@ -464,10 +466,10 @@ def network_update(context, network_id, values):
 
 def project_get_network(_context, project_id):
     session = get_session()
-    rv = session.query(models.Network) \
-                .filter_by(project_id=project_id) \
-                .filter_by(deleted=False) \
-                .first()
+    rv = session.query(models.Network
+               ).filter_by(project_id=project_id
+               ).filter_by(deleted=False
+               ).first()
     if not rv:
         raise exception.NotFound('No network for project: %s' % project_id)
     return rv
@@ -501,11 +503,11 @@ def export_device_create(_context, values):
 def volume_allocate_shelf_and_blade(_context, volume_id):
     session = get_session()
     with session.begin():
-        export_device = session.query(models.ExportDevice) \
-                               .filter_by(volume=None) \
-                               .filter_by(deleted=False) \
-                               .with_lockmode('update') \
-                               .first()
+        export_device = session.query(models.ExportDevice
+                              ).filter_by(volume=None
+                              ).filter_by(deleted=False
+                              ).with_lockmode('update'
+                              ).first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not export_device:
@@ -562,10 +564,10 @@ def volume_get_all(_context):
 
 def volume_get_by_project(_context, project_id):
     session = get_session()
-    return session.query(models.Volume) \
-                  .filter_by(project_id=project_id) \
-                  .filter_by(deleted=False) \
-                  .all()
+    return session.query(models.Volume
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def volume_get_by_str(_context, str_id):
@@ -585,9 +587,9 @@ def volume_get_instance(context, volume_id):
 
 def volume_get_shelf_and_blade(_context, volume_id):
     session = get_session()
-    export_device = session.query(models.ExportDevice) \
-                           .filter_by(volume_id=volume_id) \
-                           .first()
+    export_device = session.query(models.ExportDevice
+                          ).filter_by(volume_id=volume_id
+                          ).first()
     if not export_device:
         raise exception.NotFound()
     return (export_device.shelf_id, export_device.blade_id)
