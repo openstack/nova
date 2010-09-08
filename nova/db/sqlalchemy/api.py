@@ -28,9 +28,19 @@ from sqlalchemy import or_
 
 FLAGS = flags.FLAGS
 
+
 # NOTE(vish): disabling docstring pylint because the docstrings are
 #             in the interface definition
 # pylint: disable-msg=C0111
+def _deleted(context):
+    """Calcultates whether to include deleted objects based on context.
+
+    Currently just looks for a flag called deleted in the context dict.
+    """
+    if not context:
+        return False
+    return context.get('deleted', False)
+
 
 ###################
 
@@ -236,19 +246,19 @@ def instance_destroy(_context, instance_id):
         instance_ref.delete(session=session)
 
 
-def instance_get(_context, instance_id):
-    return models.Instance.find(instance_id)
+def instance_get(context, instance_id):
+    return models.Instance.find(instance_id, deleted=_deleted(context))
 
 
-def instance_get_all(_context):
-    return models.Instance.all()
+def instance_get_all(context):
+    return models.Instance.all(deleted=_deleted(context))
 
 
-def instance_get_by_project(_context, project_id):
+def instance_get_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
                  ).filter_by(project_id=project_id
-                 ).filter_by(deleted=False
+                 ).filter_by(deleted=_deleted(context)
                  ).all()
 
 
@@ -260,8 +270,8 @@ def instance_get_by_reservation(_context, reservation_id):
                  ).all()
 
 
-def instance_get_by_str(_context, str_id):
-    return models.Instance.find_by_str(str_id)
+def instance_get_by_str(context, str_id):
+    return models.Instance.find_by_str(str_id, deleted=_deleted(context))
 
 
 def instance_get_fixed_address(_context, instance_id):
@@ -562,24 +572,24 @@ def volume_detached(_context, volume_id):
         volume_ref.save(session=session)
 
 
-def volume_get(_context, volume_id):
-    return models.Volume.find(volume_id)
+def volume_get(context, volume_id):
+    return models.Volume.find(volume_id, deleted=_deleted(context))
 
 
-def volume_get_all(_context):
-    return models.Volume.all()
+def volume_get_all(context):
+    return models.Volume.all(deleted=_deleted(context))
 
 
-def volume_get_by_project(_context, project_id):
+def volume_get_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume
                  ).filter_by(project_id=project_id
-                 ).filter_by(deleted=False
+                 ).filter_by(deleted=_deleted(context)
                  ).all()
 
 
-def volume_get_by_str(_context, str_id):
-    return models.Volume.find_by_str(str_id)
+def volume_get_by_str(context, str_id):
+    return models.Volume.find_by_str(str_id, deleted=_deleted(context))
 
 
 def volume_get_host(context, volume_id):
