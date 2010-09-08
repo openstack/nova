@@ -335,7 +335,7 @@ class FixedIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=deleted):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
@@ -364,7 +364,7 @@ class FloatingIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=deleted):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
