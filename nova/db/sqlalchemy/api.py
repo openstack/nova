@@ -157,7 +157,8 @@ def fixed_ip_allocate(_context, network_id):
         if not fixed_ip_ref:
             raise db.NoMoreAddresses()
         if not fixed_ip_ref.network:
-            fixed_ip_ref.network = models.Network.find(network_id)
+            fixed_ip_ref.network = models.Network.find(network_id,
+                                                       session=session)
         fixed_ip_ref['allocated'] = True
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
@@ -300,8 +301,10 @@ def instance_state(context, instance_id, state, description=None):
     from nova.compute import power_state
     if not description:
         description = power_state.name(state)
-    db.instance_update(context, {'state': state,
-                                 'state_description': description})
+    db.instance_update(context,
+                       instance_id,
+                       {'state': state,
+                        'state_description': description})
 
 
 def instance_update(context, instance_id, values):
@@ -518,12 +521,15 @@ def volume_allocate_shelf_and_blade(_context, volume_id):
 
 
 def volume_attached(context, volume_id, instance_id, mountpoint):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref.instance_id = instance_id
-    volume_ref['status'] = 'in-use'
-    volume_ref['mountpoint'] = mountpoint
-    volume_ref['attach_status'] = 'attached'
-    volume_ref.save()
+    session = get_session()
+    with session.begin():
+        volume_ref = models.Volume.find(volume_id, session=session)
+        volume_ref['status'] = 'in-use'
+        volume_ref['mountpoint'] = mountpoint
+        volume_ref['attach_status'] = 'attached'
+        volume_ref.instance = models.Instance.find(instance_id,
+                                                   session=session)
+        volume_ref.save(session=session)
 
 
 def volume_create(_context, values):
@@ -546,12 +552,14 @@ def volume_destroy(_context, volume_id):
 
 
 def volume_detached(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref['instance_id'] = None
-    volume_ref['mountpoint'] = None
-    volume_ref['status'] = 'available'
-    volume_ref['attach_status'] = 'detached'
-    volume_ref.save()
+    session = get_session()
+    with session.begin():
+        volume_ref = models.Volume.find(volume_id, session=session)
+        volume_ref['status'] = 'available'
+        volume_ref['mountpoint'] = None
+        volume_ref['attach_status'] = 'detached'
+        volume_ref.instance = None
+        volume_ref.save(session=session)
 
 
 def volume_get(_context, volume_id):
@@ -580,9 +588,9 @@ def volume_get_host(context, volume_id):
 
 
 def volume_get_instance(context, volume_id):
-    volume_ref = db.volume_get(context, volume_id)
-    instance_ref = db.instance_get(context, volume_ref['instance_id'])
-    return instance_ref
+    session = get_session()
+    with session.begin():
+        return models.Volume.find(volume_id, session=session).instance
 
 
 def volume_get_shelf_and_blade(_context, volume_id):
@@ -598,7 +606,7 @@ def volume_get_shelf_and_blade(_context, volume_id):
 def volume_update(context, volume_id, values):
     session = get_session()
     with session.begin():
-        volume_ref = models.Volumes.find(volume_id, session=session)
+        volume_ref = models.Volume.find(volume_id, session=session)
         for (key, value) in values.iteritems():
             volume_ref[key] = value
         volume_ref.save(session=session)

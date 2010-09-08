@@ -255,6 +255,7 @@ class Volume(BASE, NovaBase):
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance, backref=backref('volumes'))
     mountpoint = Column(String(255))
     attach_time = Column(String(255))  # TODO(vish): datetime
     status = Column(String(255))  # TODO(vish): enum?

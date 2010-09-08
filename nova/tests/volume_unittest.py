@@ -99,7 +99,16 @@ class VolumeTestCase(test.TrialTestCase):
     @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
         """Make sure volume can be attached and detached from instance"""
-        instance_id = "storage-test"
+        inst = {}
+        inst['image_id'] = 'ami-test'
+        inst['reservation_id'] = 'r-fakeres'
+        inst['launch_time'] = '10'
+        inst['user_id'] = 'fake'
+        inst['project_id'] = 'fake'
+        inst['instance_type'] = 'm1.tiny'
+        inst['mac_address'] = utils.generate_mac()
+        inst['ami_launch_index'] = 0
+        instance_id = db.instance_create(self.context, inst)
         mountpoint = "/dev/sdf"
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
@@ -112,8 +121,9 @@ class VolumeTestCase(test.TrialTestCase):
         vol = db.volume_get(None, volume_id)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
-        self.assertEqual(vol['instance_id'], instance_id)
         self.assertEqual(vol['mountpoint'], mountpoint)
+        instance_ref = db.volume_get_instance(self.context, volume_id)
+        self.assertEqual(instance_ref['id'], instance_id)
 
         self.assertFailure(self.volume.delete_volume(self.context, volume_id),
                            exception.Error)
@@ -130,6 +140,7 @@ class VolumeTestCase(test.TrialTestCase):
                           db.volume_get,
                           None,
                           volume_id)
+        db.instance_destroy(self.context, instance_id)
 
     @defer.inlineCallbacks
     def test_concurrent_volumes_get_different_blades(self):
