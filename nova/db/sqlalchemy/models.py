@@ -30,7 +30,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
-from nova.db.sqlalchemy.session import managed_session
+from nova.db.sqlalchemy.session import get_session
 
 from nova import auth
 from nova import exception
@@ -53,40 +53,34 @@ class NovaBase(object):
     @classmethod
     def all(cls, session=None):
         """Get all objects of this type"""
-        if session:
-            return session.query(cls) \
-                          .filter_by(deleted=False) \
-                          .all()
-        else:
-            with managed_session() as sess:
-                return cls.all(session=sess)
+        if not session:
+            session = get_session()
+        return session.query(cls) \
+                      .filter_by(deleted=False) \
+                      .all()
 
     @classmethod
     def count(cls, session=None):
         """Count objects of this type"""
-        if session:
-            return session.query(cls) \
-                          .filter_by(deleted=False) \
-                          .count()
-        else:
-            with managed_session() as sess:
-                return cls.count(session=sess)
+        if not session:
+            session = get_session()
+        return session.query(cls) \
+                      .filter_by(deleted=False) \
+                      .count()
 
     @classmethod
     def find(cls, obj_id, session=None):
         """Find object by id"""
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(id=obj_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for id %s" % obj_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find(obj_id, session=sess)
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls) \
+                          .filter_by(id=obj_id) \
+                          .filter_by(deleted=False) \
+                          .one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for id %s" % obj_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
@@ -101,12 +95,10 @@ class NovaBase(object):
 
     def save(self, session=None):
         """Save this object"""
-        if session:
-            session.add(self)
-            session.flush()
-        else:
-            with managed_session() as sess:
-                self.save(session=sess)
+        if not session:
+            session = get_session()
+        session.add(self)
+        session.flush()
 
     def delete(self, session=None):
         """Delete this object"""
@@ -175,20 +167,18 @@ class Service(BASE, NovaBase):
 
     @classmethod
     def find_by_args(cls, host, binary, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(host=host) \
-                              .filter_by(binary=binary) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for %s, %s" % (host,
-                                                                  binary))
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_args(host, binary, session=sess)
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls) \
+                          .filter_by(host=host) \
+                          .filter_by(binary=binary) \
+                          .filter_by(deleted=False) \
+                          .one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for %s, %s" % (host,
+                                                              binary))
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 class Instance(BASE, NovaBase):
@@ -239,16 +229,6 @@ class Instance(BASE, NovaBase):
 
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
-
-    def set_state(self, state_code, state_description=None):
-        """Set the code and description of an instance"""
-        # TODO(devcamcar): Move this out of models and into driver
-        from nova.compute import power_state
-        self.state = state_code
-        if not state_description:
-            state_description = power_state.name(state_code)
-        self.state_description = state_description
-        self.save()
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -351,18 +331,16 @@ class FixedIp(BASE, NovaBase):
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(address=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for address %s" % str_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls) \
+                          .filter_by(address=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for address %s" % str_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 class FloatingIp(BASE, NovaBase):
@@ -382,18 +360,17 @@ class FloatingIp(BASE, NovaBase):
 
     @classmethod
     def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(address=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for address %s" % str_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls) \
+                          .filter_by(address=str_id) \
+                          .filter_by(deleted=False) \
+                          .one()
+        except exc.NoResultFound:
+            session.rollback()
+            new_exc = exception.NotFound("No model for address %s" % str_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 def register_models():

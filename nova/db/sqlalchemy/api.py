@@ -23,7 +23,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy.session import managed_session
+from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 
 FLAGS = flags.FLAGS
@@ -52,17 +52,20 @@ def service_create(_context, values):
 
 
 def service_update(context, service_id, values):
-    service_ref = service_get(context, service_id)
-    for (key, value) in values.iteritems():
-        service_ref[key] = value
-    service_ref.save()
+    session = get_session()
+    with session.begin():
+        service_ref = models.Service.find(service_id, session=session)
+        for (key, value) in values.iteritems():
+            service_ref[key] = value
+        service_ref.save(session)
 
 
 ###################
 
 
 def floating_ip_allocate_address(_context, host, project_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         floating_ip_ref = session.query(models.FloatingIp) \
                                  .filter_by(host=host) \
                                  .filter_by(fixed_ip_id=None) \
@@ -75,8 +78,7 @@ def floating_ip_allocate_address(_context, host, project_id):
             raise db.NoMoreAddresses()
         floating_ip_ref['project_id'] = project_id
         session.add(floating_ip_ref)
-        session.commit()
-        return floating_ip_ref['address']
+    return floating_ip_ref['address']
 
 
 def floating_ip_create(_context, values):
@@ -88,18 +90,19 @@ def floating_ip_create(_context, values):
 
 
 def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         floating_ip_ref = models.FloatingIp.find_by_str(floating_address,
                                                         session=session)
         fixed_ip_ref = models.FixedIp.find_by_str(fixed_address,
                                                   session=session)
         floating_ip_ref.fixed_ip = fixed_ip_ref
         floating_ip_ref.save(session=session)
-        session.commit()
 
 
 def floating_ip_disassociate(_context, address):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         floating_ip_ref = models.FloatingIp.find_by_str(address,
                                                         session=session)
         fixed_ip_ref = floating_ip_ref.fixed_ip
@@ -109,12 +112,12 @@ def floating_ip_disassociate(_context, address):
             fixed_ip_address = None
         floating_ip_ref.fixed_ip = None
         floating_ip_ref.save(session=session)
-        session.commit()
-        return fixed_ip_address
+    return fixed_ip_address
 
 
 def floating_ip_deallocate(_context, address):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         floating_ip_ref = models.FloatingIp.find_by_str(address,
                                                         session=session)
         floating_ip_ref['project_id'] = None
@@ -126,7 +129,8 @@ def floating_ip_get_by_address(_context, address):
 
 
 def floating_ip_get_instance(_context, address):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         floating_ip_ref = models.FloatingIp.find_by_str(address,
                                                         session=session)
         return floating_ip_ref.fixed_ip.instance
@@ -136,7 +140,8 @@ def floating_ip_get_instance(_context, address):
 
 
 def fixed_ip_allocate(_context, network_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
                               models.FixedIp.network_id == None)
         fixed_ip_ref = session.query(models.FixedIp) \
@@ -155,8 +160,7 @@ def fixed_ip_allocate(_context, network_id):
             fixed_ip_ref.network = models.Network.find(network_id)
         fixed_ip_ref['allocated'] = True
         session.add(fixed_ip_ref)
-        session.commit()
-        return fixed_ip_ref['address']
+    return fixed_ip_ref['address']
 
 
 def fixed_ip_create(_context, values):
@@ -172,12 +176,14 @@ def fixed_ip_get_by_address(_context, address):
 
 
 def fixed_ip_get_instance(_context, address):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         return models.FixedIp.find_by_str(address, session=session).instance
 
 
 def fixed_ip_get_network(_context, address):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         return models.FixedIp.find_by_str(address, session=session).network
 
 
@@ -188,27 +194,29 @@ def fixed_ip_deallocate(context, address):
 
 
 def fixed_ip_instance_associate(_context, address, instance_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
         instance_ref = models.Instance.find(instance_id, session=session)
         fixed_ip_ref.instance = instance_ref
         fixed_ip_ref.save(session=session)
-        session.commit()
 
 
 def fixed_ip_instance_disassociate(_context, address):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
-        session.commit()
 
 
 def fixed_ip_update(context, address, values):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    for (key, value) in values.iteritems():
-        fixed_ip_ref[key] = value
-    fixed_ip_ref.save()
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        for (key, value) in values.iteritems():
+            fixed_ip_ref[key] = value
+        fixed_ip_ref.save()
 
 
 ###################
@@ -236,19 +244,19 @@ def instance_get_all(_context):
 
 
 def instance_get_by_project(_context, project_id):
-    with managed_session() as session:
-        return session.query(models.Instance) \
-                      .filter_by(project_id=project_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+    session = get_session()
+    return session.query(models.Instance) \
+                  .filter_by(project_id=project_id) \
+                  .filter_by(deleted=False) \
+                  .all()
 
 
 def instance_get_by_reservation(_context, reservation_id):
-    with managed_session() as session:
-        return session.query(models.Instance) \
-                      .filter_by(reservation_id=reservation_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+    session = get_session()
+    return session.query(models.Instance) \
+                  .filter_by(reservation_id=reservation_id) \
+                  .filter_by(deleted=False) \
+                  .all()
 
 
 def instance_get_by_str(_context, str_id):
@@ -256,7 +264,8 @@ def instance_get_by_str(_context, str_id):
 
 
 def instance_get_fixed_address(_context, instance_id):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
@@ -264,7 +273,8 @@ def instance_get_fixed_address(_context, instance_id):
 
 
 def instance_get_floating_address(_context, instance_id):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
@@ -280,20 +290,27 @@ def instance_get_host(context, instance_id):
 
 
 def instance_is_vpn(context, instance_id):
+    # TODO(vish): Move this into image code somewhere
     instance_ref = instance_get(context, instance_id)
     return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
 def instance_state(context, instance_id, state, description=None):
-    instance_ref = instance_get(context, instance_id)
-    instance_ref.set_state(state, description)
+    # TODO(devcamcar): Move this out of models and into driver
+    from nova.compute import power_state
+    if not description:
+        description = power_state.name(state)
+    db.instance_update(context, {'state': state,
+                                 'state_description': description})
 
 
 def instance_update(context, instance_id, values):
-    instance_ref = instance_get(context, instance_id)
-    for (key, value) in values.iteritems():
-        instance_ref[key] = value
-    instance_ref.save()
+    session = get_session()
+    with session.begin():
+        instance_ref = models.instance.find(instance_id, session=session)
+        for (key, value) in values.iteritems():
+            instance_ref[key] = value
+        instance_ref.save()
 
 
 ###################
@@ -304,31 +321,31 @@ def network_count(_context):
 
 
 def network_count_allocated_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(allocated=True) \
-                      .filter_by(deleted=False) \
-                      .count()
+    session = get_session()
+    return session.query(models.FixedIp) \
+                  .filter_by(network_id=network_id) \
+                  .filter_by(allocated=True) \
+                  .filter_by(deleted=False) \
+                  .count()
 
 
 def network_count_available_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(allocated=False) \
-                      .filter_by(reserved=False) \
-                      .filter_by(deleted=False) \
-                      .count()
+    session = get_session()
+    return session.query(models.FixedIp) \
+                  .filter_by(network_id=network_id) \
+                  .filter_by(allocated=False) \
+                  .filter_by(reserved=False) \
+                  .filter_by(deleted=False) \
+                  .count()
 
 
 def network_count_reserved_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(reserved=True) \
-                      .filter_by(deleted=False) \
-                      .count()
+    session = get_session()
+    return session.query(models.FixedIp) \
+                  .filter_by(network_id=network_id) \
+                  .filter_by(reserved=True) \
+                  .filter_by(deleted=False) \
+                  .count()
 
 
 def network_create(_context, values):
@@ -340,7 +357,8 @@ def network_create(_context, values):
 
 
 def network_destroy(_context, network_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         # TODO(vish): do we have to use sql here?
         session.execute('update networks set deleted=1 where id=:id',
                         {'id': network_id})
@@ -354,7 +372,6 @@ def network_destroy(_context, network_id):
         session.execute('update network_indexes set network_id=NULL '
                         'where network_id=:id',
                         {'id': network_id})
-        session.commit()
 
 
 def network_get(_context, network_id):
@@ -363,23 +380,23 @@ def network_get(_context, network_id):
 
 # pylint: disable-msg=C0103
 def network_get_associated_fixed_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter(models.FixedIp.instance_id != None) \
-                      .filter_by(deleted=False) \
-                      .all()
+    session = get_session()
+    return session.query(models.FixedIp) \
+                  .filter_by(network_id=network_id) \
+                  .filter(models.FixedIp.instance_id != None) \
+                  .filter_by(deleted=False) \
+                  .all()
 
 
 def network_get_by_bridge(_context, bridge):
-    with managed_session() as session:
-        rv = session.query(models.Network) \
-                    .filter_by(bridge=bridge) \
-                    .filter_by(deleted=False) \
-                    .first()
-        if not rv:
-            raise exception.NotFound('No network for bridge %s' % bridge)
-        return rv
+    session = get_session()
+    rv = session.query(models.Network) \
+                .filter_by(bridge=bridge) \
+                .filter_by(deleted=False) \
+                .first()
+    if not rv:
+        raise exception.NotFound('No network for bridge %s' % bridge)
+    return rv
 
 
 def network_get_host(context, network_id):
@@ -388,7 +405,8 @@ def network_get_host(context, network_id):
 
 
 def network_get_index(_context, network_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         network_index = session.query(models.NetworkIndex) \
                                .filter_by(network_id=None) \
                                .filter_by(deleted=False) \
@@ -399,8 +417,7 @@ def network_get_index(_context, network_id):
         network_index['network'] = models.Network.find(network_id,
                                                        session=session)
         session.add(network_index)
-        session.commit()
-        return network_index['index']
+    return network_index['index']
 
 
 def network_index_count(_context):
@@ -415,7 +432,8 @@ def network_index_create(_context, values):
 
 
 def network_set_host(_context, network_id, host_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         network = session.query(models.Network) \
                          .filter_by(id=network_id) \
                          .filter_by(deleted=False) \
@@ -426,34 +444,33 @@ def network_set_host(_context, network_id, host_id):
                                      network_id)
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if network.host:
-            session.commit()
-            return network['host']
-        network['host'] = host_id
-        session.add(network)
-        session.commit()
-        return network['host']
+        if not network['host']:
+            network['host'] = host_id
+            session.add(network)
+    return network['host']
 
 
 def network_update(context, network_id, values):
-    network_ref = network_get(context, network_id)
-    for (key, value) in values.iteritems():
-        network_ref[key] = value
-    network_ref.save()
+    session = get_session()
+    with session.begin():
+        network_ref = models.Network(network_id, session=session)
+        for (key, value) in values.iteritems():
+            network_ref[key] = value
+        network_ref.save()
 
 
 ###################
 
 
 def project_get_network(_context, project_id):
-    with managed_session() as session:
-        rv = session.query(models.Network) \
-                    .filter_by(project_id=project_id) \
-                    .filter_by(deleted=False) \
-                    .first()
-        if not rv:
-            raise exception.NotFound('No network for project: %s' % project_id)
-        return rv
+    session = get_session()
+    rv = session.query(models.Network) \
+                .filter_by(project_id=project_id) \
+                .filter_by(deleted=False) \
+                .first()
+    if not rv:
+        raise exception.NotFound('No network for project: %s' % project_id)
+    return rv
 
 
 ###################
@@ -482,7 +499,8 @@ def export_device_create(_context, values):
 
 
 def volume_allocate_shelf_and_blade(_context, volume_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         export_device = session.query(models.ExportDevice) \
                                .filter_by(volume=None) \
                                .filter_by(deleted=False) \
@@ -494,8 +512,7 @@ def volume_allocate_shelf_and_blade(_context, volume_id):
             raise db.NoMoreBlades()
         export_device.volume_id = volume_id
         session.add(export_device)
-        session.commit()
-        return (export_device.shelf_id, export_device.blade_id)
+    return (export_device.shelf_id, export_device.blade_id)
 
 
 def volume_attached(context, volume_id, instance_id, mountpoint):
@@ -516,14 +533,14 @@ def volume_create(_context, values):
 
 
 def volume_destroy(_context, volume_id):
-    with managed_session(autocommit=False) as session:
+    session = get_session()
+    with session.begin():
         # TODO(vish): do we have to use sql here?
         session.execute('update volumes set deleted=1 where id=:id',
                         {'id': volume_id})
         session.execute('update export_devices set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
-        session.commit()
 
 
 def volume_detached(context, volume_id):
@@ -544,11 +561,11 @@ def volume_get_all(_context):
 
 
 def volume_get_by_project(_context, project_id):
-    with managed_session() as session:
-        return session.query(models.Volume) \
-                      .filter_by(project_id=project_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+    session = get_session()
+    return session.query(models.Volume) \
+                  .filter_by(project_id=project_id) \
+                  .filter_by(deleted=False) \
+                  .all()
 
 
 def volume_get_by_str(_context, str_id):
@@ -567,17 +584,19 @@ def volume_get_instance(context, volume_id):
 
 
 def volume_get_shelf_and_blade(_context, volume_id):
-    with managed_session() as session:
-        export_device = session.query(models.ExportDevice) \
-                               .filter_by(volume_id=volume_id) \
-                               .first()
-        if not export_device:
-            raise exception.NotFound()
-        return (export_device.shelf_id, export_device.blade_id)
+    session = get_session()
+    export_device = session.query(models.ExportDevice) \
+                           .filter_by(volume_id=volume_id) \
+                           .first()
+    if not export_device:
+        raise exception.NotFound()
+    return (export_device.shelf_id, export_device.blade_id)
 
 
 def volume_update(context, volume_id, values):
-    volume_ref = volume_get(context, volume_id)
-    for (key, value) in values.iteritems():
-        volume_ref[key] = value
-    volume_ref.save()
+    session = get_session()
+    with session.begin():
+        volume_ref = models.Volumes(context, session=session)
+        for (key, value) in values.iteritems():
+            volume_ref[key] = value
+        volume_ref.save()
