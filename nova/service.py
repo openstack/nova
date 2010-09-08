@@ -140,6 +140,7 @@ class Service(object, service.Service):
                 logging.debug("The service database object disappeared, "
                               "Recreating it.")
                 self._create_service_ref()
+                service_ref = db.service_get(context, self.service_id)
 
             db.service_update(context,
                              self.service_id,
