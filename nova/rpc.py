@@ -264,7 +264,7 @@ def call(topic, msg):
             return d.callback(data['result'])
 
     consumer.register_callback(deferred_receive)
-    injected = consumer.attach_to_tornado()
+    injected = consumer.attach_to_twisted()
 
     # clean up after the injected listened and return x
     d.addCallback(lambda x: injected.stop() and x or x)
