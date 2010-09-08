@@ -37,8 +37,7 @@ class VolumeTestCase(test.TrialTestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
         self.compute = utils.import_object(FLAGS.compute_manager)
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
         self.volume = utils.import_object(FLAGS.volume_manager)
         self.context = None
 
