@@ -62,6 +62,7 @@ class TrialTestCase(unittest.TestCase):
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
+        self.injected = []
 
     def tearDown(self): # pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
@@ -71,6 +72,9 @@ class TrialTestCase(unittest.TestCase):
         self.stubs.UnsetAll()
         self.stubs.SmartUnsetAll()
         self.mox.VerifyAll()
+
+        for x in self.injected:
+            x.stop()
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
@@ -99,7 +103,6 @@ class BaseTestCase(TrialTestCase):
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
         #               the injected listeners... this is fine for now though
-        self.injected = []
         self.ioloop = ioloop.IOLoop.instance()
 
         self._waiting = None
@@ -109,8 +112,6 @@ class BaseTestCase(TrialTestCase):
     def tearDown(self):# pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(BaseTestCase, self).tearDown()
-        for x in self.injected:
-            x.stop()
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
 

@@ -19,7 +19,6 @@
 import logging
 import StringIO
 import time
-from tornado import ioloop
 from twisted.internet import defer
 import unittest
 from xml.etree import ElementTree
@@ -36,7 +35,7 @@ from nova.endpoint import cloud
 FLAGS = flags.FLAGS
 
 
-class CloudTestCase(test.BaseTestCase):
+class CloudTestCase(test.TrialTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -51,18 +50,21 @@ class CloudTestCase(test.BaseTestCase):
         # set up a service
         self.compute = service.ComputeService()
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                     topic=FLAGS.compute_topic,
-                                                     proxy=self.compute)
-        self.injected.append(self.compute_consumer.attach_to_tornado(self.ioloop))
+                                                    topic=FLAGS.compute_topic,
+                                                    proxy=self.compute)
+        self.injected.append(self.compute_consumer.attach_to_twisted())
 
         try:
             manager.AuthManager().create_user('admin', 'admin', 'admin')
         except: pass
         admin = manager.AuthManager().get_user('admin')
         project = manager.AuthManager().create_project('proj', 'admin', 'proj')
-        self.context = api.APIRequestContext(handler=None,project=project,user=admin)
+        self.context = api.APIRequestContext(handler=None,
+                                             project=project,
+                                             user=admin)
 
     def tearDown(self):
+        super(CloudTestCase, self).tearDown()
         manager.AuthManager().delete_project('proj')
         manager.AuthManager().delete_user('admin')
 

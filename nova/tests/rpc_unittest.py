@@ -30,7 +30,7 @@ from nova import test
 FLAGS = flags.FLAGS
 
 
-class RpcTestCase(test.BaseTestCase):
+class RpcTestCase(test.TrialTestCase):
     """Test cases for rpc"""
     def setUp(self):  # pylint: disable-msg=C0103
         super(RpcTestCase, self).setUp()
@@ -40,7 +40,7 @@ class RpcTestCase(test.BaseTestCase):
                                             topic='test',
                                             proxy=self.receiver)
 
-        self.injected.append(self.consumer.attach_to_tornado(self.ioloop))
+        self.injected.append(self.consumer.attach_to_twisted())
 
     def test_call_succeed(self):
         """Get a value through rpc call"""

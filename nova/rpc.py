@@ -81,21 +81,6 @@ class Consumer(messaging.Consumer):
         self.failed_connection = False
         super(Consumer, self).__init__(*args, **kwargs)
 
-    # TODO(termie): it would be nice to give these some way of automatically
-    #               cleaning up after themselves
-    def attach_to_tornado(self, io_inst=None):
-        """Attach a callback to tornado that fires 10 times a second"""
-        from tornado import ioloop
-        if io_inst is None:
-            io_inst = ioloop.IOLoop.instance()
-
-        injected = ioloop.PeriodicCallback(
-            lambda: self.fetch(enable_callbacks=True), 100, io_loop=io_inst)
-        injected.start()
-        return injected
-
-    attachToTornado = attach_to_tornado
-
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
         # TODO(vish): the logic for failed connections and logging should be
@@ -123,6 +108,7 @@ class Consumer(messaging.Consumer):
         """Attach a callback to twisted that fires 10 times a second"""
         loop = task.LoopingCall(self.fetch, enable_callbacks=True)
         loop.start(interval=0.1)
+        return loop
 
 
 class Publisher(messaging.Publisher):
