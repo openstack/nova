@@ -57,7 +57,7 @@ def service_update(context, service_id, values):
         service_ref = models.Service.find(service_id, session=session)
         for (key, value) in values.iteritems():
             service_ref[key] = value
-        service_ref.save(session)
+        service_ref.save(session=session)
 
 
 ###################
@@ -216,7 +216,7 @@ def fixed_ip_update(context, address, values):
         fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
         for (key, value) in values.iteritems():
             fixed_ip_ref[key] = value
-        fixed_ip_ref.save()
+        fixed_ip_ref.save(session=session)
 
 
 ###################
@@ -307,10 +307,10 @@ def instance_state(context, instance_id, state, description=None):
 def instance_update(context, instance_id, values):
     session = get_session()
     with session.begin():
-        instance_ref = models.instance.find(instance_id, session=session)
+        instance_ref = models.Instance.find(instance_id, session=session)
         for (key, value) in values.iteritems():
             instance_ref[key] = value
-        instance_ref.save()
+        instance_ref.save(session=session)
 
 
 ###################
@@ -453,10 +453,10 @@ def network_set_host(_context, network_id, host_id):
 def network_update(context, network_id, values):
     session = get_session()
     with session.begin():
-        network_ref = models.Network(network_id, session=session)
+        network_ref = models.Network.find(network_id, session=session)
         for (key, value) in values.iteritems():
             network_ref[key] = value
-        network_ref.save()
+        network_ref.save(session=session)
 
 
 ###################
@@ -596,7 +596,7 @@ def volume_get_shelf_and_blade(_context, volume_id):
 def volume_update(context, volume_id, values):
     session = get_session()
     with session.begin():
-        volume_ref = models.Volumes(context, session=session)
+        volume_ref = models.Volumes.find(volume_id, session=session)
         for (key, value) in values.iteritems():
             volume_ref[key] = value
-        volume_ref.save()
+        volume_ref.save(session=session)
