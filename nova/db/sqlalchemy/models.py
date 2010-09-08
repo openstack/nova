@@ -174,7 +174,7 @@ class Service(BASE, NovaBase):
                          ).filter_by(host=host
                          ).filter_by(binary=binary
                          ).filter_by(deleted=False
-                          .one()
+                         ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for %s, %s" % (host,
                                                               binary))
@@ -338,7 +338,7 @@ class FixedIp(BASE, NovaBase):
             return session.query(cls
                          ).filter_by(address=str_id
                          ).filter_by(deleted=False
-                          .one()
+                         ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % str_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
@@ -367,7 +367,7 @@ class FloatingIp(BASE, NovaBase):
             return session.query(cls
                          ).filter_by(address=str_id
                          ).filter_by(deleted=False
-                          .one()
+                         ).one()
         except exc.NoResultFound:
             session.rollback()
             new_exc = exception.NotFound("No model for address %s" % str_id)
