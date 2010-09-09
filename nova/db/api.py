@@ -91,6 +91,16 @@ def floating_ip_create(context, values):
     return IMPL.floating_ip_create(context, values)
 
 
+def floating_ip_deallocate(context, address):
+    """Deallocate an floating ip by address"""
+    return IMPL.floating_ip_deallocate(context, address)
+
+
+def floating_ip_destroy(context, address):
+    """Destroy the floating_ip or raise if it does not exist."""
+    return IMPL.floating_ip_destroy(context, address)
+
+
 def floating_ip_disassociate(context, address):
     """Disassociate an floating ip from a fixed ip by address.
 
@@ -99,16 +109,21 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_deallocate(context, address):
-    """Deallocate an floating ip by address"""
-    return IMPL.floating_ip_deallocate(context, address)
-
-
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address)
+
+
+def floating_ip_get_all(context):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all(context)
+
+
+def floating_ip_get_all_by_host(context, host):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all_by_host(context, host)
 
 
 def floating_ip_get_by_address(context, address):
