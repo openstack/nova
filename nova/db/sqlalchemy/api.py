@@ -33,11 +33,11 @@ FLAGS = flags.FLAGS
 #             in the interface definition
 # pylint: disable-msg=C0111
 def _deleted(context):
-    """Calcultates whether to include deleted objects based on context.
+    """Calculates whether to include deleted objects based on context.
 
     Currently just looks for a flag called deleted in the context dict.
     """
-    if not context:
+    if not hasattr(context, 'get'):
         return False
     return context.get('deleted', False)
 
