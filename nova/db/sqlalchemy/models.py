@@ -266,6 +266,20 @@ class Volume(BASE, NovaBase):
     attach_status = Column(String(255))  # TODO(vish): enum
 
 
+class Quota(BASE, NovaBase):
+    """Represents quota overrides for a project"""
+    __tablename__ = 'quotas'
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(String(255))
+
+    instances = Column(Integer)
+    cores = Column(Integer)
+    volumes = Column(Integer)
+    gigabytes = Column(Integer)
+    floating_ips = Column(Integer)
+
+
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
     __tablename__ = 'export_devices'
