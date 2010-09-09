@@ -420,10 +420,12 @@ class CloudController(object):
             iterator = db.floating_ip_get_by_project(context,
                                                      context.project.id)
         for floating_ip_ref in iterator:
-            address = floating_ip_ref['id_str']
-            instance_ref = db.floating_ip_get_instance(address)
+            address = floating_ip_ref['str_id']
+            instance_id = None
+            if floating_ip_ref['instance']:
+                instance_id = floating_ip_ref['instance']['str_id']
             address_rv = {'public_ip': address,
-                          'instance_id': instance_ref['id_str']}
+                          'instance_id': instance_id}
             if context.user.is_admin():
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
