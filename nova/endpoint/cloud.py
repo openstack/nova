@@ -260,7 +260,7 @@ class CloudController(object):
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
-                'host',
+                volume['host'],
                 volume['instance_id'],
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
@@ -635,7 +635,7 @@ class CloudController(object):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
         host = db.volume_get_host(context, volume_ref['id'])
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
                              "args": {"context": None,
                                       "volume_id": volume_id}})
