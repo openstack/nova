@@ -196,7 +196,7 @@ class LazyPluggable(object):
                 fromlist = backend
 
             self.__backend = __import__(name, None, None, fromlist)
-            logging.error('backend %s', self.__backend)
+            logging.info('backend %s', self.__backend)
         return self.__backend
 
     def __getattr__(self, key):
