@@ -21,6 +21,7 @@ Handles all code relating to instances (guest vms)
 """
 
 import base64
+import datetime
 import logging
 import os
 
@@ -83,6 +84,8 @@ class ComputeManager(manager.Manager):
 
         try:
             yield self.driver.spawn(instance_ref)
+            now = datetime.datetime.utcnow()
+            self.db.instance_update(None, instance_id, {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
             logging.exception("instance %s: Failed to spawn",
                               instance_ref['name'])
@@ -109,6 +112,8 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'shutting_down')
         yield self.driver.destroy(instance_ref)
+        now = datetime.datetime.utcnow()
+        self.db.instance_update(None, instance_id, {'terminated_at': now})
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
