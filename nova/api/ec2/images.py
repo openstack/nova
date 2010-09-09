@@ -26,20 +26,20 @@ import urllib
 
 import boto.s3.connection
 
-from nova import image
 from nova import flags
 from nova import utils
 from nova.auth import manager
+from nova.image import service
 
 
 FLAGS = flags.FLAGS
 
 
 def modify(context, image_id, operation):
-    image.S3ImageService(context)._conn().make_request(
+    service.S3ImageService(context)._conn().make_request(
         method='POST',
         bucket='_images',
-        query_args=qs({'image_id': image_id, 'operation': operation}))
+        query_args=service.qs({'image_id': image_id, 'operation': operation}))
 
     return True
 
@@ -48,10 +48,10 @@ def register(context, image_location):
     """ rpc call to register a new image based from a manifest """
 
     image_id = utils.generate_uid('ami')
-    image.S3ImageService(context)._conn().make_request(
+    service.S3ImageService(context)._conn().make_request(
             method='PUT',
             bucket='_images',
-            query_args=qs({'image_location': image_location,
+            query_args=service.qs({'image_location': image_location,
                            'image_id': image_id}))
 
     return image_id
@@ -62,7 +62,7 @@ def list(context, filter_list=[]):
 
     optionally filtered by a list of image_id """
 
-    result = image.S3ImageService(context).index().values()
+    result = service.S3ImageService(context).index().values()
     if not filter_list is None:
         return [i for i in result if i['imageId'] in filter_list]
     return result
@@ -70,11 +70,4 @@ def list(context, filter_list=[]):
 
 def deregister(context, image_id):
     """ unregister an image """
-    image.S3ImageService(context).delete(image_id)
-
-
-def qs(params):
-    pairs = []
-    for key in params.keys():
-        pairs.append(key + '=' + urllib.quote(params[key]))
-    return '&'.join(pairs)
+    service.S3ImageService(context).delete(image_id)

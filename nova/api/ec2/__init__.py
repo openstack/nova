@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Starting point for routing EC2 requests
-"""
+"""Starting point for routing EC2 requests"""
 
 import logging
 import routes
@@ -40,6 +38,7 @@ _log.setLevel(logging.DEBUG)
 
 
 class API(wsgi.Middleware):
+
     """Routing for all EC2 API requests."""
 
     def __init__(self):
@@ -47,6 +46,7 @@ class API(wsgi.Middleware):
 
 
 class Authenticate(wsgi.Middleware):
+
     """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
 
     @webob.dec.wsgify
@@ -65,28 +65,25 @@ class Authenticate(wsgi.Middleware):
         # Authenticate the request.
         try:
             (user, project) = manager.AuthManager().authenticate(
-                access,
-                signature,
-                auth_params,
-                req.method,
-                req.host,
-                req.path
-            )
-
+                    access,
+                    signature,
+                    auth_params,
+                    req.method,
+                    req.host,
+                    req.path)
         except exception.Error, ex:
             logging.debug("Authentication Failure: %s" % ex)
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
         req.environ['ec2.context'] = context.APIRequestContext(user, project)
-
         return self.application
 
 
 class Router(wsgi.Middleware):
-    """
-    Add 'ec2.controller', 'ec2.action', and 'ec2.action_args' to WSGI environ.
-    """
+
+    """Add ec2.'controller', .'action', and .'action_args' to WSGI environ."""
+
     def __init__(self, application):
         super(Router, self).__init__(application)
         self.map = routes.Mapper()
@@ -121,12 +118,13 @@ class Router(wsgi.Middleware):
         req.environ['ec2.controller'] = controller
         req.environ['ec2.action'] = action
         req.environ['ec2.action_args'] = args
-
         return self.application
 
 
 class Authorizer(wsgi.Middleware):
-    """
+
+    """Authorize an EC2 API request.
+
     Return a 401 if ec2.controller and ec2.action in WSGI environ may not be
     executed in ec2.context.
     """
@@ -194,11 +192,14 @@ class Authorizer(wsgi.Middleware):
     
 
 class Executor(wsgi.Application):
-    """
+
+    """Execute an EC2 API request.
+
     Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and 
     'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
     response, or a 400 upon failure.
     """
+
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']

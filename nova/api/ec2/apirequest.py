@@ -51,7 +51,6 @@ class APIRequest(object):
         self.action = action
 
     def send(self, context, **kwargs):
-
         try:
             method = getattr(self.controller,
                              _camelcase_to_underscore(self.action))
@@ -83,7 +82,6 @@ class APIRequest(object):
                     args[key] = [v for k, v in s]
 
         result = method(context, **args)
-
         return self._render_response(result, context.request_id)
 
     def _render_response(self, response_data, request_id):

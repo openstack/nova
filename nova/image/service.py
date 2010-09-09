@@ -133,3 +133,10 @@ class S3ImageService(ImageService):
                                                calling_format=calling,
                                                port=FLAGS.s3_port,
                                                host=FLAGS.s3_host)
+
+
+def qs(params):
+    pairs = []
+    for key in params.keys():
+        pairs.append(key + '=' + urllib.quote(params[key]))
+    return '&'.join(pairs)

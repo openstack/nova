@@ -63,7 +63,6 @@ class FakeHttplibConnection(object):
         # For some reason, the response doesn't have "HTTP/1.0 " prepended; I
         # guess that's a function the web server usually provides.
         resp = "HTTP/1.0 %s" % resp
-
         sock = FakeHttplibSocket(resp)
         self.http_response = httplib.HTTPResponse(sock)
         self.http_response.begin()

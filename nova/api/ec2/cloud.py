@@ -205,8 +205,8 @@ class CloudController(object):
     def create_key_pair(self, context, key_name, **kwargs):
         data = _gen_key(context.user.id, key_name)
         return {'keyName': key_name,
-            'keyFingerprint': data['fingerprint'],
-            'keyMaterial': data['private_key']}
+                'keyFingerprint': data['fingerprint'],
+                'keyMaterial': data['private_key']}
 
     def delete_key_pair(self, context, key_name, **kwargs):
         context.user.delete_key_pair(key_name)
@@ -273,10 +273,11 @@ class CloudController(object):
 
     def create_volume(self, context, size, **kwargs):
         # TODO(vish): refactor this to create the volume object here and tell service to create it
-        result = rpc.call(FLAGS.volume_topic, {"method": "create_volume",
-                                 "args": {"size": size,
-                                           "user_id": context.user.id,
-                                           "project_id": context.project.id}})
+        result = rpc.call(FLAGS.volume_topic, 
+                {"method": "create_volume",
+                 "args": {"size": size,
+                          "user_id": context.user.id,
+                          "project_id": context.project.id}})
         # NOTE(vish): rpc returned value is in the result key in the dictionary
         volume = self._get_volume(context, result)
         return {'volumeSet': [self.format_volume(context, volume)]}
@@ -638,7 +639,6 @@ class CloudController(object):
             image_location = kwargs['name']
         image_id = images.register(context, image_location)
         logging.debug("Registered %s as %s" % (image_location, image_id))
-
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
@@ -682,5 +682,4 @@ class CloudController(object):
                 aggregate_state['pending'].has_key(item_id)):
                 del aggregate_state['pending'][item_id]
         aggregate_state[node_name] = items
-
         return True
