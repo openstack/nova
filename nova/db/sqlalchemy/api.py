@@ -25,6 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload_all
 
 FLAGS = flags.FLAGS
 
@@ -251,12 +252,17 @@ def instance_get(context, instance_id):
 
 
 def instance_get_all(context):
-    return models.Instance.all(deleted=_deleted(context))
+    session = get_session()
+    return session.query(models.Instance
+                 ).options(joinedload_all('fixed_ip.floating_ips')
+                 ).filter_by(deleted=_deleted(context)
+                 ).all()
 
 
 def instance_get_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
+                 ).options(joinedload_all('fixed_ip.floating_ips')
                  ).filter_by(project_id=project_id
                  ).filter_by(deleted=_deleted(context)
                  ).all()
@@ -265,6 +271,7 @@ def instance_get_by_project(context, project_id):
 def instance_get_by_reservation(_context, reservation_id):
     session = get_session()
     return session.query(models.Instance
+                 ).options(joinedload_all('fixed_ip.floating_ips')
                  ).filter_by(reservation_id=reservation_id
                  ).filter_by(deleted=False
                  ).all()

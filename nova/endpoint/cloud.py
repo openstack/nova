@@ -379,11 +379,11 @@ class CloudController(object):
                 'code': instance['state'],
                 'name': instance['state_description']
             }
-            floating_addr = db.instance_get_floating_address(context,
-                                                             instance['id'])
+            floating_addr = None
+            if instance['fixed_ip']['floating_ips']:
+                floating_addr = instance['fixed_ip']['floating_ips'][0]['str_id']
             i['publicDnsName'] = floating_addr
-            fixed_addr = db.instance_get_fixed_address(context,
-                                                       instance['id'])
+            fixed_addr = instance['fixed_ip']['str_id']
             i['privateDnsName'] = fixed_addr
             if not i['publicDnsName']:
                 i['publicDnsName'] = i['privateDnsName']
