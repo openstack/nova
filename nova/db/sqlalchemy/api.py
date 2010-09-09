@@ -609,6 +609,14 @@ def security_group_get_by_user(_context, user_id):
                              .filter_by(deleted=False) \
                              .all()
 
+def security_group_get_by_user_and_name(_context, user_id, name):
+    with managed_session() as session:
+        return session.query(models.SecurityGroup) \
+                             .filter_by(user_id=user_id) \
+                             .filter_by(name=name) \
+                             .filter_by(deleted=False) \
+                             .one()
+
 def security_group_destroy(_context, security_group_id):
     with managed_session() as session:
         security_group = session.query(models.SecurityGroup) \
@@ -619,3 +627,14 @@ def security_group_get_all(_context):
     return models.SecurityGroup.all()
 
 
+
+
+###################
+
+
+def security_group_rule_create(_context, values):
+    security_group_rule_ref = models.SecurityGroupIngressRule()
+    for (key, value) in values.iteritems():
+        security_group_rule_ref[key] = value
+    security_group_rule_ref.save()
+    return security_group_rule_ref

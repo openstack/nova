@@ -214,14 +214,54 @@ class CloudController(object):
     @rbac.allow('all')
     def describe_security_groups(self, context, **kwargs):
         groups = {'securityGroupSet': 
-                    [{ 'groupDescription': group.description,
-                       'groupName' : group.name,
-                       'ownerId': context.user.id } for group in db.security_group_get_by_user(context, context.user.id) ] }
+                  [{ 'groupDescription': group.description,
+                     'groupName' : group.name,
+                     'ownerId': context.user.id } for group in \
+                         db.security_group_get_by_user(context,
+                                                       context.user.id) ] }
 
         return groups
 
     @rbac.allow('netadmin')
-    def authorize_security_group_ingress(self, context, group_name, **kwargs):
+    def authorize_security_group_ingress(self, context, group_name,
+                                         to_port=None, from_port=None,
+                                         ip_protocol=None, cidr_ip=None,
+                                         user_id=None,
+                                         source_security_group_name=None,
+                                         source_security_group_owner_id=None):
+        security_group = db.security_group_get_by_user_and_name(context,
+                                                                context.user.id,
+                                                                group_name)
+        values = { 'parent_security_group' : security_group.id }
+
+        # Aw, crap.
+        if source_security_group_name:
+            if source_security_group_owner_id:
+                other_user_id = source_security_group_owner_id
+            else: 
+                other_user_id = context.user.id
+
+            foreign_security_group = \
+                    db.security_group_get_by_user_and_name(context,
+                                                other_user_id,
+                                                source_security_group_name)
+            values['group_id'] = foreign_security_group.id
+        elif cidr_ip:
+            values['cidr'] = cidr_ip
+        else:
+            return { 'return': False }
+
+        if ip_protocol and from_port and to_port:
+            values['protocol'] = ip_protocol
+            values['from_port'] = from_port
+            values['to_port'] = to_port
+        else:
+            # If cidr based filtering, protocol and ports are mandatory
+            if 'cidr' in values:
+                print values
+                return None
+
+        security_group_rule = db.security_group_rule_create(context, values)
         return True
 
     @rbac.allow('netadmin')
@@ -234,6 +274,8 @@ class CloudController(object):
 
     @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):
+        security_group = db.security_group_get_by_user_and_name(context, context.user.id, group_name)
+        security_group.delete()
         return True
 
     @rbac.allow('projectmanager', 'sysadmin')

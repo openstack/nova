@@ -330,12 +330,11 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
     parent_security_group = Column(Integer, ForeignKey('security_group.id'))
     protocol = Column(String(5)) # "tcp", "udp", or "icmp"
-    fromport = Column(Integer)
-    toport = Column(Integer)
+    from_port = Column(Integer)
+    to_port = Column(Integer)
 
-    # Note: This is not the parent SecurityGroup's owner. It's the owner of
-    # the SecurityGroup we're granting access.
-    user_id = Column(String(255))
+    # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
+    # granting access for.
     group_id = Column(Integer, ForeignKey('security_group.id'))
 
     @property

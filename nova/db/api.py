@@ -461,6 +461,19 @@ def security_group_get_by_user(context, user_id):
     return IMPL.security_group_get_by_user(context, user_id)
 
 
+def security_group_get_by_user_and_name(context, user_id, name):
+    """Get user's named security group"""
+    return IMPL.security_group_get_by_user_and_name(context, user_id, name)
+
+
 def security_group_destroy(context, security_group_id):
     """Deletes a security group"""
     return IMPL.security_group_destroy(context, security_group_id)
+
+
+####################
+
+
+def security_group_rule_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_rule_create(context, values)
