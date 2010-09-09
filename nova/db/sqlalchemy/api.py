@@ -285,11 +285,6 @@ def instance_get_floating_address(_context, instance_id):
         return instance_ref.fixed_ip.floating_ips[0]['address']
 
 
-def instance_get_host(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    return instance_ref['host']
-
-
 def instance_is_vpn(context, instance_id):
     # TODO(vish): Move this into image code somewhere
     instance_ref = instance_get(context, instance_id)
@@ -402,11 +397,6 @@ def network_get_by_bridge(_context, bridge):
     if not rv:
         raise exception.NotFound('No network for bridge %s' % bridge)
     return rv
-
-
-def network_get_host(context, network_id):
-    network_ref = network_get(context, network_id)
-    return network_ref['host']
 
 
 def network_get_index(_context, network_id):
@@ -580,11 +570,6 @@ def volume_get_by_project(_context, project_id):
 
 def volume_get_by_str(_context, str_id):
     return models.Volume.find_by_str(str_id)
-
-
-def volume_get_host(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    return volume_ref['host']
 
 
 def volume_get_instance(_context, volume_id):

@@ -299,7 +299,7 @@ class CloudController(object):
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
-        host = db.instance_get_host(context, instance_ref['id'])
+        host = instance_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
                                  "args": {"context": None,
@@ -323,7 +323,7 @@ class CloudController(object):
         if volume_ref['status'] == "available":
             raise exception.Error("Volume is already detached")
         try:
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
                                  "args": {"context": None,
@@ -483,7 +483,7 @@ class CloudController(object):
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         network_ref = db.project_get_network(context, context.project.id)
-        host = db.network_get_host(context, network_ref['id'])
+        host = network_ref['host']
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
                                     {"method": "set_network_host",
@@ -608,7 +608,7 @@ class CloudController(object):
                 #             we will need to cast here.
                 db.fixed_ip_deallocate(context, address)
 
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             if host:
                 rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
@@ -623,7 +623,7 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
             instance_ref = db.instance_get_by_str(context, id_str)
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "reboot_instance",
                       "args": {"context": None,
@@ -634,7 +634,7 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
-        host = db.volume_get_host(context, volume_ref['id'])
+        host = volume_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
                              "args": {"context": None,
