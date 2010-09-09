@@ -369,7 +369,6 @@ class FloatingIp(BASE, NovaBase):
                          ).filter_by(deleted=False
                          ).one()
         except exc.NoResultFound:
-            session.rollback()
             new_exc = exception.NotFound("No model for address %s" % str_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
