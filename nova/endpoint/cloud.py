@@ -638,7 +638,7 @@ class CloudController(object):
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
                              "args": {"context": None,
-                                      "volume_id": volume_id}})
+                                      "volume_id": volume_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('all')
