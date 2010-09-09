@@ -465,8 +465,7 @@ class CloudController(object):
                  {"method": "associate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['str_id'],
-                           "fixed_address": fixed_ip_ref['str_id'],
-                           "instance_id": instance_ref['id']}})
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
