@@ -421,8 +421,10 @@ class CloudController(object):
                                                      context.project.id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['str_id']
-            instance_ref = db.floating_ip_get_instance(context, address)
-            instance_id = instance_ref['str_id']
+            instance_id = None
+            if (floating_ip_ref['fixed_ip']
+                and floating_ip_ref['fixed_ip']['instance']):
+                instance_id = floating_ip_ref['fixed_ip']['instance']['str_id']
             address_rv = {'public_ip': address,
                           'instance_id': instance_id}
             if context.user.is_admin():
