@@ -25,6 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import managed_session
 from sqlalchemy import or_
+from sqlalchemy.orm import eagerload
 
 FLAGS = flags.FLAGS
 
@@ -615,6 +616,7 @@ def security_group_get_by_user_and_name(_context, user_id, name):
                              .filter_by(user_id=user_id) \
                              .filter_by(name=name) \
                              .filter_by(deleted=False) \
+                             .options(eagerload('rules')) \
                              .one()
 
 def security_group_destroy(_context, security_group_id):
@@ -638,3 +640,9 @@ def security_group_rule_create(_context, values):
         security_group_rule_ref[key] = value
     security_group_rule_ref.save()
     return security_group_rule_ref
+
+def security_group_rule_destroy(_context, security_group_rule_id):
+    with managed_session() as session:
+        security_group_rule = session.query(models.SecurityGroupIngressRule) \
+                                            .get(security_group_rule_id)
+        security_group_rule.delete(session=session)

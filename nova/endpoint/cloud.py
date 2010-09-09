@@ -223,6 +223,52 @@ class CloudController(object):
         return groups
 
     @rbac.allow('netadmin')
+    def revoke_security_group_ingress(self, context, group_name,
+                                      to_port=None, from_port=None,
+                                      ip_protocol=None, cidr_ip=None,
+                                      user_id=None,
+                                      source_security_group_name=None,
+                                      source_security_group_owner_id=None):
+        security_group = db.security_group_get_by_user_and_name(context,
+                                                                context.user.id,
+                                                                group_name)
+
+        criteria = {}
+
+        if source_security_group_name:
+            if source_security_group_owner_id:
+                other_user_id = source_security_group_owner_id
+            else:
+                other_user_id = context.user.id
+
+            foreign_security_group = \
+                    db.security_group_get_by_user_and_name(context,
+                                                other_user_id,
+                                                source_security_group_name)
+            criteria['group_id'] = foreign_security_group.id
+        elif cidr_ip:
+            criteria['cidr'] = cidr_ip
+        else:
+            return { 'return': False }
+
+        if ip_protocol and from_port and to_port:
+            criteria['protocol'] = ip_protocol
+            criteria['from_port'] = from_port
+            criteria['to_port'] = to_port
+        else:
+            # If cidr based filtering, protocol and ports are mandatory
+            if 'cidr' in criteria:
+                return { 'return': False }
+
+        for rule in security_group.rules:
+            for (k,v) in criteria.iteritems():
+                if getattr(rule, k, False) != v:
+                    break
+            # If we make it here, we have a match
+            db.security_group_rule_destroy(context, rule.id)
+        return True
+
+    @rbac.allow('netadmin')
     def authorize_security_group_ingress(self, context, group_name,
                                          to_port=None, from_port=None,
                                          ip_protocol=None, cidr_ip=None,
@@ -232,13 +278,12 @@ class CloudController(object):
         security_group = db.security_group_get_by_user_and_name(context,
                                                                 context.user.id,
                                                                 group_name)
-        values = { 'parent_security_group' : security_group.id }
+        values = { 'parent_group_id' : security_group.id }
 
-        # Aw, crap.
         if source_security_group_name:
             if source_security_group_owner_id:
                 other_user_id = source_security_group_owner_id
-            else: 
+            else:
                 other_user_id = context.user.id
 
             foreign_security_group = \

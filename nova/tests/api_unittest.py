@@ -274,8 +274,11 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 
-    def test_authorize_security_group_cidr(self):
-        """Test that we can add rules to a security group"""
+    def test_authorize_revoke_security_group_cidr(self):
+        """
+        Test that we can add and remove CIDR based rules
+        to a security group
+        """
         self.expect_http()
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
@@ -294,6 +297,12 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         self.expect_http()
         self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.revoke('tcp', 80, 80, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
 
         self.ec2.delete_security_group(security_group_name)
 
@@ -302,8 +311,11 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         return
 
-    def test_authorize_security_group_foreign_group(self):
-        """Test that we can grant another security group access to a security group"""
+    def test_authorize_revoke_security_group_foreign_group(self):
+        """
+        Test that we can grant and revoke another security group access
+        to a security group
+        """
         self.expect_http()
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
@@ -324,6 +336,12 @@ class ApiEc2TestCase(test.BaseTestCase):
         group.connection = self.ec2
 
         group.authorize(src_group=other_group)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.revoke(src_group=other_group)
 
         self.expect_http()
         self.mox.ReplayAll()
