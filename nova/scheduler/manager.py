@@ -63,4 +63,4 @@ class SchedulerManager(manager.Manager):
         rpc.cast(db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        logging.debug("Casting to %s %s for %s", topic, host, self.method)
+        logging.debug("Casting to %s %s for %s", topic, host, method)
