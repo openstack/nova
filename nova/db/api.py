@@ -442,3 +442,25 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+####################
+
+
+def security_group_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_create(context, values)
+
+
+def security_group_get_by_instance(context, instance_id):
+    """Get security groups to which the instance is assigned"""
+    return IMPL.security_group_get_by_instance(context, instance_id)
+
+
+def security_group_get_by_user(context, user_id):
+    """Get security groups owned by the given user"""
+    return IMPL.security_group_get_by_user(context, user_id)
+
+
+def security_group_destroy(context, security_group_id):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy(context, security_group_id)

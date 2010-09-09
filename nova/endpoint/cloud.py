@@ -212,10 +212,12 @@ class CloudController(object):
         return True
 
     @rbac.allow('all')
-    def describe_security_groups(self, context, group_names, **kwargs):
-        groups = {'securityGroupSet': []}
+    def describe_security_groups(self, context, **kwargs):
+        groups = {'securityGroupSet': 
+                    [{ 'groupDescription': group.description,
+                       'groupName' : group.name,
+                       'ownerId': context.user.id } for group in db.security_group_get_by_user(context, context.user.id) ] }
 
-        # Stubbed for now to unblock other things.
         return groups
 
     @rbac.allow('netadmin')
@@ -223,7 +225,11 @@ class CloudController(object):
         return True
 
     @rbac.allow('netadmin')
-    def create_security_group(self, context, group_name, **kwargs):
+    def create_security_group(self, context, group_name, group_description):
+        db.security_group_create(context,
+                                 values = { 'user_id' : context.user.id,
+                                            'name': group_name,
+                                            'description': group_description })
         return True
 
     @rbac.allow('netadmin')

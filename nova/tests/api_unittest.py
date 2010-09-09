@@ -185,6 +185,9 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.host = '127.0.0.1'
 
         self.app = api.APIServerApplication({'Cloud': self.cloud})
+
+    def expect_http(self, host=None, is_secure=False):
+        """Returns a new EC2 connection"""
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
@@ -194,9 +197,6 @@ class ApiEc2TestCase(test.BaseTestCase):
                 path='/services/Cloud')
 
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
-
-    def expect_http(self, host=None, is_secure=False):
-        """Returns a new EC2 connection"""
         http = FakeHttplibConnection(
                 self.app, '%s:%d' % (self.host, FLAGS.cc_port), False)
         # pylint: disable-msg=E1103
@@ -229,5 +229,33 @@ class ApiEc2TestCase(test.BaseTestCase):
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
         self.assertEquals(len(results), 1)
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_get_all_security_groups(self):
+        """Test that operations on security groups stick"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                      for x in range(random.randint(4, 8)))
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        rv = self.ec2.get_all_security_groups()
+        self.assertEquals(len(rv), 1)
+        self.assertEquals(rv[0].name,  'default')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.create_security_group(security_group_name, 'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        self.assertEquals(len(rv), 2)
+        self.assertTrue(security_group_name in [group.name for group in rv])
+
         self.manager.delete_project(project)
         self.manager.delete_user(user)

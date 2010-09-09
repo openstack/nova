@@ -26,7 +26,7 @@ import datetime
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, validates, exc
 from sqlalchemy.sql import func
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Table
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -291,6 +291,58 @@ class ExportDevice(BASE, NovaBase):
     volume = relationship(Volume, backref=backref('export_device',
                                                   uselist=False))
 
+
+security_group_instance_association = Table('security_group_instance_association',
+                                            BASE.metadata,
+                                            Column('security_group_id', Integer,
+                                                   ForeignKey('security_group.id')),
+                                            Column('instance_id', Integer,
+                                                   ForeignKey('instances.id')))
+
+class SecurityGroup(BASE, NovaBase):
+    """Represents a security group"""
+    __tablename__ = 'security_group'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String(255))
+    description = Column(String(255))
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    instances = relationship(Instance,
+                             secondary=security_group_instance_association,
+                             backref='security_groups')
+
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+
+class SecurityGroupIngressRule(BASE, NovaBase):
+    """Represents a rule in a security group"""
+    __tablename__ = 'security_group_rules'
+    id = Column(Integer, primary_key=True)
+
+    parent_security_group = Column(Integer, ForeignKey('security_group.id'))
+    protocol = Column(String(5)) # "tcp", "udp", or "icmp"
+    fromport = Column(Integer)
+    toport = Column(Integer)
+
+    # Note: This is not the parent SecurityGroup's owner. It's the owner of
+    # the SecurityGroup we're granting access.
+    user_id = Column(String(255))
+    group_id = Column(Integer, ForeignKey('security_group.id'))
+
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    cidr = Column(String(255))
 
 class Network(BASE, NovaBase):
     """Represents a network"""

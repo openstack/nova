@@ -581,3 +581,41 @@ def volume_update(context, volume_id, values):
     for (key, value) in values.iteritems():
         volume_ref[key] = value
     volume_ref.save()
+
+
+###################
+
+
+def security_group_create(_context, values):
+    security_group_ref = models.SecurityGroup()
+    for (key, value) in values.iteritems():
+        security_group_ref[key] = value
+    security_group_ref.save()
+    return security_group_ref
+
+
+def security_group_get_by_instance(_context, instance_id):
+    with managed_session() as session:
+        return session.query(models.Instance) \
+                      .get(instance_id) \
+                      .security_groups \
+                      .all()
+
+
+def security_group_get_by_user(_context, user_id):
+    with managed_session() as session:
+        return session.query(models.SecurityGroup) \
+                             .filter_by(user_id=user_id) \
+                             .filter_by(deleted=False) \
+                             .all()
+
+def security_group_destroy(_context, security_group_id):
+    with managed_session() as session:
+        security_group = session.query(models.SecurityGroup) \
+                                .get(security_group_id)
+        security_group.delete(session=session)
+
+def security_group_get_all(_context):
+    return models.SecurityGroup.all()
+
+
