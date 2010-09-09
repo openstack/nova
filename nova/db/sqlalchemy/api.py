@@ -100,6 +100,23 @@ def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
         floating_ip_ref.save(session=session)
 
 
+def floating_ip_deallocate(_context, address):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = models.FloatingIp.find_by_str(address,
+                                                        session=session)
+        floating_ip_ref['project_id'] = None
+        floating_ip_ref.save(session=session)
+
+
+def floating_ip_destroy(_context, address):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = models.FloatingIp.find_by_str(address,
+                                                        session=session)
+        floating_ip_ref.delete(session=session)
+
+
 def floating_ip_disassociate(_context, address):
     session = get_session()
     with session.begin():
@@ -115,14 +132,17 @@ def floating_ip_disassociate(_context, address):
     return fixed_ip_address
 
 
-def floating_ip_deallocate(_context, address):
+def floating_ip_get_all(_context):
+    return models.FloatingIp.all()
+
+
+def floating_ip_get_all_by_host(_context, host):
     session = get_session()
     with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
-        floating_ip_ref['project_id'] = None
-        floating_ip_ref.save(session=session)
-
+        return session.query(models.FloatingIp
+                     ).filter_by(host=host
+                     ).filter_by(deleted=False
+                     ).all()
 
 def floating_ip_get_by_address(_context, address):
     return models.FloatingIp.find_by_str(address)
