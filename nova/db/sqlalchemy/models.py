@@ -46,8 +46,8 @@ class NovaBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
 

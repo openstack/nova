@@ -84,7 +84,7 @@ class ComputeManager(manager.Manager):
 
         try:
             yield self.driver.spawn(instance_ref)
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             self.db.instance_update(None, instance_id, {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
             logging.exception("instance %s: Failed to spawn",
@@ -112,7 +112,7 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'shutting_down')
         yield self.driver.destroy(instance_ref)
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         self.db.instance_update(None, instance_id, {'terminated_at': now})
 
         # TODO(ja): should we keep it in a terminated state for a bit?
