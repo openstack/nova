@@ -296,7 +296,7 @@ def instance_is_vpn(context, instance_id):
     return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
-def instance_state(context, instance_id, state, description=None):
+def instance_set_state(context, instance_id, state, description=None):
     # TODO(devcamcar): Move this out of models and into driver
     from nova.compute import power_state
     if not description:

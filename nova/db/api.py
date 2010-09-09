@@ -230,9 +230,9 @@ def instance_is_vpn(context, instance_id):
     return IMPL.instance_is_vpn(context, instance_id)
 
 
-def instance_state(context, instance_id, state, description=None):
+def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
-    return IMPL.instance_state(context, instance_id, state, description)
+    return IMPL.instance_set_state(context, instance_id, state, description)
 
 
 def instance_update(context, instance_id, values):
