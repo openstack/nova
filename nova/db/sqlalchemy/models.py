@@ -168,7 +168,7 @@ class Service(BASE, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, host, binary, session=None):
+    def find_by_args(cls, host, binary, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
