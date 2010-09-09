@@ -220,11 +220,6 @@ def instance_get_by_str(context, str_id):
     return IMPL.instance_get_by_str(context, str_id)
 
 
-def instance_get_host(context, instance_id):
-    """Get the host that the instance is running on."""
-    return IMPL.instance_get_host(context, instance_id)
-
-
 def instance_is_vpn(context, instance_id):
     """True if instance is a vpn."""
     return IMPL.instance_is_vpn(context, instance_id)
@@ -296,11 +291,6 @@ def network_get_associated_fixed_ips(context, network_id):
 def network_get_by_bridge(context, bridge):
     """Get an network or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
-
-
-def network_get_host(context, network_id):
-    """Get host assigned to network or raise"""
-    return IMPL.network_get_host(context, network_id)
 
 
 def network_get_index(context, network_id):
@@ -422,11 +412,6 @@ def volume_get_by_project(context, project_id):
 def volume_get_by_str(context, str_id):
     """Get a volume by string id."""
     return IMPL.volume_get_by_str(context, str_id)
-
-
-def volume_get_host(context, volume_id):
-    """Get the host that the volume is running on."""
-    return IMPL.volume_get_host(context, volume_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):
