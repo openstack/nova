@@ -245,9 +245,12 @@ class FloatingIpCommands(object):
         else:
             floating_ips = db.floating_ip_get_all_by_host(None, host)
         for floating_ip in floating_ips:
-            print "%s\t%s\ti-%s" % (floating_ip['host'],
-                                    floating_ip['address'],
-                                    floating_ip['instance_id'])
+            instance = None
+            if floating_ip['fixed_ip']:
+                instance = floating_ip['fixed_ip']['instance']['str_id']
+            print "%s\t%s\t%s" % (floating_ip['host'],
+                                  floating_ip['address'],
+                                  instance)
 
 CATEGORIES = [
     ('user', UserCommands),

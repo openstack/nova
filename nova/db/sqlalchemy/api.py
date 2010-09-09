@@ -144,16 +144,20 @@ def floating_ip_disassociate(_context, address):
 
 
 def floating_ip_get_all(_context):
-    return models.FloatingIp.all()
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).options(joinedload_all('fixed_ip.instance')
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def floating_ip_get_all_by_host(_context, host):
     session = get_session()
-    with session.begin():
-        return session.query(models.FloatingIp
-                     ).filter_by(host=host
-                     ).filter_by(deleted=False
-                     ).all()
+    return session.query(models.FloatingIp
+                 ).options(joinedload_all('fixed_ip.instance')
+                 ).filter_by(host=host
+                 ).filter_by(deleted=False
+                 ).all()
 
 def floating_ip_get_by_address(_context, address):
     return models.FloatingIp.find_by_str(address)
