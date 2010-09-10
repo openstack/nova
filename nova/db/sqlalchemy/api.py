@@ -26,6 +26,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload_all
+from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
 
@@ -262,6 +263,15 @@ def instance_create(_context, values):
         instance_ref[key] = value
     instance_ref.save()
     return instance_ref.id
+
+
+def instance_data_get_for_project(_context, project_id):
+    session = get_session()
+    return session.query(func.count(models.Instance.id),
+                         func.sum(models.Instance.vcpus)
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).first()
 
 
 def instance_destroy(_context, instance_id):
@@ -534,6 +544,37 @@ def export_device_create(_context, values):
 ###################
 
 
+def quota_create(_context, values):
+    quota_ref = models.Quota()
+    for (key, value) in values.iteritems():
+        quota_ref[key] = value
+    quota_ref.save()
+    return quota_ref
+
+
+def quota_get(_context, project_id):
+    return models.Quota.find_by_str(project_id)
+
+
+def quota_update(_context, project_id, values):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        for (key, value) in values.iteritems():
+            quota_ref[key] = value
+        quota_ref.save(session=session)
+
+
+def quota_destroy(_context, project_id):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        quota_ref.delete(session=session)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(_context, volume_id):
     session = get_session()
     with session.begin():
@@ -621,7 +662,7 @@ def volume_get_instance(_context, volume_id):
 
 def volume_get_shelf_and_blade(_context, volume_id):
     session = get_session()
-    export_device = session.query(models.ExportDevice
+    export_device = session.query(models.exportdevice
                           ).filter_by(volume_id=volume_id
                           ).first()
     if not export_device:

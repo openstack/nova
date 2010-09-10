@@ -195,6 +195,10 @@ def instance_create(context, values):
     return IMPL.instance_create(context, values)
 
 
+def instance_data_get_for_project(context, project_id):
+    """Get (instance_count, core_count) for project."""
+    return IMPL.instance_data_get_for_project(context, project_id)
+
 def instance_destroy(context, instance_id):
     """Destroy the instance or raise if it does not exist."""
     return IMPL.instance_destroy(context, instance_id)
@@ -374,6 +378,29 @@ def export_device_count(context):
 def export_device_create(context, values):
     """Create an export_device from the values dictionary."""
     return IMPL.export_device_create(context, values)
+
+
+###################
+
+
+def quota_create(context, values):
+    """Create a quota from the values dictionary."""
+    return IMPL.quota_create(context, values)
+
+
+def quota_get(context, project_id):
+    """Retrieve a quota or raise if it does not exist."""
+    return IMPL.quota_get(context, project_id)
+
+
+def quota_update(context, project_id, values):
+    """Update a quota from the values dictionary."""
+    return IMPL.quota_update(context, project_id, values)
+
+
+def quota_destroy(context, project_id):
+    """Destroy the quota or raise if it does not exist."""
+    return IMPL.quota_destroy(context, project_id)
 
 
 ###################
