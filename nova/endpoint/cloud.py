@@ -348,7 +348,7 @@ class CloudController(object):
     @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):
         security_group = db.security_group_get_by_user_and_name(context, context.user.id, group_name)
-        security_group.delete()
+        db.security_group_destroy(context, security_group.id)
         return True
 
     @rbac.allow('projectmanager', 'sysadmin')

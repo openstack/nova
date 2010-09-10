@@ -16,6 +16,7 @@
 
 from xml.dom.minidom import parseString
 
+from nova import db
 from nova import flags
 from nova import test
 from nova.endpoint import cloud
@@ -91,7 +92,10 @@ class NWFilterTestCase(test.TrialTestCase):
                                                           cidr_ip='0.0.0.0/0')
 
         fw = libvirt_conn.NWFilterFirewall()
-        xml = fw.security_group_to_nwfilter_xml(1)
+
+        security_group = db.security_group_get_by_user_and_name({}, 'fake', 'testgroup')
+
+        xml = fw.security_group_to_nwfilter_xml(security_group.id)
 
         dom = parseString(xml)
         self.assertEqual(dom.firstChild.tagName, 'filter')
