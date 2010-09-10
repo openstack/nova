@@ -53,7 +53,7 @@ def add_lease(_mac, ip_address, _hostname, _interface):
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.lease_fixed_ip(None, ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
                   "args": {"context": None,
                            "address": ip_address}})
@@ -71,7 +71,7 @@ def del_lease(_mac, ip_address, _hostname, _interface):
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.release_fixed_ip(None, ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
                   "args": {"context": None,
                            "address": ip_address}})
