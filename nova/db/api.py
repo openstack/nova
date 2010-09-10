@@ -451,6 +451,11 @@ def security_group_create(context, values):
     return IMPL.security_group_create(context, values)
 
 
+def security_group_get_by_id(context, security_group_id):
+    """Get security group by its internal id"""
+    return IMPL.security_group_get_by_id(context, security_group_id)
+
+
 def security_group_get_by_instance(context, instance_id):
     """Get security groups to which the instance is assigned"""
     return IMPL.security_group_get_by_instance(context, instance_id)

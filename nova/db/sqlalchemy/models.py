@@ -329,8 +329,8 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
 
     parent_group_id = Column(Integer, ForeignKey('security_group.id'))
-    parent_group = relationship("SecurityGroup", backref="rules", foreign_keys=parent_group_id)
-#                                primaryjoin=SecurityGroup().id==parent_group_id)
+    parent_group = relationship("SecurityGroup", backref="rules", foreign_keys=parent_group_id,
+                                  primaryjoin=parent_group_id==SecurityGroup.id)
 
     protocol = Column(String(5)) # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
@@ -338,7 +338,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
-#    group_id = Column(Integer, ForeignKey('security_group.id'))
+    group_id = Column(Integer, ForeignKey('security_group.id'))
 
     @property
     def user(self):

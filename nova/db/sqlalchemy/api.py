@@ -595,6 +595,12 @@ def security_group_create(_context, values):
     return security_group_ref
 
 
+def security_group_get_by_id(_context, security_group_id):
+    with managed_session() as session:
+        return session.query(models.SecurityGroup) \
+                      .get(security_group_id)
+
+
 def security_group_get_by_instance(_context, instance_id):
     with managed_session() as session:
         return session.query(models.Instance) \
@@ -608,6 +614,7 @@ def security_group_get_by_user(_context, user_id):
         return session.query(models.SecurityGroup) \
                              .filter_by(user_id=user_id) \
                              .filter_by(deleted=False) \
+                             .options(eagerload('rules')) \
                              .all()
 
 def security_group_get_by_user_and_name(_context, user_id, name):

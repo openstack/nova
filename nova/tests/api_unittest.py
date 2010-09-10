@@ -293,18 +293,42 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.mox.ReplayAll()
         group.connection = self.ec2
 
-        group.authorize('tcp', 80, 80, '0.0.0.0/0')
+        group.authorize('tcp', 80, 81, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should 
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(int(group.rules[0].from_port), 80)
+                self.assertEquals(int(group.rules[0].to_port), 81)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]),  '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
         group.connection = self.ec2
 
-        group.revoke('tcp', 80, 80, '0.0.0.0/0')
+        group.revoke('tcp', 80, 81, '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
 
         self.ec2.delete_security_group(security_group_name)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        rv = self.ec2.get_all_security_groups()
+
+        self.assertEqual(len(rv), 1)
+        self.assertEqual(rv[0].name, 'default')
 
         self.manager.delete_project(project)
         self.manager.delete_user(user)
@@ -323,13 +347,16 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
                                       for x in range(random.randint(4, 8)))
+        other_security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                          for x in range(random.randint(4, 8)))
 
         group = self.ec2.create_security_group(security_group_name, 'test group')
 
         self.expect_http()
         self.mox.ReplayAll()
 
-        other_group = self.ec2.create_security_group('appserver', 'The application tier')
+        other_group = self.ec2.create_security_group(other_security_group_name,
+                                                     'some other group')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -339,9 +366,30 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         self.expect_http()
         self.mox.ReplayAll()
-        group.connection = self.ec2
 
-        group.revoke(src_group=other_group)
+        rv = self.ec2.get_all_security_groups()
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should 
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]),
+                                  '%s-%s' % (other_security_group_name, 'fake'))
+
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+
+        for group in rv:
+            if group.name == security_group_name:
+                self.expect_http()
+                self.mox.ReplayAll()
+                group.connection = self.ec2
+                group.revoke(src_group=other_group)
 
         self.expect_http()
         self.mox.ReplayAll()

@@ -213,14 +213,41 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_security_groups(self, context, **kwargs):
-        groups = {'securityGroupSet': 
-                  [{ 'groupDescription': group.description,
-                     'groupName' : group.name,
-                     'ownerId': context.user.id } for group in \
-                         db.security_group_get_by_user(context,
-                                                       context.user.id) ] }
+        groups = []
+        for group in db.security_group_get_by_user(context, context.user.id):
+            group_dict = {}
+            group_dict['groupDescription'] = group.description
+            group_dict['groupName'] = group.name
+            group_dict['ownerId'] = context.user.id
+            group_dict['ipPermissions'] = []
+            for rule in group.rules:
+                rule_dict = {}
+                rule_dict['ipProtocol'] = rule.protocol
+                rule_dict['fromPort'] = rule.from_port
+                rule_dict['toPort'] = rule.to_port
+                rule_dict['groups'] = []
+                rule_dict['ipRanges'] = []
+                if rule.group_id:
+                    foreign_group = db.security_group_get_by_id({}, rule.group_id)
+                    rule_dict['groups'] += [ { 'groupName': foreign_group.name,
+                                              'userId': foreign_group.user_id } ]
+                else:
+                    rule_dict['ipRanges'] += [ { 'cidrIp': rule.cidr } ]
+                group_dict['ipPermissions'] += [ rule_dict ]
+            groups += [ group_dict ]
 
-        return groups
+        return {'securityGroupInfo': groups }
+#
+#                 [{ 'groupDescription': group.description,
+#                     'groupName' : group.name,
+#                     'ownerId': context.user.id,
+#                     'ipPermissions' : [
+#                        { 'ipProtocol' : rule.protocol,
+#                          'fromPort' : rule.from_port,
+#                          'toPort' : rule.to_port,
+#                          'ipRanges' : [ { 'cidrIp' : rule.cidr } ] } for rule in group.rules ] } for group in \
+#
+#        return groups
 
     @rbac.allow('netadmin')
     def revoke_security_group_ingress(self, context, group_name,
