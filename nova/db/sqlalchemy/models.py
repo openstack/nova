@@ -306,26 +306,23 @@ class SecurityGroup(BASE, NovaBase):
 
 class SecurityGroupIngressRule(BASE, NovaBase):
     """Represents a rule in a security group"""
-    __tablename__ = 'security_group_rules'
+    __tablename__ = 'security_group_rule'
     id = Column(Integer, primary_key=True)
 
-    parent_group_id = Column(Integer, ForeignKey('security_group.id'))
-    parent_group = relationship("SecurityGroup", backref="rules", foreign_keys=parent_group_id,
-                                  primaryjoin=parent_group_id==SecurityGroup.id)
+    group_id = Column(Integer, ForeignKey('security_group.id'))
+    group = relationship("SecurityGroup", backref="rules",
+                         foreign_keys=group_id,
+                         primaryjoin=group_id==SecurityGroup.id)
 
     protocol = Column(String(5)) # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
+    cidr = Column(String(255))
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
-    group_id = Column(Integer, ForeignKey('security_group.id'))
+    source_group_id = Column(Integer, ForeignKey('security_group.id'))
 
-    @property
-    def user(self):
-        return auth.manager.AuthManager().get_user(self.user_id)
-
-    cidr = Column(String(255))
 
 class Network(BASE, NovaBase):
     """Represents a network"""
@@ -430,8 +427,9 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex)  # , Image, Host)
+    models = (Service, Instance, Volume, ExportDevice, FixedIp, FloatingIp,
+              Network, NetworkIndex, SecurityGroup, SecurityGroupIngressRule)
+              # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

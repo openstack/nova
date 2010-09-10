@@ -649,8 +649,6 @@ class AuthManager(object):
     def delete_user(self, user):
         """Deletes a user"""
         with self.driver() as drv:
-            for security_group in db.security_group_get_by_user(context = {}, user_id=User.safe_id(user)):
-                db.security_group_destroy({}, security_group.id)
             drv.delete_user(User.safe_id(user))
 
     def generate_key_pair(self, user, key_name):

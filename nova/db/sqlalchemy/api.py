@@ -616,20 +616,45 @@ def volume_update(_context, volume_id, values):
 ###################
 
 
-def security_group_create(_context, values):
-    security_group_ref = models.SecurityGroup()
-    for (key, value) in values.iteritems():
-        security_group_ref[key] = value
-    security_group_ref.save()
-    return security_group_ref
+def security_group_get_all(_context):
+    session = get_session()
+    return session.query(models.SecurityGroup
+                 ).options(eagerload('rules')
+                 ).filter_by(deleted=False
+                 ).all()
 
 
-def security_group_get_by_id(_context, security_group_id):
+def security_group_get(_context, security_group_id):
     session = get_session()
     with session.begin():
         return session.query(models.SecurityGroup
+                     ).options(eagerload('rules')
+                     ).get(security_group_id)
+
+
+def securitygroup_get_by_name(context, project_id, group_name):
+    session = get_session()
+    group_ref = session.query(models.SecurityGroup
                       ).options(eagerload('rules')
-                      ).get(security_group_id)
+                      ).filter_by(project_id=project_id
+                      ).filter_by(name=group_name
+                      ).filter_by(deleted=False
+                      ).first()
+    if not group_ref:
+        raise exception.NotFound(
+            'No security group named %s for project: %s' \
+             % (group_name, project_id))
+             
+    return group_ref
+    
+
+def securitygroup_get_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.SecurityGroup
+                 ).options(eagerload('rules')
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def security_group_get_by_instance(_context, instance_id):
@@ -638,34 +663,27 @@ def security_group_get_by_instance(_context, instance_id):
         return session.query(models.Instance
                       ).get(instance_id
                       ).security_groups \
-                      .all()
+                       .filter_by(deleted=False
+                      ).all()
 
 
-def security_group_get_by_user(_context, user_id):
-    session = get_session()
-    with session.begin():
-        return session.query(models.SecurityGroup
-                             ).filter_by(user_id=user_id
-                             ).filter_by(deleted=False
-                             ).options(eagerload('rules')
-                             ).all()
+def security_group_create(_context, values):
+    security_group_ref = models.SecurityGroup()
+    for (key, value) in values.iteritems():
+        security_group_ref[key] = value
+    security_group_ref.save()
+    return security_group_ref
 
-def security_group_get_by_user_and_name(_context, user_id, name):
-    session = get_session()
-    with session.begin():
-        return session.query(models.SecurityGroup
-                             ).filter_by(user_id=user_id
-                             ).filter_by(name=name
-                             ).filter_by(deleted=False
-                             ).options(eagerload('rules')
-                             ).one()
 
 def security_group_destroy(_context, security_group_id):
     session = get_session()
     with session.begin():
-        security_group = session.query(models.SecurityGroup
-                                ).get(security_group_id)
-        security_group.delete(session=session)
+        # TODO(vish): do we have to use sql here?
+        session.execute('update security_group set deleted=1 where id=:id',
+                        {'id': security_group_id})
+        session.execute('update security_group_rule set deleted=1 '
+                        'where group_id=:id',
+                        {'id': security_group_id})
 
 
 ###################

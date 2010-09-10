@@ -492,7 +492,7 @@ class NWFilterFirewall(object):
 </filter>'''
 
     def security_group_to_nwfilter_xml(self, security_group_id):
-        security_group = db.security_group_get_by_id({}, security_group_id)
+        security_group = db.security_group_get({}, security_group_id)
         rule_xml = ""
         for rule in security_group.rules:
             rule_xml += "<rule action='allow' direction='in' priority='900'>"

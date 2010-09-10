@@ -216,7 +216,8 @@ class CloudController(object):
     @rbac.allow('all')
     def describe_security_groups(self, context, **kwargs):
         groups = []
-        for group in db.security_group_get_by_user(context, context.user.id):
+        for group in db.security_group_get_by_project(context,
+                                                      context.project.id):
             group_dict = {}
             group_dict['groupDescription'] = group.description
             group_dict['groupName'] = group.name
@@ -229,10 +230,11 @@ class CloudController(object):
                 rule_dict['toPort'] = rule.to_port
                 rule_dict['groups'] = []
                 rule_dict['ipRanges'] = []
+                import pdb; pdb.set_trace()
                 if rule.group_id:
-                    foreign_group = db.security_group_get_by_id({}, rule.group_id)
-                    rule_dict['groups'] += [ { 'groupName': foreign_group.name,
-                                              'userId': foreign_group.user_id } ]
+                    source_group = db.security_group_get(context, rule.group_id)
+                    rule_dict['groups'] += [ { 'groupName': source_group.name,
+                                              'userId': source_group.user_id } ]
                 else:
                     rule_dict['ipRanges'] += [ { 'cidrIp': rule.cidr } ]
                 group_dict['ipPermissions'] += [ rule_dict ]
@@ -258,23 +260,22 @@ class CloudController(object):
                                       user_id=None,
                                       source_security_group_name=None,
                                       source_security_group_owner_id=None):
-        security_group = db.security_group_get_by_user_and_name(context,
-                                                                context.user.id,
-                                                                group_name)
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
 
         criteria = {}
 
         if source_security_group_name:
-            if source_security_group_owner_id:
-                other_user_id = source_security_group_owner_id
-            else:
-                other_user_id = context.user.id
-
-            foreign_security_group = \
-                    db.security_group_get_by_user_and_name(context,
-                                                other_user_id,
-                                                source_security_group_name)
-            criteria['group_id'] = foreign_security_group.id
+            source_project_id = self._get_source_project_id(context,
+                source_security_group_owner_id)
+                
+            source_security_group = \
+                    db.security_group_get_by_name(context,
+                                                  source_project_id,
+                                                  source_security_group_name)
+                                                  
+            criteria['group_id'] = source_security_group.id
         elif cidr_ip:
             criteria['cidr'] = cidr_ip
         else:
@@ -303,22 +304,20 @@ class CloudController(object):
                                          ip_protocol=None, cidr_ip=None,
                                          source_security_group_name=None,
                                          source_security_group_owner_id=None):
-        security_group = db.security_group_get_by_user_and_name(context,
-                                                                context.user.id,
-                                                                group_name)
-        values = { 'parent_group_id' : security_group.id }
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
+        values = { 'group_id' : security_group.id }
 
         if source_security_group_name:
-            if source_security_group_owner_id:
-                other_user_id = source_security_group_owner_id
-            else:
-                other_user_id = context.user.id
+            source_project_id = self._get_source_project_id(context,
+                source_security_group_owner_id)
 
-            foreign_security_group = \
-                    db.security_group_get_by_user_and_name(context,
-                                                other_user_id,
-                                                source_security_group_name)
-            values['group_id'] = foreign_security_group.id
+            source_security_group = \
+                    db.security_group_get_by_name(context,
+                                                  source_project_id,
+                                                  source_security_group_name)
+            values['source_group_id'] = source_security_group.id
         elif cidr_ip:
             values['cidr'] = cidr_ip
         else:
@@ -336,18 +335,38 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
         return True
+        
+    def _get_source_project_id(self, context, source_security_group_owner_id):
+        if source_security_group_owner_id:
+        # Parse user:project for source group.
+            source_parts = source_security_group_owner_id.split(':')
+                
+            # If no project name specified, assume it's same as user name.
+            # Since we're looking up by project name, the user name is not
+            # used here.  It's only read for EC2 API compatibility.
+            if len(source_parts) == 2:
+                source_project_id = parts[1]
+            else:
+                source_project_id = parts[0]
+        else:
+            source_project_id = context.project.id
+            
+        return source_project_id
 
     @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, group_description):
         db.security_group_create(context,
                                  values = { 'user_id' : context.user.id,
+                                            'project_id': context.project.id,
                                             'name': group_name,
                                             'description': group_description })
         return True
 
     @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):
-        security_group = db.security_group_get_by_user_and_name(context, context.user.id, group_name)
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
         db.security_group_destroy(context, security_group.id)
         return True
 

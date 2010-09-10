@@ -304,6 +304,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         # be good enough for that.
         for group in rv:
             if group.name == security_group_name:
+                import pdb; pdb.set_trace()
                 self.assertEquals(len(group.rules), 1)
                 self.assertEquals(int(group.rules[0].from_port), 80)
                 self.assertEquals(int(group.rules[0].to_port), 81)
