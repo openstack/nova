@@ -84,7 +84,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in db.instance_get_by_project(project_id):
+        for instance in db.instance_get_by_project(None, project_id):
             line = '%s slots=%d' % (instance.fixed_ip['str_id'],
                 INSTANCE_TYPES[instance['instance_type']]['vcpus'])
             if instance['key_name'] in result:
