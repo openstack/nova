@@ -426,3 +426,66 @@ class LibvirtConnection(object):
         """
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
+
+
+class NWFilterFirewall(object):
+    """
+    This class implements a network filtering mechanism versatile
+    enough for EC2 style Security Group filtering by leveraging
+    libvirt's nwfilter.
+
+    First, all instances get a filter ("nova-base-filter") applied.
+    This filter drops all incoming ipv4 and ipv6 connections.
+    Outgoing connections are never blocked.
+
+    Second, every security group maps to a nwfilter filter(*).
+    NWFilters can be updated at runtime and changes are applied
+    immediately, so changes to security groups can be applied at
+    runtime (as mandated by the spec).
+
+    Security group rules are named "nova-secgroup-<id>" where <id>
+    is the internal id of the security group. They're applied only on
+    hosts that have instances in the security group in question.
+
+    Updates to security groups are done by updating the data model
+    (in response to API calls) followed by a request sent to all
+    the nodes with instances in the security group to refresh the
+    security group.
+
+    Outstanding questions:
+
+    The name is unique, so would there be any good reason to sync
+    the uuid across the nodes (by assigning it from the datamodel)?
+
+
+    (*) This sentence brought to you by the redundancy department of
+        redundancy.
+    """
+
+    def __init__(self):
+        pass
+
+    def nova_base_filter(self):
+        return '''<filter name='nova-base-filter' chain='root'>
+  <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
+  <rule action='drop' direction='in' priority='1000'>
+    <ipv6 />
+  </rule>
+  <rule action='drop' direction='in' priority='1000'>
+    <ip />
+  </rule>
+</filter>'''
+
+    def security_group_to_nwfilter_xml(self, security_group_id):
+        security_group = db.security_group_get_by_id({}, security_group_id)
+        rule_xml = ""
+        for rule in security_group.rules:
+            rule_xml += "<rule action='allow' direction='in' priority='900'>"
+            if rule.cidr:
+                rule_xml += ("<ip srcipaddr='%s' protocol='%s' " + 
+                            "dstportstart='%s' dstportend='%s' />") % \
+                            (rule.cidr, rule.protocol,
+                             rule.from_port, rule.to_port)
+            rule_xml += "</rule>"
+        xml = '''<filter name='nova-secgroup-%d' chain='root'>%s</filter>''' % (security_group_id, rule_xml,)
+        return xml

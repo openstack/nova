@@ -598,6 +598,7 @@ def security_group_create(_context, values):
 def security_group_get_by_id(_context, security_group_id):
     with managed_session() as session:
         return session.query(models.SecurityGroup) \
+                      .options(eagerload('rules')) \
                       .get(security_group_id)
 
 

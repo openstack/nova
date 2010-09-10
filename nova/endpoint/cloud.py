@@ -299,7 +299,6 @@ class CloudController(object):
     def authorize_security_group_ingress(self, context, group_name,
                                          to_port=None, from_port=None,
                                          ip_protocol=None, cidr_ip=None,
-                                         user_id=None,
                                          source_security_group_name=None,
                                          source_security_group_owner_id=None):
         security_group = db.security_group_get_by_user_and_name(context,

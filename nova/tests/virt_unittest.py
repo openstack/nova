@@ -14,23 +14,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from xml.dom.minidom import parseString
+
 from nova import flags
 from nova import test
+from nova.endpoint import cloud
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 
 
 class LibvirtConnTestCase(test.TrialTestCase):
-    def test_get_uri_and_template(self):
+    def bitrot_test_get_uri_and_template(self):
         class MockDataModel(object):
+            def __getitem__(self, name):
+                return self.datamodel[name]
+
             def __init__(self):
                 self.datamodel = { 'name' : 'i-cafebabe',
                                    'memory_kb' : '1024000',
                                    'basepath' : '/some/path',
                                    'bridge_name' : 'br100',
                                    'mac_address' : '02:12:34:46:56:67',
-                                   'vcpus' : 2 }
+                                   'vcpus' : 2,
+                                   'project_id' : None }
 
         type_uri_map = { 'qemu' : ('qemu:///system',
                                 [lambda s: '<domain type=\'qemu\'>' in s,
@@ -53,7 +60,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
             self.assertEquals(uri, expected_uri)
 
             for i, check in enumerate(checks):
-                xml = conn.toXml(MockDataModel())
+                xml = conn.to_xml(MockDataModel())
                 self.assertTrue(check(xml), '%s failed check %d' % (xml, i))
 
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
@@ -67,3 +74,40 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, testuri)
 
+
+class NWFilterTestCase(test.TrialTestCase):
+    def test_stuff(self):
+        cloud_controller = cloud.CloudController()
+        class FakeContext(object):
+            pass
+
+        context = FakeContext()
+        context.user = FakeContext()
+        context.user.id = 'fake'
+        context.user.is_superuser = lambda:True
+        cloud_controller.create_security_group(context, 'testgroup', 'test group description')
+        cloud_controller.authorize_security_group_ingress(context, 'testgroup', from_port='80',
+                                                          to_port='81', ip_protocol='tcp',
+                                                          cidr_ip='0.0.0.0/0')
+
+        fw = libvirt_conn.NWFilterFirewall()
+        xml = fw.security_group_to_nwfilter_xml(1)
+
+        dom = parseString(xml)
+        self.assertEqual(dom.firstChild.tagName, 'filter')
+
+        rules = dom.getElementsByTagName('rule')
+        self.assertEqual(len(rules), 1)
+
+        # It's supposed to allow inbound traffic.
+        self.assertEqual(rules[0].getAttribute('action'), 'allow')
+        self.assertEqual(rules[0].getAttribute('direction'), 'in')
+
+        # Must be lower priority than the base filter (which blocks everything)
+        self.assertTrue(int(rules[0].getAttribute('priority')) < 1000)
+
+        ip_conditions = rules[0].getElementsByTagName('ip')
+        self.assertEqual(len(ip_conditions), 1)
+        self.assertEqual(ip_conditions[0].getAttribute('protocol'), 'tcp')
+        self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
+        self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
