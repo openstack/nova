@@ -578,7 +578,7 @@ class CloudController(object):
         base_options['security_group'] = security_group
         base_options['instance_type'] = instance_type
 
-        type_data = INSTANCE_TYPES['instance_type']
+        type_data = INSTANCE_TYPES[instance_type]
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
