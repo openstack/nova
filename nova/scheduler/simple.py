@@ -51,7 +51,10 @@ class SimpleScheduler(chance.ChanceScheduler):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
                 now = datetime.datetime.utcnow()
-                db.instance_update(context, instance_id, {'scheduled_at': now})
+                db.instance_update(context,
+                                   instance_id,
+                                   {'host': service['host'],
+                                    'scheduled_at': now})
                 return service['host']
         raise driver.NoValidHost("No hosts found")
 
@@ -67,7 +70,10 @@ class SimpleScheduler(chance.ChanceScheduler):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
                 now = datetime.datetime.utcnow()
-                db.volume_update(context, volume_id, {'scheduled_at': now})
+                db.volume_update(context,
+                                 volume_id,
+                                 {'host': service['host'],
+                                  'scheduled_at': now})
                 return service['host']
         raise driver.NoValidHost("No hosts found")
 
