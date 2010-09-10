@@ -19,6 +19,7 @@
 import logging
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import quota
 from nova import test
@@ -46,6 +47,7 @@ class QuotaTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('admin', 'admin', 'admin')
+        self.network = utils.import_object(FLAGS.network_manager)
         self.context = api.APIRequestContext(handler=None,
                                              project=self.project,
                                              user=self.user)
@@ -124,4 +126,27 @@ class QuotaTestCase(test.TrialTestCase):
                           size=10)
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
+
+    def test_too_many_gigabytes(self):
+        volume_ids = []
+        volume_id = self._create_volume(size=20)
+        volume_ids.append(volume_id)
+        self.assertRaises(cloud.QuotaError,
+                          self.cloud.create_volume,
+                          self.context,
+                          size=10)
+        for volume_id in volume_ids:
+            db.volume_destroy(self.context, volume_id)
+
+    def test_too_many_addresses(self):
+        address = '192.168.0.100'
+        try:
+            db.floating_ip_get_by_address(None, address)
+        except exception.NotFound:
+            db.floating_ip_create(None, {'address': address,
+                                         'host': FLAGS.host})
+            #float_addr = self.network.allocate_floating_ip(self.context,
+            #                                               self.project.id)
+        self.assertFailure(self.cloud.allocate_address(self.context),
+                           cloud.QuotaError)
 
