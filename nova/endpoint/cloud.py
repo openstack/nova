@@ -108,8 +108,8 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        floating_ip = db.instance_get_floating_ip_address(None,
-                                                          instance_ref['id'])
+        floating_ip = db.instance_get_floating_address(None,
+                                                       instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
