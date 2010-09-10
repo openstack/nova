@@ -362,12 +362,14 @@ class CloudController(object):
     def _format_instances(self, context, reservation_id=None):
         reservations = {}
         if reservation_id:
-            instances = db.instance_get_by_reservation(context, reservation_id)
+            instances = db.instance_get_by_reservation(context,
+                                                       reservation_id)
         else:
             if not context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
-                instances = db.instance_get_by_project(context, context.project.id)
+                instances = db.instance_get_by_project(context,
+                                                       context.project.id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -379,12 +381,15 @@ class CloudController(object):
                 'code': instance['state'],
                 'name': instance['state_description']
             }
+            fixed_addr = None
             floating_addr = None
-            if instance['fixed_ip']['floating_ips']:
-                floating_addr = instance['fixed_ip']['floating_ips'][0]['str_id']
-            i['publicDnsName'] = floating_addr
-            fixed_addr = instance['fixed_ip']['str_id']
+            if instance['fixed_ip']:
+                fixed_addr = instance['fixed_ip']['str_id']
+                if instance['fixed_ip']['floating_ips']:
+                    fixed = instance['fixed_ip']
+                    floating_addr = fixed['floating_ips'][0]['str_id']
             i['privateDnsName'] = fixed_addr
+            i['publicDnsName'] = floating_addr
             if not i['publicDnsName']:
                 i['publicDnsName'] = i['privateDnsName']
             i['dnsName'] = None
