@@ -140,6 +140,7 @@ class Service(object, service.Service):
                 logging.debug("The service database object disappeared, "
                               "Recreating it.")
                 self._create_service_ref()
+                service_ref = db.service_get(context, self.service_id)
 
             db.service_update(context,
                              self.service_id,
@@ -151,7 +152,7 @@ class Service(object, service.Service):
                 logging.error("Recovered model server connection!")
 
         # TODO(vish): this should probably only catch connection errors
-        except:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception("model server went away")

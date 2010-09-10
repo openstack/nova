@@ -38,8 +38,7 @@ class ComputeTestCase(test.TrialTestCase):
     def setUp(self):  # pylint: disable-msg=C0103
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
@@ -61,7 +60,7 @@ class ComputeTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
-        return db.instance_create(None, inst)
+        return db.instance_create(self.context, inst)
 
     @defer.inlineCallbacks
     def test_run_terminate(self):

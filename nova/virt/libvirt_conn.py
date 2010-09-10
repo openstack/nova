@@ -139,12 +139,16 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
             try:
-                instance.set_state(self.get_info(instance['name'])['state'])
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      self.get_info(instance['name'])['state'])
                 if instance.state == power_state.SHUTDOWN:
                     timer.stop()
                     d.callback(None)
             except Exception:
-                instance.set_state(power_state.SHUTDOWN)
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
                 timer.stop()
                 d.callback(None)
         timer.f = _wait_for_shutdown
@@ -186,14 +190,18 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_reboot():
             try:
-                instance.set_state(self.get_info(instance['name'])['state'])
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
                     logging.debug('instance %s: rebooted', instance['name'])
                     timer.stop()
                     d.callback(None)
             except Exception, exn:
                 logging.error('_wait_for_reboot failed: %s', exn)
-                instance.set_state(power_state.SHUTDOWN)
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
                 timer.stop()
                 d.callback(None)
         timer.f = _wait_for_reboot
@@ -204,7 +212,10 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def spawn(self, instance):
         xml = self.to_xml(instance)
-        instance.set_state(power_state.NOSTATE, 'launching')
+        db.instance_set_state(None,
+                              instance['id'],
+                              power_state.NOSTATE,
+                              'launching')
         yield self._create_image(instance, xml)
         yield self._conn.createXML(xml, 0)
         # TODO(termie): this should actually register
@@ -215,7 +226,9 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_boot():
             try:
-                instance.set_state(self.get_info(instance['name'])['state'])
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      self.get_info(instance['name'])['state'])
                 if instance.state == power_state.RUNNING:
                     logging.debug('instance %s: booted', instance['name'])
                     timer.stop()
@@ -223,7 +236,9 @@ class LibvirtConnection(object):
             except:
                 logging.exception('instance %s: failed to boot',
                                   instance['name'])
-                instance.set_state(power_state.SHUTDOWN)
+                db.instance_set_state(None,
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
                 timer.stop()
                 local_d.callback(None)
         timer.f = _wait_for_boot

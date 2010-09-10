@@ -39,8 +39,7 @@ FLAGS = flags.FLAGS
 class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)

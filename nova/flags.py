@@ -203,12 +203,6 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
-# UNUSED
-DEFINE_string('node_availability_zone', 'nova',
-              'availability zone of this node')
-DEFINE_string('host', socket.gethostname(),
-              'name of this node')
-
 DEFINE_string('sql_connection',
               'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
               'connection string for sql database')
@@ -220,4 +214,9 @@ DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
 DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
               'Manager for volume')
 
+DEFINE_string('host', socket.gethostname(),
+              'name of this node')
 
+# UNUSED
+DEFINE_string('node_availability_zone', 'nova',
+              'availability zone of this node')

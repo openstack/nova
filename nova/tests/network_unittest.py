@@ -39,7 +39,6 @@ class NetworkTestCase(test.TrialTestCase):
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
-                   fake_storage=True,
                    fake_network=True,
                    auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
                    network_size=16,
@@ -87,11 +86,12 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
         pubnet = IPy.IP(flags.FLAGS.public_range)
-        ip_str = str(pubnet[0])
+        address = str(pubnet[0])
         try:
-            db.floating_ip_get_by_address(None, ip_str)
+            db.floating_ip_get_by_address(None, address)
         except exception.NotFound:
-            db.floating_ip_create(None, ip_str, FLAGS.host)
+            db.floating_ip_create(None, {'address': address,
+                                         'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.projects[0].id)
         fix_addr = self._create_address(0)

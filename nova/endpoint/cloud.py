@@ -78,7 +78,7 @@ class CloudController(object):
         if not os.path.exists(root_ca_path):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
-            # TODO: Do this with M2Crypto instead
+            # TODO(vish): Do this with M2Crypto instead
             utils.runthis("Generating root CA: %s", "sh genrootca.sh")
             os.chdir(start)
 
@@ -93,28 +93,30 @@ class CloudController(object):
                 result[instance['key_name']] = [line]
         return result
 
-    def get_metadata(self, ipaddress):
-        i = db.fixed_ip_get_instance(ipaddress)
-        if i is None:
+    def get_metadata(self, address):
+        instance_ref = db.fixed_ip_get_instance(None, address)
+        if instance_ref is None:
             return None
-        mpi = self._get_mpi_data(i['project_id'])
-        if i['key_name']:
+        mpi = self._get_mpi_data(instance_ref['project_id'])
+        if instance_ref['key_name']:
             keys = {
                 '0': {
-                    '_name': i['key_name'],
-                    'openssh-key': i['key_data']
+                    '_name': instance_ref['key_name'],
+                    'openssh-key': instance_ref['key_data']
                 }
             }
         else:
             keys = ''
-        hostname = i['hostname']
+        hostname = instance_ref['hostname']
+        floating_ip = db.instance_get_floating_ip_address(None,
+                                                          instance_ref['id'])
         data = {
-            'user-data': base64.b64decode(i['user_data']),
+            'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
-                'ami-id': i['image_id'],
-                'ami-launch-index': i['ami_launch_index'],
-                'ami-manifest-path': 'FIXME', # image property
-                'block-device-mapping': { # TODO: replace with real data
+                'ami-id': instance_ref['image_id'],
+                'ami-launch-index': instance_ref['ami_launch_index'],
+                'ami-manifest-path': 'FIXME',
+                'block-device-mapping': {  # TODO(vish): replace with real data
                     'ami': 'sda1',
                     'ephemeral0': 'sda2',
                     'root': '/dev/sda1',
@@ -122,27 +124,27 @@ class CloudController(object):
                 },
                 'hostname': hostname,
                 'instance-action': 'none',
-                'instance-id': i['instance_id'],
-                'instance-type': i.get('instance_type', ''),
+                'instance-id': instance_ref['str_id'],
+                'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
-                'local-ipv4': i['private_dns_name'], # TODO: switch to IP
-                'kernel-id': i.get('kernel_id', ''),
+                'local-ipv4': address,
+                'kernel-id': instance_ref['kernel_id'],
                 'placement': {
-                    'availaibility-zone': i.get('availability_zone', 'nova'),
+                    'availaibility-zone': instance_ref['availability_zone'],
                 },
                 'public-hostname': hostname,
-                'public-ipv4': i.get('dns_name', ''), # TODO: switch to IP
+                'public-ipv4': floating_ip or '',
                 'public-keys': keys,
-                'ramdisk-id': i.get('ramdisk_id', ''),
-                'reservation-id': i['reservation_id'],
-                'security-groups': i.get('groups', ''),
+                'ramdisk-id': instance_ref['ramdisk_id'],
+                'reservation-id': instance_ref['reservation_id'],
+                'security-groups': '',
                 'mpi': mpi
             }
         }
-        if False: # TODO: store ancestor ids
+        if False:  # TODO(vish): store ancestor ids
             data['ancestor-ami-ids'] = []
-        if i.get('product_codes', None):
-            data['product-codes'] = i['product_codes']
+        if False:  # TODO(vish): store product codes
+            data['product-codes'] = []
         return data
 
     @rbac.allow('all')
@@ -376,7 +378,7 @@ class CloudController(object):
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
-        # v['createTime'] = volume['create_time']
+        v['createTime'] = volume['created_at']
         if context.user.is_admin():
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
@@ -419,7 +421,6 @@ class CloudController(object):
         # TODO(vish): abstract status checking?
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
-        #volume.start_attach(instance_id, device)
         instance_ref = db.instance_get_by_str(context, instance_id)
         host = db.instance_get_host(context, instance_ref['id'])
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -445,7 +446,6 @@ class CloudController(object):
         if volume_ref['status'] == "available":
             raise exception.Error("Volume is already detached")
         try:
-            #volume.start_detach()
             host = db.instance_get_host(context, instance_ref['id'])
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
@@ -545,15 +545,12 @@ class CloudController(object):
         for floating_ip_ref in iterator:
             address = floating_ip_ref['id_str']
             instance_ref = db.floating_ip_get_instance(address)
-            address_rv = {
-                'public_ip': address,
-                'instance_id': instance_ref['id_str']
-            }
+            address_rv = {'public_ip': address,
+                          'instance_id': instance_ref['id_str']}
             if context.user.is_admin():
-                address_rv['instance_id'] = "%s (%s)" % (
-                    address_rv['instance_id'],
-                    floating_ip_ref['project_id'],
-                )
+                details = "%s (%s)" % (address_rv['instance_id'],
+                                       floating_ip_ref['project_id'])
+                address_rv['instance_id'] = details
             addresses.append(address_rv)
         return {'addressesSet': addresses}
 
@@ -702,7 +699,6 @@ class CloudController(object):
     @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        # network_topic = yield self._get_network_topic(context)
         for id_str in instance_id:
             logging.debug("Going to try and terminate %s" % id_str)
             try:

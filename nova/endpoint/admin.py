@@ -53,7 +53,6 @@ def project_dict(project):
 def host_dict(host):
     """Convert a host model object to a result dict"""
     if host:
-        # FIXME(vish)
         return host.state
     else:
         return {}
@@ -195,6 +194,8 @@ class AdminController(object):
             raise exception.ApiError('operation must be add or remove')
         return True
 
+    # FIXME(vish): these host commands don't work yet, perhaps some of the
+    #              required data can be retrieved from service objects?
     @admin_only
     def describe_hosts(self, _context, **_kwargs):
         """Returns status info for all nodes. Includes:

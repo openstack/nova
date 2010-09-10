@@ -59,7 +59,7 @@ class ComputeManager(manager.Manager):
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         state = self.driver.get_info(instance_ref.name)['state']
-        self.db.instance_state(context, instance_id, state)
+        self.db.instance_set_state(context, instance_id, state)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -76,17 +76,19 @@ class ComputeManager(manager.Manager):
                                 {'host': self.host})
 
         # TODO(vish) check to make sure the availability zone matches
-        self.db.instance_state(context,
-                               instance_id,
-                               power_state.NOSTATE,
-                               'spawning')
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'spawning')
 
         try:
             yield self.driver.spawn(instance_ref)
-        except:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable-msg=W0702
             logging.exception("instance %s: Failed to spawn",
                               instance_ref['name'])
-            self.db.instance_state(context, instance_id, power_state.SHUTDOWN)
+            self.db.instance_set_state(context,
+                                       instance_id,
+                                       power_state.SHUTDOWN)
 
         self._update_state(context, instance_id)
 
@@ -97,16 +99,15 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: terminating", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        # TODO(vish): move this logic to layer?
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        self.db.instance_state(context,
-                               instance_id,
-                               power_state.NOSTATE,
-                               'shutting_down')
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'shutting_down')
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
@@ -128,10 +129,10 @@ class ComputeManager(manager.Manager):
                      power_state.RUNNING))
 
         logging.debug('instance %s: rebooting', instance_ref['name'])
-        self.db.instance_state(context,
-                               instance_id,
-                               power_state.NOSTATE,
-                               'rebooting')
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'rebooting')
         yield self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 

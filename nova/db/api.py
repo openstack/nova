@@ -30,10 +30,9 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
-                            sqlalchemy='nova.db.sqlalchemy.api')
+                           sqlalchemy='nova.db.sqlalchemy.api')
 
 
-# TODO(vish): where should these exceptions go?
 class NoMoreAddresses(exception.Error):
     """No more available addresses"""
     pass
@@ -87,9 +86,9 @@ def floating_ip_allocate_address(context, host, project_id):
     return IMPL.floating_ip_allocate_address(context, host, project_id)
 
 
-def floating_ip_create(context, address, host):
-    """Create a floating ip for a given address on the specified host."""
-    return IMPL.floating_ip_create(context, address, host)
+def floating_ip_create(context, values):
+    """Create a floating ip from the values dictionary."""
+    return IMPL.floating_ip_create(context, values)
 
 
 def floating_ip_disassociate(context, address):
@@ -231,9 +230,9 @@ def instance_is_vpn(context, instance_id):
     return IMPL.instance_is_vpn(context, instance_id)
 
 
-def instance_state(context, instance_id, state, description=None):
+def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
-    return IMPL.instance_state(context, instance_id, state, description)
+    return IMPL.instance_set_state(context, instance_id, state, description)
 
 
 def instance_update(context, instance_id, values):
