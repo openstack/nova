@@ -68,11 +68,6 @@ class AddressAlreadyAllocated(exception.Error):
     pass
 
 
-class AddressNotAllocated(exception.Error):
-    """Address has not been allocated"""
-    pass
-
-
 class NetworkManager(manager.Manager):
     """Implements common network manager functionality
 
@@ -236,7 +231,7 @@ class VlanManager(NetworkManager):
         logging.debug("Leasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         if not fixed_ip_ref['allocated']:
-            raise AddressNotAllocated(address)
+            logging.warn("IP %s leased that was already deallocated", address)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': True})
