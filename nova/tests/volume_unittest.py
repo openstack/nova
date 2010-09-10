@@ -108,7 +108,7 @@ class VolumeTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
-        instance_id = db.instance_create(self.context, inst)
+        instance_id = db.instance_create(self.context, inst)['id']
         mountpoint = "/dev/sdf"
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)

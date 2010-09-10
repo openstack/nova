@@ -46,47 +46,48 @@ class NovaBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
 
     @classmethod
-    def all(cls, session=None):
+    def all(cls, session=None, deleted=False):
         """Get all objects of this type"""
         if not session:
             session = get_session()
         return session.query(cls
-                     ).filter_by(deleted=False
+                     ).filter_by(deleted=deleted
                      ).all()
 
     @classmethod
-    def count(cls, session=None):
+    def count(cls, session=None, deleted=False):
         """Count objects of this type"""
         if not session:
             session = get_session()
         return session.query(cls
-                     ).filter_by(deleted=False
+                     ).filter_by(deleted=deleted
                      ).count()
 
     @classmethod
-    def find(cls, obj_id, session=None):
+    def find(cls, obj_id, session=None, deleted=False):
         """Find object by id"""
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(id=obj_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for id %s" % obj_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         """Find object by str_id"""
         int_id = int(str_id.rpartition('-')[2])
-        return cls.find(int_id, session=session)
+        return cls.find(int_id, session=session, deleted=deleted)
 
     @property
     def str_id(self):
@@ -103,6 +104,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
+        self.deleted_at = datetime.datetime.now()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -166,14 +168,14 @@ class Service(BASE, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, host, binary, session=None):
+    def find_by_args(cls, host, binary, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(host=host
                          ).filter_by(binary=binary
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for %s, %s" % (host,
@@ -230,6 +232,8 @@ class Instance(BASE, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
@@ -331,13 +335,13 @@ class FixedIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(address=str_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % str_id)
@@ -360,16 +364,15 @@ class FloatingIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(address=str_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
-            session.rollback()
             new_exc = exception.NotFound("No model for address %s" % str_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 

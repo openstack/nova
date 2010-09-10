@@ -260,7 +260,7 @@ class CloudController(object):
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
-                'host',
+                volume['host'],
                 volume['instance_id'],
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
@@ -299,7 +299,7 @@ class CloudController(object):
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
-        host = db.instance_get_host(context, instance_ref['id'])
+        host = instance_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
                                  "args": {"context": None,
@@ -323,7 +323,7 @@ class CloudController(object):
         if volume_ref['status'] == "available":
             raise exception.Error("Volume is already detached")
         try:
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
                                  "args": {"context": None,
@@ -379,11 +379,11 @@ class CloudController(object):
                 'code': instance['state'],
                 'name': instance['state_description']
             }
-            floating_addr = db.instance_get_floating_address(context,
-                                                             instance['id'])
+            floating_addr = None
+            if instance['fixed_ip']['floating_ips']:
+                floating_addr = instance['fixed_ip']['floating_ips'][0]['str_id']
             i['publicDnsName'] = floating_addr
-            fixed_addr = db.instance_get_fixed_address(context,
-                                                       instance['id'])
+            fixed_addr = instance['fixed_ip']['str_id']
             i['privateDnsName'] = fixed_addr
             if not i['publicDnsName']:
                 i['publicDnsName'] = i['privateDnsName']
@@ -420,10 +420,11 @@ class CloudController(object):
             iterator = db.floating_ip_get_by_project(context,
                                                      context.project.id)
         for floating_ip_ref in iterator:
-            address = floating_ip_ref['id_str']
-            instance_ref = db.floating_ip_get_instance(address)
+            address = floating_ip_ref['str_id']
+            instance_ref = db.floating_ip_get_instance(context, address)
+            instance_id = instance_ref['str_id']
             address_rv = {'public_ip': address,
-                          'instance_id': instance_ref['id_str']}
+                          'instance_id': instance_id}
             if context.user.is_admin():
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
@@ -448,9 +449,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "deallocate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -461,11 +462,10 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id'],
-                                   "fixed_ip": fixed_ip_ref['str_id'],
-                                   "instance_id": instance_ref['id']}})
+                 {"method": "associate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id'],
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
@@ -474,16 +474,16 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "disassociate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         network_ref = db.project_get_network(context, context.project.id)
-        host = db.network_get_host(context, network_ref['id'])
+        host = network_ref['host']
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
                                   {"method": "set_network_host",
@@ -543,7 +543,7 @@ class CloudController(object):
         base_options['security_group'] = security_group
 
         for num in range(int(kwargs['max_count'])):
-            inst_id = db.instance_create(context, base_options)
+            inst_id = db.instance_create(context, base_options)['id']
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()
@@ -609,7 +609,7 @@ class CloudController(object):
                 #             we will need to cast here.
                 db.fixed_ip_deallocate(context, address)
 
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             if host:
                 rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
@@ -624,7 +624,7 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
             instance_ref = db.instance_get_by_str(context, id_str)
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "reboot_instance",
                       "args": {"context": None,
@@ -635,11 +635,11 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
-        host = db.volume_get_host(context, volume_ref['id'])
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+        host = volume_ref['host']
+        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
                              "args": {"context": None,
-                                      "volume_id": volume_id}})
+                                      "volume_id": volume_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('all')

@@ -56,12 +56,12 @@ class NetworkTestCase(test.TrialTestCase):
                                                              name))
             # create the necessary network data for the project
             self.network.set_network_host(self.context, self.projects[i].id)
-        instance_id = db.instance_create(None,
+        instance_ref = db.instance_create(None,
                                          {'mac_address': utils.generate_mac()})
-        self.instance_id = instance_id
-        instance_id = db.instance_create(None,
+        self.instance_id = instance_ref['id']
+        instance_ref = db.instance_create(None,
                                          {'mac_address': utils.generate_mac()})
-        self.instance2_id = instance_id
+        self.instance2_id = instance_ref['id']
 
     def tearDown(self):  # pylint: disable-msg=C0103
         super(NetworkTestCase, self).tearDown()

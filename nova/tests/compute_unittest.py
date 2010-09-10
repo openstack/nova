@@ -18,6 +18,8 @@
 """
 Tests For Compute
 """
+
+import datetime
 import logging
 
 from twisted.internet import defer
@@ -60,7 +62,7 @@ class ComputeTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
-        return db.instance_create(self.context, inst)
+        return db.instance_create(self.context, inst)['id']
 
     @defer.inlineCallbacks
     def test_run_terminate(self):
@@ -78,6 +80,24 @@ class ComputeTestCase(test.TrialTestCase):
         instances = db.instance_get_all(None)
         logging.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
+
+    @defer.inlineCallbacks
+    def test_run_terminate_timestamps(self):
+        """Make sure it is possible to  run and terminate instance"""
+        instance_id = self._create_instance()
+        instance_ref = db.instance_get(self.context, instance_id)
+        self.assertEqual(instance_ref['launched_at'], None)
+        self.assertEqual(instance_ref['terminated_at'], None)
+        launch = datetime.datetime.utcnow()
+        yield self.compute.run_instance(self.context, instance_id)
+        instance_ref = db.instance_get(self.context, instance_id)
+        self.assert_(instance_ref['launched_at'] > launch)
+        self.assertEqual(instance_ref['terminated_at'], None)
+        terminate = datetime.datetime.utcnow()
+        yield self.compute.terminate_instance(self.context, instance_id)
+        instance_ref = db.instance_get({'deleted': True}, instance_id)
+        self.assert_(instance_ref['launched_at'] < terminate)
+        self.assert_(instance_ref['terminated_at'] > terminate)
 
     @defer.inlineCallbacks
     def test_reboot(self):
