@@ -391,9 +391,7 @@ class CloudController(object):
                     floating_addr = fixed['floating_ips'][0]['str_id']
             i['privateDnsName'] = fixed_addr
             i['publicDnsName'] = floating_addr
-            if not i['publicDnsName']:
-                i['publicDnsName'] = i['privateDnsName']
-            i['dnsName'] = None
+            i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
             if context.user.is_admin():
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
