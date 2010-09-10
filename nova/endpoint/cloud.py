@@ -450,7 +450,6 @@ class CloudController(object):
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
         # check quota
-        print quota.allowed_floating_ips(context, 1)
         if quota.allowed_floating_ips(context, 1) < 1:
             logging.warn("Quota exceeeded for %s, tried to allocate address",
                          context.project.id)

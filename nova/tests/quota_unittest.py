@@ -147,16 +147,9 @@ class QuotaTestCase(test.TrialTestCase):
                                          'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
-        # NOTE(vish): This assert doesn't work. When cloud attempts to
+        # NOTE(vish): This assert never fails. When cloud attempts to
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
         self.assertFailure(self.cloud.allocate_address(self.context),
                            cloud.QuotaError)
-        try:
-            yield self.cloud.allocate_address(self.context)
-            self.fail('Should have raised QuotaError')
-        except cloud.QuotaError:
-            pass
-
-
