@@ -232,6 +232,7 @@ class Instance(BASE, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
+    scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -265,6 +266,7 @@ class Volume(BASE, NovaBase):
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+    scheduled_at = Column(DateTime)
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
@@ -373,7 +375,6 @@ class FloatingIp(BASE, NovaBase):
                          ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
-            session.rollback()
             new_exc = exception.NotFound("No model for address %s" % str_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 

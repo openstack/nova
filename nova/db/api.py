@@ -51,9 +51,43 @@ class NoMoreNetworks(exception.Error):
 ###################
 
 
+def service_destroy(context, instance_id):
+    """Destroy the service or raise if it does not exist."""
+    return IMPL.service_destroy(context, instance_id)
+
+
 def service_get(context, service_id):
     """Get an service or raise if it does not exist."""
     return IMPL.service_get(context, service_id)
+
+
+def service_get_all_by_topic(context, topic):
+    """Get all compute services for a given topic """
+    return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_compute_sorted(context):
+    """Get all compute services sorted by instance count
+
+    Returns a list of (Service, instance_count) tuples
+    """
+    return IMPL.service_get_all_compute_sorted(context)
+
+
+def service_get_all_network_sorted(context):
+    """Get all network services sorted by network count
+
+    Returns a list of (Service, network_count) tuples
+    """
+    return IMPL.service_get_all_network_sorted(context)
+
+
+def service_get_all_volume_sorted(context):
+    """Get all volume services sorted by volume count
+
+    Returns a list of (Service, volume_count) tuples
+    """
+    return IMPL.service_get_all_volume_sorted(context)
 
 
 def service_get_by_args(context, host, binary):
@@ -91,6 +125,16 @@ def floating_ip_create(context, values):
     return IMPL.floating_ip_create(context, values)
 
 
+def floating_ip_deallocate(context, address):
+    """Deallocate an floating ip by address"""
+    return IMPL.floating_ip_deallocate(context, address)
+
+
+def floating_ip_destroy(context, address):
+    """Destroy the floating_ip or raise if it does not exist."""
+    return IMPL.floating_ip_destroy(context, address)
+
+
 def floating_ip_disassociate(context, address):
     """Disassociate an floating ip from a fixed ip by address.
 
@@ -99,16 +143,21 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_deallocate(context, address):
-    """Deallocate an floating ip by address"""
-    return IMPL.floating_ip_deallocate(context, address)
-
-
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
                                                floating_address,
                                                fixed_address)
+
+
+def floating_ip_get_all(context):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all(context)
+
+
+def floating_ip_get_all_by_host(context, host):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all_by_host(context, host)
 
 
 def floating_ip_get_by_address(context, address):
@@ -220,11 +269,6 @@ def instance_get_by_str(context, str_id):
     return IMPL.instance_get_by_str(context, str_id)
 
 
-def instance_get_host(context, instance_id):
-    """Get the host that the instance is running on."""
-    return IMPL.instance_get_host(context, instance_id)
-
-
 def instance_is_vpn(context, instance_id):
     """True if instance is a vpn."""
     return IMPL.instance_is_vpn(context, instance_id)
@@ -296,11 +340,6 @@ def network_get_associated_fixed_ips(context, network_id):
 def network_get_by_bridge(context, bridge):
     """Get an network or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
-
-
-def network_get_host(context, network_id):
-    """Get host assigned to network or raise"""
-    return IMPL.network_get_host(context, network_id)
 
 
 def network_get_index(context, network_id):
@@ -422,11 +461,6 @@ def volume_get_by_project(context, project_id):
 def volume_get_by_str(context, str_id):
     """Get a volume by string id."""
     return IMPL.volume_get_by_str(context, str_id)
-
-
-def volume_get_host(context, volume_id):
-    """Get the host that the volume is running on."""
-    return IMPL.volume_get_host(context, volume_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):
