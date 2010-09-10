@@ -54,6 +54,8 @@ class SchedulerManager(manager.Manager):
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
+        print topic
+        print args
         try:
             host = getattr(self.driver, driver_method)(context, *args, **kwargs)
         except AttributeError:

@@ -121,7 +121,6 @@ class SimpleDriverTestCase(test.TrialTestCase):
         instance_id = self._create_instance()
         self.service1.run_instance(self.context, instance_id)
         host = self.scheduler.driver.schedule_run_instance(self.context,
-                                                           'compute',
                                                            instance_id)
         self.assertEqual(host, 'host2')
         self.service1.terminate_instance(self.context, instance_id)
