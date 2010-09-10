@@ -114,7 +114,7 @@ class CloudController(object):
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
                 'ami-id': instance_ref['image_id'],
-                'ami-launch-index': instance_ref['ami_launch_index'],
+                'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
                 'block-device-mapping': {  # TODO(vish): replace with real data
                     'ami': 'sda1',
@@ -130,7 +130,7 @@ class CloudController(object):
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
                 'placement': {
-                    'availaibility-zone': instance_ref['availability_zone'],
+                    'availability-zone': 'nova' # TODO(vish): real zone
                 },
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
