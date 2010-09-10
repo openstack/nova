@@ -91,6 +91,11 @@ def floating_ip_create(context, values):
     return IMPL.floating_ip_create(context, values)
 
 
+def floating_ip_count_by_project(context, project_id):
+    """Count floating ips used by project."""
+    return IMPL.floating_ip_count_by_project(context, project_id)
+
+
 def floating_ip_deallocate(context, address):
     """Deallocate an floating ip by address"""
     return IMPL.floating_ip_deallocate(context, address)
@@ -198,6 +203,7 @@ def instance_create(context, values):
 def instance_data_get_for_project(context, project_id):
     """Get (instance_count, core_count) for project."""
     return IMPL.instance_data_get_for_project(context, project_id)
+
 
 def instance_destroy(context, instance_id):
     """Destroy the instance or raise if it does not exist."""
@@ -419,6 +425,11 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return IMPL.volume_create(context, values)
+
+
+def volume_data_get_for_project(context, project_id):
+    """Get (volume_count, gigabytes) for project."""
+    return IMPL.volume_data_get_for_project(context, project_id)
 
 
 def volume_destroy(context, volume_id):

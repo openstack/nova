@@ -469,9 +469,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "deallocate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -482,11 +482,10 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id'],
-                                   "fixed_ip": fixed_ip_ref['str_id'],
-                                   "instance_id": instance_ref['id']}})
+                 {"method": "associate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id'],
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
@@ -495,9 +494,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "disassociate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks

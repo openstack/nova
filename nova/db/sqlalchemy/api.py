@@ -101,6 +101,14 @@ def floating_ip_create(_context, values):
     return floating_ip_ref['address']
 
 
+def floating_ip_count_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).count()
+
+
 def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
     session = get_session()
     with session.begin():
@@ -267,11 +275,13 @@ def instance_create(_context, values):
 
 def instance_data_get_for_project(_context, project_id):
     session = get_session()
-    return session.query(func.count(models.Instance.id),
-                         func.sum(models.Instance.vcpus)
-                 ).filter_by(project_id=project_id
-                 ).filter_by(deleted=False
-                 ).first()
+    result = session.query(func.count(models.Instance.id),
+                           func.sum(models.Instance.vcpus)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
 
 
 def instance_destroy(_context, instance_id):
@@ -612,6 +622,17 @@ def volume_create(_context, values):
     return volume_ref
 
 
+def volume_data_get_for_project(_context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Volume.id),
+                           func.sum(models.Volume.size)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
+
+
 def volume_destroy(_context, volume_id):
     session = get_session()
     with session.begin():
@@ -662,7 +683,7 @@ def volume_get_instance(_context, volume_id):
 
 def volume_get_shelf_and_blade(_context, volume_id):
     session = get_session()
-    export_device = session.query(models.exportdevice
+    export_device = session.query(models.ExportDevice
                           ).filter_by(volume_id=volume_id
                           ).first()
     if not export_device:
