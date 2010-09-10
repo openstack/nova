@@ -109,7 +109,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
-        return db.instance_create(self.context, inst)
+        return db.instance_create(self.context, inst)['id']
 
     def test_hosts_are_up(self):
         # NOTE(vish): constructing service without create method
