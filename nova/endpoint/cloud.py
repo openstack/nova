@@ -550,12 +550,13 @@ class CloudController(object):
         base_options['security_group'] = security_group
 
         for num in range(int(kwargs['max_count'])):
-            inst_id = db.instance_create(context, base_options)['id']
+            instance_ref = db.instance_create(context, base_options)
+            inst_id = instance_ref['id']
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
-            inst['hostname'] = inst_id
+            inst['hostname'] = instance_ref['str_id']
             db.instance_update(context, inst_id, inst)
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
