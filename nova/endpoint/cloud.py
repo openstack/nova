@@ -451,9 +451,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "deallocate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -464,11 +464,10 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id'],
-                                   "fixed_ip": fixed_ip_ref['str_id'],
-                                   "instance_id": instance_ref['id']}})
+                 {"method": "associate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id'],
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
@@ -477,9 +476,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "disassociate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
@@ -489,9 +488,9 @@ class CloudController(object):
         host = network_ref['host']
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "set_network_host",
-                                     "args": {"context": None,
-                                              "project_id": context.project.id}})
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": context.project.id}})
         defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -546,7 +545,7 @@ class CloudController(object):
         base_options['security_group'] = security_group
 
         for num in range(int(kwargs['max_count'])):
-            inst_id = db.instance_create(context, base_options)
+            inst_id = db.instance_create(context, base_options)['id']
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()
