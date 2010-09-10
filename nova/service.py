@@ -62,10 +62,11 @@ class Service(object, service.Service):
 
 
     def _create_service_ref(self):
-        self.service_id = db.service_create(None, {'host': self.host,
-                                                 'binary': self.binary,
-                                                 'topic': self.topic,
-                                                 'report_count': 0})
+        service_ref = db.service_create(None, {'host': self.host,
+                                               'binary': self.binary,
+                                               'topic': self.topic,
+                                               'report_count': 0})
+        self.service_id = service_ref['id']
 
     def __getattr__(self, key):
         try:
