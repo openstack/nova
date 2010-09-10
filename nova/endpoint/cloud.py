@@ -529,7 +529,7 @@ class CloudController(object):
                          context.project.id, min_instances)
             raise QuotaError("Instance quota exceeded. You can only "
                              "run %s more instances of this type." %
-                             num_instances)
+                             num_instances, "InstanceLimitExceeded")
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
