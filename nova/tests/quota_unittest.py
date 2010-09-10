@@ -65,7 +65,7 @@ class QuotaTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.large'
         inst['vcpus'] = cores
         inst['mac_address'] = utils.generate_mac()
-        return db.instance_create(self.context, inst)
+        return db.instance_create(self.context, inst)['id']
 
     def _create_volume(self, size=10):
         """Create a test volume"""

@@ -583,8 +583,8 @@ class CloudController(object):
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
 
-        for num in range():
-            inst_id = db.instance_create(context, base_options)
+        for num in range(num_instances):
+            inst_id = db.instance_create(context, base_options)['id']
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()

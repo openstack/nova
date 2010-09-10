@@ -60,7 +60,7 @@ def service_create(_context, values):
     for (key, value) in values.iteritems():
         service_ref[key] = value
     service_ref.save()
-    return service_ref.id
+    return service_ref
 
 
 def service_update(_context, service_id, values):
@@ -270,7 +270,7 @@ def instance_create(_context, values):
     for (key, value) in values.iteritems():
         instance_ref[key] = value
     instance_ref.save()
-    return instance_ref.id
+    return instance_ref
 
 
 def instance_data_get_for_project(_context, project_id):
