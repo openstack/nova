@@ -206,6 +206,12 @@ class AuthTestCase(test.BaseTestCase):
         self.assert_(len(self.manager.get_projects()) > 1)
         self.assertEqual(len(self.manager.get_projects('test2')), 1)
 
+    def test_220_can_modify_project(self):
+        self.manager.modify_project('testproj', 'test2', 'new description')
+        project = self.manager.get_project('testproj')
+        self.assertEqual(project.project_manager_id, 'test2')
+        self.assertEqual(project.description, 'new description')
+
     def test_299_can_delete_project(self):
         self.manager.delete_project('testproj')
         self.assertFalse(filter(lambda p: p.name == 'testproj', self.manager.get_projects()))
