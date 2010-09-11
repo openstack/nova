@@ -96,6 +96,10 @@ class NetworkManager(manager.Manager):
         """Gets a fixed ip from the pool"""
         raise NotImplementedError()
 
+    def deallocate_fixed_ip(self, context, instance_id, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        raise NotImplementedError()
+
     def setup_fixed_ip(self, context, address):
         """Sets up rules for fixed ip"""
         raise NotImplementedError()
@@ -174,6 +178,11 @@ class FlatManager(NetworkManager):
         self.db.fixed_ip_instance_associate(context, address, instance_id)
         return address
 
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_deallocate(context, address)
+        self.db.fixed_ip_instance_disassociate(context, address)
+
     def setup_compute_network(self, context, project_id):
         """Network is created manually"""
         pass
@@ -215,6 +224,14 @@ class VlanManager(NetworkManager):
                                                 network_ref['id'])
         self.db.fixed_ip_instance_associate(context, address, instance_id)
         return address
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_deallocate(context, address)
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        if not fixed_ip_ref['leased']:
+            self.db.fixed_ip_instance_disassociate(context, address)
+
 
     def setup_fixed_ip(self, context, address):
         """Sets forwarding rules and dhcp for fixed ip"""
@@ -258,13 +275,11 @@ class VlanManager(NetworkManager):
         if instance_ref['mac_address'] != mac:
             raise exception.Error("IP %s released from bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
-        if fixed_ip_ref['allocated']:
+        self.db.fixed_ip_update(context, address, {'leased': False})
+        if not fixed_ip_ref['allocated']:
+            self.db.fixed_ip_instance_disassociate(context, address)
+        else:
             logging.warn("IP %s released that is still allocated", address)
-            self.db.fixed_ip_update(context, address, {'leased': False})
-            return
-        self.db.fixed_ip_update(context, address, {'allocated': False,
-                                                   'leased': False})
-        self.db.fixed_ip_instance_disassociate(context, address)
 
     def allocate_network(self, context, project_id):
         """Set up the network"""

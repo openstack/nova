@@ -185,6 +185,7 @@ def fixed_ip_allocate(_context, network_id):
                              ).filter_by(allocated=False
                              ).filter_by(leased=False
                              ).filter_by(deleted=False
+                             ).filter_by(instance=None
                              ).with_lockmode('update'
                              ).first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
