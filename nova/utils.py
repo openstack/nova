@@ -29,6 +29,8 @@ import subprocess
 import socket
 import sys
 
+from twisted.internet.threads import deferToThread
+
 from nova import exception
 from nova import flags
 from nova.exception import ProcessExecutionError
@@ -37,6 +39,16 @@ from nova.exception import ProcessExecutionError
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
+class ProcessExecutionError(IOError):
+    def __init__(   self, stdout=None, stderr=None, exit_code=None, cmd=None,
+                    description=None):
+        if description is None:
+            description = "Unexpected error while running command."
+        if exit_code is None:
+            exit_code = '-'
+        message = "%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r" % (
+                  description, cmd, exit_code, stdout, stderr)
+        IOError.__init__(self, message)
 
 def import_class(import_str):
     """Returns a class from a string including module and class"""
@@ -47,6 +59,14 @@ def import_class(import_str):
     except (ImportError, ValueError, AttributeError):
         raise exception.NotFound('Class %s cannot be found' % class_str)
 
+def import_object(import_str):
+    """Returns an object including a module or module and class"""
+    try:
+        __import__(import_str)
+        return sys.modules[import_str]
+    except ImportError:
+        cls = import_class(import_str)
+        return cls()
 
 def fetchfile(url, target):
     logging.debug("Fetching %s" % url)
@@ -60,6 +80,7 @@ def fetchfile(url, target):
     execute("curl --fail %s -o %s" % (url, target))
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
+    logging.debug("Running cmd: %s", cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -131,8 +152,7 @@ def last_octet(address):
 
 
 def get_my_ip():
-    ''' returns the actual ip of the local machine.
-    '''
+    """Returns the actual ip of the local machine."""
     if getattr(FLAGS, 'fake_tests', None):
         return '127.0.0.1'
     try:
@@ -154,3 +174,39 @@ def isotime(at=None):
 
 def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
+
+
+class LazyPluggable(object):
+    """A pluggable backend loaded lazily based on some value."""
+
+    def __init__(self, pivot, **backends):
+        self.__backends = backends
+        self.__pivot = pivot
+        self.__backend = None
+
+    def __get_backend(self):
+        if not self.__backend:
+            backend_name = self.__pivot.value
+            if backend_name not in self.__backends:
+                raise exception.Error('Invalid backend: %s' % backend_name)
+
+            backend = self.__backends[backend_name]
+            if type(backend) == type(tuple()):
+                name = backend[0]
+                fromlist = backend[1]
+            else:
+                name = backend
+                fromlist = backend
+
+            self.__backend = __import__(name, None, None, fromlist)
+            logging.info('backend %s', self.__backend)
+        return self.__backend
+
+    def __getattr__(self, key):
+        backend = self.__get_backend()
+        return getattr(backend, key)
+
+def deferredToThread(f):
+    def g(*args, **kwargs):
+        return deferToThread(f, *args, **kwargs)
+    return g

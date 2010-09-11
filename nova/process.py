@@ -18,9 +18,10 @@
 #    under the License.
 
 """
-Process pool, still buggy right now.
+Process pool using twisted threading
 """
 
+import logging
 import StringIO
 
 from twisted.internet import defer
@@ -127,6 +128,7 @@ def get_process_output(executable, args=None, env=None, path=None,
     cmd = executable
     if args:
         cmd = " ".join([cmd] + args)
+    logging.debug("Running cmd: %s", cmd)
     process_handler = BackRelayWithInput(
             deferred,
             cmd,

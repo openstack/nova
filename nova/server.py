@@ -44,6 +44,8 @@ flags.DEFINE_bool('use_syslog', True, 'output to syslog when daemonizing')
 flags.DEFINE_string('logfile', None, 'log file to output to')
 flags.DEFINE_string('pidfile', None, 'pid file to output to')
 flags.DEFINE_string('working_directory', './', 'working directory...')
+flags.DEFINE_integer('uid', os.getuid(), 'uid under which to run')
+flags.DEFINE_integer('gid', os.getgid(), 'gid under which to run')
 
 
 def stop(pidfile):
@@ -58,7 +60,7 @@ def stop(pidfile):
         sys.stderr.write(message % pidfile)
         return # not an error in a restart
 
-    # Try killing the daemon process    
+    # Try killing the daemon process
     try:
         while 1:
             os.kill(pid, signal.SIGTERM)
@@ -135,6 +137,8 @@ def daemonize(args, name, main):
                                                    threaded=False),
             stdin=stdin,
             stdout=stdout,
-            stderr=stderr
+            stderr=stderr,
+            uid=FLAGS.uid,
+            gid=FLAGS.gid
             ):
         main(args)

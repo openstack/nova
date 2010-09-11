@@ -22,11 +22,20 @@ Tornado daemon for the main API endpoint.
 """
 
 import logging
+import os
+import sys
 from tornado import httpserver
 from tornado import ioloop
 
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
 from nova import flags
-from nova import rpc
 from nova import server
 from nova import utils
 from nova.endpoint import admin
@@ -43,14 +52,7 @@ def main(_argv):
         'Admin': admin.AdminController()}
     _app = api.APIServerApplication(controllers)
 
-    conn = rpc.Connection.instance()
-    consumer = rpc.AdapterConsumer(connection=conn,
-                                       topic=FLAGS.cloud_topic,
-                                       proxy=controllers['Cloud'])
-
     io_inst = ioloop.IOLoop.instance()
-    _injected = consumer.attach_to_tornado(io_inst)
-
     http_server = httpserver.HTTPServer(_app)
     http_server.listen(FLAGS.cc_port)
     logging.debug('Started HTTP server on %s', FLAGS.cc_port)

@@ -196,7 +196,8 @@ class Controller(object):
     WSGI app that reads routing information supplied by RoutesMiddleware
     and calls the requested action method upon itself.  All action methods
     must, in addition to their normal parameters, accept a 'req' argument
-    which is the incoming webob.Request.
+    which is the incoming webob.Request.  They raise a webob.exc exception,
+    or return a dict which will be serialized by requested content type.
     """
 
     @webob.dec.wsgify
@@ -210,7 +211,21 @@ class Controller(object):
         del arg_dict['controller']
         del arg_dict['action']
         arg_dict['req'] = req
-        return method(**arg_dict)
+        result = method(**arg_dict)
+        if type(result) is dict:
+            return self._serialize(result, req) 
+        else:
+            return result
+
+    def _serialize(self, data, request):
+        """
+        Serialize the given dict to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.to_content_type(data)
 
 
 class Serializer(object):
@@ -226,6 +241,9 @@ class Serializer(object):
         """
         self.environ = environ
         self.metadata = metadata or {}
+        self._methods = {
+            'application/json': self._to_json,
+            'application/xml': self._to_xml}
 
     def to_content_type(self, data):
         """
@@ -235,20 +253,20 @@ class Serializer(object):
         """
         mimetype = 'application/xml'
         # TODO(gundlach): determine mimetype from request
+        return self._methods.get(mimetype, repr)(data)
 
-        if mimetype == 'application/json':
-            import json
-            return json.dumps(data)
-        elif mimetype == 'application/xml':
-            metadata = self.metadata.get('application/xml', {})
-            # We expect data to contain a single key which is the XML root.
-            root_key = data.keys()[0]
-            from xml.dom import minidom
-            doc = minidom.Document()
-            node = self._to_xml_node(doc, metadata, root_key, data[root_key])
-            return node.toprettyxml(indent='    ')
-        else:
-            return repr(data)
+    def _to_json(self, data):
+        import json
+        return json.dumps(data)
+
+    def _to_xml(self, data):
+        metadata = self.metadata.get('application/xml', {})
+        # We expect data to contain a single key which is the XML root.
+        root_key = data.keys()[0]
+        from xml.dom import minidom
+        doc = minidom.Document()
+        node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+        return node.toprettyxml(indent='    ')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""

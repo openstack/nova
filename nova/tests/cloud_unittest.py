@@ -27,8 +27,9 @@ from xml.etree import ElementTree
 from nova import flags
 from nova import rpc
 from nova import test
+from nova import utils
 from nova.auth import manager
-from nova.compute import service
+from nova.compute import power_state
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -39,21 +40,16 @@ FLAGS = flags.FLAGS
 class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
 
         # set up our cloud
         self.cloud = cloud.CloudController()
-        self.cloud_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                      topic=FLAGS.cloud_topic,
-                                                      proxy=self.cloud)
-        self.injected.append(self.cloud_consumer.attach_to_tornado(self.ioloop))
 
         # set up a service
-        self.compute = service.ComputeService()
+        self.compute = utils.import_class(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                      topic=FLAGS.compute_topic,
                                                      proxy=self.compute)
@@ -99,7 +95,7 @@ class CloudTestCase(test.BaseTestCase):
             rv = yield defer.succeed(time.sleep(1))
             info = self.cloud._get_instance(instance['instance_id'])
             logging.debug(info['state'])
-            if info['state'] == node.Instance.RUNNING:
+            if info['state'] == power_state.RUNNING:
                 break
         self.assert_(rv)
 
