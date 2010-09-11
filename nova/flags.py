@@ -34,7 +34,7 @@ class FlagValues(gflags.FlagValues):
     Unknown flags will be ignored when parsing the command line, but the
     command line will be kept so that it can be replayed if new flags are
     defined after the initial parsing.
-    
+
     """
 
     def __init__(self):
@@ -50,7 +50,7 @@ class FlagValues(gflags.FlagValues):
         # leftover args at the end
         sneaky_unparsed_args = {"value": None}
         original_argv = list(argv)
-        
+
         if self.IsGnuGetOpt():
             orig_getopt = getattr(getopt, 'gnu_getopt')
             orig_name = 'gnu_getopt'
@@ -81,7 +81,7 @@ class FlagValues(gflags.FlagValues):
                 args = argv[:1]
         finally:
             setattr(getopt, orig_name, orig_getopt)
-        
+
         # Store the arguments for later, we'll need them for new flags
         # added at runtime
         self.__dict__['__stored_argv'] = original_argv
@@ -92,7 +92,7 @@ class FlagValues(gflags.FlagValues):
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
-    
+
     def IsDirty(self, name):
         return name in self.__dict__['__dirty']
 
@@ -113,12 +113,12 @@ class FlagValues(gflags.FlagValues):
         for k in self.__dict__['__dirty']:
             setattr(self, k, getattr(new_flags, k))
         self.ClearDirty()
-        
+
     def __setitem__(self, name, flag):
         gflags.FlagValues.__setitem__(self, name, flag)
         if self.WasAlreadyParsed():
             self.SetDirty(name)
-    
+
     def __getitem__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
@@ -166,6 +166,9 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
+DEFINE_list('region_list',
+            [],
+            'list of region,url pairs')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
