@@ -355,6 +355,38 @@ def instance_update(_context, instance_id, values):
 ###################
 
 
+def keypair_create(_context, values):
+    keypair_ref = models.Keypair()
+    for (key, value) in values.iteritems():
+        keypair_ref[key] = value
+    keypair_ref.save()
+    return keypair_ref
+
+
+def keypair_destroy(_context, user_id, name):
+    session = get_session()
+    with session.begin():
+        keypair_ref = models.Keypair.find_by_args(user_id,
+                                                  name,
+                                                  session=session)
+        keypair_ref.delete(session=session)
+
+
+def keypair_get(_context, user_id, name):
+    return models.Keypair.find_by_args(user_id, name)
+
+
+def keypair_get_all_by_user(_context, user_id):
+    session = get_session()
+    return session.query(models.Keypair
+                 ).filter_by(user_id=user_id
+                 ).filter_by(deleted=False
+                 ).all()
+
+
+###################
+
+
 def network_count(_context):
     return models.Network.count()
 

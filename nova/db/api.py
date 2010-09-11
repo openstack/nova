@@ -254,6 +254,29 @@ def instance_update(context, instance_id, values):
     return IMPL.instance_update(context, instance_id, values)
 
 
+###################
+
+
+def keypair_create(context, values):
+    """Create a keypair from the values dictionary."""
+    return IMPL.keypair_create(context, values)
+
+
+def keypair_destroy(context, user_id, name):
+    """Destroy the keypair or raise if it does not exist."""
+    return IMPL.keypair_destroy(context, user_id, name)
+
+
+def keypair_get(context, user_id, name):
+    """Get a keypair or raise if it does not exist."""
+    return IMPL.keypair_get(context, user_id, name)
+
+
+def keypair_get_all_by_user(context, user_id):
+    """Get all keypairs by user."""
+    return IMPL.keypair_get_all_by_user(context, user_id)
+
+
 ####################
 
 

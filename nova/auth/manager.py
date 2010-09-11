@@ -668,42 +668,36 @@ class AuthManager(object):
         with self.driver() as drv:
             if not drv.get_user(uid):
                 raise exception.NotFound("User %s doesn't exist" % user)
-            if drv.get_key_pair(uid, key_name):
-                raise exception.Duplicate("The keypair %s already exists"
-                                          % key_name)
+        try:
+            db.keypair_get(None, uid, key_name)
+            raise exception.Duplicate("The keypair %s already exists"
+                                      % key_name)
+        except exception.NotFound:
+            pass
         private_key, public_key, fingerprint = crypto.generate_key_pair()
         self.create_key_pair(uid, key_name, public_key, fingerprint)
         return private_key, fingerprint
 
     def create_key_pair(self, user, key_name, public_key, fingerprint):
         """Creates a key pair for user"""
-        with self.driver() as drv:
-            kp_dict = drv.create_key_pair(User.safe_id(user),
-                                          key_name,
-                                          public_key,
-                                          fingerprint)
-            if kp_dict:
-                return KeyPair(**kp_dict)
+        key = {}
+        key['user_id'] = User.safe_id(user)
+        key['name'] = key_name
+        key['public_key'] = public_key
+        key['fingerprint'] = fingerprint
+        return db.keypair_create(None, key)
 
     def get_key_pair(self, user, key_name):
         """Retrieves a key pair for user"""
-        with self.driver() as drv:
-            kp_dict = drv.get_key_pair(User.safe_id(user), key_name)
-            if kp_dict:
-                return KeyPair(**kp_dict)
+        return db.keypair_get(None, User.safe_id(user), key_name)
 
     def get_key_pairs(self, user):
         """Retrieves all key pairs for user"""
-        with self.driver() as drv:
-            kp_list = drv.get_key_pairs(User.safe_id(user))
-            if not kp_list:
-                return []
-            return [KeyPair(**kp_dict) for kp_dict in kp_list]
+        return db.keypair_get_all_by_user(None, User.safe_id(user))
 
     def delete_key_pair(self, user, key_name):
         """Deletes a key pair for user"""
-        with self.driver() as drv:
-            drv.delete_key_pair(User.safe_id(user), key_name)
+        return db.keypair_destroy(None, User.safe_id(user), key_name)
 
     def get_credentials(self, user, project=None):
         """Get credential zip for user in project"""
