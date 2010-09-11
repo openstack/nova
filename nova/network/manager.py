@@ -61,15 +61,12 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
+flags.DEFINE_bool('update_dhcp_on_disassociate', False,
+                  'Whether to update dhcp when fixed_ip is disassocated')
 
 
 class AddressAlreadyAllocated(exception.Error):
     """Address was already allocated"""
-    pass
-
-
-class AddressNotAllocated(exception.Error):
-    """Address has not been allocated"""
     pass
 
 
@@ -99,6 +96,10 @@ class NetworkManager(manager.Manager):
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
+        raise NotImplementedError()
+
+    def deallocate_fixed_ip(self, context, instance_id, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
         raise NotImplementedError()
 
     def setup_fixed_ip(self, context, address):
@@ -175,9 +176,16 @@ class FlatManager(NetworkManager):
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
-        address = self.db.fixed_ip_allocate(context, network_ref['id'])
-        self.db.fixed_ip_instance_associate(context, address, instance_id)
+        address = self.db.fixed_ip_associate_pool(context,
+                                                  network_ref['id'],
+                                                  instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
         return address
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+        self.db.fixed_ip_disassociate(context, address)
 
     def setup_compute_network(self, context, project_id):
         """Network is created manually"""
@@ -214,12 +222,28 @@ class VlanManager(NetworkManager):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
         if kwargs.get('vpn', None):
-            address = self._allocate_vpn_ip(context, network_ref['id'])
+            address = network_ref['vpn_private_address']
+            self.db.fixed_ip_associate(context, address, instance_id)
         else:
-            address = self.db.fixed_ip_allocate(context,
-                                                network_ref['id'])
-        self.db.fixed_ip_instance_associate(context, address, instance_id)
+            address = self.db.fixed_ip_associate_pool(context,
+                                                      network_ref['id'],
+                                                      instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
         return address
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        if not fixed_ip_ref['leased']:
+            self.db.fixed_ip_disassociate(context, address)
+            # NOTE(vish): dhcp server isn't updated until next setup, this
+            #             means there will stale entries in the conf file
+            #             the code below will update the file if necessary
+            if FLAGS.update_dhcp_on_disassociate:
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network_ref['id'])
+
 
     def setup_fixed_ip(self, context, address):
         """Sets forwarding rules and dhcp for fixed ip"""
@@ -231,22 +255,47 @@ class VlanManager(NetworkManager):
                                             network_ref['vpn_private_address'])
         self.driver.update_dhcp(context, network_ref['id'])
 
-    def lease_fixed_ip(self, context, address):
+    def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased"""
         logging.debug("Leasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         if not fixed_ip_ref['allocated']:
-            raise AddressNotAllocated(address)
+            logging.warn("IP %s leased that was already deallocated", address)
+            return
+        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        if not instance_ref:
+            raise exception.Error("IP %s leased that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s leased to bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': True})
 
-    def release_fixed_ip(self, context, address):
+    def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released"""
         logging.debug("Releasing IP %s", address)
-        self.db.fixed_ip_update(context, address, {'allocated': False,
-                                                   'leased': False})
-        self.db.fixed_ip_instance_disassociate(context, address)
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        if not fixed_ip_ref['leased']:
+            logging.warn("IP %s released that was not leased", address)
+            return
+        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        if not instance_ref:
+            raise exception.Error("IP %s released that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s released from bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
+        self.db.fixed_ip_update(context, address, {'leased': False})
+        if not fixed_ip_ref['allocated']:
+            self.db.fixed_ip_disassociate(context, address)
+            # NOTE(vish): dhcp server isn't updated until next setup, this
+            #             means there will stale entries in the conf file
+            #             the code below will update the file if necessary
+            if FLAGS.update_dhcp_on_disassociate:
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network_ref['id'])
 
     def allocate_network(self, context, project_id):
         """Set up the network"""
@@ -287,19 +336,6 @@ class VlanManager(NetworkManager):
         """Ensure the network for each user is enabled"""
         # TODO(vish): Implement this
         pass
-
-    @staticmethod
-    def _allocate_vpn_ip(context, network_id):
-        """Allocate vpn ip for network"""
-        # TODO(vish): There is a possible concurrency issue here.
-        network_ref = db.network_get(context, network_id)
-        address = network_ref['vpn_private_address']
-        fixed_ip_ref = db.fixed_ip_get_by_address(context, address)
-        # TODO(vish): Should this be fixed_ip_is_allocated?
-        if fixed_ip_ref['allocated']:
-            raise AddressAlreadyAllocated()
-        db.fixed_ip_update(context, fixed_ip_ref['id'], {'allocated': True})
-        return fixed_ip_ref['str_id']
 
     def _ensure_indexes(self, context):
         """Ensure the indexes for the network exist

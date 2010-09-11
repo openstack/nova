@@ -44,18 +44,20 @@ flags.DECLARE('auth_driver', 'nova.auth.manager')
 flags.DECLARE('redis_db', 'nova.datastore')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 
 
-def add_lease(_mac, ip_address, _hostname, _interface):
+def add_lease(mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
         logging.debug("leasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.lease_fixed_ip(None, ip_address)
+        network_manager.lease_fixed_ip(None, mac, ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
                   "args": {"context": None,
+                           "mac": mac,
                            "address": ip_address}})
 
 
@@ -64,16 +66,17 @@ def old_lease(_mac, _ip_address, _hostname, _interface):
     logging.debug("Adopted old lease or got a change of mac/hostname")
 
 
-def del_lease(_mac, ip_address, _hostname, _interface):
+def del_lease(mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
         logging.debug("releasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.release_fixed_ip(None, ip_address)
+        network_manager.release_fixed_ip(None, mac, ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.node_name),
+        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
                   "args": {"context": None,
+                           "mac": mac,
                            "address": ip_address}})
 
 
