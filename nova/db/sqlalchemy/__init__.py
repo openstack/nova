@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,26 +17,8 @@
 #    under the License.
 
 """
-  Twistd daemon for the nova compute nodes.
+SQLAlchemy database backend
 """
+from nova.db.sqlalchemy import models
 
-import os
-import sys
-
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
-
-from nova import service
-from nova import twistd
-
-
-if __name__ == '__main__':
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.Service.create()  # pylint: disable=C0103
+models.register_models()

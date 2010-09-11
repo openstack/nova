@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -16,28 +15,28 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-  Twistd daemon for the nova compute nodes.
+Session Handling for SQLAlchemy backend
 """
 
-import os
-import sys
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
+from nova import flags
 
-from nova import service
-from nova import twistd
+FLAGS = flags.FLAGS
 
+_ENGINE = None
+_MAKER = None
 
-if __name__ == '__main__':
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.Service.create()  # pylint: disable=C0103
+def get_session(autocommit=True, expire_on_commit=False):
+    """Helper method to grab session"""
+    global _ENGINE
+    global _MAKER
+    if not _MAKER:
+        if not _ENGINE:
+            _ENGINE = create_engine(FLAGS.sql_connection, echo=False)
+        _MAKER = sessionmaker(bind=_ENGINE,
+                              autocommit=autocommit,
+                              expire_on_commit=expire_on_commit)
+    return _MAKER()

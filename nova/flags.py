@@ -22,6 +22,7 @@ where they're used.
 """
 
 import getopt
+import os
 import socket
 import sys
 
@@ -74,7 +75,7 @@ class FlagValues(gflags.FlagValues):
             unparsed_args = sneaky_unparsed_args['value']
             if unparsed_args:
                 if self.IsGnuGetOpt():
-                    args = argv[:1] + unparsed
+                    args = argv[:1] + unparsed_args
                 else:
                     args = argv[:1] + original_argv[-len(unparsed_args):]
             else:
@@ -205,9 +206,20 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
+DEFINE_string('sql_connection',
+              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'connection string for sql database')
+
+DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
+              'Manager for compute')
+DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
+              'Manager for network')
+DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+              'Manager for volume')
+
+DEFINE_string('host', socket.gethostname(),
+              'name of this node')
+
 # UNUSED
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
-DEFINE_string('node_name', socket.gethostname(),
-              'name of this node')
-

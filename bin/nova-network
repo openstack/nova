@@ -32,17 +32,12 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import flags
+from nova import service
 from nova import twistd
-
-from nova.network import service
-
-FLAGS = flags.FLAGS
 
 
 if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    # pylint: disable-msg=C0103
-    application = service.type_to_class(FLAGS.network_type).create()
+    application = service.Service.create()  # pylint: disable-msg=C0103

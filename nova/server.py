@@ -60,7 +60,7 @@ def stop(pidfile):
         sys.stderr.write(message % pidfile)
         return # not an error in a restart
 
-    # Try killing the daemon process    
+    # Try killing the daemon process
     try:
         while 1:
             os.kill(pid, signal.SIGTERM)
