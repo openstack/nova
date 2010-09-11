@@ -51,10 +51,10 @@ def _gen_key(context, user_id, key_name):
     it into a process pool."""
     try:
         # NOTE(vish): generating key pair is slow so check for legal
-        #             creation before creating keypair
+        #             creation before creating key_pair
         try:
-            db.keypair_get(context, user_id, key_name)
-            raise exception.Duplicate("The keypair %s already exists"
+            db.key_pair_get(context, user_id, key_name)
+            raise exception.Duplicate("The key_pair %s already exists"
                                       % key_name)
         except exception.NotFound:
             pass
@@ -64,7 +64,7 @@ def _gen_key(context, user_id, key_name):
         key['name'] = key_name
         key['public_key'] = public_key
         key['fingerprint'] = fingerprint
-        db.keypair_create(context, key)
+        db.key_pair_create(context, key)
         return {'private_key': private_key, 'fingerprint': fingerprint}
     except Exception as ex:
         return {'exception': ex}
@@ -193,7 +193,7 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = db.keypair_get_all_by_user(context, context.user.id)
+        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
         if not key_name is None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
@@ -228,7 +228,7 @@ class CloudController(object):
     @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
         try:
-            db.keypair_destroy(context, context.user.id, key_name)
+            db.key_pair_destroy(context, context.user.id, key_name)
         except exception.NotFound:
             # aws returns true even if the key doesn't exist
             pass
@@ -545,11 +545,10 @@ class CloudController(object):
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
-            key_pair = context.user.get_key_pair(kwargs['key_name'])
-            if not key_pair:
-                raise exception.ApiError('Key Pair %s not found' %
-                                         kwargs['key_name'])
-            key_data = key_pair.public_key
+            key_pair_ref = db.key_pair_get(context,
+                                      context.user.id,
+                                      kwargs['key_name'])
+            key_data = key_pair_ref['public_key']
 
         # TODO: Get the real security group of launch in here
         security_group = "default"

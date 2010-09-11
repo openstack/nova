@@ -355,38 +355,38 @@ def instance_update(_context, instance_id, values):
 ###################
 
 
-def keypair_create(_context, values):
-    keypair_ref = models.Keypair()
+def key_pair_create(_context, values):
+    key_pair_ref = models.KeyPair()
     for (key, value) in values.iteritems():
-        keypair_ref[key] = value
-    keypair_ref.save()
-    return keypair_ref
+        key_pair_ref[key] = value
+    key_pair_ref.save()
+    return key_pair_ref
 
 
-def keypair_destroy(_context, user_id, name):
+def key_pair_destroy(_context, user_id, name):
     session = get_session()
     with session.begin():
-        keypair_ref = models.Keypair.find_by_args(user_id,
+        key_pair_ref = models.KeyPair.find_by_args(user_id,
                                                   name,
                                                   session=session)
-        keypair_ref.delete(session=session)
+        key_pair_ref.delete(session=session)
 
 
-def keypair_destroy_all_by_user(_context, user_id):
+def key_pair_destroy_all_by_user(_context, user_id):
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
-        session.execute('update keypairs set deleted=1 where user_id=:id',
+        session.execute('update key_pairs set deleted=1 where user_id=:id',
                         {'id': user_id})
 
 
-def keypair_get(_context, user_id, name):
-    return models.Keypair.find_by_args(user_id, name)
+def key_pair_get(_context, user_id, name):
+    return models.KeyPair.find_by_args(user_id, name)
 
 
-def keypair_get_all_by_user(_context, user_id):
+def key_pair_get_all_by_user(_context, user_id):
     session = get_session()
-    return session.query(models.Keypair
+    return session.query(models.KeyPair
                  ).filter_by(user_id=user_id
                  ).filter_by(deleted=False
                  ).all()

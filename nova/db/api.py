@@ -257,29 +257,29 @@ def instance_update(context, instance_id, values):
 ###################
 
 
-def keypair_create(context, values):
-    """Create a keypair from the values dictionary."""
-    return IMPL.keypair_create(context, values)
+def key_pair_create(context, values):
+    """Create a key_pair from the values dictionary."""
+    return IMPL.key_pair_create(context, values)
 
 
-def keypair_destroy(context, user_id, name):
-    """Destroy the keypair or raise if it does not exist."""
-    return IMPL.keypair_destroy(context, user_id, name)
+def key_pair_destroy(context, user_id, name):
+    """Destroy the key_pair or raise if it does not exist."""
+    return IMPL.key_pair_destroy(context, user_id, name)
 
 
-def keypair_destroy_all_by_user(context, user_id):
-    """Destroy all keypairs by user."""
-    return IMPL.keypair_destroy_all_by_user(context, user_id)
+def key_pair_destroy_all_by_user(context, user_id):
+    """Destroy all key_pairs by user."""
+    return IMPL.key_pair_destroy_all_by_user(context, user_id)
 
 
-def keypair_get(context, user_id, name):
-    """Get a keypair or raise if it does not exist."""
-    return IMPL.keypair_get(context, user_id, name)
+def key_pair_get(context, user_id, name):
+    """Get a key_pair or raise if it does not exist."""
+    return IMPL.key_pair_get(context, user_id, name)
 
 
-def keypair_get_all_by_user(context, user_id):
-    """Get all keypairs by user."""
-    return IMPL.keypair_get_all_by_user(context, user_id)
+def key_pair_get_all_by_user(context, user_id):
+    """Get all key_pairs by user."""
+    return IMPL.key_pair_get_all_by_user(context, user_id)
 
 
 ####################

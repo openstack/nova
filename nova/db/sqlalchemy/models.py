@@ -284,9 +284,9 @@ class ExportDevice(BASE, NovaBase):
                                                   uselist=False))
 
 
-class Keypair(BASE, NovaBase):
-    """Represents a keypair"""
-    __tablename__ = 'keypairs'
+class KeyPair(BASE, NovaBase):
+    """Represents a public key pair for ssh"""
+    __tablename__ = 'key_pairs'
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
 

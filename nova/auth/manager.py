@@ -604,9 +604,9 @@ class AuthManager(object):
     def delete_user(self, user):
         """Deletes a user
 
-        Additionally deletes all users keypairs"""
+        Additionally deletes all users key_pairs"""
         uid = User.safe_id(user)
-        db.keypair_destroy_all_by_user(None, uid)
+        db.key_pair_destroy_all_by_user(None, uid)
         with self.driver() as drv:
             drv.delete_user(uid)
 

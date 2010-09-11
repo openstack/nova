@@ -92,7 +92,7 @@ class CloudTestCase(test.BaseTestCase):
         private_key = result['private_key']
         key = RSA.load_key_string(private_key, callback=lambda: None)
         bio = BIO.MemoryBuffer()
-        public_key = db.keypair_get(self.context,
+        public_key = db.key_pair_get(self.context,
                                     self.context.user.id,
                                     'test')['public_key']
         key.save_pub_key_bio(bio)
