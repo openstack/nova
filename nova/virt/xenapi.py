@@ -274,9 +274,19 @@ class XenAPIConnection(object):
     def destroy(self, instance):
         vm = yield self._lookup(instance.name)
         if vm is None:
-            raise Exception('instance not present %s' % instance.name)
-        task = yield self._call_xenapi('Async.VM.destroy', vm)
-        yield self._wait_for_task(task)
+            # Don't complain, just return.  This lets us clean up instances
+            # that have already disappeared from the underlying platform.
+            defer.returnValue(None)
+        try:
+            task = yield self._call_xenapi('Async.VM.hard_shutdown', vm)
+            yield self._wait_for_task(task)
+        except Exception, exc:
+            logging.warn(exc)
+        try:
+            task = yield self._call_xenapi('Async.VM.destroy', vm)
+            yield self._wait_for_task(task)
+        except Exception, exc:
+            logging.warn(exc)
 
     def get_info(self, instance_id):
         vm = self._lookup_blocking(instance_id)
@@ -330,9 +340,9 @@ class XenAPIConnection(object):
                              error_info)
                 deferred.errback(XenAPI.Failure(error_info))
             #logging.debug('Polling task %s done.', task)
-        except Exception, exn:
-            logging.warn(exn)
-            deferred.errback(exn)
+        except Exception, exc:
+            logging.warn(exc)
+            deferred.errback(exc)
 
     @utils.deferredToThread
     def _call_xenapi(self, method, *args):
@@ -358,21 +368,21 @@ class XenAPIConnection(object):
 def _unwrap_plugin_exceptions(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except XenAPI.Failure, exn:
-        logging.debug("Got exception: %s", exn)
-        if (len(exn.details) == 4 and
-            exn.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
-            exn.details[2] == 'Failure'):
+    except XenAPI.Failure, exc:
+        logging.debug("Got exception: %s", exc)
+        if (len(exc.details) == 4 and
+            exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
+            exc.details[2] == 'Failure'):
             params = None
             try:
-                params = eval(exn.details[3])
+                params = eval(exc.details[3])
             except:
-                raise exn
+                raise exc
             raise XenAPI.Failure(params)
         else:
             raise
-    except xmlrpclib.ProtocolError, exn:
-        logging.debug("Got exception: %s", exn)
+    except xmlrpclib.ProtocolError, exc:
+        logging.debug("Got exception: %s", exc)
         raise
 
 

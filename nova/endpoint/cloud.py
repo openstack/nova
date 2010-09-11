@@ -632,7 +632,7 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                db.fixed_ip_deallocate(context, address)
+                self.network.deallocate_fixed_ip(context, address)
 
             host = instance_ref['host']
             if host:

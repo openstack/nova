@@ -34,6 +34,7 @@ from nova import rpc
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import power_state
 from nova.endpoint import api
 from nova.endpoint import cloud
 
@@ -131,7 +132,7 @@ class CloudTestCase(test.BaseTestCase):
             rv = yield defer.succeed(time.sleep(1))
             info = self.cloud._get_instance(instance['instance_id'])
             logging.debug(info['state'])
-            if info['state'] == node.Instance.RUNNING:
+            if info['state'] == power_state.RUNNING:
                 break
         self.assert_(rv)
 
