@@ -154,29 +154,6 @@ class User(AuthBase):
                                                      self.admin)
 
 
-class KeyPair(AuthBase):
-    """Represents an ssh key returned from the datastore
-
-    Even though this object is named KeyPair, only the public key and
-    fingerprint is stored. The user's private key is not saved.
-    """
-
-    def __init__(self, id, name, owner_id, public_key, fingerprint):
-        AuthBase.__init__(self)
-        self.id = id
-        self.name = name
-        self.owner_id = owner_id
-        self.public_key = public_key
-        self.fingerprint = fingerprint
-
-    def __repr__(self):
-        return "KeyPair('%s', '%s', '%s', '%s', '%s')" % (self.id,
-                                                          self.name,
-                                                          self.owner_id,
-                                                          self.public_key,
-                                                          self.fingerprint)
-
-
 class Project(AuthBase):
     """Represents a Project returned from the datastore"""
 
