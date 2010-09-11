@@ -531,12 +531,12 @@ class AuthManager(object):
                 except:
                     drv.delete_project(project.id)
                     raise
-                 
-                db.security_group_create(context={},
-                                         values={ 'name': 'default',
-                                                  'description': 'default',
-                                                  'user_id': manager_user,
-                                                  'project_id': project.id })
+                
+                values = {'name': 'default',
+                          'description': 'default',
+                          'user_id': User.safe_id(manager_user),
+                          'project_id': project.id}
+                db.security_group_create({}, values)
                 return project
 
     def add_to_project(self, user, project):
