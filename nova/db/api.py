@@ -267,6 +267,11 @@ def keypair_destroy(context, user_id, name):
     return IMPL.keypair_destroy(context, user_id, name)
 
 
+def keypair_destroy_all_by_user(context, user_id):
+    """Destroy all keypairs by user."""
+    return IMPL.keypair_destroy_all_by_user(context, user_id)
+
+
 def keypair_get(context, user_id, name):
     """Get a keypair or raise if it does not exist."""
     return IMPL.keypair_get(context, user_id, name)

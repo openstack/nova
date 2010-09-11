@@ -620,9 +620,13 @@ class AuthManager(object):
                 return User(**user_dict)
 
     def delete_user(self, user):
-        """Deletes a user"""
+        """Deletes a user
+
+        Additionally deletes all users keypairs"""
+        uid = User.safe_id(user)
+        db.keypair_destroy_all_by_user(None, uid)
         with self.driver() as drv:
-            drv.delete_user(User.safe_id(user))
+            drv.delete_user(uid)
 
     def generate_key_pair(self, user, key_name):
         """Generates a key pair for a user

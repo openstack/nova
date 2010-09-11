@@ -372,6 +372,14 @@ def keypair_destroy(_context, user_id, name):
         keypair_ref.delete(session=session)
 
 
+def keypair_destroy_all_by_user(_context, user_id):
+    session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update keypairs set deleted=1 where user_id=:id',
+                        {'id': user_id})
+
+
 def keypair_get(_context, user_id, name):
     return models.Keypair.find_by_args(user_id, name)
 
