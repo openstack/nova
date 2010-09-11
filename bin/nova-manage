@@ -17,6 +17,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# Interactive shell based on Django:
+#
+# Copyright (c) 2005, the Lawrence Journal-World
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+#     1. Redistributions of source code must retain the above copyright notice,
+#        this list of conditions and the following disclaimer.
+#
+#     2. Redistributions in binary form must reproduce the above copyright
+#        notice, this list of conditions and the following disclaimer in the
+#        documentation and/or other materials provided with the distribution.
+#
+#     3. Neither the name of Django nor the names of its contributors may be used
+#        to endorse or promote products derived from this software without
+#        specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 """
   CLI interface for nova management.
   Connects to the running ADMIN api in the api daemon.
@@ -101,6 +132,29 @@ class VpnCommands(object):
     def run(self, project_id):
         """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
+
+
+class ShellCommands(object):
+    def run(self):
+        "Runs a Python interactive interpreter. Tries to use IPython, if it's available."
+        try:
+            import IPython
+            # Explicitly pass an empty list as arguments, because otherwise IPython
+            # would use sys.argv from this script.
+            shell = IPython.Shell.IPShell(argv=[])
+            shell.mainloop()
+        except ImportError:
+            import code
+            try: # Try activating rlcompleter, because it's handy.
+                import readline
+            except ImportError:
+                pass
+            else:
+                # We don't have to wrap the following import in a 'try', because
+                # we already know 'readline' was imported successfully.
+                import rlcompleter
+                readline.parse_and_bind("tab:complete")
+            code.interact()
 
 
 class RoleCommands(object):
@@ -256,6 +310,7 @@ CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
+    ('shell', ShellCommands),
     ('vpn', VpnCommands),
     ('floating', FloatingIpCommands)
 ]
