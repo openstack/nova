@@ -90,13 +90,14 @@ class CloudController(object):
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in db.instance_get_by_project(project_id):
-            line = '%s slots=%d' % (instance.fixed_ip['str_id'],
-                INSTANCE_TYPES[instance['instance_type']]['vcpus'])
-            if instance['key_name'] in result:
-                result[instance['key_name']].append(line)
-            else:
-                result[instance['key_name']] = [line]
+        for instance in db.instance_get_by_project(None, project_id):
+            if instance['fixed_ip']:
+                line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
+                    INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                if instance['key_name'] in result:
+                    result[instance['key_name']].append(line)
+                else:
+                    result[instance['key_name']] = [line]
         return result
 
     def get_metadata(self, address):
@@ -114,13 +115,13 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        floating_ip = db.instance_get_floating_ip_address(None,
-                                                          instance_ref['id'])
+        floating_ip = db.instance_get_floating_address(None,
+                                                       instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
                 'ami-id': instance_ref['image_id'],
-                'ami-launch-index': instance_ref['ami_launch_index'],
+                'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
                 'block-device-mapping': {  # TODO(vish): replace with real data
                     'ami': 'sda1',
@@ -136,7 +137,7 @@ class CloudController(object):
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
                 'placement': {
-                    'availaibility-zone': instance_ref['availability_zone'],
+                    'availability-zone': 'nova' # TODO(vish): real zone
                 },
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
@@ -376,12 +377,14 @@ class CloudController(object):
     def _format_instances(self, context, reservation_id=None):
         reservations = {}
         if reservation_id:
-            instances = db.instance_get_by_reservation(context, reservation_id)
+            instances = db.instance_get_by_reservation(context,
+                                                       reservation_id)
         else:
             if not context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
-                instances = db.instance_get_by_project(context, context.project.id)
+                instances = db.instance_get_by_project(context,
+                                                       context.project.id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -393,15 +396,16 @@ class CloudController(object):
                 'code': instance['state'],
                 'name': instance['state_description']
             }
+            fixed_addr = None
             floating_addr = None
-            if instance['fixed_ip']['floating_ips']:
-                floating_addr = instance['fixed_ip']['floating_ips'][0]['str_id']
-            i['publicDnsName'] = floating_addr
-            fixed_addr = instance['fixed_ip']['str_id']
+            if instance['fixed_ip']:
+                fixed_addr = instance['fixed_ip']['str_id']
+                if instance['fixed_ip']['floating_ips']:
+                    fixed = instance['fixed_ip']
+                    floating_addr = fixed['floating_ips'][0]['str_id']
             i['privateDnsName'] = fixed_addr
-            if not i['publicDnsName']:
-                i['publicDnsName'] = i['privateDnsName']
-            i['dnsName'] = None
+            i['publicDnsName'] = floating_addr
+            i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
             if context.user.is_admin():
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
@@ -435,8 +439,10 @@ class CloudController(object):
                                                      context.project.id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['str_id']
-            instance_ref = db.floating_ip_get_instance(context, address)
-            instance_id = instance_ref['str_id']
+            instance_id = None
+            if (floating_ip_ref['fixed_ip']
+                and floating_ip_ref['fixed_ip']['instance']):
+                instance_id = floating_ip_ref['fixed_ip']['instance']['str_id']
             address_rv = {'public_ip': address,
                           'instance_id': instance_id}
             if context.user.is_admin():
@@ -584,12 +590,13 @@ class CloudController(object):
         base_options['local_gb'] = type_data['local_gb']
 
         for num in range(num_instances):
-            inst_id = db.instance_create(context, base_options)['id']
+            instance_ref = db.instance_create(context, base_options)
+            inst_id = instance_ref['id']
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
-            inst['hostname'] = inst_id
+            inst['hostname'] = instance_ref['str_id']
             db.instance_update(context, inst_id, inst)
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
@@ -647,7 +654,7 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                db.fixed_ip_deallocate(context, address)
+                self.network.deallocate_fixed_ip(context, address)
 
             host = instance_ref['host']
             if host:

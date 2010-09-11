@@ -24,8 +24,7 @@ import sys
 import datetime
 
 # TODO(vish): clean up these imports
-from sqlalchemy.orm import relationship, backref, validates, exc
-from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship, backref, exc, object_mapper
 from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -112,6 +111,14 @@ class NovaBase(object):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def __iter__(self):
+        self._i = iter(object_mapper(self).columns)
+        return self
+
+    def next(self):
+        n = self._i.next().name
+        return n, getattr(self, n)
 
 # TODO(vish): Store images in the database instead of file system
 #class Image(BASE, NovaBase):

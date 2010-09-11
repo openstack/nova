@@ -144,12 +144,20 @@ def floating_ip_get_instance(context, address):
 ####################
 
 
-def fixed_ip_allocate(context, network_id):
-    """Allocate free fixed ip and return the address.
+def fixed_ip_associate(context, address, instance_id):
+    """Associate fixed ip to instance.
+
+    Raises if fixed ip is not available.
+    """
+    return IMPL.fixed_ip_associate(context, address, instance_id)
+
+
+def fixed_ip_associate_pool(context, network_id, instance_id):
+    """Find free ip in network and associate it to instance.
 
     Raises if one is not available.
     """
-    return IMPL.fixed_ip_allocate(context, network_id)
+    return IMPL.fixed_ip_associate_pool(context, network_id, instance_id)
 
 
 def fixed_ip_create(context, values):
@@ -157,9 +165,9 @@ def fixed_ip_create(context, values):
     return IMPL.fixed_ip_create(context, values)
 
 
-def fixed_ip_deallocate(context, address):
-    """Deallocate a fixed ip by address."""
-    return IMPL.fixed_ip_deallocate(context, address)
+def fixed_ip_disassociate(context, address):
+    """Disassociate a fixed ip from an instance by address."""
+    return IMPL.fixed_ip_disassociate(context, address)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -175,16 +183,6 @@ def fixed_ip_get_instance(context, address):
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
-
-
-def fixed_ip_instance_associate(context, address, instance_id):
-    """Associate a fixed ip to an instance by address."""
-    return IMPL.fixed_ip_instance_associate(context, address, instance_id)
-
-
-def fixed_ip_instance_disassociate(context, address):
-    """Disassociate a fixed ip from an instance by address."""
-    return IMPL.fixed_ip_instance_disassociate(context, address)
 
 
 def fixed_ip_update(context, address, values):
