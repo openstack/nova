@@ -667,8 +667,19 @@ def security_group_get_by_instance(_context, instance_id):
                       ).all()
 
 
+def securitygroup_exists(_context, project_id, group_name):
+    try:
+        group = securitygroup_get_by_name(_context, project_id, group_name)
+        return group != None
+    except exception.NotFound:
+        return False
+        
+
 def security_group_create(_context, values):
     security_group_ref = models.SecurityGroup()
+    # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
+    # once save() is called.  This will get cleaned up in next orm pass.
+    security_group_ref.rules 
     for (key, value) in values.iteritems():
         security_group_ref[key] = value
     security_group_ref.save()

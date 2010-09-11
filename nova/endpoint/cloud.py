@@ -214,43 +214,40 @@ class CloudController(object):
         return True
 
     @rbac.allow('all')
-    def describe_security_groups(self, context, **kwargs):
-        groups = []
-        for group in db.security_group_get_by_project(context,
-                                                      context.project.id):
-            group_dict = {}
-            group_dict['groupDescription'] = group.description
-            group_dict['groupName'] = group.name
-            group_dict['ownerId'] = context.user.id
-            group_dict['ipPermissions'] = []
-            for rule in group.rules:
-                rule_dict = {}
-                rule_dict['ipProtocol'] = rule.protocol
-                rule_dict['fromPort'] = rule.from_port
-                rule_dict['toPort'] = rule.to_port
-                rule_dict['groups'] = []
-                rule_dict['ipRanges'] = []
-                if rule.group_id:
-                    source_group = db.security_group_get(context, rule.group_id)
-                    rule_dict['groups'] += [ { 'groupName': source_group.name,
-                                              'userId': source_group.user_id } ]
-                else:
-                    rule_dict['ipRanges'] += [ { 'cidrIp': rule.cidr } ]
-                group_dict['ipPermissions'] += [ rule_dict ]
-            groups += [ group_dict ]
+    def describe_security_groups(self, context, group_name=None, **kwargs):
+        if context.user.is_admin():
+            groups = db.security_group_get_all(context)
+        else:
+            groups = db.security_group_get_by_project(context,
+                                                      context.project.id)
+        groups = [self._format_security_group(context, g) for g in groups]
+        if not group_name is None:
+            groups = [g for g in groups if g.name in group_name]
 
         return {'securityGroupInfo': groups }
-#
-#                 [{ 'groupDescription': group.description,
-#                     'groupName' : group.name,
-#                     'ownerId': context.user.id,
-#                     'ipPermissions' : [
-#                        { 'ipProtocol' : rule.protocol,
-#                          'fromPort' : rule.from_port,
-#                          'toPort' : rule.to_port,
-#                          'ipRanges' : [ { 'cidrIp' : rule.cidr } ] } for rule in group.rules ] } for group in \
-#
-#        return groups
+
+    def _format_security_group(self, context, group):
+        g = {}
+        g['groupDescription'] = group.description
+        g['groupName'] = group.name
+        g['ownerId'] = context.user.id
+        g['ipPermissions'] = []
+        for rule in group.rules:
+            r = {}
+            r['ipProtocol'] = rule.protocol
+            r['fromPort'] = rule.from_port
+            r['toPort'] = rule.to_port
+            r['groups'] = []
+            r['ipRanges'] = []
+            if rule.group_id:
+                source_group = db.security_group_get(context, rule.group_id)
+                r['groups'] += [{'groupName': source_group.name,
+                                 'userId': source_group.user_id}]
+            else:
+                r['ipRanges'] += [{'cidrIp': rule.cidr}]
+            g['ipPermissions'] += [r]
+        return g
+
 
     @rbac.allow('netadmin')
     def revoke_security_group_ingress(self, context, group_name,
@@ -354,12 +351,17 @@ class CloudController(object):
 
     @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, group_description):
-        db.security_group_create(context,
-                                 values = { 'user_id' : context.user.id,
-                                            'project_id': context.project.id,
-                                            'name': group_name,
-                                            'description': group_description })
-        return True
+        if db.securitygroup_exists(context, context.project.id, group_name):
+            raise exception.ApiError('group %s already exists' % group_name)
+        
+        group = {'user_id' : context.user.id,
+                 'project_id': context.project.id,
+                 'name': group_name,
+                 'description': group_description}
+        group_ref = db.security_group_create(context, group)
+
+        return {'securityGroupSet': [self._format_security_group(context,
+                                                                 group_ref)]}
 
     @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):

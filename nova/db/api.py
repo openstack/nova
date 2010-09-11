@@ -471,6 +471,11 @@ def security_group_get_by_instance(context, instance_id):
     return IMPL.security_group_get_by_instance(context, instance_id)
 
 
+def securitygroup_exists(context, project_id, group_name):
+    """Indicates if a group name exists in a project"""
+    return IMPL.securitygroup_exists(context, project_id, group_name)
+
+
 def security_group_create(context, values):
     """Create a new security group"""
     return IMPL.security_group_create(context, values)
