@@ -366,7 +366,7 @@ class CloudController(object):
             instances = db.instance_get_by_reservation(context,
                                                        reservation_id)
         else:
-            if not context.user.is_admin():
+            if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_by_project(context,
