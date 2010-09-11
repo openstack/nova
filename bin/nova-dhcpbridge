@@ -44,6 +44,7 @@ flags.DECLARE('auth_driver', 'nova.auth.manager')
 flags.DECLARE('redis_db', 'nova.datastore')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 
 
 def add_lease(mac, ip_address, _hostname, _interface):

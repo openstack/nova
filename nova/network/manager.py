@@ -61,8 +61,8 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
-flags.DEFINE_boool('update_dhcp_on_disassocate', False,
-                    'Whether to update dhcp when fixed_ip is disassocated')
+flags.DEFINE_bool('update_dhcp_on_disassociate', False,
+                  'Whether to update dhcp when fixed_ip is disassocated')
 
 
 class AddressAlreadyAllocated(exception.Error):
