@@ -23,6 +23,7 @@ datastore.
 """
 
 import base64
+import datetime
 import logging
 import os
 import time
@@ -594,6 +595,10 @@ class CloudController(object):
                                 % id_str)
                 continue
 
+            now = datetime.datetime.utcnow()
+            self.db.instance_update(context,
+                                    instance_ref['id'],
+                                    {'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -643,6 +648,10 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
+        now = datetime.datetime.utcnow()
+        self.db.volume_update(context,
+                              volume_ref['id'],
+                              {'terminated_at': now})
         host = volume_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",

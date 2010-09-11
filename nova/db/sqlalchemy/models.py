@@ -274,6 +274,8 @@ class Volume(BASE, NovaBase):
     attach_status = Column(String(255))  # TODO(vish): enum
 
     scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""

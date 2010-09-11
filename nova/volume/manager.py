@@ -22,6 +22,7 @@ destroying persistent storage volumes, ala EBS.
 """
 
 import logging
+import datetime
 
 from twisted.internet import defer
 
@@ -97,6 +98,8 @@ class AOEManager(manager.Manager):
         logging.debug("volume %s: re-exporting all values", volume_id)
         yield self.driver.ensure_exports()
 
+        now = datetime.datetime.utcnow()
+        self.db.volume_update(context, volume_id, {'launched_at': now})
         logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
