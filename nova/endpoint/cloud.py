@@ -230,7 +230,6 @@ class CloudController(object):
                 rule_dict['toPort'] = rule.to_port
                 rule_dict['groups'] = []
                 rule_dict['ipRanges'] = []
-                import pdb; pdb.set_trace()
                 if rule.group_id:
                     source_group = db.security_group_get(context, rule.group_id)
                     rule_dict['groups'] += [ { 'groupName': source_group.name,
@@ -307,7 +306,7 @@ class CloudController(object):
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
-        values = { 'group_id' : security_group.id }
+        values = { 'parent_group_id' : security_group.id }
 
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
@@ -317,7 +316,7 @@ class CloudController(object):
                     db.security_group_get_by_name(context,
                                                   source_project_id,
                                                   source_security_group_name)
-            values['source_group_id'] = source_security_group.id
+            values['group_id'] = source_security_group.id
         elif cidr_ip:
             values['cidr'] = cidr_ip
         else:

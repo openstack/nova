@@ -681,7 +681,7 @@ def security_group_destroy(_context, security_group_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update security_group set deleted=1 where id=:id',
                         {'id': security_group_id})
-        session.execute('update security_group_rule set deleted=1 '
+        session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
                         {'id': security_group_id})
 

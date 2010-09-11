@@ -306,13 +306,13 @@ class SecurityGroup(BASE, NovaBase):
 
 class SecurityGroupIngressRule(BASE, NovaBase):
     """Represents a rule in a security group"""
-    __tablename__ = 'security_group_rule'
+    __tablename__ = 'security_group_rules'
     id = Column(Integer, primary_key=True)
 
-    group_id = Column(Integer, ForeignKey('security_group.id'))
-    group = relationship("SecurityGroup", backref="rules",
-                         foreign_keys=group_id,
-                         primaryjoin=group_id==SecurityGroup.id)
+    parent_group_id = Column(Integer, ForeignKey('security_group.id'))
+    parent_group = relationship("SecurityGroup", backref="rules",
+                         foreign_keys=parent_group_id,
+                         primaryjoin=parent_group_id==SecurityGroup.id)
 
     protocol = Column(String(5)) # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
@@ -321,7 +321,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
-    source_group_id = Column(Integer, ForeignKey('security_group.id'))
+    group_id = Column(Integer, ForeignKey('security_group.id'))
 
 
 class Network(BASE, NovaBase):
