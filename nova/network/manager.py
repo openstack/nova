@@ -61,6 +61,8 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
+flags.DEFINE_boool('update_dhcp_on_disassocate', False,
+                    'Whether to update dhcp when fixed_ip is disassocated')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -235,6 +237,12 @@ class VlanManager(NetworkManager):
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         if not fixed_ip_ref['leased']:
             self.db.fixed_ip_disassociate(context, address)
+            # NOTE(vish): dhcp server isn't updated until next setup, this
+            #             means there will stale entries in the conf file
+            #             the code below will update the file if necessary
+            if FLAGS.update_dhcp_on_disassociate:
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network_ref['id'])
 
 
     def setup_fixed_ip(self, context, address):
@@ -282,6 +290,12 @@ class VlanManager(NetworkManager):
         self.db.fixed_ip_update(context, address, {'leased': False})
         if not fixed_ip_ref['allocated']:
             self.db.fixed_ip_disassociate(context, address)
+            # NOTE(vish): dhcp server isn't updated until next setup, this
+            #             means there will stale entries in the conf file
+            #             the code below will update the file if necessary
+            if FLAGS.update_dhcp_on_disassociate:
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network_ref['id'])
 
     def allocate_network(self, context, project_id):
         """Set up the network"""

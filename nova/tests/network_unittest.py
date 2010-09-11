@@ -28,6 +28,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.endpoint import api
 
 FLAGS = flags.FLAGS
 
@@ -48,7 +49,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
-        self.context = None
+        self.context = api.APIRequestContext(None, project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
             self.projects.append(self.manager.create_project(name,
@@ -75,12 +76,10 @@ class NetworkTestCase(test.TrialTestCase):
 
     def _create_address(self, project_num, instance_id=None):
         """Create an address in given project num"""
-        net = db.project_get_network(None, self.projects[project_num].id)
-        address = db.fixed_ip_allocate(None, net['id'])
         if instance_id is None:
             instance_id = self.instance_id
-        db.fixed_ip_instance_associate(None, address, instance_id)
-        return address
+        self.context.project = self.projects[project_num]
+        return self.network.allocate_fixed_ip(self.context, instance_id)
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
@@ -103,14 +102,14 @@ class NetworkTestCase(test.TrialTestCase):
         address = db.instance_get_floating_address(None, self.instance_id)
         self.assertEqual(address, None)
         self.network.deallocate_floating_ip(self.context, float_addr)
-        db.fixed_ip_deallocate(None, fix_addr)
+        self.network.deallocate_fixed_ip(self.context, fix_addr)
 
     def test_allocate_deallocate_fixed_ip(self):
         """Makes sure that we can allocate and deallocate a fixed ip"""
         address = self._create_address(0)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
         lease_ip(address)
-        db.fixed_ip_deallocate(None, address)
+        self.network.deallocate_fixed_ip(self.context, address)
 
         # Doesn't go away until it's dhcp released
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
@@ -131,14 +130,14 @@ class NetworkTestCase(test.TrialTestCase):
         lease_ip(address)
         lease_ip(address2)
 
-        db.fixed_ip_deallocate(None, address)
+        self.network.deallocate_fixed_ip(self.context, address)
         release_ip(address)
         self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
         # First address release shouldn't affect the second
         self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
 
-        db.fixed_ip_deallocate(None, address2)
+        self.network.deallocate_fixed_ip(self.context, address2)
         release_ip(address2)
         self.assertFalse(is_allocated_in_project(address2,
                                                  self.projects[1].id))
@@ -173,16 +172,16 @@ class NetworkTestCase(test.TrialTestCase):
                                                      self.projects[0].id))
             self.assertFalse(is_allocated_in_project(address3,
                                                      self.projects[0].id))
-            db.fixed_ip_deallocate(None, address)
-            db.fixed_ip_deallocate(None, address2)
-            db.fixed_ip_deallocate(None, address3)
+            self.network.deallocate_fixed_ip(self.context, address)
+            self.network.deallocate_fixed_ip(self.context, address2)
+            self.network.deallocate_fixed_ip(self.context, address3)
             release_ip(address)
             release_ip(address2)
             release_ip(address3)
         for instance_id in instance_ids:
             db.instance_destroy(None, instance_id)
         release_ip(first)
-        db.fixed_ip_deallocate(None, first)
+        self.network.deallocate_fixed_ip(self.context, first)
 
     def test_vpn_ip_and_port_looks_valid(self):
         """Ensure the vpn ip and port are reasonable"""
@@ -209,12 +208,12 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that ip addresses that are deallocated get reused"""
         address = self._create_address(0)
         lease_ip(address)
-        db.fixed_ip_deallocate(None, address)
+        self.network.deallocate_fixed_ip(self.context, address)
         release_ip(address)
 
         address2 = self._create_address(0)
         self.assertEqual(address, address2)
-        db.fixed_ip_deallocate(None, address2)
+        self.network.deallocate_fixed_ip(self.context, address2)
 
     def test_available_ips(self):
         """Make sure the number of available ips for the network is correct
@@ -254,12 +253,12 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertEqual(db.network_count_available_ips(None,
                                                         network['id']), 0)
         self.assertRaises(db.NoMoreAddresses,
-                          db.fixed_ip_allocate,
-                          None,
-                          network['id'])
+                          self.network.allocate_fixed_ip,
+                          self.context,
+                          'foo')
 
         for i in range(num_available_ips):
-            db.fixed_ip_deallocate(None, addresses[i])
+            self.network.deallocate_fixed_ip(self.context, addresses[i])
             release_ip(addresses[i])
             db.instance_destroy(None, instance_ids[i])
         self.assertEqual(db.network_count_available_ips(None,

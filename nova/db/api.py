@@ -144,7 +144,7 @@ def fixed_ip_associate(context, address, instance_id):
 
     Raises if fixed ip is not available.
     """
-    return IMPL.fixed_ip_allocate(context, address, instance_id)
+    return IMPL.fixed_ip_associate(context, address, instance_id)
 
 
 def fixed_ip_associate_pool(context, network_id, instance_id):
@@ -152,7 +152,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
 
     Raises if one is not available.
     """
-    return IMPL.fixed_ip_allocate(context, network_id, instance_id)
+    return IMPL.fixed_ip_associate_pool(context, network_id, instance_id)
 
 
 def fixed_ip_create(context, values):
@@ -162,7 +162,7 @@ def fixed_ip_create(context, values):
 
 def fixed_ip_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
-    return IMPL.fixed_ip_instance_disassociate(context, address)
+    return IMPL.fixed_ip_disassociate(context, address)
 
 
 def fixed_ip_get_by_address(context, address):
