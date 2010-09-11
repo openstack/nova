@@ -147,10 +147,23 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that private ips don't overlap"""
         first = self._create_address(0)
         lease_ip(first)
+        instance_ids = []
         for i in range(1, 5):
-            address = self._create_address(i)
-            address2 = self._create_address(i)
-            address3 = self._create_address(i)
+            mac = utils.generate_mac()
+            instance_ref = db.instance_create(None,
+                                              {'mac_address': mac})
+            instance_ids.append(instance_ref['id'])
+            address = self._create_address(i, instance_ref['id'])
+            mac = utils.generate_mac()
+            instance_ref = db.instance_create(None,
+                                              {'mac_address': mac})
+            instance_ids.append(instance_ref['id'])
+            address2 = self._create_address(i, instance_ref['id'])
+            mac = utils.generate_mac()
+            instance_ref = db.instance_create(None,
+                                              {'mac_address': mac})
+            instance_ids.append(instance_ref['id'])
+            address3 = self._create_address(i, instance_ref['id'])
             lease_ip(address)
             lease_ip(address2)
             lease_ip(address3)
@@ -166,6 +179,8 @@ class NetworkTestCase(test.TrialTestCase):
             release_ip(address)
             release_ip(address2)
             release_ip(address3)
+        for instance_id in instance_ids:
+            db.instance_destroy(None, instance_id)
         release_ip(first)
         db.fixed_ip_deallocate(None, first)
 
@@ -226,8 +241,13 @@ class NetworkTestCase(test.TrialTestCase):
         num_available_ips = db.network_count_available_ips(None,
                                                            network['id'])
         addresses = []
+        instance_ids = []
         for i in range(num_available_ips):
-            address = self._create_address(0)
+            mac = utils.generate_mac()
+            instance_ref = db.instance_create(None,
+                                              {'mac_address': mac})
+            instance_ids.append(instance_ref['id'])
+            address = self._create_address(0, instance_ref['id'])
             addresses.append(address)
             lease_ip(address)
 
@@ -238,9 +258,10 @@ class NetworkTestCase(test.TrialTestCase):
                           None,
                           network['id'])
 
-        for i in range(len(addresses)):
+        for i in range(num_available_ips):
             db.fixed_ip_deallocate(None, addresses[i])
             release_ip(addresses[i])
+            db.instance_destroy(None, instance_ids[i])
         self.assertEqual(db.network_count_available_ips(None,
                                                         network['id']),
                          num_available_ips)
@@ -263,7 +284,10 @@ def binpath(script):
 def lease_ip(private_ip):
     """Run add command on dhcpbridge"""
     network_ref = db.fixed_ip_get_network(None, private_ip)
-    cmd = "%s add fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
+    instance_ref = db.fixed_ip_get_instance(None, private_ip)
+    cmd = "%s add %s %s fake" % (binpath('nova-dhcpbridge'),
+                                 instance_ref['mac_address'],
+                                 private_ip)
     env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
@@ -274,7 +298,10 @@ def lease_ip(private_ip):
 def release_ip(private_ip):
     """Run del command on dhcpbridge"""
     network_ref = db.fixed_ip_get_network(None, private_ip)
-    cmd = "%s del fake %s fake" % (binpath('nova-dhcpbridge'), private_ip)
+    instance_ref = db.fixed_ip_get_instance(None, private_ip)
+    cmd = "%s del %s %s fake" % (binpath('nova-dhcpbridge'),
+                                 instance_ref['mac_address'],
+                                 private_ip)
     env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}

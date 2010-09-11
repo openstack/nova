@@ -226,19 +226,42 @@ class VlanManager(NetworkManager):
                                             network_ref['vpn_private_address'])
         self.driver.update_dhcp(context, network_ref['id'])
 
-    def lease_fixed_ip(self, context, address):
+    def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased"""
         logging.debug("Leasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         if not fixed_ip_ref['allocated']:
             logging.warn("IP %s leased that was already deallocated", address)
+            return
+        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        if not instance_ref:
+            raise exception.Error("IP %s leased that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s leased to bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': True})
 
-    def release_fixed_ip(self, context, address):
+    def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released"""
         logging.debug("Releasing IP %s", address)
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        if not fixed_ip_ref['leased']:
+            logging.warn("IP %s released that was not leased", address)
+            return
+        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        if not instance_ref:
+            raise exception.Error("IP %s released that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s released from bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
+        if fixed_ip_ref['allocated']:
+            logging.warn("IP %s released that is still allocated", address)
+            self.db.fixed_ip_update(context, address, {'leased': False})
+            return
         self.db.fixed_ip_update(context, address, {'allocated': False,
                                                    'leased': False})
         self.db.fixed_ip_instance_disassociate(context, address)
