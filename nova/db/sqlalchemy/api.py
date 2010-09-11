@@ -174,7 +174,25 @@ def floating_ip_get_instance(_context, address):
 ###################
 
 
-def fixed_ip_allocate(_context, network_id):
+def fixed_ip_associate(_context, address, instance_id):
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = session.query(models.FixedIp
+                             ).filter_by(address=address
+                             ).filter_by(deleted=False
+                             ).filter_by(instance=None
+                             ).with_lockmode('update'
+                             ).first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not fixed_ip_ref:
+            raise db.NoMoreAddresses()
+        fixed_ip_ref.instance = models.Instance.find(instance_id,
+                                                     session=session)
+        session.add(fixed_ip_ref)
+
+
+def fixed_ip_associate_pool(_context, network_id, instance_id):
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -182,8 +200,6 @@ def fixed_ip_allocate(_context, network_id):
         fixed_ip_ref = session.query(models.FixedIp
                              ).filter(network_or_none
                              ).filter_by(reserved=False
-                             ).filter_by(allocated=False
-                             ).filter_by(leased=False
                              ).filter_by(deleted=False
                              ).filter_by(instance=None
                              ).with_lockmode('update'
@@ -195,7 +211,8 @@ def fixed_ip_allocate(_context, network_id):
         if not fixed_ip_ref.network:
             fixed_ip_ref.network = models.Network.find(network_id,
                                                        session=session)
-        fixed_ip_ref['allocated'] = True
+        fixed_ip_ref.instance = models.Instance.find(instance_id,
+                                                     session=session)
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
@@ -206,6 +223,14 @@ def fixed_ip_create(_context, values):
         fixed_ip_ref[key] = value
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
+
+
+def fixed_ip_disassociate(_context, address):
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        fixed_ip_ref.instance = None
+        fixed_ip_ref.save(session=session)
 
 
 def fixed_ip_get_by_address(_context, address):
@@ -222,27 +247,6 @@ def fixed_ip_get_network(_context, address):
     session = get_session()
     with session.begin():
         return models.FixedIp.find_by_str(address, session=session).network
-
-
-def fixed_ip_deallocate(context, address):
-    db.fixed_ip_update(context, address, {'allocated': False})
-
-
-def fixed_ip_instance_associate(_context, address, instance_id):
-    session = get_session()
-    with session.begin():
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
-        instance_ref = models.Instance.find(instance_id, session=session)
-        fixed_ip_ref.instance = instance_ref
-        fixed_ip_ref.save(session=session)
-
-
-def fixed_ip_instance_disassociate(_context, address):
-    session = get_session()
-    with session.begin():
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
-        fixed_ip_ref.instance = None
-        fixed_ip_ref.save(session=session)
 
 
 def fixed_ip_update(_context, address, values):

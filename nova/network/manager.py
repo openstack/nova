@@ -174,14 +174,16 @@ class FlatManager(NetworkManager):
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
-        address = self.db.fixed_ip_allocate(context, network_ref['id'])
-        self.db.fixed_ip_instance_associate(context, address, instance_id)
+        address = self.db.fixed_ip_associate_pool(context,
+                                                  network_ref['id'],
+                                                  instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
         return address
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool"""
-        self.db.fixed_ip_deallocate(context, address)
-        self.db.fixed_ip_instance_disassociate(context, address)
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+        self.db.fixed_ip_disassociate(context, address)
 
     def setup_compute_network(self, context, project_id):
         """Network is created manually"""
@@ -218,19 +220,21 @@ class VlanManager(NetworkManager):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
         if kwargs.get('vpn', None):
-            address = self._allocate_vpn_ip(context, network_ref['id'])
+            address = network_ref['vpn_private_address']
+            self.db.fixed_ip_associate(context, address, instance_id)
         else:
-            address = self.db.fixed_ip_allocate(context,
-                                                network_ref['id'])
-        self.db.fixed_ip_instance_associate(context, address, instance_id)
+            address = self.db.fixed_ip_associate_pool(context,
+                                                      network_ref['id'],
+                                                      instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
         return address
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool"""
-        self.db.fixed_ip_deallocate(context, address)
+        self.db.fixed_ip_update(context, address, {'allocated': False})
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         if not fixed_ip_ref['leased']:
-            self.db.fixed_ip_instance_disassociate(context, address)
+            self.db.fixed_ip_disassociate(context, address)
 
 
     def setup_fixed_ip(self, context, address):
@@ -277,9 +281,7 @@ class VlanManager(NetworkManager):
                                   (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context, address, {'leased': False})
         if not fixed_ip_ref['allocated']:
-            self.db.fixed_ip_instance_disassociate(context, address)
-        else:
-            logging.warn("IP %s released that is still allocated", address)
+            self.db.fixed_ip_disassociate(context, address)
 
     def allocate_network(self, context, project_id):
         """Set up the network"""
@@ -320,19 +322,6 @@ class VlanManager(NetworkManager):
         """Ensure the network for each user is enabled"""
         # TODO(vish): Implement this
         pass
-
-    @staticmethod
-    def _allocate_vpn_ip(context, network_id):
-        """Allocate vpn ip for network"""
-        # TODO(vish): There is a possible concurrency issue here.
-        network_ref = db.network_get(context, network_id)
-        address = network_ref['vpn_private_address']
-        fixed_ip_ref = db.fixed_ip_get_by_address(context, address)
-        # TODO(vish): Should this be fixed_ip_is_allocated?
-        if fixed_ip_ref['allocated']:
-            raise AddressAlreadyAllocated()
-        db.fixed_ip_update(context, fixed_ip_ref['id'], {'allocated': True})
-        return fixed_ip_ref['str_id']
 
     def _ensure_indexes(self, context):
         """Ensure the indexes for the network exist
