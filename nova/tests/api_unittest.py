@@ -41,8 +41,8 @@ FLAGS = flags.FLAGS
 #               it's pretty damn circuitous so apologies if you have to fix
 #               a bug in it
 # NOTE(jaypipes) The pylint disables here are for R0913 (too many args) which
-#                isn't controllable since boto's HTTPRequest needs that many 
-#                args, and for the version-differentiated import of tornado's 
+#                isn't controllable since boto's HTTPRequest needs that many
+#                args, and for the version-differentiated import of tornado's
 #                httputil.
 # NOTE(jaypipes): The disable-msg=E1101 and E1103 below is because pylint is
 #                 unable to introspect the deferred's return value properly
@@ -224,7 +224,8 @@ class ApiEc2TestCase(test.BaseTestCase):
                           for x in range(random.randint(4, 8)))
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
-        self.manager.generate_key_pair(user.id, keyname)
+        # NOTE(vish): create depends on pool, so call helper directly
+        cloud._gen_key(None, user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
