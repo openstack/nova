@@ -159,6 +159,14 @@ def floating_ip_get_all_by_host(_context, host):
                  ).filter_by(deleted=False
                  ).all()
 
+def floating_ip_get_all_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).options(joinedload_all('fixed_ip.instance')
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
+
 def floating_ip_get_by_address(_context, address):
     return models.FloatingIp.find_by_str(address)
 
@@ -288,7 +296,7 @@ def instance_get_all(context):
                  ).all()
 
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -297,7 +305,7 @@ def instance_get_by_project(context, project_id):
                  ).all()
 
 
-def instance_get_by_reservation(_context, reservation_id):
+def instance_get_all_by_reservation(_context, reservation_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -606,7 +614,7 @@ def volume_get_all(context):
     return models.Volume.all(deleted=_deleted(context))
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume
                  ).filter_by(project_id=project_id
