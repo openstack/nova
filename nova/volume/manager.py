@@ -95,6 +95,9 @@ class AOEManager(manager.Manager):
         yield self.driver.ensure_exports()
 
         now = datetime.datetime.utcnow()
+        self.db.volume_update(context,
+                              volume_ref['id'], {'status': 'available',
+                                                 'launched_at': now})
         logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
