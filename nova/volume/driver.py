@@ -24,6 +24,7 @@ import logging
 
 from twisted.internet import defer
 
+from nova import exception
 from nova import flags
 from nova import process
 
@@ -81,16 +82,34 @@ class AOEDriver(object):
     @defer.inlineCallbacks
     def remove_export(self, _volume_name, shelf_id, blade_id):
         """Removes an export for a logical volume"""
-        yield self._execute(
-                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id))
-        yield self._execute(
-                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id))
+        # NOTE(vish): These commands can partially fail sometimes, but
+        #             running them a second time on failure will usually
+        #             pick up the remaining tasks even though it also
+        #             raises an exception
+        try:
+            yield self._execute("sudo vblade-persist stop %s %s" %
+                                (shelf_id, blade_id))
+        except exception.ProcessExecutionError:
+            logging.exception("vblade stop threw an error, recovering")
+            yield self._execute("sleep 2")
+            yield self._execute("sudo vblade-persist stop %s %s" %
+                                (shelf_id, blade_id),
+                                check_exit_code=False)
+        try:
+            yield self._execute("sudo vblade-persist destroy %s %s" %
+                                (shelf_id, blade_id))
+        except exception.ProcessExecutionError:
+            logging.exception("vblade destroy threw an error, recovering")
+            yield self._execute("sleep 2")
+            yield self._execute("sudo vblade-persist destroy %s %s" %
+                                (shelf_id, blade_id),
+                                check_exit_code=False)
 
     @defer.inlineCallbacks
     def ensure_exports(self):
         """Runs all existing exports"""
         # NOTE(ja): wait for blades to appear
-        yield self._execute("sleep 5")
+        yield self._execute("sleep 2")
         yield self._execute("sudo vblade-persist auto all",
                             check_exit_code=False)
         yield self._execute("sudo vblade-persist start all",
