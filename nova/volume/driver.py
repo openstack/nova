@@ -42,6 +42,19 @@ class AOEDriver(object):
         self._execute = execute
 
     @defer.inlineCallbacks
+    def _try_execute(self, command):
+        # NOTE(vish): Volume commands can partially fail due to timing, but
+        #             running them a second time on failure will usually
+        #             recover nicely.
+        try:
+            yield self._execute(command)
+        except exception.ProcessExecutionError:
+            logging.exception("Attempting to recover from a failed execute.")
+            yield self._execute("sleep 2")
+            yield self._execute(command)
+
+
+    @defer.inlineCallbacks
     def create_volume(self, volume_name, size):
         """Creates a logical volume"""
         # NOTE(vish): makes sure that the volume group exists
@@ -50,7 +63,7 @@ class AOEDriver(object):
             sizestr = '100M'
         else:
             sizestr = '%sG' % size
-        yield self._execute("sudo lvcreate -L %s -n %s %s" %
+        yield self._try_execute("sudo lvcreate -L %s -n %s %s" %
                             (sizestr,
                              volume_name,
                              FLAGS.volume_group))
@@ -58,23 +71,14 @@ class AOEDriver(object):
     @defer.inlineCallbacks
     def delete_volume(self, volume_name):
         """Deletes a logical volume"""
-        # NOTE(vish): Sometimes complains that the volume is still
-        #             open, so delay and try again before failing
-        try:
-            yield self._execute("sudo lvremove -f %s/%s" %
-                                (FLAGS.volume_group,
-                                 volume_name))
-        except exception.ProcessExecutionError:
-            logging.exception("lvremove threw an error, recovering")
-            yield self._execute("sleep 2")
-            yield self._execute("sudo lvremove -f %s/%s" %
+        yield self._try_execute("sudo lvremove -f %s/%s" %
                                 (FLAGS.volume_group,
                                  volume_name))
 
     @defer.inlineCallbacks
     def create_export(self, volume_name, shelf_id, blade_id):
         """Creates an export for a logical volume"""
-        yield self._execute(
+        yield self._try_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (shelf_id,
                  blade_id,
@@ -91,39 +95,16 @@ class AOEDriver(object):
     @defer.inlineCallbacks
     def remove_export(self, _volume_name, shelf_id, blade_id):
         """Removes an export for a logical volume"""
-        # NOTE(vish): These commands can partially fail sometimes, but
-        #             running them a second time on failure will usually
-        #             pick up the remaining tasks even though it also
-        #             raises an exception.  We therefore ignore the
-        #             failure on the second try.
-        try:
-            yield self._execute("sudo vblade-persist stop %s %s" %
+        yield self._try_execute("sudo vblade-persist stop %s %s" %
                                 (shelf_id, blade_id))
-        except exception.ProcessExecutionError:
-            logging.exception("vblade stop threw an error, recovering")
-            yield self._execute("sleep 2")
-            yield self._execute("sudo vblade-persist stop %s %s" %
-                                (shelf_id, blade_id),
-                                check_exit_code=False)
-        try:
-            yield self._execute("sudo vblade-persist destroy %s %s" %
+        yield self._try_execute("sudo vblade-persist destroy %s %s" %
                                 (shelf_id, blade_id))
-        except exception.ProcessExecutionError:
-            logging.exception("vblade destroy threw an error, recovering")
-            yield self._execute("sleep 2")
-            yield self._execute("sudo vblade-persist destroy %s %s" %
-                                (shelf_id, blade_id),
-                                check_exit_code=False)
 
     @defer.inlineCallbacks
     def ensure_exports(self):
         """Runs all existing exports"""
-        # NOTE(ja): wait for blades to appear
-        yield self._execute("sleep 2")
-        yield self._execute("sudo vblade-persist auto all",
-                            check_exit_code=False)
-        yield self._execute("sudo vblade-persist start all",
-                            check_exit_code=False)
+        yield self._try_execute("sudo vblade-persist auto all")
+        yield self._try_execute("sudo vblade-persist start all")
 
 
 class FakeAOEDriver(AOEDriver):
