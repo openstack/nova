@@ -83,21 +83,21 @@ class ComputeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_run_terminate_timestamps(self):
-        """Make sure it is possible to  run and terminate instance"""
+        """Make sure timestamps are set for launched and destroyed"""
         instance_id = self._create_instance()
         instance_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(instance_ref['launched_at'], None)
-        self.assertEqual(instance_ref['terminated_at'], None)
+        self.assertEqual(instance_ref['deleted_at'], None)
         launch = datetime.datetime.utcnow()
         yield self.compute.run_instance(self.context, instance_id)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] > launch)
-        self.assertEqual(instance_ref['terminated_at'], None)
+        self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
         yield self.compute.terminate_instance(self.context, instance_id)
         instance_ref = db.instance_get({'deleted': True}, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
-        self.assert_(instance_ref['terminated_at'] > terminate)
+        self.assert_(instance_ref['deleted_at'] > terminate)
 
     @defer.inlineCallbacks
     def test_reboot(self):

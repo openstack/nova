@@ -103,7 +103,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
-        self.deleted_at = datetime.datetime.now()
+        self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
