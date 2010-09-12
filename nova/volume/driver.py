@@ -103,8 +103,18 @@ class AOEDriver(object):
     @defer.inlineCallbacks
     def ensure_exports(self):
         """Runs all existing exports"""
-        yield self._try_execute("sudo vblade-persist auto all")
-        yield self._try_execute("sudo vblade-persist start all")
+        # NOTE(vish): The standard _try_execute does not work here
+        #             because these methods throw errors if other
+        #             volumes on this host are in the process of
+        #             being created.  The good news is the command
+        #             still works for the other volumes, so we
+        #             just wait a bit for the current volume to
+        #             be ready and ignore any errors.
+        yield self._execute("sleep 2")
+        yield self._execute("sudo vblade-persist auto all",
+                            check_exit_code=False)
+        yield self._execute("sudo vblade-persist start all",
+                            check_exit_code=False)
 
 
 class FakeAOEDriver(AOEDriver):
