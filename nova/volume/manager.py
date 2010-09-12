@@ -62,7 +62,7 @@ class AOEManager(manager.Manager):
         for shelf_id in xrange(FLAGS.num_shelves):
             for blade_id in xrange(FLAGS.blades_per_shelf):
                 dev = {'shelf_id': shelf_id, 'blade_id': blade_id}
-                self.db.export_device_create(context, dev)
+                self.db.export_device_create_safe(context, dev)
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):

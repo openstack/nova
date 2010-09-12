@@ -630,12 +630,14 @@ def export_device_count(_context):
     return models.ExportDevice.count()
 
 
-def export_device_create(_context, values):
+def export_device_create_safe(_context, values):
     export_device_ref = models.ExportDevice()
     for (key, value) in values.iteritems():
         export_device_ref[key] = value
-    export_device_ref.save()
-    return export_device_ref
+    try:
+        export_device_ref.save()
+    except exc.IntegrityError:
+        pass
 
 
 ###################
