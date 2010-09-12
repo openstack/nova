@@ -85,9 +85,9 @@ def service_get_all_compute_sorted(context):
         #              FROM instances GROUP BY host) AS inst_count
         #             ON services.host = inst_count.host
         topic = 'compute'
-        label = 'instance_count'
+        label = 'instance_cores'
         subq = session.query(models.Instance.host,
-                             func.count('*').label(label)
+                             func.sum('cores').label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Instance.host
                      ).subquery()
@@ -119,9 +119,9 @@ def service_get_all_volume_sorted(context):
     session = get_session()
     with session.begin():
         topic = 'volume'
-        label = 'volume_count'
+        label = 'volume_gigabytes'
         subq = session.query(models.Volume.host,
-                             func.count('*').label(label)
+                             func.count('size').label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Volume.host
                      ).subquery()
