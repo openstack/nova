@@ -300,9 +300,11 @@ class CloudController(object):
         vol['attach_status'] = "detached"
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"context": None,
-                                               "volume_id": volume_ref['id']}})
+        rpc.cast(FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"context": None,
+                           "topic": FLAGS.volume_topic,
+                           "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
