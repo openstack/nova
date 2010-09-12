@@ -182,6 +182,14 @@ def floating_ip_create(_context, values):
     return floating_ip_ref['address']
 
 
+def floating_ip_count_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).count()
+
+
 def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
     session = get_session()
     with session.begin():
@@ -349,6 +357,17 @@ def instance_create(_context, values):
         instance_ref[key] = value
     instance_ref.save()
     return instance_ref
+
+
+def instance_data_get_for_project(_context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Instance.id),
+                           func.sum(models.Instance.vcpus)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
 
 
 def instance_destroy(_context, instance_id):
@@ -621,6 +640,37 @@ def export_device_create(_context, values):
 ###################
 
 
+def quota_create(_context, values):
+    quota_ref = models.Quota()
+    for (key, value) in values.iteritems():
+        quota_ref[key] = value
+    quota_ref.save()
+    return quota_ref
+
+
+def quota_get(_context, project_id):
+    return models.Quota.find_by_str(project_id)
+
+
+def quota_update(_context, project_id, values):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        for (key, value) in values.iteritems():
+            quota_ref[key] = value
+        quota_ref.save(session=session)
+
+
+def quota_destroy(_context, project_id):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        quota_ref.delete(session=session)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(_context, volume_id):
     session = get_session()
     with session.begin():
@@ -656,6 +706,17 @@ def volume_create(_context, values):
         volume_ref[key] = value
     volume_ref.save()
     return volume_ref
+
+
+def volume_data_get_for_project(_context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Volume.id),
+                           func.sum(models.Volume.size)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
 
 
 def volume_destroy(_context, volume_id):

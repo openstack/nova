@@ -229,6 +229,11 @@ class Instance(BASE, NovaBase):
     state = Column(Integer)
     state_description = Column(String(255))
 
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+
+
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
@@ -272,6 +277,36 @@ class Volume(BASE, NovaBase):
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+
+class Quota(BASE, NovaBase):
+    """Represents quota overrides for a project"""
+    __tablename__ = 'quotas'
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(String(255))
+
+    instances = Column(Integer)
+    cores = Column(Integer)
+    volumes = Column(Integer)
+    gigabytes = Column(Integer)
+    floating_ips = Column(Integer)
+
+    @property
+    def str_id(self):
+        return self.project_id
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(project_id=str_id
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for project_id %s" % str_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""

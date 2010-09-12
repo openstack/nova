@@ -50,6 +50,7 @@ class ComputeTestCase(test.TrialTestCase):
     def tearDown(self):  # pylint: disable-msg=C0103
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
+        super(ComputeTestCase, self).tearDown()
 
     def _create_instance(self):
         """Create a test instance"""
