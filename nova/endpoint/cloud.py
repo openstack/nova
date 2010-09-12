@@ -464,14 +464,15 @@ class CloudController(object):
     @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance_ref = db.instance_get_by_str(context, instance_id)
-        fixed_ip_ref = db.fixed_ip_get_by_instance(context, instance_ref['id'])
+        fixed_address = db.instance_get_fixed_address(context,
+                                                      instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
                  {"method": "associate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['str_id'],
-                           "fixed_address": fixed_ip_ref['str_id']}})
+                           "fixed_address": fixed_address}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
