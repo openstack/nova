@@ -51,9 +51,43 @@ class NoMoreNetworks(exception.Error):
 ###################
 
 
+def service_destroy(context, instance_id):
+    """Destroy the service or raise if it does not exist."""
+    return IMPL.service_destroy(context, instance_id)
+
+
 def service_get(context, service_id):
     """Get an service or raise if it does not exist."""
     return IMPL.service_get(context, service_id)
+
+
+def service_get_all_by_topic(context, topic):
+    """Get all compute services for a given topic """
+    return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_compute_sorted(context):
+    """Get all compute services sorted by instance count
+
+    Returns a list of (Service, instance_count) tuples
+    """
+    return IMPL.service_get_all_compute_sorted(context)
+
+
+def service_get_all_network_sorted(context):
+    """Get all network services sorted by network count
+
+    Returns a list of (Service, network_count) tuples
+    """
+    return IMPL.service_get_all_network_sorted(context)
+
+
+def service_get_all_volume_sorted(context):
+    """Get all volume services sorted by volume count
+
+    Returns a list of (Service, volume_count) tuples
+    """
+    return IMPL.service_get_all_volume_sorted(context)
 
 
 def service_get_by_args(context, host, binary):
@@ -89,6 +123,11 @@ def floating_ip_allocate_address(context, host, project_id):
 def floating_ip_create(context, values):
     """Create a floating ip from the values dictionary."""
     return IMPL.floating_ip_create(context, values)
+
+
+def floating_ip_count_by_project(context, project_id):
+    """Count floating ips used by project."""
+    return IMPL.floating_ip_count_by_project(context, project_id)
 
 
 def floating_ip_deallocate(context, address):
@@ -191,6 +230,11 @@ def fixed_ip_update(context, address, values):
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return IMPL.instance_create(context, values)
+
+
+def instance_data_get_for_project(context, project_id):
+    """Get (instance_count, core_count) for project."""
+    return IMPL.instance_data_get_for_project(context, project_id)
 
 
 def instance_destroy(context, instance_id):
@@ -377,6 +421,29 @@ def export_device_create(context, values):
 ###################
 
 
+def quota_create(context, values):
+    """Create a quota from the values dictionary."""
+    return IMPL.quota_create(context, values)
+
+
+def quota_get(context, project_id):
+    """Retrieve a quota or raise if it does not exist."""
+    return IMPL.quota_get(context, project_id)
+
+
+def quota_update(context, project_id, values):
+    """Update a quota from the values dictionary."""
+    return IMPL.quota_update(context, project_id, values)
+
+
+def quota_destroy(context, project_id):
+    """Destroy the quota or raise if it does not exist."""
+    return IMPL.quota_destroy(context, project_id)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""
     return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
@@ -390,6 +457,11 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return IMPL.volume_create(context, values)
+
+
+def volume_data_get_for_project(context, project_id):
+    """Get (volume_count, gigabytes) for project."""
+    return IMPL.volume_data_get_for_project(context, project_id)
 
 
 def volume_destroy(context, volume_id):
