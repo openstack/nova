@@ -80,6 +80,7 @@ def floating_ip_allocate_address(_context, host, project_id):
         floating_ip_ref = session.query(models.FloatingIp
                                 ).filter_by(host=host
                                 ).filter_by(fixed_ip_id=None
+                                ).filter_by(project_id=None
                                 ).filter_by(deleted=False
                                 ).with_lockmode('update'
                                 ).first()
