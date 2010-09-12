@@ -79,15 +79,15 @@ def service_get_all_compute_sorted(context):
     session = get_session()
     with session.begin():
         # NOTE(vish): The intended query is below
-        #             SELECT services.*, inst_count.instance_count
+        #             SELECT services.*, inst_cores.instance_cores
         #             FROM services LEFT OUTER JOIN
-        #             (SELECT host, count(*) AS instance_count
-        #              FROM instances GROUP BY host) AS inst_count
-        #             ON services.host = inst_count.host
+        #             (SELECT host, sum(instances.vcpus) AS instance_cores
+        #              FROM instances GROUP BY host) AS inst_cores
+        #             ON services.host = inst_cores.host
         topic = 'compute'
         label = 'instance_cores'
         subq = session.query(models.Instance.host,
-                             func.sum('cores').label(label)
+                             func.sum(models.Instance.vcpus).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Instance.host
                      ).subquery()
@@ -121,7 +121,7 @@ def service_get_all_volume_sorted(context):
         topic = 'volume'
         label = 'volume_gigabytes'
         subq = session.query(models.Volume.host,
-                             func.count('size').label(label)
+                             func.sum(models.Volume.size).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Volume.host
                      ).subquery()

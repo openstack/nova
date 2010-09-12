@@ -43,6 +43,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         results = db.service_get_all_compute_sorted(context)
         for result in results:
             (service, instance_cores) = result
+            print service, instance_cores
             if instance_cores >= FLAGS.max_cores:
                 raise driver.NoValidHost("All hosts have too many cores")
             if self.service_is_up(service):

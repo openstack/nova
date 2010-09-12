@@ -33,7 +33,7 @@ from nova.scheduler import driver
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('max_instances', 'nova.scheduler.simple')
+flags.DECLARE('max_cores', 'nova.scheduler.simple')
 
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
@@ -75,7 +75,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
     def setUp(self):  # pylint: disable-msg=C0103
         super(SimpleDriverTestCase, self).setUp()
         self.flags(connection_type='fake',
-                   max_instances=4,
+                   max_cores=4,
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
         self.context = None
@@ -109,6 +109,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
+        inst['vcpus'] = 1
         return db.instance_create(self.context, inst)['id']
 
     def test_hosts_are_up(self):
@@ -125,10 +126,10 @@ class SimpleDriverTestCase(test.TrialTestCase):
         self.assertEqual(host, 'host2')
         self.service1.terminate_instance(self.context, instance_id)
 
-    def test_too_many_instances(self):
+    def test_too_many_cores(self):
         instance_ids1 = []
         instance_ids2 = []
-        for index in xrange(FLAGS.max_instances):
+        for index in xrange(FLAGS.max_cores):
             instance_id = self._create_instance()
             self.service1.run_instance(self.context, instance_id)
             instance_ids1.append(instance_id)
@@ -139,7 +140,6 @@ class SimpleDriverTestCase(test.TrialTestCase):
         self.assertRaises(driver.NoValidHost,
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
-                          'compute',
                           instance_id)
         for instance_id in instance_ids1:
             self.service1.terminate_instance(self.context, instance_id)
