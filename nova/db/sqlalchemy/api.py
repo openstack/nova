@@ -244,6 +244,20 @@ def fixed_ip_disassociate(_context, address):
         fixed_ip_ref.save(session=session)
 
 
+def fixed_ip_disassociate_all_by_timeout(_context, host, time):
+    session = get_session()
+    result = session.execute('update fixed_ips set instance_id = NULL '
+                             'WHERE id IN (SELECT fixed_ips.id FROM fixed_ips '
+                                          'INNER JOIN networks '
+                                          'ON fixed_ips.network_id = '
+                                          'networks.id '
+                                          'WHERE host = :host) '
+                             'AND updated_at < :time '
+                             'AND instance_id IS NOT NULL',
+                    {'host': host,
+                     'time': time.isoformat()})
+    return result.rowcount
+
 def fixed_ip_get_by_address(_context, address):
     session = get_session()
     with session.begin():

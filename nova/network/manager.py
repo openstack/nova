@@ -20,10 +20,12 @@
 Network Hosts are responsible for allocating ips and setting up network
 """
 
+import datetime
 import logging
 import math
 
 import IPy
+from twisted.internet import defer
 
 from nova import db
 from nova import exception
@@ -62,7 +64,9 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
 flags.DEFINE_bool('update_dhcp_on_disassociate', False,
-                  'Whether to update dhcp when fixed_ip is disassocated')
+                  'Whether to update dhcp when fixed_ip is disassociated')
+flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
+                     'Seconds after which a deallocated ip is disassociated')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -90,7 +94,7 @@ class NetworkManager(manager.Manager):
         network_id = network_ref['id']
         host = self.db.network_set_host(context,
                                         network_id,
-                                        FLAGS.host)
+                                        self.host)
         self._on_set_network_host(context, network_id)
         return host
 
@@ -118,7 +122,7 @@ class NetworkManager(manager.Manager):
         """Gets an floating ip from the pool"""
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
-                                                    FLAGS.host,
+                                                    self.host,
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
@@ -218,6 +222,21 @@ class FlatManager(NetworkManager):
 
 class VlanManager(NetworkManager):
     """Vlan network with dhcp"""
+
+    @defer.inlineCallbacks
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval"""
+        yield super(VlanManager, self).periodic_tasks(context)
+        now = datetime.datetime.utcnow()
+        timeout = FLAGS.fixed_ip_disassociate_timeout
+        time = now - datetime.timedelta(seconds=timeout)
+        num = self.db.fixed_ip_disassociate_all_by_timeout(self,
+                                                           self.host,
+                                                           time)
+        if num:
+            logging.debug("Dissassociated %s stale fixed ip(s)", num)
+
+
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
@@ -235,14 +254,6 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool"""
         self.db.fixed_ip_update(context, address, {'allocated': False})
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['leased']:
-            self.db.fixed_ip_disassociate(context, address)
-            # NOTE(vish): dhcp server isn't updated until next setup, this
-            #             means there will stale entries in the conf file
-            #             the code below will update the file if necessary
-            if FLAGS.update_dhcp_on_disassociate:
-                network_ref = self.db.fixed_ip_get_network(context, address)
-                self.driver.update_dhcp(context, network_ref['id'])
 
 
     def setup_fixed_ip(self, context, address):
@@ -287,7 +298,9 @@ class VlanManager(NetworkManager):
         if instance_ref['mac_address'] != mac:
             raise exception.Error("IP %s released from bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
-        self.db.fixed_ip_update(context, address, {'leased': False})
+        self.db.fixed_ip_update(context,
+                                fixed_ip_ref['str_id'],
+                                {'leased': False})
         if not fixed_ip_ref['allocated']:
             self.db.fixed_ip_disassociate(context, address)
             # NOTE(vish): dhcp server isn't updated until next setup, this

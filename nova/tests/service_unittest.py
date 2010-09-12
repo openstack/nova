@@ -65,15 +65,20 @@ class ServiceTestCase(test.BaseTestCase):
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
+        rpc.AdapterConsumer.attach_to_twisted()
+        rpc.AdapterConsumer.attach_to_twisted()
+
         # Stub out looping call a bit needlessly since we don't have an easy
         # way to cancel it (yet) when the tests finishes
         service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
                         service.task.LoopingCall)
         service.task.LoopingCall.start(interval=mox.IgnoreArg(),
                                        now=mox.IgnoreArg())
+        service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
+                        service.task.LoopingCall)
+        service.task.LoopingCall.start(interval=mox.IgnoreArg(),
+                                       now=mox.IgnoreArg())
 
-        rpc.AdapterConsumer.attach_to_twisted()
-        rpc.AdapterConsumer.attach_to_twisted()
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
