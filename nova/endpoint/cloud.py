@@ -314,6 +314,8 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
@@ -336,10 +338,10 @@ class CloudController(object):
         volume_ref = db.volume_get_by_str(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
         if not instance_ref:
-            raise exception.Error("Volume isn't attached to anything!")
+            raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
         if volume_ref['status'] == "available":
-            raise exception.Error("Volume is already detached")
+            raise exception.ApiError("Volume is already detached")
         try:
             host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -691,6 +693,8 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
         now = datetime.datetime.utcnow()
         db.volume_update(context, volume_ref['id'], {'terminated_at': now})
         host = volume_ref['host']

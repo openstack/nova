@@ -90,16 +90,13 @@ class AOEManager(manager.Manager):
         yield self.driver.create_export(volume_ref['str_id'],
                                         shelf_id,
                                         blade_id)
-        # TODO(joshua): We need to trigger a fanout message
-        #               for aoe-discover on all the nodes
-
-        self.db.volume_update(context, volume_id, {'status': 'available'})
 
         logging.debug("volume %s: re-exporting all values", volume_id)
         yield self.driver.ensure_exports()
 
         now = datetime.datetime.utcnow()
-        self.db.volume_update(context, volume_id, {'launched_at': now})
+        self.db.volume_update(context, volume_id, {'status': 'available',
+                                                   'launched_at': now})
         logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
