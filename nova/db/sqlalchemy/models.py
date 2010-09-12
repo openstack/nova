@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -315,6 +315,7 @@ class Quota(BASE, NovaBase):
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
     __tablename__ = 'export_devices'
+    __table_args__ = (schema.UniqueConstraint("name", "site"), {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
