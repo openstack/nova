@@ -437,6 +437,7 @@ def network_get(_context, network_id):
 def network_get_associated_fixed_ips(_context, network_id):
     session = get_session()
     return session.query(models.FixedIp
+                 ).options(joinedload_all('instance')
                  ).filter_by(network_id=network_id
                  ).filter(models.FixedIp.instance_id != None
                  ).filter_by(deleted=False
