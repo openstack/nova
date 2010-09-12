@@ -67,7 +67,7 @@ def service_get_all_by_topic(context, topic):
 
 def _service_get_all_topic_subquery(_context, session, topic, subq, label):
     sort_value = getattr(subq.c, label)
-    return session.query(models.Service, sort_value
+    return session.query(models.Service, func.coalesce(sort_value, 0)
                  ).filter_by(topic=topic
                  ).filter_by(deleted=False
                  ).outerjoin((subq, models.Service.host == subq.c.host)
@@ -79,15 +79,16 @@ def service_get_all_compute_sorted(context):
     session = get_session()
     with session.begin():
         # NOTE(vish): The intended query is below
-        #             SELECT services.*, inst_count.instance_count
+        #             SELECT services.*, COALESCE(inst_cores.instance_cores,
+        #                                         0)
         #             FROM services LEFT OUTER JOIN
-        #             (SELECT host, count(*) AS instance_count
-        #              FROM instances GROUP BY host) AS inst_count
-        #             ON services.host = inst_count.host
+        #             (SELECT host, SUM(instances.vcpus) AS instance_cores
+        #              FROM instances GROUP BY host) AS inst_cores
+        #             ON services.host = inst_cores.host
         topic = 'compute'
-        label = 'instance_count'
+        label = 'instance_cores'
         subq = session.query(models.Instance.host,
-                             func.count('*').label(label)
+                             func.sum(models.Instance.vcpus).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Instance.host
                      ).subquery()
@@ -104,7 +105,7 @@ def service_get_all_network_sorted(context):
         topic = 'network'
         label = 'network_count'
         subq = session.query(models.Network.host,
-                             func.count('*').label(label)
+                             func.count(models.Network.id).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Network.host
                      ).subquery()
@@ -119,9 +120,9 @@ def service_get_all_volume_sorted(context):
     session = get_session()
     with session.begin():
         topic = 'volume'
-        label = 'volume_count'
+        label = 'volume_gigabytes'
         subq = session.query(models.Volume.host,
-                             func.count('*').label(label)
+                             func.sum(models.Volume.size).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Volume.host
                      ).subquery()
@@ -180,6 +181,14 @@ def floating_ip_create(_context, values):
         floating_ip_ref[key] = value
     floating_ip_ref.save()
     return floating_ip_ref['address']
+
+
+def floating_ip_count_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).count()
 
 
 def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
@@ -349,6 +358,17 @@ def instance_create(_context, values):
         instance_ref[key] = value
     instance_ref.save()
     return instance_ref
+
+
+def instance_data_get_for_project(_context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Instance.id),
+                           func.sum(models.Instance.vcpus)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
 
 
 def instance_destroy(_context, instance_id):
@@ -621,6 +641,37 @@ def export_device_create(_context, values):
 ###################
 
 
+def quota_create(_context, values):
+    quota_ref = models.Quota()
+    for (key, value) in values.iteritems():
+        quota_ref[key] = value
+    quota_ref.save()
+    return quota_ref
+
+
+def quota_get(_context, project_id):
+    return models.Quota.find_by_str(project_id)
+
+
+def quota_update(_context, project_id, values):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        for (key, value) in values.iteritems():
+            quota_ref[key] = value
+        quota_ref.save(session=session)
+
+
+def quota_destroy(_context, project_id):
+    session = get_session()
+    with session.begin():
+        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        quota_ref.delete(session=session)
+
+
+###################
+
+
 def volume_allocate_shelf_and_blade(_context, volume_id):
     session = get_session()
     with session.begin():
@@ -656,6 +707,17 @@ def volume_create(_context, values):
         volume_ref[key] = value
     volume_ref.save()
     return volume_ref
+
+
+def volume_data_get_for_project(_context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Volume.id),
+                           func.sum(models.Volume.size)
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=False
+                   ).first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
 
 
 def volume_destroy(_context, volume_id):

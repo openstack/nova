@@ -29,10 +29,10 @@ from nova.scheduler import driver
 from nova.scheduler import chance
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer("max_instances", 16,
-                     "maximum number of instances to allow per host")
-flags.DEFINE_integer("max_volumes", 100,
-                     "maximum number of volumes to allow per host")
+flags.DEFINE_integer("max_cores", 16,
+                     "maximum number of instance cores to allow per host")
+flags.DEFINE_integer("max_gigabytes", 10000,
+                     "maximum number of volume gigabytes to allow per host")
 flags.DEFINE_integer("max_networks", 1000,
                      "maximum number of networks to allow per host")
 
@@ -41,12 +41,12 @@ class SimpleScheduler(chance.ChanceScheduler):
 
     def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
-
+        instance_ref = db.instance_get(context, instance_id)
         results = db.service_get_all_compute_sorted(context)
         for result in results:
-            (service, instance_count) = result
-            if instance_count >= FLAGS.max_instances:
-                raise driver.NoValidHost("All hosts have too many instances")
+            (service, instance_cores) = result
+            if instance_cores + instance_ref['vcpus'] > FLAGS.max_cores:
+                raise driver.NoValidHost("All hosts have too many cores")
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
@@ -60,12 +60,12 @@ class SimpleScheduler(chance.ChanceScheduler):
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
-
+        volume_ref = db.volume_get(context, volume_id)
         results = db.service_get_all_volume_sorted(context)
         for result in results:
-            (service, instance_count) = result
-            if instance_count >= FLAGS.max_volumes:
-                raise driver.NoValidHost("All hosts have too many volumes")
+            (service, volume_gigabytes) = result
+            if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
+                raise driver.NoValidHost("All hosts have too many gigabytes")
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow

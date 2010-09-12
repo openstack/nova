@@ -33,6 +33,7 @@ from twisted.internet import defer
 from nova import db
 from nova import exception
 from nova import flags
+from nova import quota
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
@@ -43,6 +44,11 @@ from nova.endpoint import images
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
+
+
+class QuotaError(exception.ApiError):
+    """Quota Exceeeded"""
+    pass
 
 
 def _gen_key(user_id, key_name):
@@ -278,6 +284,14 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
+        # check quota
+        size = int(size)
+        if quota.allowed_volumes(context, 1, size) < 1:
+            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
+                         context.project.id, size)
+            raise QuotaError("Volume quota exceeded. You cannot "
+                             "create a volume of size %s" %
+                             size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
@@ -287,9 +301,11 @@ class CloudController(object):
         vol['attach_status'] = "detached"
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"context": None,
-                                               "volume_id": volume_ref['id']}})
+        rpc.cast(FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"context": None,
+                           "topic": FLAGS.volume_topic,
+                           "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
@@ -442,6 +458,12 @@ class CloudController(object):
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
+        # check quota
+        if quota.allowed_floating_ips(context, 1) < 1:
+            logging.warn("Quota exceeeded for %s, tried to allocate address",
+                         context.project.id)
+            raise QuotaError("Address quota exceeded. You cannot "
+                             "allocate any more addresses")
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
                          {"method": "allocate_floating_ip",
@@ -501,6 +523,22 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
+        instance_type = kwargs.get('instance_type', 'm1.small')
+        if instance_type not in INSTANCE_TYPES:
+            raise exception.ApiError("Unknown instance type: %s",
+                                     instance_type)
+        # check quota
+        max_instances = int(kwargs.get('max_count', 1))
+        min_instances = int(kwargs.get('min_count', max_instances))
+        num_instances = quota.allowed_instances(context,
+                                                max_instances,
+                                                instance_type)
+        if num_instances < min_instances:
+            logging.warn("Quota exceeeded for %s, tried to run %s instances",
+                         context.project.id, min_instances)
+            raise QuotaError("Instance quota exceeded. You can only "
+                             "run %s more instances of this type." %
+                             num_instances, "InstanceLimitExceeded")
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
@@ -522,7 +560,7 @@ class CloudController(object):
         images.get(context, kernel_id)
         images.get(context, ramdisk_id)
 
-        logging.debug("Going to run instances...")
+        logging.debug("Going to run %s instances...", num_instances)
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
@@ -547,10 +585,15 @@ class CloudController(object):
         base_options['user_id'] = context.user.id
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
-        base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
         base_options['security_group'] = security_group
+        base_options['instance_type'] = instance_type
 
-        for num in range(int(kwargs['max_count'])):
+        type_data = INSTANCE_TYPES[instance_type]
+        base_options['memory_mb'] = type_data['memory_mb']
+        base_options['vcpus'] = type_data['vcpus']
+        base_options['local_gb'] = type_data['local_gb']
+
+        for num in range(num_instances):
             instance_ref = db.instance_create(context, base_options)
             inst_id = instance_ref['id']
 
