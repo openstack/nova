@@ -67,7 +67,7 @@ def service_get_all_by_topic(context, topic):
 
 def _service_get_all_topic_subquery(_context, session, topic, subq, label):
     sort_value = getattr(subq.c, label)
-    return session.query(models.Service, sort_value
+    return session.query(models.Service, func.coalesce(sort_value, 0)
                  ).filter_by(topic=topic
                  ).filter_by(deleted=False
                  ).outerjoin((subq, models.Service.host == subq.c.host)
@@ -79,9 +79,10 @@ def service_get_all_compute_sorted(context):
     session = get_session()
     with session.begin():
         # NOTE(vish): The intended query is below
-        #             SELECT services.*, inst_cores.instance_cores
+        #             SELECT services.*, COALESCE(inst_cores.instance_cores,
+        #                                         0)
         #             FROM services LEFT OUTER JOIN
-        #             (SELECT host, sum(instances.vcpus) AS instance_cores
+        #             (SELECT host, SUM(instances.vcpus) AS instance_cores
         #              FROM instances GROUP BY host) AS inst_cores
         #             ON services.host = inst_cores.host
         topic = 'compute'
@@ -104,7 +105,7 @@ def service_get_all_network_sorted(context):
         topic = 'network'
         label = 'network_count'
         subq = session.query(models.Network.host,
-                             func.count('*').label(label)
+                             func.count(models.Network.id).label(label)
                      ).filter_by(deleted=False
                      ).group_by(models.Network.host
                      ).subquery()

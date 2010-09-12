@@ -39,12 +39,11 @@ class SimpleScheduler(chance.ChanceScheduler):
 
     def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
-
+        instance_ref = db.instance_get(context, instance_id)
         results = db.service_get_all_compute_sorted(context)
         for result in results:
             (service, instance_cores) = result
-            print service, instance_cores
-            if instance_cores >= FLAGS.max_cores:
+            if instance_cores + instance_ref['vcpus'] > FLAGS.max_cores:
                 raise driver.NoValidHost("All hosts have too many cores")
             if self.service_is_up(service):
                 db.instance_update(context,
@@ -55,11 +54,11 @@ class SimpleScheduler(chance.ChanceScheduler):
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
-
+        volume_ref = db.volume_get(context, volume_id)
         results = db.service_get_all_volume_sorted(context)
         for result in results:
             (service, volume_gigabytes) = result
-            if volume_gigabytes >= FLAGS.max_gigabytes:
+            if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
                 raise driver.NoValidHost("All hosts have too many gigabytes")
             if self.service_is_up(service):
                 db.volume_update(context,
