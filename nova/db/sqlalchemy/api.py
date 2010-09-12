@@ -25,6 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
 
@@ -636,7 +637,7 @@ def export_device_create_safe(_context, values):
         export_device_ref[key] = value
     try:
         export_device_ref.save()
-    except exc.IntegrityError:
+    except IntegrityError:
         pass
 
 
