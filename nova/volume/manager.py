@@ -105,14 +105,11 @@ class AOEManager(manager.Manager):
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume"""
         volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['status'] != "available":
-            raise exception.Error("Volume is not available")
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
         if volume_ref['host'] != self.host:
             raise exception.Error("Volume is not local to this node")
         logging.debug("Deleting volume with id of: %s", volume_id)
-        self.db.volume_update(context, volume_id, {'status': 'deleting'})
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                                 volume_id)
         yield self.driver.remove_export(volume_ref['str_id'],
