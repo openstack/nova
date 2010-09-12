@@ -50,17 +50,26 @@ class AOEDriver(object):
             sizestr = '100M'
         else:
             sizestr = '%sG' % size
-        yield self._execute(
-                "sudo lvcreate -L %s -n %s %s" % (sizestr,
-                                                  volume_name,
-                                                  FLAGS.volume_group))
+        yield self._execute("sudo lvcreate -L %s -n %s %s" %
+                            (sizestr,
+                             volume_name,
+                             FLAGS.volume_group))
 
     @defer.inlineCallbacks
     def delete_volume(self, volume_name):
         """Deletes a logical volume"""
-        yield self._execute(
-                "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            volume_name))
+        # NOTE(vish): Sometimes complains that the volume is still
+        #             open, so delay and try again before failing
+        try:
+            yield self._execute("sudo lvremove -f %s/%s" %
+                                (FLAGS.volume_group,
+                                 volume_name))
+        except exception.ProcessExecutionError:
+            logging.exception("lvremove threw an error, recovering")
+            yield self._execute("sleep 2")
+            yield self._execute("sudo lvremove -f %s/%s" %
+                                (FLAGS.volume_group,
+                                 volume_name))
 
     @defer.inlineCallbacks
     def create_export(self, volume_name, shelf_id, blade_id):
@@ -85,7 +94,8 @@ class AOEDriver(object):
         # NOTE(vish): These commands can partially fail sometimes, but
         #             running them a second time on failure will usually
         #             pick up the remaining tasks even though it also
-        #             raises an exception
+        #             raises an exception.  We therefore ignore the
+        #             failure on the second try.
         try:
             yield self._execute("sudo vblade-persist stop %s %s" %
                                 (shelf_id, blade_id))
