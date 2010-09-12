@@ -59,7 +59,7 @@ class AOEDriver(object):
                     raise
                 logging.exception("Recovering from a failed execute."
                                   "Try number %s", tries)
-                yield self._execute("sleep %s", tries ** 2)
+                yield self._execute("sleep %s" % tries ** 2)
 
 
     @defer.inlineCallbacks
