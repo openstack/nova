@@ -34,6 +34,8 @@ flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
 flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
+flags.DEFINE_string('num_shell_tries', 3,
+                    'number of times to attempt to run flakey shell commands')
 
 
 class AOEDriver(object):
@@ -46,12 +48,18 @@ class AOEDriver(object):
         # NOTE(vish): Volume commands can partially fail due to timing, but
         #             running them a second time on failure will usually
         #             recover nicely.
-        try:
-            yield self._execute(command)
-        except exception.ProcessExecutionError:
-            logging.exception("Attempting to recover from a failed execute.")
-            yield self._execute("sleep 2")
-            yield self._execute(command)
+        tries = 0
+        while True:
+            try:
+                yield self._execute(command)
+                defer.returnValue(True)
+            except exception.ProcessExecutionError:
+                tries = tries + 1
+                if tries >= FLAGS.num_shell_tries:
+                    raise
+                logging.exception("Recovering from a failed execute."
+                                  "Try number %s", tries)
+                yield self._execute("sleep %s", tries ** 2)
 
 
     @defer.inlineCallbacks
