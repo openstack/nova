@@ -605,7 +605,7 @@ class CloudController(object):
                 rpc.cast(network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"context": None,
-                                   "address": address}})
+                                   "floating_address": address}})
 
             address = db.instance_get_fixed_address(context,
                                                     instance_ref['id'])
