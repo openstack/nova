@@ -252,7 +252,7 @@ class ProjectCommands(object):
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(project_id, user_id)
+        rc = self.manager.get_environment_rc(user_id, project_id)
         with open(filename, 'w') as f:
             f.write(rc)
 
