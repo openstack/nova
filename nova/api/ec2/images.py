@@ -29,17 +29,16 @@ import boto.s3.connection
 from nova import flags
 from nova import utils
 from nova.auth import manager
-from nova.image import service
 
 
 FLAGS = flags.FLAGS
 
 
 def modify(context, image_id, operation):
-    service.S3ImageService(context)._conn().make_request(
+    conn(context).make_request(
         method='POST',
         bucket='_images',
-        query_args=service.qs({'image_id': image_id, 'operation': operation}))
+        query_args=qs({'image_id': image_id, 'operation': operation}))
 
     return True
 
@@ -48,10 +47,10 @@ def register(context, image_location):
     """ rpc call to register a new image based from a manifest """
 
     image_id = utils.generate_uid('ami')
-    service.S3ImageService(context)._conn().make_request(
+    conn(context).make_request(
             method='PUT',
             bucket='_images',
-            query_args=service.qs({'image_location': image_location,
+            query_args=qs({'image_location': image_location,
                            'image_id': image_id}))
 
     return image_id
@@ -62,7 +61,12 @@ def list(context, filter_list=[]):
 
     optionally filtered by a list of image_id """
 
-    result = service.S3ImageService(context).index().values()
+    # FIXME: send along the list of only_images to check for
+    response = conn(context).make_request(
+            method='GET',
+            bucket='_images')
+
+    result = json.loads(response.read())
     if not filter_list is None:
         return [i for i in result if i['imageId'] in filter_list]
     return result
@@ -70,4 +74,20 @@ def list(context, filter_list=[]):
 
 def deregister(context, image_id):
     """ unregister an image """
-    service.S3ImageService(context).delete(image_id)
+    conn(context).make_request(
+            method='DELETE',
+            bucket='_images',
+            query_args=qs({'image_id': image_id}))
+
+
+def conn(context):
+    access = manager.AuthManager().get_access_key(context.user,
+                                                  context.project)
+    secret = str(context.user.secret)
+    calling = boto.s3.connection.OrdinaryCallingFormat()
+    return boto.s3.connection.S3Connection(aws_access_key_id=access,
+                                           aws_secret_access_key=secret,
+                                           is_secure=False,
+                                           calling_format=calling,
+                                           port=FLAGS.s3_port,
+                                           host=FLAGS.s3_host)

@@ -38,8 +38,6 @@ class ImageService(object):
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
-
-        Returns None if the id does not exist.
         """
 
 
@@ -90,53 +88,3 @@ class LocalImageService(ImageService):
         Delete the given image.  Raises OSError if the image does not exist.
         """
         os.unlink(self._path_to(image_id))
-
-
-# TODO(gundlach): before this can be loaded dynamically in ImageService.load(),
-# we'll have to make __init__() not require a context.  Right now it
-# is only used by the AWS API, which hard-codes it, so that's OK.
-class S3ImageService(ImageService):
-    """Service that stores images in an S3 provider."""
-
-    def __init__(self, context):
-        self._context = context
-
-    def index(self):
-        response = self._conn().make_request(
-                method='GET',
-                bucket='_images')
-        items = json.loads(response.read())
-        return dict((item['imageId'], item) for item in items)
-    
-    def show(self, id):
-        response = self._conn().make_request(
-            method='GET',
-            bucket='_images',
-            query_args=qs({'image_id': image_id}))
-        return json.loads(response.read())
-
-    def delete(self, image_id):
-        self._conn().make_request(
-                method='DELETE',
-                bucket='_images',
-                query_args=qs({'image_id': image_id}))
-
-    def _conn(self):
-        """Return a boto S3Connection to the S3 store."""
-        access = manager.AuthManager().get_access_key(self._context.user,
-                                                      self._context.project)
-        secret = str(self._context.user.secret)
-        calling = boto.s3.connection.OrdinaryCallingFormat()
-        return boto.s3.connection.S3Connection(aws_access_key_id=access,
-                                               aws_secret_access_key=secret,
-                                               is_secure=False,
-                                               calling_format=calling,
-                                               port=FLAGS.s3_port,
-                                               host=FLAGS.s3_host)
-
-
-def qs(params):
-    pairs = []
-    for key in params.keys():
-        pairs.append(key + '=' + urllib.quote(params[key]))
-    return '&'.join(pairs)
