@@ -258,9 +258,10 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                                            'INNER JOIN networks '
                                            'ON fixed_ips.network_id = '
                                            'networks.id '
-                                           'WHERE host = :host) as x) '
-                             'AND updated_at < :time '
-                             'AND instance_id IS NOT NULL',
+                                           'WHERE networks.host = :host '
+                                           'AND fixed_ip.updated_at < :time '
+                                           'AND fixed_ip.instance_id IS NOT NULL'
+                                           'AND fixed_ip.allocated = 0) as x) ',
                     {'host': host,
                      'time': time.isoformat()})
     return result.rowcount
