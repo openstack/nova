@@ -284,7 +284,6 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
         # check quota
-        size = int(size)
         if quota.allowed_volumes(context, 1, size) < 1:
             logging.warn("Quota exceeeded for %s, tried to create %sG volume",
                          context.project.id, size)

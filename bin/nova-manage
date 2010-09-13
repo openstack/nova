@@ -273,7 +273,7 @@ class ProjectCommands(object):
                 db.quota_update(None, project_id, quo)
             except exception.NotFound:
                 db.quota_create(None, quo)
-        project_quota = quota._get_quota(None, project_id)
+        project_quota = quota.get_quota(None, project_id)
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)
 

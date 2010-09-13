@@ -37,7 +37,7 @@ flags.DEFINE_integer('quota_gigabytes', 1000,
 flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 
-def _get_quota(context, project_id):
+def get_quota(context, project_id):
     rval = {'instances': FLAGS.quota_instances,
             'cores': FLAGS.quota_cores,
             'volumes': FLAGS.quota_volumes,
@@ -57,7 +57,7 @@ def allowed_instances(context, num_instances, instance_type):
     project_id = context.project.id
     used_instances, used_cores = db.instance_data_get_for_project(context,
                                                                   project_id)
-    quota = _get_quota(context, project_id)
+    quota = get_quota(context, project_id)
     allowed_instances = quota['instances'] - used_instances
     allowed_cores = quota['cores'] - used_cores
     type_cores = instance_types.INSTANCE_TYPES[instance_type]['vcpus']
@@ -72,9 +72,10 @@ def allowed_volumes(context, num_volumes, size):
     project_id = context.project.id
     used_volumes, used_gigabytes = db.volume_data_get_for_project(context,
                                                                   project_id)
-    quota = _get_quota(context, project_id)
+    quota = get_quota(context, project_id)
     allowed_volumes = quota['volumes'] - used_volumes
     allowed_gigabytes = quota['gigabytes'] - used_gigabytes
+    size = int(size)
     num_gigabytes = num_volumes * size
     allowed_volumes = min(allowed_volumes,
                           int(allowed_gigabytes // size))
@@ -85,7 +86,7 @@ def allowed_floating_ips(context, num_floating_ips):
     """Check quota and return min(num_floating_ips, allowed_floating_ips)"""
     project_id = context.project.id
     used_floating_ips = db.floating_ip_count_by_project(context, project_id)
-    quota = _get_quota(context, project_id)
+    quota = get_quota(context, project_id)
     allowed_floating_ips = quota['floating_ips'] - used_floating_ips
     return min(num_floating_ips, allowed_floating_ips)
 
