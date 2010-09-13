@@ -246,12 +246,19 @@ def fixed_ip_disassociate(_context, address):
 
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     session = get_session()
-    result = session.execute('update fixed_ips set instance_id = NULL '
-                             'WHERE id IN (SELECT fixed_ips.id FROM fixed_ips '
-                                          'INNER JOIN networks '
-                                          'ON fixed_ips.network_id = '
-                                          'networks.id '
-                                          'WHERE host = :host) '
+    # NOTE(vish): The annoying nested select here is because SQLite doesn't
+    #             support JOINs in UPDATEs and Mysql doesn't support SELECT
+    #             from the same table you are updating without using a temp
+    #             table.  It would be great if we can coax sqlalchemy into
+    #             generating this update for us without having to update
+    #             each fixed_ip individually.
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL '
+                             'WHERE id IN (SELECT x.id FROM '
+                                          '(SELECT fixed_ips.id FROM fixed_ips '
+                                           'INNER JOIN networks '
+                                           'ON fixed_ips.network_id = '
+                                           'networks.id '
+                                           'WHERE host = :host) as x) '
                              'AND updated_at < :time '
                              'AND instance_id IS NOT NULL',
                     {'host': host,
