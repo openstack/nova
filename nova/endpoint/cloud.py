@@ -93,6 +93,14 @@ class CloudController(object):
                 result[instance['key_name']] = [line]
         return result
 
+    def _refresh_security_group(self, security_group):
+        nodes = set([instance.host for instance in security_group.instances])
+        for node in nodes:
+            rpc.call('%s.%s' % (FLAGS.compute_topic, node),
+                     { "method": "refresh_security_group",
+                       "args": { "context": None,
+                                 "security_group_id": security_group.id}})
+
     def get_metadata(self, address):
         instance_ref = db.fixed_ip_get_instance(None, address)
         if instance_ref is None:
@@ -265,12 +273,12 @@ class CloudController(object):
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
                 source_security_group_owner_id)
-                
+
             source_security_group = \
                     db.security_group_get_by_name(context,
                                                   source_project_id,
                                                   source_security_group_name)
-                                                  
+
             criteria['group_id'] = source_security_group.id
         elif cidr_ip:
             criteria['cidr'] = cidr_ip
@@ -292,6 +300,9 @@ class CloudController(object):
                     break
             # If we make it here, we have a match
             db.security_group_rule_destroy(context, rule.id)
+
+        self._refresh_security_group(security_group)
+
         return True
 
     @rbac.allow('netadmin')
@@ -330,8 +341,11 @@ class CloudController(object):
                 return None
 
         security_group_rule = db.security_group_rule_create(context, values)
+
+        self._refresh_security_group(security_group)
+
         return True
-        
+
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
         # Parse user:project for source group.

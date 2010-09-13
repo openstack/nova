@@ -444,6 +444,12 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
+
+    def refresh_security_group(self, security_group_id):
+        fw = self.NWFilterFirewall(self._conn)
+        fw.ensure_security_group_filter(security_group_id, override=True)
+
+
 class NWFilterFirewall(object):
     """
     This class implements a network filtering mechanism versatile
@@ -533,27 +539,32 @@ class NWFilterFirewall(object):
         return 'nova-secgroup-%d' % (security_group_id,)
 
 
-    def ensure_filter(self, name, xml_generator):
-        def _already_exists_check(filterlist, filter):
-            return filter in filterlist
-        def _define_if_not_exists(exists, xml_generator):
-            if not exists:
-                xml = xml_generator()
-                return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
-        d = threads.deferToThread(self._conn.listNWFilter)
-        d.addCallback(_already_exists_check, name)
+    def define_filter(self, name, xml_generator, override=False):
+        if not override:
+            def _already_exists_check(filterlist, filter):
+                return filter in filterlist
+            def _define_if_not_exists(exists, xml_generator):
+                if not exists:
+                    xml = xml_generator()
+                    return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
+            d = threads.deferToThread(self._conn.listNWFilter)
+            d.addCallback(_already_exists_check, name)
+        else:
+            # Pretend we looked it up and it wasn't defined
+            d = defer.succeed(False)
         d.addCallback(_define_if_not_exists, xml_generator)
         return d
 
 
     def ensure_base_filter(self):
-        return self.ensure_filter('nova-base-filter', self.nova_base_filter)
+        return self.define_filter('nova-base-filter', self.nova_base_filter)
 
 
-    def ensure_security_group_filter(self, security_group_id):
-        return self.ensure_filter(
+    def ensure_security_group_filter(self, security_group_id, override=False):
+        return self.define_filter(
                    self._nwfilter_name_for_security_group(security_group_id),
-                   lambda:self.security_group_to_nwfilter_xml(security_group_id))
+                   lambda:self.security_group_to_nwfilter_xml(security_group_id),
+                   override=override)
 
 
     def security_group_to_nwfilter_xml(self, security_group_id):
