@@ -368,6 +368,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
+
         # I don't bother checkng that we actually find it here,
         # because the create/delete unit test further up should 
         # be good enough for that.

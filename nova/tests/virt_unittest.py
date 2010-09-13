@@ -86,6 +86,8 @@ class NWFilterTestCase(test.TrialTestCase):
         context.user = FakeContext()
         context.user.id = 'fake'
         context.user.is_superuser = lambda:True
+        context.project = FakeContext()
+        context.project.id = 'fake'
         cloud_controller.create_security_group(context, 'testgroup', 'test group description')
         cloud_controller.authorize_security_group_ingress(context, 'testgroup', from_port='80',
                                                           to_port='81', ip_protocol='tcp',
@@ -93,7 +95,7 @@ class NWFilterTestCase(test.TrialTestCase):
 
         fw = libvirt_conn.NWFilterFirewall()
 
-        security_group = db.security_group_get_by_user_and_name({}, 'fake', 'testgroup')
+        security_group = db.security_group_get_by_name({}, 'fake', 'testgroup')
 
         xml = fw.security_group_to_nwfilter_xml(security_group.id)
 

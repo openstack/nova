@@ -442,17 +442,28 @@ def volume_update(context, volume_id, values):
     """
     return IMPL.volume_update(context, volume_id, values)
 
+
 ####################
 
 
-def security_group_create(context, values):
-    """Create a new security group"""
-    return IMPL.security_group_create(context, values)
+def security_group_get_all(context):
+    """Get all security groups"""
+    return IMPL.security_group_get_all(context)
 
 
-def security_group_get_by_id(context, security_group_id):
+def security_group_get(context, security_group_id):
     """Get security group by its internal id"""
-    return IMPL.security_group_get_by_id(context, security_group_id)
+    return IMPL.security_group_get(context, security_group_id)
+
+
+def security_group_get_by_name(context, project_id, group_name):
+    """Returns a security group with the specified name from a project"""
+    return IMPL.securitygroup_get_by_name(context, project_id, group_name)
+
+
+def security_group_get_by_project(context, project_id):
+    """Get all security groups belonging to a project"""
+    return IMPL.securitygroup_get_by_project(context, project_id)
 
 
 def security_group_get_by_instance(context, instance_id):
@@ -460,15 +471,15 @@ def security_group_get_by_instance(context, instance_id):
     return IMPL.security_group_get_by_instance(context, instance_id)
 
 
-def security_group_get_by_user(context, user_id):
-    """Get security groups owned by the given user"""
-    return IMPL.security_group_get_by_user(context, user_id)
+def securitygroup_exists(context, project_id, group_name):
+    """Indicates if a group name exists in a project"""
+    return IMPL.securitygroup_exists(context, project_id, group_name)
 
 
-def security_group_get_by_user_and_name(context, user_id, name):
-    """Get user's named security group"""
-    return IMPL.security_group_get_by_user_and_name(context, user_id, name)
-
+def security_group_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_create(context, values)
+    
 
 def security_group_destroy(context, security_group_id):
     """Deletes a security group"""
