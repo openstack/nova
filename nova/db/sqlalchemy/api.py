@@ -261,7 +261,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                                'networks.id '
                                'WHERE networks.host = :host '
                                'AND fixed_ip.updated_at < :time '
-                               'AND fixed_ip.instance_id IS NOT NULL'
+                               'AND fixed_ip.instance_id IS NOT NULL '
                                'AND fixed_ip.allocated = 0) as x) ',
                     {'host': host,
                      'time': time.isoformat()})
