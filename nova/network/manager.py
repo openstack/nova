@@ -343,7 +343,7 @@ class VlanManager(NetworkManager):
         This could use a manage command instead of keying off of a flag"""
         if not self.db.network_index_count(context):
             for index in range(FLAGS.num_networks):
-                self.db.network_index_create(context, {'index': index})
+                self.db.network_index_create_safe(context, {'index': index})
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
