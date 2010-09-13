@@ -14,8 +14,8 @@
         <interface type='bridge'>
             <source bridge='%(bridge_name)s'/>
             <mac address='%(mac_address)s'/>
-            <filterref filter="nova-instance-$(name)s">
-                <parameter name="IP" value="$(private_dns_name)s" />
+            <filterref filter="nova-instance-%(name)s">
+                <parameter name="IP" value="%(ip_address)s" />
             </filterref>
         </interface>
         <console type="file">

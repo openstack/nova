@@ -322,6 +322,7 @@ class LibvirtConnection(object):
         network = db.project_get_network(None, instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
+        ip_address = db.instance_get_fixed_address({}, instance['id'])
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -329,7 +330,8 @@ class LibvirtConnection(object):
                     'memory_kb': instance_type['memory_mb'] * 1024,
                     'vcpus': instance_type['vcpus'],
                     'bridge_name': network['bridge'],
-                    'mac_address': instance['mac_address']}
+                    'mac_address': instance['mac_address'],
+                    'ip_address': ip_address }
         libvirt_xml = self.libvirt_xml % xml_info
         logging.debug('instance %s: finished toXML method', instance['name'])
 
