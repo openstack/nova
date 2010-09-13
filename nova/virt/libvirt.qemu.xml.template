@@ -20,7 +20,7 @@
             <source bridge='%(bridge_name)s'/>
             <mac address='%(mac_address)s'/>
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
-            <filterref filter="clean-traffic">
+            <filterref filter="nova-instance-$(name)s">
                 <parameter name="IP" value="$(private_dns_name)s" />
             </filterref>
         </interface>

@@ -77,27 +77,39 @@ class LibvirtConnTestCase(test.TrialTestCase):
 
 
 class NWFilterTestCase(test.TrialTestCase):
-    def test_stuff(self):
-        cloud_controller = cloud.CloudController()
-        class FakeContext(object):
+    def setUp(self):
+        super(NWFilterTestCase, self).setUp()
+
+        class Mock(object):
             pass
 
-        context = FakeContext()
-        context.user = FakeContext()
-        context.user.id = 'fake'
-        context.user.is_superuser = lambda:True
-        context.project = FakeContext()
-        context.project.id = 'fake'
-        cloud_controller.create_security_group(context, 'testgroup', 'test group description')
-        cloud_controller.authorize_security_group_ingress(context, 'testgroup', from_port='80',
-                                                          to_port='81', ip_protocol='tcp',
+        self.context = Mock()
+        self.context.user = Mock()
+        self.context.user.id = 'fake'
+        self.context.user.is_superuser = lambda:True
+        self.context.project = Mock()
+        self.context.project.id = 'fake'
+
+        self.fake_libvirt_connection = Mock()
+
+        self.fw = libvirt_conn.NWFilterFirewall(self.fake_libvirt_connection)
+
+    def test_cidr_rule_nwfilter_xml(self):
+        cloud_controller = cloud.CloudController()
+        cloud_controller.create_security_group(self.context,
+                                               'testgroup',
+                                               'test group description')
+        cloud_controller.authorize_security_group_ingress(self.context,
+                                                          'testgroup',
+                                                          from_port='80',
+                                                          to_port='81',
+                                                          ip_protocol='tcp',
                                                           cidr_ip='0.0.0.0/0')
 
-        fw = libvirt_conn.NWFilterFirewall()
 
         security_group = db.security_group_get_by_name({}, 'fake', 'testgroup')
 
-        xml = fw.security_group_to_nwfilter_xml(security_group.id)
+        xml = self.fw.security_group_to_nwfilter_xml(security_group.id)
 
         dom = parseString(xml)
         self.assertEqual(dom.firstChild.tagName, 'filter')
@@ -117,3 +129,64 @@ class NWFilterTestCase(test.TrialTestCase):
         self.assertEqual(ip_conditions[0].getAttribute('protocol'), 'tcp')
         self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
         self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
+
+
+        self.teardown_security_group()
+
+    def teardown_security_group(self):
+        cloud_controller = cloud.CloudController()
+        cloud_controller.delete_security_group(self.context, 'testgroup')
+
+
+    def setup_and_return_security_group(self):
+        cloud_controller = cloud.CloudController()
+        cloud_controller.create_security_group(self.context,
+                                               'testgroup',
+                                               'test group description')
+        cloud_controller.authorize_security_group_ingress(self.context,
+                                                          'testgroup',
+                                                          from_port='80',
+                                                          to_port='81',
+                                                          ip_protocol='tcp',
+                                                          cidr_ip='0.0.0.0/0')
+
+        return db.security_group_get_by_name({}, 'fake', 'testgroup')
+
+    def test_creates_base_rule_first(self):
+        self.defined_filters = []
+        self.fake_libvirt_connection.listNWFilter = lambda:self.defined_filters
+        self.base_filter_defined = False
+        self.i = 0
+        def _filterDefineXMLMock(xml):
+            dom = parseString(xml)
+            name = dom.firstChild.getAttribute('name')
+            if self.i == 0:
+                self.assertEqual(dom.firstChild.getAttribute('name'),
+                                 'nova-base-filter')
+            elif self.i == 1:
+                self.assertTrue(name.startswith('nova-secgroup-'),
+                             'unexpected name: %s' % name)
+            elif self.i == 2:
+                self.assertTrue(name.startswith('nova-instance-'),
+                             'unexpected name: %s' % name)
+
+            self.defined_filters.append(name)
+            self.i += 1
+            return True
+
+        def _ensure_all_called(_):
+            self.assertEqual(self.i, 3)
+
+        self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
+
+        inst_id = db.instance_create({}, { 'user_id' : 'fake', 'project_id' : 'fake' })
+        security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group({}, inst_id, security_group.id)
+        instance = db.instance_get({}, inst_id)
+
+        d = self.fw.setup_nwfilters_for_instance(instance)
+        d.addCallback(_ensure_all_called)
+        d.addCallback(lambda _:self.teardown_security_group())
+
+        return d

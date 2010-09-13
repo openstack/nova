@@ -238,7 +238,10 @@ def instance_destroy(_context, instance_id):
 
 
 def instance_get(_context, instance_id):
-    return models.Instance.find(instance_id)
+    session = get_session()
+    return session.query(models.Instance
+                 ).options(eagerload('security_groups')
+                 ).get(instance_id)
 
 
 def instance_get_all(_context):
@@ -314,6 +317,17 @@ def instance_update(_context, instance_id, values):
         instance_ref = models.Instance.find(instance_id, session=session)
         for (key, value) in values.iteritems():
             instance_ref[key] = value
+        instance_ref.save(session=session)
+
+
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    session = get_session()
+    with session.begin():
+        instance_ref = models.Instance.find(instance_id, session=session)
+        security_group_ref = models.SecurityGroup.find(security_group_id,
+                                                       session=session)
+        instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
 
 

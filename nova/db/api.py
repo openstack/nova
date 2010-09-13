@@ -244,6 +244,11 @@ def instance_update(context, instance_id, values):
     return IMPL.instance_update(context, instance_id, values)
 
 
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    return IMPL.instance_add_security_group(context, instance_id, security_group_id)
+
+
 ####################
 
 

@@ -27,6 +27,7 @@ import shutil
 
 from twisted.internet import defer
 from twisted.internet import task
+from twisted.internet import threads
 
 from nova import db
 from nova import exception
@@ -216,6 +217,7 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
+        yield NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
         yield self._create_image(instance, xml)
         yield self._conn.createXML(xml, 0)
         # TODO(termie): this should actually register
@@ -442,7 +444,6 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
-
 class NWFilterFirewall(object):
     """
     This class implements a network filtering mechanism versatile
@@ -467,6 +468,14 @@ class NWFilterFirewall(object):
     the nodes with instances in the security group to refresh the
     security group.
 
+    Each instance has its own NWFilter, which references the above
+    mentioned security group NWFilters. This was done because
+    interfaces can only reference one filter while filters can
+    reference multiple other filters. This has the added benefit of
+    actually being able to add and remove security groups from an
+    instance at run time. This functionality is not exposed anywhere,
+    though.
+
     Outstanding questions:
 
     The name is unique, so would there be any good reason to sync
@@ -477,12 +486,14 @@ class NWFilterFirewall(object):
         redundancy.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, get_connection):
+        self._conn = get_connection
+
 
     def nova_base_filter(self):
         return '''<filter name='nova-base-filter' chain='root'>
   <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
+  <filterref filter='clean-traffic' />
   <rule action='drop' direction='in' priority='1000'>
     <ipv6 />
   </rule>
@@ -491,6 +502,60 @@ class NWFilterFirewall(object):
   </rule>
 </filter>'''
 
+
+    def setup_nwfilters_for_instance(self, instance):
+        """
+        Creates an NWFilter for the given instance. In the process,
+        it makes sure the filters for the security groups as well as
+        the base filter are all in place.
+        """
+
+        d = self.ensure_base_filter()
+
+        nwfilter_xml  = ("<filter name='nova-instance-%s' chain='root'>\n" +
+                         "  <filterref filter='nova-base-filter' />\n"
+                        ) % instance['name']
+
+        for security_group in instance.security_groups:
+            d.addCallback(lambda _:self.ensure_security_group_filter(security_group.id))
+
+            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
+                            ) % security_group.id
+        nwfilter_xml += "</filter>"
+
+        d.addCallback(lambda _: threads.deferToThread(
+                                   self._conn.nwfilterDefineXML,
+                                   nwfilter_xml))
+        return d
+
+
+    def _nwfilter_name_for_security_group(self, security_group_id):
+        return 'nova-secgroup-%d' % (security_group_id,)
+
+
+    def ensure_filter(self, name, xml_generator):
+        def _already_exists_check(filterlist, filter):
+            return filter in filterlist
+        def _define_if_not_exists(exists, xml_generator):
+            if not exists:
+                xml = xml_generator()
+                return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
+        d = threads.deferToThread(self._conn.listNWFilter)
+        d.addCallback(_already_exists_check, name)
+        d.addCallback(_define_if_not_exists, xml_generator)
+        return d
+
+
+    def ensure_base_filter(self):
+        return self.ensure_filter('nova-base-filter', self.nova_base_filter)
+
+
+    def ensure_security_group_filter(self, security_group_id):
+        return self.ensure_filter(
+                   self._nwfilter_name_for_security_group(security_group_id),
+                   lambda:self.security_group_to_nwfilter_xml(security_group_id))
+
+
     def security_group_to_nwfilter_xml(self, security_group_id):
         security_group = db.security_group_get({}, security_group_id)
         rule_xml = ""
@@ -498,7 +563,8 @@ class NWFilterFirewall(object):
             rule_xml += "<rule action='allow' direction='in' priority='900'>"
             if rule.cidr:
                 rule_xml += ("<ip srcipaddr='%s' protocol='%s' " + 
-                            "dstportstart='%s' dstportend='%s' />") % \
+                            "dstportstart='%s' dstportend='%s' />" +
+                            "priority='900'\n") % \
                             (rule.cidr, rule.protocol,
                              rule.from_port, rule.to_port)
             rule_xml += "</rule>"

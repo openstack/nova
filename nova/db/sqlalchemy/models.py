@@ -215,7 +215,6 @@ class Instance(BASE, NovaBase):
     launch_index = Column(Integer)
     key_name = Column(String(255))
     key_data = Column(Text)
-    security_group = Column(String(255))
 
     state = Column(Integer)
     state_description = Column(String(255))
