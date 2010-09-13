@@ -547,7 +547,7 @@ class NWFilterFirewall(object):
                 if not exists:
                     xml = xml_generator()
                     return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
-            d = threads.deferToThread(self._conn.listNWFilter)
+            d = threads.deferToThread(self._conn.listNWFilters)
             d.addCallback(_already_exists_check, name)
         else:
             # Pretend we looked it up and it wasn't defined

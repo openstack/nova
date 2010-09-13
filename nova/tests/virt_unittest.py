@@ -154,7 +154,7 @@ class NWFilterTestCase(test.TrialTestCase):
 
     def test_creates_base_rule_first(self):
         self.defined_filters = []
-        self.fake_libvirt_connection.listNWFilter = lambda:self.defined_filters
+        self.fake_libvirt_connection.listNWFilters = lambda:self.defined_filters
         self.base_filter_defined = False
         self.i = 0
         def _filterDefineXMLMock(xml):
