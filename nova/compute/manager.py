@@ -189,7 +189,7 @@ class ComputeManager(manager.Manager):
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        self.driver.detach_volume(instance_ref['str_id'],
-                                  volume_ref['mountpoint'])
+        yield self.driver.detach_volume(instance_ref['str_id'],
+                                        volume_ref['mountpoint'])
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)
