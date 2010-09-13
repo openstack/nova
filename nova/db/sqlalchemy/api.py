@@ -252,16 +252,17 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     #             table.  It would be great if we can coax sqlalchemy into
     #             generating this update for us without having to update
     #             each fixed_ip individually.
-    result = session.execute('UPDATE fixed_ips SET instance_id = NULL '
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
+                                                  'leased = 0 '
                              'WHERE id IN (SELECT x.id FROM '
-                                          '(SELECT fixed_ips.id FROM fixed_ips '
-                                           'INNER JOIN networks '
-                                           'ON fixed_ips.network_id = '
-                                           'networks.id '
-                                           'WHERE networks.host = :host '
-                                           'AND fixed_ip.updated_at < :time '
-                                           'AND fixed_ip.instance_id IS NOT NULL'
-                                           'AND fixed_ip.allocated = 0) as x) ',
+                              '(SELECT fixed_ips.id FROM fixed_ips '
+                               'INNER JOIN networks '
+                               'ON fixed_ips.network_id = '
+                               'networks.id '
+                               'WHERE networks.host = :host '
+                               'AND fixed_ip.updated_at < :time '
+                               'AND fixed_ip.instance_id IS NOT NULL'
+                               'AND fixed_ip.allocated = 0) as x) ',
                     {'host': host,
                      'time': time.isoformat()})
     return result.rowcount
