@@ -270,9 +270,6 @@ class VlanManager(NetworkManager):
         """Called by dhcp-bridge when ip is leased"""
         logging.debug("Leasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['allocated']:
-            logging.warn("IP %s leased that was already deallocated", address)
-            return
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s leased that isn't associated" %
@@ -283,14 +280,13 @@ class VlanManager(NetworkManager):
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': True})
+        if not fixed_ip_ref['allocated']:
+            logging.warn("IP %s leased that was already deallocated", address)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released"""
         logging.debug("Releasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['leased']:
-            logging.warn("IP %s released that was not leased", address)
-            return
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s released that isn't associated" %
@@ -298,6 +294,8 @@ class VlanManager(NetworkManager):
         if instance_ref['mac_address'] != mac:
             raise exception.Error("IP %s released from bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
+        if not fixed_ip_ref['leased']:
+            logging.warn("IP %s released that was not leased", address)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': False})
