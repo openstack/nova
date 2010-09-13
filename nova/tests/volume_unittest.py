@@ -128,7 +128,6 @@ class VolumeTestCase(test.TrialTestCase):
                           volume_service.get_volume,
                           volume_id)
 
-    @defer.inlineCallbacks
     def test_multiple_volume_race_condition(self):
         vol_size = "5"
         user_id = "fake"
@@ -137,17 +136,28 @@ class VolumeTestCase(test.TrialTestCase):
         def _check(volume_id):
             vol = volume_service.get_volume(volume_id)
             shelf_blade = '%s.%s' % (vol['shelf_id'], vol['blade_id'])
-            self.assert_(shelf_blade not in shelf_blades)
+            self.assertTrue(shelf_blade not in shelf_blades,
+                            "Same shelf/blade tuple came back twice")
             shelf_blades.append(shelf_blade)
             logging.debug("got %s" % shelf_blade)
-            vol.destroy()
+            return vol
         deferreds = []
         for i in range(5):
             d = self.volume.create_volume(vol_size, user_id, project_id)
             d.addCallback(_check)
             d.addErrback(self.fail)
             deferreds.append(d)
-        yield defer.DeferredList(deferreds)
+        def destroy_volumes(retvals):
+            overall_succes = True
+            for success, volume in retvals:
+                if not success:
+                    overall_succes = False
+                else:
+                    volume.destroy()
+            self.assertTrue(overall_succes)
+        d = defer.DeferredList(deferreds)
+        d.addCallback(destroy_volumes)
+        return d
 
     def test_multi_node(self):
         # TODO(termie): Figure out how to test with two nodes,
