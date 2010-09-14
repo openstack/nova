@@ -156,6 +156,11 @@ class ShellCommands(object):
                 readline.parse_and_bind("tab:complete")
             code.interact()
 
+    def script(self, path):
+        """Runs the script from the specifed path with flags set properly.
+        arguments: path"""
+        exec(compile(open(path).read(), path, 'exec'), locals(), globals())
+
 
 class RoleCommands(object):
     """Class for managing roles."""
