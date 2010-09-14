@@ -279,7 +279,7 @@ class CloudController(object):
                                                   source_project_id,
                                                   source_security_group_name)
 
-            criteria['group_id'] = source_security_group.id
+            criteria['group_id'] = source_security_group
         elif cidr_ip:
             criteria['cidr'] = cidr_ip
         else:
@@ -682,8 +682,16 @@ class CloudController(object):
                                          kwargs['key_name'])
             key_data = key_pair.public_key
 
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
+        security_group_arg = kwargs.get('security_group', ["default"])
+        if not type(security_group_arg) is list:
+            security_group_arg = [security_group_arg]
+
+        security_groups = []
+        for security_group_name in security_group_arg:
+            group = db.security_group_get_by_project(context,
+                                                     context.project.id, 
+                                                     security_group_name)
+            security_groups.append(group)
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
@@ -697,7 +705,7 @@ class CloudController(object):
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
         base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
-        base_options['security_group'] = security_group
+        base_options['security_groups'] = security_groups
 
         for num in range(int(kwargs['max_count'])):
             inst_id = db.instance_create(context, base_options)
