@@ -64,7 +64,7 @@ class ComputeManager(manager.Manager):
     @defer.inlineCallbacks
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
-        self.driver.refresh_security_group(security_group_id)
+        yield self.driver.refresh_security_group(security_group_id)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
