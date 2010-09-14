@@ -290,7 +290,6 @@ class LibvirtConnection(object):
             address = db.instance_get_fixed_address(None, inst['id'])
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
-                                  'network': network_ref['network'],
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
                                   'broadcast': network_ref['broadcast'],
@@ -448,7 +447,7 @@ class LibvirtConnection(object):
 
 
     def refresh_security_group(self, security_group_id):
-        fw = self.NWFilterFirewall(self._conn)
+        fw = NWFilterFirewall(self._conn)
         fw.ensure_security_group_filter(security_group_id, override=True)
 
 
@@ -541,19 +540,26 @@ class NWFilterFirewall(object):
         return 'nova-secgroup-%d' % (security_group_id,)
 
 
+    # TODO(soren): Should override be the default (and should it even
+    #              be optional? We save a bit of processing time in
+    #              libvirt by only defining this conditionally, but
+    #              we still have to go and ask libvirt if the group
+    #              is already defined, and there's the off chance of
+    #              of inconsitencies having snuck in which would get
+    #              fixed by just redefining the filter.
     def define_filter(self, name, xml_generator, override=False):
         if not override:
             def _already_exists_check(filterlist, filter):
                 return filter in filterlist
-            def _define_if_not_exists(exists, xml_generator):
-                if not exists:
-                    xml = xml_generator()
-                    return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
             d = threads.deferToThread(self._conn.listNWFilters)
             d.addCallback(_already_exists_check, name)
         else:
             # Pretend we looked it up and it wasn't defined
             d = defer.succeed(False)
+        def _define_if_not_exists(exists, xml_generator):
+            if not exists:
+                xml = xml_generator()
+                return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
         d.addCallback(_define_if_not_exists, xml_generator)
         return d
 
@@ -573,13 +579,20 @@ class NWFilterFirewall(object):
         security_group = db.security_group_get({}, security_group_id)
         rule_xml = ""
         for rule in security_group.rules:
-            rule_xml += "<rule action='allow' direction='in' priority='900'>"
+            rule_xml += "<rule action='accept' direction='in' priority='900'>"
             if rule.cidr:
-                rule_xml += ("<ip srcipaddr='%s' protocol='%s' " + 
-                            "dstportstart='%s' dstportend='%s' />" +
-                            "priority='900'\n") % \
-                            (rule.cidr, rule.protocol,
-                             rule.from_port, rule.to_port)
-            rule_xml += "</rule>"
-        xml = '''<filter name='nova-secgroup-%d' chain='root'>%s</filter>''' % (security_group_id, rule_xml,)
+                rule_xml += "<%s srcipaddr='%s' " % (rule.protocol, rule.cidr)
+                if rule.protocol in ['tcp', 'udp']:
+                    rule_xml += "dstportstart='%s' dstportend='%s' " % \
+                                (rule.from_port, rule.to_port)
+                elif rule.protocol == 'icmp':
+                    logging.info('rule.protocol: %r, rule.from_port: %r, rule.to_port: %r' % (rule.protocol, rule.from_port, rule.to_port))
+                    if rule.from_port != -1:
+                        rule_xml += "type='%s' " % rule.from_port
+                    if rule.to_port != -1:
+                        rule_xml += "code='%s' " % rule.to_port
+
+		rule_xml += '/>\n'
+            rule_xml += "</rule>\n"
+        xml = '''<filter name='nova-secgroup-%s' chain='root'>%s</filter>''' % (security_group_id, rule_xml,)
         return xml

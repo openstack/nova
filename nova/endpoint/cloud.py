@@ -326,7 +326,7 @@ class CloudController(object):
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
-        values = { 'parent_group_id' : security_group.id }
+        values = { 'parent_group' : security_group }
 
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
@@ -349,7 +349,6 @@ class CloudController(object):
         else:
             # If cidr based filtering, protocol and ports are mandatory
             if 'cidr' in values:
-                print values
                 return None
 
         security_group_rule = db.security_group_rule_create(context, values)

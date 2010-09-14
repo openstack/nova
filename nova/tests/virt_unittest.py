@@ -118,15 +118,15 @@ class NWFilterTestCase(test.TrialTestCase):
         self.assertEqual(len(rules), 1)
 
         # It's supposed to allow inbound traffic.
-        self.assertEqual(rules[0].getAttribute('action'), 'allow')
+        self.assertEqual(rules[0].getAttribute('action'), 'accept')
         self.assertEqual(rules[0].getAttribute('direction'), 'in')
 
         # Must be lower priority than the base filter (which blocks everything)
         self.assertTrue(int(rules[0].getAttribute('priority')) < 1000)
 
-        ip_conditions = rules[0].getElementsByTagName('ip')
+        ip_conditions = rules[0].getElementsByTagName('tcp')
         self.assertEqual(len(ip_conditions), 1)
-        self.assertEqual(ip_conditions[0].getAttribute('protocol'), 'tcp')
+        self.assertEqual(ip_conditions[0].getAttribute('srcipaddr'), '0.0.0.0/0')
         self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
         self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
 
