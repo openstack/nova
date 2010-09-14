@@ -305,6 +305,18 @@ class CloudController(object):
 
         return True
 
+    # TODO(soren): Lots and lots of input validation. We're accepting
+    #              strings here (such as ipProtocol), which is put into
+    #              filter rules verbatim.
+    # TODO(soren): Dupe detection. Adding the same rule twice actually
+    #              adds the same rule twice to the rule set, which is
+    #              pointless.
+    # TODO(soren): This has only been tested with Boto as the client.
+    #              Unfortunately, it seems Boto is using an old API
+    #              for these operations, so support for newer API versions
+    #              is sketchy.
+    # TODO(soren): De-duplicate the turning method arguments into dict stuff.
+    #              revoke_security_group_ingress uses the exact same logic.
     @rbac.allow('netadmin')
     def authorize_security_group_ingress(self, context, group_name,
                                          to_port=None, from_port=None,
@@ -350,7 +362,7 @@ class CloudController(object):
         if source_security_group_owner_id:
         # Parse user:project for source group.
             source_parts = source_security_group_owner_id.split(':')
-                
+
             # If no project name specified, assume it's same as user name.
             # Since we're looking up by project name, the user name is not
             # used here.  It's only read for EC2 API compatibility.
@@ -360,14 +372,14 @@ class CloudController(object):
                 source_project_id = parts[0]
         else:
             source_project_id = context.project.id
-            
+
         return source_project_id
 
     @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, group_description):
         if db.securitygroup_exists(context, context.project.id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
-        
+
         group = {'user_id' : context.user.id,
                  'project_id': context.project.id,
                  'name': group_name,
