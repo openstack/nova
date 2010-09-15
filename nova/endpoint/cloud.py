@@ -27,6 +27,8 @@ import logging
 import os
 import time
 
+import IPy
+
 from twisted.internet import defer
 
 from nova import db
@@ -43,6 +45,7 @@ from nova.endpoint import images
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
+InvalidInputException = exception.InvalidInputException
 
 def _gen_key(user_id, key_name):
     """ Tuck this into AuthManager """
@@ -257,18 +260,14 @@ class CloudController(object):
         return g
 
 
-    @rbac.allow('netadmin')
-    def revoke_security_group_ingress(self, context, group_name,
-                                      to_port=None, from_port=None,
-                                      ip_protocol=None, cidr_ip=None,
-                                      user_id=None,
-                                      source_security_group_name=None,
-                                      source_security_group_owner_id=None):
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
-                                                       group_name)
+    def _authorize_revoke_rule_args_to_dict(self, context,
+                                            to_port=None, from_port=None,
+                                            ip_protocol=None, cidr_ip=None,
+                                            user_id=None,
+                                            source_security_group_name=None,
+                                            source_security_group_owner_id=None):
 
-        criteria = {}
+        values = {}
 
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
@@ -278,21 +277,43 @@ class CloudController(object):
                     db.security_group_get_by_name(context,
                                                   source_project_id,
                                                   source_security_group_name)
-
-            criteria['group_id'] = source_security_group
+            values['group_id'] = source_security_group.id
         elif cidr_ip:
-            criteria['cidr'] = cidr_ip
+            # If this fails, it throws an exception. This is what we want.
+            IPy.IP(cidr_ip)
+            values['cidr'] = cidr_ip
         else:
             return { 'return': False }
 
         if ip_protocol and from_port and to_port:
-            criteria['protocol'] = ip_protocol
-            criteria['from_port'] = from_port
-            criteria['to_port'] = to_port
+            from_port   = int(from_port)
+            to_port     = int(to_port)
+            ip_protocol = str(ip_protocol)
+
+            if ip_protocol.upper() not in ['TCP','UDP','ICMP']:
+                 raise InvalidInputException('%s is not a valid ipProtocol' %
+                                                 (ip_protocol,))
+            if ((min(from_port, to_port) < -1) or
+                (max(from_port, to_port) > 65535)):
+                 raise InvalidInputException('Invalid port range')
+
+            values['protocol'] = ip_protocol
+            values['from_port'] = from_port
+            values['to_port'] = to_port
         else:
             # If cidr based filtering, protocol and ports are mandatory
-            if 'cidr' in criteria:
-                return { 'return': False }
+            if 'cidr' in values:
+                return None
+
+        return values
+
+    @rbac.allow('netadmin')
+    def revoke_security_group_ingress(self, context, group_name, **kwargs):
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
+
+        criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
 
         for rule in security_group.rules:
             for (k,v) in criteria.iteritems():
@@ -305,9 +326,6 @@ class CloudController(object):
 
         return True
 
-    # TODO(soren): Lots and lots of input validation. We're accepting
-    #              strings here (such as ipProtocol), which are put into
-    #              filter rules verbatim.
     # TODO(soren): Dupe detection. Adding the same rule twice actually
     #              adds the same rule twice to the rule set, which is
     #              pointless.
@@ -315,41 +333,14 @@ class CloudController(object):
     #              Unfortunately, it seems Boto is using an old API
     #              for these operations, so support for newer API versions
     #              is sketchy.
-    # TODO(soren): De-duplicate the turning method arguments into dict stuff.
-    #              revoke_security_group_ingress uses the exact same logic.
     @rbac.allow('netadmin')
-    def authorize_security_group_ingress(self, context, group_name,
-                                         to_port=None, from_port=None,
-                                         ip_protocol=None, cidr_ip=None,
-                                         source_security_group_name=None,
-                                         source_security_group_owner_id=None):
+    def authorize_security_group_ingress(self, context, group_name, **kwargs):
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
-        values = { 'parent_group_id' : security_group.id }
 
-        if source_security_group_name:
-            source_project_id = self._get_source_project_id(context,
-                source_security_group_owner_id)
-
-            source_security_group = \
-                    db.security_group_get_by_name(context,
-                                                  source_project_id,
-                                                  source_security_group_name)
-            values['group_id'] = source_security_group.id
-        elif cidr_ip:
-            values['cidr'] = cidr_ip
-        else:
-            return { 'return': False }
-
-        if ip_protocol and from_port and to_port:
-            values['protocol'] = ip_protocol
-            values['from_port'] = from_port
-            values['to_port'] = to_port
-        else:
-            # If cidr based filtering, protocol and ports are mandatory
-            if 'cidr' in values:
-                return None
+        values = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
+        values['parent_group_id'] = security_group.id
 
         security_group_rule = db.security_group_rule_create(context, values)
 
