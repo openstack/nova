@@ -227,7 +227,7 @@ class CloudController(object):
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
-                                                      context.project['id'])
+                                                      context.project.id)
         groups = [self._format_security_group(context, g) for g in groups]
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
@@ -265,7 +265,7 @@ class CloudController(object):
                                       source_security_group_name=None,
                                       source_security_group_owner_id=None):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project['id'],
+                                                       context.project.id,
                                                        group_name)
 
         criteria = {}
@@ -324,7 +324,7 @@ class CloudController(object):
                                          source_security_group_name=None,
                                          source_security_group_owner_id=None):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project['id'],
+                                                       context.project.id,
                                                        group_name)
         values = { 'parent_group' : security_group }
 
@@ -370,7 +370,7 @@ class CloudController(object):
             else:
                 source_project_id = source_parts[0]
         else:
-            source_project_id = context.project['id']
+            source_project_id = context.project.id
 
         return source_project_id
 
@@ -700,7 +700,7 @@ class CloudController(object):
         security_groups = []
         for security_group_name in security_group_arg:
             group = db.security_group_get_by_project(context,
-                                                     context.project['id'],
+                                                     context.project.id,
                                                      security_group_name)
             security_groups.append(group['id'])
 
