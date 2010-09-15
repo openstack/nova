@@ -69,17 +69,26 @@ class AuthMiddleware(wsgi.Middleware):
 class RateLimitingMiddleware(wsgi.Middleware):
     """Rate limit incoming requests according to the OpenStack rate limits."""
 
-    def __init__(self, application):
+    def __init__(self, application, service_host=None):
+        """Create a rate limiting middleware that wraps the given application.
+
+        By default, rate counters are stored in memory.  If service_host is
+        specified, the middleware instead relies on the ratelimiting.WSGIApp
+        at the given host+port to keep rate counters.
+        """
         super(RateLimitingMiddleware, self).__init__(application)
-        #TODO(gundlach): These limits were based on limitations of Cloud 
-        #Servers.  We should revisit them in Nova.
-        self.limiter = ratelimiting.Limiter(limits={
-                'DELETE': (100, ratelimiting.PER_MINUTE),
-                'PUT': (10, ratelimiting.PER_MINUTE),
-                'POST': (10, ratelimiting.PER_MINUTE),
-                'POST servers': (50, ratelimiting.PER_DAY),
-                'GET changes-since': (3, ratelimiting.PER_MINUTE),
-            })
+        if not service_host:
+            #TODO(gundlach): These limits were based on limitations of Cloud 
+            #Servers.  We should revisit them in Nova.
+            self.limiter = ratelimiting.Limiter(limits={
+                    'DELETE': (100, ratelimiting.PER_MINUTE),
+                    'PUT': (10, ratelimiting.PER_MINUTE),
+                    'POST': (10, ratelimiting.PER_MINUTE),
+                    'POST servers': (50, ratelimiting.PER_DAY),
+                    'GET changes-since': (3, ratelimiting.PER_MINUTE),
+                })
+        else:
+            self.limiter = ratelimiting.WSGIAppProxy(service_host)
 
     @webob.dec.wsgify
     def __call__(self, req):

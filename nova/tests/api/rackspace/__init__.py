@@ -21,7 +21,9 @@ from nova.api.rackspace import RateLimitingMiddleware
 from nova.tests.api.test_helper import *
 from webob import Request
 
+
 class RateLimitingMiddlewareTest(unittest.TestCase):
+
     def test_get_action_name(self):
         middleware = RateLimitingMiddleware(APIStub())
         def verify(method, url, action_name):
@@ -69,3 +71,9 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
             del middleware.limiter._levels['usr1:POST']
         # All 50 daily "POST servers" actions should be all used up
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 0)
+
+    def test_proxy_ctor_works(self):
+        middleware = RateLimitingMiddleware(APIStub())
+        self.assertEqual(middleware.limiter.__class__.__name__, "Limiter")
+        middleware = RateLimitingMiddleware(APIStub(), service_host='foobar')
+        self.assertEqual(middleware.limiter.__class__.__name__, "WSGIAppProxy")

@@ -1,5 +1,6 @@
 """Rate limiting of arbitrary actions."""
 
+import httplib
 import time
 import urllib
 import webob.dec
@@ -98,6 +99,24 @@ class WSGIApp(object):
         delay = self.limiter.perform(action_name, username)
         if delay:
             return webob.exc.HTTPForbidden(
-                    headers={'X-Wait-Seconds': delay})
+                    headers={'X-Wait-Seconds': "%.2f" % delay})
         else:
             return '' # 200 OK
+
+
+class WSGIAppProxy(object):
+
+    """Limiter lookalike that proxies to a ratelimiting.WSGIApp."""
+
+    def __init__(self, service_host):
+        """Creates a proxy pointing to a ratelimiting.WSGIApp at the given 
+        host."""
+        self.service_host = service_host
+
+    def perform(self, action, username='nobody'):
+        conn = httplib.HTTPConnection(self.service_host)
+        conn.request('POST', '/limiter/%s/%s' % (username, action))
+        resp = conn.getresponse()
+        if resp.status == 200:
+            return None # no delay
+        return float(resp.getheader('X-Wait-Seconds'))
