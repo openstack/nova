@@ -50,8 +50,10 @@ from nova import flags
 from nova import twistd
 
 from nova.tests.access_unittest import *
-from nova.tests.auth_unittest import *
 from nova.tests.api_unittest import *
+from nova.tests.api import *
+from nova.tests.api.rackspace import *
+from nova.tests.auth_unittest import *
 from nova.tests.cloud_unittest import *
 from nova.tests.compute_unittest import *
 from nova.tests.flags_unittest import *
