@@ -268,6 +268,9 @@ class LibvirtConnection(object):
         yield disk.partition(
                 basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
 
+        if FLAGS.libvirt_type == 'uml':
+            execute('sudo chown root %s' % (basepath('disk'),))
+
     def basepath(self, instance, path=''):
         return os.path.abspath(os.path.join(instance.datamodel['basepath'], path))
 

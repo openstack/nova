@@ -224,14 +224,6 @@ class ProductCode(object):
 
 class Instance(object):
 
-    NOSTATE = 0x00
-    RUNNING = 0x01
-    BLOCKED = 0x02
-    PAUSED = 0x03
-    SHUTDOWN = 0x04
-    SHUTOFF = 0x05
-    CRASHED = 0x06
-
     def __init__(self, conn, name, data):
         """ spawn an instance with a given name """
         self._conn = conn
