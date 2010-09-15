@@ -29,22 +29,19 @@ import time
 
 from twisted.internet import defer
 
-from nova import datastore
+from nova import db
 from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
 from nova.auth import manager
-from nova.compute import model
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.endpoint import images
-from nova.network import service as network_service
-from nova.network import model as network_model
-from nova.volume import service
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 
 def _gen_key(user_id, key_name):
@@ -63,26 +60,16 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self.instdir = model.InstanceDirectory()
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         self.setup()
-
-    @property
-    def instances(self):
-        """ All instances in the system, as dicts """
-        return self.instdir.all
-
-    @property
-    def volumes(self):
-        """ returns a list of all volumes """
-        for volume_id in datastore.Redis.instance().smembers("volumes"):
-            volume = service.get_volume(volume_id)
-            yield volume
 
     def __str__(self):
         return 'CloudController'
 
     def setup(self):
         """ Ensure the keychains and folders exist. """
+        # FIXME(ja): this should be moved to a nova-manage command,
+        # if not setup throw exceptions instead of running
         # Create keys folder, if it doesn't exist
         if not os.path.exists(FLAGS.keys_path):
             os.makedirs(FLAGS.keys_path)
@@ -91,18 +78,15 @@ class CloudController(object):
         if not os.path.exists(root_ca_path):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
+            # TODO(vish): Do this with M2Crypto instead
             utils.runthis("Generating root CA: %s", "sh genrootca.sh")
             os.chdir(start)
-            # TODO: Do this with M2Crypto instead
-
-    def get_instance_by_ip(self, ip):
-        return self.instdir.by_ip(ip)
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in self.instdir.all:
-            if instance['project_id'] == project_id:
-                line = '%s slots=%d' % (instance['private_dns_name'],
+        for instance in db.instance_get_by_project(None, project_id):
+            if instance['fixed_ip']:
+                line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 if instance['key_name'] in result:
                     result[instance['key_name']].append(line)
@@ -110,33 +94,30 @@ class CloudController(object):
                     result[instance['key_name']] = [line]
         return result
 
-    def get_metadata(self, ipaddress):
-        i = self.get_instance_by_ip(ipaddress)
-        if i is None:
+    def get_metadata(self, address):
+        instance_ref = db.fixed_ip_get_instance(None, address)
+        if instance_ref is None:
             return None
-        mpi = self._get_mpi_data(i['project_id'])
-        if i['key_name']:
+        mpi = self._get_mpi_data(instance_ref['project_id'])
+        if instance_ref['key_name']:
             keys = {
                 '0': {
-                    '_name': i['key_name'],
-                    'openssh-key': i['key_data']
+                    '_name': instance_ref['key_name'],
+                    'openssh-key': instance_ref['key_data']
                 }
             }
         else:
             keys = ''
-
-        address_record = network_model.FixedIp(i['private_dns_name'])
-        if address_record:
-            hostname = address_record['hostname']
-        else:
-            hostname = 'ip-%s' % i['private_dns_name'].replace('.', '-')
+        hostname = instance_ref['hostname']
+        floating_ip = db.instance_get_floating_address(None,
+                                                       instance_ref['id'])
         data = {
-            'user-data': base64.b64decode(i['user_data']),
+            'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
-                'ami-id': i['image_id'],
-                'ami-launch-index': i['ami_launch_index'],
-                'ami-manifest-path': 'FIXME', # image property
-                'block-device-mapping': { # TODO: replace with real data
+                'ami-id': instance_ref['image_id'],
+                'ami-launch-index': instance_ref['launch_index'],
+                'ami-manifest-path': 'FIXME',
+                'block-device-mapping': {  # TODO(vish): replace with real data
                     'ami': 'sda1',
                     'ephemeral0': 'sda2',
                     'root': '/dev/sda1',
@@ -144,27 +125,27 @@ class CloudController(object):
                 },
                 'hostname': hostname,
                 'instance-action': 'none',
-                'instance-id': i['instance_id'],
-                'instance-type': i.get('instance_type', ''),
+                'instance-id': instance_ref['str_id'],
+                'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
-                'local-ipv4': i['private_dns_name'], # TODO: switch to IP
-                'kernel-id': i.get('kernel_id', ''),
+                'local-ipv4': address,
+                'kernel-id': instance_ref['kernel_id'],
                 'placement': {
-                    'availaibility-zone': i.get('availability_zone', 'nova'),
+                    'availability-zone': 'nova' # TODO(vish): real zone
                 },
                 'public-hostname': hostname,
-                'public-ipv4': i.get('dns_name', ''), # TODO: switch to IP
+                'public-ipv4': floating_ip or '',
                 'public-keys': keys,
-                'ramdisk-id': i.get('ramdisk_id', ''),
-                'reservation-id': i['reservation_id'],
-                'security-groups': i.get('groups', ''),
+                'ramdisk-id': instance_ref['ramdisk_id'],
+                'reservation-id': instance_ref['reservation_id'],
+                'security-groups': '',
                 'mpi': mpi
             }
         }
-        if False: # TODO: store ancestor ids
+        if False:  # TODO(vish): store ancestor ids
             data['ancestor-ami-ids'] = []
-        if i.get('product_codes', None):
-            data['product-codes'] = i['product_codes']
+        if False:  # TODO(vish): store product codes
+            data['product-codes'] = []
         return data
 
     @rbac.allow('all')
@@ -251,141 +232,114 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
-        instance = self._get_instance(context, instance_id[0])
-        return rpc.call('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
-            {"method": "get_console_output",
-             "args": {"instance_id": instance_id[0]}})
-
-    def _get_user_id(self, context):
-        if context and context.user:
-            return context.user.id
-        else:
-            return None
+        instance_ref = db.instance_get_by_str(context, instance_id[0])
+        return rpc.call('%s.%s' % (FLAGS.compute_topic,
+                                   instance_ref['host']),
+                        {"method": "get_console_output",
+                         "args": {"context": None,
+                                  "instance_id": instance_ref['id']}})
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
-        volumes = []
-        for volume in self.volumes:
-            if context.user.is_admin() or volume['project_id'] == context.project.id:
-                v = self.format_volume(context, volume)
-                volumes.append(v)
-        return defer.succeed({'volumeSet': volumes})
+        if context.user.is_admin():
+            volumes = db.volume_get_all(context)
+        else:
+            volumes = db.volume_get_by_project(context, context.project.id)
 
-    def format_volume(self, context, volume):
+        volumes = [self._format_volume(context, v) for v in volumes]
+
+        return {'volumeSet': volumes}
+
+    def _format_volume(self, context, volume):
         v = {}
-        v['volumeId'] = volume['volume_id']
+        v['volumeId'] = volume['str_id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
-        v['createTime'] = volume['create_time']
+        v['createTime'] = volume['created_at']
         if context.user.is_admin():
             v['status'] = '%s (%s, %s, %s, %s)' % (
-                volume.get('status', None),
-                volume.get('user_id', None),
-                volume.get('node_name', None),
-                volume.get('instance_id', ''),
-                volume.get('mountpoint', ''))
+                volume['status'],
+                volume['user_id'],
+                volume['host'],
+                volume['instance_id'],
+                volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
-                                   'deleteOnTermination': volume['delete_on_termination'],
+                                   'deleteOnTermination': False,
                                    'device': volume['mountpoint'],
                                    'instanceId': volume['instance_id'],
                                    'status': 'attached',
-                                   'volume_id': volume['volume_id']}]
+                                   'volume_id': volume['str_id']}]
         else:
             v['attachmentSet'] = [{}]
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def create_volume(self, context, size, **kwargs):
-        # TODO(vish): refactor this to create the volume object here and tell service to create it
-        result = yield rpc.call(FLAGS.volume_topic, {"method": "create_volume",
-                                 "args": {"size": size,
-                                           "user_id": context.user.id,
-                                           "project_id": context.project.id}})
-        # NOTE(vish): rpc returned value is in the result key in the dictionary
-        volume = self._get_volume(context, result)
-        defer.returnValue({'volumeSet': [self.format_volume(context, volume)]})
+        vol = {}
+        vol['size'] = size
+        vol['user_id'] = context.user.id
+        vol['project_id'] = context.project.id
+        vol['availability_zone'] = FLAGS.storage_availability_zone
+        vol['status'] = "creating"
+        vol['attach_status'] = "detached"
+        volume_ref = db.volume_create(context, vol)
 
-    def _get_address(self, context, public_ip):
-        # FIXME(vish) this should move into network.py
-        address = network_model.ElasticIp.lookup(public_ip)
-        if address and (context.user.is_admin() or address['project_id'] == context.project.id):
-            return address
-        raise exception.NotFound("Address at ip %s not found" % public_ip)
+        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
+                                      "args": {"context": None,
+                                               "volume_id": volume_ref['id']}})
 
-    def _get_image(self, context, image_id):
-        """passes in context because
-        objectstore does its own authorization"""
-        result = images.list(context, [image_id])
-        if not result:
-            raise exception.NotFound('Image %s could not be found' % image_id)
-        image = result[0]
-        return image
+        return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
-    def _get_instance(self, context, instance_id):
-        for instance in self.instdir.all:
-            if instance['instance_id'] == instance_id:
-                if context.user.is_admin() or instance['project_id'] == context.project.id:
-                    return instance
-        raise exception.NotFound('Instance %s could not be found' % instance_id)
-
-    def _get_volume(self, context, volume_id):
-        volume = service.get_volume(volume_id)
-        if context.user.is_admin() or volume['project_id'] == context.project.id:
-            return volume
-        raise exception.NotFound('Volume %s could not be found' % volume_id)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume = self._get_volume(context, volume_id)
-        if volume['status'] == "attached":
+        volume_ref = db.volume_get_by_str(context, volume_id)
+        # TODO(vish): abstract status checking?
+        if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
-        # TODO(vish): looping through all volumes is slow. We should probably maintain an index
-        for vol in self.volumes:
-            if vol['instance_id'] == instance_id and vol['mountpoint'] == device:
-                raise exception.ApiError("Volume %s is already attached to %s" % (vol['volume_id'], vol['mountpoint']))
-        volume.start_attach(instance_id, device)
-        instance = self._get_instance(context, instance_id)
-        compute_node = instance['node_name']
-        rpc.cast('%s.%s' % (FLAGS.compute_topic, compute_node),
+        instance_ref = db.instance_get_by_str(context, instance_id)
+        host = instance_ref['host']
+        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
-                                 "args": {"volume_id": volume_id,
-                                           "instance_id": instance_id,
-                                           "mountpoint": device}})
-        return defer.succeed({'attachTime': volume['attach_time'],
-                              'device': volume['mountpoint'],
-                              'instanceId': instance_id,
+                                 "args": {"context": None,
+                                          "volume_id": volume_ref['id'],
+                                          "instance_id": instance_ref['id'],
+                                          "mountpoint": device}})
+        return defer.succeed({'attachTime': volume_ref['attach_time'],
+                              'device': volume_ref['mountpoint'],
+                              'instanceId': instance_ref['id'],
                               'requestId': context.request_id,
-                              'status': volume['attach_status'],
-                              'volumeId': volume_id})
+                              'status': volume_ref['attach_status'],
+                              'volumeId': volume_ref['id']})
 
     @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
-        volume = self._get_volume(context, volume_id)
-        instance_id = volume.get('instance_id', None)
-        if not instance_id:
+        volume_ref = db.volume_get_by_str(context, volume_id)
+        instance_ref = db.volume_get_instance(context, volume_ref['id'])
+        if not instance_ref:
             raise exception.Error("Volume isn't attached to anything!")
-        if volume['status'] == "available":
+        # TODO(vish): abstract status checking?
+        if volume_ref['status'] == "available":
             raise exception.Error("Volume is already detached")
         try:
-            volume.start_detach()
-            instance = self._get_instance(context, instance_id)
-            rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
+            host = instance_ref['host']
+            rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
-                                 "args": {"instance_id": instance_id,
-                                           "volume_id": volume_id}})
+                                 "args": {"context": None,
+                                          "instance_id": instance_ref['id'],
+                                          "volume_id": volume_ref['id']}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
-            volume.finish_detach()
-        return defer.succeed({'attachTime': volume['attach_time'],
-                              'device': volume['mountpoint'],
-                              'instanceId': instance_id,
+            db.volume_detached(context)
+        return defer.succeed({'attachTime': volume_ref['attach_time'],
+                              'device': volume_ref['mountpoint'],
+                              'instanceId': instance_ref['str_id'],
                               'requestId': context.request_id,
-                              'status': volume['attach_status'],
-                              'volumeId': volume_id})
+                              'status': volume_ref['attach_status'],
+                              'volumeId': volume_ref['id']})
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
@@ -406,52 +360,55 @@ class CloudController(object):
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, reservation_id = None):
+    def _format_instances(self, context, reservation_id=None):
         reservations = {}
-        if context.user.is_admin():
-            instgenerator = self.instdir.all
+        if reservation_id:
+            instances = db.instance_get_by_reservation(context,
+                                                       reservation_id)
         else:
-            instgenerator = self.instdir.by_project(context.project.id)
-        for instance in instgenerator:
-            res_id = instance.get('reservation_id', 'Unknown')
-            if reservation_id != None and reservation_id != res_id:
-                continue
+            if not context.user.is_admin():
+                instances = db.instance_get_all(context)
+            else:
+                instances = db.instance_get_by_project(context,
+                                                       context.project.id)
+        for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            i['instance_id'] = instance.get('instance_id', None)
-            i['image_id'] = instance.get('image_id', None)
-            i['instance_state'] = {
-                'code': instance.get('state', 0),
-                'name': instance.get('state_description', 'pending')
+            i['instanceId'] = instance['str_id']
+            i['imageId'] = instance['image_id']
+            i['instanceState'] = {
+                'code': instance['state'],
+                'name': instance['state_description']
             }
-            i['public_dns_name'] = network_model.get_public_ip_for_instance(
-                                                        i['instance_id'])
-            i['private_dns_name'] = instance.get('private_dns_name', None)
-            if not i['public_dns_name']:
-                i['public_dns_name'] = i['private_dns_name']
-            i['dns_name'] = instance.get('dns_name', None)
-            i['key_name'] = instance.get('key_name', None)
+            fixed_addr = None
+            floating_addr = None
+            if instance['fixed_ip']:
+                fixed_addr = instance['fixed_ip']['str_id']
+                if instance['fixed_ip']['floating_ips']:
+                    fixed = instance['fixed_ip']
+                    floating_addr = fixed['floating_ips'][0]['str_id']
+            i['privateDnsName'] = fixed_addr
+            i['publicDnsName'] = floating_addr
+            i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
+            i['keyName'] = instance['key_name']
             if context.user.is_admin():
-                i['key_name'] = '%s (%s, %s)' % (i['key_name'],
-                    instance.get('project_id', None),
-                    instance.get('node_name', ''))
-            i['product_codes_set'] = self._convert_to_set(
-                instance.get('product_codes', None), 'product_code')
-            i['instance_type'] = instance.get('instance_type', None)
-            i['launch_time'] = instance.get('launch_time', None)
-            i['ami_launch_index'] = instance.get('ami_launch_index',
-                                                 None)
-            if not reservations.has_key(res_id):
+                i['keyName'] = '%s (%s, %s)' % (i['keyName'],
+                    instance['project_id'],
+                    instance['host'])
+            i['productCodesSet'] = self._convert_to_set([], 'product_codes')
+            i['instanceType'] = instance['instance_type']
+            i['launchTime'] = instance['created_at']
+            i['amiLaunchIndex'] = instance['launch_index']
+            if not reservations.has_key(instance['reservation_id']):
                 r = {}
-                r['reservation_id'] = res_id
-                r['owner_id'] = instance.get('project_id', None)
-                r['group_set'] = self._convert_to_set(
-                    instance.get('groups', None), 'group_id')
-                r['instances_set'] = []
-                reservations[res_id] = r
-            reservations[res_id]['instances_set'].append(i)
+                r['reservationId'] = instance['reservation_id']
+                r['ownerId'] = instance['project_id']
+                r['groupSet'] = self._convert_to_set([], 'groups')
+                r['instancesSet'] = []
+                reservations[instance['reservation_id']] = r
+            reservations[instance['reservation_id']]['instancesSet'].append(i)
 
         return list(reservations.values())
 
@@ -461,20 +418,23 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        for address in network_model.ElasticIp.all():
-            # TODO(vish): implement a by_project iterator for addresses
-            if (context.user.is_admin() or
-                address['project_id'] == context.project.id):
-                address_rv = {
-                    'public_ip': address['address'],
-                    'instance_id': address.get('instance_id', 'free')
-                }
-                if context.user.is_admin():
-                    address_rv['instance_id'] = "%s (%s, %s)" % (
-                        address['instance_id'],
-                        address['user_id'],
-                        address['project_id'],
-                    )
+        if context.user.is_admin():
+            iterator = db.floating_ip_get_all(context)
+        else:
+            iterator = db.floating_ip_get_by_project(context,
+                                                     context.project.id)
+        for floating_ip_ref in iterator:
+            address = floating_ip_ref['str_id']
+            instance_id = None
+            if (floating_ip_ref['fixed_ip']
+                and floating_ip_ref['fixed_ip']['instance']):
+                instance_id = floating_ip_ref['fixed_ip']['instance']['str_id']
+            address_rv = {'public_ip': address,
+                          'instance_id': instance_id}
+            if context.user.is_admin():
+                details = "%s (%s)" % (address_rv['instance_id'],
+                                       floating_ip_ref['project_id'])
+                address_rv['instance_id'] = details
             addresses.append(address_rv)
         return {'addressesSet': addresses}
 
@@ -483,8 +443,8 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
-                         {"method": "allocate_elastic_ip",
-                          "args": {"user_id": context.user.id,
+                         {"method": "allocate_floating_ip",
+                          "args": {"context": None,
                                    "project_id": context.project.id}})
         defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
 
@@ -492,56 +452,62 @@ class CloudController(object):
     @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
+        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_elastic_ip",
-                          "args": {"elastic_ip": public_ip}})
+                 {"method": "deallocate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        instance = self._get_instance(context, instance_id)
-        address = self._get_address(context, public_ip)
+        instance_ref = db.instance_get_by_str(context, instance_id)
+        fixed_ip_ref = db.fixed_ip_get_by_instance(context, instance_ref['id'])
+        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_elastic_ip",
-                          "args": {"elastic_ip": address['address'],
-                                   "fixed_ip": instance['private_dns_name'],
-                                   "instance_id": instance['instance_id']}})
+                 {"method": "associate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id'],
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
-        address = self._get_address(context, public_ip)
+        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_elastic_ip",
-                          "args": {"elastic_ip": address['address']}})
+                 {"method": "disassociate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
-        host = network_service.get_host_for_project(context.project.id)
+        network_ref = db.project_get_network(context, context.project.id)
+        host = network_ref['host']
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "set_network_host",
-                                     "args": {"user_id": context.user.id,
-                                              "project_id": context.project.id}})
-        defer.returnValue('%s.%s' %(FLAGS.network_topic, host))
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": context.project.id}})
+        defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
-        if kwargs['image_id'] != FLAGS.vpn_image_id:
-            image = self._get_image(context, kwargs['image_id'])
+        vpn = kwargs['image_id'] == FLAGS.vpn_image_id
 
-        # FIXME(ja): if image is cloudpipe, this breaks
+        if not vpn:
+            image = images.get(context, kwargs['image_id'])
 
+        # FIXME(ja): if image is vpn, this breaks
         # get defaults from imagestore
         image_id = image['imageId']
         kernel_id = image.get('kernelId', FLAGS.default_kernel)
@@ -552,11 +518,10 @@ class CloudController(object):
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
 
         # make sure we have access to kernel and ramdisk
-        self._get_image(context, kernel_id)
-        self._get_image(context, ramdisk_id)
+        images.get(context, kernel_id)
+        images.get(context, ramdisk_id)
 
         logging.debug("Going to run instances...")
-        reservation_id = utils.generate_uid('r')
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
@@ -565,107 +530,122 @@ class CloudController(object):
                 raise exception.ApiError('Key Pair %s not found' %
                                          kwargs['key_name'])
             key_data = key_pair.public_key
-        network_topic = yield self._get_network_topic(context)
+
         # TODO: Get the real security group of launch in here
         security_group = "default"
-        for num in range(int(kwargs['max_count'])):
-            is_vpn = False
-            if image_id  == FLAGS.vpn_image_id:
-                is_vpn = True
-            inst = self.instdir.new()
-            allocate_data = yield rpc.call(network_topic,
-                     {"method": "allocate_fixed_ip",
-                      "args": {"user_id": context.user.id,
-                               "project_id": context.project.id,
-                               "security_group": security_group,
-                               "is_vpn": is_vpn,
-                               "hostname": inst.instance_id}})
-            inst['image_id'] = image_id
-            inst['kernel_id'] = kernel_id
-            inst['ramdisk_id'] = ramdisk_id
-            inst['user_data'] = kwargs.get('user_data', '')
-            inst['instance_type'] = kwargs.get('instance_type', 'm1.small')
-            inst['reservation_id'] = reservation_id
-            inst['launch_time'] = launch_time
-            inst['key_data'] = key_data or ''
-            inst['key_name'] = kwargs.get('key_name', '')
-            inst['user_id'] = context.user.id
-            inst['project_id'] = context.project.id
-            inst['ami_launch_index'] = num
-            inst['security_group'] = security_group
-            inst['hostname'] = inst.instance_id
-            for (key, value) in allocate_data.iteritems():
-                inst[key] = value
 
-            inst.save()
+        reservation_id = utils.generate_uid('r')
+        base_options = {}
+        base_options['image_id'] = image_id
+        base_options['kernel_id'] = kernel_id
+        base_options['ramdisk_id'] = ramdisk_id
+        base_options['reservation_id'] = reservation_id
+        base_options['key_data'] = key_data
+        base_options['key_name'] = kwargs.get('key_name', None)
+        base_options['user_id'] = context.user.id
+        base_options['project_id'] = context.project.id
+        base_options['user_data'] = kwargs.get('user_data', '')
+        base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
+        base_options['security_group'] = security_group
+
+        for num in range(int(kwargs['max_count'])):
+            instance_ref = db.instance_create(context, base_options)
+            inst_id = instance_ref['id']
+
+            inst = {}
+            inst['mac_address'] = utils.generate_mac()
+            inst['launch_index'] = num
+            inst['hostname'] = instance_ref['str_id']
+            db.instance_update(context, inst_id, inst)
+            address = self.network_manager.allocate_fixed_ip(context,
+                                                             inst_id,
+                                                             vpn)
+
+            # TODO(vish): This probably should be done in the scheduler
+            #             network is setup when host is assigned
+            network_topic = yield self._get_network_topic(context)
+            rpc.call(network_topic,
+                     {"method": "setup_fixed_ip",
+                      "args": {"context": None,
+                               "address": address}})
+
             rpc.cast(FLAGS.compute_topic,
                  {"method": "run_instance",
-                  "args": {"instance_id": inst.instance_id}})
-            logging.debug("Casting to node for %s's instance with IP of %s" %
-                      (context.user.name, inst['private_dns_name']))
-        # TODO: Make Network figure out the network name from ip.
-        defer.returnValue(self._format_run_instances(context, reservation_id))
+                  "args": {"context": None,
+                           "instance_id": inst_id}})
+            logging.debug("Casting to node for %s/%s's instance %s" %
+                      (context.project.name, context.user.name, inst_id))
+        defer.returnValue(self._format_run_instances(context,
+                                                     reservation_id))
+
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
-        network_topic = yield self._get_network_topic(context)
-        for i in instance_id:
-            logging.debug("Going to try and terminate %s" % i)
+        for id_str in instance_id:
+            logging.debug("Going to try and terminate %s" % id_str)
             try:
-                instance = self._get_instance(context, i)
+                instance_ref = db.instance_get_by_str(context, id_str)
             except exception.NotFound:
                 logging.warning("Instance %s was not found during terminate"
-                                % i)
+                                % id_str)
                 continue
-            elastic_ip = network_model.get_public_ip_for_instance(i)
-            if elastic_ip:
-                logging.debug("Disassociating address %s" % elastic_ip)
+
+            # FIXME(ja): where should network deallocate occur?
+            address = db.instance_get_floating_address(context,
+                                                       instance_ref['id'])
+            if address:
+                logging.debug("Disassociating address %s" % address)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
+                network_topic = yield self._get_network_topic(context)
                 rpc.cast(network_topic,
-                         {"method": "disassociate_elastic_ip",
-                          "args": {"elastic_ip": elastic_ip}})
+                         {"method": "disassociate_floating_ip",
+                          "args": {"context": None,
+                                   "address": address}})
 
-            fixed_ip = instance.get('private_dns_name', None)
-            if fixed_ip:
-                logging.debug("Deallocating address %s" % fixed_ip)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             actually removed.  We may need to worry about
-                #             checking this later.  Perhaps in the scheduler?
-                rpc.cast(network_topic,
-                         {"method": "deallocate_fixed_ip",
-                          "args": {"fixed_ip": fixed_ip}})
+            address = db.instance_get_fixed_address(context,
+                                                    instance_ref['id'])
+            if address:
+                logging.debug("Deallocating address %s" % address)
+                # NOTE(vish): Currently, nothing needs to be done on the
+                #             network node until release. If this changes,
+                #             we will need to cast here.
+                self.network.deallocate_fixed_ip(context, address)
 
-            if instance.get('node_name', 'unassigned') != 'unassigned':
-                # NOTE(joshua?): It's also internal default
-                rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
+            host = instance_ref['host']
+            if host:
+                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
-                          "args": {"instance_id": i}})
+                          "args": {"context": None,
+                                   "instance_id": instance_ref['id']}})
             else:
-                instance.destroy()
+                db.instance_destroy(context, instance_ref['id'])
         defer.returnValue(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
-        for i in instance_id:
-            instance = self._get_instance(context, i)
-            rpc.cast('%s.%s' % (FLAGS.compute_topic, instance['node_name']),
-                             {"method": "reboot_instance",
-                              "args": {"instance_id": i}})
+        for id_str in instance_id:
+            instance_ref = db.instance_get_by_str(context, id_str)
+            host = instance_ref['host']
+            rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "reboot_instance",
+                      "args": {"context": None,
+                               "instance_id": instance_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
-        volume = self._get_volume(context, volume_id)
-        volume_node = volume['node_name']
-        rpc.cast('%s.%s' % (FLAGS.volume_topic, volume_node),
+        volume_ref = db.volume_get_by_str(context, volume_id)
+        host = volume_ref['host']
+        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
-                             "args": {"volume_id": volume_id}})
+                             "args": {"context": None,
+                                      "volume_id": volume_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('all')
@@ -716,23 +696,3 @@ class CloudController(object):
             raise exception.ApiError('operation_type must be add or remove')
         result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
-
-    def update_state(self, topic, value):
-        """ accepts status reports from the queue and consolidates them """
-        # TODO(jmc): if an instance has disappeared from
-        # the node, call instance_death
-        if topic == "instances":
-            return defer.succeed(True)
-        aggregate_state = getattr(self, topic)
-        node_name = value.keys()[0]
-        items = value[node_name]
-
-        logging.debug("Updating %s state for %s" % (topic, node_name))
-
-        for item_id in items.keys():
-            if (aggregate_state.has_key('pending') and
-                aggregate_state['pending'].has_key(item_id)):
-                del aggregate_state['pending'][item_id]
-        aggregate_state[node_name] = items
-
-        return defer.succeed(True)

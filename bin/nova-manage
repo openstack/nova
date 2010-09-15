@@ -57,6 +57,8 @@ import os
 import sys
 import time
 
+import IPy
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -65,10 +67,10 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import db
 from nova import flags
 from nova import utils
 from nova.auth import manager
-from nova.compute import model
 from nova.cloudpipe import pipelib
 from nova.endpoint import cloud
 
@@ -81,7 +83,6 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.instdir = model.InstanceDirectory()
         self.pipe = pipelib.CloudPipe(cloud.CloudController())
 
     def list(self):
@@ -96,8 +97,8 @@ class VpnCommands(object):
             vpn = self._vpn_for(project.id)
             if vpn:
                 command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                out, _err = utils.execute(  command % vpn['private_dns_name'],
-                                            check_exit_code=False)
+                out, _err = utils.execute(command % vpn['private_dns_name'],
+                                          check_exit_code=False)
                 if out.strip() == '0':
                     net = 'up'
                 else:
@@ -113,9 +114,8 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in self.instdir.all:
-            if ('image_id' in instance.state
-                and instance['image_id'] == FLAGS.vpn_image_id
+        for instance in db.instance_get_all():
+            if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
                 and instance['project_id'] == project_id):
@@ -274,6 +274,37 @@ class ProjectCommands(object):
         with open(filename, 'w') as f:
             f.write(zip_file)
 
+class FloatingIpCommands(object):
+    """Class for managing floating ip."""
+
+    def create(self, host, range):
+        """Creates floating ips for host by range
+        arguments: host ip_range"""
+        for address in IPy.IP(range):
+            db.floating_ip_create(None, {'address': str(address),
+                                         'host': host})
+
+    def delete(self, ip_range):
+        """Deletes floating ips by range
+        arguments: range"""
+        for address in IPy.IP(ip_range):
+            db.floating_ip_destroy(None, str(address))
+
+
+    def list(self, host=None):
+        """Lists all floating ips (optionally by host)
+        arguments: [host]"""
+        if host == None:
+            floating_ips = db.floating_ip_get_all(None)
+        else:
+            floating_ips = db.floating_ip_get_all_by_host(None, host)
+        for floating_ip in floating_ips:
+            instance = None
+            if floating_ip['fixed_ip']:
+                instance = floating_ip['fixed_ip']['instance']['str_id']
+            print "%s\t%s\t%s" % (floating_ip['host'],
+                                  floating_ip['address'],
+                                  instance)
 
 CATEGORIES = [
     ('user', UserCommands),
@@ -281,6 +312,7 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
+    ('floating', FloatingIpCommands)
 ]
 
 

@@ -19,5 +19,4 @@
             <source path='%(basepath)s/console.log'/>
         </console>
     </devices>
-    <nova>%(nova)s</nova>
 </domain>

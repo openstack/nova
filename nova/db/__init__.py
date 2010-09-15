@@ -1,4 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -15,34 +16,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Exceptions for network errors.
+DB abstraction for Nova
 """
 
-from nova import exception
-
-
-class NoMoreAddresses(exception.Error):
-    """No More Addresses are available in the network"""
-    pass
-
-
-class AddressNotAllocated(exception.Error):
-    """The specified address has not been allocated"""
-    pass
-
-
-class AddressAlreadyAssociated(exception.Error):
-    """The specified address has already been associated"""
-    pass
-
-
-class AddressNotAssociated(exception.Error):
-    """The specified address is not associated"""
-    pass
-
-
-class NotValidNetworkSize(exception.Error):
-    """The network size is not valid"""
-    pass
+from nova.db.api import *
