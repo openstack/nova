@@ -646,10 +646,11 @@ def security_group_get(_context, security_group_id):
                      ).get(security_group_id)
 
 
-def securitygroup_get_by_name(context, project_id, group_name):
+def security_group_get_by_name(context, project_id, group_name):
     session = get_session()
     group_ref = session.query(models.SecurityGroup
                       ).options(eagerload('rules')
+                      ).options(eagerload('instances')
                       ).filter_by(project_id=project_id
                       ).filter_by(name=group_name
                       ).filter_by(deleted=False
@@ -662,7 +663,7 @@ def securitygroup_get_by_name(context, project_id, group_name):
     return group_ref
     
 
-def securitygroup_get_by_project(_context, project_id):
+def security_group_get_by_project(_context, project_id):
     session = get_session()
     return session.query(models.SecurityGroup
                  ).options(eagerload('rules')
@@ -681,9 +682,9 @@ def security_group_get_by_instance(_context, instance_id):
                       ).all()
 
 
-def securitygroup_exists(_context, project_id, group_name):
+def security_group_exists(_context, project_id, group_name):
     try:
-        group = securitygroup_get_by_name(_context, project_id, group_name)
+        group = security_group_get_by_name(_context, project_id, group_name)
         return group != None
     except exception.NotFound:
         return False

@@ -326,7 +326,7 @@ class CloudController(object):
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
-        values = { 'parent_group' : security_group }
+        values = { 'parent_group_id' : security_group.id }
 
         if source_security_group_name:
             source_project_id = self._get_source_project_id(context,
@@ -353,7 +353,7 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._refresh_security_group(security_group)
+        self._trigger_refresh_security_group(security_group)
 
         return True
 

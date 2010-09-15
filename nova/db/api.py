@@ -463,12 +463,12 @@ def security_group_get(context, security_group_id):
 
 def security_group_get_by_name(context, project_id, group_name):
     """Returns a security group with the specified name from a project"""
-    return IMPL.securitygroup_get_by_name(context, project_id, group_name)
+    return IMPL.security_group_get_by_name(context, project_id, group_name)
 
 
 def security_group_get_by_project(context, project_id):
     """Get all security groups belonging to a project"""
-    return IMPL.securitygroup_get_by_project(context, project_id)
+    return IMPL.security_group_get_by_project(context, project_id)
 
 
 def security_group_get_by_instance(context, instance_id):
@@ -478,7 +478,7 @@ def security_group_get_by_instance(context, instance_id):
 
 def securitygroup_exists(context, project_id, group_name):
     """Indicates if a group name exists in a project"""
-    return IMPL.securitygroup_exists(context, project_id, group_name)
+    return IMPL.security_group_exists(context, project_id, group_name)
 
 
 def security_group_create(context, values):
