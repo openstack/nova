@@ -700,9 +700,9 @@ class CloudController(object):
         security_groups = []
         for security_group_name in security_group_arg:
             group = db.security_group_get_by_project(context,
-                                                     context.project.id, 
+                                                     context.project['id'],
                                                      security_group_name)
-            security_groups.append(group)
+            security_groups.append(group['id'])
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
@@ -716,10 +716,13 @@ class CloudController(object):
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
         base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
-        base_options['security_groups'] = security_groups
 
         for num in range(int(kwargs['max_count'])):
             inst_id = db.instance_create(context, base_options)
+
+            for security_group_id in security_groups:
+                db.instance_add_security_group(context, inst_id,
+                                               security_group_id)
 
             inst = {}
             inst['mac_address'] = utils.generate_mac()
