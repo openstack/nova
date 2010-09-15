@@ -135,7 +135,6 @@ class APIRequest(object):
 
         response = xml.toxml()
         xml.unlink()
-#        print response
         _log.debug(response)
         return response
 

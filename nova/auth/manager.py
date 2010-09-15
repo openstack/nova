@@ -531,11 +531,11 @@ class AuthManager(object):
                 except:
                     drv.delete_project(project.id)
                     raise
-                
-                values = {'name': 'default',
-                          'description': 'default',
-                          'user_id': User.safe_id(manager_user),
-                          'project_id': project.id}
+
+                values = { 'name'        : 'default',
+                           'description' : 'default',
+                           'user_id'     : User.safe_id(manager_user),
+                           'project_id'  : project['id'] }
                 db.security_group_create({}, values)
                 return project
 
@@ -597,7 +597,7 @@ class AuthManager(object):
             groups = db.security_group_get_by_project(context={},
                                                       project_id=project_id)
             for group in groups:
-                db.security_group_destroy({}, group.id)
+                db.security_group_destroy({}, group['id'])
         except:
             logging.exception('Could not destroy security groups for %s',
                               project)

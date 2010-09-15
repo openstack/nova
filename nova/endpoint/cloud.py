@@ -93,7 +93,7 @@ class CloudController(object):
                 result[instance['key_name']] = [line]
         return result
 
-    def _refresh_security_group(self, security_group):
+    def _trigger_refresh_security_group(self, security_group):
         nodes = set([instance.host for instance in security_group.instances])
         for node in nodes:
             rpc.call('%s.%s' % (FLAGS.compute_topic, node),
@@ -227,7 +227,7 @@ class CloudController(object):
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
-                                                      context.project.id)
+                                                      context.project['id'])
         groups = [self._format_security_group(context, g) for g in groups]
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
@@ -265,7 +265,7 @@ class CloudController(object):
                                       source_security_group_name=None,
                                       source_security_group_owner_id=None):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project['id'],
                                                        group_name)
 
         criteria = {}
@@ -301,12 +301,12 @@ class CloudController(object):
             # If we make it here, we have a match
             db.security_group_rule_destroy(context, rule.id)
 
-        self._refresh_security_group(security_group)
+        self._trigger_refresh_security_group(security_group)
 
         return True
 
     # TODO(soren): Lots and lots of input validation. We're accepting
-    #              strings here (such as ipProtocol), which is put into
+    #              strings here (such as ipProtocol), which are put into
     #              filter rules verbatim.
     # TODO(soren): Dupe detection. Adding the same rule twice actually
     #              adds the same rule twice to the rule set, which is
@@ -324,7 +324,7 @@ class CloudController(object):
                                          source_security_group_name=None,
                                          source_security_group_owner_id=None):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project['id'],
                                                        group_name)
         values = { 'parent_group' : security_group }
 
@@ -366,11 +366,11 @@ class CloudController(object):
             # Since we're looking up by project name, the user name is not
             # used here.  It's only read for EC2 API compatibility.
             if len(source_parts) == 2:
-                source_project_id = parts[1]
+                source_project_id = source_parts[1]
             else:
-                source_project_id = parts[0]
+                source_project_id = source_parts[0]
         else:
-            source_project_id = context.project.id
+            source_project_id = context.project['id']
 
         return source_project_id
 
