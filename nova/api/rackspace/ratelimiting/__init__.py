@@ -86,7 +86,7 @@ class WSGIApp(object):
         self.limiter = limiter
 
     @webob.dec.wsgify
-    def __call__(req):
+    def __call__(self, req):
         parts = req.path_info.split('/')
         # format: /limiter/<username>/<urlencoded action>
         if req.method != 'POST':

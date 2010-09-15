@@ -1,8 +1,10 @@
-import ratelimiting
 import time
 import unittest
+import webob
 
-class Test(unittest.TestCase):
+import nova.api.rackspace.ratelimiting as ratelimiting
+
+class LimiterTest(unittest.TestCase):
 
     def setUp(self):
         self.limits = {
@@ -58,6 +60,69 @@ class Test(unittest.TestCase):
         self.exhaust('c', 0, username='chuck')
         self.exhaust('c', 0, username='bob')
         self.exhaust('c', 0, username='alice')
+
+
+class WSGIAppTest(unittest.TestCase):
+
+    def setUp(self):
+        test = self
+        class FakeLimiter(object):
+            def __init__(self):
+                self._action = self._username = self._delay = None
+            def mock(self, action, username, delay):
+                self._action = action
+                self._username = username
+                self._delay = delay
+            def perform(self, action, username):
+                test.assertEqual(action, self._action)
+                test.assertEqual(username, self._username)
+                return self._delay
+        self.limiter = FakeLimiter()
+        self.app = ratelimiting.WSGIApp(self.limiter)
+
+    def test_invalid_methods(self):
+        requests = []
+        for method in ['GET', 'PUT', 'DELETE']:
+            req = webob.Request.blank('/limits/michael/breakdance', 
+                                      dict(REQUEST_METHOD=method))
+            requests.append(req)
+        for req in requests:
+            self.assertEqual(req.get_response(self.app).status_int, 405)
+
+    def test_invalid_urls(self):
+        requests = []
+        for prefix in ['limit', '', 'limiter2', 'limiter/limits', 'limiter/1']:
+            req = webob.Request.blank('/%s/michael/breakdance' % prefix,
+                                      dict(REQUEST_METHOD='POST'))
+        requests.append(req)
+        for req in requests:
+            self.assertEqual(req.get_response(self.app).status_int, 404)
+
+    def verify(self, url, username, action, delay=None):
+        """Make sure that POSTing to the given url causes the given username
+        to perform the given action.  Make the internal rate limiter return
+        delay and make sure that the WSGI app returns the correct response.
+        """
+        req = webob.Request.blank(url, dict(REQUEST_METHOD='POST'))
+        self.limiter.mock(action, username, delay)
+        resp = req.get_response(self.app)
+        if not delay:
+            self.assertEqual(resp.status_int, 200)
+        else:
+            self.assertEqual(resp.status_int, 403)
+            self.assertEqual(resp.headers['X-Wait-Seconds'], delay)
+
+    def test_good_urls(self):
+        self.verify('/limiter/michael/hoot', 'michael', 'hoot')
+
+    def test_escaping(self):
+        self.verify('/limiter/michael/jump%20up', 'michael', 'jump up')
+
+    def test_response_to_delays(self):
+        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1)
+        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1.56)
+        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1000)
+
 
 if __name__ == '__main__':
     unittest.main()
