@@ -58,3 +58,6 @@ class Test(unittest.TestCase):
         self.exhaust('c', 0, username='chuck')
         self.exhaust('c', 0, username='bob')
         self.exhaust('c', 0, username='alice')
+
+if __name__ == '__main__':
+    unittest.main()

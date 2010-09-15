@@ -92,23 +92,31 @@ class RateLimitingMiddleware(wsgi.Middleware):
         action_name = self.get_action_name(req)
         if not action_name: # not rate limited
             return self.application
-        delay = self.limiter.perform(action_name, username=username)
-        if action_name == 'POST servers':
-            # "POST servers" is a POST, so it counts against "POST" too.
-            delay2 = self.limiter.perform('POST', username=username)
-            delay = max(delay or 0, delay2 or 0)
+        delay = self.get_delay(action_name, username)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
             raise webob.exc.HTTPRequestEntityTooLarge(headers={
                     'Retry-After': time.time() + delay})
-        else:
-            return self.application
+        return self.application
+
+    def get_delay(self, action_name, username):
+        """Return the delay for the given action and username, or None if
+        the action would not be rate limited.
+        """
+        if action_name == 'POST servers':
+            # "POST servers" is a POST, so it counts against "POST" too.
+            # Attempt the "POST" first, lest we are rate limited by "POST" but
+            # use up a precious "POST servers" call.
+            delay = self.limiter.perform("POST", username=username)
+            if delay:
+                return delay
+        return self.limiter.perform(action_name, username=username)
 
     def get_action_name(self, req):
         """Return the action name for this request."""
         if req.method == 'GET' and 'changes-since' in req.GET:
             return 'GET changes-since'
-        if req.method == 'POST' and req.path_info.starts_with('/servers'):
+        if req.method == 'POST' and req.path_info.startswith('/servers'):
             return 'POST servers'
         if req.method in ['PUT', 'POST', 'DELETE']:
             return req.method

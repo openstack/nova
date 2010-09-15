@@ -17,22 +17,15 @@
 
 import unittest
 
-from nova.api.rackspace.ratelimiting import RateLimitingMiddleware
+from nova.api.rackspace import RateLimitingMiddleware
 from nova.tests.api.test_helper import *
 from webob import Request
 
 class RateLimitingMiddlewareTest(unittest.TestCase):
-    def setUp(self):
-        self.middleware = RateLimitingMiddleware(APIStub())
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-
     def test_get_action_name(self):
         middleware = RateLimitingMiddleware(APIStub())
         def verify(method, url, action_name):
-            req = Request(url)
+            req = Request.blank(url)
             req.method = method
             action = middleware.get_action_name(req)
             self.assertEqual(action, action_name)
@@ -45,12 +38,34 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         verify('GET', '/servers/4', None)
         verify('HEAD', '/servers/4', None)
 
-    def TODO_test_call(self):
-        pass
-        #mw = make_middleware()
-        #req = build_request('DELETE', '/servers/4')
-        #for i in range(5):
-        #    resp = req.get_response(mw)
-        #    assert resp is OK
-        #resp = req.get_response(mw)
-        #assert resp is rate limited
+    def exhaust(self, middleware, method, url, username, times):
+        req = Request.blank(url, dict(REQUEST_METHOD=method),
+                            headers={'X-Auth-User': username})
+        for i in range(times):
+            resp = req.get_response(middleware)
+            self.assertEqual(resp.status_int, 200)
+        resp = req.get_response(middleware)
+        self.assertEqual(resp.status_int, 413)
+        self.assertTrue('Retry-After' in resp.headers)
+
+    def test_single_action(self):
+        middleware = RateLimitingMiddleware(APIStub())
+        self.exhaust(middleware, 'DELETE', '/servers/4', 'usr1', 100)
+        self.exhaust(middleware, 'DELETE', '/servers/4', 'usr2', 100)
+
+    def test_POST_servers_action_implies_POST_action(self):
+        middleware = RateLimitingMiddleware(APIStub())
+        self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
+        self.exhaust(middleware, 'POST', '/images/4', 'usr2', 10)
+        self.assertTrue(set(middleware.limiter._levels) == 
+                        set(['usr1:POST', 'usr1:POST servers', 'usr2:POST']))
+
+    def test_POST_servers_action_correctly_ratelimited(self):
+        middleware = RateLimitingMiddleware(APIStub())
+        # Use up all of our "POST" allowance for the minute, 5 times
+        for i in range(5):
+            self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
+            # Reset the 'POST' action counter.
+            del middleware.limiter._levels['usr1:POST']
+        # All 50 daily "POST servers" actions should be all used up
+        self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 0)
