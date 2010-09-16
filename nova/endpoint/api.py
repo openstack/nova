@@ -42,8 +42,6 @@ from nova.endpoint import cloud
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
-
 
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
@@ -342,3 +340,4 @@ class APIServerApplication(tornado.web.Application):
             (r'/1.0/([-A-Za-z0-9/]*)', MetadataRequestHandler),
         ], pool=multiprocessing.Pool(4))
         self.controllers = controllers
+
