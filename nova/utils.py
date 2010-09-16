@@ -33,6 +33,7 @@ from twisted.internet.threads import deferToThread
 
 from nova import exception
 from nova import flags
+from nova.exception import ProcessExecutionError
 
 
 FLAGS = flags.FLAGS
@@ -129,8 +130,10 @@ def runthis(prompt, cmd, check_exit_code = True):
     exit_code = subprocess.call(cmd.split(" "))
     logging.debug(prompt % (exit_code))
     if check_exit_code and exit_code <> 0:
-        raise Exception(    "Unexpected exit code: %s from cmd: %s"
-                            % (exit_code, cmd))
+        raise ProcessExecutionError(exit_code=exit_code,
+                                    stdout=None,
+                                    stderr=None,
+                                    cmd=cmd)
 
 
 def generate_uid(topic, size=8):
