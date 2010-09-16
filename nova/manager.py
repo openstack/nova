@@ -44,6 +44,3 @@ class Manager(object):
        Child classes should override this method.
        """
 
-
-
-
