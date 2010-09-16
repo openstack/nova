@@ -22,6 +22,7 @@ where they're used.
 """
 
 import getopt
+import os
 import socket
 import sys
 
@@ -34,7 +35,7 @@ class FlagValues(gflags.FlagValues):
     Unknown flags will be ignored when parsing the command line, but the
     command line will be kept so that it can be replayed if new flags are
     defined after the initial parsing.
-    
+
     """
 
     def __init__(self):
@@ -50,7 +51,7 @@ class FlagValues(gflags.FlagValues):
         # leftover args at the end
         sneaky_unparsed_args = {"value": None}
         original_argv = list(argv)
-        
+
         if self.IsGnuGetOpt():
             orig_getopt = getattr(getopt, 'gnu_getopt')
             orig_name = 'gnu_getopt'
@@ -74,14 +75,14 @@ class FlagValues(gflags.FlagValues):
             unparsed_args = sneaky_unparsed_args['value']
             if unparsed_args:
                 if self.IsGnuGetOpt():
-                    args = argv[:1] + unparsed
+                    args = argv[:1] + unparsed_args
                 else:
                     args = argv[:1] + original_argv[-len(unparsed_args):]
             else:
                 args = argv[:1]
         finally:
             setattr(getopt, orig_name, orig_getopt)
-        
+
         # Store the arguments for later, we'll need them for new flags
         # added at runtime
         self.__dict__['__stored_argv'] = original_argv
@@ -92,7 +93,7 @@ class FlagValues(gflags.FlagValues):
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
-    
+
     def IsDirty(self, name):
         return name in self.__dict__['__dirty']
 
@@ -113,12 +114,12 @@ class FlagValues(gflags.FlagValues):
         for k in self.__dict__['__dirty']:
             setattr(self, k, getattr(new_flags, k))
         self.ClearDirty()
-        
+
     def __setitem__(self, name, flag):
         gflags.FlagValues.__setitem__(self, name, flag)
         if self.WasAlreadyParsed():
             self.SetDirty(name)
-    
+
     def __getitem__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
@@ -202,9 +203,20 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
+DEFINE_string('sql_connection',
+              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'connection string for sql database')
+
+DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
+              'Manager for compute')
+DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
+              'Manager for network')
+DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+              'Manager for volume')
+
+DEFINE_string('host', socket.gethostname(),
+              'name of this node')
+
 # UNUSED
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
-DEFINE_string('node_name', socket.gethostname(),
-              'name of this node')
-

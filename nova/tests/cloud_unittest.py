@@ -27,9 +27,9 @@ from xml.etree import ElementTree
 from nova import flags
 from nova import rpc
 from nova import test
+from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
-from nova.compute import service
 from nova.api.ec2 import context
 from nova.api.ec2 import cloud
 
@@ -40,8 +40,7 @@ FLAGS = flags.FLAGS
 class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   fake_storage=True)
+        self.flags(connection_type='fake')
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
@@ -50,7 +49,7 @@ class CloudTestCase(test.BaseTestCase):
         self.cloud = cloud.CloudController()
 
         # set up a service
-        self.compute = service.ComputeService()
+        self.compute = utils.import_class(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                      topic=FLAGS.compute_topic,
                                                      proxy=self.compute)
