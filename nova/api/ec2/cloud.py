@@ -556,7 +556,7 @@ class CloudController(object):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
-                network_topic = yield self._get_network_topic(context)
+                network_topic = self._get_network_topic(context)
                 rpc.cast(network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"context": None,
