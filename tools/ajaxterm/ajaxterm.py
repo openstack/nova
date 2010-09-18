@@ -9,6 +9,9 @@ os.chdir(os.path.normpath(os.path.dirname(__file__)))
 sys.path[0:0]=glob.glob('../../python')
 
 import qweb
+import string, subprocess, uuid
+
+global g_server
 
 class Terminal:
 	def __init__(self,width=80,height=24):
@@ -374,6 +377,7 @@ class Multiplex:
 		self.lock=threading.RLock()
 		self.thread=threading.Thread(target=self.loop)
 		self.alive=1
+		self.lastActivity=time.time()
 		# synchronize methods
 		for name in ['create','fds','proc_read','proc_write','dump','die','run']:
 			orig=getattr(self,name)
@@ -461,6 +465,10 @@ class Multiplex:
 		while self.run():
 			fds=self.fds()
 			i,o,e=select.select(fds, [], [], 1.0)
+			print str(time.time()) + " " +  str(self.lastActivity)
+			if time.time() - self.lastActivity > 120:
+				global g_server
+				g_server.shutdown()
 			for fd in i:
 				self.proc_read(fd)
 			if len(i):
@@ -473,8 +481,9 @@ class Multiplex:
 				pass
 
 class AjaxTerm:
-	def __init__(self,cmd=None,index_file='ajaxterm.html'):
+	def __init__(self,cmd=None,index_file='ajaxterm.html',token=None):
 		self.files={}
+		self.token=token
 		for i in ['css','html','js']:
 			for j in glob.glob('*.%s'%i):
 				self.files[j]=file(j).read()
@@ -494,12 +503,14 @@ class AjaxTerm:
 			if s in self.session:
 				term=self.session[s]
 			else:
+				raise 'Not Authorized'
 				if not (w>2 and w<256 and h>2 and h<100):
 					w,h=80,25
 				term=self.session[s]=self.multi.create(w,h)
 			if k:
 				self.multi.proc_write(term,k)
 			time.sleep(0.002)
+			self.multi.lastActivity = time.time();
 			dump=self.multi.dump(term,c)
 			req.response_headers['Content-Type']='text/xml'
 			if isinstance(dump,str):
@@ -514,20 +525,25 @@ class AjaxTerm:
 			if n in self.files:
 				req.response_headers['Content-Type'] = self.mime.get(os.path.splitext(n)[1].lower(), 'application/octet-stream')
 				req.write(self.files[n])
-			else:
+			elif req.REQUEST['token'] == self.token:
 				req.response_headers['Content-Type'] = 'text/html; charset=UTF-8'
-				req.write(self.files['index'])
+				session_id = str(uuid.uuid4())
+				req.write(string.Template(self.files['index']).substitute(session_id=session_id))
+				term=self.session[session_id]=self.multi.create(80,25)
+			else:
+				raise "Not Authorized"
 		return req
 
 def main():
 	parser = optparse.OptionParser()
 	parser.add_option("-p", "--port", dest="port", default="8022", help="Set the TCP port (default: 8022)")
-	parser.add_option("-c", "--command", dest="cmd", default=None,help="set the command (default: /bin/login or ssh localhost)")
+	parser.add_option("-c", "--command", dest="cmd", default=None,help="set the command (default: /bin/login or ssh 0.0.0.0)")
 	parser.add_option("-l", "--log", action="store_true", dest="log",default=0,help="log requests to stderr (default: quiet mode)")
 	parser.add_option("-d", "--daemon", action="store_true", dest="daemon", default=0, help="run as daemon in the background")
 	parser.add_option("-P", "--pidfile",dest="pidfile",default="/var/run/ajaxterm.pid",help="set the pidfile (default: /var/run/ajaxterm.pid)")
 	parser.add_option("-i", "--index", dest="index_file", default="ajaxterm.html",help="default index file (default: ajaxterm.html)")
 	parser.add_option("-u", "--uid", dest="uid", help="Set the daemon's user id")
+	parser.add_option("-t", "--token", dest="token", help="Set authorization token")
 	(o, a) = parser.parse_args()
 	if o.daemon:
 		pid=os.fork()
@@ -549,15 +565,17 @@ def main():
 				file(o.pidfile,'w+').write(str(pid)+'\n')
 			except:
 				pass
-			print 'AjaxTerm at http://localhost:%s/ pid: %d' % (o.port,pid)
+			print 'AjaxTerm at http://0.0.0.0:%s/ pid: %d' % (o.port,pid)
 			sys.exit(0)
 	else:
-		print 'AjaxTerm at http://localhost:%s/' % o.port
-	at=AjaxTerm(o.cmd,o.index_file)
+		print 'AjaxTerm at http://0.0.0.0:%s/' % o.port
+	at=AjaxTerm(o.cmd,o.index_file,o.token)
 #	f=lambda:os.system('firefox http://localhost:%s/&'%o.port)
 #	qweb.qweb_wsgi_autorun(at,ip='localhost',port=int(o.port),threaded=0,log=o.log,callback_ready=None)
 	try:
-		qweb.QWebWSGIServer(at,ip='localhost',port=int(o.port),threaded=0,log=o.log).serve_forever()
+		global g_server
+		g_server = qweb.QWebWSGIServer(at,ip='0.0.0.0',port=int(o.port),threaded=0,log=o.log)
+		g_server.serve_forever()
 	except KeyboardInterrupt,e:
 		sys.excepthook(*sys.exc_info())
 	at.multi.die()

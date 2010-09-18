@@ -3,7 +3,7 @@ ajaxterm.Terminal_ctor=function(id,width,height) {
 	var ie=0;
 	if(window.ActiveXObject)
 		ie=1;
-	var sid=""+Math.round(Math.random()*1000000000);
+	var sid=""+SESSION_ID;
 	var query0="s="+sid+"&w="+width+"&h="+height;
 	var query1=query0+"&c=1&k=";
 	var buf="";
