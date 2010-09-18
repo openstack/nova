@@ -220,10 +220,9 @@ class AdminController(object):
     def create_console(self, _context, kind, instance_id, **_kwargs):
         """Create a Console"""
         #instance = db.instance_get(_context, instance_id)
-        host = '127.0.0.1'
 
         def get_port():
-            for i in range(0,100): # don't loop forever
+            for i in xrange(0,100): # don't loop forever
                 port = int(random.uniform(10000, 12000))
                 cmd = "netcat 0.0.0.0 " + str(port) + " -w 2  < /dev/null"
                 # this Popen  will exit with 0 only if the port is in use, 
@@ -235,8 +234,10 @@ class AdminController(object):
 
         port = str(get_port())
         token = str(uuid.uuid4())
+
+        host = '127.0.0.1' #TODO add actual host
         cmd = novadir() + "tools/ajaxterm//ajaxterm.py --command 'ssh root@" + host + "' -t " \
                 + token + " -p " + port
-        port_is_unused = subprocess.Popen(cmd, shell=True)
-        return {'url': 'http://tonbuntu:' + port + '/?token=' + token }
+        port_is_unused = subprocess.Popen(cmd, shell=True) #TODO error check
+        return {'url': 'http://tonbuntu:' + port + '/?token=' + token } #TODO - s/tonbuntu/api_server_public_ip
 

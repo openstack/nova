@@ -8,7 +8,12 @@
 	<script type="text/javascript" src="sarissa_dhtml.js"></script>
 	<script type="text/javascript" src="ajaxterm.js"></script>
 	<script type="text/javascript">
-	SESSION_ID = '$session_id';
+    /* 
+        ajaxterm.py creates a random session_id to demultiplex multiple connections, 
+        and to add a layer of security - in its shipping form, ajaxterm accepted any session_id
+        and was susceptible to an easy exploit
+    */
+	SESSION_ID = '$session_id'; 
 	window.onload=function() {
 		t=ajaxterm.Terminal("term",80,25);
 	};
