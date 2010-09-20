@@ -213,7 +213,11 @@ class Executor(wsgi.Application):
             req.headers['Content-Type'] = 'text/xml'
             return result
         except exception.ApiError as ex:
-            return self._error(req, type(ex).__name__ + "." + ex.code, ex.message)
+
+            if ex.code:
+                return self._error(req, ex.code, ex.message)
+            else:
+                return self._error(req, type(ex).__name__, ex.message)
         # TODO(vish): do something more useful with unknown exceptions
         except Exception as ex:
             return self._error(req, type(ex).__name__, str(ex))

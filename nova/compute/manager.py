@@ -85,7 +85,9 @@ class ComputeManager(manager.Manager):
         try:
             yield self.driver.spawn(instance_ref)
             now = datetime.datetime.utcnow()
-            self.db.instance_update(None, instance_id, {'launched_at': now})
+            self.db.instance_update(context,
+                                    instance_id,
+                                    {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
             logging.exception("instance %s: Failed to spawn",
                               instance_ref['name'])
@@ -100,8 +102,8 @@ class ComputeManager(manager.Manager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
         logging.debug("instance %s: terminating", instance_id)
-        instance_ref = self.db.instance_get(context, instance_id)
 
+        instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
@@ -112,8 +114,6 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'shutting_down')
         yield self.driver.destroy(instance_ref)
-        now = datetime.datetime.utcnow()
-        self.db.instance_update(None, instance_id, {'terminated_at': now})
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
@@ -189,7 +189,7 @@ class ComputeManager(manager.Manager):
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        self.driver.detach_volume(instance_ref['str_id'],
-                                  volume_ref['mountpoint'])
+        yield self.driver.detach_volume(instance_ref['str_id'],
+                                        volume_ref['mountpoint'])
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)

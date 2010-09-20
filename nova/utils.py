@@ -33,21 +33,11 @@ from twisted.internet.threads import deferToThread
 
 from nova import exception
 from nova import flags
+from nova.exception import ProcessExecutionError
 
 
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-
-class ProcessExecutionError(IOError):
-    def __init__(   self, stdout=None, stderr=None, exit_code=None, cmd=None,
-                    description=None):
-        if description is None:
-            description = "Unexpected error while running command."
-        if exit_code is None:
-            exit_code = '-'
-        message = "%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r" % (
-                  description, cmd, exit_code, stdout, stderr)
-        IOError.__init__(self, message)
 
 def import_class(import_str):
     """Returns a class from a string including module and class"""
@@ -129,8 +119,10 @@ def runthis(prompt, cmd, check_exit_code = True):
     exit_code = subprocess.call(cmd.split(" "))
     logging.debug(prompt % (exit_code))
     if check_exit_code and exit_code <> 0:
-        raise Exception(    "Unexpected exit code: %s from cmd: %s"
-                            % (exit_code, cmd))
+        raise ProcessExecutionError(exit_code=exit_code,
+                                    stdout=None,
+                                    stderr=None,
+                                    cmd=cmd)
 
 
 def generate_uid(topic, size=8):
