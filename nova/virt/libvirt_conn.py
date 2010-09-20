@@ -248,6 +248,46 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
         yield local_d
 
+    def _flush_xen_console(self, virsh_output):
+        logging.info('virsh said: %r' % (virsh_output,))
+        virsh_output = virsh_output[0].strip()
+
+        if virsh_output.startswith('/dev/'):
+            logging.info('cool, it\'s a device')
+            d = process.simple_execute("sudo dd if=%s iflag=nonblock" % virsh_output, check_exit_code=False)
+            d.addCallback(lambda r:r[0])
+            return d
+        else:
+            return ''
+
+    def _append_to_file(self, data, fpath):
+        logging.info('data: %r, fpath: %r' % (data, fpath))
+        fp = open(fpath, 'a+')
+        fp.write(data)
+        return fpath
+        
+    def _dump_file(self, fpath):
+        fp = open(fpath, 'r+')
+        contents = fp.read()
+        logging.info('Contents: %r' % (contents,))
+        return contents
+
+    @exception.wrap_exception
+    def get_console_output(self, instance):
+        console_log = os.path.join(FLAGS.instances_path, instance['name'], 'console.log')
+        logging.info('console_log: %s' % console_log)
+        logging.info('FLAGS.libvirt_type: %s' % FLAGS.libvirt_type)
+        if FLAGS.libvirt_type == 'xen':
+            # Xen is spethial
+            d = process.simple_execute("virsh ttyconsole %s" % instance['name'])
+            d.addCallback(self._flush_xen_console)
+            d.addCallback(self._append_to_file, console_log)
+        else:
+            d = defer.succeed(console_log)
+        d.addCallback(self._dump_file)
+        return d
+
+
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml):
         # syntactic nicety

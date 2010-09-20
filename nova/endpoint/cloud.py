@@ -233,11 +233,16 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance_ref = db.instance_get_by_str(context, instance_id[0])
-        return rpc.call('%s.%s' % (FLAGS.compute_topic,
-                                   instance_ref['host']),
-                        {"method": "get_console_output",
-                         "args": {"context": None,
-                                  "instance_id": instance_ref['id']}})
+        d = rpc.call('%s.%s' % (FLAGS.compute_topic,
+                                instance_ref['host']),
+                     { "method" : "get_console_output",
+                       "args"   : { "context": None,
+                                    "instance_id": instance_ref['id']}})
+
+        d.addCallback(lambda output: { "InstanceId": instance_id,
+                                       "Timestamp": "2",
+                                       "output": base64.b64encode(output)})
+        return d
 
     @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
