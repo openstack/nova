@@ -39,7 +39,8 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nova_api_auth', 'nova.api.rackspace.auth.FakeAuth', 
+flags.DEFINE_string('nova_api_auth',
+    'nova.api.rackspace.auth.BasicApiAuthManager', 
     'The auth mechanism to use for the Rackspace API implemenation')
 
 class API(wsgi.Middleware):
@@ -48,7 +49,6 @@ class API(wsgi.Middleware):
     def __init__(self):
         app = AuthMiddleware(APIRouter())
         super(API, self).__init__(app)
-
 
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the rackspace API request or return an HTTP Forbidden."""
@@ -60,40 +60,15 @@ class AuthMiddleware(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         if not req.headers.has_key("X-Auth-Token"):
-            return self.authenticate(req)
+            return self.auth_driver.authenticate(req)
 
         user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
 
         if not user:
             return webob.exc.HTTPUnauthorized()
-        context = {'user':user}
+        context = {'user': user}
         req.environ['nova.context'] = context
         return self.application
-
-    def authenticate(self, req):
-        # Unless the request is explicitly made against /<version>/ don't
-        # honor it
-        path_info = req.environ['wsgiorg.routing_args'][1]['path_info']
-        if path_info:
-            return webob.exc.HTTPUnauthorized()
-
-        if req.headers.has_key("X-Auth-User") and \
-                req.headers.has_key("X-Auth-Key"):
-            username, key = req.headers['X-Auth-User'], req.headers['X-Auth-Key']
-            token, user = self.auth_driver.authorize_user(username, key)
-            if user and token:
-                res = webob.Response()
-                res.headers['X-Auth-Token'] = token
-                res.headers['X-Server-Management-Url'] = \
-                    user['server_management_url']
-                res.headers['X-Storage-Url'] = user['storage_url']
-                res.headers['X-CDN-Management-Url'] = user['cdn_management_url']
-                res.content_type = 'text/plain'
-                res.status = '204'
-                return res
-            else:
-                return webob.exc.HTTPUnauthorized()
-        return webob.exc.HTTPUnauthorized()
 
 class APIRouter(wsgi.Router):
     """

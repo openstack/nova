@@ -1,38 +1,12 @@
 import webob
 import webob.dec
 from nova.wsgi import Router
+from nova import auth
 
-fake_data_store = {}
-auth_hash = 'dummy_hash'
+auth_data = {}
 
-class FakeRedis(object):
-    def __init__(self):
-        global fake_data_store
-        self.store = fake_data_store
-
-    def hsetnx(self, hash_name, key, value):
-        if not self.store.has_key(hash_name):
-            self.store[hash_name] = {}
-
-        if self.store[hash_name].has_key(key):
-            return 0
-        self.store[hash_name][key] = value
-        return 1
-
-    def hset(self, hash_name, key, value):
-        if not self.store.has_key(hash_name):
-            self.store[hash_name] = {}
-
-        self.store[hash_name][key] = value
-        return 1
-
-    def hget(self, hash_name, key):
-        if not self.store[hash_name].has_key(key):
-            return None
-        return self.store[hash_name][key]
-
-    def hincrby(self, hash_name, key, amount=1):
-        self.store[hash_name][key] += amount
+class Context(object): 
+    pass
 
 class FakeRouter(Router):
     def __init__(self):
@@ -45,8 +19,32 @@ class FakeRouter(Router):
         res.headers['X-Test-Success'] = 'True'
         return res
 
-def fake_auth_init(self, store=FakeRedis):
-    global auth_hash
-    self._store = store()
-    self.auth_hash = auth_hash
+def fake_auth_init(self):
+    self.db = FakeAuthDatabase()
+    self.context = Context()
+    self.auth = FakeAuthManager()
+    self.host = 'foo'
 
+class FakeAuthDatabase(object):
+    @staticmethod
+    def auth_get_token(context, token_hash):
+        pass
+
+    @staticmethod
+    def auth_create_token(context, token, user_id):
+        pass
+
+    @staticmethod
+    def auth_destroy_token(context, token):
+        pass
+
+class FakeAuthManager(object):
+    def __init__(self):
+        global auth_data
+        self.data = auth_data
+
+    def add_user(self, key, user):        
+        self.data[key] = user
+
+    def get_user_from_access_key(self, key):
+        return self.data.get(key, None)

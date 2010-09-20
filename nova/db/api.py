@@ -376,6 +376,21 @@ def export_device_create(context, values):
 
 ###################
 
+def auth_destroy_token(context, token):
+    """Destroy an auth token"""
+    return IMPL.auth_destroy_token(context, token)
+
+def auth_get_token(context, token_hash):
+    """Retrieves a token given the hash representing it"""
+    return IMPL.auth_get_token(context, token_hash)
+
+def auth_create_token(context, token, user_id):
+    """Creates a new token"""
+    return IMPL.auth_create_token(context, token_hash, token, user_id)
+
+
+###################
+
 
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""

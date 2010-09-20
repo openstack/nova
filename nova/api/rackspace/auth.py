@@ -1,37 +1,88 @@
+import datetime
 import json
-from hashlib import sha1
-from nova import datastore
+import time
+import webob.exc
+import webob.dec
+import hashlib
 
-class FakeAuth(object):
-    def __init__(self, store=datastore.Redis.instance):
-        self._store = store()
-        self.auth_hash = 'rs_fake_auth'
-        self._store.hsetnx(self.auth_hash, 'rs_last_id', 0)
+from nova import auth
+from nova import manager
+from nova import db
 
-    def authorize_token(self, token):
-        user = self._store.hget(self.auth_hash, token) 
-        if user:
-            return json.loads(user)
+class Context(object):
+    pass
+
+class BasicApiAuthManager(manager.Manager):
+    """ Implements a somewhat rudimentary version of Rackspace Auth"""
+
+    def __init__(self):
+        self.auth = auth.manager.AuthManager()
+        self.context = Context()
+        super(BasicApiAuthManager, self).__init__()
+
+    def authenticate(self, req):
+        # Unless the request is explicitly made against /<version>/ don't
+        # honor it
+        path_info = req.path_info
+        if len(path_info) > 1:
+            return webob.exc.HTTPUnauthorized()
+
+        try:
+            username, key = req.headers['X-Auth-User'], \
+                req.headers['X-Auth-Key']
+        except KeyError:
+            return webob.exc.HTTPUnauthorized()
+
+        username, key = req.headers['X-Auth-User'], req.headers['X-Auth-Key']
+        token, user = self._authorize_user(username, key)
+        if user and token:
+            res = webob.Response()
+            res.headers['X-Auth-Token'] = token['token_hash']
+            res.headers['X-Server-Management-Url'] = \
+                token['server_management_url']
+            res.headers['X-Storage-Url'] = token['storage_url']
+            res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
+            res.content_type = 'text/plain'
+            res.status = '204'
+            return res
+        else:
+            return webob.exc.HTTPUnauthorized()
+
+    def authorize_token(self, token_hash):
+        """ retrieves user information from the datastore given a token
+        
+        If the token has expired, returns None
+        If the token is not found, returns None
+        Otherwise returns the token
+
+        This method will also remove the token if the timestamp is older than
+        2 days ago.
+        """
+        token = self.db.auth_get_token(self.context, token_hash) 
+        if token:
+            delta = datetime.datetime.now() - token['created_at']
+            if delta.days >= 2:
+                self.db.auth_destroy_token(self.context, token)
+            else:
+                user = self.auth.get_user(self.context, token['user_id'])
+                return { 'id':user['id'] }
         return None
 
-    def authorize_user(self, user, key):
-        token = sha1("%s_%s" % (user, key)).hexdigest()
-        user = self._store.hget(self.auth_hash, token)
-        if not user:
-            return None, None
-        else:
-            return token, json.loads(user)
+    def _authorize_user(self, username, key):
+        """ Generates a new token and assigns it to a user """
+        user = self.auth.get_user_from_access_key(key)
+        if user and user['name'] == username:
+            token_hash = hashlib.sha1('%s%s%f' % (username, key,
+                time.time())).hexdigest()
+            token = {}
+            token['token_hash'] = token_hash
+            token['cdn_management_url'] = ''
+            token['server_management_url'] = self._get_server_mgmt_url()
+            token['storage_url'] = ''
+            self.db.auth_create_token(self.context, token, user['id'])
+            return token, user
+        return None, None 
 
-    def add_user(self, user, key):
-        last_id = self._store.hget(self.auth_hash, 'rs_last_id')
-        token = sha1("%s_%s" % (user, key)).hexdigest()
-        user = {
-            'id':last_id,
-            'cdn_management_url':'cdn_management_url',
-            'storage_url':'storage_url',
-            'server_management_url':'server_management_url'
-        }
-        new_user = self._store.hsetnx(self.auth_hash, token, json.dumps(user))
-        if new_user:
-            self._store.hincrby(self.auth_hash, 'rs_last_id')
+    def _get_server_mgmt_url(self):
+        return 'https://%s/v1.0/' % self.host
         
