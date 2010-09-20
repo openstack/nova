@@ -21,6 +21,7 @@ Root WSGI middleware for all API controllers.
 """
 
 import routes
+import webob.dec
 
 from nova import wsgi
 from nova.api import ec2
@@ -32,10 +33,18 @@ class API(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        # TODO(gundlach): EC2 RootController is replaced by this class;
-        # MetadataRequestHandlers isn't part of the EC2 API and thus can
-        # be dropped; and I'm leaving off CloudPipeRequestHandler until
-        # I hear that we need it.
+        mapper.connect("/", controller=self.versions)
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
         mapper.connect("/services/{path_info:.*}", controller=ec2.API())
         super(API, self).__init__(mapper)
+
+    @webob.dec.wsgify
+    def versions(self, req):
+        """Respond to a request for all OpenStack API versions."""
+        response = {
+                "versions": [
+                    dict(status="CURRENT", id="v1.0")]}
+        metadata = {
+            "application/xml": {
+                "attributes": dict(version=["status", "id"])}}
+        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
