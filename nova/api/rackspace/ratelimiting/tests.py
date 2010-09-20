@@ -227,13 +227,10 @@ class WSGIAppProxyTest(unittest.TestCase):
         self.assertEqual(when, 1.5)
 
     def test_failure(self):
-        self.limiter.mock('murder', 'brutus', None)
-        try:
-            when = self.proxy.perform('stab', 'brutus')
-        except AssertionError:
-            pass
-        else:
-            self.fail("I didn't perform the action I expected")
+        def shouldRaise():
+            self.limiter.mock('murder', 'brutus', None)
+            self.proxy.perform('stab', 'brutus')
+        self.assertRaises(AssertionError, shouldRaise)
 
 
 if __name__ == '__main__':
