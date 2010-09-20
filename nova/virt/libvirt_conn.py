@@ -47,6 +47,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.qemu.xml.template'),
                     'Libvirt XML Template for QEmu/KVM')
+flags.DEFINE_string('libvirt_xen_xml_template',
+                    utils.abspath('virt/libvirt.xen.xml.template'),
+                    'Libvirt XML Template for Xen')
 flags.DEFINE_string('libvirt_uml_xml_template',
                     utils.abspath('virt/libvirt.uml.xml.template'),
                     'Libvirt XML Template for user-mode-linux')
@@ -55,7 +58,7 @@ flags.DEFINE_string('injected_network_template',
                     'Template file for injected network')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
-                    'Libvirt domain type (valid options are: kvm, qemu, uml)')
+                    'Libvirt domain type (valid options are: kvm, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
@@ -104,6 +107,9 @@ class LibvirtConnection(object):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
             template_file = FLAGS.libvirt_uml_xml_template
+        elif FLAGS.libvirt_type == 'xen':
+            uri = FLAGS.libvirt_uri or 'xen:///'
+            template_file = FLAGS.libvirt_xen_xml_template
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
             template_file = FLAGS.libvirt_xml_template
