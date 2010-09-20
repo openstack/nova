@@ -370,4 +370,3 @@ class VlanManager(NetworkManager):
         parent_reserved = super(VlanManager, self)._top_reserved_ips
         return parent_reserved + FLAGS.cnt_vpn_clients
 
-

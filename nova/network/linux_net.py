@@ -273,4 +273,3 @@ def _dnsmasq_pid_for(vlan):
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:
             return int(f.read())
-

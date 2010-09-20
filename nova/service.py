@@ -158,4 +158,3 @@ class Service(object, service.Service):
                 self.model_disconnected = True
                 logging.exception("model server went away")
         yield
-

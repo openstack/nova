@@ -222,4 +222,3 @@ DEFINE_string('host', socket.gethostname(),
 # UNUSED
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
-
