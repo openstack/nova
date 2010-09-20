@@ -385,7 +385,7 @@ class CloudController(object):
             instances = db.instance_get_by_reservation(context,
                                                        reservation_id)
         else:
-            if not context.user.is_admin():
+            if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_by_project(context,
@@ -665,7 +665,7 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                self.network.deallocate_fixed_ip(context, address)
+                self.network_manager.deallocate_fixed_ip(context, address)
 
             host = instance_ref['host']
             if host:
