@@ -119,6 +119,18 @@ class FakeConnection(object):
         """
         return defer.succeed(None)
 
+    def rescue(self, instance):
+        """
+        Rescue the specified instance.
+        """
+        return defer.succeed(None)
+
+    def unrescue(self, instance):
+        """
+        Unrescue the specified instance.
+        """
+        return defer.succeed(None)
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.

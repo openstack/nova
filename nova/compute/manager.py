@@ -122,16 +122,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
-        self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
-
-        if instance_ref['state'] != power_state.RUNNING:
-            raise exception.Error(
-                    'trying to reboot a non-running'
-                    'instance: %s (state: %s excepted: %s)' %
-                    (instance_ref['str_id'],
-                     instance_ref['state'],
-                     power_state.RUNNING))
 
         logging.debug('instance %s: rebooting', instance_ref['name'])
         self.db.instance_set_state(context,
@@ -139,6 +130,34 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'rebooting')
         yield self.driver.reboot(instance_ref)
+        self._update_state(context, instance_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def rescue_instance(self, context, instance_id):
+        """Rescue an instance on this server."""
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: rescuing', instance_ref['name'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'rescuing')
+        yield self.driver.rescue(instance_ref)
+        self._update_state(context, instance_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def unrescue_instance(self, context, instance_id):
+        """Rescue an instance on this server."""
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: unrescuing', instance_ref['name'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'unrescuing')
+        yield self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
