@@ -23,6 +23,7 @@ datastore.
 """
 
 import base64
+import datetime
 import logging
 import os
 import time
@@ -32,6 +33,7 @@ from twisted.internet import defer
 from nova import db
 from nova import exception
 from nova import flags
+from nova import quota
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
@@ -42,6 +44,11 @@ from nova.endpoint import images
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
+
+
+class QuotaError(exception.ApiError):
+    """Quota Exceeeded"""
+    pass
 
 
 def _gen_key(user_id, key_name):
@@ -282,6 +289,14 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
+        # check quota
+        size = int(size)
+        if quota.allowed_volumes(context, 1, size) < 1:
+            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
+                         context.project.id, size)
+            raise QuotaError("Volume quota exceeded. You cannot "
+                             "create a volume of size %s" %
+                             size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
@@ -291,9 +306,11 @@ class CloudController(object):
         vol['attach_status'] = "detached"
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"context": None,
-                                               "volume_id": volume_ref['id']}})
+        rpc.cast(FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"context": None,
+                           "topic": FLAGS.volume_topic,
+                           "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
@@ -302,6 +319,8 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
@@ -324,10 +343,10 @@ class CloudController(object):
         volume_ref = db.volume_get_by_str(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
         if not instance_ref:
-            raise exception.Error("Volume isn't attached to anything!")
+            raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
         if volume_ref['status'] == "available":
-            raise exception.Error("Volume is already detached")
+            raise exception.ApiError("Volume is already detached")
         try:
             host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -371,7 +390,7 @@ class CloudController(object):
             instances = db.instance_get_by_reservation(context,
                                                        reservation_id)
         else:
-            if not context.user.is_admin():
+            if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_by_project(context,
@@ -446,6 +465,12 @@ class CloudController(object):
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
+        # check quota
+        if quota.allowed_floating_ips(context, 1) < 1:
+            logging.warn("Quota exceeeded for %s, tried to allocate address",
+                         context.project.id)
+            raise QuotaError("Address quota exceeded. You cannot "
+                             "allocate any more addresses")
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
                          {"method": "allocate_floating_ip",
@@ -505,6 +530,22 @@ class CloudController(object):
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
+        instance_type = kwargs.get('instance_type', 'm1.small')
+        if instance_type not in INSTANCE_TYPES:
+            raise exception.ApiError("Unknown instance type: %s",
+                                     instance_type)
+        # check quota
+        max_instances = int(kwargs.get('max_count', 1))
+        min_instances = int(kwargs.get('min_count', max_instances))
+        num_instances = quota.allowed_instances(context,
+                                                max_instances,
+                                                instance_type)
+        if num_instances < min_instances:
+            logging.warn("Quota exceeeded for %s, tried to run %s instances",
+                         context.project.id, min_instances)
+            raise QuotaError("Instance quota exceeded. You can only "
+                             "run %s more instances of this type." %
+                             num_instances, "InstanceLimitExceeded")
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
@@ -526,7 +567,7 @@ class CloudController(object):
         images.get(context, kernel_id)
         images.get(context, ramdisk_id)
 
-        logging.debug("Going to run instances...")
+        logging.debug("Going to run %s instances...", num_instances)
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
@@ -541,6 +582,7 @@ class CloudController(object):
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
+        base_options['state_description'] = 'scheduling'
         base_options['image_id'] = image_id
         base_options['kernel_id'] = kernel_id
         base_options['ramdisk_id'] = ramdisk_id
@@ -550,10 +592,15 @@ class CloudController(object):
         base_options['user_id'] = context.user.id
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
-        base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
         base_options['security_group'] = security_group
+        base_options['instance_type'] = instance_type
 
-        for num in range(int(kwargs['max_count'])):
+        type_data = INSTANCE_TYPES[instance_type]
+        base_options['memory_mb'] = type_data['memory_mb']
+        base_options['vcpus'] = type_data['vcpus']
+        base_options['local_gb'] = type_data['local_gb']
+
+        for num in range(num_instances):
             instance_ref = db.instance_create(context, base_options)
             inst_id = instance_ref['id']
 
@@ -574,11 +621,12 @@ class CloudController(object):
                       "args": {"context": None,
                                "address": address}})
 
-            rpc.cast(FLAGS.compute_topic,
-                 {"method": "run_instance",
-                  "args": {"context": None,
-                           "instance_id": inst_id}})
-            logging.debug("Casting to node for %s/%s's instance %s" %
+            rpc.cast(FLAGS.scheduler_topic,
+                     {"method": "run_instance",
+                      "args": {"context": None,
+                               "topic": FLAGS.compute_topic,
+                               "instance_id": inst_id}})
+            logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
         defer.returnValue(self._format_run_instances(context,
                                                      reservation_id))
@@ -597,6 +645,10 @@ class CloudController(object):
                                 % id_str)
                 continue
 
+            now = datetime.datetime.utcnow()
+            db.instance_update(context,
+                               instance_ref['id'],
+                               {'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -618,7 +670,7 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                self.network.deallocate_fixed_ip(context, address)
+                self.network_manager.deallocate_fixed_ip(context, address)
 
             host = instance_ref['host']
             if host:
@@ -646,6 +698,10 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
+        now = datetime.datetime.utcnow()
+        db.volume_update(context, volume_ref['id'], {'terminated_at': now})
         host = volume_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
