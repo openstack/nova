@@ -124,7 +124,8 @@ class ApiEc2TestCase(test.BaseTestCase):
                           for x in range(random.randint(4, 8)))
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
-        self.manager.generate_key_pair(user.id, keyname)
+        # NOTE(vish): create depends on pool, so call helper directly
+        cloud._gen_key(None, user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]

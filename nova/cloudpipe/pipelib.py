@@ -58,7 +58,7 @@ class CloudPipe(object):
         z.write(FLAGS.boot_script_template,'autorun.sh')
         z.close()
 
-        key_name = self.setup_keypair(project.project_manager_id, project_id)
+        key_name = self.setup_key_pair(project.project_manager_id, project_id)
         zippy = open(zippath, "r")
         context = context.APIRequestContext(user=project.project_manager, project=project)
 
@@ -74,7 +74,7 @@ class CloudPipe(object):
             security_groups=["vpn-secgroup"])
         zippy.close()
 
-    def setup_keypair(self, user_id, project_id):
+    def setup_key_pair(self, user_id, project_id):
         key_name = '%s%s' % (project_id, FLAGS.vpn_key_suffix)
         try:
             private_key, fingerprint = self.manager.generate_key_pair(user_id, key_name)

@@ -28,13 +28,13 @@ import logging
 import os
 import time
 
+from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.auth import manager
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.api.ec2 import images
 
@@ -48,10 +48,26 @@ class QuotaError(exception.ApiError):
     pass
 
 
-def _gen_key(user_id, key_name):
-    """ Tuck this into AuthManager """
-    mgr = manager.AuthManager()
-    private_key, fingerprint = mgr.generate_key_pair(user_id, key_name)
+def _gen_key(context, user_id, key_name):
+    """Generate a key
+
+    This is a module level method because it is slow and we need to defer
+    it into a process pool."""
+    # NOTE(vish): generating key pair is slow so check for legal
+    #             creation before creating key_pair
+    try:
+        db.key_pair_get(context, user_id, key_name)
+        raise exception.Duplicate("The key_pair %s already exists"
+                                  % key_name)
+    except exception.NotFound:
+        pass
+    private_key, public_key, fingerprint = crypto.generate_key_pair()
+    key = {}
+    key['user_id'] = user_id
+    key['name'] = key_name
+    key['public_key'] = public_key
+    key['fingerprint'] = fingerprint
+    db.key_pair_create(context, key)
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
@@ -89,10 +105,11 @@ class CloudController(object):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
-                if instance['key_name'] in result:
-                    result[instance['key_name']].append(line)
+                key = str(instance['key_name'])
+                if key in result:
+                    result[key].append(line)
                 else:
-                    result[instance['key_name']] = [line]
+                    result[key] = [line]
         return result
 
     def get_metadata(self, address):
@@ -154,9 +171,18 @@ class CloudController(object):
                                           'zoneState': 'available'}]}
 
     def describe_regions(self, context, region_name=None, **kwargs):
-        # TODO(vish): region_name is an array.  Support filtering
-        return {'regionInfo': [{'regionName': 'nova',
-                                'regionUrl': FLAGS.ec2_url}]}
+        if FLAGS.region_list:
+            regions = []
+            for region in FLAGS.region_list:
+                name, _sep, url = region.partition('=')
+                regions.append({'regionName': name,
+                                'regionEndpoint': url})
+        else:
+            regions = [{'regionName': 'nova',
+                        'regionEndpoint': FLAGS.ec2_url}]
+        if region_name:
+            regions = [r for r in regions if r['regionName'] in region_name]
+        return {'regionInfo': regions }
 
     def describe_snapshots(self,
                            context,
@@ -174,31 +200,35 @@ class CloudController(object):
                                  'description': 'fixme'}]}
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = context.user.get_key_pairs()
+        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
         if not key_name is None:
-            key_pairs = [x for x in key_pairs if x.name in key_name]
+            key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context.user.is_admin() or not key_pair.name.endswith(suffix):
+            if context.user.is_admin() or not key_pair['name'].endswith(suffix):
                 result.append({
-                    'keyName': key_pair.name,
-                    'keyFingerprint': key_pair.fingerprint,
+                    'keyName': key_pair['name'],
+                    'keyFingerprint': key_pair['fingerprint'],
                 })
 
         return {'keypairsSet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
-        data = _gen_key(context.user.id, key_name)
+        data = _gen_key(None, context.user.id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
+        # TODO(vish): when context is no longer an object, pass it here
 
     def delete_key_pair(self, context, key_name, **kwargs):
-        context.user.delete_key_pair(key_name)
-        # aws returns true even if the key doens't exist
+        try:
+            db.key_pair_destroy(context, context.user.id, key_name)
+        except exception.NotFound:
+            # aws returns true even if the key doesn't exist
+            pass
         return True
 
     def describe_security_groups(self, context, group_names, **kwargs):
@@ -259,7 +289,6 @@ class CloudController(object):
 
     def create_volume(self, context, size, **kwargs):
         # check quota
-        size = int(size)
         if quota.allowed_volumes(context, 1, size) < 1:
             logging.warn("Quota exceeeded for %s, tried to create %sG volume",
                          context.project.id, size)
@@ -525,11 +554,10 @@ class CloudController(object):
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
-            key_pair = context.user.get_key_pair(kwargs['key_name'])
-            if not key_pair:
-                raise exception.ApiError('Key Pair %s not found' %
-                                         kwargs['key_name'])
-            key_data = key_pair.public_key
+            key_pair_ref = db.key_pair_get(context,
+                                      context.user.id,
+                                      kwargs['key_name'])
+            key_data = key_pair_ref['public_key']
 
         # TODO: Get the real security group of launch in here
         security_group = "default"
