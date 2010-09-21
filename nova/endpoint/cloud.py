@@ -23,6 +23,7 @@ datastore.
 """
 
 import base64
+import datetime
 import logging
 import os
 import time
@@ -299,9 +300,11 @@ class CloudController(object):
         vol['attach_status'] = "detached"
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"context": None,
-                                               "volume_id": volume_ref['id']}})
+        rpc.cast(FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"context": None,
+                           "topic": FLAGS.volume_topic,
+                           "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
@@ -310,6 +313,8 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
@@ -332,10 +337,10 @@ class CloudController(object):
         volume_ref = db.volume_get_by_str(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
         if not instance_ref:
-            raise exception.Error("Volume isn't attached to anything!")
+            raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
         if volume_ref['status'] == "available":
-            raise exception.Error("Volume is already detached")
+            raise exception.ApiError("Volume is already detached")
         try:
             host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -379,7 +384,7 @@ class CloudController(object):
             instances = db.instance_get_by_reservation(context,
                                                        reservation_id)
         else:
-            if not context.user.is_admin():
+            if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_by_project(context,
@@ -571,6 +576,7 @@ class CloudController(object):
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
+        base_options['state_description'] = 'scheduling'
         base_options['image_id'] = image_id
         base_options['kernel_id'] = kernel_id
         base_options['ramdisk_id'] = ramdisk_id
@@ -609,11 +615,12 @@ class CloudController(object):
                       "args": {"context": None,
                                "address": address}})
 
-            rpc.cast(FLAGS.compute_topic,
-                 {"method": "run_instance",
-                  "args": {"context": None,
-                           "instance_id": inst_id}})
-            logging.debug("Casting to node for %s/%s's instance %s" %
+            rpc.cast(FLAGS.scheduler_topic,
+                     {"method": "run_instance",
+                      "args": {"context": None,
+                               "topic": FLAGS.compute_topic,
+                               "instance_id": inst_id}})
+            logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
         defer.returnValue(self._format_run_instances(context,
                                                      reservation_id))
@@ -632,6 +639,10 @@ class CloudController(object):
                                 % id_str)
                 continue
 
+            now = datetime.datetime.utcnow()
+            db.instance_update(context,
+                               instance_ref['id'],
+                               {'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -653,7 +664,7 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                self.network.deallocate_fixed_ip(context, address)
+                self.network_manager.deallocate_fixed_ip(context, address)
 
             host = instance_ref['host']
             if host:
@@ -681,6 +692,10 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
+        now = datetime.datetime.utcnow()
+        db.volume_update(context, volume_ref['id'], {'terminated_at': now})
         host = volume_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",

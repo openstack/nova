@@ -51,9 +51,43 @@ class NoMoreNetworks(exception.Error):
 ###################
 
 
+def service_destroy(context, instance_id):
+    """Destroy the service or raise if it does not exist."""
+    return IMPL.service_destroy(context, instance_id)
+
+
 def service_get(context, service_id):
     """Get an service or raise if it does not exist."""
     return IMPL.service_get(context, service_id)
+
+
+def service_get_all_by_topic(context, topic):
+    """Get all compute services for a given topic """
+    return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_compute_sorted(context):
+    """Get all compute services sorted by instance count
+
+    Returns a list of (Service, instance_count) tuples
+    """
+    return IMPL.service_get_all_compute_sorted(context)
+
+
+def service_get_all_network_sorted(context):
+    """Get all network services sorted by network count
+
+    Returns a list of (Service, network_count) tuples
+    """
+    return IMPL.service_get_all_network_sorted(context)
+
+
+def service_get_all_volume_sorted(context):
+    """Get all volume services sorted by volume count
+
+    Returns a list of (Service, volume_count) tuples
+    """
+    return IMPL.service_get_all_volume_sorted(context)
 
 
 def service_get_by_args(context, host, binary):

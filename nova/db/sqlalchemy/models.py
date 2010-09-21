@@ -103,7 +103,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
-        self.deleted_at = datetime.datetime.now()
+        self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -244,6 +244,7 @@ class Instance(BASE, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
+    scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -277,6 +278,9 @@ class Volume(BASE, NovaBase):
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project"""

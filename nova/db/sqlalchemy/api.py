@@ -47,8 +47,90 @@ def _deleted(context):
 ###################
 
 
+def service_destroy(context, service_id):
+    session = get_session()
+    with session.begin():
+        service_ref = models.Service.find(service_id, session=session)
+        service_ref.delete(session=session)
+
 def service_get(_context, service_id):
     return models.Service.find(service_id)
+
+
+def service_get_all_by_topic(context, topic):
+    session = get_session()
+    return session.query(models.Service
+                 ).filter_by(deleted=False
+                 ).filter_by(topic=topic
+                 ).all()
+
+
+def _service_get_all_topic_subquery(_context, session, topic, subq, label):
+    sort_value = getattr(subq.c, label)
+    return session.query(models.Service, func.coalesce(sort_value, 0)
+                 ).filter_by(topic=topic
+                 ).filter_by(deleted=False
+                 ).outerjoin((subq, models.Service.host == subq.c.host)
+                 ).order_by(sort_value
+                 ).all()
+
+
+def service_get_all_compute_sorted(context):
+    session = get_session()
+    with session.begin():
+        # NOTE(vish): The intended query is below
+        #             SELECT services.*, COALESCE(inst_cores.instance_cores,
+        #                                         0)
+        #             FROM services LEFT OUTER JOIN
+        #             (SELECT host, SUM(instances.vcpus) AS instance_cores
+        #              FROM instances GROUP BY host) AS inst_cores
+        #             ON services.host = inst_cores.host
+        topic = 'compute'
+        label = 'instance_cores'
+        subq = session.query(models.Instance.host,
+                             func.sum(models.Instance.vcpus).label(label)
+                     ).filter_by(deleted=False
+                     ).group_by(models.Instance.host
+                     ).subquery()
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
+
+
+def service_get_all_network_sorted(context):
+    session = get_session()
+    with session.begin():
+        topic = 'network'
+        label = 'network_count'
+        subq = session.query(models.Network.host,
+                             func.count(models.Network.id).label(label)
+                     ).filter_by(deleted=False
+                     ).group_by(models.Network.host
+                     ).subquery()
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
+
+
+def service_get_all_volume_sorted(context):
+    session = get_session()
+    with session.begin():
+        topic = 'volume'
+        label = 'volume_gigabytes'
+        subq = session.query(models.Volume.host,
+                             func.sum(models.Volume.size).label(label)
+                     ).filter_by(deleted=False
+                     ).group_by(models.Volume.host
+                     ).subquery()
+        return _service_get_all_topic_subquery(context,
+                                               session,
+                                               topic,
+                                               subq,
+                                               label)
 
 
 def service_get_by_args(_context, host, binary):

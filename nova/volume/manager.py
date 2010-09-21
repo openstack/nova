@@ -22,6 +22,7 @@ destroying persistent storage volumes, ala EBS.
 """
 
 import logging
+import datetime
 
 from twisted.internet import defer
 
@@ -72,7 +73,7 @@ class AOEManager(manager.Manager):
 
         self.db.volume_update(context,
                               volume_id,
-                              {'host': FLAGS.host})
+                              {'host': self.host})
 
         size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG", volume_id, size)
@@ -89,14 +90,13 @@ class AOEManager(manager.Manager):
         yield self.driver.create_export(volume_ref['str_id'],
                                         shelf_id,
                                         blade_id)
-        # TODO(joshua): We need to trigger a fanout message
-        #               for aoe-discover on all the nodes
-
-        self.db.volume_update(context, volume_id, {'status': 'available'})
 
         logging.debug("volume %s: re-exporting all values", volume_id)
         yield self.driver.ensure_exports()
 
+        now = datetime.datetime.utcnow()
+        self.db.volume_update(context, volume_id, {'status': 'available',
+                                                   'launched_at': now})
         logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
@@ -107,7 +107,7 @@ class AOEManager(manager.Manager):
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
-        if volume_ref['host'] != FLAGS.host:
+        if volume_ref['host'] != self.host:
             raise exception.Error("Volume is not local to this node")
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                                 volume_id)
