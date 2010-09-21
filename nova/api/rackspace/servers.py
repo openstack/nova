@@ -31,8 +31,9 @@ class Controller(base.Controller):
         'application/xml': {
             "plurals": "servers",
             "attributes": {
-                "server": [ "id", "imageId", "flavorId", "hostId", "status",
-                           "progress", "addresses", "metadata", "progress" ]
+                "server": [ "id", "imageId", "name", "flavorId", "hostId", 
+                            "status", "progress", "addresses", "metadata", 
+                            "progress" ]
             }
         }
     }
@@ -41,7 +42,11 @@ class Controller(base.Controller):
         self.instdir = compute.InstanceDirectory()
 
     def index(self, req):
-        return [_entity_inst(instance_details(inst)) for inst in instdir.all]
+        allowed_keys = [ 'id', 'name']
+        return [_entity_inst(inst, allowed_keys) for inst in instdir.all]
+
+    def detail(self, req):
+        return [_entity_inst(inst) for inst in instdir.all]
 
     def show(self, req, id):
         inst = self.instdir.get(id)
@@ -103,7 +108,7 @@ class Controller(base.Controller):
         inst.save()
         return _entity_inst(inst)
 
-    def _entity_inst(self, inst):
+    def _entity_inst(self, inst, allowed_keys=None):
         """ Maps everything to Rackspace-like attributes for return"""
 
         translated_keys = dict(metadata={}, status=state_description,
@@ -118,5 +123,10 @@ class Controller(base.Controller):
 
         for key in filtered_keys::
             del inst[key]
+
+        if allowed_keys:
+            for key in inst.keys():
+                if key not in allowed_keys:
+                    del inst[key]
 
         return dict(server=inst)
