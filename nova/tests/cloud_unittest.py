@@ -35,8 +35,8 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
-from nova.endpoint import api
-from nova.endpoint import cloud
+from nova.api.ec2 import context
+from nova.api.ec2 import cloud
 
 
 FLAGS = flags.FLAGS
@@ -63,9 +63,8 @@ class CloudTestCase(test.BaseTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = api.APIRequestContext(handler=None,
-                                             user=self.user,
-                                             project=self.project)
+        self.context = context.APIRequestContext(user=self.user,
+                                                 project=self.project)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
