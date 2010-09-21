@@ -95,10 +95,11 @@ class CloudController(object):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
-                if instance['key_name'] in result:
-                    result[instance['key_name']].append(line)
+                key = str(instance['key_name'])
+                if key in result:
+                    result[key].append(line)
                 else:
-                    result[instance['key_name']] = [line]
+                    result[key] = [line]
         return result
 
     def get_metadata(self, address):
