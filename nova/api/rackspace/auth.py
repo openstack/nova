@@ -4,7 +4,7 @@ import time
 import webob.exc
 import webob.dec
 import hashlib
-
+from nova import flags
 from nova import auth
 from nova import manager
 from nova import db
@@ -12,10 +12,16 @@ from nova import db
 class Context(object):
     pass
 
-class BasicApiAuthManager(manager.Manager):
+class BasicApiAuthManager(object):
     """ Implements a somewhat rudimentary version of Rackspace Auth"""
 
     def __init__(self):
+        if not host:
+            host = FLAGS.host
+        self.host = host                                                                                                                                     
+        if not db_driver:
+            db_driver = FLAGS.db_driver                                                                                                                      
+        self.db = utils.import_object(db_driver)
         self.auth = auth.manager.AuthManager()
         self.context = Context()
         super(BasicApiAuthManager, self).__init__()
@@ -64,8 +70,8 @@ class BasicApiAuthManager(manager.Manager):
             if delta.days >= 2:
                 self.db.auth_destroy_token(self.context, token)
             else:
-                user = self.auth.get_user(self.context, token['user_id'])
-                return { 'id':user['id'] }
+                user = self.auth.get_user(token['user_id'])
+                return { 'id':user['uid'] }
         return None
 
     def _authorize_user(self, username, key):
@@ -79,7 +85,8 @@ class BasicApiAuthManager(manager.Manager):
             token['cdn_management_url'] = ''
             token['server_management_url'] = self._get_server_mgmt_url()
             token['storage_url'] = ''
-            self.db.auth_create_token(self.context, token, user['id'])
+            token['user_id'] = user['uid']
+            self.db.auth_create_token(self.context, token)
             return token, user
         return None, None 
 

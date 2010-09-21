@@ -1,9 +1,8 @@
 import webob
 import webob.dec
+import datetime
 from nova.wsgi import Router
 from nova import auth
-
-auth_data = {}
 
 class Context(object): 
     pass
@@ -26,25 +25,33 @@ def fake_auth_init(self):
     self.host = 'foo'
 
 class FakeAuthDatabase(object):
-    @staticmethod
-    def auth_get_token(context, token_hash):
-        pass
+    data = {}
 
     @staticmethod
-    def auth_create_token(context, token, user_id):
-        pass
+    def auth_get_token(context, token_hash):
+        return FakeAuthDatabase.data.get(token_hash, None)
+
+    @staticmethod
+    def auth_create_token(context, token):
+        token['created_at'] = datetime.datetime.now()
+        FakeAuthDatabase.data[token['token_hash']] = token
 
     @staticmethod
     def auth_destroy_token(context, token):
-        pass
+        if FakeAuthDatabase.data.has_key(token['token_hash']):
+            del FakeAuthDatabase.data['token_hash']
 
 class FakeAuthManager(object):
-    def __init__(self):
-        global auth_data
-        self.data = auth_data
+    auth_data = {}
 
     def add_user(self, key, user):        
-        self.data[key] = user
+        FakeAuthManager.auth_data[key] = user
+
+    def get_user(self, uid):
+        for k, v in FakeAuthManager.auth_data.iteritems():
+            if v['uid'] == uid:
+                return v
+        return None
 
     def get_user_from_access_key(self, key):
-        return self.data.get(key, None)
+        return FakeAuthManager.auth_data.get(key, None)
