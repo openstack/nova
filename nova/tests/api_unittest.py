@@ -107,6 +107,8 @@ class ApiEc2TestCase(test.BaseTestCase):
     def test_describe_instances(self):
         """Test that, after creating a user and a project, the describe
         instances call to the API works properly"""
+        import eventlet
+        raise KeyError(eventlet.__version__)
         self.expect_http()
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake')
