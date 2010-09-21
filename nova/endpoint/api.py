@@ -304,7 +304,10 @@ class APIRequestHandler(tornado.web.RequestHandler):
         try:
             failure.raiseException()
         except exception.ApiError as ex:
-            self._error(type(ex).__name__ + "." + ex.code, ex.message)
+            if ex.code:
+                self._error(ex.code, ex.message)
+            else:
+                self._error(type(ex).__name__, ex.message)
         # TODO(vish): do something more useful with unknown exceptions
         except Exception as ex:
             self._error(type(ex).__name__, str(ex))
