@@ -50,7 +50,7 @@ def init_host():
     # forwarding entries and a default DNAT entry.
     _confirm_rule("-t nat -A nova_prerouting -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_ip, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
 
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
