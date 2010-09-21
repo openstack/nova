@@ -33,6 +33,7 @@ SCOPE_ONELEVEL = 1 # not implemented
 SCOPE_SUBTREE = 2
 MOD_ADD = 0
 MOD_DELETE = 1
+MOD_REPLACE = 2
 
 
 class NO_SUCH_OBJECT(Exception): # pylint: disable-msg=C0103
@@ -175,7 +176,7 @@ class FakeLDAP(object):
         Args:
         dn -- a dn
         attrs -- a list of tuples in the following form:
-            ([MOD_ADD | MOD_DELETE], attribute, value)
+            ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
         redis = datastore.Redis.instance()
@@ -185,6 +186,8 @@ class FakeLDAP(object):
             values = _from_json(redis.hget(key, k))
             if cmd == MOD_ADD:
                 values.append(v)
+            elif cmd == MOD_REPLACE:
+                values = [v]
             else:
                 values.remove(v)
             values = redis.hset(key, k, _to_json(values))

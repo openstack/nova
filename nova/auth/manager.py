@@ -533,6 +533,26 @@ class AuthManager(object):
                     raise
                 return project
 
+    def modify_project(self, project, manager_user=None, description=None):
+        """Modify a project
+
+        @type name: Project or project_id
+        @param project: The project to modify.
+
+        @type manager_user: User or uid
+        @param manager_user: This user will be the new project manager.
+
+        @type description: str
+        @param project: This will be the new description of the project.
+
+        """
+        if manager_user:
+            manager_user = User.safe_id(manager_user)
+        with self.driver() as drv:
+            drv.modify_project(Project.safe_id(project),
+                               manager_user,
+                               description)
+
     def add_to_project(self, user, project):
         """Add user to project"""
         with self.driver() as drv:

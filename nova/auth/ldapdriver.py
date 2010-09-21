@@ -202,6 +202,24 @@ class LdapDriver(object):
         self.conn.add_s('cn=%s,%s' % (name, FLAGS.ldap_project_subtree), attr)
         return self.__to_project(dict(attr))
 
+    def modify_project(self, project_id, manager_uid=None, description=None):
+        """Modify an existing project"""
+        if not manager_uid and not description:
+            return
+        attr = []
+        if manager_uid:
+            if not self.__user_exists(manager_uid):
+                raise exception.NotFound("Project can't be modified because "
+                                         "manager %s doesn't exist" %
+                                         manager_uid)
+            manager_dn = self.__uid_to_dn(manager_uid)
+            attr.append((self.ldap.MOD_REPLACE, 'projectManager', manager_dn))
+        if description:
+            attr.append((self.ldap.MOD_REPLACE, 'description', description))
+        self.conn.modify_s('cn=%s,%s' % (project_id,
+                                         FLAGS.ldap_project_subtree),
+                           attr)
+
     def add_to_project(self, uid, project_id):
         """Add user to project"""
         dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
