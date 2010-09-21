@@ -324,6 +324,42 @@ class ExportDevice(BASE, NovaBase):
                                                   uselist=False))
 
 
+class KeyPair(BASE, NovaBase):
+    """Represents a public key pair for ssh"""
+    __tablename__ = 'key_pairs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+
+    user_id = Column(String(255))
+
+    fingerprint = Column(String(255))
+    public_key = Column(Text)
+
+    @property
+    def str_id(self):
+        return '%s.%s' % (self.user_id, self.name)
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        user_id, _sep, name = str_id.partition('.')
+        return cls.find_by_str(user_id, name, session, deleted)
+
+    @classmethod
+    def find_by_args(cls, user_id, name, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(user_id=user_id
+                         ).filter_by(name=name
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for user %s, name %s" %
+                                         (user_id, name))
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
+
+
 class Network(BASE, NovaBase):
     """Represents a network"""
     __tablename__ = 'networks'

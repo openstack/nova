@@ -296,6 +296,34 @@ def instance_update(context, instance_id, values):
     return IMPL.instance_update(context, instance_id, values)
 
 
+###################
+
+
+def key_pair_create(context, values):
+    """Create a key_pair from the values dictionary."""
+    return IMPL.key_pair_create(context, values)
+
+
+def key_pair_destroy(context, user_id, name):
+    """Destroy the key_pair or raise if it does not exist."""
+    return IMPL.key_pair_destroy(context, user_id, name)
+
+
+def key_pair_destroy_all_by_user(context, user_id):
+    """Destroy all key_pairs by user."""
+    return IMPL.key_pair_destroy_all_by_user(context, user_id)
+
+
+def key_pair_get(context, user_id, name):
+    """Get a key_pair or raise if it does not exist."""
+    return IMPL.key_pair_get(context, user_id, name)
+
+
+def key_pair_get_all_by_user(context, user_id):
+    """Get all key_pairs by user."""
+    return IMPL.key_pair_get_all_by_user(context, user_id)
+
+
 ####################
 
 
@@ -420,6 +448,29 @@ def export_device_create_safe(context, values):
     constraints because the shelf_id and blade_id already exist,
     no exception is raised."""
     return IMPL.export_device_create_safe(context, values)
+
+
+###################
+
+
+def quota_create(context, values):
+    """Create a quota from the values dictionary."""
+    return IMPL.quota_create(context, values)
+
+
+def quota_get(context, project_id):
+    """Retrieve a quota or raise if it does not exist."""
+    return IMPL.quota_get(context, project_id)
+
+
+def quota_update(context, project_id, values):
+    """Update a quota from the values dictionary."""
+    return IMPL.quota_update(context, project_id, values)
+
+
+def quota_destroy(context, project_id):
+    """Destroy the quota or raise if it does not exist."""
+    return IMPL.quota_destroy(context, project_id)
 
 
 ###################

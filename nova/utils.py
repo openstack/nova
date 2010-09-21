@@ -39,17 +39,6 @@ from nova.exception import ProcessExecutionError
 FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-class ProcessExecutionError(IOError):
-    def __init__(   self, stdout=None, stderr=None, exit_code=None, cmd=None,
-                    description=None):
-        if description is None:
-            description = "Unexpected error while running command."
-        if exit_code is None:
-            exit_code = '-'
-        message = "%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r" % (
-                  description, cmd, exit_code, stdout, stderr)
-        IOError.__init__(self, message)
-
 def import_class(import_str):
     """Returns a class from a string including module and class"""
     mod_str, _sep, class_str = import_str.rpartition('.')
