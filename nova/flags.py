@@ -169,7 +169,7 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 
 DEFINE_list('region_list',
             [],
-            'list of region|url pairs separated by commas')
+            'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')

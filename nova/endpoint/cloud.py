@@ -158,7 +158,7 @@ class CloudController(object):
         if FLAGS.region_list:
             regions = []
             for region in FLAGS.region_list:
-                name, _sep, url = region.partition('|')
+                name, _sep, url = region.partition('=')
                 regions.append({'regionName': name,
                                 'regionEndpoint': url})
         else:
