@@ -19,15 +19,13 @@
 Implementation of SQLAlchemy backend
 """
 
-import sys
-
 from nova import db
 from nova import exception
 from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
-from sqlalchemy.orm import exc, joinedload_all
+from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
@@ -352,17 +350,14 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
 
 def fixed_ip_get_by_address(_context, address):
     session = get_session()
-    with session.begin():
-        try:
-            return session.query(models.FixedIp
-                         ).options(joinedload_all('instance')
-                         ).filter_by(address=address
-                         ).filter_by(deleted=False
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % address)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
+    result = session.query(models.FixedIp
+                   ).options(joinedload_all('instance')
+                   ).filter_by(address=address
+                   ).filter_by(deleted=False
+                   ).first()
+    if not result:
+        raise exception.NotFound("No model for address %s" % address)
+    return result
 
 def fixed_ip_get_instance(_context, address):
     session = get_session()
