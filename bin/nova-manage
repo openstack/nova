@@ -135,15 +135,48 @@ class VpnCommands(object):
 
 
 class ShellCommands(object):
-    def run(self):
-        "Runs a Python interactive interpreter. Tries to use IPython, if it's available."
-        try:
-            import IPython
-            # Explicitly pass an empty list as arguments, because otherwise IPython
-            # would use sys.argv from this script.
-            shell = IPython.Shell.IPShell(argv=[])
-            shell.mainloop()
-        except ImportError:
+    def bpython(self):
+        """Runs a bpython shell.
+
+        Falls back to Ipython/python shell if unavailable"""
+        self.run('bpython')
+
+    def ipython(self):
+        """Runs an Ipython shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('ipython')
+
+    def python(self):
+        """Runs an python shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('python')
+
+    def run(self, shell=None):
+        """Runs a Python interactive interpreter.
+
+        args: [shell=bpython]"""
+        if not shell:
+            shell = 'bpython'
+
+        if shell == 'bpython':
+            try:
+                import bpython
+                bpython.embed()
+            except ImportError:
+                shell = 'ipython'
+        if shell == 'ipython':
+            try:
+                import IPython
+                # Explicitly pass an empty list as arguments, because otherwise IPython
+                # would use sys.argv from this script.
+                shell = IPython.Shell.IPShell(argv=[])
+                shell.mainloop()
+            except ImportError:
+                shell = 'python'
+
+        if shell == 'python':
             import code
             try: # Try activating rlcompleter, because it's handy.
                 import readline
