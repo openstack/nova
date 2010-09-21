@@ -382,7 +382,7 @@ def instance_get(context, instance_id):
     session = get_session()
     result = session.query(models.Instance
                  ).options(eagerload('security_groups')
-                 ).filter_by(instance_id=instance_id
+                 ).filter_by(id=instance_id
                  ).filter_by(deleted=_deleted(context)
                  ).first()
     if not result:
