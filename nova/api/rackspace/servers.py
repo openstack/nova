@@ -14,18 +14,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import time
 
+from nova import db
+from nova import flags
 from nova import rpc
-from nova.compute import model as compute
+from nova import utils
 from nova.api.rackspace import base
 from webob import exc
 from nova import flags
 
 FLAGS = flags.FLAGS
 
-
 class Controller(base.Controller):
-
     _serialization_metadata = {
         'application/xml': {
             "plurals": "servers",
@@ -50,6 +51,7 @@ class Controller(base.Controller):
 
     def delete(self, req, id):
         instance = self.instdir.get(id)
+
         if not instance:
             return exc.HTTPNotFound()
         instance.destroy()
@@ -74,7 +76,7 @@ class Controller(base.Controller):
     def _build_server_instance(self, req):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        inst = self.instdir.new()
+        inst = {}
         inst['name'] = env['server']['name']
         inst['image_id'] = env['server']['imageId']
         inst['instance_type'] = env['server']['flavorId']
