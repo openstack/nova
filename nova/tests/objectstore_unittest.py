@@ -185,7 +185,7 @@ class S3APITestCase(test.TrialTestCase):
         """Setup users, projects, and start a test server."""
         super(S3APITestCase, self).setUp()
 
-        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver',
+        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
         FLAGS.buckets_path = os.path.join(OSS_TEMPDIR, 'buckets')
 
         self.auth_manager = manager.AuthManager()

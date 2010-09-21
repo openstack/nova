@@ -19,7 +19,7 @@ from xml.dom.minidom import parseString
 from nova import db
 from nova import flags
 from nova import test
-from nova.endpoint import cloud
+from nova.api.ec2 import cloud
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
@@ -179,7 +179,8 @@ class NWFilterTestCase(test.TrialTestCase):
 
         self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
 
-        inst_id = db.instance_create({}, { 'user_id' : 'fake', 'project_id' : 'fake' })
+        inst_id = db.instance_create({}, {'user_id': 'fake',
+                                          'project_id': 'fake'})['id']
         security_group = self.setup_and_return_security_group()
 
         db.instance_add_security_group({}, inst_id, security_group.id)

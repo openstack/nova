@@ -167,10 +167,14 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
+DEFINE_list('region_list',
+            [],
+            'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
+DEFINE_string('scheduler_topic', 'scheduler', 'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
 DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
@@ -213,6 +217,8 @@ DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
 DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
               'Manager for volume')
+DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
+              'Manager for scheduler')
 
 DEFINE_string('host', socket.gethostname(),
               'name of this node')

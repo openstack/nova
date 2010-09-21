@@ -87,7 +87,7 @@ class ServiceTestCase(test.BaseTestCase):
                                        host,
                                        binary).AndRaise(exception.NotFound())
         service.db.service_create(None,
-                                  service_create).AndReturn(service_ref['id'])
+                                  service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
 
         app = service.Service.create(host=host, binary=binary)
@@ -131,7 +131,7 @@ class ServiceTestCase(test.BaseTestCase):
                                       host,
                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(None,
-                                  service_create).AndReturn(service_ref['id'])
+                                  service_create).AndReturn(service_ref)
         service.db.service_get(None, service_ref['id']).AndReturn(service_ref)
         service.db.service_update(None, service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))

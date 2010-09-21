@@ -17,8 +17,6 @@
 #    under the License.
 
 import logging
-from M2Crypto import BIO
-from M2Crypto import RSA
 from M2Crypto import X509
 import unittest
 
@@ -26,7 +24,7 @@ from nova import crypto
 from nova import flags
 from nova import test
 from nova.auth import manager
-from nova.endpoint import cloud
+from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 
@@ -64,35 +62,6 @@ class AuthTestCase(test.BaseTestCase):
         'export EC2_URL="http://127.0.0.1:8773/services/Cloud"\n' +
         'export S3_URL="http://127.0.0.1:3333/"\n' +
         'export EC2_USER_ID="test1"\n')
-
-    def test_006_test_key_storage(self):
-        user = self.manager.get_user('test1')
-        user.create_key_pair('public', 'key', 'fingerprint')
-        key = user.get_key_pair('public')
-        self.assertEqual('key', key.public_key)
-        self.assertEqual('fingerprint', key.fingerprint)
-
-    def test_007_test_key_generation(self):
-        user = self.manager.get_user('test1')
-        private_key, fingerprint = user.generate_key_pair('public2')
-        key = RSA.load_key_string(private_key, callback=lambda: None)
-        bio = BIO.MemoryBuffer()
-        public_key = user.get_key_pair('public2').public_key
-        key.save_pub_key_bio(bio)
-        converted = crypto.ssl_pub_to_ssh_pub(bio.read())
-        # assert key fields are equal
-        self.assertEqual(public_key.split(" ")[1].strip(),
-                         converted.split(" ")[1].strip())
-
-    def test_008_can_list_key_pairs(self):
-        keys = self.manager.get_user('test1').get_key_pairs()
-        self.assertTrue(filter(lambda k: k.name == 'public', keys))
-        self.assertTrue(filter(lambda k: k.name == 'public2', keys))
-
-    def test_009_can_delete_key_pair(self):
-        self.manager.get_user('test1').delete_key_pair('public')
-        keys = self.manager.get_user('test1').get_key_pairs()
-        self.assertFalse(filter(lambda k: k.name == 'public', keys))
 
     def test_010_can_list_users(self):
         users = self.manager.get_users()
@@ -203,6 +172,12 @@ class AuthTestCase(test.BaseTestCase):
         project = self.manager.create_project('testproj2', 'test2', 'Another test project', ['test2'])
         self.assert_(len(self.manager.get_projects()) > 1)
         self.assertEqual(len(self.manager.get_projects('test2')), 1)
+
+    def test_220_can_modify_project(self):
+        self.manager.modify_project('testproj', 'test2', 'new description')
+        project = self.manager.get_project('testproj')
+        self.assertEqual(project.project_manager_id, 'test2')
+        self.assertEqual(project.description, 'new description')
 
     def test_299_can_delete_project(self):
         self.manager.delete_project('testproj')
