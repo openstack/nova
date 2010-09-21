@@ -55,11 +55,13 @@ from nova.tests.api_unittest import *
 from nova.tests.cloud_unittest import *
 from nova.tests.compute_unittest import *
 from nova.tests.flags_unittest import *
-from nova.tests.model_unittest import *
 from nova.tests.network_unittest import *
 from nova.tests.objectstore_unittest import *
 from nova.tests.process_unittest import *
+from nova.tests.quota_unittest import *
 from nova.tests.rpc_unittest import *
+from nova.tests.scheduler_unittest import *
+from nova.tests.service_unittest import *
 from nova.tests.validator_unittest import *
 from nova.tests.volume_unittest import *
 
