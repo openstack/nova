@@ -63,9 +63,8 @@ class CloudTestCase(test.BaseTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.APIRequestContext(handler=None,
-                                             user=self.user,
-                                             project=self.project)
+        self.context = context.APIRequestContext(user=self.user,
+                                                 project=self.project)
 
     def tearDown(self):
         self.manager.delete_project(self.project)

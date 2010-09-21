@@ -26,8 +26,9 @@ import StringIO
 import webob
 
 from nova import test
-from nova.auth import manager
 from nova import api
+from nova.api.ec2 import cloud
+from nova.auth import manager
 
 
 class FakeHttplibSocket(object):
