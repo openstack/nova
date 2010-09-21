@@ -162,9 +162,18 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_regions(self, context, region_name=None, **kwargs):
-        # TODO(vish): region_name is an array.  Support filtering
-        return {'regionInfo': [{'regionName': 'nova',
-                                'regionUrl': FLAGS.ec2_url}]}
+        if FLAGS.region_list:
+            regions = []
+            for region in FLAGS.region_list:
+                name, _sep, url = region.partition('=')
+                regions.append({'regionName': name,
+                                'regionEndpoint': url})
+        else:
+            regions = [{'regionName': 'nova',
+                        'regionEndpoint': FLAGS.ec2_url}]
+        if region_name:
+            regions = [r for r in regions if r['regionName'] in region_name]
+        return {'regionInfo': regions }
 
     @rbac.allow('all')
     def describe_snapshots(self,
