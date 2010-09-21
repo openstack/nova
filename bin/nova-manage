@@ -149,7 +149,7 @@ class ShellCommands(object):
         self.run('ipython')
 
     def python(self):
-        """Runs an python shell.
+        """Runs a python shell.
 
         Falls back to Python shell if unavailable"""
         self.run('python')
