@@ -128,53 +128,12 @@ class User(AuthBase):
     def is_project_manager(self, project):
         return AuthManager().is_project_manager(self, project)
 
-    def generate_key_pair(self, name):
-        return AuthManager().generate_key_pair(self.id, name)
-
-    def create_key_pair(self, name, public_key, fingerprint):
-        return AuthManager().create_key_pair(self.id,
-                                             name,
-                                             public_key,
-                                             fingerprint)
-
-    def get_key_pair(self, name):
-        return AuthManager().get_key_pair(self.id, name)
-
-    def delete_key_pair(self, name):
-        return AuthManager().delete_key_pair(self.id, name)
-
-    def get_key_pairs(self):
-        return AuthManager().get_key_pairs(self.id)
-
     def __repr__(self):
         return "User('%s', '%s', '%s', '%s', %s)" % (self.id,
                                                      self.name,
                                                      self.access,
                                                      self.secret,
                                                      self.admin)
-
-
-class KeyPair(AuthBase):
-    """Represents an ssh key returned from the datastore
-
-    Even though this object is named KeyPair, only the public key and
-    fingerprint is stored. The user's private key is not saved.
-    """
-
-    def __init__(self, id, name, owner_id, public_key, fingerprint):
-        AuthBase.__init__(self)
-        self.id = id
-        self.name = name
-        self.owner_id = owner_id
-        self.public_key = public_key
-        self.fingerprint = fingerprint
-
-    def __repr__(self):
-        return "KeyPair('%s', '%s', '%s', '%s', '%s')" % (self.id,
-                                                          self.name,
-                                                          self.owner_id,
-                                                          self.public_key,
-                                                          self.fingerprint)
 
 
 class Project(AuthBase):
@@ -533,6 +492,26 @@ class AuthManager(object):
                     raise
                 return project
 
+    def modify_project(self, project, manager_user=None, description=None):
+        """Modify a project
+
+        @type name: Project or project_id
+        @param project: The project to modify.
+
+        @type manager_user: User or uid
+        @param manager_user: This user will be the new project manager.
+
+        @type description: str
+        @param project: This will be the new description of the project.
+
+        """
+        if manager_user:
+            manager_user = User.safe_id(manager_user)
+        with self.driver() as drv:
+            drv.modify_project(Project.safe_id(project),
+                               manager_user,
+                               description)
+
     def add_to_project(self, user, project):
         """Add user to project"""
         with self.driver() as drv:
@@ -643,67 +622,13 @@ class AuthManager(object):
                 return User(**user_dict)
 
     def delete_user(self, user):
-        """Deletes a user"""
-        with self.driver() as drv:
-            drv.delete_user(User.safe_id(user))
+        """Deletes a user
 
-    def generate_key_pair(self, user, key_name):
-        """Generates a key pair for a user
-
-        Generates a public and private key, stores the public key using the
-        key_name, and returns the private key and fingerprint.
-
-        @type user: User or uid
-        @param user: User for which to create key pair.
-
-        @type key_name: str
-        @param key_name: Name to use for the generated KeyPair.
-
-        @rtype: tuple (private_key, fingerprint)
-        @return: A tuple containing the private_key and fingerprint.
-        """
-        # NOTE(vish): generating key pair is slow so check for legal
-        #             creation before creating keypair
+        Additionally deletes all users key_pairs"""
         uid = User.safe_id(user)
+        db.key_pair_destroy_all_by_user(None, uid)
         with self.driver() as drv:
-            if not drv.get_user(uid):
-                raise exception.NotFound("User %s doesn't exist" % user)
-            if drv.get_key_pair(uid, key_name):
-                raise exception.Duplicate("The keypair %s already exists"
-                                          % key_name)
-        private_key, public_key, fingerprint = crypto.generate_key_pair()
-        self.create_key_pair(uid, key_name, public_key, fingerprint)
-        return private_key, fingerprint
-
-    def create_key_pair(self, user, key_name, public_key, fingerprint):
-        """Creates a key pair for user"""
-        with self.driver() as drv:
-            kp_dict = drv.create_key_pair(User.safe_id(user),
-                                          key_name,
-                                          public_key,
-                                          fingerprint)
-            if kp_dict:
-                return KeyPair(**kp_dict)
-
-    def get_key_pair(self, user, key_name):
-        """Retrieves a key pair for user"""
-        with self.driver() as drv:
-            kp_dict = drv.get_key_pair(User.safe_id(user), key_name)
-            if kp_dict:
-                return KeyPair(**kp_dict)
-
-    def get_key_pairs(self, user):
-        """Retrieves all key pairs for user"""
-        with self.driver() as drv:
-            kp_list = drv.get_key_pairs(User.safe_id(user))
-            if not kp_list:
-                return []
-            return [KeyPair(**kp_dict) for kp_dict in kp_list]
-
-    def delete_key_pair(self, user, key_name):
-        """Deletes a key pair for user"""
-        with self.driver() as drv:
-            drv.delete_key_pair(User.safe_id(user), key_name)
+            drv.delete_user(uid)
 
     def get_credentials(self, user, project=None):
         """Get credential zip for user in project"""
