@@ -55,3 +55,11 @@ class FakeAuthManager(object):
 
     def get_user_from_access_key(self, key):
         return FakeAuthManager.auth_data.get(key, None)
+
+class FakeRateLimiter(object):
+    def __init__(self, application):
+        self.application = application
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        return self.application
