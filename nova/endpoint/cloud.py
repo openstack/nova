@@ -752,3 +752,15 @@ class CloudController(object):
             raise exception.ApiError('operation_type must be add or remove')
         result = images.modify(context, image_id, operation_type)
         return defer.succeed(result)
+
+    @rbac.allow('projectmanager', 'sysadmin')
+    def set_image_name(self, context, image_id, name):
+        result = images.update_user_editable_field(context, image_id,
+                                                   'displayName', name)
+        return defer.succeed(result)
+
+    @rbac.allow('projectmanager', 'sysadmin')
+    def set_image_description(self, context, image_id, name):
+        result = images.update_user_editable_field(context, image_id,
+                                                   'displayDescription', name)
+        return defer.succeed(result)

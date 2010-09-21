@@ -82,6 +82,18 @@ class Image(object):
         with open(os.path.join(self.path, 'info.json'), 'w') as f:
             json.dump(md, f)
 
+    def update_user_editable_field(self, field, value):
+        fields = ['displayName', 'displayDescription']
+        if field not in fields:
+            raise KeyError("Invalid field: %s" % field)
+        info = self.metadata
+        if value:
+            info[field] = value
+        elif field in info:
+            del info[field]
+        with open(os.path.join(self.path, 'info.json'), 'w') as f:
+            json.dump(info, f)
+
     @staticmethod
     def all():
         images = []

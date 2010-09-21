@@ -382,15 +382,26 @@ class ImagesResource(resource.Resource):
     def render_POST(self, request): # pylint: disable-msg=R0201
         """Update image attributes: public/private"""
 
+        # image_id required for all requests
         image_id = get_argument(request, 'image_id', u'')
-        operation = get_argument(request, 'operation', u'')
-
         image_object = image.Image(image_id)
-
         if not image_object.is_authorized(request.context):
+            logging.debug("not authorized for handle_POST in images")
             raise exception.NotAuthorized
 
-        image_object.set_public(operation=='add')
+        operation = get_argument(request, 'operation', u'')
+        field = get_argument(request, 'field', u'')
+        value = get_argument(request, 'value', u'')
+        if operation:
+            # operation implies publicity toggle
+            logging.debug("handling publicity toggle")
+            image_object.set_public(operation=='add')
+        elif field:
+            # field implies user field editing (value can be blank)
+            logging.debug("update user field")
+            image_object.update_user_editable_field(field, value)
+        else:
+            logging.debug("unknown action for handle_POST in images")
 
         return ''
 

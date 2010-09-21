@@ -16,9 +16,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import logging
+import os
 import StringIO
+import tempfile
 import time
+
 from tornado import ioloop
 from twisted.internet import defer
 import unittest
@@ -32,15 +36,22 @@ from nova.auth import manager
 from nova.compute import power_state
 from nova.endpoint import api
 from nova.endpoint import cloud
+from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
 
 
+# Temp dirs for working with image attributes through the cloud controller
+# (stole this from objectstore_unittest.py)
+OSS_TEMPDIR = tempfile.mkdtemp(prefix='test_oss-')
+IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
+os.makedirs(IMAGES_PATH)
+
 class CloudTestCase(test.BaseTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake')
+        self.flags(connection_type='fake', images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
@@ -156,3 +167,16 @@ class CloudTestCase(test.BaseTestCase):
         #for i in xrange(4):
         #    data = self.cloud.get_metadata(instance(i)['private_dns_name'])
         #    self.assert_(data['meta-data']['ami-id'] == 'ami-%s' % i)
+
+    def test_user_editable_endpoint(self):
+        pathdir = os.path.join(FLAGS.images_path, 'i-testing')
+        os.mkdir(pathdir)
+        info = {}
+        with open(os.path.join(pathdir, 'info.json'), 'w') as f:
+            json.dump(info, f)
+        yield self.cloud.set_image_description(self.context, 'i-testing',
+                                               'Foo Img')
+        img = image.Image('i-testing')
+        self.assertEqual('Foo Img', img.metadata['displayDescription'])
+        self.cloud.set_image_description(self.context, 'i-testing', '')
+        self.assert_(not 'displayDescription' in img.metadata)

@@ -43,6 +43,12 @@ def modify(context, image_id, operation):
 
     return True
 
+def update_user_editable_field(context, image_id, field, value):
+    conn(context).make_request(
+        method='POST',
+        bucket='_images',
+        query_args=qs({'image_id': image_id, 'field': field, 'value': value}))
+    return True
 
 def register(context, image_location):
     """ rpc call to register a new image based from a manifest """

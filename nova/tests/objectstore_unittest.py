@@ -164,6 +164,12 @@ class ObjectStoreTestCase(test.BaseTestCase):
         self.context.project = self.auth_manager.get_project('proj2')
         self.assertFalse(my_img.is_authorized(self.context))
 
+        # change user-editable fields
+        my_img.update_user_editable_field('displayName', 'my cool image')
+        self.assertEqual('my cool image', my_img.metadata['displayName'])
+        my_img.update_user_editable_field('displayName', '')
+        self.assert_(not 'displayName' in my_img.metadata)
+
 
 class TestHTTPChannel(http.HTTPChannel):
     """Dummy site required for twisted.web"""
