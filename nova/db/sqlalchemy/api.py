@@ -462,6 +462,46 @@ def instance_update(_context, instance_id, values):
 ###################
 
 
+def key_pair_create(_context, values):
+    key_pair_ref = models.KeyPair()
+    for (key, value) in values.iteritems():
+        key_pair_ref[key] = value
+    key_pair_ref.save()
+    return key_pair_ref
+
+
+def key_pair_destroy(_context, user_id, name):
+    session = get_session()
+    with session.begin():
+        key_pair_ref = models.KeyPair.find_by_args(user_id,
+                                                  name,
+                                                  session=session)
+        key_pair_ref.delete(session=session)
+
+
+def key_pair_destroy_all_by_user(_context, user_id):
+    session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update key_pairs set deleted=1 where user_id=:id',
+                        {'id': user_id})
+
+
+def key_pair_get(_context, user_id, name):
+    return models.KeyPair.find_by_args(user_id, name)
+
+
+def key_pair_get_all_by_user(_context, user_id):
+    session = get_session()
+    return session.query(models.KeyPair
+                 ).filter_by(user_id=user_id
+                 ).filter_by(deleted=False
+                 ).all()
+
+
+###################
+
+
 def network_count(_context):
     return models.Network.count()
 
