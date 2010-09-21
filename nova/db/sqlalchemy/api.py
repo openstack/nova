@@ -380,7 +380,7 @@ def instance_destroy(_context, instance_id):
 
 def instance_get(context, instance_id):
     session = get_session()
-    result = session.query(models.FixedIp
+    result = session.query(models.Instance
                  ).options(eagerload('security_groups')
                  ).filter_by(instance_id=instance_id
                  ).filter_by(deleted=_deleted(context)
