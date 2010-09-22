@@ -52,8 +52,9 @@ class Test(unittest.TestCase):
         result = webob.Request.blank('/test/cloud').get_response(api.API())
         self.assertNotEqual(result.body, "/cloud")
 
-    def test_query_api_version(self):
-        pass
+    def test_query_api_versions(self):
+        result = webob.Request.blank('/').get_response(api.API())
+        self.assertTrue('CURRENT' in result.body)
 
 if __name__ == '__main__':
     unittest.main()

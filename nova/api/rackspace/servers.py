@@ -72,7 +72,7 @@ class Controller(base.Controller):
         inst['reservation_id'] = reservation
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
-        inst_id = db.instance_create(None, inst)
+        inst_id = db.instance_create(None, inst)['id']
         address = self.network_manager.allocate_fixed_ip(None, inst_id)
         # key_data, key_name, ami_launch_index
         # TODO(todd): key data or root password

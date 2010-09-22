@@ -140,10 +140,9 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
             try:
-                db.instance_set_state(None,
-                                      instance['id'],
-                                      self.get_info(instance['name'])['state'])
-                if instance.state == power_state.SHUTDOWN:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(None, instance['id'], state)
+                if state == power_state.SHUTDOWN:
                     timer.stop()
                     d.callback(None)
             except Exception:
@@ -191,10 +190,9 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_reboot():
             try:
-                db.instance_set_state(None,
-                                      instance['id'],
-                                      self.get_info(instance['name'])['state'])
-                if instance.state == power_state.RUNNING:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(None, instance['id'], state)
+                if state == power_state.RUNNING:
                     logging.debug('instance %s: rebooted', instance['name'])
                     timer.stop()
                     d.callback(None)
@@ -228,10 +226,9 @@ class LibvirtConnection(object):
         timer = task.LoopingCall(f=None)
         def _wait_for_boot():
             try:
-                db.instance_set_state(None,
-                                      instance['id'],
-                                      self.get_info(instance['name'])['state'])
-                if instance.state == power_state.RUNNING:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(None, instance['id'], state)
+                if state == power_state.RUNNING:
                     logging.debug('instance %s: booted', instance['name'])
                     timer.stop()
                     local_d.callback(None)

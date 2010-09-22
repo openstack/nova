@@ -24,9 +24,8 @@ import sys
 import datetime
 
 # TODO(vish): clean up these imports
-from sqlalchemy.orm import relationship, backref, validates, exc
-from sqlalchemy.sql import func
-from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy.orm import relationship, backref, exc, object_mapper
+from sqlalchemy import Table, Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -46,47 +45,48 @@ class NovaBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
 
     @classmethod
-    def all(cls, session=None):
+    def all(cls, session=None, deleted=False):
         """Get all objects of this type"""
         if not session:
             session = get_session()
         return session.query(cls
-                     ).filter_by(deleted=False
+                     ).filter_by(deleted=deleted
                      ).all()
 
     @classmethod
-    def count(cls, session=None):
+    def count(cls, session=None, deleted=False):
         """Count objects of this type"""
         if not session:
             session = get_session()
         return session.query(cls
-                     ).filter_by(deleted=False
+                     ).filter_by(deleted=deleted
                      ).count()
 
     @classmethod
-    def find(cls, obj_id, session=None):
+    def find(cls, obj_id, session=None, deleted=False):
         """Find object by id"""
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(id=obj_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for id %s" % obj_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         """Find object by str_id"""
         int_id = int(str_id.rpartition('-')[2])
-        return cls.find(int_id, session=session)
+        return cls.find(int_id, session=session, deleted=deleted)
 
     @property
     def str_id(self):
@@ -103,6 +103,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
+        self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -110,6 +111,14 @@ class NovaBase(object):
 
     def __getitem__(self, key):
         return getattr(self, key)
+
+    def __iter__(self):
+        self._i = iter(object_mapper(self).columns)
+        return self
+
+    def next(self):
+        n = self._i.next().name
+        return n, getattr(self, n)
 
 # TODO(vish): Store images in the database instead of file system
 #class Image(BASE, NovaBase):
@@ -166,14 +175,14 @@ class Service(BASE, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
 
     @classmethod
-    def find_by_args(cls, host, binary, session=None):
+    def find_by_args(cls, host, binary, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(host=host
                          ).filter_by(binary=binary
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for %s, %s" % (host,
@@ -219,6 +228,11 @@ class Instance(BASE, NovaBase):
     state = Column(Integer)
     state_description = Column(String(255))
 
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+
+
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
@@ -229,6 +243,9 @@ class Instance(BASE, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
@@ -260,6 +277,39 @@ class Volume(BASE, NovaBase):
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
+
+class Quota(BASE, NovaBase):
+    """Represents quota overrides for a project"""
+    __tablename__ = 'quotas'
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(String(255))
+
+    instances = Column(Integer)
+    cores = Column(Integer)
+    volumes = Column(Integer)
+    gigabytes = Column(Integer)
+    floating_ips = Column(Integer)
+
+    @property
+    def str_id(self):
+        return self.project_id
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(project_id=str_id
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for project_id %s" % str_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
@@ -283,10 +333,8 @@ class SecurityGroup(BASE, NovaBase):
     """Represents a security group"""
     __tablename__ = 'security_group'
     id = Column(Integer, primary_key=True)
-
     name = Column(String(255))
     description = Column(String(255))
-
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -322,6 +370,39 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_group.id'))
 
+
+class KeyPair(BASE, NovaBase):
+    """Represents a public key pair for ssh"""
+    __tablename__ = 'key_pairs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    user_id = Column(String(255))
+    fingerprint = Column(String(255))
+    public_key = Column(Text)
+
+    @property
+    def str_id(self):
+        return '%s.%s' % (self.user_id, self.name)
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        user_id, _sep, name = str_id.partition('.')
+        return cls.find_by_str(user_id, name, session, deleted)
+
+    @classmethod
+    def find_by_args(cls, user_id, name, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(user_id=user_id
+                         ).filter_by(name=name
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for user %s, name %s" %
+                                         (user_id, name))
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class Network(BASE, NovaBase):
     """Represents a network"""
@@ -381,13 +462,13 @@ class FixedIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(address=str_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % str_id)
@@ -410,13 +491,13 @@ class FloatingIp(BASE, NovaBase):
         return self.address
 
     @classmethod
-    def find_by_str(cls, str_id, session=None):
+    def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
             session = get_session()
         try:
             return session.query(cls
                          ).filter_by(address=str_id
-                         ).filter_by(deleted=False
+                         ).filter_by(deleted=deleted
                          ).one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % str_id)

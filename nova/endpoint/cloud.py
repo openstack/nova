@@ -23,6 +23,7 @@ datastore.
 """
 
 import base64
+import datetime
 import logging
 import os
 import time
@@ -31,13 +32,14 @@ import IPy
 
 from twisted.internet import defer
 
+from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import quota
 from nova import rpc
 from nova import utils
 from nova.auth import rbac
-from nova.auth import manager
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.endpoint import images
 
@@ -47,14 +49,35 @@ flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 InvalidInputException = exception.InvalidInputException
 
-def _gen_key(user_id, key_name):
-    """ Tuck this into AuthManager """
+class QuotaError(exception.ApiError):
+    """Quota Exceeeded"""
+    pass
+
+
+def _gen_key(context, user_id, key_name):
+    """Generate a key
+
+    This is a module level method because it is slow and we need to defer
+    it into a process pool."""
     try:
-        mgr = manager.AuthManager()
-        private_key, fingerprint = mgr.generate_key_pair(user_id, key_name)
+        # NOTE(vish): generating key pair is slow so check for legal
+        #             creation before creating key_pair
+        try:
+            db.key_pair_get(context, user_id, key_name)
+            raise exception.Duplicate("The key_pair %s already exists"
+                                      % key_name)
+        except exception.NotFound:
+            pass
+        private_key, public_key, fingerprint = crypto.generate_key_pair()
+        key = {}
+        key['user_id'] = user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return {'private_key': private_key, 'fingerprint': fingerprint}
     except Exception as ex:
         return {'exception': ex}
-    return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
 class CloudController(object):
@@ -87,13 +110,15 @@ class CloudController(object):
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in db.instance_get_by_project(project_id):
-            line = '%s slots=%d' % (instance.fixed_ip['str_id'],
-                INSTANCE_TYPES[instance['instance_type']]['vcpus'])
-            if instance['key_name'] in result:
-                result[instance['key_name']].append(line)
-            else:
-                result[instance['key_name']] = [line]
+        for instance in db.instance_get_by_project(None, project_id):
+            if instance['fixed_ip']:
+                line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
+                    INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                key = str(instance['key_name'])
+                if key in result:
+                    result[key].append(line)
+                else:
+                    result[key] = [line]
         return result
 
     def _trigger_refresh_security_group(self, security_group):
@@ -119,13 +144,13 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        floating_ip = db.instance_get_floating_ip_address(None,
-                                                          instance_ref['id'])
+        floating_ip = db.instance_get_floating_address(None,
+                                                       instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
                 'ami-id': instance_ref['image_id'],
-                'ami-launch-index': instance_ref['ami_launch_index'],
+                'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
                 'block-device-mapping': {  # TODO(vish): replace with real data
                     'ami': 'sda1',
@@ -141,7 +166,7 @@ class CloudController(object):
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
                 'placement': {
-                    'availaibility-zone': instance_ref['availability_zone'],
+                    'availability-zone': 'nova' # TODO(vish): real zone
                 },
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
@@ -165,9 +190,18 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_regions(self, context, region_name=None, **kwargs):
-        # TODO(vish): region_name is an array.  Support filtering
-        return {'regionInfo': [{'regionName': 'nova',
-                                'regionUrl': FLAGS.ec2_url}]}
+        if FLAGS.region_list:
+            regions = []
+            for region in FLAGS.region_list:
+                name, _sep, url = region.partition('=')
+                regions.append({'regionName': name,
+                                'regionEndpoint': url})
+        else:
+            regions = [{'regionName': 'nova',
+                        'regionEndpoint': FLAGS.ec2_url}]
+        if region_name:
+            regions = [r for r in regions if r['regionName'] in region_name]
+        return {'regionInfo': regions }
 
     @rbac.allow('all')
     def describe_snapshots(self,
@@ -187,18 +221,18 @@ class CloudController(object):
 
     @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = context.user.get_key_pairs()
+        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
         if not key_name is None:
-            key_pairs = [x for x in key_pairs if x.name in key_name]
+            key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
         result = []
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context.user.is_admin() or not key_pair.name.endswith(suffix):
+            if context.user.is_admin() or not key_pair['name'].endswith(suffix):
                 result.append({
-                    'keyName': key_pair.name,
-                    'keyFingerprint': key_pair.fingerprint,
+                    'keyName': key_pair['name'],
+                    'keyFingerprint': key_pair['fingerprint'],
                 })
 
         return {'keypairsSet': result}
@@ -214,14 +248,18 @@ class CloudController(object):
             dcall.callback({'keyName': key_name,
                 'keyFingerprint': kwargs['fingerprint'],
                 'keyMaterial': kwargs['private_key']})
-        pool.apply_async(_gen_key, [context.user.id, key_name],
+        # TODO(vish): when context is no longer an object, pass it here
+        pool.apply_async(_gen_key, [None, context.user.id, key_name],
             callback=_complete)
         return dcall
 
     @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
-        context.user.delete_key_pair(key_name)
-        # aws returns true even if the key doens't exist
+        try:
+            db.key_pair_destroy(context, context.user.id, key_name)
+        except exception.NotFound:
+            # aws returns true even if the key doesn't exist
+            pass
         return True
 
     @rbac.allow('all')
@@ -419,7 +457,7 @@ class CloudController(object):
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
-                'host',
+                volume['host'],
                 volume['instance_id'],
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
@@ -435,6 +473,14 @@ class CloudController(object):
 
     @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
+        # check quota
+        size = int(size)
+        if quota.allowed_volumes(context, 1, size) < 1:
+            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
+                         context.project.id, size)
+            raise QuotaError("Volume quota exceeded. You cannot "
+                             "create a volume of size %s" %
+                             size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
@@ -444,9 +490,11 @@ class CloudController(object):
         vol['attach_status'] = "detached"
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.volume_topic, {"method": "create_volume",
-                                      "args": {"context": None,
-                                               "volume_id": volume_ref['id']}})
+        rpc.cast(FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"context": None,
+                           "topic": FLAGS.volume_topic,
+                           "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
@@ -455,10 +503,12 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_str(context, instance_id)
-        host = db.instance_get_host(context, instance_ref['id'])
+        host = instance_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
                                  "args": {"context": None,
@@ -477,12 +527,12 @@ class CloudController(object):
         volume_ref = db.volume_get_by_str(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
         if not instance_ref:
-            raise exception.Error("Volume isn't attached to anything!")
+            raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
         if volume_ref['status'] == "available":
-            raise exception.Error("Volume is already detached")
+            raise exception.ApiError("Volume is already detached")
         try:
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
                                  "args": {"context": None,
@@ -521,12 +571,14 @@ class CloudController(object):
     def _format_instances(self, context, reservation_id=None):
         reservations = {}
         if reservation_id:
-            instances = db.instance_get_by_reservation(context, reservation_id)
+            instances = db.instance_get_by_reservation(context,
+                                                       reservation_id)
         else:
-            if not context.user.is_admin():
+            if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
-                instances = db.instance_get_by_project(context, context.project.id)
+                instances = db.instance_get_by_project(context,
+                                                       context.project.id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -538,15 +590,16 @@ class CloudController(object):
                 'code': instance['state'],
                 'name': instance['state_description']
             }
-            floating_addr = db.instance_get_floating_address(context,
-                                                             instance['id'])
-            i['publicDnsName'] = floating_addr
-            fixed_addr = db.instance_get_fixed_address(context,
-                                                       instance['id'])
+            fixed_addr = None
+            floating_addr = None
+            if instance['fixed_ip']:
+                fixed_addr = instance['fixed_ip']['str_id']
+                if instance['fixed_ip']['floating_ips']:
+                    fixed = instance['fixed_ip']
+                    floating_addr = fixed['floating_ips'][0]['str_id']
             i['privateDnsName'] = fixed_addr
-            if not i['publicDnsName']:
-                i['publicDnsName'] = i['privateDnsName']
-            i['dnsName'] = None
+            i['publicDnsName'] = floating_addr
+            i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
             if context.user.is_admin():
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
@@ -579,10 +632,13 @@ class CloudController(object):
             iterator = db.floating_ip_get_by_project(context,
                                                      context.project.id)
         for floating_ip_ref in iterator:
-            address = floating_ip_ref['id_str']
-            instance_ref = db.floating_ip_get_instance(address)
+            address = floating_ip_ref['str_id']
+            instance_id = None
+            if (floating_ip_ref['fixed_ip']
+                and floating_ip_ref['fixed_ip']['instance']):
+                instance_id = floating_ip_ref['fixed_ip']['instance']['str_id']
             address_rv = {'public_ip': address,
-                          'instance_id': instance_ref['id_str']}
+                          'instance_id': instance_id}
             if context.user.is_admin():
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
@@ -593,6 +649,12 @@ class CloudController(object):
     @rbac.allow('netadmin')
     @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
+        # check quota
+        if quota.allowed_floating_ips(context, 1) < 1:
+            logging.warn("Quota exceeeded for %s, tried to allocate address",
+                         context.project.id)
+            raise QuotaError("Address quota exceeded. You cannot "
+                             "allocate any more addresses")
         network_topic = yield self._get_network_topic(context)
         public_ip = yield rpc.call(network_topic,
                          {"method": "allocate_floating_ip",
@@ -607,9 +669,9 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "deallocate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "deallocate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'releaseResponse': ["Address released."]})
 
     @rbac.allow('netadmin')
@@ -620,11 +682,10 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "associate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id'],
-                                   "fixed_ip": fixed_ip_ref['str_id'],
-                                   "instance_id": instance_ref['id']}})
+                 {"method": "associate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id'],
+                           "fixed_address": fixed_ip_ref['str_id']}})
         defer.returnValue({'associateResponse': ["Address associated."]})
 
     @rbac.allow('netadmin')
@@ -633,26 +694,42 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = yield self._get_network_topic(context)
         rpc.cast(network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_ip": floating_ip_ref['str_id']}})
+                 {"method": "disassociate_floating_ip",
+                  "args": {"context": None,
+                           "floating_address": floating_ip_ref['str_id']}})
         defer.returnValue({'disassociateResponse': ["Address disassociated."]})
 
     @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         network_ref = db.project_get_network(context, context.project.id)
-        host = db.network_get_host(context, network_ref['id'])
+        host = network_ref['host']
         if not host:
             host = yield rpc.call(FLAGS.network_topic,
-                                    {"method": "set_network_host",
-                                     "args": {"context": None,
-                                              "project_id": context.project.id}})
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": context.project.id}})
         defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
 
     @rbac.allow('projectmanager', 'sysadmin')
     @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
+        instance_type = kwargs.get('instance_type', 'm1.small')
+        if instance_type not in INSTANCE_TYPES:
+            raise exception.ApiError("Unknown instance type: %s",
+                                     instance_type)
+        # check quota
+        max_instances = int(kwargs.get('max_count', 1))
+        min_instances = int(kwargs.get('min_count', max_instances))
+        num_instances = quota.allowed_instances(context,
+                                                max_instances,
+                                                instance_type)
+        if num_instances < min_instances:
+            logging.warn("Quota exceeeded for %s, tried to run %s instances",
+                         context.project.id, min_instances)
+            raise QuotaError("Instance quota exceeded. You can only "
+                             "run %s more instances of this type." %
+                             num_instances, "InstanceLimitExceeded")
         # make sure user can access the image
         # vpn image is private so it doesn't show up on lists
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
@@ -674,15 +751,14 @@ class CloudController(object):
         images.get(context, kernel_id)
         images.get(context, ramdisk_id)
 
-        logging.debug("Going to run instances...")
+        logging.debug("Going to run %s instances...", num_instances)
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         key_data = None
         if kwargs.has_key('key_name'):
-            key_pair = context.user.get_key_pair(kwargs['key_name'])
-            if not key_pair:
-                raise exception.ApiError('Key Pair %s not found' %
-                                         kwargs['key_name'])
-            key_data = key_pair.public_key
+            key_pair_ref = db.key_pair_get(context,
+                                      context.user.id,
+                                      kwargs['key_name'])
+            key_data = key_pair_ref['public_key']
 
         security_group_arg = kwargs.get('security_group', ["default"])
         if not type(security_group_arg) is list:
@@ -697,6 +773,7 @@ class CloudController(object):
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
+        base_options['state_description'] = 'scheduling'
         base_options['image_id'] = image_id
         base_options['kernel_id'] = kernel_id
         base_options['ramdisk_id'] = ramdisk_id
@@ -706,10 +783,15 @@ class CloudController(object):
         base_options['user_id'] = context.user.id
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
-        base_options['instance_type'] = kwargs.get('instance_type', 'm1.small')
 
-        for num in range(int(kwargs['max_count'])):
-            inst_id = db.instance_create(context, base_options)
+        type_data = INSTANCE_TYPES[instance_type]
+        base_options['memory_mb'] = type_data['memory_mb']
+        base_options['vcpus'] = type_data['vcpus']
+        base_options['local_gb'] = type_data['local_gb']
+
+        for num in range(num_instances):
+            instance_ref = db.instance_create(context, base_options)
+            inst_id = instance_ref['id']
 
             for security_group_id in security_groups:
                 db.instance_add_security_group(context, inst_id,
@@ -718,7 +800,7 @@ class CloudController(object):
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
-            inst['hostname'] = inst_id
+            inst['hostname'] = instance_ref['str_id']
             db.instance_update(context, inst_id, inst)
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
@@ -732,11 +814,12 @@ class CloudController(object):
                       "args": {"context": None,
                                "address": address}})
 
-            rpc.cast(FLAGS.compute_topic,
-                 {"method": "run_instance",
-                  "args": {"context": None,
-                           "instance_id": inst_id}})
-            logging.debug("Casting to node for %s/%s's instance %s" %
+            rpc.cast(FLAGS.scheduler_topic,
+                     {"method": "run_instance",
+                      "args": {"context": None,
+                               "topic": FLAGS.compute_topic,
+                               "instance_id": inst_id}})
+            logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
         defer.returnValue(self._format_run_instances(context,
                                                      reservation_id))
@@ -755,6 +838,10 @@ class CloudController(object):
                                 % id_str)
                 continue
 
+            now = datetime.datetime.utcnow()
+            db.instance_update(context,
+                               instance_ref['id'],
+                               {'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -776,9 +863,9 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                db.fixed_ip_deallocate(context, address)
+                self.network_manager.deallocate_fixed_ip(context, address)
 
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             if host:
                 rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
@@ -793,7 +880,7 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
             instance_ref = db.instance_get_by_str(context, id_str)
-            host = db.instance_get_host(context, instance_ref['id'])
+            host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "reboot_instance",
                       "args": {"context": None,
@@ -804,11 +891,15 @@ class CloudController(object):
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
-        host = db.volume_get_host(context, volume_ref['id'])
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+        if volume_ref['status'] != "available":
+            raise exception.ApiError("Volume status must be available")
+        now = datetime.datetime.utcnow()
+        db.volume_update(context, volume_ref['id'], {'terminated_at': now})
+        host = volume_ref['host']
+        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
                              "args": {"context": None,
-                                      "volume_id": volume_id}})
+                                      "volume_id": volume_ref['id']}})
         return defer.succeed(True)
 
     @rbac.allow('all')
