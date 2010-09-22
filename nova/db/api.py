@@ -582,7 +582,7 @@ def securitygroup_exists(context, project_id, group_name):
 def security_group_create(context, values):
     """Create a new security group"""
     return IMPL.security_group_create(context, values)
-    
+
 
 def security_group_destroy(context, security_group_id):
     """Deletes a security group"""

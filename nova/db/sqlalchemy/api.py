@@ -25,8 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
-from sqlalchemy.orm import eagerload
-from sqlalchemy.orm import joinedload_all
+from sqlalchemy.orm import eagerload, joinedload_all
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
@@ -853,10 +852,13 @@ def security_group_get_all(_context):
 
 def security_group_get(_context, security_group_id):
     session = get_session()
-    with session.begin():
-        return session.query(models.SecurityGroup
-                     ).options(eagerload('rules')
-                     ).get(security_group_id)
+    result = session.query(models.SecurityGroup
+                   ).options(eagerload('rules')
+                   ).get(security_group_id)
+    if not result:
+        raise exception.NotFound("No secuity group with id %s" %
+                                 security_group_id)
+    return result
 
 
 def security_group_get_by_name(context, project_id, group_name):
@@ -872,9 +874,8 @@ def security_group_get_by_name(context, project_id, group_name):
         raise exception.NotFound(
             'No security group named %s for project: %s' \
              % (group_name, project_id))
-             
     return group_ref
-    
+
 
 def security_group_get_by_project(_context, project_id):
     session = get_session()
@@ -889,9 +890,8 @@ def security_group_get_by_instance(_context, instance_id):
     session = get_session()
     with session.begin():
         return session.query(models.Instance
-                      ).get(instance_id
-                      ).security_groups \
-                       .filter_by(deleted=False
+                      ).join(models.Instance.security_groups
+                      ).filter_by(deleted=False
                       ).all()
 
 
@@ -901,13 +901,13 @@ def security_group_exists(_context, project_id, group_name):
         return group != None
     except exception.NotFound:
         return False
-        
+
 
 def security_group_create(_context, values):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
     # once save() is called.  This will get cleaned up in next orm pass.
-    security_group_ref.rules 
+    security_group_ref.rules
     for (key, value) in values.iteritems():
         security_group_ref[key] = value
     security_group_ref.save()
@@ -938,6 +938,7 @@ def security_group_rule_create(_context, values):
 def security_group_rule_destroy(_context, security_group_rule_id):
     session = get_session()
     with session.begin():
-        security_group_rule = session.query(models.SecurityGroupIngressRule
-                                            ).get(security_group_rule_id)
+        model = models.SecurityGroupIngressRule
+        security_group_rule = model.find(security_group_rule_id,
+                                         session=session)
         security_group_rule.delete(session=session)

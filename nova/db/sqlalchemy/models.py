@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Table, Column, Integer, String
+from sqlalchemy import Column, Integer, String, Table
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -337,6 +337,7 @@ class SecurityGroup(BASE, NovaBase):
     """Represents a security group"""
     __tablename__ = 'security_group'
     id = Column(Integer, primary_key=True)
+
     name = Column(String(255))
     description = Column(String(255))
     user_id = Column(String(255))
@@ -379,8 +380,12 @@ class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh"""
     __tablename__ = 'key_pairs'
     id = Column(Integer, primary_key=True)
+
     name = Column(String(255))
+
     user_id = Column(String(255))
+    project_id = Column(String(255))
+
     fingerprint = Column(String(255))
     public_key = Column(Text)
 
@@ -407,6 +412,7 @@ class KeyPair(BASE, NovaBase):
             new_exc = exception.NotFound("No model for user %s, name %s" %
                                          (user_id, name))
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
+
 
 class Network(BASE, NovaBase):
     """Represents a network"""

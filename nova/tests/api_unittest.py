@@ -210,7 +210,7 @@ class ApiEc2TestCase(test.BaseTestCase):
 
         rv = self.ec2.get_all_security_groups()
         # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should 
+        # because the create/delete unit test further up should
         # be good enough for that.
         for group in rv:
             if group.name == security_group_name:
@@ -254,7 +254,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.mox.ReplayAll()
         user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
         project = self.manager.create_project('fake', 'fake', 'fake')
-        
+
         # At the moment, you need both of these to actually be netadmin
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
@@ -284,7 +284,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         rv = self.ec2.get_all_security_groups()
 
         # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should 
+        # because the create/delete unit test further up should
         # be good enough for that.
         for group in rv:
             if group.name == security_group_name:
