@@ -8,6 +8,9 @@ from nova import flags
 from nova import auth
 from nova import manager
 from nova import db
+from nova import utils
+
+FLAGS = flags.FLAGS
 
 class Context(object):
     pass
@@ -15,7 +18,7 @@ class Context(object):
 class BasicApiAuthManager(object):
     """ Implements a somewhat rudimentary version of Rackspace Auth"""
 
-    def __init__(self):
+    def __init__(self, host=None, db_driver=None):
         if not host:
             host = FLAGS.host
         self.host = host                                                                                                                                     

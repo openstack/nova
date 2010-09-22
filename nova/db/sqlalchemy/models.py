@@ -401,7 +401,7 @@ class AuthToken(BASE, NovaBase):
     are a string representing the actual token and a user id for mapping 
     to the actual user"""
     __tablename__ = 'auth_tokens'
-    token_hash = Column(String(255))
+    token_hash = Column(String(255), primary_key=True)
     user_id = Column(Integer)
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
