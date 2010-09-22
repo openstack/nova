@@ -55,7 +55,7 @@ from twisted.web import static
 from nova import exception
 from nova import flags
 from nova.auth import manager
-from nova.endpoint import api
+from nova.api.ec2 import context
 from nova.objectstore import bucket
 from nova.objectstore import image
 
@@ -131,7 +131,7 @@ def get_context(request):
                                           request.uri,
                                           headers=request.getAllHeaders(),
                                           check_type='s3')
-        return api.APIRequestContext(None, user, project)
+        return context.APIRequestContext(user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized
