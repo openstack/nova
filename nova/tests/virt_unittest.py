@@ -19,7 +19,6 @@ from xml.dom.minidom import parseString
 from nova import db
 from nova import flags
 from nova import test
-from nova.endpoint import cloud
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS

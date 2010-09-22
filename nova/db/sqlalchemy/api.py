@@ -380,10 +380,8 @@ def instance_destroy(_context, instance_id):
 
 
 def instance_get(context, instance_id):
-    session = get_session()
-    return session.query(models.Instance
-                 ).options(eagerload('security_groups')
-                 ).find(instance_id, deleted=_deleted(context))
+    return models.Instance().find(instance_id, deleted=_deleted(context),
+                                    options=eagerload('security_groups'))
 
 
 def instance_get_all(context):

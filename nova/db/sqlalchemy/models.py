@@ -69,15 +69,19 @@ class NovaBase(object):
                      ).count()
 
     @classmethod
-    def find(cls, obj_id, session=None, deleted=False):
+    def find(cls, obj_id, session=None, deleted=False, options=None):
         """Find object by id"""
         if not session:
             session = get_session()
         try:
-            return session.query(cls
+            query = session.query(cls
                          ).filter_by(id=obj_id
-                         ).filter_by(deleted=deleted
-                         ).one()
+                         ).filter_by(deleted=deleted)
+
+            if options:
+                query = query.options(options)
+
+            return query.one()
         except exc.NoResultFound:
             new_exc = exception.NotFound("No model for id %s" % obj_id)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
