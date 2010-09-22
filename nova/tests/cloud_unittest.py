@@ -28,6 +28,7 @@ from twisted.internet import defer
 import unittest
 from xml.etree import ElementTree
 
+from nova import db
 from nova import flags
 from nova import rpc
 from nova import test
@@ -168,15 +169,47 @@ class CloudTestCase(test.BaseTestCase):
         #    data = self.cloud.get_metadata(instance(i)['private_dns_name'])
         #    self.assert_(data['meta-data']['ami-id'] == 'ami-%s' % i)
 
-    def test_user_editable_endpoint(self):
-        pathdir = os.path.join(FLAGS.images_path, 'i-testing')
+    def test_user_editable_image_endpoint(self):
+        pathdir = os.path.join(FLAGS.images_path, 'ami-testing')
         os.mkdir(pathdir)
         info = {}
         with open(os.path.join(pathdir, 'info.json'), 'w') as f:
             json.dump(info, f)
-        yield self.cloud.set_image_description(self.context, 'i-testing',
+        yield self.cloud.set_image_description(self.context, 'ami-testing',
                                                'Foo Img')
-        img = image.Image('i-testing')
+        img = image.Image('ami-testing')
         self.assertEqual('Foo Img', img.metadata['displayDescription'])
-        self.cloud.set_image_description(self.context, 'i-testing', '')
+        self.cloud.set_image_description(self.context, 'ami-testing', '')
         self.assert_(not 'displayDescription' in img.metadata)
+
+    def test_update_of_instance_display_fields(self):
+        inst = db.instance_create({}, {})
+        self.cloud.update_instance(self.context, inst['id'],
+                                   display_name='c00l 1m4g3')
+        inst = db.instance_get({}, inst['id'])
+        self.assertEqual('c00l 1m4g3', inst['display_name'])
+        db.instance_destroy({}, inst['id'])
+
+    def test_update_of_instance_wont_update_private_fields(self):
+        inst = db.instance_create({}, {})
+        self.cloud.update_instance(self.context, inst['id'],
+                                   mac_address='DE:AD:BE:EF')
+        inst = db.instance_get({}, inst['id'])
+        self.assertEqual(None, inst['mac_address'])
+        db.instance_destroy({}, inst['id'])
+
+    def test_update_of_volume_display_fields(self):
+        vol = db.volume_create({}, {})
+        self.cloud.update_volume(self.context, vol['id'],
+                                 display_name='c00l v0lum3')
+        vol = db.volume_get({}, vol['id'])
+        self.assertEqual('c00l v0lum3', vol['display_name'])
+        db.volume_destroy({}, vol['id'])
+
+    def test_update_of_volume_wont_update_private_fields(self):
+        vol = db.volume_create({}, {})
+        self.cloud.update_volume(self.context, vol['id'],
+                                   mountpoint='/not/here')
+        vol = db.volume_get({}, vol['id'])
+        self.assertEqual(None, vol['mountpoint'])
+        db.volume_destroy({}, vol['id'])
