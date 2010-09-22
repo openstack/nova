@@ -74,7 +74,10 @@ class AccessTestCase(test.BaseTestCase):
             self.project.add_role(self.testsys, 'sysadmin')
         except: pass
         #user is set in each test
-        self.mw = ec2.Authorizer(lambda x,y: y('200 OK', []) and '')
+        def noopWSGIApp(environ, start_response):
+            start_response('200 OK', [])
+            return ['']
+        self.mw = ec2.Authorizer(noopWSGIApp)
         self.mw.action_roles = {'str': {
                 '_allow_all': ['all'],
                 '_allow_none': [],
