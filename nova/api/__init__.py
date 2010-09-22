@@ -23,9 +23,18 @@ Root WSGI middleware for all API controllers.
 import routes
 import webob.dec
 
+from nova import flags
 from nova import wsgi
 from nova.api import ec2
 from nova.api import rackspace
+from nova.api.ec2 import metadatarequesthandler
+
+
+flags.DEFINE_string('rsapi_subdomain', 'rs', 
+                    'subdomain running the RS API')
+flags.DEFINE_string('ec2api_subdomain', 'ec2', 
+                    'subdomain running the EC2 API')
+FLAGS = flags.FLAGS
 
 
 class API(wsgi.Router):
@@ -33,13 +42,33 @@ class API(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        mapper.connect("/", controller=self.versions)
-        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
-        mapper.connect("/services/{path_info:.*}", controller=ec2.API())
+        mapper.sub_domains = True
+        mapper.connect("/", controller=self.rsapi_versions, 
+                            conditions={'sub_domain': [FLAGS.rsapi_subdomain]})
+        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API(),
+                            conditions={'sub_domain': [FLAGS.rsapi_subdomain]})
+
+        mapper.connect("/", controller=self.ec2api_versions,
+                            conditions={'sub_domain': [FLAGS.ec2api_subdomain]})
+        mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
+                            conditions={'sub_domain': [FLAGS.ec2api_subdomain]})
+        mrh = metadatarequesthandler.MetadataRequestHandler()
+        for s in ['/latest',
+                  '/2009-04-04',
+                  '/2008-09-01',
+                  '/2008-02-01',
+                  '/2007-12-15',
+                  '/2007-10-10',
+                  '/2007-08-29',
+                  '/2007-03-01',
+                  '/2007-01-19',
+                  '/1.0']:
+            mapper.connect('%s/{path_info:.*}' % s, controller=mrh,
+                           conditions={'subdomain': FLAGS.ec2api_subdomain})
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
-    def versions(self, req):
+    def rsapi_versions(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
                 "versions": [
@@ -48,3 +77,22 @@ class API(wsgi.Router):
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
         return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+    @webob.dec.wsgify
+    def ec2api_versions(self, req):
+        """Respond to a request for all EC2 versions."""
+        # available api versions
+        versions = [
+            '1.0',
+            '2007-01-19',
+            '2007-03-01',
+            '2007-08-29',
+            '2007-10-10',
+            '2007-12-15',
+            '2008-02-01',
+            '2008-09-01',
+            '2009-04-04',
+        ]
+        return ''.join('%s\n' % v for v in versions)
+
+
