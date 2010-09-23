@@ -73,7 +73,7 @@ from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
-from nova.endpoint import cloud
+from nova.api.ec2 import cloud
 
 
 FLAGS = flags.FLAGS
