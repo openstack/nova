@@ -456,9 +456,9 @@ def auth_get_token(context, token_hash):
     """Retrieves a token given the hash representing it"""
     return IMPL.auth_get_token(context, token_hash)
 
-def auth_create_token(context, token, user_id):
+def auth_create_token(context, token):
     """Creates a new token"""
-    return IMPL.auth_create_token(context, token_hash, token, user_id)
+    return IMPL.auth_create_token(context, token_hash, token)
 
 
 ###################

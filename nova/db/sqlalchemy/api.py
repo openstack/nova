@@ -720,7 +720,7 @@ def auth_get_token(_context, token_hash):
         raise exception.NotFound('Token %s does not exist' % token_hash)
     return tk
 
-def auth_create_token(_context, token, user_id):
+def auth_create_token(_context, token):
     tk = models.AuthToken()
     for k,v in token.iteritems():
         tk[k] = v

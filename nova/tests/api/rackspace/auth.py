@@ -13,7 +13,8 @@ class Test(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.rackspace.auth.BasicApiAuthManager,
             '__init__', test_helper.fake_auth_init)
-        test_helper.auth_data = {}
+        test_helper.FakeAuthManager.auth_data = {}
+        test_helper.FakeAuthDatabase.data = {}
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -21,8 +22,22 @@ class Test(unittest.TestCase):
 
     def test_authorize_user(self):
         f = test_helper.FakeAuthManager()
-        f.add_user('derp', { 'id': 1, 'name':'herp' } )
+        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
 
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-User'] = 'herp'
+        req.headers['X-Auth-Key'] = 'derp'
+        result = req.get_response(nova.api.API())
+        self.assertEqual(result.status, '204 No Content')
+        self.assertEqual(len(result.headers['X-Auth-Token']), 40)
+        self.assertEqual(result.headers['X-CDN-Management-Url'],
+            "")
+        self.assertEqual(result.headers['X-Storage-Url'], "")
+
+    def test_authorize_token(self):
+        f = test_helper.FakeAuthManager()
+        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
+            
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
@@ -35,30 +50,14 @@ class Test(unittest.TestCase):
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
-    #def test_authorize_token(self):
-    #    auth = nova.api.rackspace.auth.FakeAuth()
-    #    auth.add_user('herp', 'derp')
-
-    #    req = webob.Request.blank('/v1.0/')
-    #    req.headers['X-Auth-User'] = 'herp'
-    #    req.headers['X-Auth-Key'] = 'derp'
-    #    result = req.get_response(nova.api.API())
-    #    self.assertEqual(result.status, '204 No Content')
-    #    self.assertEqual(len(result.headers['X-Auth-Token']), 40)
-    #    self.assertEqual(result.headers['X-Server-Management-Url'],
-    #        "server_management_url")
-    #    self.assertEqual(result.headers['X-CDN-Management-Url'],
-    #        "cdn_management_url")
-    #    self.assertEqual(result.headers['X-Storage-Url'], "storage_url")
-
-    #    token = result.headers['X-Auth-Token']
-    #    self.stubs.Set(nova.api.rackspace, 'APIRouter',
-    #        test_helper.FakeRouter)
-    #    req = webob.Request.blank('/v1.0/fake')
-    #    req.headers['X-Auth-Token'] = token
-    #    result = req.get_response(nova.api.API())
-    #    self.assertEqual(result.status, '200 OK')
-    #    self.assertEqual(result.headers['X-Test-Success'], 'True')
+        token = result.headers['X-Auth-Token']
+        self.stubs.Set(nova.api.rackspace, 'APIRouter',
+            test_helper.FakeRouter)
+        req = webob.Request.blank('/v1.0/fake')
+        req.headers['X-Auth-Token'] = token
+        result = req.get_response(nova.api.API())
+        self.assertEqual(result.status, '200 OK')
+        self.assertEqual(result.headers['X-Test-Success'], 'True')
     
     def test_token_expiry(self):
         self.destroy_called = False
