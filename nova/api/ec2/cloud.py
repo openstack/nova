@@ -725,9 +725,9 @@ class CloudController(object):
 
         security_groups = []
         for security_group_name in security_group_arg:
-            group = db.security_group_get_by_project(context,
-                                                     context.project.id,
-                                                     security_group_name)
+            group = db.security_group_get_by_name(context,
+                                                  context.project.id,
+                                                  security_group_name)
             security_groups.append(group['id'])
 
         reservation_id = utils.generate_uid('r')
@@ -744,6 +744,7 @@ class CloudController(object):
         base_options['user_data'] = kwargs.get('user_data', '')
 
         type_data = INSTANCE_TYPES[instance_type]
+        base_options['instance_type'] = instance_type
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
