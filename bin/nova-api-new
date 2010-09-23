@@ -32,13 +32,18 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import api
 from nova import flags
-from nova import wsgi
+from nova import utils
+from nova import server
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('api_port', 8773, 'API port')
 
-if __name__ == '__main__':
-    FLAGS(sys.argv)
+def main(_args):
+    from nova import api
+    from nova import wsgi
     wsgi.run_server(api.API(), FLAGS.api_port)
+
+if __name__ == '__main__':
+    utils.default_flagfile()
+    server.serve('nova-api', main)
