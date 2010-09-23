@@ -40,7 +40,8 @@ class Manager(object):
 
     def init_host(self):
        """Do any initialization that needs to be run if this is a standalone service.
-       
+
        Child classes should override this method.
        """
+       pass
 
