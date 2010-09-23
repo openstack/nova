@@ -166,8 +166,8 @@ class Authorizer(wsgi.Middleware):
                 'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
             },
             'AdminController': {
-                # All actions have the same permission: [] (the default)
-                # admins will be allowed to run them
+                # All actions have the same permission: ['none'] (the default)
+                # superusers will be allowed to run them
                 # all others will get HTTPUnauthorized.
             },
         }
@@ -177,8 +177,7 @@ class Authorizer(wsgi.Middleware):
         context = req.environ['ec2.context']
         controller_name = req.environ['ec2.controller'].__class__.__name__
         action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action, [])
-        allowed_roles.extend(FLAGS.superuser_roles)
+        allowed_roles = self.action_roles[controller_name].get(action, ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
@@ -186,6 +185,8 @@ class Authorizer(wsgi.Middleware):
 
     def _matches_any_role(self, context, roles):
         """Return True if any role in roles is allowed in context."""
+        if context.user.is_superuser():
+            return True
         if 'all' in roles:
             return True
         if 'none' in roles:
