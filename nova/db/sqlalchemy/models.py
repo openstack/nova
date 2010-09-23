@@ -213,7 +213,8 @@ class Instance(BASE, NovaBase):
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
-    
+    ramdisk_id = Column(String(255))
+
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
