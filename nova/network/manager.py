@@ -218,6 +218,13 @@ class FlatManager(NetworkManager):
 
 class VlanManager(NetworkManager):
     """Vlan network with dhcp"""
+    
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service.
+        """
+        driver.init_host()
+
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
