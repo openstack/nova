@@ -25,10 +25,15 @@ import random
 import StringIO
 import webob
 
+from nova import flags
 from nova import test
 from nova import api
 from nova.api.ec2 import cloud
 from nova.auth import manager
+
+
+FLAGS = flags.FLAGS
+FLAGS.FAKE_subdomain = 'ec2'
 
 
 class FakeHttplibSocket(object):
