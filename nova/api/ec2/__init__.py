@@ -25,6 +25,7 @@ import webob.dec
 import webob.exc
 
 from nova import exception
+from nova import flags
 from nova import wsgi
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import context
@@ -33,6 +34,7 @@ from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
+FLAGS = flags.FLAGS
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
 
@@ -176,6 +178,7 @@ class Authorizer(wsgi.Middleware):
         controller_name = req.environ['ec2.controller'].__class__.__name__
         action = req.environ['ec2.action']
         allowed_roles = self.action_roles[controller_name].get(action, [])
+        allowed_roles.extend(FLAGS.superuser_roles)
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:

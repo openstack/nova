@@ -172,14 +172,6 @@ Further Challenges
 
 
 
-The :mod:`rbac` Module
---------------------------
-
-.. automodule:: nova.auth.rbac
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`signer` Module
 ------------------------
 
