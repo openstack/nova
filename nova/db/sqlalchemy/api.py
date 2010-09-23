@@ -708,7 +708,25 @@ def quota_destroy(_context, project_id):
         quota_ref = models.Quota.find_by_str(project_id, session=session)
         quota_ref.delete(session=session)
 
+def auth_destroy_token(_context, token):
+    session = get_session()
+    session.delete(token)
 
+def auth_get_token(_context, token_hash):
+    session = get_session()
+    tk = session.query(models.AuthToken
+                ).filter_by(token_hash=token_hash)
+    if not tk:
+        raise exception.NotFound('Token %s does not exist' % token_hash)
+    return tk
+
+def auth_create_token(_context, token, user_id):
+    tk = models.AuthToken()
+    for k,v in token.iteritems():
+        tk[k] = v
+    tk.save()
+    return tk
+    
 ###################
 
 

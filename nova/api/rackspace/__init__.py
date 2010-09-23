@@ -40,7 +40,8 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nova_api_auth', 'nova.api.rackspace.auth.FakeAuth', 
+flags.DEFINE_string('nova_api_auth',
+    'nova.api.rackspace.auth.BasicApiAuthManager', 
     'The auth mechanism to use for the Rackspace API implemenation')
 
 class API(wsgi.Middleware):
@@ -49,7 +50,6 @@ class API(wsgi.Middleware):
     def __init__(self):
         app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
         super(API, self).__init__(app)
-
 
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the rackspace API request or return an HTTP Forbidden."""
@@ -61,13 +61,13 @@ class AuthMiddleware(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         if not req.headers.has_key("X-Auth-Token"):
-            return self.authenticate(req)
+            return self.auth_driver.authenticate(req)
 
         user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
 
         if not user:
             return webob.exc.HTTPUnauthorized()
-        context = {'user':user}
+        context = {'user': user}
         req.environ['nova.context'] = context
         return self.application
 
