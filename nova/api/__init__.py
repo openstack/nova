@@ -25,6 +25,7 @@ import webob.dec
 
 from nova import flags
 from nova import wsgi
+from nova.api import cloudpipe
 from nova.api import ec2
 from nova.api import rackspace
 from nova.api.ec2 import metadatarequesthandler
@@ -63,6 +64,7 @@ class API(wsgi.Router):
                             conditions=ec2domain)
         mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
                             conditions=ec2domain)
+        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         mrh = metadatarequesthandler.MetadataRequestHandler()
         for s in ['/latest',
                   '/2009-04-04',

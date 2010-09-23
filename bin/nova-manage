@@ -73,7 +73,6 @@ from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
-from nova.api.ec2 import cloud
 
 
 FLAGS = flags.FLAGS
@@ -84,7 +83,7 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.pipe = pipelib.CloudPipe(cloud.CloudController())
+        self.pipe = pipelib.CloudPipe()
 
     def list(self):
         """Print a listing of the VPNs for all projects."""
