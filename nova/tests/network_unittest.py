@@ -28,7 +28,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.endpoint import api
+from nova.api.ec2 import context
 
 FLAGS = flags.FLAGS
 
@@ -49,7 +49,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
-        self.context = api.APIRequestContext(None, project=None, user=self.user)
+        self.context = context.APIRequestContext(project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
             self.projects.append(self.manager.create_project(name,

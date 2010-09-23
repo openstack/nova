@@ -26,8 +26,10 @@ import time
 import routes
 import webob.dec
 import webob.exc
+import webob
 
 from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api.rackspace import flavors
 from nova.api.rackspace import images
@@ -37,6 +39,11 @@ from nova.api.rackspace import sharedipgroups
 from nova.auth import manager
 
 
+FLAGS = flags.FLAGS
+flags.DEFINE_string('nova_api_auth',
+    'nova.api.rackspace.auth.BasicApiAuthManager', 
+    'The auth mechanism to use for the Rackspace API implemenation')
+
 class API(wsgi.Middleware):
     """WSGI entry point for all Rackspace API requests."""
 
@@ -44,27 +51,25 @@ class API(wsgi.Middleware):
         app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
         super(API, self).__init__(app)
 
-
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the rackspace API request or return an HTTP Forbidden."""
 
-    #TODO(gundlach): isn't this the old Nova API's auth?  Should it be replaced
-    #with correct RS API auth?
+    def __init__(self, application):
+        self.auth_driver = utils.import_class(FLAGS.nova_api_auth)()
+        super(AuthMiddleware, self).__init__(application)
 
     @webob.dec.wsgify
     def __call__(self, req):
-        context = {}
-        if "HTTP_X_AUTH_TOKEN" in req.environ:
-            context['user'] = manager.AuthManager().get_user_from_access_key(
-                              req.environ['HTTP_X_AUTH_TOKEN'])
-            if context['user']:
-                context['project'] = manager.AuthManager().get_project(
-                                     context['user'].name)
-        if "user" not in context:
-            return webob.exc.HTTPForbidden()
+        if not req.headers.has_key("X-Auth-Token"):
+            return self.auth_driver.authenticate(req)
+
+        user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
+
+        if not user:
+            return webob.exc.HTTPUnauthorized()
+        context = {'user': user}
         req.environ['nova.context'] = context
         return self.application
-
 
 class RateLimitingMiddleware(wsgi.Middleware):
     """Rate limit incoming requests according to the OpenStack rate limits."""
