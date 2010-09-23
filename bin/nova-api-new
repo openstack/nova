@@ -34,12 +34,11 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 from nova import api
 from nova import flags
-from nova import utils
 from nova import wsgi
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('api_port', 8773, 'API port')
 
 if __name__ == '__main__':
-    utils.default_flagfile()
+    FLAGS(sys.argv)
     wsgi.run_server(api.API(), FLAGS.api_port)
