@@ -34,6 +34,8 @@ flags.DEFINE_string('rsapi_subdomain', 'rs',
                     'subdomain running the RS API')
 flags.DEFINE_string('ec2api_subdomain', 'ec2', 
                     'subdomain running the EC2 API')
+flags.DEFINE_string('FAKE_subdomain', None, 
+                    'set to rs or ec2 to fake the subdomain of the host for testing')
 FLAGS = flags.FLAGS
 
 
@@ -41,17 +43,26 @@ class API(wsgi.Router):
     """Routes top-level requests to the appropriate controller."""
 
     def __init__(self):
+        rsdomain =  {'sub_domain': [FLAGS.rsapi_subdomain]}
+        ec2domain = {'sub_domain': [FLAGS.ec2api_subdomain]}
+        # If someone wants to pretend they're hitting the RS subdomain
+        # on their local box, they can set FAKE_subdomain to 'rs', which
+        # removes subdomain restrictions from the RS routes below.
+        if FLAGS.FAKE_subdomain == 'rs':
+            rsdomain = {}
+        elif FLAGS.FAKE_subdomain == 'ec2':
+            ec2domain = {}
         mapper = routes.Mapper()
         mapper.sub_domains = True
         mapper.connect("/", controller=self.rsapi_versions, 
-                            conditions={'sub_domain': [FLAGS.rsapi_subdomain]})
+                            conditions=rsdomain)
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API(),
-                            conditions={'sub_domain': [FLAGS.rsapi_subdomain]})
+                            conditions=rsdomain)
 
         mapper.connect("/", controller=self.ec2api_versions,
-                            conditions={'sub_domain': [FLAGS.ec2api_subdomain]})
+                            conditions=ec2domain)
         mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
-                            conditions={'sub_domain': [FLAGS.ec2api_subdomain]})
+                            conditions=ec2domain)
         mrh = metadatarequesthandler.MetadataRequestHandler()
         for s in ['/latest',
                   '/2009-04-04',
@@ -64,7 +75,7 @@ class API(wsgi.Router):
                   '/2007-01-19',
                   '/1.0']:
             mapper.connect('%s/{path_info:.*}' % s, controller=mrh,
-                           conditions={'subdomain': FLAGS.ec2api_subdomain})
+                           conditions=ec2domain)
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
