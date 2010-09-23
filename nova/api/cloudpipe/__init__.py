@@ -51,6 +51,7 @@ class API(wsgi.Application):
         return webob.exc.HTTPNotFound()
 
     def get_project_id_from_ip(self, ip):
+        # TODO(eday): This was removed with the ORM branch, fix!
         instance = self.controller.get_instance_by_ip(ip)
         return instance['project_id']
 
