@@ -60,8 +60,8 @@ def init_host():
              "-j SNAT --to-source %s"
              % (FLAGS.private_range, FLAGS.routing_source_ip))
 
-    _confirm_rule("POSTROUTING", "-t nat -s %s MASQUERADE" % FLAGS.private_range)
-    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s" % {'range': FLAGS.private_range})
+    _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" % FLAGS.private_range)
+    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" % {'range': FLAGS.private_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
