@@ -103,7 +103,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
-        self.deleted_at = datetime.datetime.now()
+        self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -214,6 +214,7 @@ class Instance(BASE, NovaBase):
     image_id = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -229,6 +230,11 @@ class Instance(BASE, NovaBase):
     state = Column(Integer)
     state_description = Column(String(255))
 
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+
+
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
@@ -239,6 +245,7 @@ class Instance(BASE, NovaBase):
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
+    scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -272,6 +279,39 @@ class Volume(BASE, NovaBase):
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
+
+class Quota(BASE, NovaBase):
+    """Represents quota overrides for a project"""
+    __tablename__ = 'quotas'
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(String(255))
+
+    instances = Column(Integer)
+    cores = Column(Integer)
+    volumes = Column(Integer)
+    gigabytes = Column(Integer)
+    floating_ips = Column(Integer)
+
+    @property
+    def str_id(self):
+        return self.project_id
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(project_id=str_id
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for project_id %s" % str_id)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
@@ -282,6 +322,42 @@ class ExportDevice(BASE, NovaBase):
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume, backref=backref('export_device',
                                                   uselist=False))
+
+
+class KeyPair(BASE, NovaBase):
+    """Represents a public key pair for ssh"""
+    __tablename__ = 'key_pairs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+
+    user_id = Column(String(255))
+
+    fingerprint = Column(String(255))
+    public_key = Column(Text)
+
+    @property
+    def str_id(self):
+        return '%s.%s' % (self.user_id, self.name)
+
+    @classmethod
+    def find_by_str(cls, str_id, session=None, deleted=False):
+        user_id, _sep, name = str_id.partition('.')
+        return cls.find_by_str(user_id, name, session, deleted)
+
+    @classmethod
+    def find_by_args(cls, user_id, name, session=None, deleted=False):
+        if not session:
+            session = get_session()
+        try:
+            return session.query(cls
+                         ).filter_by(user_id=user_id
+                         ).filter_by(name=name
+                         ).filter_by(deleted=deleted
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for user %s, name %s" %
+                                         (user_id, name))
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 class Network(BASE, NovaBase):
@@ -320,6 +396,18 @@ class NetworkIndex(BASE, NovaBase):
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
+
+class AuthToken(BASE, NovaBase):
+    """Represents an authorization token for all API transactions. Fields 
+    are a string representing the actual token and a user id for mapping 
+    to the actual user"""
+    __tablename__ = 'auth_tokens'
+    token_hash = Column(String(255), primary_key=True)
+    user_id = Column(Integer)
+    server_manageent_url = Column(String(255))
+    storage_url = Column(String(255))
+    cdn_management_url = Column(String(255))
+
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -388,7 +476,8 @@ def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex)  # , Image, Host)
+              FixedIp, FloatingIp, Network, NetworkIndex,
+              AuthToken)  # , Image, Host)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
