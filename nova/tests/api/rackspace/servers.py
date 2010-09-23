@@ -16,19 +16,25 @@
 #    under the License.
 
 import unittest
-
+import stubout
 from nova.api.rackspace import servers
+import nova.api.rackspace
 from nova.tests.api.test_helper import *
+from nova.tests.api.rackspace import test_helper
 
 class ServersTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
+        test_helper.FakeAuthManager.auth_data = {}
+        test_helper.FakeAuthDatabase.data = {}
+        test_helper.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
 
     def test_get_server_list(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers')
+        req.get_response(nova.api.API())
 
     def test_create_instance(self):
         pass
@@ -56,3 +62,6 @@ class ServersTest(unittest.TestCase):
 
     def test_delete_server_instance(self):
         pass
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3,6 +3,7 @@ import webob.dec
 import datetime
 from nova.wsgi import Router
 from nova import auth
+import nova.api.rackspace.auth
 
 class Context(object): 
     pass
@@ -23,6 +24,27 @@ def fake_auth_init(self):
     self.context = Context()
     self.auth = FakeAuthManager()
     self.host = 'foo'
+
+def stub_out_auth(stubs):
+    def fake_auth_init(self, app):
+        self.application = app
+
+    def fake_rate_init(self, app):
+        super(nova.api.rackspace.RateLimitingMiddleware, self).__init__(app)
+        self.application = app
+
+    @webob.dec.wsgify
+    def fake_wsgi(self, req):
+        return self.application
+    
+    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+        '__init__', fake_auth_init) 
+    stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
+        '__init__', fake_rate_init)
+    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+        '__call__', fake_wsgi) 
+    stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
+        '__call__', fake_wsgi)
 
 class FakeAuthDatabase(object):
     data = {}
