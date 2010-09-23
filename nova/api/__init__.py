@@ -24,6 +24,7 @@ import routes
 import webob.dec
 
 from nova import wsgi
+from nova.api import cloudpipe
 from nova.api import ec2
 from nova.api import rackspace
 
@@ -36,6 +37,7 @@ class API(wsgi.Router):
         mapper.connect("/", controller=self.versions)
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
         mapper.connect("/services/{path_info:.*}", controller=ec2.API())
+        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify

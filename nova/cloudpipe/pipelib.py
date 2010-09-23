@@ -32,6 +32,7 @@ from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
+from nova.api.ec2 import cloud
 from nova.api.ec2 import context
 
 
@@ -43,7 +44,7 @@ flags.DEFINE_string('boot_script_template',
 
 class CloudPipe(object):
     def __init__(self, cloud_controller):
-        self.controller = cloud_controller
+        self.controller = cloud.CloudController()
         self.manager = manager.AuthManager()
 
     def launch_vpn_instance(self, project_id):
