@@ -35,7 +35,7 @@ class API(wsgi.Router):
         mapper = routes.Mapper()
         mapper.connect("/", controller=self.versions)
         mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API())
-        mapper.connect("/ec2/{path_info:.*}", controller=ec2.API())
+        mapper.connect("/services/{path_info:.*}", controller=ec2.API())
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify

@@ -266,7 +266,7 @@ class AuthManager(object):
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
-        if project_id is '':
+        if project_id == '':
             project_id = user.name
 
         project = self.get_project(project_id)

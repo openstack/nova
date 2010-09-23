@@ -681,6 +681,29 @@ def export_device_create(_context, values):
 ###################
 
 
+def auth_destroy_token(_context, token):
+    session = get_session()
+    session.delete(token)
+
+def auth_get_token(_context, token_hash):
+    session = get_session()
+    tk = session.query(models.AuthToken
+                ).filter_by(token_hash=token_hash)
+    if not tk:
+        raise exception.NotFound('Token %s does not exist' % token_hash)
+    return tk
+
+def auth_create_token(_context, token):
+    tk = models.AuthToken()
+    for k,v in token.iteritems():
+        tk[k] = v
+    tk.save()
+    return tk
+    
+
+###################
+
+
 def quota_create(_context, values):
     quota_ref = models.Quota()
     for (key, value) in values.iteritems():
