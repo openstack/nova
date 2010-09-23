@@ -41,6 +41,8 @@ flags.DEFINE_string('bridge_dev', 'eth0',
                     'network device for bridges')
 flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
+flags.DEFINE_string('use_nova_chains', False,
+                    'use the nova_ routing chains instead of default')
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
@@ -48,18 +50,18 @@ def init_host():
     """Basic networking setup goes here"""
     # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
     # forwarding entries and a default DNAT entry.
-    _confirm_rule("-t nat -A nova_prerouting -s 0.0.0.0/0 "
+    _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
              "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
 
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    _confirm_rule("-t nat -A nova_postrouting -s %s "
+    _confirm_rule("POSTROUTING", "-t nat -s %s "
              "-j SNAT --to-source %s"
              % (FLAGS.private_range, FLAGS.routing_source_ip))
 
-    _confirm_rule("-A nova_postrouting -s %s MASQUERADE" % FLAGS.private_range)
-    _confirm_rule("-A nova_postrouting -s %(range)s -d %(range)s" % {'range': FLAGS.private_range})
+    _confirm_rule("POSTROUTING", "-t nat -s %s MASQUERADE" % FLAGS.private_range)
+    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s" % {'range': FLAGS.private_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -75,37 +77,37 @@ def unbind_floating_ip(floating_ip):
 
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
-    _confirm_rule("nova_forward -d %s -p udp --dport 1194 -j ACCEPT" % private_ip)
+    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" % private_ip)
     _confirm_rule(
-        "nova_prerouting -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+        "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
             % (public_ip, port, private_ip))
 
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
-    _confirm_rule("nova_prerouting -t nat -d %s -j DNAT --to %s"
+    _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
-    _confirm_rule("nova_postrouting -t nat -s %s -j SNAT --to %s"
+    _confirm_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
     # TODO(joshua): Get these from the secgroup datastore entries
-    _confirm_rule("nova_forward -d %s -p icmp -j ACCEPT"
+    _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
         _confirm_rule(
-            "nova_forward -d %s -p %s --dport %s -j ACCEPT"
+            "FORWARD -d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
-    _remove_rule("nova_prerouting -t nat -d %s -j DNAT --to %s"
+    _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
-    _remove_rule("nova_postrouting -t nat -s %s -j SNAT --to %s"
+    _remove_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))
-    _remove_rule("nova_forward -d %s -p icmp -j ACCEPT"
+    _remove_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                           % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _remove_rule("nova_forward -d %s -p %s --dport %s -j ACCEPT"
+        _remove_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
                               % (fixed_ip, protocol, port))
 
 
@@ -141,7 +143,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                      net_attrs['gateway'],
                      net_attrs['broadcast'],
                      net_attrs['netmask']))
-            _confirm_rule("nova_forward --in-interface %s -j ACCEPT" % bridge)
+            _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
         else:
             _execute("sudo ifconfig %s up" % bridge)
 
@@ -211,15 +213,19 @@ def _device_exists(device):
     return not err
 
 
-def _confirm_rule(cmd):
+def _confirm_rule(chain, cmd):
     """Delete and re-add iptables rule"""
-    _execute("sudo iptables --delete %s" % (cmd), check_exit_code=False)
-    _execute("sudo iptables -I %s" % (cmd))
+    if FLAGS.use_nova_chains:
+        chain = "nova_%s" % chain.lower()
+    _execute("sudo iptables --delete %s %s" % (chain, cmd), check_exit_code=False)
+    _execute("sudo iptables -I %s %s" % (chain, cmd))
 
 
-def _remove_rule(cmd):
+def _remove_rule(chain, cmd):
     """Remove iptables rule"""
-    _execute("sudo iptables --delete %s" % (cmd))
+    if FLAGS.use_nova_chains:
+        chain = "%S" % chain.lower()
+    _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 
 def _dnsmasq_cmd(net):
