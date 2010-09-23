@@ -20,6 +20,7 @@ from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import compute
 from nova.api.rackspace import base
 from webob import exc
 from nova import flags
@@ -121,7 +122,7 @@ class Controller(base.Controller):
             'reservation_id', 'project_id', 'launch_time',
             'bridge_name', 'mac_address', 'user_id']
 
-        for key in filtered_keys::
+        for key in filtered_keys:
             del inst[key]
 
         if allowed_keys:
