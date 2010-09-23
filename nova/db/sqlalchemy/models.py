@@ -475,7 +475,8 @@ def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex)  # , Image, Host)
+              FixedIp, FloatingIp, Network, NetworkIndex,
+              AuthToken)  # , Image, Host)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

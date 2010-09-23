@@ -15,6 +15,8 @@ class Test(unittest.TestCase):
             '__init__', test_helper.fake_auth_init)
         test_helper.FakeAuthManager.auth_data = {}
         test_helper.FakeAuthDatabase.data = {}
+        self.stubs.Set(nova.api.rackspace, 'RateLimitingMiddleware',
+            test_helper.FakeRateLimiter)
 
     def tearDown(self):
         self.stubs.UnsetAll()
