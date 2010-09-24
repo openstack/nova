@@ -46,9 +46,9 @@ LOG.setLevel(logging.DEBUG)
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls):
+    def instance(cls, new=False):
         """Returns the instance"""
-        if not hasattr(cls, '_instance'):
+        if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
                           userid=FLAGS.rabbit_userid,
@@ -60,7 +60,10 @@ class Connection(carrot_connection.BrokerConnection):
 
             # NOTE(vish): magic is fun!
             # pylint: disable-msg=W0142
-            cls._instance = cls(**params)
+            if new:
+                return cls(**params)
+            else:
+                cls._instance = cls(**params)
         return cls._instance
 
     @classmethod
@@ -93,8 +96,6 @@ class Consumer(messaging.Consumer):
             lambda: self.fetch(enable_callbacks=True), 100, io_loop=io_inst)
         injected.start()
         return injected
-
-    attachToTornado = attach_to_tornado
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
@@ -265,28 +266,32 @@ def call(topic, msg):
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
 
-    conn = Connection.instance()
-    d = defer.Deferred()
+    class WaitMessage(object):
+
+        def __call__(self, data, message):
+            """Acks message and sets result."""
+            message.ack()
+            if data['failure']:
+                self.result = RemoteError(*data['failure'])
+            else:
+                self.result = data['result']
+
+    wait_msg = WaitMessage()
+    conn = Connection.instance(True)
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
+    consumer.register_callback(wait_msg)
 
-    def deferred_receive(data, message):
-        """Acks message and callbacks or errbacks"""
-        message.ack()
-        if data['failure']:
-            return d.errback(RemoteError(*data['failure']))
-        else:
-            return d.callback(data['result'])
-
-    consumer.register_callback(deferred_receive)
-    injected = consumer.attach_to_tornado()
-
-    # clean up after the injected listened and return x
-    d.addCallback(lambda x: injected.stop() and x or x)
-
+    conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)
     publisher.close()
-    return d
+
+    try:
+        consumer.wait(limit=1)
+    except StopIteration:
+        pass
+    consumer.close()
+    return wait_msg.result
 
 
 def cast(topic, msg):

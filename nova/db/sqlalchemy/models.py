@@ -218,6 +218,7 @@ class Instance(BASE, NovaBase):
     image_id = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -451,6 +452,18 @@ class NetworkIndex(BASE, NovaBase):
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
 
+class AuthToken(BASE, NovaBase):
+    """Represents an authorization token for all API transactions. Fields 
+    are a string representing the actual token and a user id for mapping 
+    to the actual user"""
+    __tablename__ = 'auth_tokens'
+    token_hash = Column(String(255), primary_key=True)
+    user_id = Column(Integer)
+    server_manageent_url = Column(String(255))
+    storage_url = Column(String(255))
+    cdn_management_url = Column(String(255))
+
+
 
 # TODO(vish): can these both come from the same baseclass?
 class FixedIp(BASE, NovaBase):
@@ -518,8 +531,8 @@ def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice, FixedIp, FloatingIp,
-              Network, NetworkIndex, SecurityGroup, SecurityGroupIngressRule)
-              # , Image, Host
+              Network, NetworkIndex, SecurityGroup, SecurityGroupIngressRule,
+              AuthToken) # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

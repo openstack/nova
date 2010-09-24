@@ -68,7 +68,7 @@ class APIRequest(object):
             key = _camelcase_to_underscore(parts[0])
             if len(parts) > 1:
                 d = args.get(key, {})
-                d[parts[1]] = value[0]
+                d[parts[1]] = value
                 value = d
             args[key] = value
 
