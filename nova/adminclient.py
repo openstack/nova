@@ -20,8 +20,8 @@ Nova User API client library.
 """
 
 import base64
-
 import boto
+import httplib
 from boto.ec2.regioninfo import RegionInfo
 
 
@@ -68,13 +68,13 @@ class UserRole(object):
     def __init__(self, connection=None):
         self.connection = connection
         self.role = None
-    
+
     def __repr__(self):
         return 'UserRole:%s' % self.role
 
     def startElement(self, name, attrs, connection):
         return None
-        
+
     def endElement(self, name, value, connection):
         if name == 'role':
             self.role = value
@@ -128,20 +128,20 @@ class ProjectMember(object):
     def __init__(self, connection=None):
         self.connection = connection
         self.memberId = None
-    
+
     def __repr__(self):
         return 'ProjectMember:%s' % self.memberId
 
     def startElement(self, name, attrs, connection):
         return None
-        
+
     def endElement(self, name, value, connection):
         if name == 'member':
             self.memberId = value
         else:
             setattr(self, name, str(value))
 
-            
+
 class HostInfo(object):
     """
     Information about a Nova Host, as parsed through SAX:
@@ -171,17 +171,20 @@ class HostInfo(object):
 
 
 class NovaAdminClient(object):
-    def __init__(self, clc_ip='127.0.0.1', region='nova', access_key='admin',
-                 secret_key='admin', **kwargs):
-        self.clc_ip = clc_ip
+    def __init__(self, clc_url='http://127.0.0.1:8773', region='nova',
+                 access_key='admin', secret_key='admin', **kwargs):
+        parts = httplib.urlsplit(clc_url)
+        is_secure = parts.scheme == 'https'
+        ip, port = parts.netloc.split(':')
+
         self.region = region
         self.access = access_key
         self.secret = secret_key
         self.apiconn = boto.connect_ec2(aws_access_key_id=access_key,
                                         aws_secret_access_key=secret_key,
-                                        is_secure=False,
-                                        region=RegionInfo(None, region, clc_ip),
-                                        port=8773,
+                                        is_secure=is_secure,
+                                        region=RegionInfo(None, region, ip),
+                                        port=port,
                                         path='/services/Admin',
                                         **kwargs)
         self.apiconn.APIVersion = 'nova'
@@ -289,7 +292,7 @@ class NovaAdminClient(object):
 
         if project.projectname != None:
             return project
-            
+
     def create_project(self, projectname, manager_user, description=None,
                        member_users=None):
         """
@@ -322,7 +325,7 @@ class NovaAdminClient(object):
         Adds a user to a project.
         """
         return self.modify_project_member(user, project, operation='add')
-        
+
     def remove_project_member(self, user, project):
         """
         Removes a user from a project.
