@@ -43,40 +43,48 @@ if [ -n "$4" ]; then
 else
     MGMT_IP="$IP"
 fi
+if [ "$CMD" == "clear" ]; then
+    iptables -P INPUT ACCEPT
+    iptables -P FORWARD ACCEPT
+    iptables -P OUTPUT ACCEPT
+    iptables -F
+    iptables -X
+fi
 
-iptables -F
-iptables -P INPUT DROP
-iptables -A INPUT -m state --state INVALID -j DROP
-iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-iptables -A INPUT -m tcp -p tcp -d $MGMT_IP --dport 22 -j ACCEPT
-iptables -A INPUT -m udp -p udp --dport 123 -j ACCEPT
-iptables -N nova_input
-iptables -A INPUT -j nova_input
-iptables -A INPUT -p icmp -j ACCEPT
-iptables -A INPUT -p tcp -j REJECT --reject-with tcp-reset
-iptables -A INPUT -j REJECT --reject-with icmp-port-unreachable
+if [ "$CMD" == "base" ] || [ "$CMD" == "all" ]; then
+    iptables -P INPUT DROP
+    iptables -A INPUT -m state --state INVALID -j DROP
+    iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+    iptables -A INPUT -m tcp -p tcp -d $MGMT_IP --dport 22 -j ACCEPT
+    iptables -A INPUT -m udp -p udp --dport 123 -j ACCEPT
+    iptables -N nova_input
+    iptables -A INPUT -j nova_input
+    iptables -A INPUT -p icmp -j ACCEPT
+    iptables -A INPUT -p tcp -j REJECT --reject-with tcp-reset
+    iptables -A INPUT -j REJECT --reject-with icmp-port-unreachable
 
-iptables -P FORWARD DROP
-iptables -A FORWARD -m state --state INVALID -j DROP
-iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-iptables -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-iptables -N nova_forward
-iptables -A FORWARD -j nova_forward
+    iptables -P FORWARD DROP
+    iptables -A FORWARD -m state --state INVALID -j DROP
+    iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+    iptables -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+    iptables -N nova_forward
+    iptables -A FORWARD -j nova_forward
 
-iptables -P OUTPUT DROP
-iptables -A OUTPUT -m state --state INVALID -j DROP
-iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-iptables -N nova_output
-iptables -A OUTPUT -j nova_output
+    iptables -P OUTPUT DROP
+    iptables -A OUTPUT -m state --state INVALID -j DROP
+    iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+    iptables -N nova_output
+    iptables -A OUTPUT -j nova_output
 
-iptables -t nat -N nova_prerouting
-iptables -t nat -A PREROUTING -j nova_prerouting
+    iptables -t nat -N nova_prerouting
+    iptables -t nat -A PREROUTING -j nova_prerouting
 
-iptables -t nat -N nova_postrouting
-iptables -t nat -A POSTROUTING -j nova_postrouting
+    iptables -t nat -N nova_postrouting
+    iptables -t nat -A POSTROUTING -j nova_postrouting
 
-iptables -t nat -N nova_output
-iptables -t nat -A OUTPUT -j nova_output
+    iptables -t nat -N nova_output
+    iptables -t nat -A OUTPUT -j nova_output
+fi
 
 if [ "$CMD" == "ganglia" ] || [ "$CMD" == "all" ]; then
     iptables -A nova_input -m tcp -p tcp -d $IP --dport 8649 -j ACCEPT
