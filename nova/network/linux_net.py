@@ -60,8 +60,10 @@ def init_host():
              "-j SNAT --to-source %s"
              % (FLAGS.private_range, FLAGS.routing_source_ip))
 
-    _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" % FLAGS.private_range)
-    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" % {'range': FLAGS.private_range})
+    _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
+                  FLAGS.private_range)
+    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
+                  {'range': FLAGS.private_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -77,9 +79,10 @@ def unbind_floating_ip(floating_ip):
 
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
-    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" % private_ip)
-    _confirm_rule(
-        "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" %
+                  private_ip)
+    _confirm_rule("PREROUTING",
+                  "-t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
             % (public_ip, port, private_ip))
 
 
@@ -93,8 +96,7 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _confirm_rule(
-            "FORWARD -d %s -p %s --dport %s -j ACCEPT"
+        _confirm_rule("FORWARD","-d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
 
