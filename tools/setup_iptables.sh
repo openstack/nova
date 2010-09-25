@@ -106,6 +106,9 @@ fi
 
 if [ "$CMD" == "api" ] || [ "$CMD" == "all" ]; then
     iptables -A nova_input -m tcp -p tcp -d $IP --dport 8773 -j ACCEPT
+    if [ "$IP" != "$MGMT_IP" ]; then
+        iptables -A nova_input -m tcp -p tcp -d $MGMT_IP --dport 8773 -j ACCEPT
+    fi
 fi
 
 if [ "$CMD" == "redis" ] || [ "$CMD" == "all" ]; then
