@@ -52,6 +52,11 @@ if [ "$CMD" == "clear" ]; then
     iptables -F nova_output
     iptables -F nova_forward
     iptables -X
+    iptables -t nat -F
+    iptables -t nat -F nova_input
+    iptables -t nat -F nova_output
+    iptables -t nat -F nova_forward
+    iptables -t nat -X
 fi
 
 if [ "$CMD" == "base" ] || [ "$CMD" == "all" ]; then
@@ -73,7 +78,7 @@ if [ "$CMD" == "base" ] || [ "$CMD" == "all" ]; then
     iptables -N nova_forward
     iptables -A FORWARD -j nova_forward
 
-    iptables -P OUTPUT DROP
+    # iptables -P OUTPUT DROP  # too restrictive for the moment
     iptables -A OUTPUT -m state --state INVALID -j DROP
     iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
     iptables -N nova_output
