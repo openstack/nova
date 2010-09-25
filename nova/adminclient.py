@@ -25,6 +25,12 @@ import httplib
 from boto.ec2.regioninfo import RegionInfo
 
 
+DEFAULT_CLC_URL='http://127.0.0.1:8773'
+DEFAULT_REGION='nova'
+DEFAULT_ACCESS_KEY='admin'
+DEFAULT_SECRET_KEY='admin'
+
+
 class UserInfo(object):
     """
     Information about a Nova user, as parsed through SAX
@@ -171,38 +177,57 @@ class HostInfo(object):
 
 
 class NovaAdminClient(object):
-    def __init__(self, clc_url='http://127.0.0.1:8773', region='nova',
-                 access_key='admin', secret_key='admin', **kwargs):
-        parts = httplib.urlsplit(clc_url)
-        is_secure = parts.scheme == 'https'
-        ip, port = parts.netloc.split(':')
+    def __init__(self, clc_url=DEFAULT_CLC_URL, region=DEFAULT_REGION,
+                 access_key=DEFAULT_ACCESS_KEY, secret_key=DEFAULT_SECRET_KEY,
+                 **kwargs):
+        parts = self.split_clc_url(clc_url)
 
+        self.clc_url = clc_url
         self.region = region
         self.access = access_key
         self.secret = secret_key
         self.apiconn = boto.connect_ec2(aws_access_key_id=access_key,
                                         aws_secret_access_key=secret_key,
-                                        is_secure=is_secure,
-                                        region=RegionInfo(None, region, ip),
-                                        port=port,
+                                        is_secure=parts['is_secure'],
+                                        region=RegionInfo(None,
+                                                          region,
+                                                          parts['ip']),
+                                        port=parts['port'],
                                         path='/services/Admin',
                                         **kwargs)
         self.apiconn.APIVersion = 'nova'
 
-    def connection_for(self, username, project, **kwargs):
+    def connection_for(self, username, project, clc_url=None, region=None,
+                       **kwargs):
         """
         Returns a boto ec2 connection for the given username.
         """
+        if not clc_url:
+            clc_url = self.clc_url
+        if not region:
+            region = self.region
+        parts = self.split_clc_url(clc_url)
         user = self.get_user(username)
         access_key = '%s:%s' % (user.accesskey, project)
-        return boto.connect_ec2(
-            aws_access_key_id=access_key,
-            aws_secret_access_key=user.secretkey,
-            is_secure=False,
-            region=RegionInfo(None, self.region, self.clc_ip),
-            port=8773,
-            path='/services/Cloud',
-            **kwargs)
+        return boto.connect_ec2(aws_access_key_id=access_key,
+                                aws_secret_access_key=user.secretkey,
+                                is_secure=parts['is_secure'],
+                                region=RegionInfo(None,
+                                                  self.region,
+                                                  parts['ip']),
+                                port=parts['port'],
+                                path='/services/Cloud',
+                                **kwargs)
+
+    def split_clc_url(self, clc_url):
+        """
+        Splits a cloud controller endpoint url.
+        """
+        import logging; logging.debug('clc_url = %s', clc_url)
+        parts = httplib.urlsplit(clc_url)
+        is_secure = parts.scheme == 'https'
+        ip, port = parts.netloc.split(':')
+        return {'ip': ip, 'port': int(port), 'is_secure': is_secure}
 
     def get_users(self):
         """ grabs the list of all users """
