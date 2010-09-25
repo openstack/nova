@@ -28,25 +28,73 @@ from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 
+class user_generator(object):
+    def __init__(self, manager, **user_state):
+        if 'name' not in user_state:
+            user_state['name'] = 'test1'
+        self.manager = manager
+        self.user = manager.create_user(**user_state)
 
+    def __enter__(self):
+        return self.user
+
+    def __exit__(self, value, type, trace):
+        self.manager.delete_user(self.user)
+
+class project_generator(object):
+    def __init__(self, manager, **project_state):
+        if 'name' not in project_state:
+            project_state['name'] = 'testproj'
+        if 'manager_user' not in project_state:
+            project_state['manager_user'] = 'test1'
+        self.manager = manager
+        self.project = manager.create_project(**project_state)
+
+    def __enter__(self):
+        return self.project
+
+    def __exit__(self, value, type, trace):
+        self.manager.delete_project(self.project)
+
+class user_and_project_generator(object):
+    def __init__(self, manager, user_state={}, project_state={}):
+        self.manager = manager
+        if 'name' not in user_state:
+            user_state['name'] = 'test1'
+        if 'name' not in project_state:
+            project_state['name'] = 'testproj'
+        if 'manager_user' not in project_state:
+            project_state['manager_user'] = 'test1'
+        self.user = manager.create_user(**user_state)
+        self.project = manager.create_project(**project_state)
+
+    def __enter__(self):
+        return (self.user, self.project)
+
+    def __exit__(self, value, type, trace):
+        self.manager.delete_user(self.user)
+        self.manager.delete_project(self.project)
+
+# TODO(todd): Have a test class that tests just the AuthManager functions
+#             and different test classes for User and Project wrappers
 class AuthTestCase(test.BaseTestCase):
     def setUp(self):
         super(AuthTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager()
 
-    def test_001_can_create_users(self):
-        self.manager.create_user('test1', 'access', 'secret')
-        self.manager.create_user('test2')
+    def test_create_and_find_user(self):
+        with user_generator(self.manager):
+            self.assert_(self.manager.get_user('test1'))
 
-    def test_002_can_get_user(self):
-        user = self.manager.get_user('test1')
-
-    def test_003_can_retreive_properties(self):
-        user = self.manager.get_user('test1')
-        self.assertEqual('test1', user.id)
-        self.assertEqual('access', user.access)
-        self.assertEqual('secret', user.secret)
+    def test_create_and_find_with_properties(self):
+        with user_generator(self.manager, name="herbert", secret="classified",
+                        access="private-party"):
+            u = self.manager.get_user('herbert')
+            self.assertEqual('herbert', u.id)
+            self.assertEqual('herbert', u.name)
+            self.assertEqual('classified', u.secret)
+            self.assertEqual('private-party', u.access)
 
     def test_004_signature_is_valid(self):
         #self.assertTrue(self.manager.authenticate( **boto.generate_url ... ? ? ? ))
@@ -63,133 +111,217 @@ class AuthTestCase(test.BaseTestCase):
         'export S3_URL="http://127.0.0.1:3333/"\n' +
         'export EC2_USER_ID="test1"\n')
 
-    def test_010_can_list_users(self):
-        users = self.manager.get_users()
-        logging.warn(users)
-        self.assertTrue(filter(lambda u: u.id == 'test1', users))
+    def test_can_list_users(self):
+        with user_generator(self.manager):
+            with user_generator(self.manager, name="test2"):
+                users = self.manager.get_users()
+                self.assert_(filter(lambda u: u.id == 'test1', users))
+                self.assert_(filter(lambda u: u.id == 'test2', users))
+                self.assert_(not filter(lambda u: u.id == 'test3', users))
+        
+    def test_can_add_and_remove_user_role(self):
+        with user_generator(self.manager):
+            self.assertFalse(self.manager.has_role('test1', 'itsec'))
+            self.manager.add_role('test1', 'itsec')
+            self.assertTrue(self.manager.has_role('test1', 'itsec'))
+            self.manager.remove_role('test1', 'itsec')
+            self.assertFalse(self.manager.has_role('test1', 'itsec'))
 
-    def test_101_can_add_user_role(self):
-        self.assertFalse(self.manager.has_role('test1', 'itsec'))
-        self.manager.add_role('test1', 'itsec')
-        self.assertTrue(self.manager.has_role('test1', 'itsec'))
+    def test_can_create_and_get_project(self):
+        with user_and_project_generator(self.manager) as (u,p):
+            self.assert_(self.manager.get_user('test1'))
+            self.assert_(self.manager.get_user('test1'))
+            self.assert_(self.manager.get_project('testproj'))
 
-    def test_199_can_remove_user_role(self):
-        self.assertTrue(self.manager.has_role('test1', 'itsec'))
-        self.manager.remove_role('test1', 'itsec')
-        self.assertFalse(self.manager.has_role('test1', 'itsec'))
+    def test_can_list_projects(self):
+        with user_and_project_generator(self.manager):
+            with project_generator(self.manager, name="testproj2"):
+                projects = self.manager.get_projects()
+                self.assert_(filter(lambda p: p.name == 'testproj', projects))
+                self.assert_(filter(lambda p: p.name == 'testproj2', projects))
+                self.assert_(not filter(lambda p: p.name == 'testproj3',
+                                        projects))
 
-    def test_201_can_create_project(self):
-        project = self.manager.create_project('testproj', 'test1', 'A test project', ['test1'])
-        self.assertTrue(filter(lambda p: p.name == 'testproj', self.manager.get_projects()))
-        self.assertEqual(project.name, 'testproj')
-        self.assertEqual(project.description, 'A test project')
-        self.assertEqual(project.project_manager_id, 'test1')
-        self.assertTrue(project.has_member('test1'))
+    def test_can_create_and_get_project_with_attributes(self):
+        with user_generator(self.manager):
+            with project_generator(self.manager, description='A test project'):
+                project = self.manager.get_project('testproj')
+                self.assertEqual('A test project', project.description)
 
-    def test_202_user1_is_project_member(self):
-        self.assertTrue(self.manager.get_user('test1').is_project_member('testproj'))
+    def test_can_create_project_with_manager(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.assertEqual('test1', project.project_manager_id)
+            self.assertTrue(user.is_project_manager('testproj'))
 
-    def test_203_user2_is_not_project_member(self):
-        self.assertFalse(self.manager.get_user('test2').is_project_member('testproj'))
+    def test_create_project_assigns_manager_to_members(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.assertTrue(user.is_project_member('testproj'))
+            self.assertTrue(project.has_member('test1'))
 
-    def test_204_user1_is_project_manager(self):
-        self.assertTrue(self.manager.get_user('test1').is_project_manager('testproj'))
+    def test_no_extra_project_members(self):
+        with user_generator(self.manager, name='test2') as baduser:
+            with user_and_project_generator(self.manager) as (user, project):
+                self.assertFalse(baduser.is_project_member('testproj'))
+                self.assertFalse(project.has_member('test2'))
 
-    def test_205_user2_is_not_project_manager(self):
-        self.assertFalse(self.manager.get_user('test2').is_project_manager('testproj'))
+    def test_no_extra_project_managers(self):
+        with user_generator(self.manager, name='test2') as baduser:
+            with user_and_project_generator(self.manager) as (user, project):
+                self.assertFalse(baduser.is_project_manager('testproj'))
 
-    def test_206_can_add_user_to_project(self):
-        self.manager.add_to_project('test2', 'testproj')
-        self.assertTrue(self.manager.get_project('testproj').has_member('test2'))
+    def test_can_add_user_to_project(self):
+        with user_generator(self.manager, name='test2') as user:
+            with user_and_project_generator(self.manager):
+                self.manager.add_to_project('test2', 'testproj')
+                self.assertTrue(user.is_project_member('testproj'))
+                # NOTE(todd): have to reload after the add_to_project
+                project = self.manager.get_project('testproj')
+                self.assertTrue(project.has_member('test2'))
 
-    def test_207_can_remove_user_from_project(self):
-        self.manager.remove_from_project('test2', 'testproj')
-        self.assertFalse(self.manager.get_project('testproj').has_member('test2'))
+    def test_can_remove_user_from_project(self):
+        with user_generator(self.manager, name='test2') as user:
+            with user_and_project_generator(self.manager):
+                self.manager.add_to_project('test2', 'testproj')
+                self.assertTrue(user.is_project_member('testproj'))
+                self.manager.remove_from_project('test2', 'testproj')
+                self.assertFalse(user.is_project_member('testproj'))
+                # NOTE(todd): have to reload after the membership modifications
+                project = self.manager.get_project('testproj')
+                self.assertFalse(project.has_member('test2'))
 
-    def test_208_can_remove_add_user_with_role(self):
-        self.manager.add_to_project('test2', 'testproj')
-        self.manager.add_role('test2', 'developer', 'testproj')
-        self.manager.remove_from_project('test2', 'testproj')
-        self.assertFalse(self.manager.has_role('test2', 'developer', 'testproj'))
-        self.manager.add_to_project('test2', 'testproj')
-        self.manager.remove_from_project('test2', 'testproj')
+    def test_can_add_remove_user_with_role(self):
+        with user_generator(self.manager, name='test2') as user:
+            with user_and_project_generator(self.manager):
+                self.manager.add_to_project('test2', 'testproj')
+                self.manager.add_role('test2', 'developer', 'testproj')
+                self.assertTrue(user.is_project_member('testproj'))
+                self.manager.remove_from_project('test2', 'testproj')
+                self.assertFalse(self.manager.has_role('test2', 'developer',
+                                                       'testproj'))
+                self.assertFalse(user.is_project_member('testproj'))
 
-    def test_209_can_generate_x509(self):
-        # MUST HAVE RUN CLOUD SETUP BY NOW
-        self.cloud = cloud.CloudController()
-        self.cloud.setup()
-        _key, cert_str = self.manager._generate_x509_cert('test1', 'testproj')
-        logging.debug(cert_str)
+    def test_can_generate_x509(self):
+        # NOTE(todd): this doesn't assert against the auth manager
+        #             so it probably belongs in crypto_unittest
+        #             but I'm leaving it where I found it.
+        with user_and_project_generator(self.manager) as (user, project):
+            # NOTE(todd): Should mention why we must setup controller first
+            #             (somebody please clue me in)
+            cloud_controller = cloud.CloudController()
+            cloud_controller.setup()
+            _key, cert_str = self.manager._generate_x509_cert('test1',
+                                                              'testproj')
+            logging.debug(cert_str)
 
-        # Need to verify that it's signed by the right intermediate CA
-        full_chain = crypto.fetch_ca(project_id='testproj', chain=True)
-        int_cert = crypto.fetch_ca(project_id='testproj', chain=False)
-        cloud_cert = crypto.fetch_ca()
-        logging.debug("CA chain:\n\n =====\n%s\n\n=====" % full_chain)
-        signed_cert = X509.load_cert_string(cert_str)
-        chain_cert = X509.load_cert_string(full_chain)
-        int_cert = X509.load_cert_string(int_cert)
-        cloud_cert = X509.load_cert_string(cloud_cert)
-        self.assertTrue(signed_cert.verify(chain_cert.get_pubkey()))
-        self.assertTrue(signed_cert.verify(int_cert.get_pubkey()))
+            # Need to verify that it's signed by the right intermediate CA
+            full_chain = crypto.fetch_ca(project_id='testproj', chain=True)
+            int_cert = crypto.fetch_ca(project_id='testproj', chain=False)
+            cloud_cert = crypto.fetch_ca()
+            logging.debug("CA chain:\n\n =====\n%s\n\n=====" % full_chain)
+            signed_cert = X509.load_cert_string(cert_str)
+            chain_cert = X509.load_cert_string(full_chain)
+            int_cert = X509.load_cert_string(int_cert)
+            cloud_cert = X509.load_cert_string(cloud_cert)
+            self.assertTrue(signed_cert.verify(chain_cert.get_pubkey()))
+            self.assertTrue(signed_cert.verify(int_cert.get_pubkey()))
+            if not FLAGS.use_intermediate_ca:
+                self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
+            else:
+                self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
 
-        if not FLAGS.use_intermediate_ca:
-            self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
-        else:
-            self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
+    def test_adding_role_to_project_is_ignored_unless_added_to_user(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
+            project.add_role('test1', 'sysadmin')
+            # NOTE(todd): it will still show up in get_user_roles(u, project)
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
+            self.manager.add_role('test1', 'sysadmin')
+            self.assertTrue(project.has_role('test1', 'sysadmin'))
 
-    def test_210_can_add_project_role(self):
-        project = self.manager.get_project('testproj')
-        self.assertFalse(project.has_role('test1', 'sysadmin'))
-        self.manager.add_role('test1', 'sysadmin')
-        self.assertFalse(project.has_role('test1', 'sysadmin'))
-        project.add_role('test1', 'sysadmin')
-        self.assertTrue(project.has_role('test1', 'sysadmin'))
+    def test_add_user_role_doesnt_infect_project_roles(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
+            self.manager.add_role('test1', 'sysadmin')
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
 
-    def test_211_can_list_project_roles(self):
-        project = self.manager.get_project('testproj')
-        user = self.manager.get_user('test1')
-        self.manager.add_role(user, 'netadmin', project)
-        roles = self.manager.get_user_roles(user)
-        self.assertTrue('sysadmin' in roles)
-        self.assertFalse('netadmin' in roles)
-        project_roles = self.manager.get_user_roles(user, project)
-        self.assertTrue('sysadmin' in project_roles)
-        self.assertTrue('netadmin' in project_roles)
-        # has role should be false because global role is missing
-        self.assertFalse(self.manager.has_role(user, 'netadmin', project))
+    def test_can_list_user_roles(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.manager.add_role('test1', 'sysadmin')
+            roles = self.manager.get_user_roles(user)
+            self.assertTrue('sysadmin' in roles)
+            self.assertFalse('netadmin' in roles)
 
+    def test_can_list_project_roles(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.manager.add_role('test1', 'sysadmin')
+            project.add_role('test1', 'sysadmin')
+            project.add_role('test1', 'netadmin')
+            project_roles = self.manager.get_user_roles(user, project)
+            self.assertTrue('sysadmin' in project_roles)
+            self.assertTrue('netadmin' in project_roles)
+            # has role should be false user-level role is missing
+            self.assertFalse(self.manager.has_role(user, 'netadmin', project))
 
-    def test_212_can_remove_project_role(self):
-        project = self.manager.get_project('testproj')
-        self.assertTrue(project.has_role('test1', 'sysadmin'))
-        project.remove_role('test1', 'sysadmin')
-        self.assertFalse(project.has_role('test1', 'sysadmin'))
-        self.manager.remove_role('test1', 'sysadmin')
-        self.assertFalse(project.has_role('test1', 'sysadmin'))
+    def test_can_remove_user_roles(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.manager.add_role('test1', 'sysadmin')
+            self.assertTrue(user.has_role('sysadmin'))
+            self.manager.remove_role('test1', 'sysadmin')
+            self.assertFalse(user.has_role('sysadmin'))
 
-    def test_214_can_retrieve_project_by_user(self):
-        project = self.manager.create_project('testproj2', 'test2', 'Another test project', ['test2'])
-        self.assert_(len(self.manager.get_projects()) > 1)
-        self.assertEqual(len(self.manager.get_projects('test2')), 1)
+    def test_removing_user_role_hides_it_from_project(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.manager.add_role('test1', 'sysadmin')
+            project.add_role('test1', 'sysadmin')
+            self.assertTrue(project.has_role('test1', 'sysadmin'))
+            self.manager.remove_role('test1', 'sysadmin')
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
 
-    def test_220_can_modify_project(self):
-        self.manager.modify_project('testproj', 'test2', 'new description')
-        project = self.manager.get_project('testproj')
-        self.assertEqual(project.project_manager_id, 'test2')
-        self.assertEqual(project.description, 'new description')
+    def test_can_remove_project_role_but_keep_user_role(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.manager.add_role('test1', 'sysadmin')
+            project.add_role('test1', 'sysadmin')
+            self.assertTrue(user.has_role('sysadmin'))
+            self.assertTrue(project.has_role('test1', 'sysadmin'))
+            project.remove_role('test1', 'sysadmin')
+            self.assertFalse(project.has_role('test1', 'sysadmin'))
+            self.assertTrue(user.has_role('sysadmin'))
 
-    def test_299_can_delete_project(self):
-        self.manager.delete_project('testproj')
-        self.assertFalse(filter(lambda p: p.name == 'testproj', self.manager.get_projects()))
-        self.manager.delete_project('testproj2')
+    def test_can_retrieve_project_by_user(self):
+        with user_and_project_generator(self.manager) as (user, project):
+            self.assertEqual(1, len(self.manager.get_projects('test1')))
 
-    def test_999_can_delete_users(self):
+    def test_can_modify_project(self):
+        with user_and_project_generator(self.manager):
+            with user_generator(self.manager, name='test2'):
+                self.manager.modify_project('testproj', 'test2', 'new desc')
+                project = self.manager.get_project('testproj')
+                self.assertEqual('test2', project.project_manager_id)
+                self.assertEqual('new desc', project.description)
+
+    def test_can_delete_project(self):
+        with user_generator(self.manager):
+            self.manager.create_project('testproj', 'test1')
+            self.assert_(self.manager.get_project('testproj'))
+            self.manager.delete_project('testproj')
+            projectlist = self.manager.get_projects()
+            self.assert_(not filter(lambda p: p.name == 'testproj',
+                         projectlist))
+
+    def test_can_delete_user(self):
+        self.manager.create_user('test1')
+        self.assert_(self.manager.get_user('test1'))
         self.manager.delete_user('test1')
-        users = self.manager.get_users()
-        self.assertFalse(filter(lambda u: u.id == 'test1', users))
-        self.manager.delete_user('test2')
-        self.assertEqual(self.manager.get_user('test2'), None)
+        userlist = self.manager.get_users()
+        self.assert_(not filter(lambda u: u.id == 'test1', userlist))
+
+    def test_can_modify_users(self):
+        with user_generator(self.manager):
+            self.manager.modify_user('test1', 'access', 'secret', True)
+            user = self.manager.get_user('test1')
+            self.assertEqual('access', user.access)
+            self.assertEqual('secret', user.secret)
+            self.assertTrue(user.is_admin())
 
 
 if __name__ == "__main__":
