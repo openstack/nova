@@ -145,10 +145,10 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                      net_attrs['gateway'],
                      net_attrs['broadcast'],
                      net_attrs['netmask']))
-            _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
         else:
             _execute("sudo ifconfig %s up" % bridge)
-            _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
+        _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
+        _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
 
 
 def get_dhcp_hosts(context, network_id):
