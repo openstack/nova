@@ -17,9 +17,10 @@
 
 from nova.api.rackspace import base
 from nova.compute import instance_types
+from nova import wsgi
 from webob import exc
 
-class Controller(base.Controller):
+class Controller(wsgi.Controller):
     """Flavor controller for the Rackspace API."""
 
     _serialization_metadata = {

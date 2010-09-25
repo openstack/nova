@@ -21,16 +21,14 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import compute
+from nova import flags
 from nova.api.rackspace import base
 from nova.api.rackspace import _id_translator
 from webob import exc
-from nova import flags
 
 FLAGS = flags.FLAGS
 
-class ServersContext(object): pass
-
-class Controller(base.Controller):
+class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "plurals": "servers",
@@ -43,27 +41,30 @@ class Controller(base.Controller):
     }
 
     def __init__(self, db_driver=None):
-        self.context = ServersContext()
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
 
     def index(self, req):
         unfiltered = [ 'id', 'name']
-        instance_list = self.instance_get_all(self.context)
-        return [_entity_inst(inst, unfiltered) for inst in instance_list]
+        instance_list = self.db.instance_get_all(None)
+        res = [self._entity_inst(inst, unfiltered) for inst in \ 
+            instance_list]
+        return self._entity_list(res)
 
     def detail(self, req):
-        return [_entity_inst(inst) for inst in instdir.all]
+        res = [self._entity_inst(inst) for inst in \
+                self.db.instance_get_all(None)]
+        return self._entity_list(res)
 
     def show(self, req, id):
-        inst = self.instdir.get(id)
+        inst = self.db.instance_get(None, id)
         if inst:
-            return _entity_inst(inst)
+            return self._entity_inst(inst)
         raise exc.HTTPNotFound()
 
     def delete(self, req, id):
-        instance = self.instdir.get(id)
+        instance = self.db.instance_get(None, id)
 
         if not instance:
             return exc.HTTPNotFound()
@@ -79,7 +80,7 @@ class Controller(base.Controller):
         return _entity_inst(inst)
 
     def update(self, req, id):
-        instance = self.instdir.get(instance_id)
+        instance = self.db.instance_get(None, id)
         if not instance:
             return exc.HTTPNotFound()
         instance.update(kwargs['server'])
@@ -107,7 +108,6 @@ class Controller(base.Controller):
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
 
-        # TODO(dietz) Do we need any of these?
         inst['project_id'] = env['project']['id']
         inst['reservation_id'] = reservation
         reservation = utils.generate_uid('r')
@@ -124,6 +124,9 @@ class Controller(base.Controller):
 
         inst.save()
         return _entity_inst(inst)
+
+    def _entity_list(self, entities):
+        return dict(servers=entities)
 
     def _entity_inst(self, inst, allowed_keys=None):
         """ Maps everything to Rackspace-like attributes for return"""
