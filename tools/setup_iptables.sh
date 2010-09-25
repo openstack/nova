@@ -48,6 +48,9 @@ if [ "$CMD" == "clear" ]; then
     iptables -P FORWARD ACCEPT
     iptables -P OUTPUT ACCEPT
     iptables -F
+    iptables -F nova_input
+    iptables -F nova_output
+    iptables -F nova_forward
     iptables -X
 fi
 
