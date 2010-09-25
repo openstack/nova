@@ -33,8 +33,9 @@ class ServersTest(unittest.TestCase):
         self.stubs.UnsetAll()
 
     def test_get_server_list(self):
-        req = webob.Request.blank('/v1.0/servers')
-        req.get_response(nova.api.API())
+        req = webob.Request.blank('/v1.0/servers/')
+        res = req.get_response(nova.api.API())
+        print res
 
     def test_create_instance(self):
         pass

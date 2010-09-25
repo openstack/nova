@@ -22,10 +22,13 @@ from nova import rpc
 from nova import utils
 from nova import compute
 from nova.api.rackspace import base
+from nova.api.rackspace import _id_translator
 from webob import exc
 from nova import flags
 
 FLAGS = flags.FLAGS
+
+class ServersContext(object): pass
 
 class Controller(base.Controller):
     _serialization_metadata = {
@@ -39,12 +42,16 @@ class Controller(base.Controller):
         }
     }
 
-    def __init__(self):
-        self.instdir = compute.InstanceDirectory()
+    def __init__(self, db_driver=None):
+        self.context = ServersContext()
+        if not db_driver:
+            db_driver = FLAGS.db_driver
+        self.db = utils.import_object(db_driver)
 
     def index(self, req):
-        allowed_keys = [ 'id', 'name']
-        return [_entity_inst(inst, allowed_keys) for inst in instdir.all]
+        unfiltered = [ 'id', 'name']
+        instance_list = self.instance_get_all(self.context)
+        return [_entity_inst(inst, unfiltered) for inst in instance_list]
 
     def detail(self, req):
         return [_entity_inst(inst) for inst in instdir.all]
@@ -79,12 +86,21 @@ class Controller(base.Controller):
         instance.save()
         return exc.HTTPNoContent()
 
+    def _id_translator(self):
+        service = nova.image.service.ImageService.load()
+        return _id_translator.RackspaceAPIIdTranslator(
+            "image", self.service.__class__.__name__)
+
     def _build_server_instance(self, req):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
+
+        image_id = env['server']['imageId']
+        opaque_id = self._id_translator.from_rs_id(image_id)
+
         inst['name'] = env['server']['name']
-        inst['image_id'] = env['server']['imageId']
+        inst['image_id'] = opaque_id
         inst['instance_type'] = env['server']['flavorId']
         inst['user_id'] = env['user']['id']
 

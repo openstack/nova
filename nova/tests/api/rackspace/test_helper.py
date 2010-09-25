@@ -1,3 +1,4 @@
+from nova import utils
 import webob
 import webob.dec
 import datetime
@@ -36,6 +37,9 @@ def stub_out_auth(stubs):
     @webob.dec.wsgify
     def fake_wsgi(self, req):
         return self.application
+
+    def get_my_ip():
+        return '127.0.0.1' 
     
     stubs.Set(nova.api.rackspace.AuthMiddleware, 
         '__init__', fake_auth_init) 
@@ -45,6 +49,7 @@ def stub_out_auth(stubs):
         '__call__', fake_wsgi) 
     stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
         '__call__', fake_wsgi)
+    stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
 
 class FakeAuthDatabase(object):
     data = {}
