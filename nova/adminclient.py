@@ -223,7 +223,6 @@ class NovaAdminClient(object):
         """
         Splits a cloud controller endpoint url.
         """
-        import logging; logging.debug('clc_url = %s', clc_url)
         parts = httplib.urlsplit(clc_url)
         is_secure = parts.scheme == 'https'
         ip, port = parts.netloc.split(':')
