@@ -48,15 +48,15 @@ if [ "$CMD" == "clear" ]; then
     iptables -P FORWARD ACCEPT
     iptables -P OUTPUT ACCEPT
     iptables -F
+    iptables -t nat -F
     iptables -F nova_input
     iptables -F nova_output
     iptables -F nova_forward
-    iptables -X
-    iptables -t nat -F
     iptables -t nat -F nova_input
     iptables -t nat -F nova_output
     iptables -t nat -F nova_forward
     iptables -t nat -X
+    iptables -X
 fi
 
 if [ "$CMD" == "base" ] || [ "$CMD" == "all" ]; then
