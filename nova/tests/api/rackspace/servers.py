@@ -53,6 +53,7 @@ class ServersTest(unittest.TestCase):
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
+        req.headers['content-type'] = 'application/json'
         res = req.get_response(nova.api.API())
         print res
 

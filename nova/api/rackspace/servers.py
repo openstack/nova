@@ -14,8 +14,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import time
 
+import time
+import nova.image.service
 from nova import wsgi
 from nova import db
 from nova import flags
@@ -23,6 +24,7 @@ from nova import rpc
 from nova import utils
 from nova import compute
 from nova import flags
+from nova.compute import power_state
 from nova.api.rackspace import base
 from nova.api.rackspace import _id_translator
 from webob import exc
@@ -30,6 +32,16 @@ from webob import exc
 FLAGS = flags.FLAGS
 
 class Controller(wsgi.Controller):
+
+    _power_mapping = { 
+        power_state.NOSTATE:  'build', 
+        power_state.RUNNING:  'active',
+        power_state.BLOCKED:  'active',
+        power_state.PAUSED:   'suspended',
+        power_state.SHUTDOWN: 'active',
+        power_state.SHUTOFF:  'active',
+        power_state.CRASHED:  'error'
+    }
 
     _serialization_metadata = {
         'application/xml': {
@@ -74,7 +86,7 @@ class Controller(wsgi.Controller):
         rpc.cast(
             FLAGS.compute_topic, {
                 "method": "run_instance",
-                "args": {"instance_id": inst.instance_id}})
+                "args": {"instance_id": inst.id}})
         return _entity_inst(inst)
 
     def update(self, req, id):
@@ -121,33 +133,31 @@ class Controller(wsgi.Controller):
                                 'default')['bridge_name']
 
         inst.save()
-        return _entity_inst(inst)
+        return inst
+
+    def _filter_params(self, inst_dict):
+        pass
 
     def _entity_list(self, entities):
         return dict(servers=entities)
 
     def _entity_detail(self, inst):
         """ Maps everything to Rackspace-like attributes for return"""
-        inst_dir = {}
+        inst_dict = {}
 
-        mapped_keys = dict(status='state_description', imageId='image_id', 
+        mapped_keys = dict(status='state', imageId='image_id', 
             flavorId='instance_type', name='name')
 
         for k,v in mapped_keys.iteritems():
-            inst_dir[k] = inst[v]
+            inst_dict[k] = inst[v]
 
-        inst_dir['addresses'] = dict(public=[], private=[])
-        inst_dir['metadata'] = {}
-        inst_dir['hostId'] = ''
+        inst_dict['status'] = Controller._power_mapping[inst_dict['status']]
+        inst_dict['addresses'] = dict(public=[], private=[])
+        inst_dict['metadata'] = {}
+        inst_dict['hostId'] = ''
 
-        return dict(server=inst_dir)
+        return dict(server=inst_dict)
 
     def _entity_inst(self, inst):
         """ Filters all model attributes save for id and name """
         return dict(server=dict(id=inst['id'], name=inst['name']))
-
-    def _to_rs_power_state(self, inst):
-        pass
-
-    def _from_rs_power_state(self, inst):
-        pass
