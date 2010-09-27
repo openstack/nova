@@ -140,7 +140,7 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        mapper.resource("server", "servers", controller=servers.Controller()
+        mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'})
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})

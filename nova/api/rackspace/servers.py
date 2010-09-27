@@ -29,7 +29,6 @@ FLAGS = flags.FLAGS
 class Controller(base.Controller):
     _serialization_metadata = {
         'application/xml': {
-            "plurals": "servers",
             "attributes": {
                 "server": [ "id", "imageId", "name", "flavorId", "hostId", 
                             "status", "progress", "addresses", "metadata", 
@@ -39,7 +38,7 @@ class Controller(base.Controller):
     }
 
     def __init__(self):
-        self.instdir = compute.InstanceDirectory()
+        self.instdir = None # TODO(cerberus): compute doesn't exist. compute.InstanceDirectory()
 
     def index(self, req):
         allowed_keys = [ 'id', 'name']
@@ -121,7 +120,7 @@ class Controller(base.Controller):
             'reservation_id', 'project_id', 'launch_time',
             'bridge_name', 'mac_address', 'user_id']
 
-        for key in filtered_keys::
+        for key in filtered_keys:
             del inst[key]
 
         if allowed_keys:
