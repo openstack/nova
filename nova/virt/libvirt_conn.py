@@ -319,6 +319,8 @@ class LibvirtConnection(object):
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
         ip_address = db.instance_get_fixed_address({}, instance['id'])
+        # Assume that the gateway also acts as the dhcp server.
+        dhcp_server = network['gateway']
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -327,7 +329,8 @@ class LibvirtConnection(object):
                     'vcpus': instance_type['vcpus'],
                     'bridge_name': network['bridge'],
                     'mac_address': instance['mac_address'],
-                    'ip_address': ip_address }
+                    'ip_address': ip_address,
+                    'dhcp_server': dhcp_server }
         libvirt_xml = self.libvirt_xml % xml_info
         logging.debug('instance %s: finished toXML method', instance['name'])
 
@@ -498,6 +501,7 @@ class NWFilterFirewall(object):
         return '''<filter name='nova-base-filter' chain='root'>
   <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
   <filterref filter='clean-traffic' />
+  <filterref filter='allow-dhcp-server' />
   <rule action='drop' direction='in' priority='1000'>
     <ipv6 />
   </rule>
