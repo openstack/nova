@@ -497,20 +497,36 @@ class NWFilterFirewall(object):
         self._conn = get_connection
 
 
-    def nova_base_filter(self):
-        return '''<filter name='nova-base-filter' chain='root'>
-  <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
-  <filterref filter='clean-traffic' />
-  <filterref filter='allow-dhcp-server' />
-  <rule action='drop' direction='in' priority='1000'>
-    <ipv6 />
-  </rule>
-  <rule action='drop' direction='in' priority='1000'>
-    <ip />
-  </rule>
-</filter>'''
+    nova_base_filter = '''<filter name='nova-base' chain='root'>
+                            <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
+                            <filterref filter='no-mac-spoofing'/>
+                            <filterref filter='no-ip-spoofing'/>
+                            <filterref filter='no-arp-spoofing'/>
+                            <filterref filter='allow-dhcp-server'/>
+                            <filterref filter='nova-base-ipv4'/>
+                            <filterref filter='nova-base-ipv6'/>
+                          </filter>'''
+
+    nova_base_ipv4_filter = '''<filter name='nova-base-ipv4' chain='ipv4'>
+                                 <rule action='drop' direction='in'
+                                       priority='400' />
+                               </filter>'''
 
 
+    nova_base_ipv6_filter = '''<filter name='nova-base-ipv6' chain='ipv6'>
+                                 <rule action='drop' direction='in'
+                                       priority='400' />
+                               </filter>'''
+
+
+    def _define_filter(self, xml):
+        if callable(xml):
+            xml = xml()
+        d = threads.deferToThread(self._conn.nwfilterDefineXML, xml)
+        return d
+
+
+    @defer.inlineCallbacks
     def setup_nwfilters_for_instance(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
@@ -518,63 +534,24 @@ class NWFilterFirewall(object):
         the base filter are all in place.
         """
 
-        d = self.ensure_base_filter()
+        yield self._define_filter(self.nova_base_ipv4_filter)
+        yield self._define_filter(self.nova_base_ipv6_filter)
+        yield self._define_filter(self.nova_base_filter)
 
         nwfilter_xml  = ("<filter name='nova-instance-%s' chain='root'>\n" +
-                         "  <filterref filter='nova-base-filter' />\n"
+                         "  <filterref filter='nova-base' />\n"
                         ) % instance['name']
 
         for security_group in instance.security_groups:
-            d.addCallback(lambda _:self.ensure_security_group_filter(security_group.id))
+            yield self._define_filter(
+                   self.security_group_to_nwfilter_xml(security_group['id']))
 
             nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
                             ) % security_group.id
         nwfilter_xml += "</filter>"
 
-        d.addCallback(lambda _: threads.deferToThread(
-                                   self._conn.nwfilterDefineXML,
-                                   nwfilter_xml))
-        return d
-
-
-    def _nwfilter_name_for_security_group(self, security_group_id):
-        return 'nova-secgroup-%d' % (security_group_id,)
-
-
-    # TODO(soren): Should override be the default (and should it even
-    #              be optional? We save a bit of processing time in
-    #              libvirt by only defining this conditionally, but
-    #              we still have to go and ask libvirt if the group
-    #              is already defined, and there's the off chance of
-    #              of inconsitencies having snuck in which would get
-    #              fixed by just redefining the filter.
-    def define_filter(self, name, xml_generator, override=False):
-        if not override:
-            def _already_exists_check(filterlist, filter):
-                return filter in filterlist
-            d = threads.deferToThread(self._conn.listNWFilters)
-            d.addCallback(_already_exists_check, name)
-        else:
-            # Pretend we looked it up and it wasn't defined
-            d = defer.succeed(False)
-        def _define_if_not_exists(exists, xml_generator):
-            if not exists:
-                xml = xml_generator()
-                return threads.deferToThread(self._conn.nwfilterDefineXML, xml)
-        d.addCallback(_define_if_not_exists, xml_generator)
-        return d
-
-
-    def ensure_base_filter(self):
-        return self.define_filter('nova-base-filter', self.nova_base_filter)
-
-
-    def ensure_security_group_filter(self, security_group_id, override=False):
-        return self.define_filter(
-                   self._nwfilter_name_for_security_group(security_group_id),
-                   lambda:self.security_group_to_nwfilter_xml(security_group_id),
-                   override=override)
-
+        yield self._define_filter(nwfilter_xml)
+        return
 
     def security_group_to_nwfilter_xml(self, security_group_id):
         security_group = db.security_group_get({}, security_group_id)
@@ -593,7 +570,7 @@ class NWFilterFirewall(object):
                     if rule.to_port != -1:
                         rule_xml += "code='%s' " % rule.to_port
 
-		rule_xml += '/>\n'
+                rule_xml += '/>\n'
             rule_xml += "</rule>\n"
-        xml = '''<filter name='nova-secgroup-%s' chain='root'>%s</filter>''' % (security_group_id, rule_xml,)
+        xml = '''<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>''' % (security_group_id, rule_xml,)
         return xml
