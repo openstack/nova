@@ -448,7 +448,7 @@ class LibvirtConnection(object):
 
     def refresh_security_group(self, security_group_id):
         fw = NWFilterFirewall(self._conn)
-        fw.ensure_security_group_filter(security_group_id, override=True)
+        fw.ensure_security_group_filter(security_group_id)
 
 
 class NWFilterFirewall(object):
@@ -543,15 +543,19 @@ class NWFilterFirewall(object):
                         ) % instance['name']
 
         for security_group in instance.security_groups:
-            yield self._define_filter(
-                   self.security_group_to_nwfilter_xml(security_group['id']))
+            yield self.ensure_security_group_filter(security_group['id'])
 
             nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
-                            ) % security_group.id
+                            ) % security_group['id']
         nwfilter_xml += "</filter>"
 
         yield self._define_filter(nwfilter_xml)
         return
+
+    def ensure_security_group_filter(self, security_group_id):
+        return self._define_filter(
+                   self.security_group_to_nwfilter_xml(security_group_id))
+
 
     def security_group_to_nwfilter_xml(self, security_group_id):
         security_group = db.security_group_get({}, security_group_id)
