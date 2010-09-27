@@ -20,6 +20,7 @@ from nova import db
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import compute
 from nova.api.rackspace import base
 from webob import exc
 from nova import flags
