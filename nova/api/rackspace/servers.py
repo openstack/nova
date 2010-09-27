@@ -16,6 +16,7 @@
 #    under the License.
 import time
 
+from nova import wsgi
 from nova import db
 from nova import flags
 from nova import rpc
@@ -29,13 +30,12 @@ from webob import exc
 FLAGS = flags.FLAGS
 
 class Controller(wsgi.Controller):
+
     _serialization_metadata = {
         'application/xml': {
-            "plurals": "servers",
             "attributes": {
                 "server": [ "id", "imageId", "name", "flavorId", "hostId", 
-                            "status", "progress", "addresses", "metadata", 
-                            "progress" ]
+                            "status", "progress", "progress" ]
             }
         }
     }
@@ -46,21 +46,19 @@ class Controller(wsgi.Controller):
         self.db = utils.import_object(db_driver)
 
     def index(self, req):
-        unfiltered = [ 'id', 'name']
         instance_list = self.db.instance_get_all(None)
-        res = [self._entity_inst(inst, unfiltered) for inst in \ 
-            instance_list]
+        res = [self._entity_inst(inst)['server'] for inst in instance_list]
         return self._entity_list(res)
 
     def detail(self, req):
-        res = [self._entity_inst(inst) for inst in \
+        res = [self._entity_detail(inst)['server'] for inst in \
                 self.db.instance_get_all(None)]
         return self._entity_list(res)
 
     def show(self, req, id):
         inst = self.db.instance_get(None, id)
         if inst:
-            return self._entity_inst(inst)
+            return self._entity_detail(inst)
         raise exc.HTTPNotFound()
 
     def delete(self, req, id):
@@ -128,25 +126,28 @@ class Controller(wsgi.Controller):
     def _entity_list(self, entities):
         return dict(servers=entities)
 
-    def _entity_inst(self, inst, allowed_keys=None):
+    def _entity_detail(self, inst):
         """ Maps everything to Rackspace-like attributes for return"""
+        inst_dir = {}
 
-        translated_keys = dict(metadata={}, status=state_description,
-            id=instance_id, imageId=image_id, flavorId=instance_type,)
+        mapped_keys = dict(status='state_description', imageId='image_id', 
+            flavorId='instance_type', name='name')
 
-        for k,v in translated_keys.iteritems():
-            inst[k] = inst[v]
+        for k,v in mapped_keys.iteritems():
+            inst_dir[k] = inst[v]
 
-        filtered_keys = ['instance_id', 'state_description', 'state',
-            'reservation_id', 'project_id', 'launch_time',
-            'bridge_name', 'mac_address', 'user_id']
+        inst_dir['addresses'] = dict(public=[], private=[])
+        inst_dir['metadata'] = {}
+        inst_dir['hostId'] = ''
 
-        for key in filtered_keys:
-            del inst[key]
+        return dict(server=inst_dir)
 
-        if allowed_keys:
-            for key in inst.keys():
-                if key not in allowed_keys:
-                    del inst[key]
+    def _entity_inst(self, inst):
+        """ Filters all model attributes save for id and name """
+        return dict(server=dict(id=inst['id'], name=inst['name']))
 
-        return dict(server=inst)
+    def _to_rs_power_state(self, inst):
+        pass
+
+    def _from_rs_power_state(self, inst):
+        pass

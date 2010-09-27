@@ -17,10 +17,25 @@
 
 import unittest
 import stubout
-from nova.api.rackspace import servers
 import nova.api.rackspace
+import nova.db.api
+from nova import flags
+from nova.api.rackspace import servers
+from nova.db.sqlalchemy.models import Instance
 from nova.tests.api.test_helper import *
 from nova.tests.api.rackspace import test_helper
+from nova import db
+
+FLAGS = flags.FLAGS
+
+def return_server(context, id):
+    return stub_instance(id)
+
+def return_servers(context):
+    return [stub_instance(i) for i in xrange(5)]
+
+def stub_instance(id):
+    return Instance(id=id, state=0, )
 
 class ServersTest(unittest.TestCase):
     def setUp(self):
@@ -30,9 +45,19 @@ class ServersTest(unittest.TestCase):
         test_helper.stub_for_testing(self.stubs)
         test_helper.stub_out_rate_limiting(self.stubs)
         test_helper.stub_out_auth(self.stubs)
+        self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server)
 
     def tearDown(self):
         self.stubs.UnsetAll()
+
+    def test_get_server_by_id(self):
+        req = webob.Request.blank('/v1.0/servers/1')
+        res = req.get_response(nova.api.API())
+        print res
+
+    def test_get_backup_schedule(self):
+        pass
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
@@ -42,14 +67,10 @@ class ServersTest(unittest.TestCase):
     def test_create_instance(self):
         pass
 
-    def test_get_server_by_id(self):
-        pass
-
-    def test_get_backup_schedule(self):
-        pass
-
     def test_get_server_details(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers/detail')
+        res = req.get_response(nova.api.API())
+        print res
 
     def test_get_server_ips(self):
         pass
