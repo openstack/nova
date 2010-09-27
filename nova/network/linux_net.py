@@ -150,8 +150,13 @@ def update_dhcp(context, network_id):
     signal causing it to reload, otherwise spawn a new instance
     """
     network_ref = db.network_get(context, network_id)
-    with open(_dhcp_file(network_ref['vlan'], 'conf'), 'w') as f:
+
+    conffile = _dhcp_file(network_ref['vlan'], 'conf')
+    with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_id))
+
+    # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
+    os.chmod(conffile, 0644)
 
     pid = _dnsmasq_pid_for(network_ref['vlan'])
 
