@@ -91,6 +91,33 @@ class Test(unittest.TestCase):
         result = webob.Request.blank('/test/123').get_response(Router())
         self.assertNotEqual(result.body, "123")
 
-    def test_serializer(self):
-        # TODO(eday): Placeholder for serializer testing.
-        pass
+
+class SerializerTest(unittest.TestCase):
+
+    def match(self, url, accept, expect):
+        input_dict = dict(servers=dict(a=(2,3)))
+        expected_xml = '<servers><a>(2,3)</a></servers>'
+        expected_json = '{"servers":{"a":[2,3]}}'
+        req = webob.Request.blank(url, headers=dict(Accept=accept))
+        result = wsgi.Serializer(req.environ).to_content_type(input_dict)
+        result = result.replace('\n', '').replace(' ', '')
+        if expect == 'xml':
+            self.assertEqual(result, expected_xml)
+        elif expect == 'json':
+            self.assertEqual(result, expected_json)
+        else:
+            raise "Bad expect value"
+
+    def test_basic(self):
+        self.match('/servers/4.json', None, expect='json')
+        self.match('/servers/4', 'application/json', expect='json')
+        self.match('/servers/4', 'application/xml', expect='xml')
+        self.match('/servers/4.xml',  None, expect='xml')
+
+    def test_defaults_to_json(self):
+        self.match('/servers/4', None, expect='json')
+        self.match('/servers/4', 'text/html', expect='json')
+
+    def test_suffix_takes_precedence_over_accept_header(self):
+        self.match('/servers/4.xml', 'application/json', expect='xml')
+        self.match('/servers/4.xml.', 'application/json', expect='json')

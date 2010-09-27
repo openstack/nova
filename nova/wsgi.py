@@ -29,6 +29,7 @@ import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True)
 import routes
 import routes.middleware
+import webob
 import webob.dec
 import webob.exc
 
@@ -239,11 +240,19 @@ class Serializer(object):
         'metadata' is an optional dict mapping MIME types to information
         needed to serialize a dictionary to that type.
         """
-        self.environ = environ
         self.metadata = metadata or {}
-        self._methods = {
-            'application/json': self._to_json,
-            'application/xml': self._to_xml}
+        req = webob.Request(environ)
+        suffix = req.path_info.split('.')[-1].lower()
+        if suffix == 'json':
+            self.handler = self._to_json
+        elif suffix == 'xml':
+            self.handler = self._to_xml
+        elif 'application/json' in req.accept:
+            self.handler = self._to_json
+        elif 'application/xml' in req.accept:
+            self.handler = self._to_xml
+        else:
+            self.handler = self._to_json # default
 
     def to_content_type(self, data):
         """
@@ -251,9 +260,7 @@ class Serializer(object):
         will be decided based on the Content Type requested in self.environ:
         by Accept: header, or by URL suffix.
         """
-        mimetype = 'application/xml'
-        # TODO(gundlach): determine mimetype from request
-        return self._methods.get(mimetype, repr)(data)
+        return self.handler(data)
 
     def _to_json(self, data):
         import json
