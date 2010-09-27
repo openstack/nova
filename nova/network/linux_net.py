@@ -118,15 +118,16 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
         _execute("sudo brctl addif %s %s" % (bridge, interface))
-        if net_attrs:
-            _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                    (bridge,
-                     net_attrs['gateway'],
-                     net_attrs['broadcast'],
-                     net_attrs['netmask']))
-            _confirm_rule("FORWARD --in-interface %s -j ACCEPT" % bridge)
-        else:
-            _execute("sudo ifconfig %s up" % bridge)
+
+    if net_attrs:
+        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
+                (bridge,
+                 net_attrs['gateway'],
+                 net_attrs['broadcast'],
+                 net_attrs['netmask']))
+        _confirm_rule("FORWARD --in-interface %s -j ACCEPT" % bridge)
+    else:
+        _execute("sudo ifconfig %s up" % bridge)
 
 
 def get_dhcp_hosts(context, network_id):
