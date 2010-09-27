@@ -116,7 +116,8 @@ class CloudController(object):
         return result
 
     def _trigger_refresh_security_group(self, security_group):
-        nodes = set([instance.host for instance in security_group.instances])
+        nodes = set([instance['host'] for instance in security_group.instances
+                       if instance['host'] is not None])
         for node in nodes:
             rpc.call('%s.%s' % (FLAGS.compute_topic, node),
                      { "method": "refresh_security_group",
