@@ -561,7 +561,7 @@ class NWFilterFirewall(object):
         security_group = db.security_group_get({}, security_group_id)
         rule_xml = ""
         for rule in security_group.rules:
-            rule_xml += "<rule action='accept' direction='in' priority='900'>"
+            rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
                 rule_xml += "<%s srcipaddr='%s' " % (rule.protocol, rule.cidr)
                 if rule.protocol in ['tcp', 'udp']:
