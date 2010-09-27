@@ -28,6 +28,11 @@ from nova import flags
 from nova import utils
 
 
+def _bin_file(script):
+    """Return the absolute path to scipt in the bin directory"""
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
@@ -39,6 +44,8 @@ flags.DEFINE_string('public_interface', 'vlan1',
                         'Interface for public IP addresses')
 flags.DEFINE_string('bridge_dev', 'eth0',
                         'network device for bridges')
+flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
+                        'location of nova-dhcpbridge')
 
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
@@ -222,7 +229,7 @@ def _dnsmasq_cmd(net):
            ' --except-interface=lo',
            ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
            ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
-           ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
+           ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
     return ''.join(cmd)
 
@@ -242,11 +249,6 @@ def _dhcp_file(vlan, kind):
     """Return path to a pid, leases or conf file for a vlan"""
 
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
-
-
-def _bin_file(script):
-    """Return the absolute path to scipt in the bin directory"""
-    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
 def _dnsmasq_pid_for(vlan):
