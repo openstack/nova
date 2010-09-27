@@ -301,7 +301,7 @@ class CloudController(object):
             IPy.IP(cidr_ip)
             values['cidr'] = cidr_ip
         else:
-            return { 'return': False }
+            values['cidr'] = '0.0.0.0/0'
 
         if ip_protocol and from_port and to_port:
             from_port   = int(from_port)
