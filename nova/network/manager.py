@@ -80,10 +80,13 @@ class NetworkManager(manager.Manager):
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
         super(NetworkManager, self).__init__(*args, **kwargs)
-        # Set up networking for the projects for which we're already
-        # the designated network host.
-        for network in self.db.host_get_networks(None, host=kwargs['host']):
-            self._on_set_network_host(None, network['id'])
+        # Host only gets passed if being instantiated as part of the network
+        # service.
+        if 'host' in kwargs:
+            # Set up networking for the projects for which we're already
+            # the designated network host.
+            for network in self.db.host_get_networks(None, host=kwargs['host']):
+                self._on_set_network_host(None, network['id'])
 
     def set_network_host(self, context, project_id):
         """Safely sets the host of the projects network"""
