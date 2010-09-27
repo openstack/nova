@@ -503,20 +503,49 @@ class NWFilterFirewall(object):
                             <filterref filter='no-ip-spoofing'/>
                             <filterref filter='no-arp-spoofing'/>
                             <filterref filter='allow-dhcp-server'/>
+                            <filterref filter='nova-allow-dhcp-server'/>
                             <filterref filter='nova-base-ipv4'/>
                             <filterref filter='nova-base-ipv6'/>
                           </filter>'''
 
-    nova_base_ipv4_filter = '''<filter name='nova-base-ipv4' chain='ipv4'>
-                                 <rule action='drop' direction='in'
-                                       priority='400' />
-                               </filter>'''
+    nova_dhcp_filter = '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
+                            <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                              <rule action='accept' direction='out'
+                                    priority='100'>
+                                <udp srcipaddr='0.0.0.0'
+                                     dstipaddr='255.255.255.255'
+                                     srcportstart='68'
+                                     dstportstart='67'/>
+                              </rule>
+                              <rule action='accept' direction='in' priority='100'>
+                                <udp srcipaddr='$DHCPSERVER'
+                                     srcportstart='67'
+                                     dstportstart='68'/>
+                              </rule>
+                            </filter>'''
+
+    def nova_base_ipv4_filter(self):
+        retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
+        for protocol in ['tcp', 'udp', 'icmp']:
+            for direction,action in [('out','accept'),
+                                     ('in','drop')]:
+                retval += """<rule action='%s' direction='%s' priority='400'>
+                               <%s />
+                             </rule>""" % (action, direction, protocol)
+        retval += '</filter>'
+        return retval
 
 
-    nova_base_ipv6_filter = '''<filter name='nova-base-ipv6' chain='ipv6'>
-                                 <rule action='drop' direction='in'
-                                       priority='400' />
-                               </filter>'''
+    def nova_base_ipv6_filter(self):
+        retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
+        for protocol in ['tcp', 'udp', 'icmp']:
+            for direction,action in [('out','accept'),
+                                     ('in','drop')]:
+                retval += """<rule action='%s' direction='%s' priority='400'>
+                               <%s-ipv6 />
+                             </rule>""" % (action, direction, protocol)
+        retval += '</filter>'
+        return retval
 
 
     def _define_filter(self, xml):
@@ -536,6 +565,7 @@ class NWFilterFirewall(object):
 
         yield self._define_filter(self.nova_base_ipv4_filter)
         yield self._define_filter(self.nova_base_ipv6_filter)
+        yield self._define_filter(self.nova_dhcp_filter)
         yield self._define_filter(self.nova_base_filter)
 
         nwfilter_xml  = ("<filter name='nova-instance-%s' chain='root'>\n" +
