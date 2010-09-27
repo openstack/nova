@@ -1,9 +1,13 @@
+from nova import utils
 import webob
 import webob.dec
 import datetime
 from nova.wsgi import Router
 from nova import auth
 import nova.api.rackspace.auth
+from nova import flags
+
+FLAGS = flags.FLAGS
 
 class Context(object): 
     pass
@@ -25,26 +29,35 @@ def fake_auth_init(self):
     self.auth = FakeAuthManager()
     self.host = 'foo'
 
+@webob.dec.wsgify
+def fake_wsgi(self, req):
+    return self.application
+
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
+    
+    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+        '__init__', fake_auth_init) 
+    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+        '__call__', fake_wsgi) 
 
+def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
         super(nova.api.rackspace.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    @webob.dec.wsgify
-    def fake_wsgi(self, req):
-        return self.application
-    
-    stubs.Set(nova.api.rackspace.AuthMiddleware, 
-        '__init__', fake_auth_init) 
     stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
         '__init__', fake_rate_init)
-    stubs.Set(nova.api.rackspace.AuthMiddleware, 
-        '__call__', fake_wsgi) 
+
     stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
         '__call__', fake_wsgi)
+
+def stub_for_testing(stubs):
+    def get_my_ip():
+        return '127.0.0.1' 
+    stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
+    FLAGS.FAKE_subdomain = 'rs'
 
 class FakeAuthDatabase(object):
     data = {}
