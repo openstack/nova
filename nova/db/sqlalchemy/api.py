@@ -22,6 +22,7 @@ Implementation of SQLAlchemy backend
 from nova import db
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -356,6 +357,7 @@ def instance_create(_context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
         instance_ref[key] = value
+    instance_ref.ec2_id = utils.generate_uid(instance_ref.__prefix__)
     instance_ref.save()
     return instance_ref
 
@@ -408,8 +410,16 @@ def instance_get_by_reservation(_context, reservation_id):
                  ).all()
 
 
-def instance_get_by_str(context, str_id):
-    return models.Instance.find_by_str(str_id, deleted=_deleted(context))
+def instance_get_by_ec2_id(context, ec2_id):
+    session = get_session()
+    instance_ref = session.query(models.Instance
+                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(deleted=_deleted(context)
+                       ).first()
+    if not instance_ref:
+        raise exception.NotFound('Instance %s not found' % (ec2_id))
+
+    return instance_ref
 
 
 def instance_get_fixed_address(_context, instance_id):
@@ -699,7 +709,7 @@ def auth_create_token(_context, token):
         tk[k] = v
     tk.save()
     return tk
-    
+
 
 ###################
 
@@ -768,6 +778,7 @@ def volume_create(_context, values):
     volume_ref = models.Volume()
     for (key, value) in values.iteritems():
         volume_ref[key] = value
+    volume_ref.ec2_id = utils.generate_uid(volume_ref.__prefix__)
     volume_ref.save()
     return volume_ref
 
@@ -821,8 +832,16 @@ def volume_get_by_project(context, project_id):
                  ).all()
 
 
-def volume_get_by_str(context, str_id):
-    return models.Volume.find_by_str(str_id, deleted=_deleted(context))
+def volume_get_by_ec2_id(context, ec2_id):
+    session = get_session()
+    volume_ref = session.query(models.Volume
+                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(deleted=_deleted(context)
+                       ).first()
+    if not volume_ref:
+        raise exception.NotFound('Volume %s not found' % (ec2_id))
+
+    return volume_ref
 
 
 def volume_get_instance(_context, volume_id):

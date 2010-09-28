@@ -143,7 +143,7 @@ class CloudController(object):
                 },
                 'hostname': hostname,
                 'instance-action': 'none',
-                'instance-id': instance_ref['str_id'],
+                'instance-id': instance_ref['ec2_id'],
                 'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
                 'local-ipv4': address,
@@ -245,7 +245,7 @@ class CloudController(object):
 
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
-        instance_ref = db.instance_get_by_str(context, instance_id[0])
+        instance_ref = db.instance_get_by_ec2_id(context, instance_id[0])
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
                                    instance_ref['host']),
                         {"method": "get_console_output",
@@ -264,7 +264,7 @@ class CloudController(object):
 
     def _format_volume(self, context, volume):
         v = {}
-        v['volumeId'] = volume['str_id']
+        v['volumeId'] = volume['ec2_id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -282,7 +282,7 @@ class CloudController(object):
                                    'device': volume['mountpoint'],
                                    'instanceId': volume['instance_id'],
                                    'status': 'attached',
-                                   'volume_id': volume['str_id']}]
+                                   'volume_id': volume['ec2_id']}]
         else:
             v['attachmentSet'] = [{}]
         return v
@@ -314,13 +314,13 @@ class CloudController(object):
 
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume_ref = db.volume_get_by_str(context, volume_id)
+        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         # TODO(vish): abstract status checking?
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
-        instance_ref = db.instance_get_by_str(context, instance_id)
+        instance_ref = db.instance_get_by_ec2_id(context, instance_id)
         host = instance_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
@@ -336,7 +336,7 @@ class CloudController(object):
                 'volumeId': volume_ref['id']}
 
     def detach_volume(self, context, volume_id, **kwargs):
-        volume_ref = db.volume_get_by_str(context, volume_id)
+        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
         if not instance_ref:
             raise exception.ApiError("Volume isn't attached to anything!")
@@ -356,7 +356,7 @@ class CloudController(object):
             db.volume_detached(context)
         return {'attachTime': volume_ref['attach_time'],
                 'device': volume_ref['mountpoint'],
-                'instanceId': instance_ref['str_id'],
+                'instanceId': instance_ref['ec2_id'],
                 'requestId': context.request_id,
                 'status': volume_ref['attach_status'],
                 'volumeId': volume_ref['id']}
@@ -395,7 +395,7 @@ class CloudController(object):
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            i['instanceId'] = instance['str_id']
+            i['instanceId'] = instance['ec2_id']
             i['imageId'] = instance['image_id']
             i['instanceState'] = {
                 'code': instance['state'],
@@ -446,7 +446,7 @@ class CloudController(object):
             instance_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['str_id']
+                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
             address_rv = {'public_ip': address,
                           'instance_id': instance_id}
             if context.user.is_admin():
@@ -481,7 +481,7 @@ class CloudController(object):
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        instance_ref = db.instance_get_by_str(context, instance_id)
+        instance_ref = db.instance_get_by_ec2_id(context, instance_id)
         fixed_ip_ref = db.fixed_ip_get_by_instance(context, instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
@@ -589,7 +589,7 @@ class CloudController(object):
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
-            inst['hostname'] = instance_ref['str_id']
+            inst['hostname'] = instance_ref['ec2_id']
             db.instance_update(context, inst_id, inst)
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
@@ -618,7 +618,7 @@ class CloudController(object):
         for id_str in instance_id:
             logging.debug("Going to try and terminate %s" % id_str)
             try:
-                instance_ref = db.instance_get_by_str(context, id_str)
+                instance_ref = db.instance_get_by_ec2_id(context, id_str)
             except exception.NotFound:
                 logging.warning("Instance %s was not found during terminate"
                                 % id_str)
@@ -664,7 +664,7 @@ class CloudController(object):
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
-            instance_ref = db.instance_get_by_str(context, id_str)
+            instance_ref = db.instance_get_by_ec2_id(context, id_str)
             host = instance_ref['host']
             rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "reboot_instance",
@@ -674,7 +674,7 @@ class CloudController(object):
 
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
-        volume_ref = db.volume_get_by_str(context, volume_id)
+        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
         now = datetime.datetime.utcnow()

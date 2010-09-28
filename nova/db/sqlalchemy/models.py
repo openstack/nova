@@ -126,6 +126,7 @@ class NovaBase(object):
 #    __tablename__ = 'images'
 #    __prefix__ = 'ami'
 #    id = Column(Integer, primary_key=True)
+#    ec2_id = Column(String(12), unique=True)
 #    user_id = Column(String(255))
 #    project_id = Column(String(255))
 #    image_type = Column(String(255))
@@ -195,6 +196,7 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
+    ec2_id = Column(String(10), unique=True)
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -265,6 +267,7 @@ class Volume(BASE, NovaBase):
     __tablename__ = 'volumes'
     __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
+    ec2_id = Column(String(12), unique=True)
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -398,8 +401,8 @@ class NetworkIndex(BASE, NovaBase):
                                                     uselist=False))
 
 class AuthToken(BASE, NovaBase):
-    """Represents an authorization token for all API transactions. Fields 
-    are a string representing the actual token and a user id for mapping 
+    """Represents an authorization token for all API transactions. Fields
+    are a string representing the actual token and a user id for mapping
     to the actual user"""
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
