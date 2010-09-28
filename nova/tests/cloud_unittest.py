@@ -219,7 +219,7 @@ class CloudTestCase(test.BaseTestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create({}, {})
-        self.cloud.update_instance(self.context, inst['id'],
+        self.cloud.update_instance(self.context, inst['str_id'],
                                    display_name='c00l 1m4g3')
         inst = db.instance_get({}, inst['id'])
         self.assertEqual('c00l 1m4g3', inst['display_name'])

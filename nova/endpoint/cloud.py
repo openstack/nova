@@ -310,10 +310,11 @@ class CloudController(object):
                                    'volume_id': volume['str_id']}]
         else:
             v['attachmentSet'] = [{}]
-        if 'display_name' in volume:
-            v['display_name'] = volume['display_name']
-        if 'display_description' in volume:
-            v['display_description'] = volume['display_description']
+
+        # TODO(todd): check api version and only pass back to nova-aware
+        #             clients
+        v['display_name'] = volume['display_name']
+        v['display_description'] = volume['display_description']
         return v
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -746,7 +747,9 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            db.instance_update(context, instance_id, kwargs)
+            db_context = {}
+            inst = db.instance_get_by_str(db_context, instance_id)
+            db.instance_update(db_context, inst['id'], kwargs)
         return defer.succeed(True)
 
     @rbac.allow('projectmanager', 'sysadmin')
@@ -814,13 +817,6 @@ class CloudController(object):
         return defer.succeed(result)
 
     @rbac.allow('projectmanager', 'sysadmin')
-    def set_image_name(self, context, image_id, name):
-        result = images.update_user_editable_field(context, image_id,
-                                                   'displayName', name)
-        return defer.succeed(result)
-
-    @rbac.allow('projectmanager', 'sysadmin')
-    def set_image_description(self, context, image_id, name):
-        result = images.update_user_editable_field(context, image_id,
-                                                   'displayDescription', name)
+    def update_image(self, context, image_id, **kwargs):
+        result = images.update(context, image_id, dict(kwargs))
         return defer.succeed(result)

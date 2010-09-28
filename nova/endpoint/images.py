@@ -43,11 +43,13 @@ def modify(context, image_id, operation):
 
     return True
 
-def update_user_editable_field(context, image_id, field, value):
+def update(context, image_id, attributes):
+    """update an image's attributes / info.json"""
+    attributes.update({"image_id": image_id})
     conn(context).make_request(
         method='POST',
         bucket='_images',
-        query_args=qs({'image_id': image_id, 'field': field, 'value': value}))
+        query_args=qs(attributes))
     return True
 
 def register(context, image_location):
