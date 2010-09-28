@@ -1,10 +1,12 @@
-from nova import utils
+import json
 import webob
 import webob.dec
 import datetime
+import nova.api.rackspace.auth
+import nova.api.rackspace._id_translator
 from nova.wsgi import Router
 from nova import auth
-import nova.api.rackspace.auth
+from nova import utils
 from nova import flags
 
 FLAGS = flags.FLAGS
@@ -32,7 +34,23 @@ def fake_auth_init(self):
 @webob.dec.wsgify
 def fake_wsgi(self, req):
     req.environ['nova.context'] = dict(user=dict(id=1))
+    if req.body:
+        req.environ['inst_dict'] = json.loads(req.body)
     return self.application
+
+def stub_out_image_translator(stubs):
+    class FakeTranslator(object):
+        def __init__(self, id_type, service_name):
+            pass
+        
+        def to_rs_id(self, id):
+            return id
+
+        def from_rs_id(self, id):
+            return id
+
+    stubs.Set(nova.api.rackspace._id_translator,
+        'RackspaceAPIIdTranslator', FakeTranslator)
 
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):

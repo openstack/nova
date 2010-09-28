@@ -80,9 +80,19 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
-    def test_create_instance(self):
-        pass
+    #def test_create_instance(self):
+    #    test_helper.stub_out_image_translator(self.stubs)
+    #    body = dict(server=dict(
+    #        name='server_test', imageId=2, flavorId=2, metadata={},
+    #        personality = {}
+    #    ))
+    #    req = webob.Request.blank('/v1.0/servers')
+    #    req.method = 'POST'
+    #    req.body = json.dumps(body)
 
+    #    res = req.get_response(nova.api.API())
+
+    #    print res
     def test_update_server_password(self):
         pass
 
@@ -119,22 +129,37 @@ class ServersTest(unittest.TestCase):
             i += 1
 
     def test_server_reboot(self):
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality = {}
+        ))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
+        req.content_type= 'application/json'
+        req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
-        res_dict = json.loads(res.body)
 
     def test_server_rebuild(self):
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality = {}
+        ))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
+        req.content_type= 'application/json'
+        req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
-        res_dict = json.loads(res.body)
 
     def test_server_resize(self):
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality = {}
+        ))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
+        req.content_type= 'application/json'
+        req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
-        res_dict = json.loads(res.body)
 
     def test_delete_server_instance(self):
         req = webob.Request.blank('/v1.0/servers/1')

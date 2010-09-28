@@ -85,7 +85,11 @@ class Controller(wsgi.Controller):
         return exc.HTTPNotFound()
 
     def create(self, req):
+        if not req.environ.has_key('inst_dict'):
+            return exc.HTTPUnprocessableEntity()
+
         inst = self._build_server_instance(req)
+
         rpc.cast(
             FLAGS.compute_topic, {
                 "method": "run_instance",
@@ -93,6 +97,9 @@ class Controller(wsgi.Controller):
         return _entity_inst(inst)
 
     def update(self, req, id):
+        if not req.environ.has_key('inst_dict'):
+            return exc.HTTPUnprocessableEntity()
+
         instance = self.db.instance_get(None, id)
         if not instance:
             return exc.HTTPNotFound()
@@ -105,25 +112,30 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
-        return {}
+        if not req.environ.has_key('inst_dict'):
+            return exc.HTTPUnprocessableEntity()
 
-    def _id_translator(self):
+    def translator_instance(self):
         service = nova.image.service.ImageService.load()
         return _id_translator.RackspaceAPIIdTranslator(
-            "image", self.service.__class__.__name__)
+                "image", service.__class__.__name__)
 
     def _build_server_instance(self, req):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
 
+        env = req.environ['inst_dict']
+
         image_id = env['server']['imageId']
-        opaque_id = self._id_translator.from_rs_id(image_id)
+        opaque_id = self.translator_instance().from_rs_id(image_id)
 
         inst['name'] = env['server']['name']
         inst['image_id'] = opaque_id
         inst['instance_type'] = env['server']['flavorId']
-        inst['user_id'] = env['user']['id']
+
+        user_id = req.environ['nova.context']['user']['id']
+        inst['user_id'] = user_id
 
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
