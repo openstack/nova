@@ -19,6 +19,8 @@
 Implementation of SQLAlchemy backend
 """
 
+import sys
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -349,6 +351,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      'time': time.isoformat()})
     return result.rowcount
 
+
 def fixed_ip_get_by_address(_context, address):
     session = get_session()
     result = session.query(models.FixedIp
@@ -550,7 +553,6 @@ def network_associate(_context, project_id):
         network_ref['project_id'] = project_id
         session.add(network_ref)
     return network_ref
-
 
 
 def network_count(_context):
