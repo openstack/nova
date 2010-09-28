@@ -72,6 +72,7 @@ from nova import flags
 from nova import quota
 from nova import utils
 from nova.auth import manager
+from nova.network import manager as network_manager
 from nova.cloudpipe import pipelib
 
 
@@ -321,6 +322,25 @@ class FloatingIpCommands(object):
                                   floating_ip['address'],
                                   instance)
 
+class NetworkCommands(object):
+    """Class for managing networks."""
+
+    def create(self, num_networks=None, network_size=None,
+               vlan_start=None, vpn_start=None):
+        """Creates floating ips for host by range
+        arguments: [num_networks=FLAG], [network_size=FLAG],
+                   [vlan_start=FLAG, vpn_start=FLAG]"""
+        if not num_networks:
+            num_networks = FLAGS.num_networks
+        if not network_size:
+            network_size = FLAGS.network_size
+        if not vlan_start:
+            vlan_start = FLAGS.vlan_start
+        if not vpn_start:
+            vpn_start = FLAGS.vpn_start
+        net_manager = network_manager.VlanManager()
+        net_manager.create_networks(None, int(num_networks), int(network_size),
+                                    int(vlan_start), int(vpn_start))
 
 CATEGORIES = [
     ('user', UserCommands),
@@ -328,7 +348,8 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
-    ('floating', FloatingIpCommands)
+    ('floating', FloatingIpCommands),
+    ('network', NetworkCommands)
 ]
 
 
@@ -394,9 +415,9 @@ def main():
         fn(*argv)
         sys.exit(0)
     except TypeError:
-        print "Wrong number of arguments supplied"
+        print "Possible wrong number of arguments supplied"
         print "%s %s: %s" % (category, action, fn.__doc__)
-        sys.exit(2)
+        raise
 
 if __name__ == '__main__':
     main()

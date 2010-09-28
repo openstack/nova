@@ -157,7 +157,7 @@ class NetworkManager(manager.Manager):
     def _create_fixed_ips(self, context, network_id):
         """Create all fixed ips for network"""
         network_ref = self.db.network_get(context, network_id)
-        # NOTE(vish): should these be properties of the network as opposed
+        # NOTE(vish): Should these be properties of the network as opposed
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
@@ -308,34 +308,18 @@ class VlanManager(NetworkManager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self.driver.update_dhcp(context, network_ref['id'])
 
-    def allocate_network(self, context, project_id):
-        """Set up the network"""
-        self._ensure_indexes(context)
-        network_ref = db.network_create(context, {'project_id': project_id})
-        network_id = network_ref['id']
-        private_net = IPy.IP(FLAGS.private_range)
-        index = db.network_get_index(context, network_id)
-        vlan = FLAGS.vlan_start + index
-        start = index * FLAGS.network_size
-        significant_bits = 32 - int(math.log(FLAGS.network_size, 2))
-        cidr = "%s/%s" % (private_net[start], significant_bits)
-        project_net = IPy.IP(cidr)
 
-        net = {}
-        net['cidr'] = cidr
-        # NOTE(vish): we could turn these into properties
-        net['netmask'] = str(project_net.netmask())
-        net['gateway'] = str(project_net[1])
-        net['broadcast'] = str(project_net.broadcast())
-        net['vpn_private_address'] = str(project_net[2])
-        net['dhcp_start'] = str(project_net[3])
-        net['vlan'] = vlan
-        net['bridge'] = 'br%s' % vlan
-        net['vpn_public_address'] = FLAGS.vpn_ip
-        net['vpn_public_port'] = FLAGS.vpn_start + index
-        db.network_update(context, network_id, net)
-        self._create_fixed_ips(context, network_id)
+    def associate_network(self, context, project_id):
+        """Associates a network to a project"""
+        network_ref = db.network_associate(context, project_id)
+        network_id = network_ref['id']
         return network_id
+
+
+    def disassociate_network(self, context, network_id):
+        """Disassociates a newtwork from a project"""
+        db.network_disassocate(context, network_id)
+
 
     def setup_compute_network(self, context, project_id):
         """Sets up matching network for compute hosts"""
@@ -348,17 +332,40 @@ class VlanManager(NetworkManager):
         # TODO(vish): Implement this
         pass
 
-    def _ensure_indexes(self, context):
-        """Ensure the indexes for the network exist
 
-        This could use a manage command instead of keying off of a flag"""
-        if not self.db.network_index_count(context):
-            for index in range(FLAGS.num_networks):
-                self.db.network_index_create(context, {'index': index})
+    def create_networks(self, context, num_networks, network_size,
+                        vlan_start, vpn_start):
+        """Create networks based on parameters"""
+        for index in range(num_networks):
+            private_net = IPy.IP(FLAGS.private_range)
+            vlan = vlan_start + index
+            start = index * network_size
+            significant_bits = 32 - int(math.log(network_size, 2))
+            cidr = "%s/%s" % (private_net[start], significant_bits)
+            project_net = IPy.IP(cidr)
+            net = {}
+            net['cidr'] = cidr
+            net['netmask'] = str(project_net.netmask())
+            net['gateway'] = str(project_net[1])
+            net['broadcast'] = str(project_net.broadcast())
+            net['vpn_private_address'] = str(project_net[2])
+            net['dhcp_start'] = str(project_net[3])
+            net['vlan'] = vlan
+            net['bridge'] = 'br%s' % vlan
+            # NOTE(vish): This makes ports unique accross the cloud, a more
+            #             robust solution would be to make them unique per ip
+            net['vpn_public_port'] = vpn_start + index
+            network_ref = self.db.network_create_safe(context, net)
+            if network_ref:
+                self._create_fixed_ips(context, network_ref['id'])
+
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
         network_ref = self.db.network_get(context, network_id)
+        net = {}
+        net['vpn_public_address'] = FLAGS.vpn_ip
+        db.network_update(context, network_id, net)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref)

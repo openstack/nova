@@ -337,6 +337,11 @@ def key_pair_get_all_by_user(context, user_id):
 ####################
 
 
+def network_associate(context, project_id):
+    """Associate a free network to a project."""
+    return IMPL.network_associate(context, project_id)
+
+
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)
@@ -357,9 +362,12 @@ def network_count_reserved_ips(context, network_id):
     return IMPL.network_count_reserved_ips(context, network_id)
 
 
-def network_create(context, values):
-    """Create a network from the values dictionary."""
-    return IMPL.network_create(context, values)
+def network_create_safe(context, values):
+    """Create a network from the values dict
+
+    The network is only returned if the create succeeds. If the create violates
+    constraints because the network already exists, no exception is raised."""
+    return IMPL.network_create_safe(context, values)
 
 
 def network_create_fixed_ips(context, network_id, num_vpn_clients):
@@ -367,9 +375,14 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
     return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
 
 
-def network_destroy(context, network_id):
-    """Destroy the network or raise if it does not exist."""
-    return IMPL.network_destroy(context, network_id)
+def network_disassociate(context, network_id):
+    """Disassociate the network from project or raise if it does not exist."""
+    return IMPL.network_disassociate(context, network_id)
+
+
+def network_disassociate_all(context):
+    """Disassociate all networks from projects."""
+    return IMPL.network_disassociate_all(context)
 
 
 def network_get(context, network_id):
@@ -396,16 +409,6 @@ def network_get_index(context, network_id):
 def network_get_vpn_ip(context, network_id):
     """Get non-conflicting index for network"""
     return IMPL.network_get_vpn_ip(context, network_id)
-
-
-def network_index_count(context):
-    """Return count of network indexes"""
-    return IMPL.network_index_count(context)
-
-
-def network_index_create(context, values):
-    """Create a network index from the values dict"""
-    return IMPL.network_index_create(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
