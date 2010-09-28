@@ -531,7 +531,8 @@ class NWFilterFirewall(object):
                                      ('in','drop', 399)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s />
-                             </rule>""" % (action, direction, protocol, priority)
+                             </rule>""" % (action, direction,
+                                              priority, protocol)
         retval += '</filter>'
         return retval
 
@@ -544,7 +545,7 @@ class NWFilterFirewall(object):
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s-ipv6 />
                              </rule>""" % (action, direction,
-                                             protocol, priority)
+                                             priority, protocol)
         retval += '</filter>'
         return retval
 
