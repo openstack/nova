@@ -251,6 +251,9 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all(context, user_id)
 
 def instance_get_by_project(context, project_id):
     """Get all instance belonging to a project."""

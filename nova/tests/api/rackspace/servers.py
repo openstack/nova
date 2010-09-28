@@ -32,12 +32,14 @@ FLAGS = flags.FLAGS
 def return_server(context, id):
     return stub_instance(id)
 
-def return_servers(context):
-    return [stub_instance(i) for i in xrange(5)]
+def return_servers(context, user_id=1):
+    return [stub_instance(i, user_id) for i in xrange(5)]
 
-def stub_instance(id):
+
+def stub_instance(id, user_id=1):
     return Instance(
-        id=id, state=0, image_id=10, server_name='server%s'%id
+        id=id, state=0, image_id=10, server_name='server%s'%id,
+        user_id=user_id
     )
 
 class ServersTest(unittest.TestCase):
@@ -50,6 +52,8 @@ class ServersTest(unittest.TestCase):
         test_helper.stub_out_auth(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
         self.stubs.Set(nova.db.api, 'instance_get', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
+            return_servers)
 
     def tearDown(self):
         self.stubs.UnsetAll()

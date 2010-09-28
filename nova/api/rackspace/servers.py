@@ -57,28 +57,32 @@ class Controller(wsgi.Controller):
         self.db = utils.import_object(db_driver)
 
     def index(self, req):
-        instance_list = self.db.instance_get_all(None)
+        user_id = req.environ['nova.context']['user']['id']
+        instance_list = self.db.instance_get_all_by_user(None, user_id)
         res = [self._entity_inst(inst)['server'] for inst in instance_list]
         return self._entity_list(res)
 
     def detail(self, req):
+        user_id = req.environ['nova.context']['user']['id']
         res = [self._entity_detail(inst)['server'] for inst in 
-                self.db.instance_get_all(None)]
+                self.db.instance_get_all_by_user(None, user_id)]
         return self._entity_list(res)
 
     def show(self, req, id):
-        user = req.environ['nova.context']['user']
+        user_id = req.environ['nova.context']['user']['id']
         inst = self.db.instance_get(None, id)
         if inst:
-            return self._entity_detail(inst)
+            if inst.user_id == user_id:
+                return self._entity_detail(inst)
         raise exc.HTTPNotFound()
 
     def delete(self, req, id):
+        user_id = req.environ['nova.context']['user']['id']
         instance = self.db.instance_get(None, id)
-        if not instance:
-            return exc.HTTPNotFound()
-        self.db.instance_destroy(None, id)
-        return exc.HTTPAccepted()
+        if instance and instance['user_id'] == user_id:
+            self.db.instance_destroy(None, id)
+            return exc.HTTPAccepted()
+        return exc.HTTPNotFound()
 
     def create(self, req):
         inst = self._build_server_instance(req)
@@ -95,7 +99,7 @@ class Controller(wsgi.Controller):
 
         attrs = req.environ['nova.context'].get('model_attributes', None)
         if attrs:
-            self.db.instance_update(None, id, attrs)
+            self.db.instance_update(None, id, self._filter_params(attrs))
         return exc.HTTPNoContent()
 
     def action(self, req, id):
@@ -142,7 +146,12 @@ class Controller(wsgi.Controller):
         return inst
 
     def _filter_params(self, inst_dict):
-        pass
+        keys = ['name', 'adminPass']
+        new_attrs = {}
+        for k in keys:
+            if inst_dict.has_key(k):
+                new_attrs[k] = inst_dict[k]
+        return new_attrs
 
     def _entity_list(self, entities):
         return dict(servers=entities)
