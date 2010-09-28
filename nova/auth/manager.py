@@ -491,11 +491,6 @@ class AuthManager(object):
                     drv.delete_project(project.id)
                     raise
 
-                values = { 'name'        : 'default',
-                           'description' : 'default',
-                           'user_id'     : User.safe_id(manager_user),
-                           'project_id'  : project.id }
-                db.security_group_create({}, values)
                 return project
 
     def modify_project(self, project, manager_user=None, description=None):
@@ -570,15 +565,6 @@ class AuthManager(object):
             db.network_destroy(context, network_ref['id'])
         except:
             logging.exception('Could not destroy network for %s',
-                              project)
-        try:
-            project_id = Project.safe_id(project)
-            groups = db.security_group_get_by_project(context={},
-                                                      project_id=project_id)
-            for group in groups:
-                db.security_group_destroy({}, group['id'])
-        except:
-            logging.exception('Could not destroy security groups for %s',
                               project)
 
         with self.driver() as drv:

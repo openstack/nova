@@ -604,6 +604,11 @@ def security_group_destroy(context, security_group_id):
     return IMPL.security_group_destroy(context, security_group_id)
 
 
+def security_group_destroy_all(context):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy_all(context)
+
+
 ####################
 
 
