@@ -22,7 +22,6 @@ from M2Crypto import RSA
 import StringIO
 import time
 
-from tornado import ioloop
 from twisted.internet import defer
 import unittest
 from xml.etree import ElementTree

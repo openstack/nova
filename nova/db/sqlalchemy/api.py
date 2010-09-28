@@ -19,6 +19,8 @@
 Implementation of SQLAlchemy backend
 """
 
+import sys
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -348,6 +350,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      'time': time.isoformat()})
     return result.rowcount
 
+
 def fixed_ip_get_by_address(_context, address):
     session = get_session()
     result = session.query(models.FixedIp
@@ -358,6 +361,7 @@ def fixed_ip_get_by_address(_context, address):
     if not result:
         raise exception.NotFound("No model for address %s" % address)
     return result
+
 
 def fixed_ip_get_instance(_context, address):
     session = get_session()
@@ -708,6 +712,29 @@ def export_device_create(_context, values):
         export_device_ref[key] = value
     export_device_ref.save()
     return export_device_ref
+
+
+###################
+
+
+def auth_destroy_token(_context, token):
+    session = get_session()
+    session.delete(token)
+
+def auth_get_token(_context, token_hash):
+    session = get_session()
+    tk = session.query(models.AuthToken
+                ).filter_by(token_hash=token_hash)
+    if not tk:
+        raise exception.NotFound('Token %s does not exist' % token_hash)
+    return tk
+
+def auth_create_token(_context, token):
+    tk = models.AuthToken()
+    for k,v in token.iteritems():
+        tk[k] = v
+    tk.save()
+    return tk
 
 
 ###################

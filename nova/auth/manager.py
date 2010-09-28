@@ -44,7 +44,7 @@ flags.DEFINE_list('allowed_roles',
 # NOTE(vish): a user with one of these roles will be a superuser and
 #             have access to all api commands
 flags.DEFINE_list('superuser_roles', ['cloudadmin'],
-                  'Roles that ignore rbac checking completely')
+                  'Roles that ignore authorization checking completely')
 
 # NOTE(vish): a user with one of these roles will have it for every
 #             project, even if he or she is not a member of the project
@@ -266,7 +266,7 @@ class AuthManager(object):
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
-        if project_id is '':
+        if project_id == '':
             project_id = user.name
 
         project = self.get_project(project_id)
@@ -304,7 +304,7 @@ class AuthManager(object):
         return "%s:%s" % (user.access, Project.safe_id(project))
 
     def is_superuser(self, user):
-        """Checks for superuser status, allowing user to bypass rbac
+        """Checks for superuser status, allowing user to bypass authorization
 
         @type user: User or uid
         @param user: User to check.

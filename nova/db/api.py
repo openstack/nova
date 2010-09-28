@@ -458,6 +458,44 @@ def export_device_create(context, values):
 
 ###################
 
+def auth_destroy_token(context, token):
+    """Destroy an auth token"""
+    return IMPL.auth_destroy_token(context, token)
+
+def auth_get_token(context, token_hash):
+    """Retrieves a token given the hash representing it"""
+    return IMPL.auth_get_token(context, token_hash)
+
+def auth_create_token(context, token):
+    """Creates a new token"""
+    return IMPL.auth_create_token(context, token_hash, token)
+
+
+###################
+
+
+def quota_create(context, values):
+    """Create a quota from the values dictionary."""
+    return IMPL.quota_create(context, values)
+
+
+def quota_get(context, project_id):
+    """Retrieve a quota or raise if it does not exist."""
+    return IMPL.quota_get(context, project_id)
+
+
+def quota_update(context, project_id, values):
+    """Update a quota from the values dictionary."""
+    return IMPL.quota_update(context, project_id, values)
+
+
+def quota_destroy(context, project_id):
+    """Destroy the quota or raise if it does not exist."""
+    return IMPL.quota_destroy(context, project_id)
+
+
+###################
+
 
 def quota_create(context, values):
     """Create a quota from the values dictionary."""
