@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import unittest
 import stubout
 import nova.api.rackspace
@@ -35,7 +36,9 @@ def return_servers(context):
     return [stub_instance(i) for i in xrange(5)]
 
 def stub_instance(id):
-    return Instance(id=id, state=0, )
+    return Instance(
+        id=id, state=0, image_id=10, server_name='server%s'%id
+    )
 
 class ServersTest(unittest.TestCase):
     def setUp(self):
@@ -53,9 +56,10 @@ class ServersTest(unittest.TestCase):
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
-        req.headers['content-type'] = 'application/json'
         res = req.get_response(nova.api.API())
-        print res
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_backup_schedule(self):
         pass
@@ -63,30 +67,85 @@ class ServersTest(unittest.TestCase):
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
         res = req.get_response(nova.api.API())
-        print res
+        res_dict = json.loads(res.body)
+        
+        i = 0
+        for s in res_dict['servers']:
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['name'], 'server%d'%i)
+            self.assertEqual(s.get('imageId', None), None)
+            i += 1
 
     def test_create_instance(self):
         pass
 
-    def test_get_server_details(self):
+    def test_update_server_password(self):
+        pass
+
+    def test_update_server_name(self):
+        pass
+
+    def test_create_backup_schedules(self):
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req.method = 'POST'
+        res = req.get_response(nova.api.API())
+        self.assertEqual(res.status, '404 Not Found')
+
+    def test_delete_backup_schedules(self):
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req.method = 'DELETE'
+        res = req.get_response(nova.api.API())
+        self.assertEqual(res.status, '404 Not Found')
+
+    def test_get_server_backup_schedules(self):
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        res = req.get_response(nova.api.API())
+        self.assertEqual(res.status, '404 Not Found')
+
+    def test_get_all_server_details(self):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(nova.api.API())
-        print res
-
-    def test_get_server_ips(self):
-        pass
+        res_dict = json.loads(res.body)
+        
+        i = 0
+        for s in res_dict['servers']:
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['name'], 'server%d'%i)
+            self.assertEqual(s['imageId'], 10)
+            i += 1
 
     def test_server_reboot(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        res = req.get_response(nova.api.API())
+        res_dict = json.loads(res.body)
 
     def test_server_rebuild(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        res = req.get_response(nova.api.API())
+        res_dict = json.loads(res.body)
 
     def test_server_resize(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        res = req.get_response(nova.api.API())
+        res_dict = json.loads(res.body)
 
     def test_delete_server_instance(self):
-        pass
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'DELETE'
+
+        self.server_delete_called = False
+        def instance_destroy_mock(context, id):
+            self.server_delete_called = True 
+
+        self.stubs.Set(nova.db.api, 'instance_destroy',
+            instance_destroy_mock)
+
+        res = req.get_response(nova.api.API())
+        self.assertEqual(res.status, '202 Accepted')
+        self.assertEqual(self.server_delete_called, True)
 
 if __name__ == "__main__":
     unittest.main()

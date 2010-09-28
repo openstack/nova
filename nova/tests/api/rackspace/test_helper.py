@@ -31,6 +31,7 @@ def fake_auth_init(self):
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
+    req.environ['nova.context'] = dict(user=dict(id=1))
     return self.application
 
 def stub_out_auth(stubs):

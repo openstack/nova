@@ -209,11 +209,13 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.str_id
+        return self.server_name or self.str_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+
+    server_name = Column(String(255))
 
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)

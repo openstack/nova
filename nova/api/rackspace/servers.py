@@ -25,7 +25,6 @@ from nova import utils
 from nova import compute
 from nova import flags
 from nova.compute import power_state
-from nova.api.rackspace import base
 from nova.api.rackspace import _id_translator
 from webob import exc
 
@@ -63,11 +62,12 @@ class Controller(wsgi.Controller):
         return self._entity_list(res)
 
     def detail(self, req):
-        res = [self._entity_detail(inst)['server'] for inst in \
+        res = [self._entity_detail(inst)['server'] for inst in 
                 self.db.instance_get_all(None)]
         return self._entity_list(res)
 
     def show(self, req, id):
+        user = req.environ['nova.context']['user']
         inst = self.db.instance_get(None, id)
         if inst:
             return self._entity_detail(inst)
@@ -75,10 +75,9 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         instance = self.db.instance_get(None, id)
-
         if not instance:
             return exc.HTTPNotFound()
-        instance.destroy()
+        self.db.instance_destroy(None, id)
         return exc.HTTPAccepted()
 
     def create(self, req):
@@ -93,9 +92,16 @@ class Controller(wsgi.Controller):
         instance = self.db.instance_get(None, id)
         if not instance:
             return exc.HTTPNotFound()
-        instance.update(kwargs['server'])
-        instance.save()
+
+        attrs = req.environ['nova.context'].get('model_attributes', None)
+        if attrs:
+            self.db.instance_update(None, id, attrs)
         return exc.HTTPNoContent()
+
+    def action(self, req, id):
+        """ multi-purpose method used to reboot, rebuild, and 
+        resize a server """
+        return {}
 
     def _id_translator(self):
         service = nova.image.service.ImageService.load()
@@ -132,7 +138,7 @@ class Controller(wsgi.Controller):
                                 inst['project_id'],
                                 'default')['bridge_name']
 
-        inst.save()
+        self.db.instance_create(None, inst)
         return inst
 
     def _filter_params(self, inst_dict):
@@ -146,7 +152,7 @@ class Controller(wsgi.Controller):
         inst_dict = {}
 
         mapped_keys = dict(status='state', imageId='image_id', 
-            flavorId='instance_type', name='name')
+            flavorId='instance_type', name='name', id='id')
 
         for k,v in mapped_keys.iteritems():
             inst_dict[k] = inst[v]
