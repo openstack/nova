@@ -286,8 +286,6 @@ class CloudController(object):
         else:
             v['attachmentSet'] = [{}]
 
-        # TODO(todd): check api version and only pass back to nova-aware
-        #             clients
         v['display_name'] = volume['display_name']
         v['display_description'] = volume['display_description']
         return v
