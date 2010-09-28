@@ -21,8 +21,10 @@
 Utility methods for working with WSGI servers
 """
 
+import json
 import logging
 import sys
+from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
@@ -231,7 +233,7 @@ class Controller(object):
 
 class Serializer(object):
     """
-    Serializes a dictionary to a Content Type specified by a WSGI environment.
+    Serializes and deserializes dictionaries to certain MIME types.
     """
 
     def __init__(self, environ, metadata=None):
@@ -256,21 +258,58 @@ class Serializer(object):
 
     def to_content_type(self, data):
         """
-        Serialize a dictionary into a string.  The format of the string
-        will be decided based on the Content Type requested in self.environ:
-        by Accept: header, or by URL suffix.
+        Serialize a dictionary into a string.
+        
+        The format of the string will be decided based on the Content Type
+        requested in self.environ: by Accept: header, or by URL suffix.
         """
         return self.handler(data)
 
+    def deserialize(self, datastring):
+        """
+        Deserialize a string to a dictionary.
+        
+        The string must be in the format of a supported MIME type.
+        """
+        datastring = datastring.strip()
+        is_xml = (datastring[0] == '<')
+        if not is_xml:
+            return json.loads(datastring)
+        return self._from_xml(datastring)
+
+    def _from_xml(self, datastring):
+        xmldata = self.metadata.get('application/xml', {})
+        plurals = set(xmldata.get('plurals', {}))
+        node = minidom.parseString(datastring).childNodes[0]
+        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+    def _from_xml_node(self, node, listnames):
+        """
+        Convert a minidom node to a simple Python type.
+        
+        listnames is a collection of names of XML nodes whose subnodes should
+        be considered list items.
+        """
+        if len(node.childNodes) == 1 and node.childNodes[0].nodeType == 3:
+            return node.childNodes[0].nodeValue
+        elif node.nodeName in listnames:
+            return [self._from_xml_node(n, listnames) for n in node.childNodes]
+        else:
+            result = dict()
+            for attr in node.attributes.keys():
+                result[attr] = node.attributes[attr].nodeValue
+            for child in node.childNodes:
+                if child.nodeType != node.TEXT_NODE:
+                    result[child.nodeName] = self._from_xml_node(child, listnames)
+            return result
+
     def _to_json(self, data):
-        import json
         return json.dumps(data)
 
     def _to_xml(self, data):
         metadata = self.metadata.get('application/xml', {})
         # We expect data to contain a single key which is the XML root.
         root_key = data.keys()[0]
-        from xml.dom import minidom
         doc = minidom.Document()
         node = self._to_xml_node(doc, metadata, root_key, data[root_key])
         return node.toprettyxml(indent='    ')

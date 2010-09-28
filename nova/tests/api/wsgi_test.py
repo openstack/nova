@@ -121,3 +121,27 @@ class SerializerTest(unittest.TestCase):
     def test_suffix_takes_precedence_over_accept_header(self):
         self.match('/servers/4.xml', 'application/json', expect='xml')
         self.match('/servers/4.xml.', 'application/json', expect='json')
+
+    def test_deserialize(self):
+        xml = """
+            <a a1="1" a2="2">
+              <bs><b>1</b><b>2</b><b>3</b><b><c c1="1"/></b></bs>
+              <d><e>1</e></d>
+              <f>1</f>
+            </a>
+            """.strip()
+        as_dict = dict(a={
+                'a1': '1',
+                'a2': '2',
+                'bs': ['1', '2', '3', {'c': dict(c1='1')}],
+                'd': {'e': '1'},
+                'f': '1'})
+        metadata = {'application/xml': dict(plurals={'bs': 'b', 'ts': 't'})}
+        serializer = wsgi.Serializer({}, metadata)
+        self.assertEqual(serializer.deserialize(xml), as_dict)
+
+    def test_deserialize_empty_xml(self):
+        xml = """<a></a>"""
+        as_dict = {"a": {}}
+        serializer = wsgi.Serializer({})
+        self.assertEqual(serializer.deserialize(xml), as_dict)
