@@ -42,7 +42,8 @@ class Scheduler(object):
     def service_is_up(service):
         """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
-        elapsed = datetime.datetime.now() - last_heartbeat
+        # Timestamps in DB are UTC.
+        elapsed = datetime.datetime.utcnow() - last_heartbeat
         return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):
