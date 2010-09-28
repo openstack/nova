@@ -172,7 +172,7 @@ def update_dhcp(context, network_id):
         # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
         #           correct dnsmasq process
         try:
-            os.kill(pid, signal.SIGHUP)
+            _execute('sudo kill -HUP %d' % pid)
             return
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Hupping dnsmasq threw %s", exc)
@@ -240,7 +240,7 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            os.kill(pid, signal.SIGTERM)
+            _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Killing dnsmasq threw %s", exc)
 
