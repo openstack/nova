@@ -389,6 +389,13 @@ def instance_get_all(context):
                  ).filter_by(deleted=_deleted(context)
                  ).all()
 
+def instance_get_all_by_user(context, user_id):
+    session = get_session()
+    return session.query(models.Instance
+                 ).options(joinedload_all('fixed_ip.floating_ips')
+                 ).filter_by(deleted=_deleted(context)
+                 ).filter_by(user_id=user_id
+                 ).all()
 
 def instance_get_by_project(context, project_id):
     session = get_session()

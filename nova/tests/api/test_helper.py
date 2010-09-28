@@ -1,4 +1,5 @@
 import webob.dec
+from nova import wsgi
 
 class APIStub(object):
     """Class to verify request and mark it was called."""

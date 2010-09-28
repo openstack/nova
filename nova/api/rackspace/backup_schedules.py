@@ -15,16 +15,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import wsgi
+import time
+from webob import exc
 
+from nova import wsgi
+from nova.api.rackspace import _id_translator
+import nova.image.service
 
 class Controller(wsgi.Controller):
-    """TODO(eday): Base controller for all rackspace controllers. What is this
-    for? Is this just Rackspace specific? """
+    def __init__(self):
+        pass
 
-    @classmethod
-    def render(cls, instance):
-        if isinstance(instance, list):
-            return {cls.entity_name: cls.render(instance)}
-        else:
-            return {"TODO": "TODO"}
+    def index(self, req, server_id):
+        return exc.HTTPNotFound()
+
+    def create(self, req, server_id):
+        """ No actual update method required, since the existing API allows
+        both create and update through a POST """
+        return exc.HTTPNotFound()
+
+    def delete(self, req, server_id):
+        return exc.HTTPNotFound()
