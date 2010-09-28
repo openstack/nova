@@ -256,6 +256,9 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -277,9 +280,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_str(context, str_id):
-    """Get an instance by string id."""
-    return IMPL.instance_get_by_str(context, str_id)
+def instance_get_by_ec2_id(context, ec2_id):
+    """Get an instance by ec2 id."""
+    return IMPL.instance_get_by_ec2_id(context, ec2_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -542,9 +545,9 @@ def volume_get_all_by_project(context, project_id):
     return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_by_str(context, str_id):
-    """Get a volume by string id."""
-    return IMPL.volume_get_by_str(context, str_id)
+def volume_get_by_ec2_id(context, ec2_id):
+    """Get a volume by ec2 id."""
+    return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):

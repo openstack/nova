@@ -135,15 +135,48 @@ class VpnCommands(object):
 
 
 class ShellCommands(object):
-    def run(self):
-        "Runs a Python interactive interpreter. Tries to use IPython, if it's available."
-        try:
-            import IPython
-            # Explicitly pass an empty list as arguments, because otherwise IPython
-            # would use sys.argv from this script.
-            shell = IPython.Shell.IPShell(argv=[])
-            shell.mainloop()
-        except ImportError:
+    def bpython(self):
+        """Runs a bpython shell.
+
+        Falls back to Ipython/python shell if unavailable"""
+        self.run('bpython')
+
+    def ipython(self):
+        """Runs an Ipython shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('ipython')
+
+    def python(self):
+        """Runs a python shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('python')
+
+    def run(self, shell=None):
+        """Runs a Python interactive interpreter.
+
+        args: [shell=bpython]"""
+        if not shell:
+            shell = 'bpython'
+
+        if shell == 'bpython':
+            try:
+                import bpython
+                bpython.embed()
+            except ImportError:
+                shell = 'ipython'
+        if shell == 'ipython':
+            try:
+                import IPython
+                # Explicitly pass an empty list as arguments, because otherwise IPython
+                # would use sys.argv from this script.
+                shell = IPython.Shell.IPShell(argv=[])
+                shell.mainloop()
+            except ImportError:
+                shell = 'python'
+
+        if shell == 'python':
             import code
             try: # Try activating rlcompleter, because it's handy.
                 import readline
@@ -155,6 +188,11 @@ class ShellCommands(object):
                 import rlcompleter
                 readline.parse_and_bind("tab:complete")
             code.interact()
+
+    def script(self, path):
+        """Runs the script from the specifed path with flags set properly.
+        arguments: path"""
+        exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
 
 class RoleCommands(object):
@@ -316,7 +354,7 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['str_id']
+                instance = floating_ip['fixed_ip']['instance']['ec2_id']
             print "%s\t%s\t%s" % (floating_ip['host'],
                                   floating_ip['address'],
                                   instance)

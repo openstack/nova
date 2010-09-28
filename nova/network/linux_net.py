@@ -177,7 +177,7 @@ def _host_dhcp(fixed_ip_ref):
     instance_ref = fixed_ip_ref['instance']
     return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
-                                   fixed_ip_ref['str_id'])
+                                   fixed_ip_ref['address'])
 
 
 def _execute(cmd, *args, **kwargs):
