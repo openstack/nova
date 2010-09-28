@@ -20,10 +20,12 @@
 Network Hosts are responsible for allocating ips and setting up network
 """
 
+import datetime
 import logging
 import math
 
 import IPy
+from twisted.internet import defer
 
 from nova import db
 from nova import exception
@@ -62,7 +64,9 @@ flags.DEFINE_integer('cnt_vpn_clients', 5,
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
 flags.DEFINE_bool('update_dhcp_on_disassociate', False,
-                  'Whether to update dhcp when fixed_ip is disassocated')
+                  'Whether to update dhcp when fixed_ip is disassociated')
+flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
+                     'Seconds after which a deallocated ip is disassociated')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -218,6 +222,21 @@ class FlatManager(NetworkManager):
 
 class VlanManager(NetworkManager):
     """Vlan network with dhcp"""
+
+    @defer.inlineCallbacks
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval"""
+        yield super(VlanManager, self).periodic_tasks(context)
+        now = datetime.datetime.utcnow()
+        timeout = FLAGS.fixed_ip_disassociate_timeout
+        time = now - datetime.timedelta(seconds=timeout)
+        num = self.db.fixed_ip_disassociate_all_by_timeout(self,
+                                                           self.host,
+                                                           time)
+        if num:
+            logging.debug("Dissassociated %s stale fixed ip(s)", num)
+
+
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
@@ -235,14 +254,6 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool"""
         self.db.fixed_ip_update(context, address, {'allocated': False})
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['leased']:
-            self.db.fixed_ip_disassociate(context, address)
-            # NOTE(vish): dhcp server isn't updated until next setup, this
-            #             means there will stale entries in the conf file
-            #             the code below will update the file if necessary
-            if FLAGS.update_dhcp_on_disassociate:
-                network_ref = self.db.fixed_ip_get_network(context, address)
-                self.driver.update_dhcp(context, network_ref['id'])
 
 
     def setup_fixed_ip(self, context, address):
@@ -259,10 +270,7 @@ class VlanManager(NetworkManager):
         """Called by dhcp-bridge when ip is leased"""
         logging.debug("Leasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['allocated']:
-            logging.warn("IP %s leased that was already deallocated", address)
-            return
-        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s leased that isn't associated" %
                                   address)
@@ -272,22 +280,25 @@ class VlanManager(NetworkManager):
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['str_id'],
                                 {'leased': True})
+        if not fixed_ip_ref['allocated']:
+            logging.warn("IP %s leased that was already deallocated", address)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released"""
         logging.debug("Releasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        if not fixed_ip_ref['leased']:
-            logging.warn("IP %s released that was not leased", address)
-            return
-        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s released that isn't associated" %
                                   address)
         if instance_ref['mac_address'] != mac:
             raise exception.Error("IP %s released from bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
-        self.db.fixed_ip_update(context, address, {'leased': False})
+        if not fixed_ip_ref['leased']:
+            logging.warn("IP %s released that was not leased", address)
+        self.db.fixed_ip_update(context,
+                                fixed_ip_ref['str_id'],
+                                {'leased': False})
         if not fixed_ip_ref['allocated']:
             self.db.fixed_ip_disassociate(context, address)
             # NOTE(vish): dhcp server isn't updated until next setup, this

@@ -163,6 +163,7 @@ def floating_ip_allocate_address(_context, host, project_id):
         floating_ip_ref = session.query(models.FloatingIp
                                 ).filter_by(host=host
                                 ).filter_by(fixed_ip_id=None
+                                ).filter_by(project_id=None
                                 ).filter_by(deleted=False
                                 ).with_lockmode('update'
                                 ).first()
@@ -250,6 +251,14 @@ def floating_ip_get_all_by_host(_context, host):
                  ).filter_by(deleted=False
                  ).all()
 
+def floating_ip_get_all_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).options(joinedload_all('fixed_ip.instance')
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
+
 def floating_ip_get_by_address(_context, address):
     return models.FloatingIp.find_by_str(address)
 
@@ -324,9 +333,31 @@ def fixed_ip_disassociate(_context, address):
         fixed_ip_ref.save(session=session)
 
 
-def fixed_ip_get_by_address(_context, address):
-    return models.FixedIp.find_by_str(address)
+def fixed_ip_disassociate_all_by_timeout(_context, host, time):
+    session = get_session()
+    # NOTE(vish): The nested select is because sqlite doesn't support
+    #             JOINs in UPDATEs.
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
+                                                  'leased = 0 '
+                             'WHERE network_id IN (SELECT id FROM networks '
+                                                  'WHERE host = :host) '
+                             'AND updated_at < :time '
+                             'AND instance_id IS NOT NULL '
+                             'AND allocated = 0',
+                    {'host': host,
+                     'time': time.isoformat()})
+    return result.rowcount
 
+def fixed_ip_get_by_address(_context, address):
+    session = get_session()
+    result = session.query(models.FixedIp
+                   ).options(joinedload_all('instance')
+                   ).filter_by(address=address
+                   ).filter_by(deleted=False
+                   ).first()
+    if not result:
+        raise exception.NotFound("No model for address %s" % address)
+    return result
 
 def fixed_ip_get_instance(_context, address):
     session = get_session()
@@ -390,7 +421,7 @@ def instance_get_all(context):
                  ).all()
 
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -399,7 +430,7 @@ def instance_get_by_project(context, project_id):
                  ).all()
 
 
-def instance_get_by_reservation(_context, reservation_id):
+def instance_get_all_by_reservation(_context, reservation_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -570,6 +601,7 @@ def network_get(_context, network_id):
 def network_get_associated_fixed_ips(_context, network_id):
     session = get_session()
     return session.query(models.FixedIp
+                 ).options(joinedload_all('instance')
                  ).filter_by(network_id=network_id
                  ).filter(models.FixedIp.instance_id != None
                  ).filter_by(deleted=False
@@ -813,7 +845,7 @@ def volume_get_all(context):
     return models.Volume.all(deleted=_deleted(context))
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume
                  ).filter_by(project_id=project_id

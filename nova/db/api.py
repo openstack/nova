@@ -161,8 +161,13 @@ def floating_ip_get_all(context):
 
 
 def floating_ip_get_all_by_host(context, host):
-    """Get all floating ips."""
+    """Get all floating ips by host."""
     return IMPL.floating_ip_get_all_by_host(context, host)
+
+
+def floating_ip_get_all_by_project(context, project_id):
+    """Get all floating ips by project."""
+    return IMPL.floating_ip_get_all_by_project(context, project_id)
 
 
 def floating_ip_get_by_address(context, address):
@@ -202,6 +207,11 @@ def fixed_ip_create(context, values):
 def fixed_ip_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
     return IMPL.fixed_ip_disassociate(context, address)
+
+
+def fixed_ip_disassociate_all_by_timeout(context, host, time):
+    """Disassociate old fixed ips from host"""
+    return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -252,14 +262,14 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
-    return IMPL.instance_get_by_project(context, project_id)
+    return IMPL.instance_get_all_by_project(context, project_id)
 
 
-def instance_get_by_reservation(context, reservation_id):
+def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
-    return IMPL.instance_get_by_reservation(context, reservation_id)
+    return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
 def instance_get_fixed_address(context, instance_id):
@@ -532,9 +542,9 @@ def volume_get_instance(context, volume_id):
     return IMPL.volume_get_instance(context, volume_id)
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     """Get all volumes belonging to a project."""
-    return IMPL.volume_get_by_project(context, project_id)
+    return IMPL.volume_get_all_by_project(context, project_id)
 
 
 def volume_get_by_str(context, str_id):
