@@ -27,7 +27,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import func
+from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
 
@@ -357,10 +357,15 @@ def instance_create(_context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
         instance_ref[key] = value
-    instance_ref.ec2_id = utils.generate_uid(instance_ref.__prefix__)
-    instance_ref.save()
-    return instance_ref
 
+    session = get_session()
+    with session.begin():
+        while instance_ref.ec2_id == None:
+            ec2_id = utils.generate_uid(instance_ref.__prefix__)
+            if not instance_ec2_id_exists(_context, ec2_id, session=session):
+                instance_ref.ec2_id = ec2_id
+        instance_ref.save(session=session)
+    return instance_ref
 
 def instance_data_get_for_project(_context, project_id):
     session = get_session()
@@ -420,6 +425,12 @@ def instance_get_by_ec2_id(context, ec2_id):
         raise exception.NotFound('Instance %s not found' % (ec2_id))
 
     return instance_ref
+
+
+def instance_ec2_id_exists(context, ec2_id, session=None):
+    if not session:
+        session = get_session()
+    return session.query(exists().where(models.Instance.id==ec2_id)).one()[0]
 
 
 def instance_get_fixed_address(_context, instance_id):
@@ -778,8 +789,14 @@ def volume_create(_context, values):
     volume_ref = models.Volume()
     for (key, value) in values.iteritems():
         volume_ref[key] = value
-    volume_ref.ec2_id = utils.generate_uid(volume_ref.__prefix__)
-    volume_ref.save()
+
+    session = get_session()
+    with session.begin():
+        while volume_ref.ec2_id == None:
+            ec2_id = utils.generate_uid(volume_ref.__prefix__)
+            if not volume_ec2_id_exists(_context, ec2_id, session=session):
+                volume_ref.ec2_id = ec2_id
+        volume_ref.save(session=session)
     return volume_ref
 
 
@@ -842,6 +859,12 @@ def volume_get_by_ec2_id(context, ec2_id):
         raise exception.NotFound('Volume %s not found' % (ec2_id))
 
     return volume_ref
+
+
+def volume_ec2_id_exists(context, ec2_id, session=None):
+    if not session:
+        session = get_session()
+    return session.query(exists().where(models.Volume.id==ec2_id)).one()[0]
 
 
 def volume_get_instance(_context, volume_id):

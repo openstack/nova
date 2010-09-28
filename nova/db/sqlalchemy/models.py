@@ -457,10 +457,6 @@ class FloatingIp(BASE, NovaBase):
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    @property
-    def str_id(self):
-        return self.address
-
     @classmethod
     def find_by_str(cls, str_id, session=None, deleted=False):
         if not session:
