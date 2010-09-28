@@ -1,13 +1,15 @@
+import datetime
 import json
+
 import webob
 import webob.dec
-import datetime
-import nova.api.rackspace.auth
-import nova.api.rackspace._id_translator
-from nova.wsgi import Router
+
 from nova import auth
 from nova import utils
 from nova import flags
+import nova.api.rackspace.auth
+import nova.api.rackspace._id_translator
+from nova.wsgi import Router
 
 FLAGS = flags.FLAGS
 

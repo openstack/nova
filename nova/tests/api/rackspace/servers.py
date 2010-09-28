@@ -17,15 +17,17 @@
 
 import json
 import unittest
+
 import stubout
-import nova.api.rackspace
-import nova.db.api
+
+from nova import db
 from nova import flags
+import nova.api.rackspace
 from nova.api.rackspace import servers
+import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.tests.api.test_helper import *
 from nova.tests.api.rackspace import test_helper
-from nova import db
 
 FLAGS = flags.FLAGS
 

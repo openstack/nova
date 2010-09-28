@@ -16,10 +16,11 @@
 #    under the License.
 
 import time
-import nova.image.service
+from webob import exc
+
 from nova import wsgi
 from nova.api.rackspace import _id_translator
-from webob import exc
+import nova.image.service
 
 class Controller(wsgi.Controller):
     def __init__(self):

@@ -31,11 +31,11 @@ import webob
 from nova import flags
 from nova import utils
 from nova import wsgi
+from nova.api.rackspace import backup_schedules
 from nova.api.rackspace import flavors
 from nova.api.rackspace import images
 from nova.api.rackspace import ratelimiting
 from nova.api.rackspace import servers
-from nova.api.rackspace import backup_schedules
 from nova.api.rackspace import sharedipgroups
 from nova.auth import manager
 
