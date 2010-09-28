@@ -32,7 +32,9 @@ from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
-from nova.endpoint import api
+# TODO(eday): Eventually changes these to something not ec2-specific
+from nova.api.ec2 import cloud
+from nova.api.ec2 import context
 
 
 FLAGS = flags.FLAGS
@@ -42,8 +44,8 @@ flags.DEFINE_string('boot_script_template',
 
 
 class CloudPipe(object):
-    def __init__(self, cloud_controller):
-        self.controller = cloud_controller
+    def __init__(self):
+        self.controller = cloud.CloudController()
         self.manager = manager.AuthManager()
 
     def launch_vpn_instance(self, project_id):
@@ -60,7 +62,7 @@ class CloudPipe(object):
 
         key_name = self.setup_key_pair(project.project_manager_id, project_id)
         zippy = open(zippath, "r")
-        context = api.APIRequestContext(handler=None, user=project.project_manager, project=project)
+        context = context.APIRequestContext(user=project.project_manager, project=project)
 
         reservation = self.controller.run_instances(context,
             # run instances expects encoded userdata, it is decoded in the get_metadata_call

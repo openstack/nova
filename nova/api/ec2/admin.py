@@ -58,46 +58,27 @@ def host_dict(host):
         return {}
 
 
-def admin_only(target):
-    """Decorator for admin-only API calls"""
-    def wrapper(*args, **kwargs):
-        """Internal wrapper method for admin-only API calls"""
-        context = args[1]
-        if context.user.is_admin():
-            return target(*args, **kwargs)
-        else:
-            return {}
-
-    return wrapper
-
-
 class AdminController(object):
     """
     API Controller for users, hosts, nodes, and workers.
-    Trivial admin_only wrapper will be replaced with RBAC,
-    allowing project managers to administer project users.
     """
 
     def __str__(self):
         return 'AdminController'
 
-    @admin_only
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
         return user_dict(manager.AuthManager().get_user(name))
 
-    @admin_only
     def describe_users(self, _context, **_kwargs):
         """Returns all users - should be changed to deal with a list."""
         return {'userSet':
             [user_dict(u) for u in manager.AuthManager().get_users()] }
 
-    @admin_only
     def register_user(self, _context, name, **_kwargs):
         """Creates a new user, and returns generated credentials."""
         return user_dict(manager.AuthManager().create_user(name))
 
-    @admin_only
     def deregister_user(self, _context, name, **_kwargs):
         """Deletes a single user (NOT undoable.)
            Should throw an exception if the user has instances,
@@ -107,13 +88,11 @@ class AdminController(object):
 
         return True
 
-    @admin_only
     def describe_roles(self, context, project_roles=True, **kwargs):
         """Returns a list of allowed roles."""
         roles = manager.AuthManager().get_roles(project_roles)
         return { 'roles': [{'role': r} for r in roles]}
 
-    @admin_only
     def describe_user_roles(self, context, user, project=None, **kwargs):
         """Returns a list of roles for the given user.
            Omitting project will return any global roles that the user has.
@@ -122,7 +101,6 @@ class AdminController(object):
         roles = manager.AuthManager().get_user_roles(user, project=project)
         return { 'roles': [{'role': r} for r in roles]}
 
-    @admin_only
     def modify_user_role(self, context, user, role, project=None,
                          operation='add', **kwargs):
         """Add or remove a role for a user and project."""
@@ -135,7 +113,6 @@ class AdminController(object):
 
         return True
 
-    @admin_only
     def generate_x509_for_user(self, _context, name, project=None, **kwargs):
         """Generates and returns an x509 certificate for a single user.
            Is usually called from a client that will wrap this with
@@ -147,19 +124,16 @@ class AdminController(object):
         user = manager.AuthManager().get_user(name)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
 
-    @admin_only
     def describe_project(self, context, name, **kwargs):
         """Returns project data, including member ids."""
         return project_dict(manager.AuthManager().get_project(name))
 
-    @admin_only
     def describe_projects(self, context, user=None, **kwargs):
         """Returns all projects - should be changed to deal with a list."""
         return {'projectSet':
             [project_dict(u) for u in
             manager.AuthManager().get_projects(user=user)]}
 
-    @admin_only
     def register_project(self, context, name, manager_user, description=None,
                          member_users=None, **kwargs):
         """Creates a new project"""
@@ -170,20 +144,17 @@ class AdminController(object):
                 description=None,
                 member_users=None))
 
-    @admin_only
     def deregister_project(self, context, name):
         """Permanently deletes a project."""
         manager.AuthManager().delete_project(name)
         return True
 
-    @admin_only
     def describe_project_members(self, context, name, **kwargs):
         project = manager.AuthManager().get_project(name)
         result = {
             'members': [{'member': m} for m in project.member_ids]}
         return result
 
-    @admin_only
     def modify_project_member(self, context, user, project, operation, **kwargs):
         """Add or remove a user from a project."""
         if operation =='add':
@@ -196,7 +167,6 @@ class AdminController(object):
 
     # FIXME(vish): these host commands don't work yet, perhaps some of the
     #              required data can be retrieved from service objects?
-    @admin_only
     def describe_hosts(self, _context, **_kwargs):
         """Returns status info for all nodes. Includes:
             * Disk Space
@@ -208,7 +178,6 @@ class AdminController(object):
         """
         return {'hostSet': [host_dict(h) for h in db.host_get_all()]}
 
-    @admin_only
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
         return host_dict(db.host_get(name))

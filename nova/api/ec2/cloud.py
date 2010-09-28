@@ -28,8 +28,6 @@ import logging
 import os
 import time
 
-from twisted.internet import defer
-
 from nova import crypto
 from nova import db
 from nova import exception
@@ -37,9 +35,8 @@ from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.auth import rbac
 from nova.compute.instance_types import INSTANCE_TYPES
-from nova.endpoint import images
+from nova.api.ec2 import images
 
 
 FLAGS = flags.FLAGS
@@ -56,25 +53,22 @@ def _gen_key(context, user_id, key_name):
 
     This is a module level method because it is slow and we need to defer
     it into a process pool."""
+    # NOTE(vish): generating key pair is slow so check for legal
+    #             creation before creating key_pair
     try:
-        # NOTE(vish): generating key pair is slow so check for legal
-        #             creation before creating key_pair
-        try:
-            db.key_pair_get(context, user_id, key_name)
-            raise exception.Duplicate("The key_pair %s already exists"
-                                      % key_name)
-        except exception.NotFound:
-            pass
-        private_key, public_key, fingerprint = crypto.generate_key_pair()
-        key = {}
-        key['user_id'] = user_id
-        key['name'] = key_name
-        key['public_key'] = public_key
-        key['fingerprint'] = fingerprint
-        db.key_pair_create(context, key)
-        return {'private_key': private_key, 'fingerprint': fingerprint}
-    except Exception as ex:
-        return {'exception': ex}
+        db.key_pair_get(context, user_id, key_name)
+        raise exception.Duplicate("The key_pair %s already exists"
+                                  % key_name)
+    except exception.NotFound:
+        pass
+    private_key, public_key, fingerprint = crypto.generate_key_pair()
+    key = {}
+    key['user_id'] = user_id
+    key['name'] = key_name
+    key['public_key'] = public_key
+    key['fingerprint'] = fingerprint
+    db.key_pair_create(context, key)
+    return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
 class CloudController(object):
@@ -172,12 +166,10 @@ class CloudController(object):
             data['product-codes'] = []
         return data
 
-    @rbac.allow('all')
     def describe_availability_zones(self, context, **kwargs):
         return {'availabilityZoneInfo': [{'zoneName': 'nova',
                                           'zoneState': 'available'}]}
 
-    @rbac.allow('all')
     def describe_regions(self, context, region_name=None, **kwargs):
         if FLAGS.region_list:
             regions = []
@@ -192,7 +184,6 @@ class CloudController(object):
             regions = [r for r in regions if r['regionName'] in region_name]
         return {'regionInfo': regions }
 
-    @rbac.allow('all')
     def describe_snapshots(self,
                            context,
                            snapshot_id=None,
@@ -208,7 +199,6 @@ class CloudController(object):
                                  'volumeSize': 0,
                                  'description': 'fixme'}]}
 
-    @rbac.allow('all')
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
         if not key_name is None:
@@ -226,23 +216,13 @@ class CloudController(object):
 
         return {'keypairsSet': result}
 
-    @rbac.allow('all')
     def create_key_pair(self, context, key_name, **kwargs):
-        dcall = defer.Deferred()
-        pool = context.handler.application.settings.get('pool')
-        def _complete(kwargs):
-            if 'exception' in kwargs:
-                dcall.errback(kwargs['exception'])
-                return
-            dcall.callback({'keyName': key_name,
-                'keyFingerprint': kwargs['fingerprint'],
-                'keyMaterial': kwargs['private_key']})
+        data = _gen_key(None, context.user.id, key_name)
+        return {'keyName': key_name,
+                'keyFingerprint': data['fingerprint'],
+                'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
-        pool.apply_async(_gen_key, [None, context.user.id, key_name],
-            callback=_complete)
-        return dcall
 
-    @rbac.allow('all')
     def delete_key_pair(self, context, key_name, **kwargs):
         try:
             db.key_pair_destroy(context, context.user.id, key_name)
@@ -251,22 +231,18 @@ class CloudController(object):
             pass
         return True
 
-    @rbac.allow('all')
     def describe_security_groups(self, context, group_names, **kwargs):
         groups = {'securityGroupSet': []}
 
         # Stubbed for now to unblock other things.
         return groups
 
-    @rbac.allow('netadmin')
     def create_security_group(self, context, group_name, **kwargs):
         return True
 
-    @rbac.allow('netadmin')
     def delete_security_group(self, context, group_name, **kwargs):
         return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance_ref = db.instance_get_by_str(context, instance_id[0])
@@ -276,7 +252,6 @@ class CloudController(object):
                          "args": {"context": None,
                                   "instance_id": instance_ref['id']}})
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():
             volumes = db.volume_get_all(context)
@@ -317,7 +292,6 @@ class CloudController(object):
         v['display_description'] = volume['display_description']
         return v
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def create_volume(self, context, size, **kwargs):
         # check quota
         if quota.allowed_volumes(context, 1, size) < 1:
@@ -346,7 +320,6 @@ class CloudController(object):
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
 
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         # TODO(vish): abstract status checking?
@@ -362,14 +335,13 @@ class CloudController(object):
                                           "volume_id": volume_ref['id'],
                                           "instance_id": instance_ref['id'],
                                           "mountpoint": device}})
-        return defer.succeed({'attachTime': volume_ref['attach_time'],
-                              'device': volume_ref['mountpoint'],
-                              'instanceId': instance_ref['id'],
-                              'requestId': context.request_id,
-                              'status': volume_ref['attach_status'],
-                              'volumeId': volume_ref['id']})
+        return {'attachTime': volume_ref['attach_time'],
+                'device': volume_ref['mountpoint'],
+                'instanceId': instance_ref['id'],
+                'requestId': context.request_id,
+                'status': volume_ref['attach_status'],
+                'volumeId': volume_ref['id']}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def detach_volume(self, context, volume_id, **kwargs):
         volume_ref = db.volume_get_by_str(context, volume_id)
         instance_ref = db.volume_get_instance(context, volume_ref['id'])
@@ -389,12 +361,12 @@ class CloudController(object):
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
             db.volume_detached(context)
-        return defer.succeed({'attachTime': volume_ref['attach_time'],
-                              'device': volume_ref['mountpoint'],
-                              'instanceId': instance_ref['str_id'],
-                              'requestId': context.request_id,
-                              'status': volume_ref['attach_status'],
-                              'volumeId': volume_ref['id']})
+        return {'attachTime': volume_ref['attach_time'],
+                'device': volume_ref['mountpoint'],
+                'instanceId': instance_ref['str_id'],
+                'requestId': context.request_id,
+                'status': volume_ref['attach_status'],
+                'volumeId': volume_ref['id']}
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
@@ -403,7 +375,6 @@ class CloudController(object):
             lst = [lst]
         return [{label: x} for x in lst]
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def update_volume(self, context, volume_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
         changes = {}
@@ -412,11 +383,10 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             db.volume_update(context, volume_id, kwargs)
-        return defer.succeed(True)
+        return True
 
-    @rbac.allow('all')
     def describe_instances(self, context, **kwargs):
-        return defer.succeed(self._format_describe_instances(context))
+        return self._format_describe_instances(context)
 
     def _format_describe_instances(self, context):
         return { 'reservationSet': self._format_instances(context) }
@@ -480,7 +450,6 @@ class CloudController(object):
 
         return list(reservations.values())
 
-    @rbac.allow('all')
     def describe_addresses(self, context, **kwargs):
         return self.format_addresses(context)
 
@@ -506,8 +475,6 @@ class CloudController(object):
             addresses.append(address_rv)
         return {'addressesSet': addresses}
 
-    @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def allocate_address(self, context, **kwargs):
         # check quota
         if quota.allowed_floating_ips(context, 1) < 1:
@@ -515,64 +482,55 @@ class CloudController(object):
                          context.project.id)
             raise QuotaError("Address quota exceeded. You cannot "
                              "allocate any more addresses")
-        network_topic = yield self._get_network_topic(context)
-        public_ip = yield rpc.call(network_topic,
+        network_topic = self._get_network_topic(context)
+        public_ip = rpc.call(network_topic,
                          {"method": "allocate_floating_ip",
                           "args": {"context": None,
                                    "project_id": context.project.id}})
-        defer.returnValue({'addressSet': [{'publicIp': public_ip}]})
+        return {'addressSet': [{'publicIp': public_ip}]}
 
-    @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                  {"method": "deallocate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['str_id']}})
-        defer.returnValue({'releaseResponse': ["Address released."]})
+        return {'releaseResponse': ["Address released."]}
 
-    @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance_ref = db.instance_get_by_str(context, instance_id)
         fixed_ip_ref = db.fixed_ip_get_by_instance(context, instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                  {"method": "associate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['str_id'],
                            "fixed_address": fixed_ip_ref['str_id']}})
-        defer.returnValue({'associateResponse': ["Address associated."]})
+        return {'associateResponse': ["Address associated."]}
 
-    @rbac.allow('netadmin')
-    @defer.inlineCallbacks
     def disassociate_address(self, context, public_ip, **kwargs):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = yield self._get_network_topic(context)
+        network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                  {"method": "disassociate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['str_id']}})
-        defer.returnValue({'disassociateResponse': ["Address disassociated."]})
+        return {'disassociateResponse': ["Address disassociated."]}
 
-    @defer.inlineCallbacks
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         network_ref = db.project_get_network(context, context.project.id)
         host = network_ref['host']
         if not host:
-            host = yield rpc.call(FLAGS.network_topic,
+            host = rpc.call(FLAGS.network_topic,
                                   {"method": "set_network_host",
                                    "args": {"context": None,
                                             "project_id": context.project.id}})
-        defer.returnValue(db.queue_get_for(context, FLAGS.network_topic, host))
+        return db.queue_get_for(context, FLAGS.network_topic, host)
 
-    @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def run_instances(self, context, **kwargs):
         instance_type = kwargs.get('instance_type', 'm1.small')
         if instance_type not in INSTANCE_TYPES:
@@ -660,7 +618,7 @@ class CloudController(object):
 
             # TODO(vish): This probably should be done in the scheduler
             #             network is setup when host is assigned
-            network_topic = yield self._get_network_topic(context)
+            network_topic = self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
                       "args": {"context": None,
@@ -673,12 +631,9 @@ class CloudController(object):
                                "instance_id": inst_id}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
-        defer.returnValue(self._format_run_instances(context,
-                                                     reservation_id))
+        return self._format_run_instances(context, reservation_id)
 
 
-    @rbac.allow('projectmanager', 'sysadmin')
-    @defer.inlineCallbacks
     def terminate_instances(self, context, instance_id, **kwargs):
         logging.debug("Going to start terminating instances")
         for id_str in instance_id:
@@ -702,7 +657,7 @@ class CloudController(object):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
-                network_topic = yield self._get_network_topic(context)
+                network_topic = self._get_network_topic(context)
                 rpc.cast(network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"context": None,
@@ -725,9 +680,8 @@ class CloudController(object):
                                    "instance_id": instance_ref['id']}})
             else:
                 db.instance_destroy(context, instance_ref['id'])
-        defer.returnValue(True)
+        return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
@@ -737,9 +691,8 @@ class CloudController(object):
                      {"method": "reboot_instance",
                       "args": {"context": None,
                                "instance_id": instance_ref['id']}})
-        return defer.succeed(True)
+        return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def update_instance(self, context, instance_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
         changes = {}
@@ -750,9 +703,8 @@ class CloudController(object):
             db_context = {}
             inst = db.instance_get_by_str(db_context, instance_id)
             db.instance_update(db_context, inst['id'], kwargs)
-        return defer.succeed(True)
+        return True
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_str(context, volume_id)
@@ -765,31 +717,26 @@ class CloudController(object):
                             {"method": "delete_volume",
                              "args": {"context": None,
                                       "volume_id": volume_ref['id']}})
-        return defer.succeed(True)
+        return True
 
-    @rbac.allow('all')
     def describe_images(self, context, image_id=None, **kwargs):
         # The objectstore does its own authorization for describe
         imageSet = images.list(context, image_id)
-        return defer.succeed({'imagesSet': imageSet})
+        return {'imagesSet': imageSet}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def deregister_image(self, context, image_id, **kwargs):
         # FIXME: should the objectstore be doing these authorization checks?
         images.deregister(context, image_id)
-        return defer.succeed({'imageId': image_id})
+        return {'imageId': image_id}
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def register_image(self, context, image_location=None, **kwargs):
         # FIXME: should the objectstore be doing these authorization checks?
         if image_location is None and kwargs.has_key('name'):
             image_location = kwargs['name']
         image_id = images.register(context, image_location)
         logging.debug("Registered %s as %s" % (image_location, image_id))
+        return {'imageId': image_id}
 
-        return defer.succeed({'imageId': image_id})
-
-    @rbac.allow('all')
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
@@ -800,9 +747,8 @@ class CloudController(object):
         result = {'image_id': image_id, 'launchPermission': []}
         if image['isPublic']:
             result['launchPermission'].append({'group': 'all'})
-        return defer.succeed(result)
+        return result
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def modify_image_attribute(self, context, image_id, attribute, operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
@@ -813,10 +759,8 @@ class CloudController(object):
             raise exception.ApiError('only group "all" is supported')
         if not operation_type in ['add', 'remove']:
             raise exception.ApiError('operation_type must be add or remove')
-        result = images.modify(context, image_id, operation_type)
-        return defer.succeed(result)
+        return images.modify(context, image_id, operation_type)
 
-    @rbac.allow('projectmanager', 'sysadmin')
     def update_image(self, context, image_id, **kwargs):
         result = images.update(context, image_id, dict(kwargs))
-        return defer.succeed(result)
+        return result
