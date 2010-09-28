@@ -677,8 +677,9 @@ def export_device_create_safe(_context, values):
         export_device_ref[key] = value
     try:
         export_device_ref.save()
+        return export_device_ref
     except IntegrityError:
-        pass
+        return None
 
 
 ###################
