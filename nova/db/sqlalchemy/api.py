@@ -19,6 +19,8 @@
 Implementation of SQLAlchemy backend
 """
 
+import sys
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -358,6 +360,7 @@ def fixed_ip_get_by_address(_context, address):
     if not result:
         raise exception.NotFound("No model for address %s" % address)
     return result
+
 
 def fixed_ip_get_instance(_context, address):
     session = get_session()
@@ -731,7 +734,7 @@ def auth_create_token(_context, token):
         tk[k] = v
     tk.save()
     return tk
-    
+
 
 ###################
 
