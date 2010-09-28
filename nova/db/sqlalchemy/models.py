@@ -211,7 +211,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.str_id
+        return self.ec2_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))

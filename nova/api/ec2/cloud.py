@@ -103,7 +103,7 @@ class CloudController(object):
         result = {}
         for instance in db.instance_get_by_project(None, project_id):
             if instance['fixed_ip']:
-                line = '%s slots=%d' % (instance['fixed_ip']['str_id'],
+                line = '%s slots=%d' % (instance['fixed_ip']['address'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
                 key = str(instance['key_name'])
                 if key in result:
@@ -404,10 +404,10 @@ class CloudController(object):
             fixed_addr = None
             floating_addr = None
             if instance['fixed_ip']:
-                fixed_addr = instance['fixed_ip']['str_id']
+                fixed_addr = instance['fixed_ip']['address']
                 if instance['fixed_ip']['floating_ips']:
                     fixed = instance['fixed_ip']
-                    floating_addr = fixed['floating_ips'][0]['str_id']
+                    floating_addr = fixed['floating_ips'][0]['address']
             i['privateDnsName'] = fixed_addr
             i['publicDnsName'] = floating_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
@@ -442,7 +442,7 @@ class CloudController(object):
             iterator = db.floating_ip_get_by_project(context,
                                                      context.project.id)
         for floating_ip_ref in iterator:
-            address = floating_ip_ref['str_id']
+            address = floating_ip_ref['address']
             instance_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
@@ -477,7 +477,7 @@ class CloudController(object):
         rpc.cast(network_topic,
                  {"method": "deallocate_floating_ip",
                   "args": {"context": None,
-                           "floating_address": floating_ip_ref['str_id']}})
+                           "floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
@@ -488,8 +488,8 @@ class CloudController(object):
         rpc.cast(network_topic,
                  {"method": "associate_floating_ip",
                   "args": {"context": None,
-                           "floating_address": floating_ip_ref['str_id'],
-                           "fixed_address": fixed_ip_ref['str_id']}})
+                           "floating_address": floating_ip_ref['address'],
+                           "fixed_address": fixed_ip_ref['address']}})
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
@@ -498,7 +498,7 @@ class CloudController(object):
         rpc.cast(network_topic,
                  {"method": "disassociate_floating_ip",
                   "args": {"context": None,
-                           "floating_address": floating_ip_ref['str_id']}})
+                           "floating_address": floating_ip_ref['address']}})
         return {'disassociateResponse': ["Address disassociated."]}
 
     def _get_network_topic(self, context):
