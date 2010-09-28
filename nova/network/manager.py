@@ -358,6 +358,7 @@ class VlanManager(NetworkManager):
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref)
+        self.driver.update_dhcp(context, network_id)
 
     @property
     def _bottom_reserved_ips(self):
