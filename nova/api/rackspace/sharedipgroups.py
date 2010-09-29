@@ -15,4 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-class Controller(object): pass
+from nova import wsgi
+
+class Controller(wsgi.Controller): pass

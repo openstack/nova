@@ -261,6 +261,9 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -282,9 +285,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_str(context, str_id):
-    """Get an instance by string id."""
-    return IMPL.instance_get_by_str(context, str_id)
+def instance_get_by_ec2_id(context, ec2_id):
+    """Get an instance by ec2 id."""
+    return IMPL.instance_get_by_ec2_id(context, ec2_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -497,29 +500,6 @@ def quota_destroy(context, project_id):
 ###################
 
 
-def quota_create(context, values):
-    """Create a quota from the values dictionary."""
-    return IMPL.quota_create(context, values)
-
-
-def quota_get(context, project_id):
-    """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get(context, project_id)
-
-
-def quota_update(context, project_id, values):
-    """Update a quota from the values dictionary."""
-    return IMPL.quota_update(context, project_id, values)
-
-
-def quota_destroy(context, project_id):
-    """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy(context, project_id)
-
-
-###################
-
-
 def volume_allocate_shelf_and_blade(context, volume_id):
     """Atomically allocate a free shelf and blade from the pool."""
     return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
@@ -570,9 +550,9 @@ def volume_get_all_by_project(context, project_id):
     return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_by_str(context, str_id):
-    """Get a volume by string id."""
-    return IMPL.volume_get_by_str(context, str_id)
+def volume_get_by_ec2_id(context, ec2_id):
+    """Get a volume by ec2 id."""
+    return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):

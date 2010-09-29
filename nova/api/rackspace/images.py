@@ -15,12 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.image.service
-from nova.api.rackspace import base
-from nova.api.rackspace import _id_translator
 from webob import exc
 
-class Controller(base.Controller):
+from nova import wsgi
+from nova.api.rackspace import _id_translator
+import nova.image.service
+
+class Controller(wsgi.Controller):
 
     _serialization_metadata = {
         'application/xml': {
