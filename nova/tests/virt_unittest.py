@@ -185,7 +185,7 @@ class NWFilterTestCase(test.TrialTestCase):
         inst_id = instance_ref['id']
 
         def _ensure_all_called(_):
-            instance_filter = 'nova-instance-%s' % instance_ref['str_id']
+            instance_filter = 'nova-instance-%s' % instance_ref['name']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',

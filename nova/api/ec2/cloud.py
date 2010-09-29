@@ -296,7 +296,7 @@ class CloudController(object):
                     db.security_group_get_by_name(context,
                                                   source_project_id,
                                                   source_security_group_name)
-            values['group_id'] = source_security_group.id
+            values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
             IPy.IP(cidr_ip)
@@ -333,17 +333,19 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
+        if criteria == None:
+            raise exception.ApiError("No rule for the specified parameters.")
 
         for rule in security_group.rules:
+            match = True
             for (k,v) in criteria.iteritems():
                 if getattr(rule, k, False) != v:
-                    break
-            # If we make it here, we have a match
-            db.security_group_rule_destroy(context, rule.id)
-
-        self._trigger_refresh_security_group(security_group)
-
-        return True
+                    match = False
+            if match:
+                db.security_group_rule_destroy(context, rule['id'])
+                self._trigger_refresh_security_group(security_group)
+                return True
+        raise exception.ApiError("No rule for the specified parameters.")
 
     # TODO(soren): Dupe detection. Adding the same rule twice actually
     #              adds the same rule twice to the rule set, which is
@@ -367,6 +369,7 @@ class CloudController(object):
 
         return True
 
+
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
         # Parse user:project for source group.
@@ -387,7 +390,7 @@ class CloudController(object):
 
     def create_security_group(self, context, group_name, group_description):
         self._ensure_default_security_group(context)
-        if db.securitygroup_exists(context, context.project.id, group_name):
+        if db.security_group_exists(context, context.project.id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
         group = {'user_id' : context.user.id,
@@ -779,12 +782,11 @@ class CloudController(object):
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
 
-        type_data = INSTANCE_TYPES[instance_type]
-        base_options['instance_type'] = instance_type
         base_options['display_name'] = kwargs.get('display_name')
         base_options['display_description'] = kwargs.get('display_description')
 
         type_data = INSTANCE_TYPES[instance_type]
+        base_options['instance_type'] = instance_type
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
