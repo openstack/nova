@@ -244,6 +244,7 @@ class CloudController(object):
         return True
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
+        self._ensure_default_security_group(context)
         if context.user.is_admin():
             groups = db.security_group_get_all(context)
         else:
@@ -326,6 +327,7 @@ class CloudController(object):
         return values
 
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
+        self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
@@ -353,6 +355,7 @@ class CloudController(object):
     #              for these operations, so support for newer API versions
     #              is sketchy.
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
+        self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project.id,
                                                        group_name)
@@ -385,6 +388,7 @@ class CloudController(object):
 
 
     def create_security_group(self, context, group_name, group_description):
+        self._ensure_default_security_group(context)
         if db.security_group_exists(context, context.project.id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
@@ -693,6 +697,18 @@ class CloudController(object):
                                             "project_id": context.project.id}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
+    def _ensure_default_security_group(self, context):
+        try:
+            db.security_group_get_by_name(context,
+                                          context.project.id,
+                                          'default')
+        except exception.NotFound:
+            values = { 'name'        : 'default',
+                       'description' : 'default',
+                       'user_id'     : context.user.id,
+                       'project_id'  : context.project.id }
+            group = db.security_group_create({}, values)
+
     def run_instances(self, context, **kwargs):
         instance_type = kwargs.get('instance_type', 'm1.small')
         if instance_type not in INSTANCE_TYPES:
@@ -745,6 +761,7 @@ class CloudController(object):
             security_group_arg = [security_group_arg]
 
         security_groups = []
+        self._ensure_default_security_group(context)
         for security_group_name in security_group_arg:
             group = db.security_group_get_by_name(context,
                                                   context.project.id,
