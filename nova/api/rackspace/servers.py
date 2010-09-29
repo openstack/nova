@@ -239,6 +239,9 @@ class Controller(wsgi.Controller):
         inst['ramdisk_id'] = image.get('ramdiskId', FLAGS.default_ramdisk)
         inst['reservation_id'] = utils.generate_uid('r')
 
+        inst['display_name'] = env['server']['name']
+        inst['display_description'] = env['server']['name']
+
         #TODO(dietz) this may be ill advised
         key_pair_ref = self.db_driver.key_pair_get_all_by_user(
             None, user_id)[0]
