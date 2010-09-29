@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
 import time
 
 import webob
@@ -31,7 +30,6 @@ from nova.api.rackspace import context
 from nova.api.rackspace import faults
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.wsgi import Serializer
 import nova.api.rackspace
 import nova.image.service
 
@@ -201,7 +199,7 @@ class Controller(wsgi.Controller):
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        opaque_id = _instance_id_translator().from_rsapi_id(id)
+        opaque_id = _instance_id_translator().from_rs_id(id)
         cloud.reboot(opaque_id)
 
     def _build_server_instance(self, req, env):
@@ -273,8 +271,8 @@ class Controller(wsgi.Controller):
         inst['hostname'] = ref.ec2_id
         self.db_driver.instance_update(None, inst['id'], inst)
 
-        self.network_manager = utils.import_object(FLAGS.rs_network_manager)
-        address = self.network_manager.allocate_fixed_ip(api_context,
+        network_manager = utils.import_object(FLAGS.rs_network_manager)
+        address = network_manager.allocate_fixed_ip(api_context,
             inst['id'])
 
         # TODO(vish): This probably should be done in the scheduler

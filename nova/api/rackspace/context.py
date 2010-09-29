@@ -22,11 +22,13 @@ APIRequestContext
 
 import random
 
+class Project(object):
+    def __init__(self, user_id):
+        self.id = user_id
+    
 class APIRequestContext(object):
     """ This is an adapter class to get around all of the assumptions made in
     the FlatNetworking """
     def __init__(self, user_id):
-        class Dummy(object): pass
         self.user_id = user_id
-        self.project = Dummy()
-        self.project.id = self.user_id
+        self.project = Project(user_id)
