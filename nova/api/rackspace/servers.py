@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import time
 
 from webob import exc
@@ -25,11 +26,13 @@ from nova import utils
 from nova import wsgi
 from nova.api.rackspace import _id_translator
 from nova.compute import power_state
+from nova.wsgi import Serializer
 import nova.image.service
 
 FLAGS = flags.FLAGS
 
-
+flags.DEFINE_string('rs_network_manager', 'nova.network.manager.FlatManager',
+    'Networking for rackspace')
 
 def translator_instance():
     """ Helper method for initializing the image id translator """
@@ -82,7 +85,6 @@ def _entity_inst(inst):
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the Openstack API """
-    
 
     _serialization_metadata = {
         'application/xml': {
@@ -146,16 +148,19 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        if not req.environ.has_key('inst_dict'):
+        user_id = req.environ['nova.context']['user']['id']
+
+        inst_dict = self._deserialize(req.body, req)
+        
+        if not inst_dict:
             return exc.HTTPUnprocessableEntity()
 
         instance = self.db_driver.instance_get(None, id)
-        if not instance:
+        if not instance or instance.user_id != user_id:
             return exc.HTTPNotFound()
 
-        attrs = req.environ['nova.context'].get('model_attributes', None)
-        if attrs:
-            self.db_driver.instance_update(None, id, _filter_params(attrs))
+        self.db_driver.instance_update(None, id, 
+            _filter_params(inst_dict['server']))
         return exc.HTTPNoContent()
 
     def action(self, req, id):
@@ -170,34 +175,44 @@ class Controller(wsgi.Controller):
         inst = {}
 
         env = req.environ['inst_dict']
+        user_id = req.environ['nova.context']['user']['id']
 
+        inst['rs_id'] = _new_rs_id(user_id)
         image_id = env['server']['imageId']
+        
         opaque_id = translator_instance().from_rs_id(image_id)
 
-        inst['name'] = env['server']['server_name']
+        inst['name'] = env['server']['name']
         inst['image_id'] = opaque_id
         inst['instance_type'] = env['server']['flavorId']
-
-        user_id = req.environ['nova.context']['user']['id']
         inst['user_id'] = user_id
-
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
 
-        inst['project_id'] = env['project']['id']
-        inst['reservation_id'] = reservation
-        reservation = utils.generate_uid('r')
+        #TODO(dietz) These are the attributes I'm unsure of
+        inst['state_description'] = 'scheduling'
+        inst['kernel_id'] = ''
+        inst['ramdisk_id'] = ''
+        inst['reservation_id'] = utils.generate_uid('r')
+        inst['key_data'] = ''
+        inst['key_name'] = ''
+        inst['security_group'] = ''
 
-        address = self.network.allocate_ip(
-                    inst['user_id'],
-                    inst['project_id'],
-                    mac=inst['mac_address'])
+        # Flavor related attributes
+        inst['instance_type'] = ''
+        inst['memory_mb'] = ''
+        inst['vcpus'] = ''
+        inst['local_gb'] = ''
 
-        inst['private_dns_name'] = str(address)
-        inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(
-                                inst['user_id'],
-                                inst['project_id'],
-                                'default')['bridge_name']
+        
+
+        #TODO(dietz): This seems necessary. How do these apply across
+        #the Rackspace implementation?
+        inst['project_id'] = ''
+
+        self.network_manager = utils.import_object(FLAGS.rs_network_manager)
+        
+        address = self.network_manager.allocate_fixed_ip( None, inst['id']) 
 
         ref = self.db_driver.instance_create(None, inst)
         inst['id'] = ref.id

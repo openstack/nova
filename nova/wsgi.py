@@ -230,6 +230,15 @@ class Controller(object):
         serializer = Serializer(request.environ, _metadata)
         return serializer.to_content_type(data)
 
+    def _deserialize(self, data, request):
+        """
+        Deserialize the request body to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.deserialize(data)
 
 class Serializer(object):
     """

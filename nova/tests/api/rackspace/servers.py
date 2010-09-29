@@ -95,11 +95,39 @@ class ServersTest(unittest.TestCase):
     #    res = req.get_response(nova.api.API())
 
     #    print res
-    def test_update_server_password(self):
-        pass
 
-    def test_update_server_name(self):
-        pass
+    def test_update_bad_params(self):
+        """ Confirm that update is filtering params """
+        inst_dict = dict(cat='leopard', name='server_test', adminPass='bacon')
+        self.body = json.dumps(dict(server=inst_dict))
+
+        def server_update(context, id, params):
+            self.update_called = True
+            filtered_dict = dict(name='server_test', adminPass='bacon')
+            self.assertEqual(params, filtered_dict)
+
+        self.stubs.Set(nova.db.api, 'instance_update',
+            server_update)
+
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        req.body = self.body
+        req.get_response(nova.api.API())
+
+    def test_update_server(self):
+        inst_dict = dict(name='server_test', adminPass='bacon')
+        self.body = json.dumps(dict(server=inst_dict))
+
+        def server_update(context, id, params):
+            self.assertEqual(params, json.loads(self.body)['server'])
+
+        self.stubs.Set(nova.db.api, 'instance_update',
+            server_update)
+
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        req.body = self.body
+        req.get_response(nova.api.API())
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
