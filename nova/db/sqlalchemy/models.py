@@ -398,7 +398,7 @@ class NetworkIndex(BASE, NovaBase):
     """
     __tablename__ = 'network_indexes'
     id = Column(Integer, primary_key=True)
-    index = Column(Integer)
+    index = Column(Integer, unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
