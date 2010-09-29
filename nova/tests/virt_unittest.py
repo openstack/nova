@@ -178,19 +178,20 @@ class NWFilterTestCase(test.TrialTestCase):
             self.defined_filters.append(name)
             return True
 
+        self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
+
+        instance_ref = db.instance_create({}, {'user_id': 'fake',
+                                          'project_id': 'fake'})
+        inst_id = instance_ref['id']
+
         def _ensure_all_called(_):
-            instance_filter = 'nova-instance-i-1'
+            instance_filter = 'nova-instance-%s' % instance_ref['str_id']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
                              'no-mac-spoofing']:
                 self.assertTrue(required in self.recursive_depends[instance_filter],
                             "Instance's filter does not include %s" % required)
-
-        self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
-
-        inst_id = db.instance_create({}, {'user_id': 'fake',
-                                          'project_id': 'fake'})['id']
 
         self.security_group = self.setup_and_return_security_group()
 
