@@ -53,7 +53,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'images'))
 os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 
 
-class ObjectStoreTestCase(test.BaseTestCase):
+class ObjectStoreTestCase(test.TrialTestCase):
     """Test objectstore API directly."""
 
     def setUp(self): # pylint: disable-msg=C0103

@@ -126,6 +126,7 @@ class NovaBase(object):
 #    __tablename__ = 'images'
 #    __prefix__ = 'ami'
 #    id = Column(Integer, primary_key=True)
+#    ec2_id = Column(String(12), unique=True)
 #    user_id = Column(String(255))
 #    project_id = Column(String(255))
 #    image_type = Column(String(255))
@@ -173,6 +174,7 @@ class Service(BASE, NovaBase):
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
+    disabled = Column(Boolean, default=False)
 
     @classmethod
     def find_by_args(cls, host, binary, session=None, deleted=False):
@@ -195,6 +197,7 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
+    ec2_id = Column(String(10), unique=True)
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -209,11 +212,13 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.str_id
+        return self.ec2_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
+
+    server_name = Column(String(255))
 
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -265,6 +270,7 @@ class Volume(BASE, NovaBase):
     __tablename__ = 'volumes'
     __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
+    ec2_id = Column(String(12), unique=True)
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -392,14 +398,14 @@ class NetworkIndex(BASE, NovaBase):
     """
     __tablename__ = 'network_indexes'
     id = Column(Integer, primary_key=True)
-    index = Column(Integer)
+    index = Column(Integer, unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
 
 class AuthToken(BASE, NovaBase):
-    """Represents an authorization token for all API transactions. Fields 
-    are a string representing the actual token and a user id for mapping 
+    """Represents an authorization token for all API transactions. Fields
+    are a string representing the actual token and a user id for mapping
     to the actual user"""
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
@@ -453,10 +459,6 @@ class FloatingIp(BASE, NovaBase):
 
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-
-    @property
-    def str_id(self):
-        return self.address
 
     @classmethod
     def find_by_str(cls, str_id, session=None, deleted=False):

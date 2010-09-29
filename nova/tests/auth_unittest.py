@@ -75,7 +75,7 @@ class user_and_project_generator(object):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
 
-class AuthManagerTestCase(test.BaseTestCase):
+class AuthManagerTestCase(test.TrialTestCase):
     def setUp(self):
         super(AuthManagerTestCase, self).setUp()
         self.flags(connection_type='fake')

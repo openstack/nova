@@ -31,6 +31,7 @@ import webob
 from nova import flags
 from nova import utils
 from nova import wsgi
+from nova.api.rackspace import backup_schedules
 from nova.api.rackspace import flavors
 from nova.api.rackspace import images
 from nova.api.rackspace import ratelimiting
@@ -67,8 +68,10 @@ class AuthMiddleware(wsgi.Middleware):
 
         if not user:
             return webob.exc.HTTPUnauthorized()
-        context = {'user': user}
-        req.environ['nova.context'] = context
+
+        if not req.environ.has_key('nova.context'):
+            req.environ['nova.context'] = {}
+        req.environ['nova.context']['user'] = user
         return self.application
 
 class RateLimitingMiddleware(wsgi.Middleware):
@@ -145,11 +148,20 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        mapper.resource("server", "servers", controller=servers.Controller())
+        mapper.resource("server", "servers", controller=servers.Controller(),
+                        collection={ 'detail': 'GET'},
+                        member={'action':'POST'})
+
+        mapper.resource("backup_schedule", "backup_schedules", 
+                        controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server', 
+                        collection_name = 'servers')) 
+
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
         mapper.resource("sharedipgroup", "sharedipgroups",
                         controller=sharedipgroups.Controller())
+
         super(APIRouter, self).__init__(mapper)

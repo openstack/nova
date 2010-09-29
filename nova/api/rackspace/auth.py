@@ -1,13 +1,15 @@
 import datetime
+import hashlib
 import json
 import time
+
 import webob.exc
 import webob.dec
-import hashlib
-from nova import flags
+
 from nova import auth
-from nova import manager
 from nova import db
+from nova import flags
+from nova import manager
 from nova import utils
 
 FLAGS = flags.FLAGS

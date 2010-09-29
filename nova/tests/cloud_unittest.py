@@ -41,7 +41,7 @@ from nova.api.ec2 import cloud
 FLAGS = flags.FLAGS
 
 
-class CloudTestCase(test.BaseTestCase):
+class CloudTestCase(test.TrialTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake')
@@ -55,9 +55,9 @@ class CloudTestCase(test.BaseTestCase):
         # set up a service
         self.compute = utils.import_class(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                     topic=FLAGS.compute_topic,
-                                                     proxy=self.compute)
-        self.injected.append(self.compute_consumer.attach_to_tornado(self.ioloop))
+                                                    topic=FLAGS.compute_topic,
+                                                    proxy=self.compute)
+        self.compute_consumer.attach_to_twisted()
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
@@ -68,7 +68,7 @@ class CloudTestCase(test.BaseTestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-        super(CloudTestCase, self).setUp()
+        super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
