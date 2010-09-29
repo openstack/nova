@@ -340,12 +340,12 @@ class ExportDevice(BASE, NovaBase):
                                                   uselist=False))
 
 
-security_group_instance_association = Table('security_group_instance_association',
-                                            BASE.metadata,
-                                            Column('security_group_id', Integer,
-                                                   ForeignKey('security_group.id')),
-                                            Column('instance_id', Integer,
-                                                   ForeignKey('instances.id')))
+class SecurityGroupInstanceAssociation(BASE, NovaBase):
+    __tablename__ = 'security_group_instance_association'
+    id = Column(Integer, primary_key=True)
+    security_group_id = Column(Integer, ForeignKey('security_group.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
 
 class SecurityGroup(BASE, NovaBase):
     """Represents a security group"""
@@ -358,7 +358,11 @@ class SecurityGroup(BASE, NovaBase):
     project_id = Column(String(255))
 
     instances = relationship(Instance,
-                             secondary=security_group_instance_association,
+                             secondary="security_group_instance_association",
+                             secondaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
+                                                 "Instance.id == SecurityGroupInstanceAssociation.instance_id,"
+                                                 "SecurityGroup.deleted == False,"
+                                                 "Instance.deleted == False)",
                              backref='security_groups')
 
     @property
@@ -378,7 +382,8 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     parent_group_id = Column(Integer, ForeignKey('security_group.id'))
     parent_group = relationship("SecurityGroup", backref="rules",
                          foreign_keys=parent_group_id,
-                         primaryjoin=parent_group_id==SecurityGroup.id)
+                         primaryjoin="and_(SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,"
+                                          "SecurityGroupIngressRule.deleted == False)")
 
     protocol = Column(String(5)) # "tcp", "udp", or "icmp"
     from_port = Column(Integer)

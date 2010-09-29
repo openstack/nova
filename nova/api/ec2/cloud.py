@@ -342,7 +342,7 @@ class CloudController(object):
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
                 self._trigger_refresh_security_group(security_group)
-
+                return True
         raise exception.ApiError("No rule for the specified parameters.")
 
     # TODO(soren): Dupe detection. Adding the same rule twice actually

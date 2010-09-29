@@ -29,7 +29,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import contains_eager, eagerload, joinedload_all
+from sqlalchemy.orm import contains_eager, joinedload_all
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -410,8 +410,17 @@ def instance_destroy(_context, instance_id):
 
 
 def instance_get(context, instance_id):
-    return models.Instance().find(instance_id, deleted=_deleted(context),
-                                    options=eagerload('security_groups'))
+    session = get_session()
+    instance_ref = session.query(models.Instance
+                    ).options(joinedload_all('fixed_ip.floating_ips')
+                    ).options(joinedload_all('security_groups')
+                    ).filter_by(id=instance_id
+                    ).filter_by(deleted=_deleted(context)
+                    ).first()
+    if not instance_ref:
+        raise exception.NotFound('Instance %s not found' % (instance_id))
+
+    return instance_ref
 
 
 def instance_get_all(context):
@@ -942,25 +951,29 @@ def volume_update(_context, volume_id, values):
 ###################
 
 
+INSTANCES_OR = or_(models.Instance.deleted == False,
+                   models.Instance.deleted == None)
+
+
+RULES_OR = or_(models.SecurityGroupIngressRule.deleted == False,
+               models.SecurityGroupIngressRule.deleted == None)
+
+
 def security_group_get_all(_context):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).join(models.SecurityGroup.rules
-                 ).options(contains_eager(models.SecurityGroup.rules)
-                 ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(deleted=False
+                 ).options(joinedload_all('rules')
                  ).all()
 
 
 def security_group_get(_context, security_group_id):
     session = get_session()
     result = session.query(models.SecurityGroup
-                   ).join(models.SecurityGroup.rules
-                   ).options(contains_eager(models.SecurityGroup.rules)
-                   ).filter(models.SecurityGroupIngressRule.deleted == False
                    ).filter_by(deleted=False
                    ).filter_by(id=security_group_id
-                   ).get(security_group_id)
+                   ).options(joinedload_all('rules')
+                   ).first()
     if not result:
         raise exception.NotFound("No secuity group with id %s" %
                                  security_group_id)
@@ -969,41 +982,41 @@ def security_group_get(_context, security_group_id):
 
 def security_group_get_by_name(context, project_id, group_name):
     session = get_session()
-    group_ref = session.query(models.SecurityGroup
-                      ).join(models.SecurityGroup.rules
-                      ).join(models.Instances
-                      ).options(contains_eager(models.SecurityGroup.rules)
-                      ).options(contains_eager(models.SecurityGroup.instances)
-                      ).filter(models.SecurityGroupIngressRule.deleted == False
+    result = session.query(models.SecurityGroup
                       ).filter_by(project_id=project_id
                       ).filter_by(name=group_name
                       ).filter_by(deleted=False
+                      ).options(joinedload_all('rules')
+                      ).options(joinedload_all('instances')
                       ).first()
-    if not group_ref:
+    if not result:
         raise exception.NotFound(
             'No security group named %s for project: %s' \
              % (group_name, project_id))
-    return group_ref
+    return result
 
 
 def security_group_get_by_project(_context, project_id):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).join(models.SecurityGroup.rules
-                 ).options(contains_eager(models.SecurityGroup.rules)
-                 ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(project_id=project_id
                  ).filter_by(deleted=False
+                 ).options(joinedload_all('rules')
+                 ).outerjoin(models.SecurityGroup.rules
+                 ).options(contains_eager(models.SecurityGroup.rules)
+                 ).filter(RULES_OR
                  ).all()
 
 
 def security_group_get_by_instance(_context, instance_id):
     session = get_session()
-    with session.begin():
-        return session.query(models.Instance
-                      ).join(models.Instance.security_groups
-                      ).filter_by(deleted=False
-                      ).all()
+    return session.query(models.SecurityGroup
+                 ).filter_by(deleted=False
+                 ).options(joinedload_all('rules')
+                 ).join(models.SecurityGroup.instances
+                 ).filter_by(id=instance_id
+                 ).filter_by(deleted=False
+                 ).all()
 
 
 def security_group_exists(_context, project_id, group_name):
