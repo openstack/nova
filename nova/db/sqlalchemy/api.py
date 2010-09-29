@@ -29,7 +29,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import contains_eager, joinedload_all
+from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -951,14 +951,6 @@ def volume_update(_context, volume_id, values):
 ###################
 
 
-INSTANCES_OR = or_(models.Instance.deleted == False,
-                   models.Instance.deleted == None)
-
-
-RULES_OR = or_(models.SecurityGroupIngressRule.deleted == False,
-               models.SecurityGroupIngressRule.deleted == None)
-
-
 def security_group_get_all(_context):
     session = get_session()
     return session.query(models.SecurityGroup
@@ -1002,9 +994,6 @@ def security_group_get_by_project(_context, project_id):
                  ).filter_by(project_id=project_id
                  ).filter_by(deleted=False
                  ).options(joinedload_all('rules')
-                 ).outerjoin(models.SecurityGroup.rules
-                 ).options(contains_eager(models.SecurityGroup.rules)
-                 ).filter(RULES_OR
                  ).all()
 
 
