@@ -62,6 +62,7 @@ def service_get_all_by_topic(context, topic):
     session = get_session()
     return session.query(models.Service
                  ).filter_by(deleted=False
+                 ).filter_by(disabled=False
                  ).filter_by(topic=topic
                  ).all()
 
@@ -71,6 +72,7 @@ def _service_get_all_topic_subquery(_context, session, topic, subq, label):
     return session.query(models.Service, func.coalesce(sort_value, 0)
                  ).filter_by(topic=topic
                  ).filter_by(deleted=False
+                 ).filter_by(disabled=False
                  ).outerjoin((subq, models.Service.host == subq.c.host)
                  ).order_by(sort_value
                  ).all()

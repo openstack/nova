@@ -174,6 +174,7 @@ class Service(BASE, NovaBase):
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
+    disabled = Column(Boolean, default=False)
 
     @classmethod
     def find_by_args(cls, host, binary, session=None, deleted=False):
