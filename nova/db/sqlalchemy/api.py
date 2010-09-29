@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend
 """
 
+import logging
 import sys
 
 from nova import db
@@ -46,6 +47,24 @@ def _deleted(context):
     if not hasattr(context, 'get'):
         return False
     return context.get('deleted', False)
+
+
+def is_admin_context(context):
+    if not context:
+        logging.warning('Use of empty request context is deprecated')
+        return True
+    if not context.user:
+        return True
+    return context.user.is_admin()
+
+
+def is_user_context(context):
+    if not context:
+        logging.warning('Use of empty request context is deprecated')
+        return False
+    if not context.user or not context.project:
+        return False
+    return True
 
 
 ###################
@@ -869,14 +888,41 @@ def volume_detached(_context, volume_id):
 
 
 def volume_get(context, volume_id):
-    return models.Volume.find(volume_id, deleted=_deleted(context))
+    session = get_session()
+
+    if is_admin_context(context):
+        volume_ref = session.query(models.Volume
+                           ).filter_by(id=volume_id
+                           ).filter_by(deleted=_deleted(context)
+                           ).first()
+        if not volume_ref:
+            raise exception.NotFound('No volume for id %s' % volume_id)
+
+    if is_user_context(context):
+        volume_ref = session.query(models.Volume
+                           ).filter_by(project_id=project_id
+                           ).filter_by(id=volume_id
+                           ).filter_by(deleted=False
+                           ).first()
+        if not volume_ref:
+            raise exception.NotFound('No volume for id %s' % volume_id)
+
+    raise exception.NotAuthorized()
 
 
 def volume_get_all(context):
-    return models.Volume.all(deleted=_deleted(context))
+    if is_admin_context(context):
+        return models.Volume.all(deleted=_deleted(context))
 
+    raise exception.NotAuthorized()
 
 def volume_get_all_by_project(context, project_id):
+    if is_user_context(context):
+        if context.project.id != project_id:
+            raise exception.NotAuthorized()
+    elif not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.Volume
                  ).filter_by(project_id=project_id
