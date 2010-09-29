@@ -26,6 +26,8 @@ from nova import utils
 from nova import wsgi
 from nova.api import cloud
 from nova.api.rackspace import _id_translator
+from nova.api.rackspace import context
+from nova.api.rackspace import faults
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.wsgi import Serializer
@@ -254,10 +256,38 @@ class Controller(wsgi.Controller):
         ref = self.db_driver.instance_create(None, inst)
         inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
 
-        #self.network_manager = utils.import_object(FLAGS.rs_network_manager)
-        #
-        #address = self.network_manager.allocate_fixed_ip( None, inst['id']) 
         
+        # TODO(dietz): this isn't explicitly necessary, but the networking
+        # calls depend on an object with a project_id property
+        context = context.APIRequestContext(user_id)
+    
+        inst['mac_address'] = utils.generate_mac()
+        
+        #TODO(dietz) is this necessary? 
+        inst['launch_index'] = 0
+
+        inst['hostname'] = instance_ref['ec2_id']
+        self.db_driver.instance_update(None, inst_id, inst)
+        self.network_manager = utils.import_object(FLAGS.rs_network_manager)
+        address = self.network_manager.allocate_fixed_ip(context, inst_id)
+
+        # TODO(vish): This probably should be done in the scheduler
+        #             network is setup when host is assigned
+        network_topic = self._get_network_topic(user_id)
+        rpc.call(network_topic,
+                 {"method": "setup_fixed_ip",
+                  "args": {"context": None,
+                           "address": address}})
         return inst
 
-    
+    def _get_network_topic(self, user_id):
+        """Retrieves the network host for a project"""
+        network_ref = self.db_driver.project_get_network(None, 
+            user_id)
+        host = network_ref['host']
+        if not host:
+            host = rpc.call(FLAGS.network_topic,
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": user_id}})
+        return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
