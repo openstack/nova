@@ -17,6 +17,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE(vish): This script sets up some reasonable defaults for iptables and
+#             creates nova-specific chains.  If you use this script you should
+#             run nova-network and nova-compute with --use_nova_chains=True
+
+# NOTE(vish): If you run nova-api on a different port, make sure to change
+#             the port here
+API_PORT=${API_PORT:-"8773"}
 if [ -n "$1" ]; then
     CMD=$1
 else
@@ -26,8 +33,9 @@ fi
 if [ -n "$2" ]; then
     IP=$2
 else
-    # NOTE(vish): this will just get the first ip in the list, so if you
-    #             have more than one eth device set up, this will fail
+    # NOTE(vish): This will just get the first ip in the list, so if you
+    #             have more than one eth device set up, this will fail, and
+    #             you should explicitly pass in the ip of the instance
     IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
@@ -39,6 +47,8 @@ fi
 
 
 if [ -n "$4" ]; then
+    # NOTE(vish): Management IP is the ip over which to allow ssh traffic.  It
+    #             will also allow traffic to nova-api
     MGMT_IP=$4
 else
     MGMT_IP="$IP"
@@ -78,7 +88,9 @@ if [ "$CMD" == "base" ] || [ "$CMD" == "all" ]; then
     iptables -N nova_forward
     iptables -A FORWARD -j nova_forward
 
-    # iptables -P OUTPUT DROP  # too restrictive for the moment
+    # NOTE(vish): DROP on output is too restrictive for now.  We need to add
+    #             in a bunch of more specific output rules to use it.
+    # iptables -P OUTPUT DROP
     iptables -A OUTPUT -m state --state INVALID -j DROP
     iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
     iptables -N nova_output
@@ -99,8 +111,9 @@ if [ "$CMD" == "ganglia" ] || [ "$CMD" == "all" ]; then
     iptables -A nova_input -m udp -p udp -d $IP --dport 8649 -j ACCEPT
 fi
 
-if [ "$CMD" == "dashboard" ] || [ "$CMD" == "all" ]; then
-    # dashboard
+if [ "$CMD" == "web" ] || [ "$CMD" == "all" ]; then
+    # NOTE(vish): This opens up ports for web access, allowing web-based
+    #             dashboards to work.
     iptables -A nova_input -m tcp -p tcp -d $IP --dport 80 -j ACCEPT
     iptables -A nova_input -m tcp -p tcp -d $IP --dport 443 -j ACCEPT
 fi
@@ -110,9 +123,9 @@ if [ "$CMD" == "objectstore" ] || [ "$CMD" == "all" ]; then
 fi
 
 if [ "$CMD" == "api" ] || [ "$CMD" == "all" ]; then
-    iptables -A nova_input -m tcp -p tcp -d $IP --dport 8773 -j ACCEPT
+    iptables -A nova_input -m tcp -p tcp -d $IP --dport $API_PORT -j ACCEPT
     if [ "$IP" != "$MGMT_IP" ]; then
-        iptables -A nova_input -m tcp -p tcp -d $MGMT_IP --dport 8773 -j ACCEPT
+        iptables -A nova_input -m tcp -p tcp -d $MGMT_IP --dport $API_PORT -j ACCEPT
     fi
 fi
 
