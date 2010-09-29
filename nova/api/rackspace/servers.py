@@ -24,6 +24,7 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova.api.rackspace import _id_translator
+from nova.api.rackspace import faults
 from nova.compute import power_state
 import nova.image.service
 
@@ -120,7 +121,7 @@ class Controller(wsgi.Controller):
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, id):
         """ Destroys a server """
@@ -128,13 +129,13 @@ class Controller(wsgi.Controller):
         instance = self.db_driver.instance_get(None, id)
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
-            return exc.HTTPAccepted()
-        return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPAccepted())
+        return faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
         """ Creates a new server for a given user """
         if not req.environ.has_key('inst_dict'):
-            return exc.HTTPUnprocessableEntity()
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         inst = self._build_server_instance(req)
 
@@ -147,22 +148,22 @@ class Controller(wsgi.Controller):
     def update(self, req, id):
         """ Updates the server name or password """
         if not req.environ.has_key('inst_dict'):
-            return exc.HTTPUnprocessableEntity()
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         instance = self.db_driver.instance_get(None, id)
         if not instance:
-            return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPNotFound())
 
         attrs = req.environ['nova.context'].get('model_attributes', None)
         if attrs:
             self.db_driver.instance_update(None, id, _filter_params(attrs))
-        return exc.HTTPNoContent()
+        return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
         if not req.environ.has_key('inst_dict'):
-            return exc.HTTPUnprocessableEntity()
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
     def _build_server_instance(self, req):
         """Build instance data structure and save it to the data store."""
