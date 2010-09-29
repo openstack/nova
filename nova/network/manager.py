@@ -270,7 +270,7 @@ class VlanManager(NetworkManager):
             raise exception.Error("IP %s leased to bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context,
-                                fixed_ip_ref['str_id'],
+                                fixed_ip_ref['address'],
                                 {'leased': True})
 
     def release_fixed_ip(self, context, mac, address):
