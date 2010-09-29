@@ -19,6 +19,7 @@ from webob import exc
 
 from nova import wsgi
 from nova.api.rackspace import _id_translator
+import nova.api.rackspace
 import nova.image.service
 
 class Controller(wsgi.Controller):
@@ -45,6 +46,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all public images in detail."""
         data = self._service.index()
+        data = nova.api.rackspace.limited(data, req)
         for img in data:
             img['id'] = self._id_translator.to_rs_id(img['id'])
         return dict(images=data)
