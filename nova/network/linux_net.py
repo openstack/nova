@@ -41,8 +41,8 @@ flags.DEFINE_string('bridge_dev', 'eth0',
                     'network device for bridges')
 flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
-flags.DEFINE_boo('use_nova_chains', False,
-                 'use the nova_ routing chains instead of default')
+flags.DEFINE_bool('use_nova_chains', False,
+                  'use the nova_ routing chains instead of default')
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
