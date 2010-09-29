@@ -21,6 +21,7 @@ from nova import wsgi
 from nova.api.rackspace import _id_translator
 import nova.api.rackspace
 import nova.image.service
+from nova.api.rackspace import faults
 
 class Controller(wsgi.Controller):
 
@@ -60,14 +61,14 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         # Only public images are supported for now.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
         # Only public images are supported for now, so a request to
         # make a backup of a server cannot be supproted.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that 
         # we support for now.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())

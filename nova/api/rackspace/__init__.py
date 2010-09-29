@@ -31,6 +31,7 @@ import webob
 from nova import flags
 from nova import utils
 from nova import wsgi
+from nova.api.rackspace import faults
 from nova.api.rackspace import backup_schedules
 from nova.api.rackspace import flavors
 from nova.api.rackspace import images
@@ -67,7 +68,7 @@ class AuthMiddleware(wsgi.Middleware):
         user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
 
         if not user:
-            return webob.exc.HTTPUnauthorized()
+            return faults.Fault(webob.exc.HTTPUnauthorized())
 
         if not req.environ.has_key('nova.context'):
             req.environ['nova.context'] = {}
@@ -112,8 +113,10 @@ class RateLimitingMiddleware(wsgi.Middleware):
         delay = self.get_delay(action_name, username)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
-            raise webob.exc.HTTPRequestEntityTooLarge(headers={
-                    'Retry-After': time.time() + delay})
+            exc = webob.exc.HTTPRequestEntityTooLarge(
+                    explanation='Too many requests.',
+                    headers={'Retry-After': time.time() + delay})
+            raise faults.Fault(exc)
         return self.application
 
     def get_delay(self, action_name, username):
