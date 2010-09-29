@@ -277,7 +277,6 @@ class UserCommands(object):
             is_admin = True
         else:
             is_admin = False
-        print "is_admin: %r" % is_admin
         self.manager.modify_user(name, access_key, secret_key, is_admin)
 
 class ProjectCommands(object):
