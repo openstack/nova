@@ -385,7 +385,7 @@ class CloudController(object):
 
 
     def create_security_group(self, context, group_name, group_description):
-        if db.securitygroup_exists(context, context.project.id, group_name):
+        if db.security_group_exists(context, context.project.id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
         group = {'user_id' : context.user.id,

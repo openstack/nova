@@ -868,7 +868,7 @@ def volume_update(_context, volume_id, values):
 def security_group_get_all(_context):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).join(models.SecurityGroupIngressRule
+                 ).join(models.SecurityGroup.rules
                  ).options(contains_eager(models.SecurityGroup.rules)
                  ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(deleted=False
@@ -878,7 +878,7 @@ def security_group_get_all(_context):
 def security_group_get(_context, security_group_id):
     session = get_session()
     result = session.query(models.SecurityGroup
-                   ).join(models.SecurityGroupIngressRule
+                   ).join(models.SecurityGroup.rules
                    ).options(contains_eager(models.SecurityGroup.rules)
                    ).filter(models.SecurityGroupIngressRule.deleted == False
                    ).filter_by(deleted=False
@@ -893,7 +893,7 @@ def security_group_get(_context, security_group_id):
 def security_group_get_by_name(context, project_id, group_name):
     session = get_session()
     group_ref = session.query(models.SecurityGroup
-                      ).join(models.SecurityGroupIngressRule
+                      ).join(models.SecurityGroup.rules
                       ).join(models.Instances
                       ).options(contains_eager(models.SecurityGroup.rules)
                       ).options(contains_eager(models.SecurityGroup.instances)
@@ -912,7 +912,7 @@ def security_group_get_by_name(context, project_id, group_name):
 def security_group_get_by_project(_context, project_id):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).join(models.SecurityGroupIngressRule
+                 ).join(models.SecurityGroup.rules
                  ).options(contains_eager(models.SecurityGroup.rules)
                  ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(project_id=project_id
