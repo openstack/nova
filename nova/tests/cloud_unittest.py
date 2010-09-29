@@ -51,7 +51,7 @@ OSS_TEMPDIR = tempfile.mkdtemp(prefix='test_oss-')
 IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
-class CloudTestCase(test.BaseTestCase):
+class CloudTestCase(test.TrialTestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake', images_path=IMAGES_PATH)
@@ -65,9 +65,9 @@ class CloudTestCase(test.BaseTestCase):
         # set up a service
         self.compute = utils.import_class(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                     topic=FLAGS.compute_topic,
-                                                     proxy=self.compute)
-        self.injected.append(self.compute_consumer.attach_to_tornado(self.ioloop))
+                                                    topic=FLAGS.compute_topic,
+                                                    proxy=self.compute)
+        self.compute_consumer.attach_to_twisted()
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
@@ -78,7 +78,7 @@ class CloudTestCase(test.BaseTestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-        super(CloudTestCase, self).setUp()
+        super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
@@ -236,7 +236,7 @@ class CloudTestCase(test.BaseTestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create({}, {})
-        self.cloud.update_instance(self.context, inst['str_id'],
+        self.cloud.update_instance(self.context, inst['ec2_id'],
                                    display_name='c00l 1m4g3')
         inst = db.instance_get({}, inst['id'])
         self.assertEqual('c00l 1m4g3', inst['display_name'])

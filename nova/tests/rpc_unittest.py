@@ -30,7 +30,7 @@ from nova import test
 FLAGS = flags.FLAGS
 
 
-class RpcTestCase(test.BaseTestCase):
+class RpcTestCase(test.TrialTestCase):
     """Test cases for rpc"""
     def setUp(self):  # pylint: disable-msg=C0103
         super(RpcTestCase, self).setUp()
@@ -39,14 +39,13 @@ class RpcTestCase(test.BaseTestCase):
         self.consumer = rpc.AdapterConsumer(connection=self.conn,
                                             topic='test',
                                             proxy=self.receiver)
-
-        self.injected.append(self.consumer.attach_to_tornado(self.ioloop))
+        self.consumer.attach_to_twisted()
 
     def test_call_succeed(self):
         """Get a value through rpc call"""
         value = 42
-        result = yield rpc.call('test', {"method": "echo",
-                                         "args": {"value": value}})
+        result = yield rpc.call_twisted('test', {"method": "echo",
+                                                 "args": {"value": value}})
         self.assertEqual(value, result)
 
     def test_call_exception(self):
@@ -57,12 +56,12 @@ class RpcTestCase(test.BaseTestCase):
         to an int in the test.
         """
         value = 42
-        self.assertFailure(rpc.call('test', {"method": "fail",
-                                             "args": {"value": value}}),
+        self.assertFailure(rpc.call_twisted('test', {"method": "fail",
+                                                     "args": {"value": value}}),
                            rpc.RemoteError)
         try:
-            yield rpc.call('test', {"method": "fail",
-                                    "args": {"value": value}})
+            yield rpc.call_twisted('test', {"method": "fail",
+                                            "args": {"value": value}})
             self.fail("should have thrown rpc.RemoteError")
         except rpc.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
