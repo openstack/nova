@@ -176,21 +176,6 @@ class Service(BASE, NovaBase):
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
 
-    @classmethod
-    def find_by_args(cls, host, binary, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(host=host
-                         ).filter_by(binary=binary
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for %s, %s" % (host,
-                                                              binary))
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
 
 class Instance(BASE, NovaBase):
     """Represents a guest vm"""

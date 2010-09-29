@@ -71,16 +71,37 @@ def is_user_context(context):
 
 
 def service_destroy(context, service_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        service_ref = models.Service.find(service_id, session=session)
+        service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
-def service_get(_context, service_id):
-    return models.Service.find(service_id)
+
+def service_get(context, service_id, session=None):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Service
+                   ).filter_by(id=service_id
+                   ).filter_by(deleted=_deleted(context)
+                   ).first()
+
+    if not result:
+        raise exception.NotFound('No service for id %s' % service_id)
+
+    return result
 
 
 def service_get_all_by_topic(context, topic):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.Service
                  ).filter_by(deleted=False
@@ -89,7 +110,10 @@ def service_get_all_by_topic(context, topic):
                  ).all()
 
 
-def _service_get_all_topic_subquery(_context, session, topic, subq, label):
+def _service_get_all_topic_subquery(context, session, topic, subq, label):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     sort_value = getattr(subq.c, label)
     return session.query(models.Service, func.coalesce(sort_value, 0)
                  ).filter_by(topic=topic
@@ -101,6 +125,9 @@ def _service_get_all_topic_subquery(_context, session, topic, subq, label):
 
 
 def service_get_all_compute_sorted(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         # NOTE(vish): The intended query is below
@@ -125,6 +152,9 @@ def service_get_all_compute_sorted(context):
 
 
 def service_get_all_network_sorted(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         topic = 'network'
@@ -142,6 +172,9 @@ def service_get_all_network_sorted(context):
 
 
 def service_get_all_volume_sorted(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         topic = 'volume'
@@ -158,11 +191,27 @@ def service_get_all_volume_sorted(context):
                                                label)
 
 
-def service_get_by_args(_context, host, binary):
-    return models.Service.find_by_args(host, binary)
+def service_get_by_args(context, host, binary):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    session = get_session()
+    result = session.query(models.Service
+                   ).filter_by(host=host
+                   ).filter_by(binary=binary
+                   ).filter_by(deleted=_deleted(context)
+                   ).first()
+
+    if not result:
+        raise exception.NotFound('No service for %s, %s' % (host, binary))
+
+    return result
 
 
-def service_create(_context, values):
+def service_create(context, values):
+    if not is_admin_context(context):
+        return exception.NotAuthorized()
+
     service_ref = models.Service()
     for (key, value) in values.iteritems():
         service_ref[key] = value
@@ -170,10 +219,13 @@ def service_create(_context, values):
     return service_ref
 
 
-def service_update(_context, service_id, values):
+def service_update(context, service_id, values):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        service_ref = models.Service.find(service_id, session=session)
+        service_ref = session_get(context, service_id, session=session)
         for (key, value) in values.iteritems():
             service_ref[key] = value
         service_ref.save(session=session)
@@ -428,8 +480,8 @@ def instance_destroy(_context, instance_id):
         instance_ref.delete(session=session)
 
 
-def instance_get(context, instance_id):
-    return models.Instance.find(instance_id, deleted=_deleted(context))
+def instance_get(context, instance_id, session=None):
+    return models.Instance.find(instance_id, session=session, deleted=_deleted(context))
 
 
 def instance_get_all(context):
@@ -810,8 +862,10 @@ def quota_destroy(_context, project_id):
 ###################
 
 
-def volume_allocate_shelf_and_blade(_context, volume_id):
-    # TODO(devcamcar): Make admin only
+def volume_allocate_shelf_and_blade(context, volume_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         export_device = session.query(models.ExportDevice
@@ -828,15 +882,17 @@ def volume_allocate_shelf_and_blade(_context, volume_id):
     return (export_device.shelf_id, export_device.blade_id)
 
 
-def volume_attached(_context, volume_id, instance_id, mountpoint):
+def volume_attached(context, volume_id, instance_id, mountpoint):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        volume_ref = models.Volume.find(volume_id, session=session)
+        volume_ref = volume_get(context, volume_id, session=session)
         volume_ref['status'] = 'in-use'
         volume_ref['mountpoint'] = mountpoint
         volume_ref['attach_status'] = 'attached'
-        volume_ref.instance = models.Instance.find(instance_id,
-                                                   session=session)
+        volume_ref.instance = instance_get(context, instance_id, session=session)
         volume_ref.save(session=session)
 
 
@@ -855,7 +911,10 @@ def volume_create(context, values):
     return volume_ref
 
 
-def volume_data_get_for_project(_context, project_id):
+def volume_data_get_for_project(context, project_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     result = session.query(func.count(models.Volume.id),
                            func.sum(models.Volume.size)
@@ -866,7 +925,10 @@ def volume_data_get_for_project(_context, project_id):
     return (result[0] or 0, result[1] or 0)
 
 
-def volume_destroy(_context, volume_id):
+def volume_destroy(context, volume_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
@@ -878,6 +940,9 @@ def volume_destroy(_context, volume_id):
 
 
 def volume_detached(context, volume_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         volume_ref = volume_get(context, volume_id, session=session)
@@ -914,10 +979,12 @@ def volume_get(context, volume_id, session=None):
 
 
 def volume_get_all(context):
-    if is_admin_context(context):
-        return models.Volume.all(deleted=_deleted(context))
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-    raise exception.NotAuthorized()
+    return session.query(models.Volume
+                 ).filter_by(deleted=_deleted(context)
+                 ).all()
 
 
 def volume_get_all_by_project(context, project_id):
