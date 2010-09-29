@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -343,13 +343,13 @@ class ExportDevice(BASE, NovaBase):
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
     id = Column(Integer, primary_key=True)
-    security_group_id = Column(Integer, ForeignKey('security_group.id'))
+    security_group_id = Column(Integer, ForeignKey('security_groups.id'))
     instance_id = Column(Integer, ForeignKey('instances.id'))
 
 
 class SecurityGroup(BASE, NovaBase):
     """Represents a security group"""
-    __tablename__ = 'security_group'
+    __tablename__ = 'security_groups'
     id = Column(Integer, primary_key=True)
 
     name = Column(String(255))
@@ -379,7 +379,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     __tablename__ = 'security_group_rules'
     id = Column(Integer, primary_key=True)
 
-    parent_group_id = Column(Integer, ForeignKey('security_group.id'))
+    parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
     parent_group = relationship("SecurityGroup", backref="rules",
                          foreign_keys=parent_group_id,
                          primaryjoin="and_(SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,"
@@ -392,7 +392,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
-    group_id = Column(Integer, ForeignKey('security_group.id'))
+    group_id = Column(Integer, ForeignKey('security_groups.id'))
 
 
 class KeyPair(BASE, NovaBase):
@@ -546,7 +546,7 @@ def register_models():
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice, FixedIp, FloatingIp,
               Network, NetworkIndex, SecurityGroup, SecurityGroupIngressRule,
-              AuthToken) # , Image, Host
+              SecurityGroupInstanceAssociation, AuthToken) # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
