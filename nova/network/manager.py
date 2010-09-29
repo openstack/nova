@@ -217,6 +217,13 @@ class FlatManager(NetworkManager):
 
 class VlanManager(NetworkManager):
     """Vlan network with dhcp"""
+
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service.
+        """
+        self.driver.init_host()
+
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
@@ -261,7 +268,7 @@ class VlanManager(NetworkManager):
         if not fixed_ip_ref['allocated']:
             logging.warn("IP %s leased that was already deallocated", address)
             return
-        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s leased that isn't associated" %
                                   address)
@@ -269,7 +276,7 @@ class VlanManager(NetworkManager):
             raise exception.Error("IP %s leased to bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context,
-                                fixed_ip_ref['str_id'],
+                                fixed_ip_ref['address'],
                                 {'leased': True})
 
     def release_fixed_ip(self, context, mac, address):
@@ -279,7 +286,7 @@ class VlanManager(NetworkManager):
         if not fixed_ip_ref['leased']:
             logging.warn("IP %s released that was not leased", address)
             return
-        instance_ref = self.db.fixed_ip_get_instance(context, address)
+        instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error("IP %s released that isn't associated" %
                                   address)
@@ -342,7 +349,7 @@ class VlanManager(NetworkManager):
         This could use a manage command instead of keying off of a flag"""
         if not self.db.network_index_count(context):
             for index in range(FLAGS.num_networks):
-                self.db.network_index_create(context, {'index': index})
+                self.db.network_index_create_safe(context, {'index': index})
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""
