@@ -25,7 +25,7 @@ from nova import flags
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
-from sqlalchemy.orm import eagerload, joinedload_all
+from sqlalchemy.orm import contains_eager, eagerload, joinedload_all
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
@@ -711,7 +711,7 @@ def auth_create_token(_context, token):
         tk[k] = v
     tk.save()
     return tk
-    
+
 
 ###################
 
@@ -868,7 +868,9 @@ def volume_update(_context, volume_id, values):
 def security_group_get_all(_context):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).options(eagerload('rules')
+                 ).join(models.SecurityGroupIngressRule
+                 ).options(contains_eager(models.SecurityGroup.rules)
+                 ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(deleted=False
                  ).all()
 
@@ -876,7 +878,11 @@ def security_group_get_all(_context):
 def security_group_get(_context, security_group_id):
     session = get_session()
     result = session.query(models.SecurityGroup
-                   ).options(eagerload('rules')
+                   ).join(models.SecurityGroupIngressRule
+                   ).options(contains_eager(models.SecurityGroup.rules)
+                   ).filter(models.SecurityGroupIngressRule.deleted == False
+                   ).filter_by(deleted=False
+                   ).filter_by(id=security_group_id
                    ).get(security_group_id)
     if not result:
         raise exception.NotFound("No secuity group with id %s" %
@@ -887,8 +893,11 @@ def security_group_get(_context, security_group_id):
 def security_group_get_by_name(context, project_id, group_name):
     session = get_session()
     group_ref = session.query(models.SecurityGroup
-                      ).options(eagerload('rules')
-                      ).options(eagerload('instances')
+                      ).join(models.SecurityGroupIngressRule
+                      ).join(models.Instances
+                      ).options(contains_eager(models.SecurityGroup.rules)
+                      ).options(contains_eager(models.SecurityGroup.instances)
+                      ).filter(models.SecurityGroupIngressRule.deleted == False
                       ).filter_by(project_id=project_id
                       ).filter_by(name=group_name
                       ).filter_by(deleted=False
@@ -903,7 +912,9 @@ def security_group_get_by_name(context, project_id, group_name):
 def security_group_get_by_project(_context, project_id):
     session = get_session()
     return session.query(models.SecurityGroup
-                 ).options(eagerload('rules')
+                 ).join(models.SecurityGroupIngressRule
+                 ).options(contains_eager(models.SecurityGroup.rules)
+                 ).filter(models.SecurityGroupIngressRule.deleted == False
                  ).filter_by(project_id=project_id
                  ).filter_by(deleted=False
                  ).all()
