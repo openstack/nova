@@ -199,7 +199,6 @@ class Instance(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     ec2_id = Column(String(10), unique=True)
 
-    rs_id = Column(String(255))
     admin_pass = Column(String(255))
 
     user_id = Column(String(255))

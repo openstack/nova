@@ -26,6 +26,7 @@ import nova.api.rackspace
 from nova.api.rackspace import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
+import nova.rpc
 from nova.tests.api.test_helper import *
 from nova.tests.api.rackspace import test_helper
 
@@ -52,8 +53,11 @@ class ServersTest(unittest.TestCase):
         test_helper.stub_for_testing(self.stubs)
         test_helper.stub_out_rate_limiting(self.stubs)
         test_helper.stub_out_auth(self.stubs)
+        test_helper.stub_out_id_translator(self.stubs)
+        test_helper.stub_out_key_pair_funcs(self.stubs)
+        test_helper.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_ec2_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
             return_servers)
 
@@ -67,9 +71,6 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(res_dict['server']['id'], '1')
         self.assertEqual(res_dict['server']['name'], 'server1')
 
-    def test_get_backup_schedule(self):
-        pass
-
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
         res = req.get_response(nova.api.API())
@@ -82,19 +83,36 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
-    #def test_create_instance(self):
-    #    test_helper.stub_out_image_translator(self.stubs)
-    #    body = dict(server=dict(
-    #        name='server_test', imageId=2, flavorId=2, metadata={},
-    #        personality = {}
-    #    ))
-    #    req = webob.Request.blank('/v1.0/servers')
-    #    req.method = 'POST'
-    #    req.body = json.dumps(body)
+    def test_create_instance(self):
+        def instance_create(context, inst):
+            class Foo(object):
+                ec2_id = 1
+            return Foo()
 
-    #    res = req.get_response(nova.api.API())
+        def fake_cast(*args, **kwargs):
+            pass
 
-    #    print res
+        self.stubs.Set(nova.db.api, 'instance_create', instance_create)
+        self.stubs.Set(nova.rpc, 'cast', fake_cast)
+            
+        test_helper.stub_out_id_translator(self.stubs)
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality = {}
+        ))
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+
+        res = req.get_response(nova.api.API())
+
+        self.assertEqual(res.status_int, 200)
+
+    def test_update_no_body(self):
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        res = req.get_response(nova.api.API())
+        self.assertEqual(res.status_int, 422)
 
     def test_update_bad_params(self):
         """ Confirm that update is filtering params """

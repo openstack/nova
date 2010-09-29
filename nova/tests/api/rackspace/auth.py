@@ -1,12 +1,14 @@
+import datetime
+import unittest
+
+import stubout
 import webob
 import webob.dec
-import unittest
-import stubout
+
 import nova.api
 import nova.api.rackspace.auth
 from nova import auth
 from nova.tests.api.rackspace import test_helper
-import datetime
 
 class Test(unittest.TestCase):
     def setUp(self):

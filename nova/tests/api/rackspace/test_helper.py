@@ -9,6 +9,7 @@ from nova import utils
 from nova import flags
 import nova.api.rackspace.auth
 import nova.api.rackspace._id_translator
+from nova.image import service
 from nova.wsgi import Router
 
 FLAGS = flags.FLAGS
@@ -40,7 +41,21 @@ def fake_wsgi(self, req):
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
-def stub_out_image_translator(stubs):
+
+
+def stub_out_key_pair_funcs(stubs):
+    def key_pair(context, user_id):
+        return [dict(name='key', public_key='public_key')]
+    stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
+        key_pair)
+
+def stub_out_image_service(stubs):
+    def fake_image_show(meh, id):
+        return dict(kernelId=1, ramdiskId=1)
+
+    stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
+
+def stub_out_id_translator(stubs):
     class FakeTranslator(object):
         def __init__(self, id_type, service_name):
             pass

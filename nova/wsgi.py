@@ -281,10 +281,13 @@ class Serializer(object):
         The string must be in the format of a supported MIME type.
         """
         datastring = datastring.strip()
-        is_xml = (datastring[0] == '<')
-        if not is_xml:
-            return json.loads(datastring)
-        return self._from_xml(datastring)
+        try:
+            is_xml = (datastring[0] == '<')
+            if not is_xml:
+                return json.loads(datastring)
+            return self._from_xml(datastring)
+        except:
+            return None
 
     def _from_xml(self, datastring):
         xmldata = self.metadata.get('application/xml', {})

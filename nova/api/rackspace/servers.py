@@ -25,6 +25,7 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova.api.rackspace import _id_translator
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.wsgi import Serializer
 import nova.image.service
@@ -39,11 +40,11 @@ def _instance_id_translator():
     ids """
     return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
 
-def _image_id_translator():
+def _image_service():
     """ Helper method for initializing the image id translator """
     service = nova.image.service.ImageService.load()
-    return _id_translator.RackspaceAPIIdTranslator(
-            "image", service.__class__.__name__)
+    return (service, _id_translator.RackspaceAPIIdTranslator(
+            "image", service.__class__.__name__))
 
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
@@ -122,8 +123,11 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """ Returns server details by server id """
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
+
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get(None, id)
+        inst = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -131,8 +135,11 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         """ Destroys a server """
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
+
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get(None, id)
+        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
             return exc.HTTPAccepted()
@@ -140,10 +147,16 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        if not req.environ.has_key('inst_dict'):
+
+        env = self._deserialize(req.body, req)
+        if not env:
             return exc.HTTPUnprocessableEntity()
 
-        inst = self._build_server_instance(req)
+        #try:
+        inst = self._build_server_instance(req, env)
+        #except Exception, e:
+        #    print e
+        #    return exc.HTTPUnprocessableEntity()
 
         rpc.cast(
             FLAGS.compute_topic, {
@@ -153,6 +166,8 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
         user_id = req.environ['nova.context']['user']['id']
 
         inst_dict = self._deserialize(req.body, req)
@@ -160,7 +175,7 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return exc.HTTPUnprocessableEntity()
 
-        instance = self.db_driver.instance_get(None, id)
+        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if not instance or instance.user_id != user_id:
             return exc.HTTPNotFound()
 
@@ -174,56 +189,68 @@ class Controller(wsgi.Controller):
         if not req.environ.has_key('inst_dict'):
             return exc.HTTPUnprocessableEntity()
 
-    def _build_server_instance(self, req):
+    def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
 
         inst_id_trans = _instance_id_translator()
-        image_id_trans = _image_id_translator()
 
-        env = req.environ['inst_dict']
         user_id = req.environ['nova.context']['user']['id']
 
-        inst['rs_id'] = inst_id_trans.to_rs_id()
+        instance_type, flavor = None, None
+        for k, v in instance_types.INSTANCE_TYPES.iteritems():
+            if v['flavorid'] == env['server']['flavorId']:
+                instance_type, flavor = k, v
+                break
+
+        if not flavor:
+            raise Exception, "Flavor not found"
+
         image_id = env['server']['imageId']
         
-        opaque_id = translator_instance().from_rs_id(image_id)
+        img_service, image_id_trans = _image_service()
 
-        inst['name'] = env['server']['name']
-        inst['image_id'] = opaque_id
-        inst['instance_type'] = env['server']['flavorId']
+        opaque_image_id = image_id_trans.to_rs_id(image_id)        
+        image = img_service.show(opaque_image_id)
+
+        if not image: 
+            raise Exception, "Image not found"
+
+        inst['server_name'] = env['server']['name']
+        inst['image_id'] = opaque_image_id
         inst['user_id'] = user_id
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
+        inst['project_id'] = user_id
 
-        #TODO(dietz) These are the attributes I'm unsure of
         inst['state_description'] = 'scheduling'
-        inst['kernel_id'] = ''
-        inst['ramdisk_id'] = ''
+        inst['kernel_id'] = image.get('kernelId', FLAGS.default_kernel)
+        inst['ramdisk_id'] = image.get('ramdiskId', FLAGS.default_ramdisk)
         inst['reservation_id'] = utils.generate_uid('r')
-        inst['key_data'] = ''
-        inst['key_name'] = ''
-        inst['security_group'] = ''
+
+        #TODO(dietz) this may be ill advised
+        key_pair_ref = self.db_driver.key_pair_get_all_by_user(
+            None, user_id)[0]
+
+        inst['key_data'] = key_pair_ref['public_key']
+        inst['key_name'] = key_pair_ref['name']
+
+        #TODO(dietz) stolen from ec2 api, see TODO there
+        inst['security_group'] = 'default'
 
         # Flavor related attributes
-        inst['instance_type'] = ''
-        inst['memory_mb'] = ''
-        inst['vcpus'] = ''
-        inst['local_gb'] = ''
-
-        
-
-        #TODO(dietz): This seems necessary. How do these apply across
-        #the Rackspace implementation?
-        inst['project_id'] = ''
-
-        self.network_manager = utils.import_object(FLAGS.rs_network_manager)
-        
-        address = self.network_manager.allocate_fixed_ip( None, inst['id']) 
+        inst['instance_type'] = instance_type
+        inst['memory_mb'] = flavor['memory_mb']
+        inst['vcpus'] = flavor['vcpus']
+        inst['local_gb'] = flavor['local_gb']
 
         ref = self.db_driver.instance_create(None, inst)
-        inst['id'] = ref.id
+        inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
+
+        #self.network_manager = utils.import_object(FLAGS.rs_network_manager)
+        #
+        #address = self.network_manager.allocate_fixed_ip( None, inst['id']) 
         
         return inst
 
