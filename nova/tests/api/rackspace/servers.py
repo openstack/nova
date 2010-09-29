@@ -103,7 +103,7 @@ class ServersTest(unittest.TestCase):
 
         def server_update(context, id, params):
             self.update_called = True
-            filtered_dict = dict(name='server_test', adminPass='bacon')
+            filtered_dict = dict(name='server_test', admin_pass='bacon')
             self.assertEqual(params, filtered_dict)
 
         self.stubs.Set(nova.db.api, 'instance_update',
@@ -119,7 +119,8 @@ class ServersTest(unittest.TestCase):
         self.body = json.dumps(dict(server=inst_dict))
 
         def server_update(context, id, params):
-            self.assertEqual(params, json.loads(self.body)['server'])
+            filtered_dict = dict(name='server_test', admin_pass='bacon')
+            self.assertEqual(params, filtered_dict)
 
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)

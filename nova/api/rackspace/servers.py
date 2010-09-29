@@ -34,7 +34,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('rs_network_manager', 'nova.network.manager.FlatManager',
     'Networking for rackspace')
 
-def translator_instance():
+def _instance_id_translator():
+    """ Helper method for initializing an id translator for Rackspace instance
+    ids """
+    return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
+
+def _image_id_translator():
     """ Helper method for initializing the image id translator """
     service = nova.image.service.ImageService.load()
     return _id_translator.RackspaceAPIIdTranslator(
@@ -42,11 +47,11 @@ def translator_instance():
 
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
-    keys = ['name', 'adminPass']
+    keys = dict(name='name', admin_pass='adminPass')
     new_attrs = {}
-    for k in keys:
-        if inst_dict.has_key(k):
-            new_attrs[k] = inst_dict[k]
+    for k, v in keys.items():
+        if inst_dict.has_key(v):
+            new_attrs[k] = inst_dict[v]
     return new_attrs
 
 def _entity_list(entities):
@@ -174,10 +179,13 @@ class Controller(wsgi.Controller):
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
 
+        inst_id_trans = _instance_id_translator()
+        image_id_trans = _image_id_translator()
+
         env = req.environ['inst_dict']
         user_id = req.environ['nova.context']['user']['id']
 
-        inst['rs_id'] = _new_rs_id(user_id)
+        inst['rs_id'] = inst_id_trans.to_rs_id()
         image_id = env['server']['imageId']
         
         opaque_id = translator_instance().from_rs_id(image_id)
