@@ -295,7 +295,7 @@ class CloudController(object):
                     db.security_group_get_by_name(context,
                                                   source_project_id,
                                                   source_security_group_name)
-            values['group_id'] = source_security_group.id
+            values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
             IPy.IP(cidr_ip)
@@ -331,17 +331,19 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
+        if criteria == None:
+            raise exception.ApiError("No rule for the specified parameters.")
 
         for rule in security_group.rules:
+            match = True
             for (k,v) in criteria.iteritems():
                 if getattr(rule, k, False) != v:
-                    break
-            # If we make it here, we have a match
-            db.security_group_rule_destroy(context, rule.id)
+                    match = False
+            if match:
+                db.security_group_rule_destroy(context, rule['id'])
+                self._trigger_refresh_security_group(security_group)
 
-        self._trigger_refresh_security_group(security_group)
-
-        return True
+        raise exception.ApiError("No rule for the specified parameters.")
 
     # TODO(soren): Dupe detection. Adding the same rule twice actually
     #              adds the same rule twice to the rule set, which is
