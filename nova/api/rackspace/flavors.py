@@ -16,6 +16,7 @@
 #    under the License.
 
 from nova.api.rackspace import base
+from nova.api.rackspace import faults
 from nova.compute import instance_types
 from webob import exc
 
@@ -47,7 +48,7 @@ class Controller(base.Controller):
                 item = dict(ram=val['memory_mb'], disk=val['local_gb'],
                             id=val['flavorid'], name=name)
                 return dict(flavor=item)
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self):
         """Return the list of all flavorids."""
