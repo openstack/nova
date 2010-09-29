@@ -412,10 +412,10 @@ def instance_destroy(_context, instance_id):
 def instance_get(context, instance_id):
     session = get_session()
     instance_ref = session.query(models.Instance
-                    ).options(joinedload_all('fixed_ip.floating_ips')
-                    ).options(joinedload_all('security_groups')
                     ).filter_by(id=instance_id
                     ).filter_by(deleted=_deleted(context)
+                    ).options(joinedload_all('security_groups')
+                    ).options(joinedload_all('fixed_ip.floating_ips')
                     ).first()
     if not instance_ref:
         raise exception.NotFound('Instance %s not found' % (instance_id))

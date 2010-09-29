@@ -359,9 +359,9 @@ class SecurityGroup(BASE, NovaBase):
 
     instances = relationship(Instance,
                              secondary="security_group_instance_association",
-                             secondaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
-                                                 "Instance.id == SecurityGroupInstanceAssociation.instance_id,"
-                                                 "SecurityGroup.deleted == False,"
+                             primaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
+                                               "SecurityGroup.deleted == False)",
+                             secondaryjoin="and_(SecurityGroupInstanceAssociation.instance_id == Instance.id,"
                                                  "Instance.deleted == False)",
                              backref='security_groups')
 
