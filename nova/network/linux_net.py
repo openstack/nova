@@ -39,7 +39,7 @@ flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
 flags.DEFINE_string('bridge_dev', 'eth0',
                     'network device for bridges')
-flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
+flags.DEFINE_string('routing_source_ip', '127.0.0.1',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
