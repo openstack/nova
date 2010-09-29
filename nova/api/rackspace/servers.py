@@ -26,6 +26,7 @@ from nova import wsgi
 from nova.api.rackspace import _id_translator
 from nova.api.rackspace import faults
 from nova.compute import power_state
+import nova.api.rackspace
 import nova.image.service
 
 FLAGS = flags.FLAGS
@@ -102,16 +103,21 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        user_id = req.environ['nova.context']['user']['id']
-        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
-        res = [_entity_inst(inst)['server'] for inst in instance_list]
-        return _entity_list(res)
+        return self._items(req, entity_maker=_entity_inst)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
+        return self._items(req, entity_maker=_entity_detail)
+
+    def _items(self, req, entity_maker):
+        """Returns a list of servers for a given user.
+
+        entity_maker - either _entity_detail or _entity_inst
+        """
         user_id = req.environ['nova.context']['user']['id']
-        res = [_entity_detail(inst)['server'] for inst in 
-                self.db_driver.instance_get_all_by_user(None, user_id)]
+        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
+        limited_list = nova.api.rackspace.limited(instance_list, req)
+        res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
     def show(self, req, id):
