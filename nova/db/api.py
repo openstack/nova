@@ -161,8 +161,13 @@ def floating_ip_get_all(context):
 
 
 def floating_ip_get_all_by_host(context, host):
-    """Get all floating ips."""
+    """Get all floating ips by host."""
     return IMPL.floating_ip_get_all_by_host(context, host)
+
+
+def floating_ip_get_all_by_project(context, project_id):
+    """Get all floating ips by project."""
+    return IMPL.floating_ip_get_all_by_project(context, project_id)
 
 
 def floating_ip_get_by_address(context, address):
@@ -251,15 +256,18 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all(context, user_id)
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
-    return IMPL.instance_get_by_project(context, project_id)
+    return IMPL.instance_get_all_by_project(context, project_id)
 
 
-def instance_get_by_reservation(context, reservation_id):
+def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
-    return IMPL.instance_get_by_reservation(context, reservation_id)
+    return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
 def instance_get_fixed_address(context, instance_id):
@@ -272,9 +280,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_str(context, str_id):
-    """Get an instance by string id."""
-    return IMPL.instance_get_by_str(context, str_id)
+def instance_get_by_ec2_id(context, ec2_id):
+    """Get an instance by ec2 id."""
+    return IMPL.instance_get_by_ec2_id(context, ec2_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -393,9 +401,12 @@ def network_index_count(context):
     return IMPL.network_index_count(context)
 
 
-def network_index_create(context, values):
-    """Create a network index from the values dict"""
-    return IMPL.network_index_create(context, values)
+def network_index_create_safe(context, values):
+    """Create a network index from the values dict
+
+    The index is not returned. If the create violates the unique
+    constraints because the index already exists, no exception is raised."""
+    return IMPL.network_index_create_safe(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
@@ -532,14 +543,14 @@ def volume_get_instance(context, volume_id):
     return IMPL.volume_get_instance(context, volume_id)
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     """Get all volumes belonging to a project."""
-    return IMPL.volume_get_by_project(context, project_id)
+    return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_by_str(context, str_id):
-    """Get a volume by string id."""
-    return IMPL.volume_get_by_str(context, str_id)
+def volume_get_by_ec2_id(context, ec2_id):
+    """Get a volume by ec2 id."""
+    return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):

@@ -82,6 +82,16 @@ class Image(object):
         with open(os.path.join(self.path, 'info.json'), 'w') as f:
             json.dump(md, f)
 
+    def update_user_editable_fields(self, args):
+        """args is from the request parameters, so requires extra cleaning"""
+        fields = {'display_name': 'displayName', 'description': 'description'}
+        info = self.metadata
+        for field in fields.keys():
+            if field in args:
+                info[fields[field]] = args[field]
+        with open(os.path.join(self.path, 'info.json'), 'w') as f:
+            json.dump(info, f)
+
     @staticmethod
     def all():
         images = []
