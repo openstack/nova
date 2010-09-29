@@ -133,7 +133,7 @@ def get_dhcp_hosts(context, network_id):
     """Get a string containing a network's hosts config in dnsmasq format"""
     hosts = []
     for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
-        hosts.append(_host_dhcp(fixed_ip['str_id']))
+        hosts.append(_host_dhcp(fixed_ip['address']))
     return '\n'.join(hosts)
 
 
