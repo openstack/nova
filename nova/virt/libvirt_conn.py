@@ -527,8 +527,8 @@ class NWFilterFirewall(object):
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
-            for direction,action,priority in [('out','accept', 400),
-                                     ('in','drop', 399)]:
+            for direction,action,priority in [('out','accept', 399),
+                                     ('inout','drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s />
                              </rule>""" % (action, direction,
@@ -540,8 +540,8 @@ class NWFilterFirewall(object):
     def nova_base_ipv6_filter(self):
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
         for protocol in ['tcp', 'udp', 'icmp']:
-            for direction,action,priority in [('out','accept',400),
-                                     ('in','drop',399)]:
+            for direction,action,priority in [('out','accept',399),
+                                     ('inout','drop',400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s-ipv6 />
                              </rule>""" % (action, direction,
