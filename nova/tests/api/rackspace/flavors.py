@@ -16,19 +16,32 @@
 #    under the License.
 
 import unittest
+import stubout
 
+import nova.api
 from nova.api.rackspace import flavors
+from nova.tests.api.rackspace import test_helper
 from nova.tests.api.test_helper import *
 
 class FlavorsTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
+        test_helper.FakeAuthManager.auth_data = {}
+        test_helper.FakeAuthDatabase.data = {}
+        test_helper.stub_for_testing(self.stubs)
+        test_helper.stub_out_rate_limiting(self.stubs)
+        test_helper.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
 
     def test_get_flavor_list(self):
-        pass
+        req = webob.Request.blank('/v1.0/flavors')
+        res = req.get_response(nova.api.API())
+        print res
 
     def test_get_flavor_by_id(self):
         pass
+
+if __name__ == '__main__':
+    unittest.main()
