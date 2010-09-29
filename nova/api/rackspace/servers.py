@@ -24,6 +24,7 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import wsgi
+from nova.api import cloud
 from nova.api.rackspace import _id_translator
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -186,8 +187,13 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
-        if not req.environ.has_key('inst_dict'):
-            return exc.HTTPUnprocessableEntity()
+        input_dict = self._deserialize(req.body, req)
+        try:
+            reboot_type = input_dict['reboot']['type']
+        except Exception:
+            raise faults.Fault(webob.exc.HTTPNotImplemented())
+        opaque_id = _instance_id_translator().from_rsapi_id(id)
+        cloud.reboot(opaque_id)
 
     def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
