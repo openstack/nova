@@ -30,7 +30,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload_all
+from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -811,6 +811,7 @@ def quota_destroy(_context, project_id):
 
 
 def volume_allocate_shelf_and_blade(_context, volume_id):
+    # TODO(devcamcar): Make admin only
     session = get_session()
     with session.begin():
         export_device = session.query(models.ExportDevice
@@ -839,7 +840,7 @@ def volume_attached(_context, volume_id, instance_id, mountpoint):
         volume_ref.save(session=session)
 
 
-def volume_create(_context, values):
+def volume_create(context, values):
     volume_ref = models.Volume()
     for (key, value) in values.iteritems():
         volume_ref[key] = value
@@ -848,7 +849,7 @@ def volume_create(_context, values):
     with session.begin():
         while volume_ref.ec2_id == None:
             ec2_id = utils.generate_uid(volume_ref.__prefix__)
-            if not volume_ec2_id_exists(_context, ec2_id, session=session):
+            if not volume_ec2_id_exists(context, ec2_id, session=session):
                 volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
     return volume_ref
@@ -876,10 +877,10 @@ def volume_destroy(_context, volume_id):
                         {'id': volume_id})
 
 
-def volume_detached(_context, volume_id):
+def volume_detached(context, volume_id):
     session = get_session()
     with session.begin():
-        volume_ref = models.Volume.find(volume_id, session=session)
+        volume_ref = volume_get(context, volume_id, session=session)
         volume_ref['status'] = 'available'
         volume_ref['mountpoint'] = None
         volume_ref['attach_status'] = 'detached'
@@ -887,27 +888,29 @@ def volume_detached(_context, volume_id):
         volume_ref.save(session=session)
 
 
-def volume_get(context, volume_id):
-    session = get_session()
+def volume_get(context, volume_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
 
     if is_admin_context(context):
-        volume_ref = session.query(models.Volume
-                           ).filter_by(id=volume_id
-                           ).filter_by(deleted=_deleted(context)
-                           ).first()
-        if not volume_ref:
-            raise exception.NotFound('No volume for id %s' % volume_id)
+        result = session.query(models.Volume
+                       ).filter_by(id=volume_id
+                       ).filter_by(deleted=_deleted(context)
+                       ).first()
+    elif is_user_context(context):
+        result = session.query(models.Volume
+                       ).filter_by(project_id=context.project.project_id
+                       ).filter_by(id=volume_id
+                       ).filter_by(deleted=False
+                       ).first()
+    else:
+        raise exception.NotAuthorized()
 
-    if is_user_context(context):
-        volume_ref = session.query(models.Volume
-                           ).filter_by(project_id=project_id
-                           ).filter_by(id=volume_id
-                           ).filter_by(deleted=False
-                           ).first()
-        if not volume_ref:
-            raise exception.NotFound('No volume for id %s' % volume_id)
+    if not result:
+        raise exception.NotFound('No volume for id %s' % volume_id)
 
-    raise exception.NotAuthorized()
+    return result
 
 
 def volume_get_all(context):
@@ -915,6 +918,7 @@ def volume_get_all(context):
         return models.Volume.all(deleted=_deleted(context))
 
     raise exception.NotAuthorized()
+
 
 def volume_get_all_by_project(context, project_id):
     if is_user_context(context):
@@ -932,42 +936,92 @@ def volume_get_all_by_project(context, project_id):
 
 def volume_get_by_ec2_id(context, ec2_id):
     session = get_session()
-    volume_ref = session.query(models.Volume
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Volume
                        ).filter_by(ec2_id=ec2_id
                        ).filter_by(deleted=_deleted(context)
                        ).first()
-    if not volume_ref:
-        raise exception.NotFound('Volume %s not found' % (ec2_id))
+    elif is_user_context(context):
+        result = session.query(models.Volume
+                       ).filter_by(project_id=context.project.id
+                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(deleted=False
+                       ).first()
+    else:
+        raise exception.NotAuthorized()
 
-    return volume_ref
+    if not result:
+        raise exception.NotFound('Volume %s not found' % ec2_id)
+
+    return result
 
 
 def volume_ec2_id_exists(context, ec2_id, session=None):
     if not session:
         session = get_session()
-    return session.query(exists().where(models.Volume.id==ec2_id)).one()[0]
+
+    if is_admin_context(context) or is_user_context(context):
+        return session.query(exists(
+                     ).where(models.Volume.id==ec2_id)
+                     ).one()[0]
+    else:
+        raise exception.NotAuthorized()
 
 
-def volume_get_instance(_context, volume_id):
+def volume_get_instance(context, volume_id):
     session = get_session()
-    with session.begin():
-        return models.Volume.find(volume_id, session=session).instance
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Volume
+                       ).filter_by(id=volume_id
+                       ).filter_by(deleted=_deleted(context)
+                       ).options(joinedload('instance')
+                       ).first()
+    elif is_user_context(context):
+        result = session.query(models.Volume
+                       ).filter_by(project_id=context.project.id
+                       ).filter_by(deleted=False
+                       ).options(joinedload('instance')
+                       ).first()
+    else:
+        raise exception.NotAuthorized()
+
+    if not result:
+        raise exception.NotFound('Volume %s not found' % ec2_id)
+
+    return result.instance
 
 
-def volume_get_shelf_and_blade(_context, volume_id):
+def volume_get_shelf_and_blade(context, volume_id):
     session = get_session()
-    export_device = session.query(models.ExportDevice
-                          ).filter_by(volume_id=volume_id
-                          ).first()
-    if not export_device:
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.ExportDevice
+                       ).filter_by(volume_id=volume_id
+                       ).first()
+    elif is_user_context(context):
+        result = session.query(models.ExportDevice
+                       ).join(models.Volume
+                       ).filter(models.Volume.project_id==context.project.id
+                       ).filter_by(volume_id=volume_id
+                       ).first()
+    else:
+        raise exception.NotAuthorized()
+
+    if not result:
         raise exception.NotFound()
-    return (export_device.shelf_id, export_device.blade_id)
+
+    return (result.shelf_id, result.blade_id)
 
 
-def volume_update(_context, volume_id, values):
+def volume_update(context, volume_id, values):
     session = get_session()
     with session.begin():
-        volume_ref = models.Volume.find(volume_id, session=session)
+        volume_ref = volume_get(context, volume_id, session=session)
         for (key, value) in values.iteritems():
             volume_ref[key] = value
         volume_ref.save(session=session)

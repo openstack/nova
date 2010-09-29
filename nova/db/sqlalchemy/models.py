@@ -282,7 +282,11 @@ class Volume(BASE, NovaBase):
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('volumes'))
+    instance = relationship(Instance,
+                            backref=backref('volumes'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(Volume.instance_id==Instance.id,'
+                                             'Volume.deleted==False)')
     mountpoint = Column(String(255))
     attach_time = Column(String(255))  # TODO(vish): datetime
     status = Column(String(255))  # TODO(vish): enum?
@@ -333,8 +337,11 @@ class ExportDevice(BASE, NovaBase):
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
-    volume = relationship(Volume, backref=backref('export_device',
-                                                  uselist=False))
+    volume = relationship(Volume,
+                          backref=backref('export_device', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
+                                           'ExportDevice.deleted==False)')
 
 
 class KeyPair(BASE, NovaBase):
@@ -407,8 +414,12 @@ class NetworkIndex(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     index = Column(Integer, unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('network_index',
-                                                    uselist=False))
+    network = relationship(Network,
+                           backref=backref('network_index', uselist=False),
+                           foreign_keys=network_id,
+                           primaryjoin='and_(NetworkIndex.network_id==Network.id,'
+                                            'NetworkIndex.deleted==False)')
+
 
 class AuthToken(BASE, NovaBase):
     """Represents an authorization token for all API transactions. Fields
@@ -432,8 +443,11 @@ class FixedIp(BASE, NovaBase):
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
+    instance = relationship(Instance,
+                            backref=backref('fixed_ip', uselist=False),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(FixedIp.instance_id==Instance.id,'
+                                             'FixedIp.deleted==False)')
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
@@ -462,8 +476,11 @@ class FloatingIp(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
-
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_(FloatingIp.fixed_ip_id==FixedIp.id,'
+                                             'FloatingIp.deleted==False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
