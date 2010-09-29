@@ -102,7 +102,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, project_id):
         result = {}
-        for instance in db.instance_get_by_project(None, project_id):
+        for instance in db.instance_get_all_by_project(None, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
@@ -257,7 +257,7 @@ class CloudController(object):
         if context.user.is_admin():
             volumes = db.volume_get_all(context)
         else:
-            volumes = db.volume_get_by_project(context, context.project.id)
+            volumes = db.volume_get_all_by_project(context, context.project.id)
 
         volumes = [self._format_volume(context, v) for v in volumes]
 
@@ -286,6 +286,9 @@ class CloudController(object):
                                    'volume_id': volume['ec2_id']}]
         else:
             v['attachmentSet'] = [{}]
+
+        v['display_name'] = volume['display_name']
+        v['display_description'] = volume['display_description']
         return v
 
     def create_volume(self, context, size, **kwargs):
@@ -303,6 +306,8 @@ class CloudController(object):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
+        vol['display_name'] = kwargs.get('display_name')
+        vol['display_description'] = kwargs.get('display_description')
         volume_ref = db.volume_create(context, vol)
 
         rpc.cast(FLAGS.scheduler_topic,
@@ -369,6 +374,16 @@ class CloudController(object):
             lst = [lst]
         return [{label: x} for x in lst]
 
+    def update_volume(self, context, volume_id, **kwargs):
+        updatable_fields = ['display_name', 'display_description']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+        if changes:
+            db.volume_update(context, volume_id, kwargs)
+        return True
+
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
 
@@ -383,14 +398,14 @@ class CloudController(object):
     def _format_instances(self, context, reservation_id=None):
         reservations = {}
         if reservation_id:
-            instances = db.instance_get_by_reservation(context,
-                                                       reservation_id)
+            instances = db.instance_get_all_by_reservation(context,
+                                                           reservation_id)
         else:
             if context.user.is_admin():
                 instances = db.instance_get_all(context)
             else:
-                instances = db.instance_get_by_project(context,
-                                                       context.project.id)
+                instances = db.instance_get_all_by_project(context,
+                                                           context.project.id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -421,6 +436,8 @@ class CloudController(object):
             i['instanceType'] = instance['instance_type']
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
+            i['displayName'] = instance['display_name']
+            i['displayDescription'] = instance['display_description']
             if not reservations.has_key(instance['reservation_id']):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
@@ -440,8 +457,8 @@ class CloudController(object):
         if context.user.is_admin():
             iterator = db.floating_ip_get_all(context)
         else:
-            iterator = db.floating_ip_get_by_project(context,
-                                                     context.project.id)
+            iterator = db.floating_ip_get_all_by_project(context,
+                                                         context.project.id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['address']
             instance_id = None
@@ -483,14 +500,15 @@ class CloudController(object):
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance_ref = db.instance_get_by_ec2_id(context, instance_id)
-        fixed_ip_ref = db.fixed_ip_get_by_instance(context, instance_ref['id'])
+        fixed_address = db.instance_get_fixed_address(context,
+                                                      instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
         rpc.cast(network_topic,
                  {"method": "associate_floating_ip",
                   "args": {"context": None,
                            "floating_address": floating_ip_ref['address'],
-                           "fixed_address": fixed_ip_ref['address']}})
+                           "fixed_address": fixed_address}})
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
@@ -577,6 +595,8 @@ class CloudController(object):
         base_options['user_data'] = kwargs.get('user_data', '')
         base_options['security_group'] = security_group
         base_options['instance_type'] = instance_type
+        base_options['display_name'] = kwargs.get('display_name')
+        base_options['display_description'] = kwargs.get('display_description')
 
         type_data = INSTANCE_TYPES[instance_type]
         base_options['memory_mb'] = type_data['memory_mb']
@@ -641,7 +661,7 @@ class CloudController(object):
                 rpc.cast(network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"context": None,
-                                   "address": address}})
+                                   "floating_address": address}})
 
             address = db.instance_get_fixed_address(context,
                                                     instance_ref['id'])
@@ -666,6 +686,18 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
             cloud.reboot(id_str, context=context)
+        return True
+
+    def update_instance(self, context, instance_id, **kwargs):
+        updatable_fields = ['display_name', 'display_description']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+        if changes:
+            db_context = {}
+            inst = db.instance_get_by_ec2_id(db_context, instance_id)
+            db.instance_update(db_context, inst['id'], kwargs)
         return True
 
     def delete_volume(self, context, volume_id, **kwargs):
@@ -723,3 +755,7 @@ class CloudController(object):
         if not operation_type in ['add', 'remove']:
             raise exception.ApiError('operation_type must be add or remove')
         return images.modify(context, image_id, operation_type)
+
+    def update_image(self, context, image_id, **kwargs):
+        result = images.update(context, image_id, dict(kwargs))
+        return result

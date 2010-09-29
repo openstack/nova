@@ -19,6 +19,8 @@
 Implementation of SQLAlchemy backend
 """
 
+import sys
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -26,6 +28,7 @@ from nova import utils
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import exists, func
 
@@ -166,6 +169,7 @@ def floating_ip_allocate_address(_context, host, project_id):
         floating_ip_ref = session.query(models.FloatingIp
                                 ).filter_by(host=host
                                 ).filter_by(fixed_ip_id=None
+                                ).filter_by(project_id=None
                                 ).filter_by(deleted=False
                                 ).with_lockmode('update'
                                 ).first()
@@ -253,6 +257,14 @@ def floating_ip_get_all_by_host(_context, host):
                  ).filter_by(deleted=False
                  ).all()
 
+def floating_ip_get_all_by_project(_context, project_id):
+    session = get_session()
+    return session.query(models.FloatingIp
+                 ).options(joinedload_all('fixed_ip.instance')
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).all()
+
 def floating_ip_get_by_address(_context, address):
     return models.FloatingIp.find_by_str(address)
 
@@ -328,7 +340,17 @@ def fixed_ip_disassociate(_context, address):
 
 
 def fixed_ip_get_by_address(_context, address):
-    return models.FixedIp.find_by_str(address)
+    session = get_session()
+    with session.begin():
+        try:
+            return session.query(models.FixedIp
+                         ).options(joinedload_all('instance')
+                         ).filter_by(address=address
+                         ).filter_by(deleted=False
+                         ).one()
+        except exc.NoResultFound:
+            new_exc = exception.NotFound("No model for address %s" % address)
+            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 def fixed_ip_get_instance(_context, address):
@@ -406,7 +428,7 @@ def instance_get_all_by_user(context, user_id):
                  ).filter_by(user_id=user_id
                  ).all()
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -415,7 +437,7 @@ def instance_get_by_project(context, project_id):
                  ).all()
 
 
-def instance_get_by_reservation(_context, reservation_id):
+def instance_get_all_by_reservation(_context, reservation_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -600,6 +622,7 @@ def network_get(_context, network_id):
 def network_get_associated_fixed_ips(_context, network_id):
     session = get_session()
     return session.query(models.FixedIp
+                 ).options(joinedload_all('instance')
                  ).filter_by(network_id=network_id
                  ).filter(models.FixedIp.instance_id != None
                  ).filter_by(deleted=False
@@ -637,11 +660,14 @@ def network_index_count(_context):
     return models.NetworkIndex.count()
 
 
-def network_index_create(_context, values):
+def network_index_create_safe(_context, values):
     network_index_ref = models.NetworkIndex()
     for (key, value) in values.iteritems():
         network_index_ref[key] = value
-    network_index_ref.save()
+    try:
+        network_index_ref.save()
+    except IntegrityError:
+        pass
 
 
 def network_set_host(_context, network_id, host_id):
@@ -850,7 +876,7 @@ def volume_get_all(context):
     return models.Volume.all(deleted=_deleted(context))
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Volume
                  ).filter_by(project_id=project_id

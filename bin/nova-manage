@@ -266,6 +266,18 @@ class UserCommands(object):
         for user in self.manager.get_users():
             print user.name
 
+    def modify(self, name, access_key, secret_key, is_admin):
+        """update a users keys & admin flag
+        arguments: accesskey secretkey admin
+        leave any field blank to ignore it, admin should be 'T', 'F', or blank
+        """
+        if not is_admin:
+            is_admin = None
+        elif is_admin.upper()[0] == 'T':
+            is_admin = True
+        else:
+            is_admin = False
+        self.manager.modify_user(name, access_key, secret_key, is_admin)
 
 class ProjectCommands(object):
     """Class for managing projects."""
@@ -291,7 +303,7 @@ class ProjectCommands(object):
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(project_id, user_id)
+        rc = self.manager.get_environment_rc(user_id, project_id)
         with open(filename, 'w') as f:
             f.write(rc)
 

@@ -31,7 +31,7 @@ FLAGS = flags.FLAGS
 class Context(object):
     pass
 
-class AccessTestCase(test.BaseTestCase):
+class AccessTestCase(test.TrialTestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
         um = manager.AuthManager()

@@ -17,6 +17,7 @@
 
 import unittest
 
+from nova.api.rackspace import limited
 from nova.api.rackspace import RateLimitingMiddleware
 from nova.tests.api.test_helper import *
 from webob import Request
@@ -77,3 +78,31 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         self.assertEqual(middleware.limiter.__class__.__name__, "Limiter")
         middleware = RateLimitingMiddleware(APIStub(), service_host='foobar')
         self.assertEqual(middleware.limiter.__class__.__name__, "WSGIAppProxy")
+
+
+class LimiterTest(unittest.TestCase):
+
+    def testLimiter(self):
+        items = range(2000)
+        req = Request.blank('/')
+        self.assertEqual(limited(items, req), items[ :1000])
+        req = Request.blank('/?offset=0')
+        self.assertEqual(limited(items, req), items[ :1000])
+        req = Request.blank('/?offset=3')
+        self.assertEqual(limited(items, req), items[3:1003])
+        req = Request.blank('/?offset=2005')
+        self.assertEqual(limited(items, req), [])
+        req = Request.blank('/?limit=10')
+        self.assertEqual(limited(items, req), items[ :10])
+        req = Request.blank('/?limit=0')
+        self.assertEqual(limited(items, req), items[ :1000])
+        req = Request.blank('/?limit=3000')
+        self.assertEqual(limited(items, req), items[ :1000])
+        req = Request.blank('/?offset=1&limit=3')
+        self.assertEqual(limited(items, req), items[1:4])
+        req = Request.blank('/?offset=3&limit=0')
+        self.assertEqual(limited(items, req), items[3:1003])
+        req = Request.blank('/?offset=3&limit=1500')
+        self.assertEqual(limited(items, req), items[3:1003])
+        req = Request.blank('/?offset=3000&limit=10')
+        self.assertEqual(limited(items, req), [])

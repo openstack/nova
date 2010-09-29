@@ -41,8 +41,6 @@ def fake_wsgi(self, req):
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
-
-
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]

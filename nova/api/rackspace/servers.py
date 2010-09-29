@@ -18,6 +18,7 @@
 import datetime
 import time
 
+import webob
 from webob import exc
 
 from nova import flags
@@ -31,6 +32,7 @@ from nova.api.rackspace import faults
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.wsgi import Serializer
+import nova.api.rackspace
 import nova.image.service
 
 FLAGS = flags.FLAGS
@@ -112,16 +114,21 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        user_id = req.environ['nova.context']['user']['id']
-        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
-        res = [_entity_inst(inst)['server'] for inst in instance_list]
-        return _entity_list(res)
+        return self._items(req, entity_maker=_entity_inst)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
+        return self._items(req, entity_maker=_entity_detail)
+
+    def _items(self, req, entity_maker):
+        """Returns a list of servers for a given user.
+
+        entity_maker - either _entity_detail or _entity_inst
+        """
         user_id = req.environ['nova.context']['user']['id']
-        res = [_entity_detail(inst)['server'] for inst in 
-                self.db_driver.instance_get_all_by_user(None, user_id)]
+        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
+        limited_list = nova.api.rackspace.limited(instance_list, req)
+        res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
     def show(self, req, id):
@@ -134,7 +141,7 @@ class Controller(wsgi.Controller):
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, id):
         """ Destroys a server """
@@ -145,15 +152,15 @@ class Controller(wsgi.Controller):
         instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
-            return exc.HTTPAccepted()
-        return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPAccepted())
+        return faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
         """ Creates a new server for a given user """
 
         env = self._deserialize(req.body, req)
         if not env:
-            return exc.HTTPUnprocessableEntity()
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         #try:
         inst = self._build_server_instance(req, env)
@@ -176,15 +183,15 @@ class Controller(wsgi.Controller):
         inst_dict = self._deserialize(req.body, req)
         
         if not inst_dict:
-            return exc.HTTPUnprocessableEntity()
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if not instance or instance.user_id != user_id:
-            return exc.HTTPNotFound()
+            return faults.Fault(exc.HTTPNotFound())
 
         self.db_driver.instance_update(None, id, 
             _filter_params(inst_dict['server']))
-        return exc.HTTPNoContent()
+        return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
@@ -259,17 +266,19 @@ class Controller(wsgi.Controller):
         
         # TODO(dietz): this isn't explicitly necessary, but the networking
         # calls depend on an object with a project_id property
-        context = context.APIRequestContext(user_id)
+        api_context = context.APIRequestContext(user_id)
     
         inst['mac_address'] = utils.generate_mac()
         
         #TODO(dietz) is this necessary? 
         inst['launch_index'] = 0
 
-        inst['hostname'] = instance_ref['ec2_id']
-        self.db_driver.instance_update(None, inst_id, inst)
+        inst['hostname'] = ref.ec2_id
+        self.db_driver.instance_update(None, inst['id'], inst)
+
         self.network_manager = utils.import_object(FLAGS.rs_network_manager)
-        address = self.network_manager.allocate_fixed_ip(context, inst_id)
+        address = self.network_manager.allocate_fixed_ip(api_context,
+            inst['id'])
 
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned

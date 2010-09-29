@@ -84,16 +84,32 @@ class ServersTest(unittest.TestCase):
             i += 1
 
     def test_create_instance(self):
+        def server_update(context, id, params):
+            pass 
+
         def instance_create(context, inst):
             class Foo(object):
                 ec2_id = 1
             return Foo()
 
-        def fake_cast(*args, **kwargs):
+        def fake_method(*args, **kwargs):
             pass
+        
+        def project_get_network(context, user_id):
+            return dict(id='1', host='localhost') 
 
+        def queue_get_for(context, *args):
+            return 'network_topic'
+
+        self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
-        self.stubs.Set(nova.rpc, 'cast', fake_cast)
+        self.stubs.Set(nova.rpc, 'cast', fake_method)
+        self.stubs.Set(nova.rpc, 'call', fake_method)
+        self.stubs.Set(nova.db.api, 'instance_update',
+            server_update)
+        self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
+        self.stubs.Set(nova.network.manager.FlatManager, 'allocate_fixed_ip',
+            fake_method)
             
         test_helper.stub_out_id_translator(self.stubs)
         body = dict(server=dict(
