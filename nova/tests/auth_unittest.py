@@ -29,7 +29,8 @@ from nova.api.ec2 import cloud
 FLAGS = flags.FLAGS
 
 
-class AuthTestCase(test.BaseTestCase):
+class AuthTestCase(test.TrialTestCase):
+    flush_db = False
     def setUp(self):
         super(AuthTestCase, self).setUp()
         self.flags(connection_type='fake')
