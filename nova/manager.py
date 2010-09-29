@@ -37,3 +37,10 @@ class Manager(object):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
+
+    def init_host(self):
+       """Do any initialization that needs to be run if this is a standalone service.
+
+       Child classes should override this method.
+       """
+       pass
