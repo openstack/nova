@@ -67,6 +67,17 @@ class RpcTestCase(test.BaseTestCase):
         except rpc.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
 
+    def test_pass_object(self):
+        """Test that we can pass objects through rpc"""
+        class x():
+            pass
+        obj = x()
+        x.foo = 'bar'
+        x.baz = 100
+
+        result = yield rpc.call('test', {"method": "echo",
+                                         "args": {"value": obj}})
+        print result
 
 class TestReceiver(object):
     """Simple Proxy class so the consumer has methods to call
