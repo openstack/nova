@@ -285,6 +285,9 @@ class CloudController(object):
                                    'volume_id': volume['ec2_id']}]
         else:
             v['attachmentSet'] = [{}]
+
+        v['display_name'] = volume['display_name']
+        v['display_description'] = volume['display_description']
         return v
 
     def create_volume(self, context, size, **kwargs):
@@ -302,6 +305,8 @@ class CloudController(object):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
+        vol['display_name'] = kwargs.get('display_name')
+        vol['display_description'] = kwargs.get('display_description')
         volume_ref = db.volume_create(context, vol)
 
         rpc.cast(FLAGS.scheduler_topic,
@@ -368,6 +373,16 @@ class CloudController(object):
             lst = [lst]
         return [{label: x} for x in lst]
 
+    def update_volume(self, context, volume_id, **kwargs):
+        updatable_fields = ['display_name', 'display_description']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+        if changes:
+            db.volume_update(context, volume_id, kwargs)
+        return True
+
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
 
@@ -420,6 +435,8 @@ class CloudController(object):
             i['instanceType'] = instance['instance_type']
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
+            i['displayName'] = instance['display_name']
+            i['displayDescription'] = instance['display_description']
             if not reservations.has_key(instance['reservation_id']):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
@@ -577,6 +594,8 @@ class CloudController(object):
         base_options['user_data'] = kwargs.get('user_data', '')
         base_options['security_group'] = security_group
         base_options['instance_type'] = instance_type
+        base_options['display_name'] = kwargs.get('display_name')
+        base_options['display_description'] = kwargs.get('display_description')
 
         type_data = INSTANCE_TYPES[instance_type]
         base_options['memory_mb'] = type_data['memory_mb']
@@ -673,6 +692,18 @@ class CloudController(object):
                                "instance_id": instance_ref['id']}})
         return True
 
+    def update_instance(self, context, instance_id, **kwargs):
+        updatable_fields = ['display_name', 'display_description']
+        changes = {}
+        for field in updatable_fields:
+            if field in kwargs:
+                changes[field] = kwargs[field]
+        if changes:
+            db_context = {}
+            inst = db.instance_get_by_ec2_id(db_context, instance_id)
+            db.instance_update(db_context, inst['id'], kwargs)
+        return True
+
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
@@ -728,3 +759,7 @@ class CloudController(object):
         if not operation_type in ['add', 'remove']:
             raise exception.ApiError('operation_type must be add or remove')
         return images.modify(context, image_id, operation_type)
+
+    def update_image(self, context, image_id, **kwargs):
+        result = images.update(context, image_id, dict(kwargs))
+        return result
