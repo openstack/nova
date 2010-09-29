@@ -213,14 +213,11 @@ class Controller(wsgi.Controller):
 
         user_id = req.environ['nova.context']['user']['id']
 
-        instance_type, flavor = None, None
-        for k, v in instance_types.INSTANCE_TYPES.iteritems():
-            if v['flavorid'] == env['server']['flavorId']:
-                instance_type, flavor = k, v
-                break
+        flavor_id = env['server']['flavorId']
 
-        if not flavor:
-            raise Exception, "Flavor not found"
+        instance_type, flavor = [(k, v) for k, v in
+            instance_types.INSTANCE_TYPES.iteritems()
+            if v['flavorid'] == flavor_id][0]
 
         image_id = env['server']['imageId']
         
@@ -262,10 +259,10 @@ class Controller(wsgi.Controller):
 
         ref = self.db_driver.instance_create(None, inst)
         inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
-
         
         # TODO(dietz): this isn't explicitly necessary, but the networking
-        # calls depend on an object with a project_id property
+        # calls depend on an object with a project_id property, and therefore
+        # should be cleaned up later
         api_context = context.APIRequestContext(user_id)
     
         inst['mac_address'] = utils.generate_mac()
