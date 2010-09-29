@@ -1,5 +1,6 @@
 import unittest
 import webob
+import webob.dec
 import webob.exc
 
 from nova.api.rackspace import faults
@@ -28,3 +29,12 @@ class TestFaults(unittest.TestCase):
         self.assertTrue('<message>sorry</message>' in body_sans_spaces)
         self.assertTrue('<retryAfter>4</retryAfter>' in body_sans_spaces)
         self.assertEqual(resp.headers['Retry-After'], 4)
+
+    def test_raise(self):
+        @webob.dec.wsgify
+        def raiser(req):
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation='whut?'))
+        req = webob.Request.blank('/.xml')
+        resp = req.get_response(raiser)
+        self.assertEqual(resp.status_int, 404)
+        self.assertTrue('whut?' in resp.body)

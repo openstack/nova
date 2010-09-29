@@ -17,11 +17,12 @@
 
 
 import webob.dec
+import webob.exc
 
 from nova import wsgi
 
 
-class Fault(wsgi.Application):
+class Fault(webob.exc.HTTPException):
 
     """An RS API fault response."""
 
@@ -39,23 +40,23 @@ class Fault(wsgi.Application):
 
     def __init__(self, exception):
         """Create a Fault for the given webob.exc.exception."""
-        self.exception = exception
+        self.wrapped_exc = exception
 
     @webob.dec.wsgify
     def __call__(self, req):
-        """Generate a WSGI response based on self.exception."""
+        """Generate a WSGI response based on the exception passed to ctor."""
         # Replace the body with fault details.
-        code = self.exception.status_int
+        code = self.wrapped_exc.status_int
         fault_name = self._fault_names.get(code, "cloudServersFault")
         fault_data = {
             fault_name: {
                 'code': code,
-                'message': self.exception.explanation}}
+                'message': self.wrapped_exc.explanation}}
         if code == 413:
-            retry = self.exception.headers['Retry-After']
+            retry = self.wrapped_exc.headers['Retry-After']
             fault_data[fault_name]['retryAfter'] = retry
         # 'code' is an attribute on the fault tag itself 
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
         serializer = wsgi.Serializer(req.environ, metadata)
-        self.exception.body = serializer.to_content_type(fault_data)
-        return self.exception
+        self.wrapped_exc.body = serializer.to_content_type(fault_data)
+        return self.wrapped_exc
