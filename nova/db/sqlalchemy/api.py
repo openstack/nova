@@ -753,7 +753,7 @@ def instance_update(context, instance_id, values):
 
 
 #@require_context
-def key_pair_create(_context, values):
+def key_pair_create(context, values):
     key_pair_ref = models.KeyPair()
     for (key, value) in values.iteritems():
         key_pair_ref[key] = value
@@ -763,15 +763,22 @@ def key_pair_create(_context, values):
 
 #@require_context
 def key_pair_destroy(context, user_id, name):
+    if is_user_context(context):
+        if context.user.id != user_id:
+            raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        key_pair_ref = models.KeyPair.find_by_args(user_id,
-                                                  name,
-                                                  session=session)
+        key_pair_ref = key_pair_get(context, user_id, name, session=session)
         key_pair_ref.delete(session=session)
 
 
-def key_pair_destroy_all_by_user(_context, user_id):
+#@require_context
+def key_pair_destroy_all_by_user(context, user_id):
+    if is_user_context(context):
+        if context.user.id != user_id:
+            raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
@@ -779,11 +786,32 @@ def key_pair_destroy_all_by_user(_context, user_id):
                         {'id': user_id})
 
 
-def key_pair_get(_context, user_id, name):
-    return models.KeyPair.find_by_args(user_id, name)
+#@require_context
+def key_pair_get(context, user_id, name, session=None):
+    if is_user_context(context):
+        if context.user.id != user_id:
+            raise exception.NotAuthorized()
+
+    if not session:
+        session = get_session()
+
+    result = session.query(models.KeyPair
+                   ).filter_by(user_id=user_id
+                   ).filter_by(name=name
+                   ).filter_by(deleted=_deleted(context)
+                   ).first()
+    if not result:
+        raise exception.NotFound('no keypair for user %s, name %s' %
+                                 (user_id, name))
+    return result
 
 
-def key_pair_get_all_by_user(_context, user_id):
+#@require_context
+def key_pair_get_all_by_user(context, user_id):
+    if is_user_context(context):
+        if context.user.id != user_id:
+            raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.KeyPair
                  ).filter_by(user_id=user_id
@@ -1118,7 +1146,7 @@ def quota_get(context, project_id, session=None):
 
 
 #@require_admin_context
-def quota_create(_context, values):
+def quota_create(context, values):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
