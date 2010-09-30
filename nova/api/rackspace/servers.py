@@ -160,11 +160,10 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        #try:
-        inst = self._build_server_instance(req, env)
-        #except Exception, e:
-        #    print e
-        #    return exc.HTTPUnprocessableEntity()
+        try:
+            inst = self._build_server_instance(req, env)
+        except Exception, e:
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         rpc.cast(
             FLAGS.compute_topic, {
