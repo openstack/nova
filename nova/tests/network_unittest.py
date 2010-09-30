@@ -84,6 +84,7 @@ class NetworkTestCase(test.TrialTestCase):
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
+        self.context.project = self.projects[0]
         pubnet = IPy.IP(flags.FLAGS.public_range)
         address = str(pubnet[0])
         try:

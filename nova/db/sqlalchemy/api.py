@@ -234,7 +234,13 @@ def service_update(context, service_id, values):
 ###################
 
 
-def floating_ip_allocate_address(_context, host, project_id):
+def floating_ip_allocate_address(context, host, project_id):
+    if is_user_context(context):
+        if context.project.id != project_id:
+            raise exception.NotAuthorized()
+    elif not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         floating_ip_ref = session.query(models.FloatingIp
@@ -253,7 +259,10 @@ def floating_ip_allocate_address(_context, host, project_id):
     return floating_ip_ref['address']
 
 
-def floating_ip_create(_context, values):
+def floating_ip_create(context, values):
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     floating_ip_ref = models.FloatingIp()
     for (key, value) in values.iteritems():
         floating_ip_ref[key] = value
@@ -261,7 +270,13 @@ def floating_ip_create(_context, values):
     return floating_ip_ref['address']
 
 
-def floating_ip_count_by_project(_context, project_id):
+def floating_ip_count_by_project(context, project_id):
+    if is_user_context(context):
+        if context.project.id != project_id:
+            raise exception.NotAuthorized()
+    elif not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FloatingIp
                  ).filter_by(project_id=project_id
@@ -269,39 +284,63 @@ def floating_ip_count_by_project(_context, project_id):
                  ).count()
 
 
-def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
+#@require_context
+def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(floating_address,
-                                                        session=session)
-        fixed_ip_ref = models.FixedIp.find_by_str(fixed_address,
-                                                  session=session)
+        # TODO(devcamcar): How to ensure floating_id belongs to user?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     floating_address,
+                                                     session=session)
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               fixed_address,
+                                               session=session)
         floating_ip_ref.fixed_ip = fixed_ip_ref
         floating_ip_ref.save(session=session)
 
 
-def floating_ip_deallocate(_context, address):
+#@require_context
+def floating_ip_deallocate(context, address):
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
+        # TODO(devcamcar): How to ensure floating id belongs to user?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
         floating_ip_ref['project_id'] = None
         floating_ip_ref.save(session=session)
 
+#@require_context
+def floating_ip_destroy(context, address):
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-def floating_ip_destroy(_context, address):
     session = get_session()
     with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
+        # TODO(devcamcar): Ensure address belongs to user.
+        floating_ip_ref = get_floating_ip_by_address(context,
+                                                     address,
+                                                     session=session)
         floating_ip_ref.delete(session=session)
 
 
-def floating_ip_disassociate(_context, address):
+def floating_ip_disassociate(context, address):
+    if not is_user_context(context) and is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
+        # TODO(devcamcar): Ensure address belongs to user.
+        #                  Does get_floating_ip_by_address handle this?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
         fixed_ip_ref = floating_ip_ref.fixed_ip
         if fixed_ip_ref:
             fixed_ip_address = fixed_ip_ref['address']
@@ -311,16 +350,22 @@ def floating_ip_disassociate(_context, address):
         floating_ip_ref.save(session=session)
     return fixed_ip_address
 
+#@require_admin_context
+def floating_ip_get_all(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-def floating_ip_get_all(_context):
     session = get_session()
     return session.query(models.FloatingIp
                  ).options(joinedload_all('fixed_ip.instance')
                  ).filter_by(deleted=False
                  ).all()
 
+#@require_admin_context
+def floating_ip_get_all_by_host(context, host):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-def floating_ip_get_all_by_host(_context, host):
     session = get_session()
     return session.query(models.FloatingIp
                  ).options(joinedload_all('fixed_ip.instance')
@@ -328,7 +373,15 @@ def floating_ip_get_all_by_host(_context, host):
                  ).filter_by(deleted=False
                  ).all()
 
-def floating_ip_get_all_by_project(_context, project_id):
+#@require_context
+def floating_ip_get_all_by_project(context, project_id):
+    # TODO(devcamcar): Change to decorate and check project_id separately.
+    if is_user_context(context):
+        if context.project.id != project_id:
+            raise exception.NotAuthorized()
+    elif not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FloatingIp
                  ).options(joinedload_all('fixed_ip.instance')
@@ -336,22 +389,38 @@ def floating_ip_get_all_by_project(_context, project_id):
                  ).filter_by(deleted=False
                  ).all()
 
-def floating_ip_get_by_address(_context, address):
-    return models.FloatingIp.find_by_str(address)
+#@require_context
+def floating_ip_get_by_address(context, address, session=None):
+    # TODO(devcamcar): Ensure the address belongs to user.
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FloatingIp
+                   ).filter_by(address=address
+                   ).filter_by(deleted=_deleted(context)
+                   ).first()
+    if not result:
+        raise exception.NotFound('No fixed ip for address %s' % address)
+
+    return result
 
 
-def floating_ip_get_instance(_context, address):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
-        return floating_ip_ref.fixed_ip.instance
+   # floating_ip_ref = get_floating_ip_by_address(context,
+   #                                              address,
+   #                                              session=session)
+   # return floating_ip_ref.fixed_ip.instance
 
 
 ###################
 
+#@require_context
+def fixed_ip_associate(context, address, instance_id):
+    if not is_user_context(context) and not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-def fixed_ip_associate(_context, address, instance_id):
     session = get_session()
     with session.begin():
         fixed_ip_ref = session.query(models.FixedIp
@@ -364,12 +433,17 @@ def fixed_ip_associate(_context, address, instance_id):
         #             then this has concurrency issues
         if not fixed_ip_ref:
             raise db.NoMoreAddresses()
-        fixed_ip_ref.instance = models.Instance.find(instance_id,
-                                                     session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
 
 
-def fixed_ip_associate_pool(_context, network_id, instance_id):
+#@require_admin_context
+def fixed_ip_associate_pool(context, network_id, instance_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
@@ -386,14 +460,16 @@ def fixed_ip_associate_pool(_context, network_id, instance_id):
         if not fixed_ip_ref:
             raise db.NoMoreAddresses()
         if not fixed_ip_ref.network:
-            fixed_ip_ref.network = models.Network.find(network_id,
-                                                       session=session)
-        fixed_ip_ref.instance = models.Instance.find(instance_id,
-                                                     session=session)
+            fixed_ip_ref.network = network_get(context,
+                                               network_id,
+                                               session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
     return fixed_ip_ref['address']
 
-
+#@require_context
 def fixed_ip_create(_context, values):
     fixed_ip_ref = models.FixedIp()
     for (key, value) in values.iteritems():
@@ -401,45 +477,56 @@ def fixed_ip_create(_context, values):
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
 
-
-def fixed_ip_disassociate(_context, address):
+#@require_context
+def fixed_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               address,
+                                               session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
 
 
-def fixed_ip_get_by_address(_context, address):
+#@require_context
+def fixed_ip_get_by_address(context, address, session=None):
+    # TODO(devcamcar): Ensure floating ip belongs to user.
+    #                  Only possible if it is associated with an instance.
+    #                  May have to use system context for this always.
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FixedIp
+                   ).filter_by(address=address
+                   ).filter_by(deleted=_deleted(context)
+                   ).options(joinedload('network')
+                   ).options(joinedload('instance')
+                   ).first()
+    if not result:
+        raise exception.NotFound('No floating ip for address %s' % address)
+
+    return result
+
+
+#@require_context
+def fixed_ip_get_instance(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
+
+
+#@require_admin_context
+def fixed_ip_get_network(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.network
+
+
+#@require_context
+def fixed_ip_update(context, address, values):
     session = get_session()
     with session.begin():
-        try:
-            return session.query(models.FixedIp
-                         ).options(joinedload_all('instance')
-                         ).filter_by(address=address
-                         ).filter_by(deleted=False
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % address)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
-
-def fixed_ip_get_instance(_context, address):
-    session = get_session()
-    with session.begin():
-        return models.FixedIp.find_by_str(address, session=session).instance
-
-
-def fixed_ip_get_network(_context, address):
-    session = get_session()
-    with session.begin():
-        return models.FixedIp.find_by_str(address, session=session).network
-
-
-def fixed_ip_update(_context, address, values):
-    session = get_session()
-    with session.begin():
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               address,
+                                               session=session)
         for (key, value) in values.iteritems():
             fixed_ip_ref[key] = value
         fixed_ip_ref.save(session=session)
@@ -462,7 +549,9 @@ def instance_create(_context, values):
         instance_ref.save(session=session)
     return instance_ref
 
+
 def instance_data_get_for_project(_context, project_id):
+    # TODO(devmcar): Admin only
     session = get_session()
     result = session.query(func.count(models.Instance.id),
                            func.sum(models.Instance.vcpus)
@@ -474,6 +563,7 @@ def instance_data_get_for_project(_context, project_id):
 
 
 def instance_destroy(_context, instance_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
@@ -481,17 +571,21 @@ def instance_destroy(_context, instance_id):
 
 
 def instance_get(context, instance_id, session=None):
+    # TODO(devcamcar): Support user context
     return models.Instance.find(instance_id, session=session, deleted=_deleted(context))
 
 
 def instance_get_all(context):
+    # TODO(devcamcar): Admin only
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
                  ).filter_by(deleted=_deleted(context)
                  ).all()
 
+
 def instance_get_all_by_user(context, user_id):
+    # TODO(devcamcar): Admin only
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -499,7 +593,9 @@ def instance_get_all_by_user(context, user_id):
                  ).filter_by(user_id=user_id
                  ).all()
 
+
 def instance_get_all_by_project(context, project_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -509,6 +605,7 @@ def instance_get_all_by_project(context, project_id):
 
 
 def instance_get_all_by_reservation(_context, reservation_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
@@ -518,6 +615,7 @@ def instance_get_all_by_reservation(_context, reservation_id):
 
 
 def instance_get_by_ec2_id(context, ec2_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     instance_ref = session.query(models.Instance
                        ).filter_by(ec2_id=ec2_id
@@ -536,6 +634,7 @@ def instance_ec2_id_exists(context, ec2_id, session=None):
 
 
 def instance_get_fixed_address(_context, instance_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
@@ -545,6 +644,7 @@ def instance_get_fixed_address(_context, instance_id):
 
 
 def instance_get_floating_address(_context, instance_id):
+    # TODO(devcamcar): Support user context
     session = get_session()
     with session.begin():
         instance_ref = models.Instance.find(instance_id, session=session)
@@ -557,6 +657,7 @@ def instance_get_floating_address(_context, instance_id):
 
 
 def instance_is_vpn(context, instance_id):
+    # TODO(devcamcar): Admin only
     # TODO(vish): Move this into image code somewhere
     instance_ref = instance_get(context, instance_id)
     return instance_ref['image_id'] == FLAGS.vpn_image_id
@@ -683,8 +784,8 @@ def network_destroy(_context, network_id):
                         {'id': network_id})
 
 
-def network_get(_context, network_id):
-    return models.Network.find(network_id)
+def network_get(_context, network_id, session=None):
+    return models.Network.find(network_id, session=session)
 
 
 # NOTE(vish): pylint complains because of the long method name, but

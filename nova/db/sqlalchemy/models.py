@@ -441,19 +441,6 @@ class FixedIp(BASE, NovaBase):
     def str_id(self):
         return self.address
 
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(address=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
 
 class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip"""
@@ -468,19 +455,6 @@ class FloatingIp(BASE, NovaBase):
                                              'FloatingIp.deleted==False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(address=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 def register_models():

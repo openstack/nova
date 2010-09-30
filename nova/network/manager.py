@@ -232,7 +232,8 @@ class VlanManager(NetworkManager):
             address = network_ref['vpn_private_address']
             self.db.fixed_ip_associate(context, address, instance_id)
         else:
-            address = self.db.fixed_ip_associate_pool(context,
+            # TODO(devcamcar) Pass system context here.
+            address = self.db.fixed_ip_associate_pool(None,
                                                       network_ref['id'],
                                                       instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})

@@ -175,7 +175,6 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-def floating_ip_get_instance(context, address):
     """Get an instance for a floating ip by address."""
     return IMPL.floating_ip_get_instance(context, address)
 
