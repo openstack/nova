@@ -103,8 +103,8 @@ class XenAPIConnection(object):
         self._conn.login_with_password(user, pw)
 
     def list_instances(self):
-        result = [self._conn.xenapi.VM.get_name_label(vm) \
-                  for vm in self._conn.xenapi.VM.get_all()]
+        return [self._conn.xenapi.VM.get_name_label(vm) \
+                for vm in self._conn.xenapi.VM.get_all()]
 
     @defer.inlineCallbacks
     def spawn(self, instance):
