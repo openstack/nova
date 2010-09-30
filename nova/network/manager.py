@@ -88,7 +88,6 @@ class NetworkManager(manager.Manager):
         # TODO(vish): can we minimize db access by just getting the
         #             id here instead of the ref?
         network_id = network_ref['id']
-        # TODO(devcamcar): Replace with system context
         host = self.db.network_set_host(None,
                                         network_id,
                                         self.host)
@@ -233,7 +232,6 @@ class VlanManager(NetworkManager):
             address = network_ref['vpn_private_address']
             self.db.fixed_ip_associate(context, address, instance_id)
         else:
-            # TODO(devcamcar) Pass system context here.
             address = self.db.fixed_ip_associate_pool(None,
                                                       network_ref['id'],
                                                       instance_id)
