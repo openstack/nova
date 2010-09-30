@@ -30,6 +30,7 @@ from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload_all
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -348,7 +349,7 @@ def fixed_ip_get_by_address(_context, address):
                          ).filter_by(address=address
                          ).filter_by(deleted=False
                          ).one()
-        except exc.NoResultFound:
+        except NoResultFound:
             new_exc = exception.NotFound("No model for address %s" % address)
             raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
