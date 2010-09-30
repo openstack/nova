@@ -794,11 +794,21 @@ def key_pair_get_all_by_user(_context, user_id):
 ###################
 
 
-def network_count(_context):
-    return models.Network.count()
+#@require_admin_context
+def network_count(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    return session.query(models.Network
+                 ).filter_by(deleted=deleted
+                 ).count()
 
 
+#@require_admin_context
 def network_count_allocated_ips(_context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FixedIp
                  ).filter_by(network_id=network_id
@@ -807,7 +817,11 @@ def network_count_allocated_ips(_context, network_id):
                  ).count()
 
 
+#@require_admin_context
 def network_count_available_ips(_context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FixedIp
                  ).filter_by(network_id=network_id
@@ -817,7 +831,11 @@ def network_count_available_ips(_context, network_id):
                  ).count()
 
 
+#@require_admin_context
 def network_count_reserved_ips(_context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FixedIp
                  ).filter_by(network_id=network_id
@@ -826,7 +844,11 @@ def network_count_reserved_ips(_context, network_id):
                  ).count()
 
 
+#@require_admin_context
 def network_create(_context, values):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     network_ref = models.Network()
     for (key, value) in values.iteritems():
         network_ref[key] = value
@@ -834,7 +856,11 @@ def network_create(_context, values):
     return network_ref
 
 
-def network_destroy(_context, network_id):
+#@require_admin_context
+def network_destroy(context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?

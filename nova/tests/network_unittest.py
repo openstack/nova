@@ -49,6 +49,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
+        # TODO(devcamcar): Passing project=None is Bad(tm).
         self.context = context.APIRequestContext(project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
