@@ -799,13 +799,14 @@ def network_count(context):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
+    session = get_session()
     return session.query(models.Network
-                 ).filter_by(deleted=deleted
+                 ).filter_by(deleted=_deleted(context)
                  ).count()
 
 
 #@require_admin_context
-def network_count_allocated_ips(_context, network_id):
+def network_count_allocated_ips(context, network_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
@@ -818,7 +819,7 @@ def network_count_allocated_ips(_context, network_id):
 
 
 #@require_admin_context
-def network_count_available_ips(_context, network_id):
+def network_count_available_ips(context, network_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
@@ -832,7 +833,7 @@ def network_count_available_ips(_context, network_id):
 
 
 #@require_admin_context
-def network_count_reserved_ips(_context, network_id):
+def network_count_reserved_ips(context, network_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
@@ -845,7 +846,7 @@ def network_count_reserved_ips(_context, network_id):
 
 
 #@require_admin_context
-def network_create(_context, values):
+def network_create(context, values):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
 
@@ -904,7 +905,11 @@ def network_get(context, network_id, session=None):
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
-def network_get_associated_fixed_ips(_context, network_id):
+#@require_admin_context
+def network_get_associated_fixed_ips(context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     return session.query(models.FixedIp
                  ).options(joinedload_all('instance')
@@ -914,18 +919,28 @@ def network_get_associated_fixed_ips(_context, network_id):
                  ).all()
 
 
-def network_get_by_bridge(_context, bridge):
+#@require_admin_context
+def network_get_by_bridge(context, bridge):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
-    rv = session.query(models.Network
+    result = session.query(models.Network
                ).filter_by(bridge=bridge
                ).filter_by(deleted=False
                ).first()
-    if not rv:
+
+    if not result:
         raise exception.NotFound('No network for bridge %s' % bridge)
-    return rv
+
+    return result
 
 
-def network_get_index(_context, network_id):
+#@require_admin_context
+def network_get_index(context, network_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
         network_index = session.query(models.NetworkIndex
@@ -933,19 +948,34 @@ def network_get_index(_context, network_id):
                               ).filter_by(deleted=False
                               ).with_lockmode('update'
                               ).first()
+
         if not network_index:
             raise db.NoMoreNetworks()
-        network_index['network'] = models.Network.find(network_id,
-                                                       session=session)
+
+        network_index['network'] = network_get(context,
+                                               network_id,
+                                               session=session)
         session.add(network_index)
+
     return network_index['index']
 
 
-def network_index_count(_context):
-    return models.NetworkIndex.count()
+#@require_admin_context
+def network_index_count(context):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    session = get_session()
+    return session.query(models.NetworkIndex
+                 ).filter_by(deleted=_deleted(context)
+                 ).count()
 
 
-def network_index_create_safe(_context, values):
+#@require_admin_context
+def network_index_create_safe(context, values):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     network_index_ref = models.NetworkIndex()
     for (key, value) in values.iteritems():
         network_index_ref[key] = value
@@ -955,29 +985,35 @@ def network_index_create_safe(_context, values):
         pass
 
 
-def network_set_host(_context, network_id, host_id):
+#@require_admin_context
+def network_set_host(context, network_id, host_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        network = session.query(models.Network
-                        ).filter_by(id=network_id
-                        ).filter_by(deleted=False
-                        ).with_lockmode('update'
-                        ).first()
-        if not network:
-            raise exception.NotFound("Couldn't find network with %s" %
-                                     network_id)
+        network_ref = session.query(models.Network
+                            ).filter_by(id=network_id
+                            ).filter_by(deleted=False
+                            ).with_lockmode('update'
+                            ).first()
+        if not network_ref:
+            raise exception.NotFound('No network for id %s' % network_id)
+
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if not network['host']:
-            network['host'] = host_id
-            session.add(network)
-    return network['host']
+        if not network_ref['host']:
+            network_ref['host'] = host_id
+            session.add(network_ref)
+
+    return network_ref['host']
 
 
-def network_update(_context, network_id, values):
+#@require_context
+def network_update(context, network_id, values):
     session = get_session()
     with session.begin():
-        network_ref = models.Network.find(network_id, session=session)
+        network_ref = network_get(context, network_id, session=session)
         for (key, value) in values.iteritems():
             network_ref[key] = value
         network_ref.save(session=session)
@@ -985,7 +1021,10 @@ def network_update(_context, network_id, values):
 
 ###################
 
-
+# YOU ARE HERE.
+# random idea for system user:
+#   ctx = context.system_user(on_behalf_of=user, read_deleted=False)
+# TODO(devcamcar): Rename to network_get_all_by_project
 def project_get_network(_context, project_id):
     session = get_session()
     rv = session.query(models.Network

@@ -88,7 +88,8 @@ class NetworkManager(manager.Manager):
         # TODO(vish): can we minimize db access by just getting the
         #             id here instead of the ref?
         network_id = network_ref['id']
-        host = self.db.network_set_host(context,
+        # TODO(devcamcar): Replace with system context
+        host = self.db.network_set_host(None,
                                         network_id,
                                         self.host)
         self._on_set_network_host(context, network_id)
