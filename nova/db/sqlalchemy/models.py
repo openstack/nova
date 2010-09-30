@@ -302,18 +302,6 @@ class Quota(BASE, NovaBase):
     def str_id(self):
         return self.project_id
 
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(project_id=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for project_id %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""

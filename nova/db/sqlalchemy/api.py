@@ -1021,19 +1021,22 @@ def network_update(context, network_id, values):
 
 ###################
 
-# YOU ARE HERE.
-# random idea for system user:
-#   ctx = context.system_user(on_behalf_of=user, read_deleted=False)
-# TODO(devcamcar): Rename to network_get_all_by_project
-def project_get_network(_context, project_id):
+
+#@require_context
+def project_get_network(context, project_id):
+    if not is_admin_context(context) and not is_user_context(context):
+        raise error.NotAuthorized()
+
     session = get_session()
-    rv = session.query(models.Network
+    result= session.query(models.Network
                ).filter_by(project_id=project_id
                ).filter_by(deleted=False
                ).first()
-    if not rv:
+
+    if not result:
         raise exception.NotFound('No network for project: %s' % project_id)
-    return rv
+
+    return result
 
 
 ###################
@@ -1043,14 +1046,26 @@ def queue_get_for(_context, topic, physical_node_id):
     # FIXME(ja): this should be servername?
     return "%s.%s" % (topic, physical_node_id)
 
+
 ###################
 
 
-def export_device_count(_context):
-    return models.ExportDevice.count()
+#@require_admin_context
+def export_device_count(context):
+    if not is_admin_context(context):
+        raise exception.notauthorized()
+
+    session = get_session()
+    return session.query(models.ExportDevice
+                 ).filter_by(deleted=_deleted(context)
+                 ).count()
 
 
-def export_device_create(_context, values):
+#@require_admin_context
+def export_device_create(context, values):
+    if not is_admin_context(context):
+        raise exception.notauthorized()
+
     export_device_ref = models.ExportDevice()
     for (key, value) in values.iteritems():
         export_device_ref[key] = value
@@ -1084,7 +1099,29 @@ def auth_create_token(_context, token):
 ###################
 
 
+#@require_admin_context
+def quota_get(context, project_id, session=None):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Quota
+                   ).filter_by(project_id=project_id
+                   ).filter_by(deleted=_deleted(context)
+                   ).first()
+    if not result:
+        raise exception.NotFound('No quota for project_id %s' % project_id)
+
+    return result
+
+
+#@require_admin_context
 def quota_create(_context, values):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     quota_ref = models.Quota()
     for (key, value) in values.iteritems():
         quota_ref[key] = value
@@ -1092,29 +1129,34 @@ def quota_create(_context, values):
     return quota_ref
 
 
-def quota_get(_context, project_id):
-    return models.Quota.find_by_str(project_id)
+#@require_admin_context
+def quota_update(context, project_id, values):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
 
-
-def quota_update(_context, project_id, values):
     session = get_session()
     with session.begin():
-        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        quota_ref = quota_get(context, project_id, session=session)
         for (key, value) in values.iteritems():
             quota_ref[key] = value
         quota_ref.save(session=session)
 
 
-def quota_destroy(_context, project_id):
+#@require_admin_context
+def quota_destroy(context, project_id):
+    if not is_admin_context(context):
+        raise exception.NotAuthorized()
+
     session = get_session()
     with session.begin():
-        quota_ref = models.Quota.find_by_str(project_id, session=session)
+        quota_ref = quota_get(context, project_id, session=session)
         quota_ref.delete(session=session)
 
 
 ###################
 
 
+#@require_admin_context
 def volume_allocate_shelf_and_blade(context, volume_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1135,6 +1177,7 @@ def volume_allocate_shelf_and_blade(context, volume_id):
     return (export_device.shelf_id, export_device.blade_id)
 
 
+#@require_admin_context
 def volume_attached(context, volume_id, instance_id, mountpoint):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1149,6 +1192,7 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
         volume_ref.save(session=session)
 
 
+#@require_context
 def volume_create(context, values):
     volume_ref = models.Volume()
     for (key, value) in values.iteritems():
@@ -1164,6 +1208,7 @@ def volume_create(context, values):
     return volume_ref
 
 
+#@require_admin_context
 def volume_data_get_for_project(context, project_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1178,6 +1223,7 @@ def volume_data_get_for_project(context, project_id):
     return (result[0] or 0, result[1] or 0)
 
 
+#@require_admin_context
 def volume_destroy(context, volume_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1192,6 +1238,7 @@ def volume_destroy(context, volume_id):
                         {'id': volume_id})
 
 
+#@require_admin_context
 def volume_detached(context, volume_id):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1206,6 +1253,7 @@ def volume_detached(context, volume_id):
         volume_ref.save(session=session)
 
 
+#@require_context
 def volume_get(context, volume_id, session=None):
     if not session:
         session = get_session()
@@ -1222,15 +1270,13 @@ def volume_get(context, volume_id, session=None):
                        ).filter_by(id=volume_id
                        ).filter_by(deleted=False
                        ).first()
-    else:
-        raise exception.NotAuthorized()
-
     if not result:
         raise exception.NotFound('No volume for id %s' % volume_id)
 
     return result
 
 
+#@require_admin_context
 def volume_get_all(context):
     if not is_admin_context(context):
         raise exception.NotAuthorized()
@@ -1239,7 +1285,7 @@ def volume_get_all(context):
                  ).filter_by(deleted=_deleted(context)
                  ).all()
 
-
+#@require_context
 def volume_get_all_by_project(context, project_id):
     if is_user_context(context):
         if context.project.id != project_id:
@@ -1254,6 +1300,7 @@ def volume_get_all_by_project(context, project_id):
                  ).all()
 
 
+#@require_context
 def volume_get_by_ec2_id(context, ec2_id):
     session = get_session()
     result = None
@@ -1278,6 +1325,7 @@ def volume_get_by_ec2_id(context, ec2_id):
     return result
 
 
+#@require_context
 def volume_ec2_id_exists(context, ec2_id, session=None):
     if not session:
         session = get_session()
@@ -1286,10 +1334,9 @@ def volume_ec2_id_exists(context, ec2_id, session=None):
         return session.query(exists(
                      ).where(models.Volume.id==ec2_id)
                      ).one()[0]
-    else:
-        raise exception.NotAuthorized()
 
 
+#@require_context
 def volume_get_instance(context, volume_id):
     session = get_session()
     result = None
@@ -1315,6 +1362,7 @@ def volume_get_instance(context, volume_id):
     return result.instance
 
 
+#@require_context
 def volume_get_shelf_and_blade(context, volume_id):
     session = get_session()
     result = None
@@ -1329,15 +1377,14 @@ def volume_get_shelf_and_blade(context, volume_id):
                        ).filter(models.Volume.project_id==context.project.id
                        ).filter_by(volume_id=volume_id
                        ).first()
-    else:
-        raise exception.NotAuthorized()
-
     if not result:
-        raise exception.NotFound()
+        raise exception.NotFound('No export device found for volume %s' %
+                                 volume_id)
 
     return (result.shelf_id, result.blade_id)
 
 
+#@require_context
 def volume_update(context, volume_id, values):
     session = get_session()
     with session.begin():
