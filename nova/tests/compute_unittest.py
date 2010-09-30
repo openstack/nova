@@ -96,6 +96,8 @@ class ComputeTestCase(test.TrialTestCase):
         self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
         yield self.compute.terminate_instance(self.context, instance_id)
+        # TODO(devcamcar): Pass deleted in using system context.
+        #                  context.read_deleted ?
         instance_ref = db.instance_get({'deleted': True}, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
