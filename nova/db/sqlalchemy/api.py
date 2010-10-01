@@ -1000,14 +1000,6 @@ def project_get(context, id):
     return result
 
 
-def project_get_by_uid(context, uid):
-    session = get_session()
-    return session.query(models.Project
-                 ).filter_by(uid=uid
-                 ).filter_by(deleted=_deleted(context)
-                 ).first()
-
-
 def project_get_all(context):
     session = get_session()
     return session.query(models.Project

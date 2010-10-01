@@ -640,11 +640,6 @@ def project_get(context, id):
     return IMPL.project_get(context, id)
 
 
-#def project_get_by_uid(context, uid):
-#    """Get project by uid"""
-#    return IMPL.project_get_by_uid(context, uid)
-#
-
 def project_create(context, values):
     """Create a new project"""
     return IMPL.project_create(context, values)
