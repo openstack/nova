@@ -384,10 +384,11 @@ def instance_create(_context, values):
 
     session = get_session()
     with session.begin():
-        while instance_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(instance_ref.__prefix__)
-            if not instance_ec2_id_exists(_context, ec2_id, session=session):
-                instance_ref.ec2_id = ec2_id
+        while instance_ref.internal_id == None:
+            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            if not instance_internal_id_exists(_context, internal_id, 
+                                               session=session):
+                instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
     return instance_ref
 
@@ -446,22 +447,23 @@ def instance_get_all_by_reservation(_context, reservation_id):
                  ).all()
 
 
-def instance_get_by_ec2_id(context, ec2_id):
+def instance_get_by_internal_id(context, internal_id):
     session = get_session()
     instance_ref = session.query(models.Instance
-                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=_deleted(context)
                        ).first()
     if not instance_ref:
-        raise exception.NotFound('Instance %s not found' % (ec2_id))
+        raise exception.NotFound('Instance %s not found' % (internal_id))
 
     return instance_ref
 
 
-def instance_ec2_id_exists(context, ec2_id, session=None):
+def instance_internal_id_exists(context, internal_id, session=None):
     if not session:
         session = get_session()
-    return session.query(exists().where(models.Instance.id==ec2_id)).one()[0]
+    return session.query(exists().where(models.Instance.id==internal_id)
+                         ).one()[0]
 
 
 def instance_get_fixed_address(_context, instance_id):
