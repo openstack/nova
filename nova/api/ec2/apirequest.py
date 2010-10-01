@@ -44,6 +44,39 @@ def _underscore_to_xmlcase(str):
     res = _underscore_to_camelcase(str)
     return res[:1].lower() + res[1:]
 
+def _try_convert(value):
+    """Return a non-string if possible"""
+    if value == 'None':
+        return None
+    if value == 'True':
+        return True
+    if value == 'False':
+        return False
+    if value == '0':
+        return 0
+    valueneg = value[1:] if value[0] == '-' else value
+    if valueneg[0] == '0':
+        if valueneg[1] in 'xX':
+            return int(value,16)
+        elif valueneg[1] in 'bB':
+            return int(value,2)
+        else:
+            try:
+                return int(value,8)
+            except ValueError:
+                pass
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    try:
+        return complex(value)
+    except ValueError:
+        return value
 
 class APIRequest(object):
     def __init__(self, controller, action):
@@ -66,6 +99,10 @@ class APIRequest(object):
         for key, value in kwargs.items():
             parts = key.split(".")
             key = _camelcase_to_underscore(parts[0])
+            if isinstance(value, str) or isinstance(value, unicode):
+                # NOTE(vish): Automatically convert strings back
+                #             into their respective values
+                value = _try_convert(value)
             if len(parts) > 1:
                 d = args.get(key, {})
                 d[parts[1]] = value
@@ -73,6 +110,7 @@ class APIRequest(object):
             args[key] = value
 
         for key in args.keys():
+            # NOTE(vish): Turn numeric dict keys into lists
             if isinstance(args[key], dict):
                 if args[key] != {} and args[key].keys()[0].isdigit():
                     s = args[key].items()
