@@ -19,7 +19,7 @@ import unittest
 
 from nova.api.rackspace import limited
 from nova.api.rackspace import RateLimitingMiddleware
-from nova.tests.api.test_helper import *
+from nova.tests.api.fakes import APIStub
 from webob import Request
 
 
@@ -82,7 +82,7 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
 
 class LimiterTest(unittest.TestCase):
 
-    def testLimiter(self):
+    def test_limiter(self):
         items = range(2000)
         req = Request.blank('/')
         self.assertEqual(limited(items, req), items[ :1000])
