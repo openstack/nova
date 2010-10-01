@@ -50,6 +50,8 @@ flags.DEFINE_string('flat_network_broadcast', '192.168.0.255',
                     'Broadcast for simple network')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
+flags.DEFINE_string('flat_network_dhcp_start', '192.168.0.2',
+                    'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
@@ -98,14 +100,6 @@ class NetworkManager(manager.Manager):
         self._on_set_network_host(context, network_id)
         return host
 
-    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Gets a fixed ip from the pool"""
-        raise NotImplementedError()
-
-    def deallocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Returns a fixed ip to the pool"""
-        raise NotImplementedError()
-
     def setup_fixed_ip(self, context, address):
         """Sets up rules for fixed ip"""
         raise NotImplementedError()
@@ -143,133 +137,6 @@ class NetworkManager(manager.Manager):
     def deallocate_floating_ip(self, context, floating_address):
         """Returns an floating ip to the pool"""
         self.db.floating_ip_deallocate(context, floating_address)
-
-    @property
-    def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
-        """Number of reserved ips at the bottom of the range"""
-        return 2  # network, gateway
-
-    @property
-    def _top_reserved_ips(self):  # pylint: disable-msg=R0201
-        """Number of reserved ips at the top of the range"""
-        return 1  # broadcast
-
-    def _create_fixed_ips(self, context, network_id):
-        """Create all fixed ips for network"""
-        network_ref = self.db.network_get(context, network_id)
-        # NOTE(vish): should these be properties of the network as opposed
-        #             to properties of the manager class?
-        bottom_reserved = self._bottom_reserved_ips
-        top_reserved = self._top_reserved_ips
-        project_net = IPy.IP(network_ref['cidr'])
-        num_ips = len(project_net)
-        for index in range(num_ips):
-            address = str(project_net[index])
-            if index < bottom_reserved or num_ips - index < top_reserved:
-                reserved = True
-            else:
-                reserved = False
-            self.db.fixed_ip_create(context, {'network_id': network_id,
-                                              'address': address,
-                                              'reserved': reserved})
-
-
-class FlatManager(NetworkManager):
-    """Basic network where no vlans are used"""
-
-    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Gets a fixed ip from the pool"""
-        network_ref = self.db.project_get_network(context, context.project.id)
-        address = self.db.fixed_ip_associate_pool(context,
-                                                  network_ref['id'],
-                                                  instance_id)
-        self.db.fixed_ip_update(context, address, {'allocated': True})
-        return address
-
-    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
-        """Returns a fixed ip to the pool"""
-        self.db.fixed_ip_update(context, address, {'allocated': False})
-        self.db.fixed_ip_disassociate(context, address)
-
-    def setup_compute_network(self, context, project_id):
-        """Network is created manually"""
-        pass
-
-    def setup_fixed_ip(self, context, address):
-        """Currently no setup"""
-        pass
-
-    def _on_set_network_host(self, context, network_id):
-        """Called when this host becomes the host for a project"""
-        # NOTE(vish): should there be two types of network objects
-        #             in the datastore?
-        net = {}
-        net['injected'] = True
-        net['network_str'] = FLAGS.flat_network_network
-        net['netmask'] = FLAGS.flat_network_netmask
-        net['bridge'] = FLAGS.flat_network_bridge
-        net['gateway'] = FLAGS.flat_network_gateway
-        net['broadcast'] = FLAGS.flat_network_broadcast
-        net['dns'] = FLAGS.flat_network_dns
-        self.db.network_update(context, network_id, net)
-        # NOTE(vish): Rignt now we are putting  all of the fixed ips in
-        #             one large pool, but ultimately it may be better to
-        #             have each network manager have its own network that
-        #             it is responsible for and its own pool of ips.
-        for address in FLAGS.flat_network_ips:
-            self.db.fixed_ip_create(context, {'address': address})
-
-
-class VlanManager(NetworkManager):
-    """Vlan network with dhcp"""
-
-    @defer.inlineCallbacks
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval"""
-        yield super(VlanManager, self).periodic_tasks(context)
-        now = datetime.datetime.utcnow()
-        timeout = FLAGS.fixed_ip_disassociate_timeout
-        time = now - datetime.timedelta(seconds=timeout)
-        num = self.db.fixed_ip_disassociate_all_by_timeout(self,
-                                                           self.host,
-                                                           time)
-        if num:
-            logging.debug("Dissassociated %s stale fixed ip(s)", num)
-
-    def init_host(self):
-        """Do any initialization that needs to be run if this is a
-           standalone service.
-        """
-        self.driver.init_host()
-
-    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Gets a fixed ip from the pool"""
-        network_ref = self.db.project_get_network(context, context.project.id)
-        if kwargs.get('vpn', None):
-            address = network_ref['vpn_private_address']
-            self.db.fixed_ip_associate(context, address, instance_id)
-        else:
-            address = self.db.fixed_ip_associate_pool(context,
-                                                      network_ref['id'],
-                                                      instance_id)
-        self.db.fixed_ip_update(context, address, {'allocated': True})
-        return address
-
-    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
-        """Returns a fixed ip to the pool"""
-        self.db.fixed_ip_update(context, address, {'allocated': False})
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-
-
-    def setup_fixed_ip(self, context, address):
-        """Sets forwarding rules and dhcp for fixed ip"""
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        network_ref = self.db.fixed_ip_get_network(context, address)
-        if self.db.instance_is_vpn(context, fixed_ip_ref['instance_id']):
-            self.driver.ensure_vlan_forward(network_ref['vpn_public_address'],
-                                            network_ref['vpn_public_port'],
-                                            network_ref['vpn_private_address'])
-        self.driver.update_dhcp(context, network_ref['id'])
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased"""
@@ -312,6 +179,153 @@ class VlanManager(NetworkManager):
             if FLAGS.update_dhcp_on_disassociate:
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self.driver.update_dhcp(context, network_ref['id'])
+
+    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
+        """Gets a fixed ip from the pool"""
+        network_ref = self.db.project_get_network(context, context.project.id)
+        address = self.db.fixed_ip_associate_pool(context,
+                                                  network_ref['id'],
+                                                  instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
+        return address
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+
+    @property
+    def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
+        """Number of reserved ips at the bottom of the range"""
+        return 2  # network, gateway
+
+    @property
+    def _top_reserved_ips(self):  # pylint: disable-msg=R0201
+        """Number of reserved ips at the top of the range"""
+        return 1  # broadcast
+
+    def _create_fixed_ips(self, context, network_id):
+        """Create all fixed ips for network"""
+        network_ref = self.db.network_get(context, network_id)
+        # NOTE(vish): should these be properties of the network as opposed
+        #             to properties of the manager class?
+        bottom_reserved = self._bottom_reserved_ips
+        top_reserved = self._top_reserved_ips
+        project_net = IPy.IP(network_ref['cidr'])
+        num_ips = len(project_net)
+        for index in range(num_ips):
+            address = str(project_net[index])
+            if index < bottom_reserved or num_ips - index < top_reserved:
+                reserved = True
+            else:
+                reserved = False
+            self.db.fixed_ip_create(context, {'network_id': network_id,
+                                              'address': address,
+                                              'reserved': reserved})
+
+
+class FlatManager(NetworkManager):
+    """Basic network where no vlans are used"""
+
+    def setup_compute_network(self, context, project_id):
+        """Network is created manually"""
+        pass
+
+    def setup_fixed_ip(self, context, address):
+        """Currently no setup"""
+        pass
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+        self.db.fixed_ip_disassociate(context, address)
+
+    def _on_set_network_host(self, context, network_id):
+        """Called when this host becomes the host for a project"""
+        # NOTE(vish): should there be two types of network objects
+        #             in the datastore?
+        net = {}
+        net['injected'] = True
+        net['network_str'] = FLAGS.flat_network_network
+        net['netmask'] = FLAGS.flat_network_netmask
+        net['bridge'] = FLAGS.flat_network_bridge
+        net['gateway'] = FLAGS.flat_network_gateway
+        net['broadcast'] = FLAGS.flat_network_broadcast
+        net['dns'] = FLAGS.flat_network_dns
+        self.db.network_update(context, network_id, net)
+        # NOTE(vish): Rignt now we are putting  all of the fixed ips in
+        #             one large pool, but ultimately it may be better to
+        #             have each network manager have its own network that
+        #             it is responsible for and its own pool of ips.
+        for address in FLAGS.flat_network_ips:
+            self.db.fixed_ip_create(context, {'address': address})
+
+
+class FlatDHCPManager(NetworkManager):
+    """Flat networking with dhcp"""
+
+    def setup_fixed_ip(self, context, address):
+        """Setup dhcp for this network"""
+        network_ref = db.fixed_ip_get_by_address(context, address)
+        self.driver.update_dhcp(context, network_ref['id'])
+
+    def _on_set_network_host(self, context, network_id):
+        """Called when this host becomes the host for a project"""
+        super(FlatDHCPManager, self)._on_set_network_host(context, network_id)
+        network_ref = self.db.network_get(context, network_id)
+        self.db.network_update(context,
+                               network_id,
+                               {'dhcp_start': FLAGS.flat_network_dhcp_start})
+        self.driver.ensure_bridge(network_ref['bridge'],
+                                  FLAGS.bridge_dev,
+                                  network_ref)
+
+
+class VlanManager(NetworkManager):
+    """Vlan network with dhcp"""
+
+    @defer.inlineCallbacks
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval"""
+        yield super(VlanManager, self).periodic_tasks(context)
+        now = datetime.datetime.utcnow()
+        timeout = FLAGS.fixed_ip_disassociate_timeout
+        time = now - datetime.timedelta(seconds=timeout)
+        num = self.db.fixed_ip_disassociate_all_by_timeout(self,
+                                                           self.host,
+                                                           time)
+        if num:
+            logging.debug("Dissassociated %s stale fixed ip(s)", num)
+
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service.
+        """
+        self.driver.init_host()
+
+    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
+        """Gets a fixed ip from the pool"""
+        if kwargs.get('vpn', None):
+            network_ref = self.db.project_get_network(context,
+                                                      context.project.id)
+            address = network_ref['vpn_private_address']
+            self.db.fixed_ip_associate(context, address, instance_id)
+            self.db.fixed_ip_update(context, address, {'allocated': True})
+        else:
+            address = super(VlanManager, self).allocate_fixed_ip(context,
+                                                                 instance_id,
+                                                                 *args,
+                                                                 **kwargs)
+        return address
+
+    def setup_fixed_ip(self, context, address):
+        """Sets forwarding rules and dhcp for fixed ip"""
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        network_ref = self.db.fixed_ip_get_network(context, address)
+        if self.db.instance_is_vpn(context, fixed_ip_ref['instance_id']):
+            self.driver.ensure_vlan_forward(network_ref['vpn_public_address'],
+                                            network_ref['vpn_public_port'],
+                                            network_ref['vpn_private_address'])
+        self.driver.update_dhcp(context, network_ref['id'])
 
     def allocate_network(self, context, project_id):
         """Set up the network"""

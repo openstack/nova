@@ -172,10 +172,10 @@ def update_dhcp(context, network_id):
     signal causing it to reload, otherwise spawn a new instance
     """
     network_ref = db.network_get(context, network_id)
-    with open(_dhcp_file(network_ref['vlan'], 'conf'), 'w') as f:
+    with open(_dhcp_file(network_ref['bridge'], 'conf'), 'w') as f:
         f.write(get_dhcp_hosts(context, network_id))
 
-    pid = _dnsmasq_pid_for(network_ref['vlan'])
+    pid = _dnsmasq_pid_for(network_ref['bridge'])
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
@@ -238,11 +238,11 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
-           ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
+           ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
            ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-           ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
+           ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
            ' --leasefile-ro']
     return ''.join(cmd)
@@ -259,10 +259,12 @@ def _stop_dnsmasq(network):
             logging.debug("Killing dnsmasq threw %s", exc)
 
 
-def _dhcp_file(vlan, kind):
-    """Return path to a pid, leases or conf file for a vlan"""
+def _dhcp_file(bridge, kind):
+    """Return path to a pid, leases or conf file for a bridge"""
 
-    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
+    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path,
+                                              bridge,
+                                              kind))
 
 
 def _bin_file(script):
@@ -270,15 +272,15 @@ def _bin_file(script):
     return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
-def _dnsmasq_pid_for(vlan):
-    """Returns he pid for prior dnsmasq instance for a vlan
+def _dnsmasq_pid_for(bridge):
+    """Returns he pid for prior dnsmasq instance for a bridge
 
     Returns None if no pid file exists
 
     If machine has rebooted pid might be incorrect (caller should check)
     """
 
-    pid_file = _dhcp_file(vlan, 'pid')
+    pid_file = _dhcp_file(bridge, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:
