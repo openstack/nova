@@ -31,3 +31,16 @@ class APIRequestContext(object):
                 [random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-')
                  for x in xrange(20)]
                 )
+        if user:
+            self.is_admin = user.is_admin()
+        else:
+            self.is_admin = False
+        self.read_deleted = False
+
+
+def get_admin_context(user=None, read_deleted=False):
+    context_ref = APIRequestContext(user=user, project=None)
+    context_ref.is_admin = True
+    context_ref.read_deleted = read_deleted
+    return context_ref
+
