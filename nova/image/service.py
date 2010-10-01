@@ -20,34 +20,117 @@ import os.path
 import random
 import string
 
-class ImageService(object):
-    """Provides storage and retrieval of disk image objects."""
+from nova import utils
+from nova import flags
 
-    @staticmethod
-    def load():
-        """Factory method to return image service."""
-        #TODO(gundlach): read from config.
-        class_ = LocalImageService
-        return class_()
+
+FLAGS = flags.FLAGS
+
+
+flags.DEFINE_string('glance_teller_address', '127.0.0.1',
+                    'IP address or URL where Glance\'s Teller service resides')
+flags.DEFINE_string('glance_teller_port', '9191',
+                    'Port for Glance\'s Teller service')
+flags.DEFINE_string('glance_parallax_address', '127.0.0.1',
+                    'IP address or URL where Glance\'s Parallax service resides')
+flags.DEFINE_string('glance_parallax_port', '9191',
+                    'Port for Glance\'s Parallax service')
+
+
+class BaseImageService(object):
+
+    """Base class for providing image search and retrieval services"""
 
     def index(self):
         """
         Return a dict from opaque image id to image data.
         """
+        raise NotImplementedError
 
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
         """
+        raise NotImplementedError
+
+    def create(self, data):
+        """
+        Store the image data and return the new image id.
+
+        :raises AlreadyExists if the image already exist.
+
+        """
+        raise NotImplementedError
+
+    def update(self, image_id, data):
+        """Replace the contents of the given image with the new data.
+
+        :raises NotFound if the image does not exist.
+
+        """
+        raise NotImplementedError
+
+    def delete(self, image_id):
+        """
+        Delete the given image. 
+        
+        :raises NotFound if the image does not exist.
+        
+        """
+        raise NotImplementedError
 
 
-class GlanceImageService(ImageService):
+class GlanceImageService(BaseImageService):
+    
     """Provides storage and retrieval of disk image objects within Glance."""
-    # TODO(gundlach): once Glance has an API, build this.
-    pass
+
+    def index(self):
+        """
+        Calls out to Parallax for a list of images available
+        """
+        raise NotImplementedError
+
+    def show(self, id):
+        """
+        Returns a dict containing image data for the given opaque image id.
+        """
+        raise NotImplementedError
+
+    def create(self, data):
+        """
+        Store the image data and return the new image id.
+
+        :raises AlreadyExists if the image already exist.
+
+        """
+        raise NotImplementedError
+
+    def update(self, image_id, data):
+        """Replace the contents of the given image with the new data.
+
+        :raises NotFound if the image does not exist.
+
+        """
+        raise NotImplementedError
+
+    def delete(self, image_id):
+        """
+        Delete the given image. 
+        
+        :raises NotFound if the image does not exist.
+        
+        """
+        raise NotImplementedError
+
+    def delete_all(self):
+        """
+        Clears out all images
+        """
+        pass
 
 
-class LocalImageService(ImageService):
+class LocalImageService(BaseImageService):
+
     """Image service storing images to local disk."""
 
     def __init__(self):
@@ -88,3 +171,10 @@ class LocalImageService(ImageService):
         Delete the given image.  Raises OSError if the image does not exist.
         """
         os.unlink(self._path_to(image_id))
+
+    def delete_all(self):
+        """
+        Clears out all images in local directory
+        """
+        for f in os.listdir(self._path):
+            os.unlink(self._path_to(f))

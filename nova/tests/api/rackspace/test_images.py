@@ -15,25 +15,111 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 import unittest
 
 import stubout
 
+from nova import utils
 from nova.api.rackspace import images
 
 
-class ImagesTest(unittest.TestCase):
+#{ Fixtures
+
+
+fixture_images = [
+    {
+     'name': 'image #1',
+     'updated': None,
+     'created': None,
+     'status': None,
+     'serverId': None,
+     'progress': None},
+    {
+     'name': 'image #2',
+     'updated': None,
+     'created': None,
+     'status': None,
+     'serverId': None,
+     'progress': None},
+    {
+     'name': 'image #3',
+     'updated': None,
+     'created': None,
+     'status': None,
+     'serverId': None,
+     'progress': None}]
+
+
+#}
+
+
+class BaseImageServiceTests():
+
+    """Tasks to test for all image services"""
+
+    def test_create_and_index(self):
+        for i in fixture_images:
+            self.service.create(i)
+
+        self.assertEquals(len(fixture_images), len(self.service.index()))
+
+    def test_create_and_update(self):
+        ids = {}
+        temp = 0
+        for i in fixture_images:
+            ids[self.service.create(i)] = temp
+            temp += 1
+
+        self.assertEquals(len(fixture_images), len(self.service.index()))
+
+        for image_id, num in ids.iteritems():
+            new_data = fixture_images[num]
+            new_data['updated'] = 'test' + str(num)
+            self.service.update(image_id, new_data)
+
+        images = self.service.index()
+
+        for i in images:
+            self.assertEquals('test' + str(ids[i['id']]),
+                              i['updated'])
+
+    def test_create_and_show(self):
+        ids = {}
+        temp = 0
+        for i in fixture_images:
+            ids[self.service.create(i)] = temp
+            temp += 1
+
+        for i in fixture_images:
+            image = self.service.show(i['id'])
+            index = ids[i['id']]
+            self.assertEquals(image, fixture_images[index])
+
+
+class LocalImageServiceTest(unittest.TestCase,
+                            BaseImageServiceTests):
+
+    """Tests the local image service"""
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
+        self.service = utils.import_object('nova.image.service.LocalImageService')
 
     def tearDown(self):
+        self.service.delete_all()
         self.stubs.UnsetAll()
 
-    def test_get_image_list(self):
-        pass
 
-    def test_delete_image(self):
-        pass
-    
-    def test_create_image(self):
-        pass
+#class GlanceImageServiceTest(unittest.TestCase,
+#                             BaseImageServiceTests):
+#
+#    """Tests the local image service"""
+#
+#    def setUp(self):
+#        self.stubs = stubout.StubOutForTesting()
+#        self.service = utils.import_object('nova.image.service.GlanceImageService')
+#
+#    def tearDown(self):
+#        self.service.delete_all()
+#        self.stubs.UnsetAll()

@@ -17,11 +17,16 @@
 
 from webob import exc
 
+from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api.rackspace import _id_translator
 import nova.api.rackspace
 import nova.image.service
 from nova.api.rackspace import faults
+
+
+FLAGS = flags.FLAGS
 
 class Controller(wsgi.Controller):
 
@@ -35,7 +40,7 @@ class Controller(wsgi.Controller):
     }
 
     def __init__(self):
-        self._service = nova.image.service.ImageService.load()
+        self._service = utils.import_object(FLAGS.image_service)
         self._id_translator = _id_translator.RackspaceAPIIdTranslator(
                 "image", self._service.__class__.__name__)
 
