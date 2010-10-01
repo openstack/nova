@@ -28,13 +28,13 @@ import os
 import tempfile
 import zipfile
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova import utils
 from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud
-from nova.api.ec2 import context
 
 
 FLAGS = flags.FLAGS
@@ -62,7 +62,7 @@ class CloudPipe(object):
 
         key_name = self.setup_key_pair(project.project_manager_id, project_id)
         zippy = open(zippath, "r")
-        context = context.APIRequestContext(user=project.project_manager, project=project)
+        context = context.RequestContext(user=project.project_manager, project=project)
 
         reservation = self.controller.run_instances(context,
             # run instances expects encoded userdata, it is decoded in the get_metadata_call

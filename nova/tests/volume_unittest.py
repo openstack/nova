@@ -22,6 +22,7 @@ import logging
 
 from twisted.internet import defer
 
+from nova import context
 from nova import exception
 from nova import db
 from nova import flags
@@ -39,7 +40,7 @@ class VolumeTestCase(test.TrialTestCase):
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.flags(connection_type='fake')
         self.volume = utils.import_object(FLAGS.volume_manager)
-        self.context = None
+        self.context = context.get_admin_context()
 
     @staticmethod
     def _create_volume(size='0'):
@@ -51,19 +52,19 @@ class VolumeTestCase(test.TrialTestCase):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        return db.volume_create(None, vol)['id']
+        return db.volume_create(context.get_admin_context(), vol)['id']
 
     @defer.inlineCallbacks
     def test_create_delete_volume(self):
         """Test volume can be created and deleted"""
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
-        self.assertEqual(volume_id, db.volume_get(None, volume_id).id)
+        self.assertEqual(volume_id, db.volume_get(context.get_admin_context(), volume_id).id)
 
         yield self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.NotFound,
                           db.volume_get,
-                          None,
+                          self.context,
                           volume_id)
 
     @defer.inlineCallbacks
@@ -92,7 +93,7 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertFailure(self.volume.create_volume(self.context,
                                                      volume_id),
                            db.NoMoreBlades)
-        db.volume_destroy(None, volume_id)
+        db.volume_destroy(context.get_admin_context(), volume_id)
         for volume_id in vols:
             yield self.volume.delete_volume(self.context, volume_id)
 
@@ -113,12 +114,13 @@ class VolumeTestCase(test.TrialTestCase):
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
-            db.volume_attached(None, volume_id, instance_id, mountpoint)
+            db.volume_attached(self.context, volume_id, instance_id, mountpoint)
         else:
-            yield self.compute.attach_volume(instance_id,
+            yield self.compute.attach_volume(self.context,
+                                             instance_id,
                                              volume_id,
                                              mountpoint)
-        vol = db.volume_get(None, volume_id)
+        vol = db.volume_get(context.get_admin_context(), volume_id)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
         self.assertEqual(vol['mountpoint'], mountpoint)
@@ -128,17 +130,18 @@ class VolumeTestCase(test.TrialTestCase):
         self.assertFailure(self.volume.delete_volume(self.context, volume_id),
                            exception.Error)
         if FLAGS.fake_tests:
-            db.volume_detached(None, volume_id)
+            db.volume_detached(self.context, volume_id)
         else:
-            yield self.compute.detach_volume(instance_id,
+            yield self.compute.detach_volume(self.context,
+                                             instance_id,
                                              volume_id)
-        vol = db.volume_get(None, volume_id)
+        vol = db.volume_get(self.context, volume_id)
         self.assertEqual(vol['status'], "available")
 
         yield self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.Error,
                           db.volume_get,
-                          None,
+                          self.context,
                           volume_id)
         db.instance_destroy(self.context, instance_id)
 
@@ -151,7 +154,7 @@ class VolumeTestCase(test.TrialTestCase):
         def _check(volume_id):
             """Make sure blades aren't duplicated"""
             volume_ids.append(volume_id)
-            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(None,
+            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(context.get_admin_context(),
                                                                  volume_id)
             shelf_blade = '%s.%s' % (shelf_id, blade_id)
             self.assert_(shelf_blade not in shelf_blades)

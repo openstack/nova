@@ -59,8 +59,8 @@ class SchedulerManager(manager.Manager):
         except AttributeError:
             host = self.driver.schedule(context, topic, *args, **kwargs)
 
-        kwargs.update({"context": None})
-        rpc.cast(db.queue_get_for(context, topic, host),
+        rpc.cast(context,
+                 db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
         logging.debug("Casting to %s %s for %s", topic, host, method)

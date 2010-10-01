@@ -40,6 +40,7 @@ def is_admin_context(context):
     if not context:
         warnings.warn('Use of empty request context is deprecated',
                       DeprecationWarning)
+        raise Exception('die')
         return True
     return context.is_admin
 
@@ -321,7 +322,7 @@ def floating_ip_destroy(context, address):
     session = get_session()
     with session.begin():
         # TODO(devcamcar): Ensure address belongs to user.
-        floating_ip_ref = get_floating_ip_by_address(context,
+        floating_ip_ref = floating_ip_get_by_address(context,
                                                      address,
                                                      session=session)
         floating_ip_ref.delete(session=session)

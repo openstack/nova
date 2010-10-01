@@ -28,6 +28,7 @@ import logging
 import os
 import time
 
+from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
@@ -100,9 +101,9 @@ class CloudController(object):
             utils.runthis("Generating root CA: %s", "sh genrootca.sh")
             os.chdir(start)
 
-    def _get_mpi_data(self, project_id):
+    def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in db.instance_get_all_by_project(None, project_id):
+        for instance in db.instance_get_all_by_project(context, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
@@ -114,10 +115,11 @@ class CloudController(object):
         return result
 
     def get_metadata(self, address):
-        instance_ref = db.fixed_ip_get_instance(None, address)
+        ctxt = context.get_admin_context()
+        instance_ref = db.fixed_ip_get_instance(ctxt, address)
         if instance_ref is None:
             return None
-        mpi = self._get_mpi_data(instance_ref['project_id'])
+        mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {
                 '0': {
@@ -128,7 +130,7 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        floating_ip = db.instance_get_floating_address(None,
+        floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
@@ -136,7 +138,7 @@ class CloudController(object):
                 'ami-id': instance_ref['image_id'],
                 'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
-                'block-device-mapping': {  # TODO(vish): replace with real data
+                'block-device-mapping': { # TODO(vish): replace with real data
                     'ami': 'sda1',
                     'ephemeral0': 'sda2',
                     'root': '/dev/sda1',
@@ -218,7 +220,7 @@ class CloudController(object):
         return {'keypairsSet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
-        data = _gen_key(None, context.user.id, key_name)
+        data = _gen_key(context, context.user.id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
@@ -247,11 +249,11 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance_ref = db.instance_get_by_ec2_id(context, instance_id[0])
-        return rpc.call('%s.%s' % (FLAGS.compute_topic,
+        return rpc.call(context,
+                        '%s.%s' % (FLAGS.compute_topic,
                                    instance_ref['host']),
                         {"method": "get_console_output",
-                         "args": {"context": None,
-                                  "instance_id": instance_ref['id']}})
+                         "args": {"instance_id": instance_ref['id']}})
 
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():
@@ -310,10 +312,10 @@ class CloudController(object):
         vol['display_description'] = kwargs.get('display_description')
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.scheduler_topic,
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
                  {"method": "create_volume",
-                  "args": {"context": None,
-                           "topic": FLAGS.volume_topic,
+                  "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
@@ -328,10 +330,10 @@ class CloudController(object):
             raise exception.ApiError("Volume is already attached")
         instance_ref = db.instance_get_by_ec2_id(context, instance_id)
         host = instance_ref['host']
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+        rpc.cast(context,
+                 db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
-                                 "args": {"context": None,
-                                          "volume_id": volume_ref['id'],
+                                 "args": {"volume_id": volume_ref['id'],
                                           "instance_id": instance_ref['id'],
                                           "mountpoint": device}})
         return {'attachTime': volume_ref['attach_time'],
@@ -351,10 +353,10 @@ class CloudController(object):
             raise exception.ApiError("Volume is already detached")
         try:
             host = instance_ref['host']
-            rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+            rpc.cast(context,
+                     db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "detach_volume",
-                                 "args": {"context": None,
-                                          "instance_id": instance_ref['id'],
+                                 "args": {"instance_id": instance_ref['id'],
                                           "volume_id": volume_ref['id']}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
@@ -388,7 +390,7 @@ class CloudController(object):
         return self._format_describe_instances(context)
 
     def _format_describe_instances(self, context):
-        return { 'reservationSet': self._format_instances(context) }
+        return {'reservationSet': self._format_instances(context)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id)
@@ -482,20 +484,20 @@ class CloudController(object):
             raise QuotaError("Address quota exceeded. You cannot "
                              "allocate any more addresses")
         network_topic = self._get_network_topic(context)
-        public_ip = rpc.call(network_topic,
+        public_ip = rpc.call(context,
+                             network_topic,
                          {"method": "allocate_floating_ip",
-                          "args": {"context": None,
-                                   "project_id": context.project.id}})
+                          "args": {"project_id": context.project.id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "deallocate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address']}})
+                  "args": {"floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
@@ -504,20 +506,20 @@ class CloudController(object):
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "associate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address'],
+                  "args": {"floating_address": floating_ip_ref['address'],
                            "fixed_address": fixed_address}})
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "disassociate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address']}})
+                  "args": {"floating_address": floating_ip_ref['address']}})
         return {'disassociateResponse': ["Address disassociated."]}
 
     def _get_network_topic(self, context):
@@ -525,10 +527,10 @@ class CloudController(object):
         network_ref = db.project_get_network(context, context.project.id)
         host = network_ref['host']
         if not host:
-            host = rpc.call(FLAGS.network_topic,
+            host = rpc.call(context,
+                            FLAGS.network_topic,
                                   {"method": "set_network_host",
-                                   "args": {"context": None,
-                                            "project_id": context.project.id}})
+                                   "args": {"project_id": context.project.id}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
     def run_instances(self, context, **kwargs):
@@ -619,15 +621,15 @@ class CloudController(object):
             # TODO(vish): This probably should be done in the scheduler
             #             network is setup when host is assigned
             network_topic = self._get_network_topic(context)
-            rpc.call(network_topic,
+            rpc.call(context,
+                     network_topic,
                      {"method": "setup_fixed_ip",
-                      "args": {"context": None,
-                               "address": address}})
+                      "args": {"address": address}})
 
-            rpc.cast(FLAGS.scheduler_topic,
+            rpc.cast(context,
+                     FLAGS.scheduler_topic,
                      {"method": "run_instance",
-                      "args": {"context": None,
-                               "topic": FLAGS.compute_topic,
+                      "args": {"topic": FLAGS.compute_topic,
                                "instance_id": inst_id}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
@@ -658,10 +660,10 @@ class CloudController(object):
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
                 network_topic = self._get_network_topic(context)
-                rpc.cast(network_topic,
+                rpc.cast(context,
+                         network_topic,
                          {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_address": address}})
+                          "args": {"floating_address": address}})
 
             address = db.instance_get_fixed_address(context,
                                                     instance_ref['id'])
@@ -674,10 +676,10 @@ class CloudController(object):
 
             host = instance_ref['host']
             if host:
-                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+                rpc.cast(context,
+                         db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
-                          "args": {"context": None,
-                                   "instance_id": instance_ref['id']}})
+                          "args": {"instance_id": instance_ref['id']}})
             else:
                 db.instance_destroy(context, instance_ref['id'])
         return True
@@ -695,9 +697,8 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            db_context = {}
-            inst = db.instance_get_by_ec2_id(db_context, instance_id)
-            db.instance_update(db_context, inst['id'], kwargs)
+            inst = db.instance_get_by_ec2_id(context, instance_id)
+            db.instance_update(context, inst['id'], kwargs)
         return True
 
     def delete_volume(self, context, volume_id, **kwargs):
@@ -708,10 +709,10 @@ class CloudController(object):
         now = datetime.datetime.utcnow()
         db.volume_update(context, volume_ref['id'], {'terminated_at': now})
         host = volume_ref['host']
-        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
+        rpc.cast(context,
+                 db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
-                             "args": {"context": None,
-                                      "volume_id": volume_ref['id']}})
+                             "args": {"volume_id": volume_ref['id']}})
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):

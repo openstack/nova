@@ -29,6 +29,7 @@ from twisted.internet import defer
 import unittest
 from xml.etree import ElementTree
 
+from nova import context
 from nova import crypto
 from nova import db
 from nova import flags
@@ -37,7 +38,6 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
-from nova.api.ec2 import context
 from nova.api.ec2 import cloud
 from nova.objectstore import image
 
@@ -72,7 +72,7 @@ class CloudTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
-        self.context = context.APIRequestContext(user=self.user,
+        self.context = context.RequestContext(user=self.user,
                                                  project=self.project)
 
     def tearDown(self):
@@ -235,33 +235,33 @@ class CloudTestCase(test.TrialTestCase):
         self.assertEqual('', img.metadata['description'])
 
     def test_update_of_instance_display_fields(self):
-        inst = db.instance_create({}, {})
+        inst = db.instance_create(self.context, {})
         self.cloud.update_instance(self.context, inst['ec2_id'],
                                    display_name='c00l 1m4g3')
-        inst = db.instance_get({}, inst['id'])
+        inst = db.instance_get(self.context, inst['id'])
         self.assertEqual('c00l 1m4g3', inst['display_name'])
-        db.instance_destroy({}, inst['id'])
+        db.instance_destroy(self.context, inst['id'])
 
     def test_update_of_instance_wont_update_private_fields(self):
-        inst = db.instance_create({}, {})
+        inst = db.instance_create(self.context, {})
         self.cloud.update_instance(self.context, inst['id'],
                                    mac_address='DE:AD:BE:EF')
-        inst = db.instance_get({}, inst['id'])
+        inst = db.instance_get(self.context, inst['id'])
         self.assertEqual(None, inst['mac_address'])
-        db.instance_destroy({}, inst['id'])
+        db.instance_destroy(self.context, inst['id'])
 
     def test_update_of_volume_display_fields(self):
-        vol = db.volume_create({}, {})
+        vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context, vol['id'],
                                  display_name='c00l v0lum3')
-        vol = db.volume_get({}, vol['id'])
+        vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
-        db.volume_destroy({}, vol['id'])
+        db.volume_destroy(self.context, vol['id'])
 
     def test_update_of_volume_wont_update_private_fields(self):
-        vol = db.volume_create({}, {})
+        vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context, vol['id'],
                                    mountpoint='/not/here')
-        vol = db.volume_get({}, vol['id'])
+        vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])
-        db.volume_destroy({}, vol['id'])
+        db.volume_destroy(self.context, vol['id'])

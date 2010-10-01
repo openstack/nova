@@ -18,6 +18,7 @@
 
 import logging
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -26,7 +27,6 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.api.ec2 import cloud
-from nova.api.ec2 import context
 
 
 FLAGS = flags.FLAGS
@@ -48,8 +48,8 @@ class QuotaTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('admin', 'admin', 'admin')
         self.network = utils.import_object(FLAGS.network_manager)
-        self.context = context.APIRequestContext(project=self.project,
-                                                 user=self.user)
+        self.context = context.RequestContext(project=self.project,
+                                              user=self.user)
 
     def tearDown(self):  # pylint: disable-msg=C0103
         manager.AuthManager().delete_project(self.project)
@@ -94,7 +94,7 @@ class QuotaTestCase(test.TrialTestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
-        self.assertRaises(cloud.QuotaError, self.cloud.run_instances, 
+        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -106,7 +106,7 @@ class QuotaTestCase(test.TrialTestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
-        self.assertRaises(cloud.QuotaError, self.cloud.run_instances, 
+        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -139,9 +139,9 @@ class QuotaTestCase(test.TrialTestCase):
     def test_too_many_addresses(self):
         address = '192.168.0.100'
         try:
-            db.floating_ip_get_by_address(None, address)
+            db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
-            db.floating_ip_create(None, {'address': address,
+            db.floating_ip_create(context.get_admin_context(), {'address': address,
                                          'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)

@@ -34,7 +34,7 @@ from twisted.internet import task
 from nova import exception
 from nova import fakerabbit
 from nova import flags
-
+from nova import context
 
 FLAGS = flags.FLAGS
 
@@ -151,6 +151,8 @@ class AdapterConsumer(TopicConsumer):
         """
         LOG.debug('received %s' % (message_data))
         msg_id = message_data.pop('_msg_id', None)
+        dict_context = message_data.pop('_context')
+        ctxt = context.RequestContext.from_dict(dict_context)
 
         method = message_data.get('method')
         args = message_data.get('args', {})
@@ -168,7 +170,7 @@ class AdapterConsumer(TopicConsumer):
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
         # pylint: disable-msg=W0142
-        d = defer.maybeDeferred(node_func, **node_args)
+        d = defer.maybeDeferred(node_func, context=ctxt, **node_args)
         if msg_id:
             d.addCallback(lambda rval: msg_reply(msg_id, rval, None))
             d.addErrback(lambda e: msg_reply(msg_id, None, e))
@@ -247,12 +249,13 @@ class RemoteError(exception.Error):
                                                          traceback))
 
 
-def call(topic, msg):
+def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
+    msg.update({'_context': context})
 
     class WaitMessage(object):
 
@@ -282,12 +285,13 @@ def call(topic, msg):
     return wait_msg.result
 
 
-def call_twisted(topic, msg):
+def call_twisted(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
+    msg.update({'_context': context.to_dict()})
 
     conn = Connection.instance()
     d = defer.Deferred()
@@ -313,9 +317,10 @@ def call_twisted(topic, msg):
     return d
 
 
-def cast(topic, msg):
+def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
     LOG.debug("Making asynchronous cast...")
+    msg.update({'_context': context.to_dict()})
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)

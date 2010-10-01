@@ -92,7 +92,7 @@ class NetworkManager(manager.Manager):
         # TODO(vish): can we minimize db access by just getting the
         #             id here instead of the ref?
         network_id = network_ref['id']
-        host = self.db.network_set_host(None,
+        host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
         self._on_set_network_host(context, network_id)
@@ -180,7 +180,7 @@ class FlatManager(NetworkManager):
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
         network_ref = self.db.project_get_network(context, context.project.id)
-        address = self.db.fixed_ip_associate_pool(context,
+        address = self.db.fixed_ip_associate_pool(context.admin(),
                                                   network_ref['id'],
                                                   instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})
@@ -249,7 +249,7 @@ class VlanManager(NetworkManager):
             address = network_ref['vpn_private_address']
             self.db.fixed_ip_associate(context, address, instance_id)
         else:
-            address = self.db.fixed_ip_associate_pool(None,
+            address = self.db.fixed_ip_associate_pool(context.admin(),
                                                       network_ref['id'],
                                                       instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})

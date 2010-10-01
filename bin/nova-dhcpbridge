@@ -33,6 +33,7 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import rpc
@@ -52,9 +53,12 @@ def add_lease(mac, ip_address, _hostname, _interface):
     if FLAGS.fake_rabbit:
         logging.debug("leasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.lease_fixed_ip(None, mac, ip_address)
+        network_manager.lease_fixed_ip(context.get_admin_context(),
+                                       mac,
+                                       ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
+        rpc.cast(context.get_admin_context(),
+                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
                   "args": {"context": None,
                            "mac": mac,
@@ -71,9 +75,12 @@ def del_lease(mac, ip_address, _hostname, _interface):
     if FLAGS.fake_rabbit:
         logging.debug("releasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.release_fixed_ip(None, mac, ip_address)
+        network_manager.release_fixed_ip(context.get_admin_context(),
+                                         mac,
+                                         ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
+        rpc.cast(context.get_admin_context(),
+                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
                   "args": {"context": None,
                            "mac": mac,
@@ -82,8 +89,9 @@ def del_lease(mac, ip_address, _hostname, _interface):
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
-    network_ref = db.network_get_by_bridge(None, interface)
-    return linux_net.get_dhcp_hosts(None, network_ref['id'])
+    ctxt = context.get_admin_context()
+    network_ref = db.network_get_by_bridge(ctxt, interface)
+    return linux_net.get_dhcp_hosts(ctxt, network_ref['id'])
 
 
 def main():

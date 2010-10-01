@@ -28,6 +28,7 @@ import shutil
 from twisted.internet import defer
 from twisted.internet import task
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -140,12 +141,13 @@ class LibvirtConnection(object):
         def _wait_for_shutdown():
             try:
                 state = self.get_info(instance['name'])['state']
-                db.instance_set_state(None, instance['id'], state)
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
                 if state == power_state.SHUTDOWN:
                     timer.stop()
                     d.callback(None)
             except Exception:
-                db.instance_set_state(None,
+                db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
@@ -190,14 +192,15 @@ class LibvirtConnection(object):
         def _wait_for_reboot():
             try:
                 state = self.get_info(instance['name'])['state']
-                db.instance_set_state(None, instance['id'], state)
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     logging.debug('instance %s: rebooted', instance['name'])
                     timer.stop()
                     d.callback(None)
             except Exception, exn:
                 logging.error('_wait_for_reboot failed: %s', exn)
-                db.instance_set_state(None,
+                db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
@@ -210,7 +213,7 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def spawn(self, instance):
         xml = self.to_xml(instance)
-        db.instance_set_state(None,
+        db.instance_set_state(context.get_admin_context(),
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
@@ -225,7 +228,8 @@ class LibvirtConnection(object):
         def _wait_for_boot():
             try:
                 state = self.get_info(instance['name'])['state']
-                db.instance_set_state(None, instance['id'], state)
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     logging.debug('instance %s: booted', instance['name'])
                     timer.stop()
@@ -233,7 +237,7 @@ class LibvirtConnection(object):
             except:
                 logging.exception('instance %s: failed to boot',
                                   instance['name'])
-                db.instance_set_state(None,
+                db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
@@ -280,9 +284,11 @@ class LibvirtConnection(object):
 
         key = str(inst['key_data'])
         net = None
-        network_ref = db.project_get_network(None, project.id)
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             project.id)
         if network_ref['injected']:
-            address = db.instance_get_fixed_address(None, inst['id'])
+            address = db.instance_get_fixed_address(context.get_admin_context(),
+                                                    inst['id'])
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
                                   'network': network_ref['network'],
@@ -314,7 +320,8 @@ class LibvirtConnection(object):
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug('instance %s: starting toXML method', instance['name'])
-        network = db.project_get_network(None, instance['project_id'])
+        network = db.project_get_network(context.get_admin_context(),
+                                         instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
         xml_info = {'type': FLAGS.libvirt_type,

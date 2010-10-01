@@ -24,9 +24,9 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import wsgi
+from nova import context
 from nova.api import cloud
 from nova.api.rackspace import _id_translator
-from nova.api.rackspace import context
 from nova.api.rackspace import faults
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -64,8 +64,8 @@ def _entity_list(entities):
 
 def _entity_detail(inst):
     """ Maps everything to Rackspace-like attributes for return"""
-    power_mapping = { 
-        power_state.NOSTATE:  'build', 
+    power_mapping = {
+        power_state.NOSTATE:  'build',
         power_state.RUNNING:  'active',
         power_state.BLOCKED:  'active',
         power_state.PAUSED:   'suspended',
@@ -75,7 +75,7 @@ def _entity_detail(inst):
     }
     inst_dict = {}
 
-    mapped_keys = dict(status='state', imageId='image_id', 
+    mapped_keys = dict(status='state', imageId='image_id',
         flavorId='instance_type', name='server_name', id='id')
 
     for k, v in mapped_keys.iteritems():
@@ -98,7 +98,7 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "server": [ "id", "imageId", "name", "flavorId", "hostId", 
+                "server": [ "id", "imageId", "name", "flavorId", "hostId",
                             "status", "progress", "progress" ]
             }
         }
@@ -164,11 +164,11 @@ class Controller(wsgi.Controller):
             inst = self._build_server_instance(req, env)
         except Exception, e:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-
-        rpc.cast(
-            FLAGS.compute_topic, {
-                "method": "run_instance",
-                "args": {"instance_id": inst['id']}})
+        user_id = req.environ['nova.context']['user']['id']
+        rpc.cast(context.RequestContext(user_id, user_id),
+                 FLAGS.compute_topic,
+                 {"method": "run_instance",
+                  "args": {"instance_id": inst['id']}})
         return _entity_inst(inst)
 
     def update(self, req, id):
@@ -178,7 +178,7 @@ class Controller(wsgi.Controller):
         user_id = req.environ['nova.context']['user']['id']
 
         inst_dict = self._deserialize(req.body, req)
-        
+
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -186,12 +186,12 @@ class Controller(wsgi.Controller):
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        self.db_driver.instance_update(None, id, 
+        self.db_driver.instance_update(None, id,
             _filter_params(inst_dict['server']))
         return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
-        """ multi-purpose method used to reboot, rebuild, and 
+        """ multi-purpose method used to reboot, rebuild, and
         resize a server """
         input_dict = self._deserialize(req.body, req)
         try:
@@ -217,13 +217,13 @@ class Controller(wsgi.Controller):
             if v['flavorid'] == flavor_id][0]
 
         image_id = env['server']['imageId']
-        
+
         img_service, image_id_trans = _image_service()
 
-        opaque_image_id = image_id_trans.to_rs_id(image_id)        
+        opaque_image_id = image_id_trans.to_rs_id(image_id)
         image = img_service.show(opaque_image_id)
 
-        if not image: 
+        if not image:
             raise Exception, "Image not found"
 
         inst['server_name'] = env['server']['name']
@@ -259,15 +259,15 @@ class Controller(wsgi.Controller):
 
         ref = self.db_driver.instance_create(None, inst)
         inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
-        
+
         # TODO(dietz): this isn't explicitly necessary, but the networking
         # calls depend on an object with a project_id property, and therefore
         # should be cleaned up later
-        api_context = context.APIRequestContext(user_id)
-    
+        api_context = context.RequestContext(user_id)
+
         inst['mac_address'] = utils.generate_mac()
-        
-        #TODO(dietz) is this necessary? 
+
+        #TODO(dietz) is this necessary?
         inst['launch_index'] = 0
 
         inst['hostname'] = ref.ec2_id
@@ -280,20 +280,20 @@ class Controller(wsgi.Controller):
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned
         network_topic = self._get_network_topic(user_id)
-        rpc.call(network_topic,
+        rpc.call(context.RequestContext(user_id, user_id),
+                 network_topic,
                  {"method": "setup_fixed_ip",
-                  "args": {"context": None,
-                           "address": address}})
+                  "args": {"address": address}})
         return inst
 
     def _get_network_topic(self, user_id):
         """Retrieves the network host for a project"""
-        network_ref = self.db_driver.project_get_network(None, 
+        network_ref = self.db_driver.project_get_network(None,
             user_id)
         host = network_ref['host']
         if not host:
-            host = rpc.call(FLAGS.network_topic,
-                                  {"method": "set_network_host",
-                                   "args": {"context": None,
-                                            "project_id": user_id}})
+            host = rpc.call(context.RequestContext(user_id, user_id),
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"project_id": user_id}})
         return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
