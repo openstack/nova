@@ -19,8 +19,6 @@
 Implementation of SQLAlchemy backend
 """
 
-import sys
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -340,18 +338,32 @@ def fixed_ip_disassociate(_context, address):
         fixed_ip_ref.save(session=session)
 
 
+def fixed_ip_disassociate_all_by_timeout(_context, host, time):
+    session = get_session()
+    # NOTE(vish): The nested select is because sqlite doesn't support
+    #             JOINs in UPDATEs.
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
+                                                  'leased = 0 '
+                             'WHERE network_id IN (SELECT id FROM networks '
+                                                  'WHERE host = :host) '
+                             'AND updated_at < :time '
+                             'AND instance_id IS NOT NULL '
+                             'AND allocated = 0',
+                    {'host': host,
+                     'time': time.isoformat()})
+    return result.rowcount
+
+
 def fixed_ip_get_by_address(_context, address):
     session = get_session()
-    with session.begin():
-        try:
-            return session.query(models.FixedIp
-                         ).options(joinedload_all('instance')
-                         ).filter_by(address=address
-                         ).filter_by(deleted=False
-                         ).one()
-        except NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % address)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
+    result = session.query(models.FixedIp
+                   ).options(joinedload_all('instance')
+                   ).filter_by(address=address
+                   ).filter_by(deleted=False
+                   ).first()
+    if not result:
+        raise exception.NotFound("No model for address %s" % address)
+    return result
 
 
 def fixed_ip_get_instance(_context, address):
