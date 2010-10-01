@@ -75,6 +75,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    max_cores=4,
                    max_gigabytes=4,
+                   network_manager='nova.network.manager.FlatManager',
                    volume_driver='nova.volume.driver.FakeAOEDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()

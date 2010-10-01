@@ -400,8 +400,13 @@ def network_get_associated_fixed_ips(context, network_id):
 
 
 def network_get_by_bridge(context, bridge):
-    """Get an network or raise if it does not exist."""
+    """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_instance(context, instance_id):
+    """Get a network by instance id or raise if it does not exist."""
+    return IMPL.network_get_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):

@@ -52,11 +52,14 @@ class NetworkTestCase(test.TrialTestCase):
         self.context = context.APIRequestContext(project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
-            self.projects.append(self.manager.create_project(name,
-                                                             'netuser',
-                                                             name))
+            project = self.manager.create_project(name, 'netuser', name)
+            self.projects.append(project)
             # create the necessary network data for the project
-            self.network.set_network_host(self.context, self.projects[i].id)
+            self.context.project = project
+            network_ref = self.network.get_network(self.context)
+            if not network_ref['host']:
+                self.network.set_network_host(self.context, network_ref['id'])
+        self.context.project = None
         instance_ref = db.instance_create(None,
                                          {'mac_address': utils.generate_mac()})
         self.instance_id = instance_ref['id']
@@ -84,7 +87,7 @@ class NetworkTestCase(test.TrialTestCase):
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
-        pubnet = IPy.IP(flags.FLAGS.public_range)
+        pubnet = IPy.IP(flags.FLAGS.floating_range)
         address = str(pubnet[0])
         try:
             db.floating_ip_get_by_address(None, address)

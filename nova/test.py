@@ -63,7 +63,9 @@ class TrialTestCase(unittest.TestCase):
         #             now that we have some required db setup for the system
         #             to work properly.
         if db.network_count(None) != 5:
-            network_manager.VlanManager().create_networks(None, 5, 16,
+            network_manager.VlanManager().create_networks(None,
+                                                          FLAGS.fixed_range,
+                                                          5, 16,
                                                           FLAGS.vlan_start,
                                                           FLAGS.vpn_start)
 

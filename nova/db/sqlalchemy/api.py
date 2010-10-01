@@ -28,7 +28,6 @@ from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -661,6 +660,19 @@ def network_get_by_bridge(_context, bridge):
                ).first()
     if not rv:
         raise exception.NotFound('No network for bridge %s' % bridge)
+    return rv
+
+
+def network_get_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network
+               ).filter_by(deleted=False
+               ).join(models.Network.fixed_ips
+               ).filter_by(instance_id=instance_id
+               ).filter_by(deleted=False
+               ).first()
+    if not rv:
+        raise exception.NotFound('No network for instance %s' % instance_id)
     return rv
 
 
