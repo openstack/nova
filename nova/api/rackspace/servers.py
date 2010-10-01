@@ -17,35 +17,45 @@
 
 import time
 
+import webob
 from webob import exc
 
 from nova import flags
 from nova import rpc
 from nova import utils
 from nova import wsgi
+from nova.api import cloud
 from nova.api.rackspace import _id_translator
+from nova.api.rackspace import context
 from nova.api.rackspace import faults
+from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.rackspace
 import nova.image.service
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('rs_network_manager', 'nova.network.manager.FlatManager',
+    'Networking for rackspace')
 
+def _instance_id_translator():
+    """ Helper method for initializing an id translator for Rackspace instance
+    ids """
+    return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
 
-def translator_instance():
+def _image_service():
     """ Helper method for initializing the image id translator """
     service = nova.image.service.ImageService.load()
-    return _id_translator.RackspaceAPIIdTranslator(
-            "image", service.__class__.__name__)
+    return (service, _id_translator.RackspaceAPIIdTranslator(
+            "image", service.__class__.__name__))
 
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
-    keys = ['name', 'adminPass']
+    keys = dict(name='name', admin_pass='adminPass')
     new_attrs = {}
-    for k in keys:
-        if inst_dict.has_key(k):
-            new_attrs[k] = inst_dict[k]
+    for k, v in keys.items():
+        if inst_dict.has_key(v):
+            new_attrs[k] = inst_dict[v]
     return new_attrs
 
 def _entity_list(entities):
@@ -84,7 +94,6 @@ def _entity_inst(inst):
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the Openstack API """
-    
 
     _serialization_metadata = {
         'application/xml': {
@@ -122,8 +131,11 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """ Returns server details by server id """
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
+
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get(None, id)
+        inst = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -131,8 +143,11 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         """ Destroys a server """
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
+
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get(None, id)
+        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
             return faults.Fault(exc.HTTPAccepted())
@@ -140,10 +155,15 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        if not req.environ.has_key('inst_dict'):
+
+        env = self._deserialize(req.body, req)
+        if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        inst = self._build_server_instance(req)
+        try:
+            inst = self._build_server_instance(req, env)
+        except Exception, e:
+            return faults.Fault(exc.HTTPUnprocessableEntity())
 
         rpc.cast(
             FLAGS.compute_topic, {
@@ -153,62 +173,127 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        if not req.environ.has_key('inst_dict'):
+        inst_id_trans = _instance_id_translator()
+        inst_id = inst_id_trans.from_rs_id(id)
+        user_id = req.environ['nova.context']['user']['id']
+
+        inst_dict = self._deserialize(req.body, req)
+        
+        if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get(None, id)
-        if not instance:
+        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        attrs = req.environ['nova.context'].get('model_attributes', None)
-        if attrs:
-            self.db_driver.instance_update(None, id, _filter_params(attrs))
+        self.db_driver.instance_update(None, id, 
+            _filter_params(inst_dict['server']))
         return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
-        if not req.environ.has_key('inst_dict'):
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+        input_dict = self._deserialize(req.body, req)
+        try:
+            reboot_type = input_dict['reboot']['type']
+        except Exception:
+            raise faults.Fault(webob.exc.HTTPNotImplemented())
+        opaque_id = _instance_id_translator().from_rs_id(id)
+        cloud.reboot(opaque_id)
 
-    def _build_server_instance(self, req):
+    def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
 
-        env = req.environ['inst_dict']
-
-        image_id = env['server']['imageId']
-        opaque_id = translator_instance().from_rs_id(image_id)
-
-        inst['name'] = env['server']['server_name']
-        inst['image_id'] = opaque_id
-        inst['instance_type'] = env['server']['flavorId']
+        inst_id_trans = _instance_id_translator()
 
         user_id = req.environ['nova.context']['user']['id']
-        inst['user_id'] = user_id
 
+        flavor_id = env['server']['flavorId']
+
+        instance_type, flavor = [(k, v) for k, v in
+            instance_types.INSTANCE_TYPES.iteritems()
+            if v['flavorid'] == flavor_id][0]
+
+        image_id = env['server']['imageId']
+        
+        img_service, image_id_trans = _image_service()
+
+        opaque_image_id = image_id_trans.to_rs_id(image_id)        
+        image = img_service.show(opaque_image_id)
+
+        if not image: 
+            raise Exception, "Image not found"
+
+        inst['server_name'] = env['server']['name']
+        inst['image_id'] = opaque_image_id
+        inst['user_id'] = user_id
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
+        inst['project_id'] = user_id
 
-        inst['project_id'] = env['project']['id']
-        inst['reservation_id'] = reservation
-        reservation = utils.generate_uid('r')
+        inst['state_description'] = 'scheduling'
+        inst['kernel_id'] = image.get('kernelId', FLAGS.default_kernel)
+        inst['ramdisk_id'] = image.get('ramdiskId', FLAGS.default_ramdisk)
+        inst['reservation_id'] = utils.generate_uid('r')
 
-        address = self.network.allocate_ip(
-                    inst['user_id'],
-                    inst['project_id'],
-                    mac=inst['mac_address'])
+        inst['display_name'] = env['server']['name']
+        inst['display_description'] = env['server']['name']
 
-        inst['private_dns_name'] = str(address)
-        inst['bridge_name'] = network.BridgedNetwork.get_network_for_project(
-                                inst['user_id'],
-                                inst['project_id'],
-                                'default')['bridge_name']
+        #TODO(dietz) this may be ill advised
+        key_pair_ref = self.db_driver.key_pair_get_all_by_user(
+            None, user_id)[0]
+
+        inst['key_data'] = key_pair_ref['public_key']
+        inst['key_name'] = key_pair_ref['name']
+
+        #TODO(dietz) stolen from ec2 api, see TODO there
+        inst['security_group'] = 'default'
+
+        # Flavor related attributes
+        inst['instance_type'] = instance_type
+        inst['memory_mb'] = flavor['memory_mb']
+        inst['vcpus'] = flavor['vcpus']
+        inst['local_gb'] = flavor['local_gb']
 
         ref = self.db_driver.instance_create(None, inst)
-        inst['id'] = ref.id
+        inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
         
+        # TODO(dietz): this isn't explicitly necessary, but the networking
+        # calls depend on an object with a project_id property, and therefore
+        # should be cleaned up later
+        api_context = context.APIRequestContext(user_id)
+    
+        inst['mac_address'] = utils.generate_mac()
+        
+        #TODO(dietz) is this necessary? 
+        inst['launch_index'] = 0
+
+        inst['hostname'] = ref.ec2_id
+        self.db_driver.instance_update(None, inst['id'], inst)
+
+        network_manager = utils.import_object(FLAGS.rs_network_manager)
+        address = network_manager.allocate_fixed_ip(api_context,
+            inst['id'])
+
+        # TODO(vish): This probably should be done in the scheduler
+        #             network is setup when host is assigned
+        network_topic = self._get_network_topic(user_id)
+        rpc.call(network_topic,
+                 {"method": "setup_fixed_ip",
+                  "args": {"context": None,
+                           "address": address}})
         return inst
 
-    
+    def _get_network_topic(self, user_id):
+        """Retrieves the network host for a project"""
+        network_ref = self.db_driver.project_get_network(None, 
+            user_id)
+        host = network_ref['host']
+        if not host:
+            host = rpc.call(FLAGS.network_topic,
+                                  {"method": "set_network_host",
+                                   "args": {"context": None,
+                                            "project_id": user_id}})
+        return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
