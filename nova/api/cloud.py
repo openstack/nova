@@ -17,16 +17,26 @@
 #    under the License.
 
 """
-:mod:`nova.objectstore` -- S3-type object store
-=====================================================
-
-.. automodule:: nova.objectstore
-   :platform: Unix
-   :synopsis: Currently a trivial file-based system, getting extended w/ swift.
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+Methods for API calls to control instances via AMQP.
 """
+
+
+from nova import db
+from nova import flags
+from nova import rpc
+
+FLAGS = flags.FLAGS
+
+
+def reboot(instance_id, context=None):
+    """Reboot the given instance.
+    
+    #TODO(gundlach) not actually sure what context is used for by ec2 here
+    -- I think we can just remove it and use None all the time.
+    """
+    instance_ref = db.instance_get_by_ec2_id(None, instance_id)
+    host = instance_ref['host']
+    rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+             {"method": "reboot_instance",
+              "args": {"context": None,
+                       "instance_id": instance_ref['id']}})
