@@ -49,7 +49,6 @@ class NetworkTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
-        # TODO(devcamcar): Passing project=None is Bad(tm).
         self.context = context.APIRequestContext(project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
@@ -60,11 +59,9 @@ class NetworkTestCase(test.TrialTestCase):
             user_context = context.APIRequestContext(project=self.projects[i],
                                                      user=self.user)
             self.network.set_network_host(user_context, self.projects[i].id)
-        instance_ref = db.instance_create(None,
-                                         {'mac_address': utils.generate_mac()})
+        instance_ref = self._create_instance(0)
         self.instance_id = instance_ref['id']
-        instance_ref = db.instance_create(None,
-                                         {'mac_address': utils.generate_mac()})
+        instance_ref = self._create_instance(1)
         self.instance2_id = instance_ref['id']
 
     def tearDown(self):  # pylint: disable-msg=C0103
@@ -77,12 +74,26 @@ class NetworkTestCase(test.TrialTestCase):
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
 
+    def _create_instance(self, project_num, mac=None):
+        if not mac:
+            mac = utils.generate_mac()
+        project = self.projects[project_num]
+        self.context.project = project
+        return db.instance_create(self.context,
+                                  {'project_id': project.id,
+                                   'mac_address': mac})
+
     def _create_address(self, project_num, instance_id=None):
         """Create an address in given project num"""
         if instance_id is None:
             instance_id = self.instance_id
         self.context.project = self.projects[project_num]
         return self.network.allocate_fixed_ip(self.context, instance_id)
+
+    def _deallocate_address(self, project_num, address):
+        self.context.project = self.projects[project_num]
+        self.network.deallocate_fixed_ip(self.context, address)
+
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
@@ -134,14 +145,14 @@ class NetworkTestCase(test.TrialTestCase):
         lease_ip(address)
         lease_ip(address2)
 
-        self.network.deallocate_fixed_ip(self.context, address)
+        self._deallocate_address(0, address)
         release_ip(address)
         self.assertFalse(is_allocated_in_project(address, self.projects[0].id))
 
         # First address release shouldn't affect the second
         self.assertTrue(is_allocated_in_project(address2, self.projects[1].id))
 
-        self.network.deallocate_fixed_ip(self.context, address2)
+        self._deallocate_address(1, address2)
         release_ip(address2)
         self.assertFalse(is_allocated_in_project(address2,
                                                  self.projects[1].id))
@@ -152,24 +163,19 @@ class NetworkTestCase(test.TrialTestCase):
         lease_ip(first)
         instance_ids = []
         for i in range(1, 5):
-            mac = utils.generate_mac()
-            instance_ref = db.instance_create(None,
-                                              {'mac_address': mac})
+            instance_ref = self._create_instance(i, mac=utils.generate_mac())
             instance_ids.append(instance_ref['id'])
             address = self._create_address(i, instance_ref['id'])
-            mac = utils.generate_mac()
-            instance_ref = db.instance_create(None,
-                                              {'mac_address': mac})
+            instance_ref = self._create_instance(i, mac=utils.generate_mac())
             instance_ids.append(instance_ref['id'])
             address2 = self._create_address(i, instance_ref['id'])
-            mac = utils.generate_mac()
-            instance_ref = db.instance_create(None,
-                                              {'mac_address': mac})
+            instance_ref = self._create_instance(i, mac=utils.generate_mac())
             instance_ids.append(instance_ref['id'])
             address3 = self._create_address(i, instance_ref['id'])
             lease_ip(address)
             lease_ip(address2)
             lease_ip(address3)
+            self.context.project = self.projects[i]
             self.assertFalse(is_allocated_in_project(address,
                                                      self.projects[0].id))
             self.assertFalse(is_allocated_in_project(address2,
@@ -185,7 +191,7 @@ class NetworkTestCase(test.TrialTestCase):
         for instance_id in instance_ids:
             db.instance_destroy(None, instance_id)
         release_ip(first)
-        self.network.deallocate_fixed_ip(self.context, first)
+        self._deallocate_address(0, first)
 
     def test_vpn_ip_and_port_looks_valid(self):
         """Ensure the vpn ip and port are reasonable"""
@@ -246,9 +252,7 @@ class NetworkTestCase(test.TrialTestCase):
         addresses = []
         instance_ids = []
         for i in range(num_available_ips):
-            mac = utils.generate_mac()
-            instance_ref = db.instance_create(None,
-                                              {'mac_address': mac})
+            instance_ref = self._create_instance(0)
             instance_ids.append(instance_ref['id'])
             address = self._create_address(0, instance_ref['id'])
             addresses.append(address)
