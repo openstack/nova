@@ -236,6 +236,11 @@ class VlanManager(NetworkManager):
         if num:
             logging.debug("Dissassociated %s stale fixed ip(s)", num)
 
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service.
+        """
+        self.driver.init_host()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool"""
@@ -278,7 +283,7 @@ class VlanManager(NetworkManager):
             raise exception.Error("IP %s leased to bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
         self.db.fixed_ip_update(context,
-                                fixed_ip_ref['str_id'],
+                                fixed_ip_ref['address'],
                                 {'leased': True})
         if not fixed_ip_ref['allocated']:
             logging.warn("IP %s leased that was already deallocated", address)
@@ -332,7 +337,6 @@ class VlanManager(NetworkManager):
         # TODO(vish): Implement this
         pass
 
-
     def create_networks(self, context, num_networks, network_size,
                         vlan_start, vpn_start):
         """Create networks based on parameters"""
@@ -358,7 +362,6 @@ class VlanManager(NetworkManager):
             network_ref = self.db.network_create_safe(context, net)
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
-
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project"""

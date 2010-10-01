@@ -43,3 +43,10 @@ class Manager(object):
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval"""
         yield
+
+    def init_host(self):
+       """Do any initialization that needs to be run if this is a standalone service.
+
+       Child classes should override this method.
+       """
+       pass

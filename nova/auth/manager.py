@@ -617,6 +617,12 @@ class AuthManager(object):
         with self.driver() as drv:
             drv.delete_user(uid)
 
+    def modify_user(self, user, access_key=None, secret_key=None, admin=None):
+        """Modify credentials for a user"""
+        uid = User.safe_id(user)
+        with self.driver() as drv:
+            drv.modify_user(uid, access_key, secret_key, admin)
+
     def get_credentials(self, user, project=None):
         """Get credential zip for user in project"""
         if not isinstance(user, User):

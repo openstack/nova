@@ -54,6 +54,7 @@ class Service(object, service.Service):
         self.topic = topic
         manager_class = utils.import_class(manager)
         self.manager = manager_class(host=host, *args, **kwargs)
+        self.manager.init_host()
         self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
         try:

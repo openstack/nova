@@ -1,14 +1,17 @@
 import datetime
+import hashlib
 import json
 import time
+
 import webob.exc
 import webob.dec
-import hashlib
-from nova import flags
+
 from nova import auth
-from nova import manager
 from nova import db
+from nova import flags
+from nova import manager
 from nova import utils
+from nova.api.rackspace import faults
 
 FLAGS = flags.FLAGS
 
@@ -34,13 +37,13 @@ class BasicApiAuthManager(object):
         # honor it
         path_info = req.path_info
         if len(path_info) > 1:
-            return webob.exc.HTTPUnauthorized()
+            return faults.Fault(webob.exc.HTTPUnauthorized())
 
         try:
             username, key = req.headers['X-Auth-User'], \
                 req.headers['X-Auth-Key']
         except KeyError:
-            return webob.exc.HTTPUnauthorized()
+            return faults.Fault(webob.exc.HTTPUnauthorized())
 
         username, key = req.headers['X-Auth-User'], req.headers['X-Auth-Key']
         token, user = self._authorize_user(username, key)
@@ -55,7 +58,7 @@ class BasicApiAuthManager(object):
             res.status = '204'
             return res
         else:
-            return webob.exc.HTTPUnauthorized()
+            return faults.Fault(webob.exc.HTTPUnauthorized())
 
     def authorize_token(self, token_hash):
         """ retrieves user information from the datastore given a token

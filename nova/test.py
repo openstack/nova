@@ -34,6 +34,7 @@ from twisted.trial import unittest
 from nova import db
 from nova import fakerabbit
 from nova import flags
+from nova import rpc
 from nova.network import manager as network_manager
 
 
@@ -71,19 +72,28 @@ class TrialTestCase(unittest.TestCase):
         self.mox = mox.Mox()
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
+        self.injected = []
+        self._monkeyPatchAttach()
 
     def tearDown(self): # pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
-        super(TrialTestCase, self).tearDown()
         self.reset_flags()
         self.mox.UnsetStubs()
         self.stubs.UnsetAll()
         self.stubs.SmartUnsetAll()
         self.mox.VerifyAll()
         db.network_disassociate_all(None)
+        rpc.Consumer.attach_to_twisted = self.originalAttach
+        for x in self.injected:
+            try:
+                x.stop()
+            except AssertionError:
+                pass
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
+
+        super(TrialTestCase, self).tearDown()
 
     def flags(self, **kw):
         """Override flag variables for a test"""
@@ -100,16 +110,51 @@ class TrialTestCase(unittest.TestCase):
         for k, v in self.flag_overrides.iteritems():
             setattr(FLAGS, k, v)
 
+    def run(self, result=None):
+        test_method = getattr(self, self._testMethodName)
+        setattr(self,
+                self._testMethodName,
+                self._maybeInlineCallbacks(test_method, result))
+        rv = super(TrialTestCase, self).run(result)
+        setattr(self, self._testMethodName, test_method)
+        return rv
+
+    def _maybeInlineCallbacks(self, func, result):
+        def _wrapped():
+            g = func()
+            if isinstance(g, defer.Deferred):
+                return g
+            if not hasattr(g, 'send'):
+                return defer.succeed(g)
+
+            inlined = defer.inlineCallbacks(func)
+            d = inlined()
+            return d
+        _wrapped.func_name = func.func_name
+        return _wrapped
+
+    def _monkeyPatchAttach(self):
+        self.originalAttach = rpc.Consumer.attach_to_twisted
+        def _wrapped(innerSelf):
+            rv = self.originalAttach(innerSelf)
+            self.injected.append(rv)
+            return rv
+
+        _wrapped.func_name = self.originalAttach.func_name
+        rpc.Consumer.attach_to_twisted = _wrapped
+
 
 class BaseTestCase(TrialTestCase):
     # TODO(jaypipes): Can this be moved into the TrialTestCase class?
-    """Base test case class for all unit tests."""
+    """Base test case class for all unit tests.
+
+    DEPRECATED: This is being removed once Tornado is gone, use TrialTestCase.
+    """
     def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
         #               the injected listeners... this is fine for now though
-        self.injected = []
         self.ioloop = ioloop.IOLoop.instance()
 
         self._waiting = None
@@ -119,8 +164,6 @@ class BaseTestCase(TrialTestCase):
     def tearDown(self):# pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
         super(BaseTestCase, self).tearDown()
-        for x in self.injected:
-            x.stop()
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
 

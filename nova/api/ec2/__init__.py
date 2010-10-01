@@ -158,12 +158,14 @@ class Authorizer(wsgi.Middleware):
                 'RunInstances': ['projectmanager', 'sysadmin'],
                 'TerminateInstances': ['projectmanager', 'sysadmin'],
                 'RebootInstances': ['projectmanager', 'sysadmin'],
+                'UpdateInstance': ['projectmanager', 'sysadmin'],
                 'DeleteVolume': ['projectmanager', 'sysadmin'],
                 'DescribeImages': ['all'],
                 'DeregisterImage': ['projectmanager', 'sysadmin'],
                 'RegisterImage': ['projectmanager', 'sysadmin'],
                 'DescribeImageAttribute': ['all'],
                 'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
+                'UpdateImage': ['projectmanager', 'sysadmin'],
             },
             'AdminController': {
                 # All actions have the same permission: ['none'] (the default)
