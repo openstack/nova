@@ -126,7 +126,9 @@ def runthis(prompt, cmd, check_exit_code = True):
 
 
 def generate_uid(topic, size=8):
-    return '%s-%s' % (topic, ''.join([random.choice('01234567890abcdefghijklmnopqrstuvwxyz') for x in xrange(size)]))
+    #TODO(gundlach): we want internal ids to just be ints now.  i just dropped
+    #off a topic prefix, so what have I broken?
+    return random.randint(0, 2**64-1)
 
 
 def generate_mac():
