@@ -260,7 +260,7 @@ class CloudController(object):
         g = {}
         g['groupDescription'] = group.description
         g['groupName'] = group.name
-        g['ownerId'] = context.user.id
+        g['ownerId'] = group.project_id
         g['ipPermissions'] = []
         for rule in group.rules:
             r = {}
@@ -272,7 +272,7 @@ class CloudController(object):
             if rule.group_id:
                 source_group = db.security_group_get(context, rule.group_id)
                 r['groups'] += [{'groupName': source_group.name,
-                                 'userId': source_group.user_id}]
+                                 'userId': source_group.project_id}]
             else:
                 r['ipRanges'] += [{'cidrIp': rule.cidr}]
             g['ipPermissions'] += [r]

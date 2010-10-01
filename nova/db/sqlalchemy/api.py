@@ -413,10 +413,10 @@ def instance_destroy(_context, instance_id):
 def instance_get(context, instance_id):
     session = get_session()
     instance_ref = session.query(models.Instance
-                    ).options(joinedload_all('fixed_ip.floating_ips')
-                    ).options(joinedload_all('security_groups')
                     ).filter_by(id=instance_id
                     ).filter_by(deleted=_deleted(context)
+                    ).options(joinedload_all('security_groups')
+                    ).options(joinedload_all('fixed_ip.floating_ips')
                     ).first()
     if not instance_ref:
         raise exception.NotFound('Instance %s not found' % (instance_id))
@@ -1032,7 +1032,7 @@ def security_group_destroy(_context, security_group_id):
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
-        session.execute('update security_group set deleted=1 where id=:id',
+        session.execute('update security_groups set deleted=1 where id=:id',
                         {'id': security_group_id})
         session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
@@ -1042,7 +1042,7 @@ def security_group_destroy_all(_context):
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
-        session.execute('update security_group set deleted=1')
+        session.execute('update security_groups set deleted=1')
         session.execute('update security_group_rules set deleted=1')
 
 ###################
