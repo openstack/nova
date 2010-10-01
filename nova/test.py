@@ -31,9 +31,11 @@ from tornado import ioloop
 from twisted.internet import defer
 from twisted.trial import unittest
 
+from nova import db
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
+from nova.network import manager as network_manager
 
 
 FLAGS = flags.FLAGS
@@ -57,6 +59,15 @@ class TrialTestCase(unittest.TestCase):
     def setUp(self): # pylint: disable-msg=C0103
         """Run before each test method to initialize test environment"""
         super(TrialTestCase, self).setUp()
+        # NOTE(vish): We need a better method for creating fixtures for tests
+        #             now that we have some required db setup for the system
+        #             to work properly.
+        if db.network_count(None) != 5:
+            network_manager.VlanManager().create_networks(None,
+                                                          FLAGS.fixed_range,
+                                                          5, 16,
+                                                          FLAGS.vlan_start,
+                                                          FLAGS.vpn_start)
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators
@@ -73,7 +84,7 @@ class TrialTestCase(unittest.TestCase):
         self.stubs.UnsetAll()
         self.stubs.SmartUnsetAll()
         self.mox.VerifyAll()
-        
+        db.network_disassociate_all(None)
         rpc.Consumer.attach_to_twisted = self.originalAttach
         for x in self.injected:
             try:
@@ -138,7 +149,7 @@ class TrialTestCase(unittest.TestCase):
 class BaseTestCase(TrialTestCase):
     # TODO(jaypipes): Can this be moved into the TrialTestCase class?
     """Base test case class for all unit tests.
-    
+
     DEPRECATED: This is being removed once Tornado is gone, use TrialTestCase.
     """
     def setUp(self): # pylint: disable-msg=C0103

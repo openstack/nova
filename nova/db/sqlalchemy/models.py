@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -378,10 +378,13 @@ class KeyPair(BASE, NovaBase):
 class Network(BASE, NovaBase):
     """Represents a network"""
     __tablename__ = 'networks'
+    __table_args__ = (schema.UniqueConstraint("vpn_public_address",
+                                              "vpn_public_port"),
+                      {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
 
     injected = Column(Boolean, default=False)
-    cidr = Column(String(255))
+    cidr = Column(String(255), unique=True)
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -394,23 +397,12 @@ class Network(BASE, NovaBase):
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
-    project_id = Column(String(255))
+    # NOTE(vish): The unique constraint below helps avoid a race condition
+    #             when associating a network, but it also means that we
+    #             can't associate two networks with one project.
+    project_id = Column(String(255), unique=True)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-
-class NetworkIndex(BASE, NovaBase):
-    """Represents a unique offset for a network
-
-    Currently vlan number, vpn port, and fixed ip ranges are keyed off of
-    this index. These may ultimately need to be converted to separate
-    pools.
-    """
-    __tablename__ = 'network_indexes'
-    id = Column(Integer, primary_key=True)
-    index = Column(Integer, unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('network_index',
-                                                    uselist=False))
 
 class AuthToken(BASE, NovaBase):
     """Represents an authorization token for all API transactions. Fields
@@ -422,7 +414,6 @@ class AuthToken(BASE, NovaBase):
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
-
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -487,7 +478,7 @@ def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex,
+              FixedIp, FloatingIp, Network,
               AuthToken)  # , Image, Host)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
