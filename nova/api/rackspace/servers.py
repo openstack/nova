@@ -129,7 +129,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_instance_id(None, id)
+        inst = self.db_driver.instance_get_by_internal_id(None, id)
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -151,10 +151,10 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        try:
-            inst = self._build_server_instance(req, env)
-        except Exception, e:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+        #try:
+        inst = self._build_server_instance(req, env)
+        #except Exception, e:
+        #    return faults.Fault(exc.HTTPUnprocessableEntity())
 
         rpc.cast(
             FLAGS.compute_topic, {

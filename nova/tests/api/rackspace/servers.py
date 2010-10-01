@@ -89,7 +89,7 @@ class ServersTest(unittest.TestCase):
 
         def instance_create(context, inst):
             class Foo(object):
-                ec2_id = 1
+                internal_id = 1
             return Foo()
 
         def fake_method(*args, **kwargs):
@@ -108,7 +108,7 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
-        self.stubs.Set(nova.network.manager.FlatManager, 'allocate_fixed_ip',
+        self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
             
         test_helper.stub_out_id_translator(self.stubs)

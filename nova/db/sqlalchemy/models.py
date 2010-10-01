@@ -197,7 +197,7 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(10), unique=True)
+    internal_id = Column(Integer, unique=True)
 
     admin_pass = Column(String(255))
 
@@ -214,7 +214,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.ec2_id
+        return self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
