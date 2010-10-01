@@ -15,9 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from webob import exc
+
+from nova.api.rackspace import faults
 from nova.compute import instance_types
 from nova import wsgi
-from webob import exc
+import nova.api.rackspace
 
 class Controller(wsgi.Controller):
     """Flavor controller for the Rackspace API."""
@@ -38,6 +41,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
+        items = nova.api.rackspace.limited(items, req)
         return dict(flavors=items)
 
     def show(self, req, id):
@@ -47,7 +51,7 @@ class Controller(wsgi.Controller):
                 item = dict(ram=val['memory_mb'], disk=val['local_gb'],
                             id=val['flavorid'], name=name)
                 return dict(flavor=item)
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self):
         """Return the list of all flavorids."""

@@ -26,7 +26,9 @@ from nova import utils
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload_all
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -671,11 +673,14 @@ def network_index_count(_context):
     return models.NetworkIndex.count()
 
 
-def network_index_create(_context, values):
+def network_index_create_safe(_context, values):
     network_index_ref = models.NetworkIndex()
     for (key, value) in values.iteritems():
         network_index_ref[key] = value
-    network_index_ref.save()
+    try:
+        network_index_ref.save()
+    except IntegrityError:
+        pass
 
 
 def network_set_host(_context, network_id, host_id):

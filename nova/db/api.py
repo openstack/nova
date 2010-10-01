@@ -406,9 +406,12 @@ def network_index_count(context):
     return IMPL.network_index_count(context)
 
 
-def network_index_create(context, values):
-    """Create a network index from the values dict"""
-    return IMPL.network_index_create(context, values)
+def network_index_create_safe(context, values):
+    """Create a network index from the values dict
+
+    The index is not returned. If the create violates the unique
+    constraints because the index already exists, no exception is raised."""
+    return IMPL.network_index_create_safe(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):

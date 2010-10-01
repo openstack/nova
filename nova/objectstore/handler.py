@@ -352,6 +352,8 @@ class ImagesResource(resource.Resource):
                 m[u'imageType'] = m['type']
             elif 'imageType' in m:
                 m[u'type'] = m['imageType']
+            if 'displayName' not in m:
+                m[u'displayName'] = u''
             return m
 
         request.write(json.dumps([decorate(i.metadata) for i in images]))
@@ -382,16 +384,25 @@ class ImagesResource(resource.Resource):
     def render_POST(self, request): # pylint: disable-msg=R0201
         """Update image attributes: public/private"""
 
+        # image_id required for all requests
         image_id = get_argument(request, 'image_id', u'')
-        operation = get_argument(request, 'operation', u'')
-
         image_object = image.Image(image_id)
-
         if not image_object.is_authorized(request.context):
+            logging.debug("not authorized for render_POST in images")
             raise exception.NotAuthorized
 
-        image_object.set_public(operation=='add')
-
+        operation = get_argument(request, 'operation', u'')
+        if operation:
+            # operation implies publicity toggle
+            logging.debug("handling publicity toggle")
+            image_object.set_public(operation=='add')
+        else:
+            # other attributes imply update
+            logging.debug("update user fields")
+            clean_args = {}
+            for arg in request.args.keys():
+                clean_args[arg] = request.args[arg][0]
+            image_object.update_user_editable_fields(clean_args)
         return ''
 
     def render_DELETE(self, request): # pylint: disable-msg=R0201

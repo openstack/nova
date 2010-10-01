@@ -20,6 +20,7 @@ from webob import exc
 
 from nova import wsgi
 from nova.api.rackspace import _id_translator
+from nova.api.rackspace import faults
 import nova.image.service
 
 class Controller(wsgi.Controller):
@@ -27,12 +28,12 @@ class Controller(wsgi.Controller):
         pass
 
     def index(self, req, server_id):
-        return exc.HTTPNotFound()
+        return faults.Fault(exc.HTTPNotFound())
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows
         both create and update through a POST """
-        return exc.HTTPNotFound()
+        return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, server_id):
-        return exc.HTTPNotFound()
+        return faults.Fault(exc.HTTPNotFound())

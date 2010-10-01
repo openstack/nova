@@ -188,6 +188,8 @@ DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
+DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
+DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
 

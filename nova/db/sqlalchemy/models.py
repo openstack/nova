@@ -199,6 +199,8 @@ class Instance(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     ec2_id = Column(String(10), unique=True)
 
+    admin_pass = Column(String(255))
+
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -239,7 +241,6 @@ class Instance(BASE, NovaBase):
     vcpus = Column(Integer)
     local_gb = Column(Integer)
 
-
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
@@ -253,6 +254,10 @@ class Instance(BASE, NovaBase):
     scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
@@ -288,6 +293,10 @@ class Volume(BASE, NovaBase):
     scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project"""
@@ -398,7 +407,7 @@ class NetworkIndex(BASE, NovaBase):
     """
     __tablename__ = 'network_indexes'
     id = Column(Integer, primary_key=True)
-    index = Column(Integer)
+    index = Column(Integer, unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('network_index',
                                                     uselist=False))
