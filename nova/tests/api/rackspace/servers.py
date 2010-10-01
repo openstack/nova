@@ -57,7 +57,7 @@ class ServersTest(unittest.TestCase):
         test_helper.stub_out_key_pair_funcs(self.stubs)
         test_helper.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_ec2_id', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
             return_servers)
 

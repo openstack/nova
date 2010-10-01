@@ -35,9 +35,6 @@ import nova.image.service
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('rs_network_manager', 'nova.network.manager.FlatManager',
-    'Networking for rackspace')
-
 def _instance_id_translator():
     """ Helper method for initializing an id translator for Rackspace instance
     ids """
@@ -131,11 +128,8 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """ Returns server details by server id """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
-
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        inst = self.db_driver.instance_get_by_instance_id(None, id)
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -143,11 +137,8 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         """ Destroys a server """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
-
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        instance = self.db_driver.instance_get_by_internal_id(None, id)
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
             return faults.Fault(exc.HTTPAccepted())
@@ -173,8 +164,6 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
         user_id = req.environ['nova.context']['user']['id']
 
         inst_dict = self._deserialize(req.body, req)
@@ -182,7 +171,7 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        instance = self.db_driver.instance_get_by_internal_id(None, id)
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -205,8 +194,6 @@ class Controller(wsgi.Controller):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
-
-        inst_id_trans = _instance_id_translator()
 
         user_id = req.environ['nova.context']['user']['id']
 
@@ -258,7 +245,7 @@ class Controller(wsgi.Controller):
         inst['local_gb'] = flavor['local_gb']
 
         ref = self.db_driver.instance_create(None, inst)
-        inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
+        inst['id'] = ref.internal_id
         
         # TODO(dietz): this isn't explicitly necessary, but the networking
         # calls depend on an object with a project_id property, and therefore
@@ -270,10 +257,10 @@ class Controller(wsgi.Controller):
         #TODO(dietz) is this necessary? 
         inst['launch_index'] = 0
 
-        inst['hostname'] = ref.ec2_id
+        inst['hostname'] = ref.internal_id
         self.db_driver.instance_update(None, inst['id'], inst)
 
-        network_manager = utils.import_object(FLAGS.rs_network_manager)
+        network_manager = utils.import_object(FLAGS.network_manager)
         address = network_manager.allocate_fixed_ip(api_context,
             inst['id'])
 
