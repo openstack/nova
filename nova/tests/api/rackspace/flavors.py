@@ -38,7 +38,6 @@ class FlavorsTest(unittest.TestCase):
     def test_get_flavor_list(self):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(nova.api.API())
-        print res
 
     def test_get_flavor_by_id(self):
         pass

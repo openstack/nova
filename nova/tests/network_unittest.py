@@ -124,7 +124,7 @@ class NetworkTestCase(test.TrialTestCase):
         address = self._create_address(0)
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))
         lease_ip(address)
-        self.network.deallocate_fixed_ip(self.context, address)
+        self._deallocate_address(0, address)
 
         # Doesn't go away until it's dhcp released
         self.assertTrue(is_allocated_in_project(address, self.projects[0].id))

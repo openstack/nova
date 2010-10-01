@@ -15,27 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
-import unittest
+"""
+APIRequestContext
+"""
 
-from nova.api.rackspace import sharedipgroups
-from nova.tests.api.test_helper import *
+import random
 
-class SharedIpGroupsTest(unittest.TestCase):
-    def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-
-    def test_get_shared_ip_groups(self):
-        pass
-
-    def test_create_shared_ip_group(self):
-        pass
-
-    def test_delete_shared_ip_group(self):
-        pass
-
-
-
+class Project(object):
+    def __init__(self, user_id):
+        self.id = user_id
+    
+class APIRequestContext(object):
+    """ This is an adapter class to get around all of the assumptions made in
+    the FlatNetworking """
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.project = Project(user_id)

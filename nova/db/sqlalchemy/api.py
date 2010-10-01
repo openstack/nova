@@ -19,8 +19,6 @@
 Implementation of SQLAlchemy backend
 """
 
-import logging
-import sys
 import warnings
 
 from nova import db
@@ -49,7 +47,6 @@ def is_admin_context(context):
 def is_user_context(context):
     """Indicates if the request context is a normal user."""
     if not context:
-        logging.warning('Use of empty request context is deprecated')
         return False
     if not context.user or not context.project:
         return False
@@ -436,8 +433,8 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
             raise db.NoMoreAddresses()
         if not fixed_ip_ref.network:
             fixed_ip_ref.network = network_get(context,
-                                               network_id,
-                                               session=session)
+                                           network_id,
+                                           session=session)
         fixed_ip_ref.instance = instance_get(context,
                                              instance_id,
                                              session=session)
@@ -465,11 +462,27 @@ def fixed_ip_disassociate(context, address):
         fixed_ip_ref.save(session=session)
 
 
+@require_admin_context
+def fixed_ip_disassociate_all_by_timeout(_context, host, time):
+    session = get_session()
+    # NOTE(vish): The nested select is because sqlite doesn't support
+    #             JOINs in UPDATEs.
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
+                                                  'leased = 0 '
+                             'WHERE network_id IN (SELECT id FROM networks '
+                                                  'WHERE host = :host) '
+                             'AND updated_at < :time '
+                             'AND instance_id IS NOT NULL '
+                             'AND allocated = 0',
+                    {'host': host,
+                     'time': time.isoformat()})
+    return result.rowcount
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
         session = get_session()
-
     result = session.query(models.FixedIp
                    ).filter_by(address=address
                    ).filter_by(deleted=can_read_deleted(context)
@@ -487,14 +500,14 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 @require_context
 def fixed_ip_get_instance(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.instance
+        fixed_ip_ref = fixed_ip_get_by_address(context, address)
+        return fixed_ip_ref.instance
 
 
 @require_admin_context
 def fixed_ip_get_network(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.network
+        fixed_ip_ref = fixed_ip_get_by_address(context, address)
+        return fixed_ip_ref.network
 
 
 @require_context
@@ -716,7 +729,6 @@ def key_pair_create(context, values):
 @require_context
 def key_pair_destroy(context, user_id, name):
     authorize_user_context(context, user_id)
-
     session = get_session()
     with session.begin():
         key_pair_ref = key_pair_get(context, user_id, name, session=session)
@@ -726,7 +738,6 @@ def key_pair_destroy(context, user_id, name):
 @require_context
 def key_pair_destroy_all_by_user(context, user_id):
     authorize_user_context(context, user_id)
-
     session = get_session()
     with session.begin():
         # TODO(vish): do we have to use sql here?
@@ -755,7 +766,6 @@ def key_pair_get(context, user_id, name, session=None):
 @require_context
 def key_pair_get_all_by_user(context, user_id):
     authorize_user_context(context, user_id)
-
     session = get_session()
     return session.query(models.KeyPair
                  ).filter_by(user_id=user_id

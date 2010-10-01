@@ -204,6 +204,11 @@ def fixed_ip_disassociate(context, address):
     return IMPL.fixed_ip_disassociate(context, address)
 
 
+def fixed_ip_disassociate_all_by_timeout(context, host, time):
+    """Disassociate old fixed ips from host"""
+    return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address)
