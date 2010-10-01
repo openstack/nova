@@ -37,7 +37,11 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('report_interval', 10,
-                     'seconds between nodes reporting state to cloud',
+                     'seconds between nodes reporting state to datastore',
+                     lower_bound=1)
+
+flags.DEFINE_integer('periodic_interval', 60,
+                     'seconds between running periodic tasks',
                      lower_bound=1)
 
 
@@ -50,6 +54,7 @@ class Service(object, service.Service):
         self.topic = topic
         manager_class = utils.import_class(manager)
         self.manager = manager_class(host=host, *args, **kwargs)
+        self.manager.init_host()
         self.model_disconnected = False
         super(Service, self).__init__(*args, **kwargs)
         try:
@@ -80,7 +85,8 @@ class Service(object, service.Service):
                binary=None,
                topic=None,
                manager=None,
-               report_interval=None):
+               report_interval=None,
+               periodic_interval=None):
         """Instantiates class and passes back application object.
 
         Args:
@@ -89,6 +95,7 @@ class Service(object, service.Service):
             topic, defaults to bin_name - "nova-" part
             manager, defaults to FLAGS.<topic>_manager
             report_interval, defaults to FLAGS.report_interval
+            periodic_interval, defaults to FLAGS.periodic_interval
         """
         if not host:
             host = FLAGS.host
@@ -100,6 +107,8 @@ class Service(object, service.Service):
             manager = FLAGS.get('%s_manager' % topic, None)
         if not report_interval:
             report_interval = FLAGS.report_interval
+        if not periodic_interval:
+            periodic_interval = FLAGS.periodic_interval
         logging.warn("Starting %s node", topic)
         service_obj = cls(host, binary, topic, manager)
         conn = rpc.Connection.instance()
@@ -112,11 +121,14 @@ class Service(object, service.Service):
                 topic='%s.%s' % (topic, host),
                 proxy=service_obj)
 
+        consumer_all.attach_to_twisted()
+        consumer_node.attach_to_twisted()
+
         pulse = task.LoopingCall(service_obj.report_state)
         pulse.start(interval=report_interval, now=False)
 
-        consumer_all.attach_to_twisted()
-        consumer_node.attach_to_twisted()
+        pulse = task.LoopingCall(service_obj.periodic_tasks)
+        pulse.start(interval=periodic_interval, now=False)
 
         # This is the parent service that twistd will be looking for when it
         # parses this file, return it so that we can get it into globals.
@@ -130,6 +142,11 @@ class Service(object, service.Service):
             db.service_destroy(context, self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
+
+    @defer.inlineCallbacks
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval"""
+        yield self.manager.periodic_tasks(context)
 
     @defer.inlineCallbacks
     def report_state(self, context=None):

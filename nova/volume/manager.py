@@ -77,7 +77,7 @@ class AOEManager(manager.Manager):
 
         size = volume_ref['size']
         logging.debug("volume %s: creating lv of size %sG", volume_id, size)
-        yield self.driver.create_volume(volume_ref['str_id'], size)
+        yield self.driver.create_volume(volume_ref['ec2_id'], size)
 
         logging.debug("volume %s: allocating shelf & blade", volume_id)
         self._ensure_blades(context)
@@ -87,7 +87,7 @@ class AOEManager(manager.Manager):
         logging.debug("volume %s: exporting shelf %s & blade %s", volume_id,
                       shelf_id, blade_id)
 
-        yield self.driver.create_export(volume_ref['str_id'],
+        yield self.driver.create_export(volume_ref['ec2_id'],
                                         shelf_id,
                                         blade_id)
 
@@ -112,10 +112,10 @@ class AOEManager(manager.Manager):
         logging.debug("Deleting volume with id of: %s", volume_id)
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                                 volume_id)
-        yield self.driver.remove_export(volume_ref['str_id'],
+        yield self.driver.remove_export(volume_ref['ec2_id'],
                                         shelf_id,
                                         blade_id)
-        yield self.driver.delete_volume(volume_ref['str_id'])
+        yield self.driver.delete_volume(volume_ref['ec2_id'])
         self.db.volume_destroy(context, volume_id)
         defer.returnValue(True)
 
@@ -126,7 +126,7 @@ class AOEManager(manager.Manager):
         Returns path to device.
         """
         volume_ref = self.db.volume_get(context, volume_id)
-        yield self.driver.discover_volume(volume_ref['str_id'])
+        yield self.driver.discover_volume(volume_ref['ec2_id'])
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                                 volume_id)
         defer.returnValue("/dev/etherd/e%s.%s" % (shelf_id, blade_id))

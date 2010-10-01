@@ -53,7 +53,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'images'))
 os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 
 
-class ObjectStoreTestCase(test.BaseTestCase):
+class ObjectStoreTestCase(test.TrialTestCase):
     """Test objectstore API directly."""
 
     def setUp(self): # pylint: disable-msg=C0103
@@ -163,6 +163,12 @@ class ObjectStoreTestCase(test.BaseTestCase):
         self.context.user = self.auth_manager.get_user('user2')
         self.context.project = self.auth_manager.get_project('proj2')
         self.assertFalse(my_img.is_authorized(self.context))
+
+        # change user-editable fields
+        my_img.update_user_editable_fields({'display_name': 'my cool image'})
+        self.assertEqual('my cool image', my_img.metadata['displayName'])
+        my_img.update_user_editable_fields({'display_name': ''})
+        self.assert_(not my_img.metadata['displayName'])
 
 
 class TestHTTPChannel(http.HTTPChannel):

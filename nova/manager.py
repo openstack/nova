@@ -22,6 +22,7 @@ Base class for managers of different parts of the system
 from nova import utils
 from nova import flags
 
+from twisted.internet import defer
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_driver', 'nova.db.api',
@@ -37,3 +38,15 @@ class Manager(object):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
+
+    @defer.inlineCallbacks
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval"""
+        yield
+
+    def init_host(self):
+       """Do any initialization that needs to be run if this is a standalone service.
+
+       Child classes should override this method.
+       """
+       pass

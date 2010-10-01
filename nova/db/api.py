@@ -161,8 +161,13 @@ def floating_ip_get_all(context):
 
 
 def floating_ip_get_all_by_host(context, host):
-    """Get all floating ips."""
+    """Get all floating ips by host."""
     return IMPL.floating_ip_get_all_by_host(context, host)
+
+
+def floating_ip_get_all_by_project(context, project_id):
+    """Get all floating ips by project."""
+    return IMPL.floating_ip_get_all_by_project(context, project_id)
 
 
 def floating_ip_get_by_address(context, address):
@@ -202,6 +207,11 @@ def fixed_ip_create(context, values):
 def fixed_ip_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
     return IMPL.fixed_ip_disassociate(context, address)
+
+
+def fixed_ip_disassociate_all_by_timeout(context, host, time):
+    """Disassociate old fixed ips from host"""
+    return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -251,15 +261,18 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all(context, user_id)
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
-    return IMPL.instance_get_by_project(context, project_id)
+    return IMPL.instance_get_all_by_project(context, project_id)
 
 
-def instance_get_by_reservation(context, reservation_id):
+def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
-    return IMPL.instance_get_by_reservation(context, reservation_id)
+    return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
 def instance_get_fixed_address(context, instance_id):
@@ -272,9 +285,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_str(context, str_id):
-    """Get an instance by string id."""
-    return IMPL.instance_get_by_str(context, str_id)
+def instance_get_by_ec2_id(context, ec2_id):
+    """Get an instance by ec2 id."""
+    return IMPL.instance_get_by_ec2_id(context, ec2_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -393,9 +406,12 @@ def network_index_count(context):
     return IMPL.network_index_count(context)
 
 
-def network_index_create(context, values):
-    """Create a network index from the values dict"""
-    return IMPL.network_index_create(context, values)
+def network_index_create_safe(context, values):
+    """Create a network index from the values dict
+
+    The index is not returned. If the create violates the unique
+    constraints because the index already exists, no exception is raised."""
+    return IMPL.network_index_create_safe(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
@@ -475,6 +491,7 @@ def quota_destroy(context, project_id):
 
 ###################
 
+
 def auth_destroy_token(context, token):
     """Destroy an auth token"""
     return IMPL.auth_destroy_token(context, token)
@@ -486,29 +503,6 @@ def auth_get_token(context, token_hash):
 def auth_create_token(context, token):
     """Creates a new token"""
     return IMPL.auth_create_token(context, token_hash, token)
-
-
-###################
-
-
-def quota_create(context, values):
-    """Create a quota from the values dictionary."""
-    return IMPL.quota_create(context, values)
-
-
-def quota_get(context, project_id):
-    """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get(context, project_id)
-
-
-def quota_update(context, project_id, values):
-    """Update a quota from the values dictionary."""
-    return IMPL.quota_update(context, project_id, values)
-
-
-def quota_destroy(context, project_id):
-    """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy(context, project_id)
 
 
 ###################
@@ -559,14 +553,14 @@ def volume_get_instance(context, volume_id):
     return IMPL.volume_get_instance(context, volume_id)
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_all_by_project(context, project_id):
     """Get all volumes belonging to a project."""
-    return IMPL.volume_get_by_project(context, project_id)
+    return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_by_str(context, str_id):
-    """Get a volume by string id."""
-    return IMPL.volume_get_by_str(context, str_id)
+def volume_get_by_ec2_id(context, ec2_id):
+    """Get a volume by ec2 id."""
+    return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):

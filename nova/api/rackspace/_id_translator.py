@@ -37,6 +37,6 @@ class RackspaceAPIIdTranslator(object):
                 # every int id be used.)
                 return int(self._store.hget(self._fwd_key, str(opaque_id)))
 
-    def from_rs_id(self, strategy_name, rs_id):
+    def from_rs_id(self, rs_id):
         """Convert a Rackspace id to a strategy-specific one."""
         return self._store.hget(self._rev_key, rs_id)

@@ -67,7 +67,7 @@ class ComputeManager(manager.Manager):
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref['str_id'] in self.driver.list_instances():
+        if instance_ref['ec2_id'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
         project_id = instance_ref['project_id']
@@ -125,7 +125,7 @@ class ComputeManager(manager.Manager):
             raise exception.Error(
                     'trying to reboot a non-running'
                     'instance: %s (state: %s excepted: %s)' %
-                    (instance_ref['str_id'],
+                    (instance_ref['ec2_id'],
                      instance_ref['state'],
                      power_state.RUNNING))
 
@@ -147,7 +147,7 @@ class ComputeManager(manager.Manager):
 
         if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['str_id'],
+                                                 instance_ref['ec2_id'],
                                                  'console.log'))
             with open(fname, 'r') as f:
                 output = f.read()
@@ -170,7 +170,7 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = yield self.volume_manager.setup_compute_volume(context,
                                                                   volume_id)
-        yield self.driver.attach_volume(instance_ref['str_id'],
+        yield self.driver.attach_volume(instance_ref['ec2_id'],
                                         dev_path,
                                         mountpoint)
         self.db.volume_attached(context, volume_id, instance_id, mountpoint)
@@ -185,7 +185,7 @@ class ComputeManager(manager.Manager):
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        yield self.driver.detach_volume(instance_ref['str_id'],
+        yield self.driver.detach_volume(instance_ref['ec2_id'],
                                         volume_ref['mountpoint'])
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)

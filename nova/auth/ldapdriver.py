@@ -256,14 +256,26 @@ class LdapDriver(object):
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s doesn't exist" % uid)
         self.__remove_from_all(uid)
-        self.conn.delete_s('uid=%s,%s' % (uid,
-                                          FLAGS.ldap_user_subtree))
+        self.conn.delete_s(self.__uid_to_dn(uid))
 
     def delete_project(self, project_id):
         """Delete a project"""
         project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
         self.__delete_roles(project_dn)
         self.__delete_group(project_dn)
+
+    def modify_user(self, uid, access_key=None, secret_key=None, admin=None):
+        """Modify an existing project"""
+        if not access_key and not secret_key and admin is None:
+            return
+        attr = []
+        if access_key:
+            attr.append((self.ldap.MOD_REPLACE, 'accessKey', access_key))
+        if secret_key:
+            attr.append((self.ldap.MOD_REPLACE, 'secretKey', secret_key))
+        if admin is not None:
+            attr.append((self.ldap.MOD_REPLACE, 'isAdmin', str(admin).upper()))
+        self.conn.modify_s(self.__uid_to_dn(uid), attr)
 
     def __user_exists(self, uid):
         """Check if user exists"""
