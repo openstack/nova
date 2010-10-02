@@ -274,6 +274,9 @@ def _stop_dnsmasq(network):
 def _dhcp_file(vlan, kind):
     """Return path to a pid, leases or conf file for a vlan"""
 
+    if not os.path.exists(FLAGS.networks_path):
+        os.makedirs(FLAGS.networks_path)
+
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
 
 
