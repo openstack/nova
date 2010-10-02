@@ -1278,18 +1278,39 @@ def volume_update(context, volume_id, values):
 ###################
 
 
-def user_get(context, id):
-    return models.User.find(id, deleted=_deleted(context))
+@require_admin_context
+def user_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User
+                   ).filter_by(id=id
+                   ).filter_by(deleted=can_read_deleted(context)
+                   ).first()
+
+    if not result:
+        raise exception.NotFound('No user for id %s' % id)
+
+    return result
 
 
-def user_get_by_access_key(context, access_key):
-    session = get_session()
-    return session.query(models.User
+@require_admin_context
+def user_get_by_access_key(context, access_key, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User
                  ).filter_by(access_key=access_key
-                 ).filter_by(deleted=_deleted(context)
+                 ).filter_by(deleted=can_read_deleted(context)
                  ).first()
 
+    if not result:
+        raise exception.NotFound('No user for id %s' % id)
 
+    return result
+
+
+@require_admin_context
 def user_create(_context, values):
     user_ref = models.User()
     for (key, value) in values.iteritems():
@@ -1298,6 +1319,7 @@ def user_create(_context, values):
     return user_ref
 
 
+@require_admin_context
 def user_delete(context, id):
     session = get_session()
     with session.begin():
@@ -1307,14 +1329,14 @@ def user_delete(context, id):
                         {'id': id})
         session.execute('delete from user_project_role_association where user_id=:id',
                         {'id': id})
-        user_ref = models.User.find(id, session=session)
+        user_ref = user_get(context, id, session=session)
         session.delete(user_ref)
 
 
 def user_get_all(context):
     session = get_session()
     return session.query(models.User
-                 ).filter_by(deleted=_deleted(context)
+                 ).filter_by(deleted=can_read_deleted(context)
                  ).all()
 
 
@@ -1329,29 +1351,33 @@ def project_create(_context, values):
 def project_add_member(context, project_id, user_id):
     session = get_session()
     with session.begin():
-        project_ref = models.Project.find(project_id, session=session)
-        user_ref = models.User.find(user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
 
         project_ref.members += [user_ref]
         project_ref.save(session=session)
 
 
-def project_get(context, id):
-    session = get_session()
+def project_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
     result = session.query(models.Project
                    ).filter_by(deleted=False
                    ).filter_by(id=id
                    ).options(joinedload_all('members')
                    ).first()
+
     if not result:
         raise exception.NotFound("No project with id %s" % id)
+
     return result
 
 
 def project_get_all(context):
     session = get_session()
     return session.query(models.Project
-                 ).filter_by(deleted=_deleted(context)
+                 ).filter_by(deleted=can_read_deleted(context)
                  ).options(joinedload_all('members')
                  ).all()
 
@@ -1359,7 +1385,7 @@ def project_get_all(context):
 def project_get_by_user(context, user_id):
     session = get_session()
     user = session.query(models.User
-                 ).filter_by(deleted=_deleted(context)
+                 ).filter_by(deleted=can_read_deleted(context)
                  ).options(joinedload_all('projects')
                  ).first()
     return user.projects
@@ -1367,32 +1393,27 @@ def project_get_by_user(context, user_id):
 
 def project_remove_member(context, project_id, user_id):
     session = get_session()
-    project = models.Project.find(project_id, session=session)
-    user = models.User.find(user_id, session=session)
-    if not project:
-        raise exception.NotFound('Project id "%s" not found' % (project_id,))
-
-    if not user:
-        raise exception.NotFound('User id "%s" not found' % (user_id,))
+    project = project_get(context, project_id, session=session)
+    user = user_get(context, user_id, session=session)
 
     if user in project.members:
         project.members.remove(user)
         project.save(session=session)
 
 
-def user_update(_context, user_id, values):
+def user_update(context, user_id, values):
     session = get_session()
     with session.begin():
-        user_ref = models.User.find(user_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
         for (key, value) in values.iteritems():
             user_ref[key] = value
         user_ref.save(session=session)
 
 
-def project_update(_context, project_id, values):
+def project_update(context, project_id, values):
     session = get_session()
     with session.begin():
-        project_ref = models.Project.find(project_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
         for (key, value) in values.iteritems():
             project_ref[key] = value
         project_ref.save(session=session)
@@ -1405,17 +1426,17 @@ def project_delete(context, id):
                         {'id': id})
         session.execute('delete from user_project_role_association where project_id=:id',
                         {'id': id})
-        project_ref = models.Project.find(id, session=session)
+        project_ref = project_get(context, id, session=session)
         session.delete(project_ref)
 
 
 def user_get_roles(context, user_id):
     session = get_session()
     with session.begin():
-        user_ref = models.User.find(user_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
         return [role.role for role in user_ref['roles']]
 
-    
+
 def user_get_roles_for_project(context, user_id, project_id):
     session = get_session()
     with session.begin():
@@ -1434,7 +1455,7 @@ def user_remove_project_role(context, user_id, project_id, role):
                                         'project_id' : project_id,
                                         'role'       : role })
 
-    
+
 def user_remove_role(context, user_id, role):
     session = get_session()
     with session.begin():
@@ -1449,18 +1470,18 @@ def user_remove_role(context, user_id, role):
 def user_add_role(context, user_id, role):
     session = get_session()
     with session.begin():
-        user_ref = models.User.find(user_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
         models.UserRoleAssociation(user=user_ref, role=role).save(session=session)
 
-    
+
 def user_add_project_role(context, user_id, project_id, role):
     session = get_session()
     with session.begin():
-        user_ref = models.User.find(user_id, session=session)
-        project_ref = models.Project.find(project_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
         models.UserProjectRoleAssociation(user_id=user_ref['id'],
                                           project_id=project_ref['id'],
                                           role=role).save(session=session)
 
-    
+
 ###################
