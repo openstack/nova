@@ -71,7 +71,7 @@ class ComputeManager(manager.Manager):
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
         project_id = instance_ref['project_id']
-        self.network_manager.setup_compute_network(context, project_id)
+        self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
                                 {'host': self.host})
