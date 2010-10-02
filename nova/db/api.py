@@ -175,11 +175,6 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-def floating_ip_get_instance(context, address):
-    """Get an instance for a floating ip by address."""
-    return IMPL.floating_ip_get_instance(context, address)
-
-
 ####################
 
 
@@ -207,6 +202,11 @@ def fixed_ip_create(context, values):
 def fixed_ip_disassociate(context, address):
     """Disassociate a fixed ip from an instance by address."""
     return IMPL.fixed_ip_disassociate(context, address)
+
+
+def fixed_ip_disassociate_all_by_timeout(context, host, time):
+    """Disassociate old fixed ips from host"""
+    return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
 def fixed_ip_get_by_address(context, address):
