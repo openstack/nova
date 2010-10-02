@@ -151,8 +151,8 @@ class AdapterConsumer(TopicConsumer):
         """
         LOG.debug('received %s' % (message_data))
         msg_id = message_data.pop('_msg_id', None)
-        dict_context = message_data.pop('_context')
-        ctxt = context.RequestContext.from_dict(dict_context)
+
+        ctxt = _unpack_context(message_data)
 
         method = message_data.get('method')
         args = message_data.get('args', {})
@@ -249,13 +249,35 @@ class RemoteError(exception.Error):
                                                          traceback))
 
 
+def _unpack_context(msg):
+    """Unpack context from msg."""
+    context_dict = {}
+    for key in list(msg.keys()):
+        if key.startswith('_context_'):
+            value = msg.pop(key)
+            context_dict[key[9:]] = value
+    LOG.debug('unpacked context: %s', context_dict)
+    return context.RequestContext.from_dict(context_dict)
+
+def _pack_context(msg, context):
+    """Pack context into msg.
+
+    Values for message keys need to be less than 255 chars, so we pull
+    context out into a bunch of separate keys. If we want to support
+    more arguments in rabbit messages, we may want to do the same
+    for args at some point.
+    """
+    context = dict([('_context_%s' % key, value)
+                   for (key, value) in context.to_dict().iteritems()])
+    msg.update(context)
+
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
-    msg.update({'_context': context.to_dict()})
+    _pack_context(msg, context)
 
     class WaitMessage(object):
 
@@ -291,7 +313,7 @@ def call_twisted(context, topic, msg):
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
-    msg.update({'_context': context.to_dict()})
+    _pack_context(msg, context)
 
     conn = Connection.instance()
     d = defer.Deferred()
@@ -320,7 +342,7 @@ def call_twisted(context, topic, msg):
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
     LOG.debug("Making asynchronous cast...")
-    msg.update({'_context': context.to_dict()})
+    _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)
