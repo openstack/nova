@@ -17,16 +17,30 @@
 #    under the License.
 
 """
-:mod:`nova.objectstore` -- S3-type object store
-=====================================================
-
-.. automodule:: nova.objectstore
-   :platform: Unix
-   :synopsis: Currently a trivial file-based system, getting extended w/ swift.
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+APIRequestContext
 """
+
+import random
+
+
+class APIRequestContext(object):
+    def __init__(self, user, project):
+        self.user = user
+        self.project = project
+        self.request_id = ''.join(
+                [random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-')
+                 for x in xrange(20)]
+                )
+        if user:
+            self.is_admin = user.is_admin()
+        else:
+            self.is_admin = False
+        self.read_deleted = False
+
+
+def get_admin_context(user=None, read_deleted=False):
+    context_ref = APIRequestContext(user=user, project=None)
+    context_ref.is_admin = True
+    context_ref.read_deleted = read_deleted
+    return context_ref
+

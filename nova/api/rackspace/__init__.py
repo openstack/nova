@@ -31,6 +31,7 @@ import webob
 from nova import flags
 from nova import utils
 from nova import wsgi
+from nova.api.rackspace import faults
 from nova.api.rackspace import backup_schedules
 from nova.api.rackspace import flavors
 from nova.api.rackspace import images
@@ -67,7 +68,7 @@ class AuthMiddleware(wsgi.Middleware):
         user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
 
         if not user:
-            return webob.exc.HTTPUnauthorized()
+            return faults.Fault(webob.exc.HTTPUnauthorized())
 
         if not req.environ.has_key('nova.context'):
             req.environ['nova.context'] = {}
@@ -112,8 +113,10 @@ class RateLimitingMiddleware(wsgi.Middleware):
         delay = self.get_delay(action_name, username)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
-            raise webob.exc.HTTPRequestEntityTooLarge(headers={
-                    'Retry-After': time.time() + delay})
+            exc = webob.exc.HTTPRequestEntityTooLarge(
+                    explanation='Too many requests.',
+                    headers={'Retry-After': time.time() + delay})
+            raise faults.Fault(exc)
         return self.application
 
     def get_delay(self, action_name, username):
@@ -165,3 +168,23 @@ class APIRouter(wsgi.Router):
                         controller=sharedipgroups.Controller())
 
         super(APIRouter, self).__init__(mapper)
+
+
+def limited(items, req):
+    """Return a slice of items according to requested offset and limit.
+    
+    items - a sliceable
+    req - wobob.Request possibly containing offset and limit GET variables.
+          offset is where to start in the list, and limit is the maximum number
+          of items to return.
+
+    If limit is not specified, 0, or > 1000, defaults to 1000.
+    """
+    offset = int(req.GET.get('offset', 0))
+    limit = int(req.GET.get('limit', 0))
+    if not limit:
+        limit = 1000
+    limit = min(1000, limit)
+    range_end = offset + limit
+    return items[offset:range_end]
+

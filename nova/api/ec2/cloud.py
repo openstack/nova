@@ -36,6 +36,7 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova.compute.instance_types import INSTANCE_TYPES
+from nova.api import cloud
 from nova.api.ec2 import images
 
 
@@ -684,12 +685,7 @@ class CloudController(object):
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for id_str in instance_id:
-            instance_ref = db.instance_get_by_ec2_id(context, id_str)
-            host = instance_ref['host']
-            rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "reboot_instance",
-                      "args": {"context": None,
-                               "instance_id": instance_ref['id']}})
+            cloud.reboot(id_str, context=context)
         return True
 
     def update_instance(self, context, instance_id, **kwargs):
