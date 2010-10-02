@@ -255,7 +255,7 @@ def call(context, topic, msg):
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
-    msg.update({'_context': context})
+    msg.update({'_context': context.to_dict()})
 
     class WaitMessage(object):
 
