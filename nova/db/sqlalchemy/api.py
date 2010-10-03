@@ -240,7 +240,7 @@ def service_create(context, values):
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
-        service_ref = session_get(context, service_id, session=session)
+        service_ref = service_get(context, service_id, session=session)
         for (key, value) in values.iteritems():
             service_ref[key] = value
         service_ref.save(session=session)
