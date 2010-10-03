@@ -88,11 +88,16 @@ class VpnCommands(object):
     def list(self):
         """Print a listing of the VPNs for all projects."""
         print "%-12s\t" % 'project',
-        print "%-12s\t" % 'ip:port',
+        print "%-20s\t" % 'ip:port',
         print "%s" % 'state'
         for project in self.manager.get_projects():
             print "%-12s\t" % project.name,
-            print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
+
+            try:
+                s = "%s:%s" % (project.vpn_ip, project.vpn_port)
+            except exception.NotFound:
+                s = "None"
+            print "%-20s\t" % s,
 
             vpn = self._vpn_for(project.id)
             if vpn:

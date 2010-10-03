@@ -653,7 +653,10 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        try:
+            (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        except exception.NotFound:
+            vpn_ip = None
         if vpn_ip:
             configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())
