@@ -565,3 +565,15 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+###################
+
+
+def host_get_networks(context, host):
+    """Return all networks for which the given host is the designated
+    network host
+    """
+    return IMPL.host_get_networks(context, host)
+
+

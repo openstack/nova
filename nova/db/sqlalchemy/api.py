@@ -1273,3 +1273,15 @@ def volume_update(context, volume_id, values):
         for (key, value) in values.iteritems():
             volume_ref[key] = value
         volume_ref.save(session=session)
+
+
+###################
+
+
+def host_get_networks(context, host):
+    session = get_session()
+    with session.begin():
+        return session.query(models.Network
+                     ).filter_by(deleted=False
+                     ).filter_by(host=host
+                     ).all()

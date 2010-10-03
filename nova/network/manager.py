@@ -85,6 +85,12 @@ class NetworkManager(manager.Manager):
         self.driver = utils.import_object(network_driver)
         super(NetworkManager, self).__init__(*args, **kwargs)
 
+    def init_host(self):
+        # Set up networking for the projects for which we're already
+        # the designated network host.
+        for network in self.db.host_get_networks(None, self.host):
+            self._on_set_network_host(None, network['id'])
+
     def set_network_host(self, context, project_id):
         """Safely sets the host of the projects network"""
         logging.debug("setting network host")
@@ -240,6 +246,7 @@ class VlanManager(NetworkManager):
         """Do any initialization that needs to be run if this is a
            standalone service.
         """
+        super(VlanManager, self).init_host()
         self.driver.init_host()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
@@ -367,6 +374,7 @@ class VlanManager(NetworkManager):
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref)
+        self.driver.update_dhcp(context, network_id)
 
     @property
     def _bottom_reserved_ips(self):
