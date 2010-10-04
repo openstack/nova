@@ -15,11 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import unittest
 
+import stubout
+
 from nova.api.rackspace import images
-from nova.tests.api.test_helper import *
+
 
 class ImagesTest(unittest.TestCase):
     def setUp(self):
@@ -36,5 +37,3 @@ class ImagesTest(unittest.TestCase):
     
     def test_create_image(self):
         pass
-
-

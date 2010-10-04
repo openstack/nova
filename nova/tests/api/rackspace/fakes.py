@@ -12,10 +12,13 @@ import nova.api.rackspace._id_translator
 from nova.image import service
 from nova.wsgi import Router
 
+
 FLAGS = flags.FLAGS
+
 
 class Context(object): 
     pass
+
 
 class FakeRouter(Router):
     def __init__(self):
@@ -28,11 +31,13 @@ class FakeRouter(Router):
         res.headers['X-Test-Success'] = 'True'
         return res
 
+
 def fake_auth_init(self):
     self.db = FakeAuthDatabase()
     self.context = Context()
     self.auth = FakeAuthManager()
     self.host = 'foo'
+
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
@@ -41,17 +46,20 @@ def fake_wsgi(self, req):
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
+
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
     stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
         key_pair)
 
+
 def stub_out_image_service(stubs):
     def fake_image_show(meh, id):
         return dict(kernelId=1, ramdiskId=1)
 
     stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
+
 
 def stub_out_id_translator(stubs):
     class FakeTranslator(object):
@@ -67,6 +75,7 @@ def stub_out_id_translator(stubs):
     stubs.Set(nova.api.rackspace._id_translator,
         'RackspaceAPIIdTranslator', FakeTranslator)
 
+
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
@@ -75,6 +84,7 @@ def stub_out_auth(stubs):
         '__init__', fake_auth_init) 
     stubs.Set(nova.api.rackspace.AuthMiddleware, 
         '__call__', fake_wsgi) 
+
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
@@ -87,11 +97,13 @@ def stub_out_rate_limiting(stubs):
     stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
-def stub_for_testing(stubs):
+
+def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1' 
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
     FLAGS.FAKE_subdomain = 'rs'
+
 
 class FakeAuthDatabase(object):
     data = {}
@@ -110,6 +122,7 @@ class FakeAuthDatabase(object):
         if FakeAuthDatabase.data.has_key(token['token_hash']):
             del FakeAuthDatabase.data['token_hash']
 
+
 class FakeAuthManager(object):
     auth_data = {}
 
@@ -124,6 +137,7 @@ class FakeAuthManager(object):
 
     def get_user_from_access_key(self, key):
         return FakeAuthManager.auth_data.get(key, None)
+
 
 class FakeRateLimiter(object):
     def __init__(self, application):
