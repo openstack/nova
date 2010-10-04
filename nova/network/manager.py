@@ -236,7 +236,7 @@ class VlanManager(NetworkManager):
         now = datetime.datetime.utcnow()
         timeout = FLAGS.fixed_ip_disassociate_timeout
         time = now - datetime.timedelta(seconds=timeout)
-        num = self.db.fixed_ip_disassociate_all_by_timeout(self,
+        num = self.db.fixed_ip_disassociate_all_by_timeout(context,
                                                            self.host,
                                                            time)
         if num:
