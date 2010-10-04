@@ -25,6 +25,7 @@ import logging
 import os
 import shutil
 
+import IPy
 from twisted.internet import defer
 from twisted.internet import task
 from twisted.internet import threads
@@ -34,6 +35,7 @@ from nova import exception
 from nova import flags
 from nova import process
 from nova import utils
+#from nova.api import context
 from nova.auth import manager
 from nova.compute import disk
 from nova.compute import instance_types
@@ -61,6 +63,9 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+flags.DEFINE_bool('allow_project_net_traffic',
+                  True,
+                  'Whether to allow in project network traffic')
 
 
 def get_connection(read_only):
@@ -135,7 +140,7 @@ class LibvirtConnection(object):
         d.addCallback(lambda _: self._cleanup(instance))
         # FIXME: What does this comment mean?
         # TODO(termie): short-circuit me for tests
-        # WE'LL save this for when we do shutdown,
+       # WE'LL save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
@@ -550,12 +555,27 @@ class NWFilterFirewall(object):
         return retval
 
 
+    def nova_project_filter(self, project, net, mask):
+        retval = "<filter name='nova-project-%s' chain='ipv4'>" % project
+        for protocol in ['tcp', 'udp', 'icmp']:
+            retval += """<rule action='accept' direction='in' priority='200'>
+                           <%s srcipaddr='%s' srcipmask='%s' />
+                         </rule>""" % (protocol, net, mask)
+        retval += '</filter>'
+        return retval
+
+
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
         d = threads.deferToThread(self._conn.nwfilterDefineXML, xml)
         return d
 
+
+    @staticmethod
+    def _get_net_and_mask(cidr):
+        net = IPy.IP(cidr)
+        return str(net.net()), str(net.netmask())
 
     @defer.inlineCallbacks
     def setup_nwfilters_for_instance(self, instance):
@@ -570,9 +590,19 @@ class NWFilterFirewall(object):
         yield self._define_filter(self.nova_dhcp_filter)
         yield self._define_filter(self.nova_base_filter)
 
-        nwfilter_xml  = ("<filter name='nova-instance-%s' chain='root'>\n" +
+        nwfilter_xml = ("<filter name='nova-instance-%s' chain='root'>\n" +
                          "  <filterref filter='nova-base' />\n"
-                        ) % instance['name']
+                       ) % instance['name']
+
+        if FLAGS.allow_project_net_traffic:
+            network_ref = db.project_get_network({}, instance['project_id'])
+            net, mask = self._get_net_and_mask(network_ref['cidr'])
+            project_filter = self.nova_project_filter(instance['project_id'],
+                                                      net, mask)
+            yield self._define_filter(project_filter)
+
+            nwfilter_xml += ("  <filterref filter='nova-project-%s' />\n"
+                            ) % instance['project_id']
 
         for security_group in instance.security_groups:
             yield self.ensure_security_group_filter(security_group['id'])
@@ -595,7 +625,8 @@ class NWFilterFirewall(object):
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
-                rule_xml += "<%s srcipaddr='%s' " % (rule.protocol, rule.cidr)
+                net, mask = self._get_net_and_mask(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % (rule.protocol, net, mask)
                 if rule.protocol in ['tcp', 'udp']:
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)

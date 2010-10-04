@@ -19,7 +19,9 @@ from xml.dom.minidom import parseString
 from nova import db
 from nova import flags
 from nova import test
+from nova.api import context
 from nova.api.ec2 import cloud
+from nova.auth import manager
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
@@ -83,16 +85,19 @@ class NWFilterTestCase(test.TrialTestCase):
         class Mock(object):
             pass
 
-        self.context = Mock()
-        self.context.user = Mock()
-        self.context.user.id = 'fake'
-        self.context.user.is_superuser = lambda:True
-        self.context.project = Mock()
-        self.context.project.id = 'fake'
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.context = context.APIRequestContext(self.user, self.project)
 
         self.fake_libvirt_connection = Mock()
 
         self.fw = libvirt_conn.NWFilterFirewall(self.fake_libvirt_connection)
+
+    def tearDown(self):
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
+
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()
@@ -107,7 +112,9 @@ class NWFilterTestCase(test.TrialTestCase):
                                                           cidr_ip='0.0.0.0/0')
 
 
-        security_group = db.security_group_get_by_name({}, 'fake', 'testgroup')
+        security_group = db.security_group_get_by_name(self.context,
+                                                       'fake',
+                                                       'testgroup')
 
         xml = self.fw.security_group_to_nwfilter_xml(security_group.id)
 
@@ -126,7 +133,8 @@ class NWFilterTestCase(test.TrialTestCase):
 
         ip_conditions = rules[0].getElementsByTagName('tcp')
         self.assertEqual(len(ip_conditions), 1)
-        self.assertEqual(ip_conditions[0].getAttribute('srcipaddr'), '0.0.0.0/0')
+        self.assertEqual(ip_conditions[0].getAttribute('srcipaddr'), '0.0.0.0')
+        self.assertEqual(ip_conditions[0].getAttribute('srcipmask'), '0.0.0.0')
         self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
         self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
 
@@ -150,7 +158,7 @@ class NWFilterTestCase(test.TrialTestCase):
                                                           ip_protocol='tcp',
                                                           cidr_ip='0.0.0.0/0')
 
-        return db.security_group_get_by_name({}, 'fake', 'testgroup')
+        return db.security_group_get_by_name(self.context, 'fake', 'testgroup')
 
     def test_creates_base_rule_first(self):
         # These come pre-defined by libvirt
@@ -180,7 +188,8 @@ class NWFilterTestCase(test.TrialTestCase):
 
         self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
 
-        instance_ref = db.instance_create({}, {'user_id': 'fake',
+        instance_ref = db.instance_create(self.context,
+                                          {'user_id': 'fake',
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
 
@@ -195,8 +204,8 @@ class NWFilterTestCase(test.TrialTestCase):
 
         self.security_group = self.setup_and_return_security_group()
 
-        db.instance_add_security_group({}, inst_id, self.security_group.id)
-        instance = db.instance_get({}, inst_id)
+        db.instance_add_security_group(self.context, inst_id, self.security_group.id)
+        instance = db.instance_get(self.context, inst_id)
 
         d = self.fw.setup_nwfilters_for_instance(instance)
         d.addCallback(_ensure_all_called)

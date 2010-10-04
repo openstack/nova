@@ -327,6 +327,26 @@ class CloudController(object):
 
         return values
 
+
+    def _security_group_rule_exists(self, security_group, values):
+        """Indicates whether the specified rule values are already
+           defined in the given security group.
+        """
+        for rule in security_group.rules:
+            if 'group_id' in values:
+                if rule['group_id'] == values['group_id']:
+                    return True
+            else:
+                is_duplicate = True
+                for key in ('cidr', 'from_port', 'to_port', 'protocol'):
+                    if rule[key] != values[key]:
+                        is_duplicate = False
+                        break
+                if is_duplicate:
+                    return True
+        return False
+
+
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
         self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
@@ -348,9 +368,6 @@ class CloudController(object):
                 return True
         raise exception.ApiError("No rule for the specified parameters.")
 
-    # TODO(soren): Dupe detection. Adding the same rule twice actually
-    #              adds the same rule twice to the rule set, which is
-    #              pointless.
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API
     #              for these operations, so support for newer API versions
@@ -363,6 +380,10 @@ class CloudController(object):
 
         values = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
         values['parent_group_id'] = security_group.id
+
+        if self._security_group_rule_exists(security_group, values):
+            raise exception.ApiError('This rule already exists in group %s' %
+                                     group_name)
 
         security_group_rule = db.security_group_rule_create(context, values)
 
@@ -709,7 +730,7 @@ class CloudController(object):
                        'description' : 'default',
                        'user_id'     : context.user.id,
                        'project_id'  : context.project.id }
-            group = db.security_group_create({}, values)
+            group = db.security_group_create(context, values)
 
     def run_instances(self, context, **kwargs):
         instance_type = kwargs.get('instance_type', 'm1.small')
@@ -797,7 +818,7 @@ class CloudController(object):
             inst_id = instance_ref['id']
 
             for security_group_id in security_groups:
-                db.instance_add_security_group(context, inst_id,
+                db.instance_add_security_group(context.admin(), inst_id,
                                                security_group_id)
 
             inst = {}
