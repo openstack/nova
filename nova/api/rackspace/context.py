@@ -15,16 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import wsgi
+"""
+APIRequestContext
+"""
 
+import random
 
-class Controller(wsgi.Controller):
-    """TODO(eday): Base controller for all rackspace controllers. What is this
-    for? Is this just Rackspace specific? """
-
-    @classmethod
-    def render(cls, instance):
-        if isinstance(instance, list):
-            return {cls.entity_name: cls.render(instance)}
-        else:
-            return {"TODO": "TODO"}
+class Project(object):
+    def __init__(self, user_id):
+        self.id = user_id
+    
+class APIRequestContext(object):
+    """ This is an adapter class to get around all of the assumptions made in
+    the FlatNetworking """
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.project = Project(user_id)

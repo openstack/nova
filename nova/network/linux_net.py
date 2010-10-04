@@ -28,6 +28,11 @@ from nova import flags
 from nova import utils
 
 
+def _bin_file(script):
+    """Return the absolute path to scipt in the bin directory"""
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
@@ -36,13 +41,36 @@ flags.DEFINE_string('dhcpbridge_flagfile',
 flags.DEFINE_string('networks_path', utils.abspath('../networks'),
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
-                        'Interface for public IP addresses')
+                    'Interface for public IP addresses')
 flags.DEFINE_string('bridge_dev', 'eth0',
                         'network device for bridges')
-
+flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
+                        'location of nova-dhcpbridge')
+flags.DEFINE_string('routing_source_ip', '127.0.0.1',
+                    'Public IP of network host')
+flags.DEFINE_bool('use_nova_chains', False,
+                  'use the nova_ routing chains instead of default')
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
+def init_host():
+    """Basic networking setup goes here"""
+    # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
+    # forwarding entries and a default DNAT entry.
+    _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
+             "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
+             "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
+
+    # NOTE(devcamcar): Cloud public SNAT entries and the default
+    # SNAT rule for outbound traffic.
+    _confirm_rule("POSTROUTING", "-t nat -s %s "
+             "-j SNAT --to-source %s"
+             % (FLAGS.private_range, FLAGS.routing_source_ip))
+
+    _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
+                  FLAGS.private_range)
+    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
+                  {'range': FLAGS.private_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -58,37 +86,37 @@ def unbind_floating_ip(floating_ip):
 
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
-    _confirm_rule("FORWARD -d %s -p udp --dport 1194 -j ACCEPT" % private_ip)
-    _confirm_rule(
-        "PREROUTING -t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
+    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" %
+                  private_ip)
+    _confirm_rule("PREROUTING",
+                  "-t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
             % (public_ip, port, private_ip))
 
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
-    _confirm_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
+    _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
-    _confirm_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
+    _confirm_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
     # TODO(joshua): Get these from the secgroup datastore entries
-    _confirm_rule("FORWARD -d %s -p icmp -j ACCEPT"
+    _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _confirm_rule(
-            "FORWARD -d %s -p %s --dport %s -j ACCEPT"
+        _confirm_rule("FORWARD","-d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
-    _remove_rule("PREROUTING -t nat -d %s -j DNAT --to %s"
+    _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
-    _remove_rule("POSTROUTING -t nat -s %s -j SNAT --to %s"
+    _remove_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))
-    _remove_rule("FORWARD -d %s -p icmp -j ACCEPT"
+    _remove_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                           % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _remove_rule("FORWARD -d %s -p %s --dport %s -j ACCEPT"
+        _remove_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
                               % (fixed_ip, protocol, port))
 
 
@@ -118,22 +146,24 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
         _execute("sudo brctl addif %s %s" % (bridge, interface))
-        if net_attrs:
-            _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                    (bridge,
-                     net_attrs['gateway'],
-                     net_attrs['broadcast'],
-                     net_attrs['netmask']))
-            _confirm_rule("FORWARD --in-interface %s -j ACCEPT" % bridge)
-        else:
-            _execute("sudo ifconfig %s up" % bridge)
+    if net_attrs:
+        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
+                (bridge,
+                 net_attrs['gateway'],
+                 net_attrs['broadcast'],
+                 net_attrs['netmask']))
+    else:
+        _execute("sudo ifconfig %s up" % bridge)
+    _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
+    _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
 
 
 def get_dhcp_hosts(context, network_id):
     """Get a string containing a network's hosts config in dnsmasq format"""
     hosts = []
-    for fixed_ip in db.network_get_associated_fixed_ips(context, network_id):
-        hosts.append(_host_dhcp(fixed_ip['str_id']))
+    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
+                                                            network_id):
+        hosts.append(_host_dhcp(fixed_ip_ref))
     return '\n'.join(hosts)
 
 
@@ -149,8 +179,13 @@ def update_dhcp(context, network_id):
     signal causing it to reload, otherwise spawn a new instance
     """
     network_ref = db.network_get(context, network_id)
-    with open(_dhcp_file(network_ref['vlan'], 'conf'), 'w') as f:
+
+    conffile = _dhcp_file(network_ref['vlan'], 'conf')
+    with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_id))
+
+    # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
+    os.chmod(conffile, 0644)
 
     pid = _dnsmasq_pid_for(network_ref['vlan'])
 
@@ -159,7 +194,7 @@ def update_dhcp(context, network_id):
         # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
         #           correct dnsmasq process
         try:
-            os.kill(pid, signal.SIGHUP)
+            _execute('sudo kill -HUP %d' % pid)
             return
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Hupping dnsmasq threw %s", exc)
@@ -171,12 +206,12 @@ def update_dhcp(context, network_id):
     _execute(command, addl_env=env)
 
 
-def _host_dhcp(address):
+def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address"""
-    instance_ref = db.fixed_ip_get_instance(None, address)
+    instance_ref = fixed_ip_ref['instance']
     return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
-                                   address)
+                                   fixed_ip_ref['address'])
 
 
 def _execute(cmd, *args, **kwargs):
@@ -194,15 +229,19 @@ def _device_exists(device):
     return not err
 
 
-def _confirm_rule(cmd):
+def _confirm_rule(chain, cmd):
     """Delete and re-add iptables rule"""
-    _execute("sudo iptables --delete %s" % (cmd), check_exit_code=False)
-    _execute("sudo iptables -I %s" % (cmd))
+    if FLAGS.use_nova_chains:
+        chain = "nova_%s" % chain.lower()
+    _execute("sudo iptables --delete %s %s" % (chain, cmd), check_exit_code=False)
+    _execute("sudo iptables -I %s %s" % (chain, cmd))
 
 
-def _remove_rule(cmd):
+def _remove_rule(chain, cmd):
     """Remove iptables rule"""
-    _execute("sudo iptables --delete %s" % (cmd))
+    if FLAGS.use_nova_chains:
+        chain = "%S" % chain.lower()
+    _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 
 def _dnsmasq_cmd(net):
@@ -216,7 +255,7 @@ def _dnsmasq_cmd(net):
            ' --except-interface=lo',
            ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
            ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
-           ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
+           ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
     return ''.join(cmd)
 
@@ -227,7 +266,7 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            os.kill(pid, signal.SIGTERM)
+            _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Killing dnsmasq threw %s", exc)
 
@@ -235,12 +274,10 @@ def _stop_dnsmasq(network):
 def _dhcp_file(vlan, kind):
     """Return path to a pid, leases or conf file for a vlan"""
 
+    if not os.path.exists(FLAGS.networks_path):
+        os.makedirs(FLAGS.networks_path)
+
     return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
-
-
-def _bin_file(script):
-    """Return the absolute path to scipt in the bin directory"""
-    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
 
 
 def _dnsmasq_pid_for(vlan):

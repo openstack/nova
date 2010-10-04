@@ -42,10 +42,12 @@ from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
 
+from nova import db
 from nova import flags
 from nova import process
 from nova import utils
 from nova.auth.manager import AuthManager
+from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
@@ -103,8 +105,8 @@ class XenAPIConnection(object):
         self._conn.login_with_password(user, pw)
 
     def list_instances(self):
-        result = [self._conn.xenapi.VM.get_name_label(vm) \
-                  for vm in self._conn.xenapi.VM.get_all()]
+        return [self._conn.xenapi.VM.get_name_label(vm) \
+                for vm in self._conn.xenapi.VM.get_all()]
 
     @defer.inlineCallbacks
     def spawn(self, instance):
@@ -113,32 +115,24 @@ class XenAPIConnection(object):
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
 
-        if 'bridge_name' in instance.datamodel:
-            network_ref = \
-                yield self._find_network_with_bridge(
-                    instance.datamodel['bridge_name'])
-        else:
-            network_ref = None
+        network = db.project_get_network(None, instance.project_id)
+        network_ref = \
+            yield self._find_network_with_bridge(network.bridge)
 
-        if 'mac_address' in instance.datamodel:
-            mac_address = instance.datamodel['mac_address']
-        else:
-            mac_address = ''
-
-        user = AuthManager().get_user(instance.datamodel['user_id'])
-        project = AuthManager().get_project(instance.datamodel['project_id'])
+        user = AuthManager().get_user(instance.user_id)
+        project = AuthManager().get_project(instance.project_id)
         vdi_uuid = yield self._fetch_image(
-            instance.datamodel['image_id'], user, project, True)
+            instance.image_id, user, project, True)
         kernel = yield self._fetch_image(
-            instance.datamodel['kernel_id'], user, project, False)
+            instance.kernel_id, user, project, False)
         ramdisk = yield self._fetch_image(
-            instance.datamodel['ramdisk_id'], user, project, False)
+            instance.ramdisk_id, user, project, False)
         vdi_ref = yield self._call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
         vm_ref = yield self._create_vm(instance, kernel, ramdisk)
         yield self._create_vbd(vm_ref, vdi_ref, 0, True)
         if network_ref:
-            yield self._create_vif(vm_ref, network_ref, mac_address)
+            yield self._create_vif(vm_ref, network_ref, instance.mac_address)
         logging.debug('Starting VM %s...', vm_ref)
         yield self._call_xenapi('VM.start', vm_ref, False, False)
         logging.info('Spawning VM %s created %s.', instance.name, vm_ref)
@@ -148,8 +142,9 @@ class XenAPIConnection(object):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
         
-        mem = str(long(instance.datamodel['memory_kb']) * 1024)
-        vcpus = str(instance.datamodel['vcpus'])
+        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
+        vcpus = str(instance_type['vcpus'])
         rec = {
             'name_label': instance.name,
             'name_description': '',

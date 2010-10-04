@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import stubout
 import unittest
 
 from nova.api.rackspace import sharedipgroups

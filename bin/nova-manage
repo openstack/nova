@@ -50,9 +50,9 @@
 
 """
   CLI interface for nova management.
-  Connects to the running ADMIN api in the api daemon.
 """
 
+import logging
 import os
 import sys
 import time
@@ -68,11 +68,12 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 from nova import db
+from nova import exception
 from nova import flags
+from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
-from nova.endpoint import cloud
 
 
 FLAGS = flags.FLAGS
@@ -83,7 +84,7 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.pipe = pipelib.CloudPipe(cloud.CloudController())
+        self.pipe = pipelib.CloudPipe()
 
     def list(self):
         """Print a listing of the VPNs for all projects."""
@@ -114,7 +115,7 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all():
+        for instance in db.instance_get_all(None):
             if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
@@ -135,15 +136,48 @@ class VpnCommands(object):
 
 
 class ShellCommands(object):
-    def run(self):
-        "Runs a Python interactive interpreter. Tries to use IPython, if it's available."
-        try:
-            import IPython
-            # Explicitly pass an empty list as arguments, because otherwise IPython
-            # would use sys.argv from this script.
-            shell = IPython.Shell.IPShell(argv=[])
-            shell.mainloop()
-        except ImportError:
+    def bpython(self):
+        """Runs a bpython shell.
+
+        Falls back to Ipython/python shell if unavailable"""
+        self.run('bpython')
+
+    def ipython(self):
+        """Runs an Ipython shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('ipython')
+
+    def python(self):
+        """Runs a python shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('python')
+
+    def run(self, shell=None):
+        """Runs a Python interactive interpreter.
+
+        args: [shell=bpython]"""
+        if not shell:
+            shell = 'bpython'
+
+        if shell == 'bpython':
+            try:
+                import bpython
+                bpython.embed()
+            except ImportError:
+                shell = 'ipython'
+        if shell == 'ipython':
+            try:
+                import IPython
+                # Explicitly pass an empty list as arguments, because otherwise IPython
+                # would use sys.argv from this script.
+                shell = IPython.Shell.IPShell(argv=[])
+                shell.mainloop()
+            except ImportError:
+                shell = 'python'
+
+        if shell == 'python':
             import code
             try: # Try activating rlcompleter, because it's handy.
                 import readline
@@ -155,6 +189,11 @@ class ShellCommands(object):
                 import rlcompleter
                 readline.parse_and_bind("tab:complete")
             code.interact()
+
+    def script(self, path):
+        """Runs the script from the specifed path with flags set properly.
+        arguments: path"""
+        exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
 
 class RoleCommands(object):
@@ -186,6 +225,13 @@ class RoleCommands(object):
 class UserCommands(object):
     """Class for managing users."""
 
+    @staticmethod
+    def _print_export(user):
+        """Print export variables to use with API."""
+        print 'export EC2_ACCESS_KEY=%s' % user.access
+        print 'export EC2_SECRET_KEY=%s' % user.secret
+
+
     def __init__(self):
         self.manager = manager.AuthManager()
 
@@ -193,13 +239,13 @@ class UserCommands(object):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, True)
-        print_export(user)
+        self._print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, False)
-        print_export(user)
+        self._print_export(user)
 
     def delete(self, name):
         """deletes an existing user
@@ -211,7 +257,7 @@ class UserCommands(object):
         arguments: name"""
         user = self.manager.get_user(name)
         if user:
-            print_export(user)
+            self._print_export(user)
         else:
             print "User %s doesn't exist" % name
 
@@ -221,12 +267,18 @@ class UserCommands(object):
         for user in self.manager.get_users():
             print user.name
 
-
-def print_export(user):
-    """Print export variables to use with API."""
-    print 'export EC2_ACCESS_KEY=%s' % user.access
-    print 'export EC2_SECRET_KEY=%s' % user.secret
-
+    def modify(self, name, access_key, secret_key, is_admin):
+        """update a users keys & admin flag
+        arguments: accesskey secretkey admin
+        leave any field blank to ignore it, admin should be 'T', 'F', or blank
+        """
+        if not is_admin:
+            is_admin = None
+        elif is_admin.upper()[0] == 'T':
+            is_admin = True
+        else:
+            is_admin = False
+        self.manager.modify_user(name, access_key, secret_key, is_admin)
 
 class ProjectCommands(object):
     """Class for managing projects."""
@@ -252,7 +304,7 @@ class ProjectCommands(object):
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(project_id, user_id)
+        rc = self.manager.get_environment_rc(user_id, project_id)
         with open(filename, 'w') as f:
             f.write(rc)
 
@@ -261,6 +313,19 @@ class ProjectCommands(object):
         arguments: <none>"""
         for project in self.manager.get_projects():
             print project.name
+
+    def quota(self, project_id, key=None, value=None):
+        """Set or display quotas for project
+        arguments: project_id [key] [value]"""
+        if key:
+            quo = {'project_id': project_id, key: value}
+            try:
+                db.quota_update(None, project_id, quo)
+            except exception.NotFound:
+                db.quota_create(None, quo)
+        project_quota = quota.get_quota(None, project_id)
+        for key, value in project_quota.iteritems():
+            print '%s: %s' % (key, value)
 
     def remove(self, project, user):
         """Removes user from project
@@ -273,6 +338,7 @@ class ProjectCommands(object):
         zip_file = self.manager.get_credentials(user_id, project_id)
         with open(filename, 'w') as f:
             f.write(zip_file)
+
 
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
@@ -301,10 +367,11 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['str_id']
+                instance = floating_ip['fixed_ip']['instance']['ec2_id']
             print "%s\t%s\t%s" % (floating_ip['host'],
                                   floating_ip['address'],
                                   instance)
+
 
 CATEGORIES = [
     ('user', UserCommands),
@@ -351,6 +418,10 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile('/etc/nova/nova-manage.conf')
     argv = FLAGS(sys.argv)
+
+    if FLAGS.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
