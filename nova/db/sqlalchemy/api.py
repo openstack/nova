@@ -240,7 +240,7 @@ def service_create(context, values):
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
-        service_ref = session_get(context, service_id, session=session)
+        service_ref = service_get(context, service_id, session=session)
         for (key, value) in values.iteritems():
             service_ref[key] = value
         service_ref.save(session=session)
@@ -1485,3 +1485,12 @@ def user_add_project_role(context, user_id, project_id, role):
 
 
 ###################
+
+
+def host_get_networks(context, host):
+    session = get_session()
+    with session.begin():
+        return session.query(models.Network
+                     ).filter_by(deleted=False
+                     ).filter_by(host=host
+                     ).all()

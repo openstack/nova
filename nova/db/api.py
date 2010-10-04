@@ -673,3 +673,14 @@ def project_update(context, project_id, values):
 def project_delete(context, project_id):
     """Delete project"""
     return IMPL.project_delete(context, project_id)
+
+
+###################
+
+
+def host_get_networks(context, host):
+    """Return all networks for which the given host is the designated
+    network host
+    """
+    return IMPL.host_get_networks(context, host)
+
