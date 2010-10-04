@@ -723,7 +723,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             db_context = {}
-            internal_id = self.ec2_id_to_internal_id(ec2_id)
+            internal_id = ec2_id_to_internal_id(ec2_id)
             inst = db.instance_get_by_internal_id(db_context, internal_id)
             db.instance_update(db_context, inst['id'], kwargs)
         return True
