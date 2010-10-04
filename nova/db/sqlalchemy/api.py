@@ -463,8 +463,8 @@ def instance_get_by_internal_id(context, internal_id):
 def instance_internal_id_exists(context, internal_id, session=None):
     if not session:
         session = get_session()
-    return session.query(exists().where(models.Instance.id==internal_id)
-                         ).one()[0]
+    return session.query(exists().where
+		(models.Instance.internal_id==internal_id)).one()[0]
 
 
 def instance_get_fixed_address(_context, instance_id):
