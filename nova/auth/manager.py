@@ -69,7 +69,7 @@ flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
-flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
+flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
 

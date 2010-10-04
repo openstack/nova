@@ -570,10 +570,117 @@ def volume_update(context, volume_id, values):
 ###################
 
 
+def user_get(context, id):
+    """Get user by id"""
+    return IMPL.user_get(context, id)
+
+
+def user_get_by_uid(context, uid):
+    """Get user by uid"""
+    return IMPL.user_get_by_uid(context, uid)
+
+
+def user_get_by_access_key(context, access_key):
+    """Get user by access key"""
+    return IMPL.user_get_by_access_key(context, access_key)
+
+
+def user_create(context, values):
+    """Create a new user"""
+    return IMPL.user_create(context, values)
+
+
+def user_delete(context, id):
+    """Delete a user"""
+    return IMPL.user_delete(context, id)
+
+
+def user_get_all(context):
+    """Create a new user"""
+    return IMPL.user_get_all(context)
+
+
+def user_add_role(context, user_id, role):
+    """Add another global role for user"""
+    return IMPL.user_add_role(context, user_id, role)
+
+
+def user_remove_role(context, user_id, role):
+    """Remove global role from user"""
+    return IMPL.user_remove_role(context, user_id, role)
+
+
+def user_get_roles(context, user_id):
+    """Get global roles for user"""
+    return IMPL.user_get_roles(context, user_id)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    """Add project role for user"""
+    return IMPL.user_add_project_role(context, user_id, project_id, role)
+
+
+def user_remove_project_role(context, user_id, project_id, role):
+    """Remove project role from user"""
+    return IMPL.user_remove_project_role(context, user_id, project_id, role)
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    """Return list of roles a user holds on project"""
+    return IMPL.user_get_roles_for_project(context, user_id, project_id)
+
+
+def user_update(context, user_id, values):
+    """Update user"""
+    return IMPL.user_update(context, user_id, values)
+
+
+def project_get(context, id):
+    """Get project by id"""
+    return IMPL.project_get(context, id)
+
+
+def project_create(context, values):
+    """Create a new project"""
+    return IMPL.project_create(context, values)
+
+
+def project_add_member(context, project_id, user_id):
+    """Add user to project"""
+    return IMPL.project_add_member(context, project_id, user_id)
+
+
+def project_get_all(context):
+    """Get all projects"""
+    return IMPL.project_get_all(context)
+
+
+def project_get_by_user(context, user_id):
+    """Get all projects of which the given user is a member"""
+    return IMPL.project_get_by_user(context, user_id)
+
+
+def project_remove_member(context, project_id, user_id):
+    """Remove the given user from the given project"""
+    return IMPL.project_remove_member(context, project_id, user_id)
+
+
+def project_update(context, project_id, values):
+    """Update Remove the given user from the given project"""
+    return IMPL.project_update(context, project_id, values)
+
+
+def project_delete(context, project_id):
+    """Delete project"""
+    return IMPL.project_delete(context, project_id)
+
+
+###################
+
+
 def host_get_networks(context, host):
     """Return all networks for which the given host is the designated
     network host
     """
     return IMPL.host_get_networks(context, host)
-
 
