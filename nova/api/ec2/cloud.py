@@ -72,6 +72,20 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
+def ec2_id_to_internal_id(ec2_id):
+    """Convert an ec2 ID (i-[base 36 number]) to an internal id (int)"""
+    return int(ec2_id[2:], 36)
+
+
+def internal_id_to_ec2_id(internal_id):
+    """Convert an internal ID (int) to an ec2 ID (i-[base 36 number])"""
+    digits = []
+    while internal_id != 0:
+        internal_id, remainder = divmod(internal_id, 36)
+        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
+    return "i-%s" % ''.join(reversed(digits))
+
+
 class CloudController(object):
     """ CloudController provides the critical dispatch between
  inbound API calls through the endpoint and messages
@@ -112,16 +126,6 @@ class CloudController(object):
                 else:
                     result[key] = [line]
         return result
-
-    def ec2_id_to_internal_id(ec2_id):
-        """Convert an ec2 ID (i-[base 36 number]) to an internal id (int)"""
-        # TODO(gundlach): Maybe this should actually work?
-        return ec2_id[2:]
-
-    def internal_id_to_ec2_id(internal_id):
-        """Convert an internal ID (int) to an ec2 ID (i-[base 36 number])"""
-        # TODO(gundlach): Yo maybe this should actually convert to base 36
-        return "i-%d" % internal_id
 
     def get_metadata(self, address):
         instance_ref = db.fixed_ip_get_instance(None, address)

@@ -378,6 +378,9 @@ def fixed_ip_update(_context, address, values):
 ###################
 
 
+#TODO(gundlach): instance_create and volume_create are nearly identical
+#and should be refactored.  I expect there are other copy-and-paste
+#functions between the two of them as well.
 def instance_create(_context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
