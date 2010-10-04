@@ -175,11 +175,6 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-def floating_ip_get_instance(context, address):
-    """Get an instance for a floating ip by address."""
-    return IMPL.floating_ip_get_instance(context, address)
-
-
 ####################
 
 
@@ -640,3 +635,15 @@ def security_group_rule_get_by_security_group(context, security_group_id):
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule"""
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)
+
+
+###################
+
+
+def host_get_networks(context, host):
+    """Return all networks for which the given host is the designated
+    network host
+    """
+    return IMPL.host_get_networks(context, host)
+
+
