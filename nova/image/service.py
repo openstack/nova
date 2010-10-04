@@ -16,9 +16,14 @@
 #    under the License.
 
 import cPickle as pickle
+import httplib
+import json
 import os.path
 import random
 import string
+import urlparse
+
+import webob.exc
 
 from nova import utils
 from nova import flags
@@ -27,11 +32,11 @@ from nova import flags
 FLAGS = flags.FLAGS
 
 
-flags.DEFINE_string('glance_teller_address', '127.0.0.1',
+flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
                     'IP address or URL where Glance\'s Teller service resides')
 flags.DEFINE_string('glance_teller_port', '9191',
                     'Port for Glance\'s Teller service')
-flags.DEFINE_string('glance_parallax_address', '127.0.0.1',
+flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
                     'IP address or URL where Glance\'s Parallax service resides')
 flags.DEFINE_string('glance_parallax_port', '9191',
                     'Port for Glance\'s Parallax service')
@@ -80,21 +85,101 @@ class BaseImageService(object):
         raise NotImplementedError
 
 
+class TellerClient(object):
+
+    def __init__(self):
+        self.address = FLAGS.glance_teller_address
+        self.port = FLAGS.glance_teller_port
+        url = urlparse.urlparse(self.address)
+        self.netloc = url.netloc
+        self.connection_type = {'http': httplib.HTTPConnection,
+                                'https': httplib.HTTPSConnection}[url.scheme]
+
+
+class ParallaxClient(object):
+
+    def __init__(self):
+        self.address = FLAGS.glance_parallax_address
+        self.port = FLAGS.glance_parallax_port
+        url = urlparse.urlparse(self.address)
+        self.netloc = url.netloc
+        self.connection_type = {'http': httplib.HTTPConnection,
+                                'https': httplib.HTTPSConnection}[url.scheme]
+
+    def get_images(self):
+        """
+        Returns a list of image data mappings from Parallax
+        """
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            c.request("GET", "images")
+            res = c.getresponse()
+            if res.status == 200:
+                data = json.loads(res.read())
+                return data
+            else:
+                # TODO(jaypipes): return or raise HTTP error?
+                return []
+        finally:
+            c.close()
+
+    def get_image_metadata(self, image_id):
+        """
+        Returns a mapping of image metadata from Parallax
+        """
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            c.request("GET", "images/%s" % image_id)
+            res = c.getresponse()
+            if res.status == 200:
+                data = json.loads(res.read())
+                return data
+            else:
+                # TODO(jaypipes): return or raise HTTP error?
+                return []
+        finally:
+            c.close()
+
+    def add_image_metadata(self, image_metadata):
+        """
+        Tells parallax about an image's metadata
+        """
+        pass
+
+    def update_image_metadata(self, image_id, image_metadata):
+        """
+        Updates Parallax's information about an image
+        """
+        pass
+
+    def delete_image_metadata(self, image_id):
+        """
+        Deletes Parallax's information about an image
+        """
+        pass
+
+
 class GlanceImageService(BaseImageService):
     
     """Provides storage and retrieval of disk image objects within Glance."""
+
+    def __init__(self):
+        self.teller = TellerClient()
+        self.parallax = ParallaxClient()
 
     def index(self):
         """
         Calls out to Parallax for a list of images available
         """
-        raise NotImplementedError
+        images = self.parallax.get_images()
+        return images
 
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
         """
-        raise NotImplementedError
+        image = self.parallax.get_image_metadata(id)
+        return image 
 
     def create(self, data):
         """
@@ -103,7 +188,7 @@ class GlanceImageService(BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        raise NotImplementedError
+        return self.parallax.add_image_metadata(data)
 
     def update(self, image_id, data):
         """Replace the contents of the given image with the new data.
@@ -111,7 +196,7 @@ class GlanceImageService(BaseImageService):
         :raises NotFound if the image does not exist.
 
         """
-        raise NotImplementedError
+        self.parallax.update_image_metadata(image_id, data)
 
     def delete(self, image_id):
         """
@@ -120,7 +205,7 @@ class GlanceImageService(BaseImageService):
         :raises NotFound if the image does not exist.
         
         """
-        raise NotImplementedError
+        self.parallax.delete_image_metadata(image_id)
 
     def delete_all(self):
         """
