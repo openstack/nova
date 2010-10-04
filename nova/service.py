@@ -57,7 +57,7 @@ class Service(object, service.Service):
         self.saved_args, self.saved_kwargs = args, kwargs
 
 
-    def startService(self):
+    def startService(self):  # pylint: disable-msg C0103
         manager_class = utils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *self.saved_args,
                                                      **self.saved_kwargs)
