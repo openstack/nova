@@ -38,7 +38,7 @@ flags.DEFINE_string('glance_teller_port', '9191',
                     'Port for Glance\'s Teller service')
 flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
                     'IP address or URL where Glance\'s Parallax service resides')
-flags.DEFINE_string('glance_parallax_port', '9191',
+flags.DEFINE_string('glance_parallax_port', '9292',
                     'Port for Glance\'s Parallax service')
 
 
