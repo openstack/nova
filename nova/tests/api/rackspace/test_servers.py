@@ -72,7 +72,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(nova.api.API())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):
@@ -93,7 +93,7 @@ class ServersTest(unittest.TestCase):
 
         def instance_create(context, inst):
             class Foo(object):
-                internal_id = 1
+                internal_id = '1'
             return Foo()
 
         def fake_method(*args, **kwargs):
