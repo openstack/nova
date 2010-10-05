@@ -58,7 +58,6 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        fakes.stub_out_id_translator(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
@@ -73,7 +72,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(nova.api.API())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):
@@ -116,7 +115,6 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
             
-        fakes.stub_out_id_translator(self.stubs)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality = {}
