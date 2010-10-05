@@ -27,7 +27,9 @@ import datetime
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
 from sqlalchemy import Column, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import ForeignKeyConstraint
 
 from nova.db.sqlalchemy.session import get_session
 
@@ -60,7 +62,13 @@ class NovaBase(object):
         if not session:
             session = get_session()
         session.add(self)
-        session.flush()
+        try:
+            session.flush()
+        except IntegrityError, e:
+            if str(e).endswith('is not unique'):
+                raise exception.Duplicate(str(e))
+            else:
+                raise
 
     def delete(self, session=None):
         """Delete this object"""
@@ -430,6 +438,67 @@ class FixedIp(BASE, NovaBase):
         return self.address
 
 
+class User(BASE, NovaBase):
+    """Represents a user"""
+    __tablename__ = 'users'
+    id = Column(String(255), primary_key=True)
+
+    name = Column(String(255))
+    access_key = Column(String(255))
+    secret_key = Column(String(255))
+
+    is_admin = Column(Boolean)
+
+
+class Project(BASE, NovaBase):
+    """Represents a project"""
+    __tablename__ = 'projects'
+    id = Column(String(255), primary_key=True)
+    name = Column(String(255))
+    description = Column(String(255))
+
+    project_manager = Column(String(255), ForeignKey(User.id))
+
+    members = relationship(User,
+                           secondary='user_project_association',
+                           backref='projects')
+
+
+class UserProjectRoleAssociation(BASE, NovaBase):
+    __tablename__ = 'user_project_role_association'
+    user_id = Column(String(255), primary_key=True)
+    user = relationship(User,
+                        primaryjoin=user_id==User.id,
+                        foreign_keys=[User.id],
+                        uselist=False)
+
+    project_id = Column(String(255), primary_key=True)
+    project = relationship(Project,
+                           primaryjoin=project_id==Project.id,
+                           foreign_keys=[Project.id],
+                           uselist=False)
+
+    role = Column(String(255), primary_key=True)
+    ForeignKeyConstraint(['user_id',
+                          'project_id'],
+                         ['user_project_association.user_id',
+                          'user_project_association.project_id'])
+
+
+class UserRoleAssociation(BASE, NovaBase):
+    __tablename__ = 'user_role_association'
+    user_id = Column(String(255), ForeignKey('users.id'), primary_key=True)
+    user = relationship(User, backref='roles')
+    role = Column(String(255), primary_key=True)
+
+
+class UserProjectAssociation(BASE, NovaBase):
+    __tablename__ = 'user_project_association'
+    user_id = Column(String(255), ForeignKey(User.id), primary_key=True)
+    project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
+
+
+
 class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip"""
     __tablename__ = 'floating_ips'
@@ -448,9 +517,10 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, FixedIp, FloatingIp,
-              Network, NetworkIndex, SecurityGroup, SecurityGroupIngressRule,
-              SecurityGroupInstanceAssociation, AuthToken) # , Image, Host
+    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+              FloatingIp, Network, NetworkIndex, SecurityGroup,
+              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
+              AuthToken, User, Project) # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
