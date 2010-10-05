@@ -450,7 +450,6 @@ def fixed_ip_create(_context, values):
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
 
-
 @require_context
 def fixed_ip_disassociate(context, address):
     session = get_session()
@@ -460,7 +459,6 @@ def fixed_ip_disassociate(context, address):
                                                session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
-
 
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):

@@ -62,7 +62,7 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_ec2_id', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
             return_servers)
 
@@ -94,7 +94,7 @@ class ServersTest(unittest.TestCase):
 
         def instance_create(context, inst):
             class Foo(object):
-                ec2_id = 1
+                internal_id = 1
             return Foo()
 
         def fake_method(*args, **kwargs):
@@ -113,7 +113,7 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
-        self.stubs.Set(nova.network.manager.FlatManager, 'allocate_fixed_ip',
+        self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
             
         fakes.stub_out_id_translator(self.stubs)
