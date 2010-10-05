@@ -18,11 +18,20 @@ from xml.etree.ElementTree import fromstring as parseXml
 
 from nova import flags
 from nova import test
+from nova.auth import manager
+# Needed to get FLAGS.instances_path defined:
+from nova.compute import manager as compute_manager
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 
 class LibvirtConnTestCase(test.TrialTestCase):
+    def setUp(self):
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        FLAGS.instances_path = ''
+
     def test_get_uri_and_template(self):
         instance = { 'name'           : 'i-cafebabe',
                      'id'             : 'i-cafebabe',
@@ -51,12 +60,6 @@ class LibvirtConnTestCase(test.TrialTestCase):
                                (lambda t: t.find('.').get('type'), 'uml'),
                                (lambda t: t.find('./os/type').text, 'uml')]),
                        }
-        common_checks = [(lambda t: \
-                             t.find('./devices/interface/filterref/parameter') \
-                              .get('name'), 'IP'),
-                         (lambda t: \
-                             t.find('./devices/interface/filterref/parameter') \
-                              .get('value'), '10.11.12.13')]
 
         for (libvirt_type,(expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
@@ -72,11 +75,6 @@ class LibvirtConnTestCase(test.TrialTestCase):
                                  expected_result,
                                  '%s failed check %d' % (xml, i))
 
-            for i, (check, expected_result) in enumerate(common_checks):
-                self.assertEqual(check(tree),
-                                 expected_result,
-                                 '%s failed common check %d' % (xml, i))
-
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
         # checking against that later on. This way we make sure the
         # implementation doesn't fiddle around with the FLAGS.
@@ -88,3 +86,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, testuri)
 
+
+    def tearDown(self):
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
