@@ -33,6 +33,7 @@ from nova.tests.api.rackspace import fakes
 
 FLAGS = flags.FLAGS
 
+FLAGS.verbose = True
 
 def return_server(context, id):
     return stub_instance(id)

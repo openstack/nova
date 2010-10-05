@@ -139,7 +139,7 @@ def stub_out_glance(stubs):
             for k, f in self.fixtures.iteritems():
                 if k == image_id:
                     return f
-            raise exc.NotFound
+            return None
 
         def fake_add_image_metadata(self, image_data):
             id = ''.join(random.choice(string.letters) for _ in range(20))

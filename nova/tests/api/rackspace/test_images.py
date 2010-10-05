@@ -20,6 +20,7 @@ import unittest
 
 import stubout
 
+from nova import exception
 from nova import utils
 from nova.api.rackspace import images
 from nova.tests.api.rackspace import fakes
@@ -44,6 +45,25 @@ class BaseImageServiceTests():
 
         self.assertNotEquals(None, id)
         self.assertEquals(num_images + 1, len(self.service.index()))
+
+    def test_create_and_show_non_existing_image(self):
+
+        fixture = {'name': 'test image',
+                   'updated': None,
+                   'created': None,
+                   'status': None,
+                   'serverId': None,
+                   'progress': None}
+
+        num_images = len(self.service.index())
+
+        id = self.service.create(fixture)
+
+        self.assertNotEquals(None, id)
+
+        self.assertRaises(exception.NotFound,
+                          self.service.show,
+                          'bad image id')
 
     def test_update(self):
 

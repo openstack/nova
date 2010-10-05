@@ -18,6 +18,7 @@
 import cPickle as pickle
 import httplib
 import json
+import logging
 import os.path
 import random
 import string
@@ -27,6 +28,7 @@ import webob.exc
 
 from nova import utils
 from nova import flags
+from nova import exception
 
 
 FLAGS = flags.FLAGS
@@ -55,6 +57,8 @@ class BaseImageService(object):
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
+
+        :raises NotFound if the image does not exist
         """
         raise NotImplementedError
 
@@ -115,10 +119,12 @@ class ParallaxClient(object):
             c.request("GET", "images")
             res = c.getresponse()
             if res.status == 200:
-                data = json.loads(res.read())
+                # Parallax returns a JSONified dict(images=image_list)
+                data = json.loads(res.read())['images']
                 return data
             else:
-                # TODO(jaypipes): return or raise HTTP error?
+                logging.warn("Parallax returned HTTP error %d from "
+                             "request for /images", res.status_int)
                 return []
         finally:
             c.close()
@@ -132,11 +138,12 @@ class ParallaxClient(object):
             c.request("GET", "images/%s" % image_id)
             res = c.getresponse()
             if res.status == 200:
-                data = json.loads(res.read())
+                # Parallax returns a JSONified dict(image=image_info)
+                data = json.loads(res.read())['image']
                 return data
             else:
-                # TODO(jaypipes): return or raise HTTP error?
-                return []
+                # TODO(jaypipes): log the error?
+                return None
         finally:
             c.close()
 
@@ -179,7 +186,9 @@ class GlanceImageService(BaseImageService):
         Returns a dict containing image data for the given opaque image id.
         """
         image = self.parallax.get_image_metadata(id)
-        return image 
+        if image:
+            return image
+        raise exception.NotFound
 
     def create(self, data):
         """
@@ -236,7 +245,10 @@ class LocalImageService(BaseImageService):
         return [ self.show(id) for id in self._ids() ]
 
     def show(self, id):
-        return pickle.load(open(self._path_to(id))) 
+        try:
+            return pickle.load(open(self._path_to(id))) 
+        except IOError:
+            raise exception.NotFound
 
     def create(self, data):
         """
@@ -249,13 +261,19 @@ class LocalImageService(BaseImageService):
 
     def update(self, image_id, data):
         """Replace the contents of the given image with the new data."""
-        pickle.dump(data, open(self._path_to(image_id), 'w'))
+        try:
+            pickle.dump(data, open(self._path_to(image_id), 'w'))
+        except IOError:
+            raise exception.NotFound
 
     def delete(self, image_id):
         """
         Delete the given image.  Raises OSError if the image does not exist.
         """
-        os.unlink(self._path_to(image_id))
+        try:
+            os.unlink(self._path_to(image_id))
+        except IOError:
+            raise exception.NotFound
 
     def delete_all(self):
         """
