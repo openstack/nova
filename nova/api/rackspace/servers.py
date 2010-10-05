@@ -42,7 +42,7 @@ def _instance_id_translator():
 
 def _image_service():
     """ Helper method for initializing the image id translator """
-    service = nova.image.service.ImageService.load()
+    service = utils.import_object(FLAGS.image_service)
     return (service, _id_translator.RackspaceAPIIdTranslator(
             "image", service.__class__.__name__))
 

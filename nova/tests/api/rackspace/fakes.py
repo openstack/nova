@@ -1,5 +1,24 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import datetime
 import json
+import random
+import string
 
 import webob
 import webob.dec
@@ -7,6 +26,7 @@ import webob.dec
 from nova import auth
 from nova import utils
 from nova import flags
+from nova import exception as exc
 import nova.api.rackspace.auth
 import nova.api.rackspace._id_translator
 from nova.image import service
@@ -103,6 +123,60 @@ def stub_out_networking(stubs):
         return '127.0.0.1' 
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
     FLAGS.FAKE_subdomain = 'rs'
+
+
+def stub_out_glance(stubs):
+
+    class FakeParallaxClient:
+
+        def __init__(self):
+            self.fixtures = {}
+
+        def fake_get_images(self):
+            return self.fixtures
+
+        def fake_get_image_metadata(self, image_id):
+            for k, f in self.fixtures.iteritems():
+                if k == image_id:
+                    return f
+            return None
+
+        def fake_add_image_metadata(self, image_data):
+            id = ''.join(random.choice(string.letters) for _ in range(20))
+            image_data['id'] = id
+            self.fixtures[id] = image_data
+            return id
+
+        def fake_update_image_metadata(self, image_id, image_data):
+            
+            if image_id not in self.fixtures.keys():
+                raise exc.NotFound
+
+            self.fixtures[image_id].update(image_data)
+
+        def fake_delete_image_metadata(self, image_id):
+            
+            if image_id not in self.fixtures.keys():
+                raise exc.NotFound
+
+            del self.fixtures[image_id]
+
+        def fake_delete_all(self):
+            self.fixtures = {}
+
+    fake_parallax_client = FakeParallaxClient()
+    stubs.Set(nova.image.service.ParallaxClient, 'get_images',
+              fake_parallax_client.fake_get_images)
+    stubs.Set(nova.image.service.ParallaxClient, 'get_image_metadata',
+              fake_parallax_client.fake_get_image_metadata)
+    stubs.Set(nova.image.service.ParallaxClient, 'add_image_metadata',
+              fake_parallax_client.fake_add_image_metadata)
+    stubs.Set(nova.image.service.ParallaxClient, 'update_image_metadata',
+              fake_parallax_client.fake_update_image_metadata)
+    stubs.Set(nova.image.service.ParallaxClient, 'delete_image_metadata',
+              fake_parallax_client.fake_delete_image_metadata)
+    stubs.Set(nova.image.service.GlanceImageService, 'delete_all',
+              fake_parallax_client.fake_delete_all)
 
 
 class FakeAuthDatabase(object):
