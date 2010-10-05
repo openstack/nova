@@ -50,44 +50,6 @@ class NovaBase(object):
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
 
-    @classmethod
-    def all(cls, session=None, deleted=False):
-        """Get all objects of this type"""
-        if not session:
-            session = get_session()
-        return session.query(cls
-                     ).filter_by(deleted=deleted
-                     ).all()
-
-    @classmethod
-    def count(cls, session=None, deleted=False):
-        """Count objects of this type"""
-        if not session:
-            session = get_session()
-        return session.query(cls
-                     ).filter_by(deleted=deleted
-                     ).count()
-
-    @classmethod
-    def find(cls, obj_id, session=None, deleted=False):
-        """Find object by id"""
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(id=obj_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for id %s" % obj_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        """Find object by str_id"""
-        int_id = int(str_id.rpartition('-')[2])
-        return cls.find(int_id, session=session, deleted=deleted)
-
     @property
     def str_id(self):
         """Get string id of object (generally prefix + '-' + id)"""
@@ -175,21 +137,6 @@ class Service(BASE, NovaBase):
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
-
-    @classmethod
-    def find_by_args(cls, host, binary, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(host=host
-                         ).filter_by(binary=binary
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for %s, %s" % (host,
-                                                              binary))
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 class Instance(BASE, NovaBase):
@@ -284,7 +231,11 @@ class Volume(BASE, NovaBase):
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('volumes'))
+    instance = relationship(Instance,
+                            backref=backref('volumes'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(Volume.instance_id==Instance.id,'
+                                             'Volume.deleted==False)')
     mountpoint = Column(String(255))
     attach_time = Column(String(255))  # TODO(vish): datetime
     status = Column(String(255))  # TODO(vish): enum?
@@ -315,18 +266,6 @@ class Quota(BASE, NovaBase):
     def str_id(self):
         return self.project_id
 
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(project_id=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for project_id %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
@@ -335,8 +274,11 @@ class ExportDevice(BASE, NovaBase):
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
-    volume = relationship(Volume, backref=backref('export_device',
-                                                  uselist=False))
+    volume = relationship(Volume,
+                          backref=backref('export_device', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
+                                           'ExportDevice.deleted==False)')
 
 
 class KeyPair(BASE, NovaBase):
@@ -353,26 +295,6 @@ class KeyPair(BASE, NovaBase):
     @property
     def str_id(self):
         return '%s.%s' % (self.user_id, self.name)
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        user_id, _sep, name = str_id.partition('.')
-        return cls.find_by_str(user_id, name, session, deleted)
-
-    @classmethod
-    def find_by_args(cls, user_id, name, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(user_id=user_id
-                         ).filter_by(name=name
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for user %s, name %s" %
-                                         (user_id, name))
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 class Network(BASE, NovaBase):
@@ -425,8 +347,11 @@ class FixedIp(BASE, NovaBase):
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
+    instance = relationship(Instance,
+                            backref=backref('fixed_ip', uselist=False),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(FixedIp.instance_id==Instance.id,'
+                                             'FixedIp.deleted==False)')
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
@@ -435,19 +360,6 @@ class FixedIp(BASE, NovaBase):
     def str_id(self):
         return self.address
 
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(address=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
-
 
 class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip"""
@@ -455,23 +367,13 @@ class FloatingIp(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
-
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_(FloatingIp.fixed_ip_id==FixedIp.id,'
+                                             'FloatingIp.deleted==False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None, deleted=False):
-        if not session:
-            session = get_session()
-        try:
-            return session.query(cls
-                         ).filter_by(address=str_id
-                         ).filter_by(deleted=deleted
-                         ).one()
-        except exc.NoResultFound:
-            new_exc = exception.NotFound("No model for address %s" % str_id)
-            raise new_exc.__class__, new_exc, sys.exc_info()[2]
 
 
 def register_models():

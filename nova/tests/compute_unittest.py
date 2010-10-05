@@ -30,7 +30,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-
+from nova.api import context
 
 FLAGS = flags.FLAGS
 
@@ -97,7 +97,9 @@ class ComputeTestCase(test.TrialTestCase):
         self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
         yield self.compute.terminate_instance(self.context, instance_id)
-        instance_ref = db.instance_get({'deleted': True}, instance_id)
+        self.context = context.get_admin_context(user=self.user,
+                                                 read_deleted=True)
+        instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
 
