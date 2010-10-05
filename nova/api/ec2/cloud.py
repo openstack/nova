@@ -262,7 +262,7 @@ class CloudController(object):
         # ec2_id_list is passed in as a list of instances
         ec2_id = ec2_id_list[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = db.instance_get_by_ec2_id(context, internal_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
                                    instance_ref['host']),
                         {"method": "get_console_output",
