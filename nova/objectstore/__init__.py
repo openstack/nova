@@ -22,7 +22,7 @@
 
 .. automodule:: nova.objectstore
    :platform: Unix
-   :synopsis: Currently a trivial file-based system, getting extended w/ mongo.
+   :synopsis: Currently a trivial file-based system, getting extended w/ swift.
 .. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
 .. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
 .. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
