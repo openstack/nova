@@ -22,6 +22,7 @@ import logging
 import Queue as queue
 
 from carrot.backends import base
+from eventlet import greenthread
 
 
 class Message(base.BaseMessage):
@@ -96,12 +97,10 @@ class Backend(object):
                                            routing_key)
 
         def declare_consumer(self, queue, callback, *args, **kwargs):
-            print 'declare_consumer', queue, callback
             self.current_queue = queue
             self.current_callback = callback
 
         def consume(self, *args, **kwargs):
-            from eventlet import greenthread
             while True:
                 item = self.get(self.current_queue)
                 if item:
