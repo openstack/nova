@@ -247,16 +247,16 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         instance_ref = db.instance_get_by_ec2_id(context, instance_id[0])
-        d = rpc.call('%s.%s' % (FLAGS.compute_topic,
+        output = rpc.call('%s.%s' % (FLAGS.compute_topic,
                                 instance_ref['host']),
                      { "method" : "get_console_output",
                        "args"   : { "context": None,
                                     "instance_id": instance_ref['id']}})
 
-        d.addCallback(lambda output: { "InstanceId": instance_id,
-                                       "Timestamp": "2",
-                                       "output": base64.b64encode(output)})
-        return d
+        now = datetime.datetime.utcnow()
+        return { "InstanceId" : instance_id,
+                 "Timestamp"  : now,
+                 "output"     : base64.b64encode(output) }
 
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():
