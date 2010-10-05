@@ -129,7 +129,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_internal_id(None, id)
+        inst = self.db_driver.instance_get_by_internal_id(None, int(id))
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -138,7 +138,7 @@ class Controller(wsgi.Controller):
     def delete(self, req, id):
         """ Destroys a server """
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get_by_internal_id(None, id)
+        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
             return faults.Fault(exc.HTTPAccepted())
@@ -171,11 +171,11 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get_by_internal_id(None, id)
+        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        self.db_driver.instance_update(None, id, 
+        self.db_driver.instance_update(None, int(id), 
             _filter_params(inst_dict['server']))
         return faults.Fault(exc.HTTPNoContent())
 
@@ -187,7 +187,7 @@ class Controller(wsgi.Controller):
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        opaque_id = _instance_id_translator().from_rs_id(id)
+        opaque_id = _instance_id_translator().from_rs_id(int(id))
         cloud.reboot(opaque_id)
 
     def _build_server_instance(self, req, env):
@@ -257,7 +257,7 @@ class Controller(wsgi.Controller):
         #TODO(dietz) is this necessary? 
         inst['launch_index'] = 0
 
-        inst['hostname'] = ref.internal_id
+        inst['hostname'] = str(ref.internal_id)
         self.db_driver.instance_update(None, inst['id'], inst)
 
         network_manager = utils.import_object(FLAGS.network_manager)
