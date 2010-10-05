@@ -16,21 +16,23 @@
 #    under the License.
 
 import unittest
+
 import stubout
+import webob
 
 import nova.api
 from nova.api.rackspace import flavors
-from nova.tests.api.rackspace import test_helper
-from nova.tests.api.test_helper import *
+from nova.tests.api.rackspace import fakes
+
 
 class FlavorsTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        test_helper.FakeAuthManager.auth_data = {}
-        test_helper.FakeAuthDatabase.data = {}
-        test_helper.stub_for_testing(self.stubs)
-        test_helper.stub_out_rate_limiting(self.stubs)
-        test_helper.stub_out_auth(self.stubs)
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()

@@ -22,6 +22,8 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
+from twisted.application.app import startApplication
+
 from nova import exception
 from nova import flags
 from nova import rpc
@@ -65,15 +67,20 @@ class ServiceTestCase(test.BaseTestCase):
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
+        rpc.AdapterConsumer.attach_to_twisted()
+        rpc.AdapterConsumer.attach_to_twisted()
+
         # Stub out looping call a bit needlessly since we don't have an easy
         # way to cancel it (yet) when the tests finishes
         service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
                         service.task.LoopingCall)
         service.task.LoopingCall.start(interval=mox.IgnoreArg(),
                                        now=mox.IgnoreArg())
+        service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
+                        service.task.LoopingCall)
+        service.task.LoopingCall.start(interval=mox.IgnoreArg(),
+                                       now=mox.IgnoreArg())
 
-        rpc.AdapterConsumer.attach_to_twisted()
-        rpc.AdapterConsumer.attach_to_twisted()
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
@@ -91,6 +98,7 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.ReplayAll()
 
         app = service.Service.create(host=host, binary=binary)
+        startApplication(app, False)
         self.assert_(app)
 
     # We're testing sort of weird behavior in how report_state decides

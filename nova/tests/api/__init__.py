@@ -27,7 +27,8 @@ import webob.dec
 
 import nova.exception
 from nova import api
-from nova.tests.api.test_helper import *
+from nova.tests.api.fakes import APIStub
+
 
 class Test(unittest.TestCase):
 
