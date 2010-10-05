@@ -29,8 +29,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload_all
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.sql import exists, func
 
 FLAGS = flags.FLAGS
@@ -450,7 +449,6 @@ def fixed_ip_create(_context, values):
         fixed_ip_ref[key] = value
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
-
 
 @require_context
 def fixed_ip_disassociate(context, address):
