@@ -57,7 +57,6 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        fakes.stub_out_id_translator(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
@@ -93,7 +92,7 @@ class ServersTest(unittest.TestCase):
 
         def instance_create(context, inst):
             class Foo(object):
-                internal_id = '1'
+                internal_id = 1
             return Foo()
 
         def fake_method(*args, **kwargs):
@@ -115,7 +114,6 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
             
-        fakes.stub_out_id_translator(self.stubs)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality = {}

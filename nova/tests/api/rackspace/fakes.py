@@ -60,22 +60,6 @@ def stub_out_image_service(stubs):
 
     stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
 
-
-def stub_out_id_translator(stubs):
-    class FakeTranslator(object):
-        def __init__(self, id_type, service_name):
-            pass
-        
-        def to_rs_id(self, id):
-            return id
-
-        def from_rs_id(self, id):
-            return id
-
-    stubs.Set(nova.api.rackspace._id_translator,
-        'RackspaceAPIIdTranslator', FakeTranslator)
-
-
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
