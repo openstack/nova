@@ -28,6 +28,7 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+from eventlet import greenthread
 from twisted.internet import defer
 from twisted.internet import task
 
@@ -106,6 +107,13 @@ class Consumer(messaging.Consumer):
             if not self.failed_connection:
                 logging.exception("Failed to fetch message from queue")
                 self.failed_connection = True
+
+    def attach_to_eventlet(self):
+        def fetch_repeatedly():
+            while True:
+                self.fetch(enable_callbacks=True)
+                greenthread.sleep(0.1)
+        greenthread.spawn(fetch_repeatedly)
 
     def attach_to_twisted(self):
         """Attach a callback to twisted that fires 10 times a second"""
