@@ -26,6 +26,7 @@ import time
 import urlparse
 
 from nova import flags
+from nova import utils
 from nova import process
 from nova.auth import manager
 from nova.auth import signer
@@ -34,6 +35,8 @@ from nova.auth import signer
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('use_s3', True,
                   'whether to get images from s3 or use local copy')
+flags.DEFINE_string('images_path', utils.abspath('../images'),
+                        'path to decrypted images')
 
 
 def fetch(image, path, user, project):
