@@ -20,7 +20,6 @@ from webob import exc
 from nova import flags
 from nova import utils
 from nova import wsgi
-from nova.api.rackspace import _id_translator
 import nova.api.rackspace
 import nova.image.service
 from nova.api.rackspace import faults
@@ -41,8 +40,6 @@ class Controller(wsgi.Controller):
 
     def __init__(self):
         self._service = utils.import_object(FLAGS.image_service)
-        self._id_translator = _id_translator.RackspaceAPIIdTranslator(
-                "image", self._service.__class__.__name__)
 
     def index(self, req):
         """Return all public images in brief."""
@@ -53,16 +50,11 @@ class Controller(wsgi.Controller):
         """Return all public images in detail."""
         data = self._service.index()
         data = nova.api.rackspace.limited(data, req)
-        for img in data:
-            img['id'] = self._id_translator.to_rs_id(img['id'])
         return dict(images=data)
 
     def show(self, req, id):
         """Return data about the given image id."""
-        opaque_id = self._id_translator.from_rs_id(id)
-        img = self._service.show(opaque_id)
-        img['id'] = id
-        return dict(image=img)
+        return dict(image=self._service.show(id))
 
     def delete(self, req, id):
         # Only public images are supported for now.

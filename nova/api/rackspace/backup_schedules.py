@@ -19,7 +19,6 @@ import time
 from webob import exc
 
 from nova import wsgi
-from nova.api.rackspace import _id_translator
 from nova.api.rackspace import faults
 import nova.image.service
 
