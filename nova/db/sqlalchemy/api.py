@@ -450,7 +450,6 @@ def fixed_ip_create(_context, values):
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
 
-
 @require_context
 def fixed_ip_disassociate(context, address):
     session = get_session()
@@ -460,7 +459,6 @@ def fixed_ip_disassociate(context, address):
                                                session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
-
 
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):
@@ -525,6 +523,9 @@ def fixed_ip_update(context, address, values):
 ###################
 
 
+#TODO(gundlach): instance_create and volume_create are nearly identical
+#and should be refactored.  I expect there are other copy-and-paste
+#functions between the two of them as well.
 @require_context
 def instance_create(context, values):
     instance_ref = models.Instance()
@@ -533,10 +534,11 @@ def instance_create(context, values):
 
     session = get_session()
     with session.begin():
-        while instance_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(instance_ref.__prefix__)
-            if not instance_ec2_id_exists(context, ec2_id, session=session):
-                instance_ref.ec2_id = ec2_id
+        while instance_ref.internal_id == None:
+            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            if not instance_internal_id_exists(context, internal_id, 
+                                               session=session):
+                instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
     return instance_ref
 
@@ -635,31 +637,33 @@ def instance_get_all_by_reservation(context, reservation_id):
 
 
 @require_context
-def instance_get_by_ec2_id(context, ec2_id):
+def instance_get_by_internal_id(context, internal_id):
     session = get_session()
 
     if is_admin_context(context):
         result = session.query(models.Instance
-                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=can_read_deleted(context)
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Instance
                        ).filter_by(project_id=context.project.id
-                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=False
                        ).first()
     if not result:
-        raise exception.NotFound('Instance %s not found' % (ec2_id))
+        raise exception.NotFound('Instance %s not found' % (internal_id))
 
     return result
 
 
 @require_context
-def instance_ec2_id_exists(context, ec2_id, session=None):
+def instance_internal_id_exists(context, internal_id, session=None):
     if not session:
         session = get_session()
-    return session.query(exists().where(models.Instance.id==ec2_id)).one()[0]
+    return session.query(
+            exists().where(models.Instance.internal_id==internal_id)
+           ).one()[0]
 
 
 @require_context

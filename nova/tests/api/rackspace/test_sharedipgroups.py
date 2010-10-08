@@ -15,11 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import unittest
 
+import stubout
+
 from nova.api.rackspace import sharedipgroups
-from nova.tests.api.test_helper import *
+
 
 class SharedIpGroupsTest(unittest.TestCase):
     def setUp(self):
@@ -36,6 +37,3 @@ class SharedIpGroupsTest(unittest.TestCase):
 
     def test_delete_shared_ip_group(self):
         pass
-
-
-

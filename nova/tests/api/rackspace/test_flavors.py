@@ -15,26 +15,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import stubout
 import unittest
 
-from nova.api.rackspace import images
-from nova.tests.api.test_helper import *
+import stubout
+import webob
 
-class ImagesTest(unittest.TestCase):
+import nova.api
+from nova.api.rackspace import flavors
+from nova.tests.api.rackspace import fakes
+
+
+class FlavorsTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
 
-    def test_get_image_list(self):
+    def test_get_flavor_list(self):
+        req = webob.Request.blank('/v1.0/flavors')
+        res = req.get_response(nova.api.API())
+
+    def test_get_flavor_by_id(self):
         pass
 
-    def test_delete_image(self):
-        pass
-    
-    def test_create_image(self):
-        pass
-
-
+if __name__ == '__main__':
+    unittest.main()

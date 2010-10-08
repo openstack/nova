@@ -19,6 +19,7 @@ import json
 import unittest
 
 import stubout
+import webob
 
 from nova import db
 from nova import flags
@@ -27,13 +28,16 @@ from nova.api.rackspace import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 import nova.rpc
-from nova.tests.api.test_helper import *
-from nova.tests.api.rackspace import test_helper
+from nova.tests.api.rackspace import fakes
+
 
 FLAGS = flags.FLAGS
 
+FLAGS.verbose = True
+
 def return_server(context, id):
     return stub_instance(id)
+
 
 def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
@@ -45,19 +49,19 @@ def stub_instance(id, user_id=1):
         user_id=user_id
     )
 
+
 class ServersTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        test_helper.FakeAuthManager.auth_data = {}
-        test_helper.FakeAuthDatabase.data = {}
-        test_helper.stub_for_testing(self.stubs)
-        test_helper.stub_out_rate_limiting(self.stubs)
-        test_helper.stub_out_auth(self.stubs)
-        test_helper.stub_out_id_translator(self.stubs)
-        test_helper.stub_out_key_pair_funcs(self.stubs)
-        test_helper.stub_out_image_service(self.stubs)
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_ec2_id', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
             return_servers)
 
@@ -68,7 +72,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(nova.api.API())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):
@@ -89,7 +93,7 @@ class ServersTest(unittest.TestCase):
 
         def instance_create(context, inst):
             class Foo(object):
-                ec2_id = 1
+                internal_id = 1
             return Foo()
 
         def fake_method(*args, **kwargs):
@@ -108,10 +112,9 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
-        self.stubs.Set(nova.network.manager.FlatManager, 'allocate_fixed_ip',
+        self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
             
-        test_helper.stub_out_id_translator(self.stubs)
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality = {}
@@ -240,6 +243,7 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(nova.api.API())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -274,7 +274,7 @@ class LibvirtConnection(object):
 
     @exception.wrap_exception
     def get_console_output(self, instance):
-        console_log = os.path.join(FLAGS.instances_path, instance['name'], 'console.log')
+        console_log = os.path.join(FLAGS.instances_path, instance['internal_id'], 'console.log')
         logging.info('console_log: %s' % console_log)
         logging.info('FLAGS.libvirt_type: %s' % FLAGS.libvirt_type)
         if FLAGS.libvirt_type == 'xen':
