@@ -25,7 +25,6 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova.api import cloud
-from nova.api.rackspace import _id_translator
 from nova.api.rackspace import context
 from nova.api.rackspace import faults
 from nova.compute import instance_types
@@ -34,11 +33,6 @@ import nova.api.rackspace
 import nova.image.service
 
 FLAGS = flags.FLAGS
-
-def _instance_id_translator():
-    """ Helper method for initializing an id translator for Rackspace instance
-    ids """
-    return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
 
 def _image_service():
     """ Helper method for initializing the image id translator """
@@ -182,13 +176,16 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
+	user_id = req.environ['nova.context']['user']['id']
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        opaque_id = _instance_id_translator().from_rs_id(int(id))
-        cloud.reboot(opaque_id)
+	inst_ref = self.db.instance_get_by_internal_id(None, int(id))
+	if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        cloud.reboot(id)
 
     def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
