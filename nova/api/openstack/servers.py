@@ -170,14 +170,14 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
-	user_id = req.environ['nova.context']['user']['id']
+        user_id = req.environ['nova.context']['user']['id']
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-	inst_ref = self.db.instance_get_by_internal_id(None, int(id))
-	if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+        inst_ref = self.db.instance_get_by_internal_id(None, int(id))
+        if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         cloud.reboot(id)
 
