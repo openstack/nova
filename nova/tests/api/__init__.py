@@ -44,8 +44,8 @@ class Test(unittest.TestCase):
         req = webob.Request.blank(url, environ_keys)
         return req.get_response(api.API())
 
-    def test_rackspace(self):
-        self.stubs.Set(api.rackspace, 'API', APIStub)
+    def test_openstack(self):
+        self.stubs.Set(api.openstack, 'API', APIStub)
         result = self._request('/v1.0/cloud', 'rs')
         self.assertEqual(result.body, "/cloud")
 
@@ -56,7 +56,7 @@ class Test(unittest.TestCase):
 
     def test_not_found(self):
         self.stubs.Set(api.ec2, 'API', APIStub)
-        self.stubs.Set(api.rackspace, 'API', APIStub)
+        self.stubs.Set(api.openstack, 'API', APIStub)
         result = self._request('/test/cloud', 'ec2')
         self.assertNotEqual(result.body, "/cloud")
 
