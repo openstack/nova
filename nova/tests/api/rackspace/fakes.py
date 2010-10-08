@@ -28,7 +28,6 @@ from nova import utils
 from nova import flags
 from nova import exception as exc
 import nova.api.rackspace.auth
-import nova.api.rackspace._id_translator
 from nova.image import service
 from nova.wsgi import Router
 
