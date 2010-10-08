@@ -25,26 +25,14 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova.api import cloud
-from nova.api.rackspace import _id_translator
-from nova.api.rackspace import context
-from nova.api.rackspace import faults
+from nova.api.openstack import context
+from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova.compute import power_state
-import nova.api.rackspace
+import nova.api.openstack
 import nova.image.service
 
 FLAGS = flags.FLAGS
-
-def _instance_id_translator():
-    """ Helper method for initializing an id translator for Rackspace instance
-    ids """
-    return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
-
-def _image_service():
-    """ Helper method for initializing the image id translator """
-    service = utils.import_object(FLAGS.image_service)
-    return (service, _id_translator.RackspaceAPIIdTranslator(
-            "image", service.__class__.__name__))
 
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
@@ -60,7 +48,7 @@ def _entity_list(entities):
     return dict(servers=entities)
 
 def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return"""
+    """ Maps everything to valid attributes for return"""
     power_mapping = { 
         power_state.NOSTATE:  'build', 
         power_state.RUNNING:  'active',
@@ -90,7 +78,7 @@ def _entity_inst(inst):
     return dict(server=dict(id=inst['id'], name=inst['server_name']))
 
 class Controller(wsgi.Controller):
-    """ The Server API controller for the Openstack API """
+    """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
         'application/xml': {
@@ -122,7 +110,7 @@ class Controller(wsgi.Controller):
         """
         user_id = req.environ['nova.context']['user']['id']
         instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
-        limited_list = nova.api.rackspace.limited(instance_list, req)
+        limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
@@ -182,13 +170,16 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
+        user_id = req.environ['nova.context']['user']['id']
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        opaque_id = _instance_id_translator().from_rs_id(int(id))
-        cloud.reboot(opaque_id)
+        inst_ref = self.db.instance_get_by_internal_id(None, int(id))
+        if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        cloud.reboot(id)
 
     def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
@@ -205,16 +196,15 @@ class Controller(wsgi.Controller):
 
         image_id = env['server']['imageId']
         
-        img_service, image_id_trans = _image_service()
+        img_service = utils.import_object(FLAGS.image_service)
 
-        opaque_image_id = image_id_trans.to_rs_id(image_id)        
-        image = img_service.show(opaque_image_id)
+        image = img_service.show(image_id)
 
         if not image: 
             raise Exception, "Image not found"
 
         inst['server_name'] = env['server']['name']
-        inst['image_id'] = opaque_image_id
+        inst['image_id'] = image_id
         inst['user_id'] = user_id
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()

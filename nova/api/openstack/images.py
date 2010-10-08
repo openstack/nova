@@ -20,9 +20,9 @@ from webob import exc
 from nova import flags
 from nova import utils
 from nova import wsgi
-import nova.api.rackspace
+import nova.api.openstack
 import nova.image.service
-from nova.api.rackspace import faults
+from nova.api.openstack import faults
 
 
 FLAGS = flags.FLAGS
@@ -49,7 +49,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all public images in detail."""
         data = self._service.index()
-        data = nova.api.rackspace.limited(data, req)
+        data = nova.api.openstack.limited(data, req)
         return dict(images=data)
 
     def show(self, req, id):

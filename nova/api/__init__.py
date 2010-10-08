@@ -27,7 +27,7 @@ from nova import flags
 from nova import wsgi
 from nova.api import cloudpipe
 from nova.api import ec2
-from nova.api import rackspace
+from nova.api import openstack
 from nova.api.ec2 import metadatarequesthandler
 
 
@@ -57,7 +57,7 @@ class API(wsgi.Router):
         mapper.sub_domains = True
         mapper.connect("/", controller=self.rsapi_versions, 
                             conditions=rsdomain)
-        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API(),
+        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
                             conditions=rsdomain)
 
         mapper.connect("/", controller=self.ec2api_versions,
