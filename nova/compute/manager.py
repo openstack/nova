@@ -39,6 +39,8 @@ flags.DEFINE_string('instances_path', utils.abspath('../instances'),
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for volume creation')
+flags.DEFINE_string('images_path', utils.abspath('../images'),
+                        'path to decrypted local images if not using s3')
 
 
 class ComputeManager(manager.Manager):
