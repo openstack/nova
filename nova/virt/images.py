@@ -24,13 +24,15 @@ Handling of VM disk images.
 import os.path
 import time
 import urlparse
+import shutil
 
 from nova import flags
-from nova import process
 from nova.auth import manager
 from nova.auth import signer
-from nova.objectstore import image
 
+import logging
+import urllib2
+import os
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('use_s3', True,
@@ -47,6 +49,7 @@ def fetch(image, path, user, project):
 
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
+    logging.debug("About to retrieve %s and place it in %s", url, path)
 
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
@@ -61,17 +64,32 @@ def _fetch_s3_image(image, path, user, project):
                                                                      url_path)
     headers['Authorization'] = 'AWS %s:%s' % (access, signature)
 
-    cmd = ['/usr/bin/curl', '--fail', '--silent', url]
-    for (k,v) in headers.iteritems():
-        cmd += ['-H', '%s: %s' % (k,v)]
+    def urlretrieve(urlfile, fpath):
+        chunk = 1*1024*1024
+        f = open(fpath, "wb")
+        while 1:
+            data = urlfile.read(chunk)
+            if not data:
+                break
+            f.write(data)
 
-    cmd += ['-o', path]
-    return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
+    request = urllib2.Request(url)
+    for (k, v) in headers.iteritems():
+        request.add_header(k, v)
+
+    urlopened = urllib2.urlopen(request)
+
+    urlretrieve(urlopened, path)
+
+    logging.debug("Finished retreving %s -- placed in %s", url, path)
+
+    return
 
 
 def _fetch_local_image(image, path, user, project):
-    source = _image_path('%s/image' % image)
-    return process.simple_execute('cp %s %s' % (source, path))
+    source = _image_path(os.path.join(image,'image'))
+    logging.debug("About to copy %s to %s", source, path)
+    return shutil.copy(source, path)
 
 
 def _image_path(path):
