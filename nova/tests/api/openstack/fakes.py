@@ -105,7 +105,7 @@ def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1' 
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
-    FLAGS.FAKE_subdomain = 'rs'
+    FLAGS.FAKE_subdomain = 'api'
 
 
 def stub_out_glance(stubs):

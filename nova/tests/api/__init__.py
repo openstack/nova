@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
 
     def test_openstack(self):
         self.stubs.Set(api.openstack, 'API', APIStub)
-        result = self._request('/v1.0/cloud', 'rs')
+        result = self._request('/v1.0/cloud', 'api')
         self.assertEqual(result.body, "/cloud")
 
     def test_ec2(self):
@@ -61,7 +61,7 @@ class Test(unittest.TestCase):
         self.assertNotEqual(result.body, "/cloud")
 
     def test_query_api_versions(self):
-        result = self._request('/', 'rs')
+        result = self._request('/', 'api')
         self.assertTrue('CURRENT' in result.body)
 
     def test_metadata(self):
