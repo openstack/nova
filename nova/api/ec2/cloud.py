@@ -258,9 +258,9 @@ class CloudController(object):
     def delete_security_group(self, context, group_name, **kwargs):
         return True
 
-    def get_console_output(self, context, ec2_id_list, **kwargs):
-        # ec2_id_list is passed in as a list of instances
-        ec2_id = ec2_id_list[0]
+    def get_console_output(self, context, instance_id, **kwargs):
+        # instance_id is passed in as a list of instances
+        ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
