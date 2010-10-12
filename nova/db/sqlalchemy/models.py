@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, PickleType, Integer, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -152,7 +152,7 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    internal_id = Column(PickleType(mutable=False), unique=True)
 
     admin_pass = Column(String(255))
 
@@ -169,7 +169,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.internal_id
+        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))

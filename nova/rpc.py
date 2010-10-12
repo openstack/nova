@@ -109,6 +109,7 @@ class Consumer(messaging.Consumer):
                 self.failed_connection = True
 
     def attach_to_eventlet(self):
+        """Only needed for unit tests!"""
         def fetch_repeatedly():
             while True:
                 self.fetch(enable_callbacks=True)

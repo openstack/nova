@@ -99,7 +99,7 @@ class CloudTestCase(test.TrialTestCase):
                   'max_count': max_count }
         rv = yield self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(self.context, [instance_id])
+        output = yield self.cloud.get_console_output(context=self.context, instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         rv = yield self.cloud.terminate_instances(self.context, [instance_id])
 

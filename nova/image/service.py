@@ -225,7 +225,9 @@ class GlanceImageService(BaseImageService):
 
 class LocalImageService(BaseImageService):
 
-    """Image service storing images to local disk."""
+    """Image service storing images to local disk.
+    
+    It assumes that image_ids are integers."""
 
     def __init__(self):
         self._path = "/tmp/nova/images"
@@ -234,12 +236,12 @@ class LocalImageService(BaseImageService):
         except OSError: # exists
             pass
 
-    def _path_to(self, image_id=''):
-        return os.path.join(self._path, image_id)
+    def _path_to(self, image_id):
+        return os.path.join(self._path, str(image_id))
 
     def _ids(self):
         """The list of all image ids."""
-        return os.listdir(self._path)
+        return [int(i) for i in os.listdir(self._path)]
 
     def index(self):
         return [ self.show(id) for id in self._ids() ]
@@ -254,7 +256,7 @@ class LocalImageService(BaseImageService):
         """
         Store the image data and return the new image id.
         """
-        id = ''.join(random.choice(string.letters) for _ in range(20))
+        id = random.randint(0, 2**32-1)
         data['id'] = id
         self.update(id, data)
         return id
@@ -279,5 +281,5 @@ class LocalImageService(BaseImageService):
         """
         Clears out all images in local directory
         """
-        for f in os.listdir(self._path):
-            os.unlink(self._path_to(f))
+        for id in self._ids():
+            os.unlink(self._path_to(id))
