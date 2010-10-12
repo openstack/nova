@@ -27,16 +27,16 @@ from nova import flags
 from nova import wsgi
 from nova.api import cloudpipe
 from nova.api import ec2
-from nova.api import rackspace
+from nova.api import openstack
 from nova.api.ec2 import metadatarequesthandler
 
 
-flags.DEFINE_string('rsapi_subdomain', 'rs', 
-                    'subdomain running the RS API')
+flags.DEFINE_string('osapi_subdomain', 'api', 
+                    'subdomain running the OpenStack API')
 flags.DEFINE_string('ec2api_subdomain', 'ec2', 
                     'subdomain running the EC2 API')
 flags.DEFINE_string('FAKE_subdomain', None, 
-                    'set to rs or ec2 to fake the subdomain of the host for testing')
+                    'set to api or ec2 to fake the subdomain of the host for testing')
 FLAGS = flags.FLAGS
 
 
@@ -44,21 +44,21 @@ class API(wsgi.Router):
     """Routes top-level requests to the appropriate controller."""
 
     def __init__(self):
-        rsdomain =  {'sub_domain': [FLAGS.rsapi_subdomain]}
+        osapidomain =  {'sub_domain': [FLAGS.osapi_subdomain]}
         ec2domain = {'sub_domain': [FLAGS.ec2api_subdomain]}
-        # If someone wants to pretend they're hitting the RS subdomain
-        # on their local box, they can set FAKE_subdomain to 'rs', which
-        # removes subdomain restrictions from the RS routes below.
-        if FLAGS.FAKE_subdomain == 'rs':
-            rsdomain = {}
+        # If someone wants to pretend they're hitting the OSAPI subdomain
+        # on their local box, they can set FAKE_subdomain to 'api', which
+        # removes subdomain restrictions from the OpenStack API routes below.
+        if FLAGS.FAKE_subdomain == 'api':
+            osapidomain = {}
         elif FLAGS.FAKE_subdomain == 'ec2':
             ec2domain = {}
         mapper = routes.Mapper()
         mapper.sub_domains = True
-        mapper.connect("/", controller=self.rsapi_versions, 
-                            conditions=rsdomain)
-        mapper.connect("/v1.0/{path_info:.*}", controller=rackspace.API(),
-                            conditions=rsdomain)
+        mapper.connect("/", controller=self.osapi_versions, 
+                            conditions=osapidomain)
+        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
+                            conditions=osapidomain)
 
         mapper.connect("/", controller=self.ec2api_versions,
                             conditions=ec2domain)
@@ -81,7 +81,7 @@ class API(wsgi.Router):
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
-    def rsapi_versions(self, req):
+    def osapi_versions(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
                 "versions": [

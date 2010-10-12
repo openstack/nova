@@ -191,14 +191,14 @@ class Image(object):
             if kernel_id == 'true':
                 image_type = 'kernel'
         except:
-            pass
+            kernel_id = None
 
         try:
             ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
             if ramdisk_id == 'true':
                 image_type = 'ramdisk'
         except:
-            pass
+            ramdisk_id = None
 
         info = {
             'imageId': image_id,
@@ -208,6 +208,12 @@ class Image(object):
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
             'imageType' : image_type
         }
+
+        if kernel_id:
+            info['kernelId'] = kernel_id
+
+        if ramdisk_id:
+            info['ramdiskId'] = ramdisk_id
 
         def write_state(state):
             info['imageState'] = state

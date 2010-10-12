@@ -75,6 +75,20 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
+def ec2_id_to_internal_id(ec2_id):
+    """Convert an ec2 ID (i-[base 36 number]) to an internal id (int)"""
+    return int(ec2_id[2:], 36)
+
+
+def internal_id_to_ec2_id(internal_id):
+    """Convert an internal ID (int) to an ec2 ID (i-[base 36 number])"""
+    digits = []
+    while internal_id != 0:
+        internal_id, remainder = divmod(internal_id, 36)
+        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
+    return "i-%s" % ''.join(reversed(digits))
+
+
 class CloudController(object):
     """ CloudController provides the critical dispatch between
  inbound API calls through the endpoint and messages
@@ -156,7 +170,7 @@ class CloudController(object):
                 },
                 'hostname': hostname,
                 'instance-action': 'none',
-                'instance-id': instance_ref['ec2_id'],
+                'instance-id': internal_id_to_ec2_id(instance_ref['internal_id']),
                 'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
                 'local-ipv4': address,
@@ -435,7 +449,9 @@ class CloudController(object):
 
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
-        instance_ref = db.instance_get_by_ec2_id(context, instance_id[0])
+        ec2_id = instance_id[0]
+        internal_id = ec2_id_to_internal_id(ec2_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
         return rpc.call('%s.%s' % (FLAGS.compute_topic,
                                    instance_ref['host']),
                         {"method": "get_console_output",
@@ -515,7 +531,8 @@ class CloudController(object):
             raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
-        instance_ref = db.instance_get_by_ec2_id(context, instance_id)
+        internal_id = ec2_id_to_internal_id(instance_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
         host = instance_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
                                 {"method": "attach_volume",
@@ -549,9 +566,11 @@ class CloudController(object):
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
             db.volume_detached(context)
+        internal_id = instance_ref['internal_id']
+        ec2_id = internal_id_to_ec2_id(internal_id)
         return {'attachTime': volume_ref['attach_time'],
                 'device': volume_ref['mountpoint'],
-                'instanceId': instance_ref['ec2_id'],
+                'instanceId': internal_id,
                 'requestId': context.request_id,
                 'status': volume_ref['attach_status'],
                 'volumeId': volume_ref['id']}
@@ -600,7 +619,9 @@ class CloudController(object):
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            i['instanceId'] = instance['ec2_id']
+            internal_id = instance['internal_id']
+            ec2_id = internal_id_to_ec2_id(internal_id)
+            i['instanceId'] = ec2_id
             i['imageId'] = instance['image_id']
             i['instanceState'] = {
                 'code': instance['state'],
@@ -653,9 +674,10 @@ class CloudController(object):
             instance_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                internal_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                ec2_id = internal_id_to_ec2_id(internal_id)
             address_rv = {'public_ip': address,
-                          'instance_id': instance_id}
+                          'instance_id': ec2_id}
             if context.user.is_admin():
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
@@ -687,8 +709,9 @@ class CloudController(object):
                            "floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
-    def associate_address(self, context, instance_id, public_ip, **kwargs):
-        instance_ref = db.instance_get_by_ec2_id(context, instance_id)
+    def associate_address(self, context, ec2_id, public_ip, **kwargs):
+        internal_id = ec2_id_to_internal_id(ec2_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
@@ -824,7 +847,9 @@ class CloudController(object):
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
-            inst['hostname'] = instance_ref['ec2_id']
+            internal_id = instance_ref['internal_id']
+            ec2_id = internal_id_to_ec2_id(internal_id)
+            inst['hostname'] = ec2_id
             db.instance_update(context, inst_id, inst)
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
@@ -849,11 +874,18 @@ class CloudController(object):
 
 
     def terminate_instances(self, context, instance_id, **kwargs):
+        """Terminate each instance in instance_id, which is a list of ec2 ids.
+
+        instance_id is a kwarg so its name cannot be modified.
+        """
+        ec2_id_list = instance_id
         logging.debug("Going to start terminating instances")
-        for id_str in instance_id:
+        for id_str in ec2_id_list:
+            internal_id = ec2_id_to_internal_id(id_str)
             logging.debug("Going to try and terminate %s" % id_str)
             try:
-                instance_ref = db.instance_get_by_ec2_id(context, id_str)
+                instance_ref = db.instance_get_by_internal_id(context, 
+                                                              internal_id)
             except exception.NotFound:
                 logging.warning("Instance %s was not found during terminate"
                                 % id_str)
@@ -902,7 +934,7 @@ class CloudController(object):
             cloud.reboot(id_str, context=context)
         return True
 
-    def update_instance(self, context, instance_id, **kwargs):
+    def update_instance(self, context, ec2_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
@@ -910,7 +942,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             db_context = {}
-            inst = db.instance_get_by_ec2_id(db_context, instance_id)
+            internal_id = ec2_id_to_internal_id(ec2_id)
+            inst = db.instance_get_by_internal_id(db_context, internal_id)
             db.instance_update(db_context, inst['id'], kwargs)
         return True
 

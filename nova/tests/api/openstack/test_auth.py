@@ -6,14 +6,14 @@ import webob
 import webob.dec
 
 import nova.api
-import nova.api.rackspace.auth
+import nova.api.openstack.auth
 from nova import auth
-from nova.tests.api.rackspace import fakes
+from nova.tests.api.openstack import fakes
 
 class Test(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.rackspace.auth.BasicApiAuthManager,
+        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
             '__init__', fakes.fake_auth_init)
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -55,7 +55,7 @@ class Test(unittest.TestCase):
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.rackspace, 'APIRouter',
+        self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token

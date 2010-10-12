@@ -69,6 +69,9 @@ def list(context, filter_list=[]):
 
     optionally filtered by a list of image_id """
 
+    if FLAGS.connection_type == 'fake':
+        return [{ 'imageId' : 'bar'}]
+
     # FIXME: send along the list of only_images to check for
     response = conn(context).make_request(
             method='GET',

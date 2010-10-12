@@ -280,9 +280,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_ec2_id(context, ec2_id):
+def instance_get_by_internal_id(context, internal_id):
     """Get an instance by ec2 id."""
-    return IMPL.instance_get_by_ec2_id(context, ec2_id)
+    return IMPL.instance_get_by_internal_id(context, internal_id)
 
 
 def instance_is_vpn(context, instance_id):

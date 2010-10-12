@@ -25,29 +25,14 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova.api import cloud
-from nova.api.rackspace import _id_translator
-from nova.api.rackspace import context
-from nova.api.rackspace import faults
+from nova.api.openstack import context
+from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova.compute import power_state
-import nova.api.rackspace
+import nova.api.openstack
 import nova.image.service
 
 FLAGS = flags.FLAGS
-
-flags.DEFINE_string('rs_network_manager', 'nova.network.manager.FlatManager',
-    'Networking for rackspace')
-
-def _instance_id_translator():
-    """ Helper method for initializing an id translator for Rackspace instance
-    ids """
-    return _id_translator.RackspaceAPIIdTranslator( "instance", 'nova')
-
-def _image_service():
-    """ Helper method for initializing the image id translator """
-    service = nova.image.service.ImageService.load()
-    return (service, _id_translator.RackspaceAPIIdTranslator(
-            "image", service.__class__.__name__))
 
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
@@ -63,7 +48,7 @@ def _entity_list(entities):
     return dict(servers=entities)
 
 def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return"""
+    """ Maps everything to valid attributes for return"""
     power_mapping = { 
         power_state.NOSTATE:  'build', 
         power_state.RUNNING:  'active',
@@ -93,7 +78,7 @@ def _entity_inst(inst):
     return dict(server=dict(id=inst['id'], name=inst['server_name']))
 
 class Controller(wsgi.Controller):
-    """ The Server API controller for the Openstack API """
+    """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
         'application/xml': {
@@ -125,17 +110,14 @@ class Controller(wsgi.Controller):
         """
         user_id = req.environ['nova.context']['user']['id']
         instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
-        limited_list = nova.api.rackspace.limited(instance_list, req)
+        limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
     def show(self, req, id):
         """ Returns server details by server id """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
-
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        inst = self.db_driver.instance_get_by_internal_id(None, int(id))
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -143,11 +125,8 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         """ Destroys a server """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
-
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
         if instance and instance['user_id'] == user_id:
             self.db_driver.instance_destroy(None, id)
             return faults.Fault(exc.HTTPAccepted())
@@ -160,10 +139,10 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        try:
-            inst = self._build_server_instance(req, env)
-        except Exception, e:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+        #try:
+        inst = self._build_server_instance(req, env)
+        #except Exception, e:
+        #    return faults.Fault(exc.HTTPUnprocessableEntity())
 
         rpc.cast(
             FLAGS.compute_topic, {
@@ -173,8 +152,6 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        inst_id_trans = _instance_id_translator()
-        inst_id = inst_id_trans.from_rs_id(id)
         user_id = req.environ['nova.context']['user']['id']
 
         inst_dict = self._deserialize(req.body, req)
@@ -182,31 +159,32 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get_by_ec2_id(None, inst_id)
+        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        self.db_driver.instance_update(None, id, 
+        self.db_driver.instance_update(None, int(id), 
             _filter_params(inst_dict['server']))
         return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and 
         resize a server """
+        user_id = req.environ['nova.context']['user']['id']
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        opaque_id = _instance_id_translator().from_rs_id(id)
-        cloud.reboot(opaque_id)
+        inst_ref = self.db.instance_get_by_internal_id(None, int(id))
+        if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        cloud.reboot(id)
 
     def _build_server_instance(self, req, env):
         """Build instance data structure and save it to the data store."""
         ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         inst = {}
-
-        inst_id_trans = _instance_id_translator()
 
         user_id = req.environ['nova.context']['user']['id']
 
@@ -218,16 +196,15 @@ class Controller(wsgi.Controller):
 
         image_id = env['server']['imageId']
         
-        img_service, image_id_trans = _image_service()
+        img_service = utils.import_object(FLAGS.image_service)
 
-        opaque_image_id = image_id_trans.to_rs_id(image_id)        
-        image = img_service.show(opaque_image_id)
+        image = img_service.show(image_id)
 
         if not image: 
             raise Exception, "Image not found"
 
         inst['server_name'] = env['server']['name']
-        inst['image_id'] = opaque_image_id
+        inst['image_id'] = image_id
         inst['user_id'] = user_id
         inst['launch_time'] = ltime
         inst['mac_address'] = utils.generate_mac()
@@ -258,7 +235,7 @@ class Controller(wsgi.Controller):
         inst['local_gb'] = flavor['local_gb']
 
         ref = self.db_driver.instance_create(None, inst)
-        inst['id'] = inst_id_trans.to_rs_id(ref.ec2_id)
+        inst['id'] = ref.internal_id
         
         # TODO(dietz): this isn't explicitly necessary, but the networking
         # calls depend on an object with a project_id property, and therefore
@@ -270,10 +247,10 @@ class Controller(wsgi.Controller):
         #TODO(dietz) is this necessary? 
         inst['launch_index'] = 0
 
-        inst['hostname'] = ref.ec2_id
+        inst['hostname'] = str(ref.internal_id)
         self.db_driver.instance_update(None, inst['id'], inst)
 
-        network_manager = utils.import_object(FLAGS.rs_network_manager)
+        network_manager = utils.import_object(FLAGS.network_manager)
         address = network_manager.allocate_fixed_ip(api_context,
             inst['id'])
 

@@ -72,7 +72,7 @@ class ComputeManager(manager.Manager):
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref['ec2_id'] in self.driver.list_instances():
+        if instance_ref['internal_id'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
         project_id = instance_ref['project_id']
@@ -134,7 +134,7 @@ class ComputeManager(manager.Manager):
             raise exception.Error(
                     'trying to reboot a non-running'
                     'instance: %s (state: %s excepted: %s)' %
-                    (instance_ref['ec2_id'],
+                    (instance_ref['internal_id'],
                      instance_ref['state'],
                      power_state.RUNNING))
 
@@ -156,7 +156,7 @@ class ComputeManager(manager.Manager):
 
         if FLAGS.connection_type == 'libvirt':
             fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['ec2_id'],
+                                                 instance_ref['internal_id'],
                                                  'console.log'))
             with open(fname, 'r') as f:
                 output = f.read()
