@@ -437,7 +437,11 @@ def network_update(context, network_id, values):
 
 
 def project_get_network(context, project_id):
-    """Return the network associated with the project."""
+    """Return the network associated with the project.
+
+    Raises NotFound if no such network can be found.
+
+    """
     return IMPL.project_get_network(context, project_id)
 
 

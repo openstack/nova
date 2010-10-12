@@ -14,7 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from xml.dom.minidom import parseString
+from xml.etree.ElementTree import fromstring as xml_to_tree
+from xml.dom.minidom import parseString as xml_to_dom
 
 from nova import db
 from nova import flags
@@ -22,38 +23,63 @@ from nova import test
 from nova.api import context
 from nova.api.ec2 import cloud
 from nova.auth import manager
+
+# Needed to get FLAGS.instances_path defined:
+from nova.compute import manager as compute_manager
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 
-
 class LibvirtConnTestCase(test.TrialTestCase):
-    def bitrot_test_get_uri_and_template(self):
-        class MockDataModel(object):
-            def __getitem__(self, name):
-                return self.datamodel[name]
+    def setUp(self):
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        FLAGS.instances_path = ''
 
-            def __init__(self):
-                self.datamodel = { 'name' : 'i-cafebabe',
-                                   'memory_kb' : '1024000',
-                                   'basepath' : '/some/path',
-                                   'bridge_name' : 'br100',
-                                   'mac_address' : '02:12:34:46:56:67',
-                                   'vcpus' : 2,
-                                   'project_id' : None }
+    def test_get_uri_and_template(self):
+        ip = '10.11.12.13'
+
+        instance = { 'internal_id'    : '1',
+                     'memory_kb'      : '1024000',
+                     'basepath'       : '/some/path',
+                     'bridge_name'    : 'br100',
+                     'mac_address'    : '02:12:34:46:56:67',
+                     'vcpus'          : 2,
+                     'project_id'     : 'fake',
+                     'bridge'         : 'br101',
+                     'instance_type'  : 'm1.small'}
+
+        instance_ref = db.instance_create(None, instance)
+        network_ref = db.project_get_network(None, self.project.id)
+
+        fixed_ip = { 'address'    : ip,
+                     'network_id' : network_ref['id'] }
+                     
+        fixed_ip_ref = db.fixed_ip_create(None, fixed_ip)
+        db.fixed_ip_update(None, ip, { 'allocated'   : True,
+                                          'instance_id' : instance_ref['id'] })
 
         type_uri_map = { 'qemu' : ('qemu:///system',
-                                [lambda s: '<domain type=\'qemu\'>' in s,
-                                 lambda s: 'type>hvm</type' in s,
-                                 lambda s: 'emulator>/usr/bin/kvm' not in s]),
+                              [(lambda t: t.find('.').get('type'), 'qemu'),
+                               (lambda t: t.find('./os/type').text, 'hvm'),
+                               (lambda t: t.find('./devices/emulator'), None)]),
                          'kvm' : ('qemu:///system',
-                                [lambda s: '<domain type=\'kvm\'>' in s,
-                                 lambda s: 'type>hvm</type' in s,
-                                 lambda s: 'emulator>/usr/bin/qemu<' not in s]),
+                              [(lambda t: t.find('.').get('type'), 'kvm'),
+                               (lambda t: t.find('./os/type').text, 'hvm'),
+                               (lambda t: t.find('./devices/emulator'), None)]),
                          'uml' : ('uml:///system',
-                                [lambda s: '<domain type=\'uml\'>' in s,
-                                 lambda s: 'type>uml</type' in s]),
-                          }
+                              [(lambda t: t.find('.').get('type'), 'uml'),
+                               (lambda t: t.find('./os/type').text, 'uml')]),
+                       }
+
+        common_checks = [(lambda t: t.find('.').tag, 'domain'),
+                         (lambda t: \
+                             t.find('./devices/interface/filterref/parameter') \
+                              .get('name'), 'IP'),
+                         (lambda t: \
+                             t.find('./devices/interface/filterref/parameter') \
+                              .get('value'), '10.11.12.13')]
 
         for (libvirt_type,(expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
@@ -62,9 +88,17 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, expected_uri)
 
-            for i, check in enumerate(checks):
-                xml = conn.to_xml(MockDataModel())
-                self.assertTrue(check(xml), '%s failed check %d' % (xml, i))
+            xml = conn.to_xml(instance_ref)
+            tree = xml_to_tree(xml)
+            for i, (check, expected_result) in enumerate(checks):
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s failed check %d' % (xml, i))
+
+            for i, (check, expected_result) in enumerate(common_checks):
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s failed common check %d' % (xml, i))
 
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
         # checking against that later on. This way we make sure the
@@ -77,6 +111,10 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, testuri)
 
+
+    def tearDown(self):
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
 
 class NWFilterTestCase(test.TrialTestCase):
     def setUp(self):
@@ -118,7 +156,7 @@ class NWFilterTestCase(test.TrialTestCase):
 
         xml = self.fw.security_group_to_nwfilter_xml(security_group.id)
 
-        dom = parseString(xml)
+        dom = xml_to_dom(xml)
         self.assertEqual(dom.firstChild.tagName, 'filter')
 
         rules = dom.getElementsByTagName('rule')
@@ -172,7 +210,7 @@ class NWFilterTestCase(test.TrialTestCase):
             self.recursive_depends[f] = []
 
         def _filterDefineXMLMock(xml):
-            dom = parseString(xml)
+            dom = xml_to_dom(xml)
             name = dom.firstChild.getAttribute('name')
             self.recursive_depends[name] = []
             for f in dom.getElementsByTagName('filterref'):
