@@ -128,7 +128,7 @@ def runthis(prompt, cmd, check_exit_code = True):
 def generate_uid(topic, size=8):
     if topic == "i":
         # Instances have integer internal ids.
-        return random.randint(0, 2**64-1)
+        return random.randint(0, 2**32-1)
     else:
         characters = '01234567890abcdefghijklmnopqrstuvwxyz'
         choices = [random.choice(characters) for x in xrange(size)]
