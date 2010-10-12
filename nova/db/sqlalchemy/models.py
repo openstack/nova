@@ -351,7 +351,6 @@ class KeyPair(BASE, NovaBase):
     name = Column(String(255))
 
     user_id = Column(String(255))
-    project_id = Column(String(255))
 
     fingerprint = Column(String(255))
     public_key = Column(Text)
