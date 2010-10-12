@@ -169,7 +169,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.internal_id
+        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
