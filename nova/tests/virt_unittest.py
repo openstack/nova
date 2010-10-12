@@ -14,36 +14,52 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from xml.etree.ElementTree import fromstring as parseXml
+
 from nova import flags
 from nova import test
+from nova.auth import manager
+# Needed to get FLAGS.instances_path defined:
+from nova.compute import manager as compute_manager
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 
-
 class LibvirtConnTestCase(test.TrialTestCase):
+    def setUp(self):
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        FLAGS.instances_path = ''
+
     def test_get_uri_and_template(self):
-        class MockDataModel(object):
-            def __init__(self):
-                self.datamodel = { 'name' : 'i-cafebabe',
-                                   'memory_kb' : '1024000',
-                                   'basepath' : '/some/path',
-                                   'bridge_name' : 'br100',
-                                   'mac_address' : '02:12:34:46:56:67',
-                                   'vcpus' : 2 }
+        instance = { 'name'           : 'i-cafebabe',
+                     'id'             : 'i-cafebabe',
+                     'memory_kb'      : '1024000',
+                     'basepath'       : '/some/path',
+                     'bridge_name'    : 'br100',
+                     'mac_address'    : '02:12:34:46:56:67',
+                     'vcpus'          : 2,
+                     'project_id'     : 'fake',
+                     'ip_address'     : '10.11.12.13',
+                     'bridge'         : 'br101',
+                     'instance_type'  : 'm1.small'}
 
         type_uri_map = { 'qemu' : ('qemu:///system',
-                                [lambda s: '<domain type=\'qemu\'>' in s,
-                                 lambda s: 'type>hvm</type' in s,
-                                 lambda s: 'emulator>/usr/bin/kvm' not in s]),
+                              [(lambda t: t.find('.').tag, 'domain'),
+                               (lambda t: t.find('.').get('type'), 'qemu'),
+                               (lambda t: t.find('./os/type').text, 'hvm'),
+                               (lambda t: t.find('./devices/emulator'), None)]),
                          'kvm' : ('qemu:///system',
-                                [lambda s: '<domain type=\'kvm\'>' in s,
-                                 lambda s: 'type>hvm</type' in s,
-                                 lambda s: 'emulator>/usr/bin/qemu<' not in s]),
+                              [(lambda t: t.find('.').tag, 'domain'),
+                               (lambda t: t.find('.').get('type'), 'kvm'),
+                               (lambda t: t.find('./os/type').text, 'hvm'),
+                               (lambda t: t.find('./devices/emulator'), None)]),
                          'uml' : ('uml:///system',
-                                [lambda s: '<domain type=\'uml\'>' in s,
-                                 lambda s: 'type>uml</type' in s]),
-                          }
+                              [(lambda t: t.find('.').tag, 'domain'),
+                               (lambda t: t.find('.').get('type'), 'uml'),
+                               (lambda t: t.find('./os/type').text, 'uml')]),
+                       }
 
         for (libvirt_type,(expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
@@ -52,9 +68,12 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, expected_uri)
 
-            for i, check in enumerate(checks):
-                xml = conn.toXml(MockDataModel())
-                self.assertTrue(check(xml), '%s failed check %d' % (xml, i))
+            xml = conn.to_xml(instance)
+            tree = parseXml(xml)
+            for i, (check, expected_result) in enumerate(checks):
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s failed check %d' % (xml, i))
 
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
         # checking against that later on. This way we make sure the
@@ -67,3 +86,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
             uri, template = conn.get_uri_and_template()
             self.assertEquals(uri, testuri)
 
+
+    def tearDown(self):
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
