@@ -40,7 +40,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
     def test_get_uri_and_template(self):
         ip = '10.11.12.13'
 
-        instance = { 'internal_id'    : '1',
+        instance = { 'internal_id'    : 1,
                      'memory_kb'      : '1024000',
                      'basepath'       : '/some/path',
                      'bridge_name'    : 'br100',
