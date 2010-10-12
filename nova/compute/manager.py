@@ -64,6 +64,11 @@ class ComputeManager(manager.Manager):
 
     @defer.inlineCallbacks
     @exception.wrap_exception
+    def refresh_security_group(self, context, security_group_id, **_kwargs):
+        yield self.driver.refresh_security_group(security_group_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         instance_ref = self.db.instance_get(context, instance_id)

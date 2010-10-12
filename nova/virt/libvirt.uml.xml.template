@@ -14,6 +14,10 @@
         <interface type='bridge'>
             <source bridge='%(bridge_name)s'/>
             <mac address='%(mac_address)s'/>
+            <filterref filter="nova-instance-%(name)s">
+                <parameter name="IP" value="%(ip_address)s" />
+                <parameter name="DHCPSERVER" value="%(dhcp_server)s" />
+            </filterref>
         </interface>
         <console type="file">
             <source path='%(basepath)s/console.log'/>

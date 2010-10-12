@@ -490,6 +490,7 @@ class AuthManager(object):
                 except:
                     drv.delete_project(project.id)
                     raise
+
                 return project
 
     def modify_project(self, project, manager_user=None, description=None):
@@ -565,6 +566,7 @@ class AuthManager(object):
         except:
             logging.exception('Could not destroy network for %s',
                               project)
+
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 

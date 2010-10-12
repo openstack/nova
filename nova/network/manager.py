@@ -211,7 +211,6 @@ class FlatManager(NetworkManager):
         #             in the datastore?
         net = {}
         net['injected'] = True
-        net['network_str'] = FLAGS.flat_network_network
         net['netmask'] = FLAGS.flat_network_netmask
         net['bridge'] = FLAGS.flat_network_bridge
         net['gateway'] = FLAGS.flat_network_gateway

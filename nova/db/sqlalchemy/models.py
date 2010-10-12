@@ -187,7 +187,6 @@ class Instance(BASE, NovaBase):
     launch_index = Column(Integer)
     key_name = Column(String(255))
     key_data = Column(Text)
-    security_group = Column(String(255))
 
     state = Column(Integer)
     state_description = Column(String(255))
@@ -289,10 +288,66 @@ class ExportDevice(BASE, NovaBase):
                                            'ExportDevice.deleted==False)')
 
 
+class SecurityGroupInstanceAssociation(BASE, NovaBase):
+    __tablename__ = 'security_group_instance_association'
+    id = Column(Integer, primary_key=True)
+    security_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+
+class SecurityGroup(BASE, NovaBase):
+    """Represents a security group"""
+    __tablename__ = 'security_groups'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String(255))
+    description = Column(String(255))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    instances = relationship(Instance,
+                             secondary="security_group_instance_association",
+                             primaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
+                                               "SecurityGroup.deleted == False)",
+                             secondaryjoin="and_(SecurityGroupInstanceAssociation.instance_id == Instance.id,"
+                                                 "Instance.deleted == False)",
+                             backref='security_groups')
+
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+
+class SecurityGroupIngressRule(BASE, NovaBase):
+    """Represents a rule in a security group"""
+    __tablename__ = 'security_group_rules'
+    id = Column(Integer, primary_key=True)
+
+    parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    parent_group = relationship("SecurityGroup", backref="rules",
+                         foreign_keys=parent_group_id,
+                         primaryjoin="and_(SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,"
+                                          "SecurityGroupIngressRule.deleted == False)")
+
+    protocol = Column(String(5)) # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+    # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
+    # granting access for.
+    group_id = Column(Integer, ForeignKey('security_groups.id'))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh"""
     __tablename__ = 'key_pairs'
     id = Column(Integer, primary_key=True)
+
     name = Column(String(255))
 
     user_id = Column(String(255))
@@ -461,9 +516,10 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex,
-              AuthToken, UserProjectAssociation, User, Project)  # , Image, Host)
+    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+              FloatingIp, Network, NetworkIndex, SecurityGroup,
+              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
+              AuthToken, User, Project) # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

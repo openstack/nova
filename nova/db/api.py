@@ -304,6 +304,11 @@ def instance_update(context, instance_id, values):
     return IMPL.instance_update(context, instance_id, values)
 
 
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    return IMPL.instance_add_security_group(context, instance_id, security_group_id)
+
+
 ###################
 
 
@@ -569,6 +574,71 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+####################
+
+
+def security_group_get_all(context):
+    """Get all security groups"""
+    return IMPL.security_group_get_all(context)
+
+
+def security_group_get(context, security_group_id):
+    """Get security group by its internal id"""
+    return IMPL.security_group_get(context, security_group_id)
+
+
+def security_group_get_by_name(context, project_id, group_name):
+    """Returns a security group with the specified name from a project"""
+    return IMPL.security_group_get_by_name(context, project_id, group_name)
+
+
+def security_group_get_by_project(context, project_id):
+    """Get all security groups belonging to a project"""
+    return IMPL.security_group_get_by_project(context, project_id)
+
+
+def security_group_get_by_instance(context, instance_id):
+    """Get security groups to which the instance is assigned"""
+    return IMPL.security_group_get_by_instance(context, instance_id)
+
+
+def security_group_exists(context, project_id, group_name):
+    """Indicates if a group name exists in a project"""
+    return IMPL.security_group_exists(context, project_id, group_name)
+
+
+def security_group_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_create(context, values)
+
+
+def security_group_destroy(context, security_group_id):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy(context, security_group_id)
+
+
+def security_group_destroy_all(context):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy_all(context)
+
+
+####################
+
+
+def security_group_rule_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_rule_create(context, values)
+
+
+def security_group_rule_get_by_security_group(context, security_group_id):
+    """Get all rules for a a given security group"""
+    return IMPL.security_group_rule_get_by_security_group(context, security_group_id)
+
+def security_group_rule_destroy(context, security_group_rule_id):
+    """Deletes a security group rule"""
+    return IMPL.security_group_rule_destroy(context, security_group_rule_id)
 
 
 ###################
