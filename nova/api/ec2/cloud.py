@@ -841,7 +841,7 @@ class CloudController(object):
             inst_id = instance_ref['id']
 
             for security_group_id in security_groups:
-                db.instance_add_security_group(context.admin(), inst_id,
+                db.instance_add_security_group(context, inst_id,
                                                security_group_id)
 
             inst = {}
