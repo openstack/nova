@@ -1024,7 +1024,8 @@ def auth_destroy_token(_context, token):
 def auth_get_token(_context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken
-                ).filter_by(token_hash=token_hash)
+                ).filter_by(token_hash=token_hash
+                ).first()
     if not tk:
         raise exception.NotFound('Token %s does not exist' % token_hash)
     return tk
@@ -1309,7 +1310,7 @@ def user_get_by_access_key(context, access_key, session=None):
                  ).first()
 
     if not result:
-        raise exception.NotFound('No user for id %s' % id)
+        raise exception.NotFound('No user for access key %s' % access_key)
 
     return result
 
