@@ -31,6 +31,7 @@ from tornado import ioloop
 from twisted.internet import defer
 from twisted.trial import unittest
 
+from nova import db
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
@@ -83,6 +84,7 @@ class TrialTestCase(unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
+        db.security_group_destroy_all(None)
 
         super(TrialTestCase, self).tearDown()
 

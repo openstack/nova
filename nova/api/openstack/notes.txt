@@ -10,11 +10,11 @@ image ids are URIs.
 LocalImageService(ImageService):
 image ids are random strings.
 
-RackspaceAPITranslationStore:
+OpenstackAPITranslationStore:
 translates RS server/images/flavor/etc ids into formats required
 by a given ImageService strategy.
 
-api.rackspace.images.Controller:
+api.openstack.images.Controller:
 uses an ImageService strategy behind the scenes to do its fetching; it just
 converts int image id into a strategy-specific image id.
 

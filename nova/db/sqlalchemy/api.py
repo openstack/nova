@@ -29,8 +29,11 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload, joinedload_all
-from sqlalchemy.sql import exists, func
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload_all
+from sqlalchemy.sql import exists
+from sqlalchemy.sql import func
+from sqlalchemy.orm.exc import NoResultFound
 
 FLAGS = flags.FLAGS
 
@@ -240,7 +243,7 @@ def service_create(context, values):
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
-        service_ref = session_get(context, service_id, session=session)
+        service_ref = service_get(context, service_id, session=session)
         for (key, value) in values.iteritems():
             service_ref[key] = value
         service_ref.save(session=session)
@@ -450,7 +453,6 @@ def fixed_ip_create(_context, values):
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
 
-
 @require_context
 def fixed_ip_disassociate(context, address):
     session = get_session()
@@ -460,7 +462,6 @@ def fixed_ip_disassociate(context, address):
                                                session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
-
 
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):
@@ -525,6 +526,9 @@ def fixed_ip_update(context, address, values):
 ###################
 
 
+#TODO(gundlach): instance_create and volume_create are nearly identical
+#and should be refactored.  I expect there are other copy-and-paste
+#functions between the two of them as well.
 @require_context
 def instance_create(context, values):
     instance_ref = models.Instance()
@@ -533,10 +537,11 @@ def instance_create(context, values):
 
     session = get_session()
     with session.begin():
-        while instance_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(instance_ref.__prefix__)
-            if not instance_ec2_id_exists(context, ec2_id, session=session):
-                instance_ref.ec2_id = ec2_id
+        while instance_ref.internal_id == None:
+            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            if not instance_internal_id_exists(context, internal_id, 
+                                               session=session):
+                instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
     return instance_ref
 
@@ -569,11 +574,13 @@ def instance_get(context, instance_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Instance
+                       ).options(joinedload('security_groups')
                        ).filter_by(id=instance_id
                        ).filter_by(deleted=can_read_deleted(context)
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Instance
+                       ).options(joinedload('security_groups')
                        ).filter_by(project_id=context.project.id
                        ).filter_by(id=instance_id
                        ).filter_by(deleted=False
@@ -589,6 +596,7 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
+                 ).options(joinedload('security_groups')
                  ).filter_by(deleted=can_read_deleted(context)
                  ).all()
 
@@ -598,6 +606,7 @@ def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
+                 ).options(joinedload('security_groups')
                  ).filter_by(deleted=can_read_deleted(context)
                  ).filter_by(user_id=user_id
                  ).all()
@@ -610,6 +619,7 @@ def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance
                  ).options(joinedload_all('fixed_ip.floating_ips')
+                 ).options(joinedload('security_groups')
                  ).filter_by(project_id=project_id
                  ).filter_by(deleted=can_read_deleted(context)
                  ).all()
@@ -622,12 +632,14 @@ def instance_get_all_by_reservation(context, reservation_id):
     if is_admin_context(context):
         return session.query(models.Instance
                      ).options(joinedload_all('fixed_ip.floating_ips')
+                     ).options(joinedload('security_groups')
                      ).filter_by(reservation_id=reservation_id
                      ).filter_by(deleted=can_read_deleted(context)
                      ).all()
     elif is_user_context(context):
         return session.query(models.Instance
                      ).options(joinedload_all('fixed_ip.floating_ips')
+                     ).options(joinedload('security_groups')
                      ).filter_by(project_id=context.project.id
                      ).filter_by(reservation_id=reservation_id
                      ).filter_by(deleted=False
@@ -635,31 +647,35 @@ def instance_get_all_by_reservation(context, reservation_id):
 
 
 @require_context
-def instance_get_by_ec2_id(context, ec2_id):
+def instance_get_by_internal_id(context, internal_id):
     session = get_session()
 
     if is_admin_context(context):
         result = session.query(models.Instance
-                       ).filter_by(ec2_id=ec2_id
+                       ).options(joinedload('security_groups')
+                       ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=can_read_deleted(context)
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Instance
+                       ).options(joinedload('security_groups')
                        ).filter_by(project_id=context.project.id
-                       ).filter_by(ec2_id=ec2_id
+                       ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=False
                        ).first()
     if not result:
-        raise exception.NotFound('Instance %s not found' % (ec2_id))
+        raise exception.NotFound('Instance %s not found' % (internal_id))
 
     return result
 
 
 @require_context
-def instance_ec2_id_exists(context, ec2_id, session=None):
+def instance_internal_id_exists(context, internal_id, session=None):
     if not session:
         session = get_session()
-    return session.query(exists().where(models.Instance.id==ec2_id)).one()[0]
+    return session.query(
+            exists().where(models.Instance.internal_id==internal_id)
+           ).one()[0]
 
 
 @require_context
@@ -711,6 +727,18 @@ def instance_update(context, instance_id, values):
         instance_ref = instance_get(context, instance_id, session=session)
         for (key, value) in values.iteritems():
             instance_ref[key] = value
+        instance_ref.save(session=session)
+
+
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
+        security_group_ref = security_group_get(context,
+                                                security_group_id,
+                                                session=session)
+        instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
 
 
@@ -1188,6 +1216,7 @@ def volume_get(context, volume_id, session=None):
 
 @require_admin_context
 def volume_get_all(context):
+    session = get_session()
     return session.query(models.Volume
                  ).filter_by(deleted=can_read_deleted(context)
                  ).all()
@@ -1273,3 +1302,383 @@ def volume_update(context, volume_id, values):
         for (key, value) in values.iteritems():
             volume_ref[key] = value
         volume_ref.save(session=session)
+
+
+###################
+
+
+@require_context
+def security_group_get_all(context):
+    session = get_session()
+    return session.query(models.SecurityGroup
+                 ).filter_by(deleted=can_read_deleted(context)
+                 ).options(joinedload_all('rules')
+                 ).all()
+
+
+@require_context
+def security_group_get(context, security_group_id, session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroup
+                       ).filter_by(deleted=can_read_deleted(context),
+                       ).filter_by(id=security_group_id
+                       ).options(joinedload_all('rules')
+                       ).first()
+    else:
+        result = session.query(models.SecurityGroup
+                       ).filter_by(deleted=False
+                       ).filter_by(id=security_group_id
+                       ).filter_by(project_id=context.project_id
+                       ).options(joinedload_all('rules')
+                       ).first()
+    if not result:
+        raise exception.NotFound("No secuity group with id %s" %
+                                 security_group_id)
+    return result
+
+
+@require_context
+def security_group_get_by_name(context, project_id, group_name):
+    session = get_session()
+    result = session.query(models.SecurityGroup
+                      ).filter_by(project_id=project_id
+                      ).filter_by(name=group_name
+                      ).filter_by(deleted=False
+                      ).options(joinedload_all('rules')
+                      ).options(joinedload_all('instances')
+                      ).first()
+    if not result:
+        raise exception.NotFound(
+            'No security group named %s for project: %s' \
+             % (group_name, project_id))
+    return result
+
+
+@require_context
+def security_group_get_by_project(context, project_id):
+    session = get_session()
+    return session.query(models.SecurityGroup
+                 ).filter_by(project_id=project_id
+                 ).filter_by(deleted=False
+                 ).options(joinedload_all('rules')
+                 ).all()
+
+
+@require_context
+def security_group_get_by_instance(context, instance_id):
+    session = get_session()
+    return session.query(models.SecurityGroup
+                 ).filter_by(deleted=False
+                 ).options(joinedload_all('rules')
+                 ).join(models.SecurityGroup.instances
+                 ).filter_by(id=instance_id
+                 ).filter_by(deleted=False
+                 ).all()
+
+
+@require_context
+def security_group_exists(context, project_id, group_name):
+    try:
+        group = security_group_get_by_name(context, project_id, group_name)
+        return group != None
+    except exception.NotFound:
+        return False
+
+
+@require_context
+def security_group_create(context, values):
+    security_group_ref = models.SecurityGroup()
+    # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
+    # once save() is called.  This will get cleaned up in next orm pass.
+    security_group_ref.rules
+    for (key, value) in values.iteritems():
+        security_group_ref[key] = value
+    security_group_ref.save()
+    return security_group_ref
+
+
+@require_context
+def security_group_destroy(context, security_group_id):
+    session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update security_groups set deleted=1 where id=:id',
+                        {'id': security_group_id})
+        session.execute('update security_group_rules set deleted=1 '
+                        'where group_id=:id',
+                        {'id': security_group_id})
+
+@require_context
+def security_group_destroy_all(context, session=None):
+    if not session:
+        session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update security_groups set deleted=1')
+        session.execute('update security_group_rules set deleted=1')
+
+
+###################
+
+
+@require_context
+def security_group_rule_get(context, security_group_rule_id, session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule
+                       ).filter_by(deleted=can_read_deleted(context)
+                       ).filter_by(id=security_group_rule_id
+                       ).first()
+    else:
+        # TODO(vish): Join to group and check for project_id
+        result = session.query(models.SecurityGroupIngressRule
+                       ).filter_by(deleted=False
+                       ).filter_by(id=security_group_rule_id
+                       ).first()
+    if not result:
+        raise exception.NotFound("No secuity group rule with id %s" %
+                                 security_group_rule_id)
+    return result
+
+
+@require_context
+def security_group_rule_create(context, values):
+    security_group_rule_ref = models.SecurityGroupIngressRule()
+    for (key, value) in values.iteritems():
+        security_group_rule_ref[key] = value
+    security_group_rule_ref.save()
+    return security_group_rule_ref
+
+@require_context
+def security_group_rule_destroy(context, security_group_rule_id):
+    session = get_session()
+    with session.begin():
+        security_group_rule = security_group_rule_get(context,
+                                                      security_group_rule_id,
+                                                      session=session)
+        security_group_rule.delete(session=session)
+
+
+###################
+
+@require_admin_context
+def user_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User
+                   ).filter_by(id=id
+                   ).filter_by(deleted=can_read_deleted(context)
+                   ).first()
+
+    if not result:
+        raise exception.NotFound('No user for id %s' % id)
+
+    return result
+
+
+@require_admin_context
+def user_get_by_access_key(context, access_key, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User
+                 ).filter_by(access_key=access_key
+                 ).filter_by(deleted=can_read_deleted(context)
+                 ).first()
+
+    if not result:
+        raise exception.NotFound('No user for id %s' % id)
+
+    return result
+
+
+@require_admin_context
+def user_create(_context, values):
+    user_ref = models.User()
+    for (key, value) in values.iteritems():
+        user_ref[key] = value
+    user_ref.save()
+    return user_ref
+
+
+@require_admin_context
+def user_delete(context, id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_association where user_id=:id',
+                        {'id': id})
+        session.execute('delete from user_role_association where user_id=:id',
+                        {'id': id})
+        session.execute('delete from user_project_role_association where user_id=:id',
+                        {'id': id})
+        user_ref = user_get(context, id, session=session)
+        session.delete(user_ref)
+
+
+def user_get_all(context):
+    session = get_session()
+    return session.query(models.User
+                 ).filter_by(deleted=can_read_deleted(context)
+                 ).all()
+
+
+def project_create(_context, values):
+    project_ref = models.Project()
+    for (key, value) in values.iteritems():
+        project_ref[key] = value
+    project_ref.save()
+    return project_ref
+
+
+def project_add_member(context, project_id, user_id):
+    session = get_session()
+    with session.begin():
+        project_ref = project_get(context, project_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
+
+        project_ref.members += [user_ref]
+        project_ref.save(session=session)
+
+
+def project_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Project
+                   ).filter_by(deleted=False
+                   ).filter_by(id=id
+                   ).options(joinedload_all('members')
+                   ).first()
+
+    if not result:
+        raise exception.NotFound("No project with id %s" % id)
+
+    return result
+
+
+def project_get_all(context):
+    session = get_session()
+    return session.query(models.Project
+                 ).filter_by(deleted=can_read_deleted(context)
+                 ).options(joinedload_all('members')
+                 ).all()
+
+
+def project_get_by_user(context, user_id):
+    session = get_session()
+    user = session.query(models.User
+                 ).filter_by(deleted=can_read_deleted(context)
+                 ).options(joinedload_all('projects')
+                 ).first()
+    return user.projects
+
+
+def project_remove_member(context, project_id, user_id):
+    session = get_session()
+    project = project_get(context, project_id, session=session)
+    user = user_get(context, user_id, session=session)
+
+    if user in project.members:
+        project.members.remove(user)
+        project.save(session=session)
+
+
+def user_update(context, user_id, values):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        for (key, value) in values.iteritems():
+            user_ref[key] = value
+        user_ref.save(session=session)
+
+
+def project_update(context, project_id, values):
+    session = get_session()
+    with session.begin():
+        project_ref = project_get(context, project_id, session=session)
+        for (key, value) in values.iteritems():
+            project_ref[key] = value
+        project_ref.save(session=session)
+
+
+def project_delete(context, id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_association where project_id=:id',
+                        {'id': id})
+        session.execute('delete from user_project_role_association where project_id=:id',
+                        {'id': id})
+        project_ref = project_get(context, id, session=session)
+        session.delete(project_ref)
+
+
+def user_get_roles(context, user_id):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        return [role.role for role in user_ref['roles']]
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserProjectRoleAssociation
+                 ).filter_by(user_id=user_id
+                 ).filter_by(project_id=project_id
+                 ).all()
+        return [association.role for association in res]
+
+def user_remove_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_role_association where ' + \
+                        'user_id=:user_id and project_id=:project_id and ' + \
+                        'role=:role', { 'user_id'    : user_id, 
+                                        'project_id' : project_id,
+                                        'role'       : role })
+
+
+def user_remove_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserRoleAssociation
+                  ).filter_by(user_id=user_id
+                  ).filter_by(role=role
+                  ).all()
+        for role in res:
+            session.delete(role)
+
+
+def user_add_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        models.UserRoleAssociation(user=user_ref, role=role).save(session=session)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
+        models.UserProjectRoleAssociation(user_id=user_ref['id'],
+                                          project_id=project_ref['id'],
+                                          role=role).save(session=session)
+
+
+###################
+
+
+
+@require_admin_context
+def host_get_networks(context, host):
+    session = get_session()
+    with session.begin():
+        return session.query(models.Network
+                     ).filter_by(deleted=False
+                     ).filter_by(host=host
+                     ).all()

@@ -29,6 +29,7 @@ from nova import flags
 from nova import process
 from nova.auth import manager
 from nova.auth import signer
+from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
