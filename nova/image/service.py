@@ -50,13 +50,61 @@ class BaseImageService(object):
 
     def index(self):
         """
-        Return a dict from opaque image id to image data.
+        Returns a sequence of mappings of id and name information about
+        images.
+
+        :retval a sequence of mappings with the following signature:
+
+            [
+            {'id': opaque id of image,
+             'name': name of image
+             }, ...
+            ]
+
+        """
+        raise NotImplementedError
+
+    def detail(self):
+        """
+        Returns a sequence of mappings of detailed information about images.
+
+        :retval a sequence of mappings with the following signature:
+
+            [
+            {'id': opaque id of image,
+             'name': name of image,
+             'created_at': creation timestamp,
+             'updated_at': modification timestamp,
+             'deleted_at': deletion timestamp or None,
+             'deleted': boolean indicating if image has been deleted,
+             'status': string description of image status,
+             'is_public': boolean indicating if image is public
+             }, ...
+            ]
+
+        If the service does not implement a method that provides a detailed
+        set of information about images, then the method should raise
+        NotImplementedError, in which case Nova will emulate this method
+        with repeated calls to show() for each image received from the
+        index() method.
         """
         raise NotImplementedError
 
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
+
+        :retval a mapping with the following signature:
+
+            {'id': opaque id of image,
+             'name': name of image,
+             'created_at': creation timestamp,
+             'updated_at': modification timestamp,
+             'deleted_at': deletion timestamp or None,
+             'deleted': boolean indicating if image has been deleted,
+             'status': string description of image status,
+             'is_public': boolean indicating if image is public
+             }, ...
 
         :raises NotFound if the image does not exist
         """
@@ -110,9 +158,9 @@ class ParallaxClient(object):
         self.connection_type = {'http': httplib.HTTPConnection,
                                 'https': httplib.HTTPSConnection}[url.scheme]
 
-    def get_images(self):
+    def get_image_index(self):
         """
-        Returns a list of image data mappings from Parallax
+        Returns a list of image id/name mappings from Parallax
         """
         try:
             c = self.connection_type(self.netloc, self.port)
@@ -125,6 +173,25 @@ class ParallaxClient(object):
             else:
                 logging.warn("Parallax returned HTTP error %d from "
                              "request for /images", res.status_int)
+                return []
+        finally:
+            c.close()
+
+    def get_image_details(self):
+        """
+        Returns a list of detailed image data mappings from Parallax
+        """
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            c.request("GET", "images/detail")
+            res = c.getresponse()
+            if res.status == 200:
+                # Parallax returns a JSONified dict(images=image_list)
+                data = json.loads(res.read())['images']
+                return data
+            else:
+                logging.warn("Parallax returned HTTP error %d from "
+                             "request for /images/detail", res.status_int)
                 return []
         finally:
             c.close()
@@ -178,7 +245,14 @@ class GlanceImageService(BaseImageService):
         """
         Calls out to Parallax for a list of images available
         """
-        images = self.parallax.get_images()
+        images = self.parallax.get_image_index()
+        return images
+
+    def detail(self):
+        """
+        Calls out to Parallax for a list of detailed image information
+        """
+        images = self.parallax.get_image_details()
         return images
 
     def show(self, id):
@@ -244,7 +318,10 @@ class LocalImageService(BaseImageService):
         return [int(i) for i in os.listdir(self._path)]
 
     def index(self):
-        return [ self.show(id) for id in self._ids() ]
+        return [dict(id=i['id'], name=i['name']) for i in self.detail()]
+
+    def detail(self):
+        return [self.show(id) for id in self._ids()]
 
     def show(self, id):
         try:
