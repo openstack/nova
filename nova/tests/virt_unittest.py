@@ -118,6 +118,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
 
 
     def tearDown(self):
+        super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
 
