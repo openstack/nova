@@ -21,20 +21,20 @@
 Handling of VM disk images.
 """
 
+import logging
+import os
 import os.path
-import time
-import urlparse
 import shutil
+import sys
+import time
+import urllib2
+import urlparse
 
 from nova import flags
 from nova import process
 from nova.auth import manager
 from nova.auth import signer
 
-import logging
-import urllib2
-import os
-import sys
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('use_s3', True,
@@ -47,6 +47,7 @@ def fetch(image, path, user, project):
     else:
         f = _fetch_local_image
     return f(image, path, user, project)
+
 
 def _fetch_image_no_curl(url, path, headers):
     request = urllib2.Request(url)
@@ -102,6 +103,7 @@ def _fetch_local_image(image, path, user, project):
 
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)
+
 
 def image_url(image):
     return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
