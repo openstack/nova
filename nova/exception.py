@@ -69,6 +69,9 @@ class NotEmpty(Error):
 class Invalid(Error):
     pass
 
+class InvalidInputException(Error):
+    pass
+
 
 def wrap_exception(f):
     def _wrap(*args, **kw):

@@ -27,7 +27,7 @@ from nova import auth
 from nova import utils
 from nova import flags
 from nova import exception as exc
-import nova.api.rackspace.auth
+import nova.api.openstack.auth
 from nova.image import service
 from nova.wsgi import Router
 
@@ -83,21 +83,21 @@ def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
     
-    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+    stubs.Set(nova.api.openstack.AuthMiddleware, 
         '__init__', fake_auth_init) 
-    stubs.Set(nova.api.rackspace.AuthMiddleware, 
+    stubs.Set(nova.api.openstack.AuthMiddleware, 
         '__call__', fake_wsgi) 
 
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(nova.api.rackspace.RateLimitingMiddleware, self).__init__(app)
+        super(nova.api.openstack.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.rackspace.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
@@ -105,7 +105,7 @@ def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1' 
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
-    FLAGS.FAKE_subdomain = 'rs'
+    FLAGS.FAKE_subdomain = 'api'
 
 
 def stub_out_glance(stubs):

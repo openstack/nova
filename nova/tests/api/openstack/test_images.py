@@ -22,8 +22,8 @@ import stubout
 
 from nova import exception
 from nova import utils
-from nova.api.rackspace import images
-from nova.tests.api.rackspace import fakes
+from nova.api.openstack import images
+from nova.tests.api.openstack import fakes
 
 
 class BaseImageServiceTests():

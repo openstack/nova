@@ -3,7 +3,7 @@ import webob
 import webob.dec
 import webob.exc
 
-from nova.api.rackspace import faults
+from nova.api.openstack import faults
 
 class TestFaults(unittest.TestCase):
 

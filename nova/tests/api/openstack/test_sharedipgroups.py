@@ -15,24 +15,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-from webob import exc
+import unittest
 
-from nova import wsgi
-from nova.api.rackspace import faults
-import nova.image.service
+import stubout
 
-class Controller(wsgi.Controller):
-    def __init__(self):
+from nova.api.openstack import sharedipgroups
+
+
+class SharedIpGroupsTest(unittest.TestCase):
+    def setUp(self):
+        self.stubs = stubout.StubOutForTesting()
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+
+    def test_get_shared_ip_groups(self):
         pass
 
-    def index(self, req, server_id):
-        return faults.Fault(exc.HTTPNotFound())
+    def test_create_shared_ip_group(self):
+        pass
 
-    def create(self, req, server_id):
-        """ No actual update method required, since the existing API allows
-        both create and update through a POST """
-        return faults.Fault(exc.HTTPNotFound())
-
-    def delete(self, req, server_id):
-        return faults.Fault(exc.HTTPNotFound())
+    def test_delete_shared_ip_group(self):
+        pass

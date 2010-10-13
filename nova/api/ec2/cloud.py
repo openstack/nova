@@ -28,6 +28,8 @@ import logging
 import os
 import time
 
+import IPy
+
 from nova import crypto
 from nova import db
 from nova import exception
@@ -43,6 +45,7 @@ from nova.api.ec2 import images
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
+InvalidInputException = exception.InvalidInputException
 
 class QuotaError(exception.ApiError):
     """Quota Exceeeded"""
@@ -126,6 +129,15 @@ class CloudController(object):
                 else:
                     result[key] = [line]
         return result
+
+    def _trigger_refresh_security_group(self, security_group):
+        nodes = set([instance['host'] for instance in security_group.instances
+                       if instance['host'] is not None])
+        for node in nodes:
+            rpc.call('%s.%s' % (FLAGS.compute_topic, node),
+                     { "method": "refresh_security_group",
+                       "args": { "context": None,
+                                 "security_group_id": security_group.id}})
 
     def get_metadata(self, address):
         instance_ref = db.fixed_ip_get_instance(None, address)
@@ -246,28 +258,210 @@ class CloudController(object):
             pass
         return True
 
-    def describe_security_groups(self, context, group_names, **kwargs):
-        groups = {'securityGroupSet': []}
+    def describe_security_groups(self, context, group_name=None, **kwargs):
+        self._ensure_default_security_group(context)
+        if context.user.is_admin():
+            groups = db.security_group_get_all(context)
+        else:
+            groups = db.security_group_get_by_project(context,
+                                                      context.project.id)
+        groups = [self._format_security_group(context, g) for g in groups]
+        if not group_name is None:
+            groups = [g for g in groups if g.name in group_name]
 
-        # Stubbed for now to unblock other things.
-        return groups
+        return {'securityGroupInfo': groups }
 
-    def create_security_group(self, context, group_name, **kwargs):
+    def _format_security_group(self, context, group):
+        g = {}
+        g['groupDescription'] = group.description
+        g['groupName'] = group.name
+        g['ownerId'] = group.project_id
+        g['ipPermissions'] = []
+        for rule in group.rules:
+            r = {}
+            r['ipProtocol'] = rule.protocol
+            r['fromPort'] = rule.from_port
+            r['toPort'] = rule.to_port
+            r['groups'] = []
+            r['ipRanges'] = []
+            if rule.group_id:
+                source_group = db.security_group_get(context, rule.group_id)
+                r['groups'] += [{'groupName': source_group.name,
+                                 'userId': source_group.project_id}]
+            else:
+                r['ipRanges'] += [{'cidrIp': rule.cidr}]
+            g['ipPermissions'] += [r]
+        return g
+
+
+    def _authorize_revoke_rule_args_to_dict(self, context,
+                                            to_port=None, from_port=None,
+                                            ip_protocol=None, cidr_ip=None,
+                                            user_id=None,
+                                            source_security_group_name=None,
+                                            source_security_group_owner_id=None):
+
+        values = {}
+
+        if source_security_group_name:
+            source_project_id = self._get_source_project_id(context,
+                source_security_group_owner_id)
+
+            source_security_group = \
+                    db.security_group_get_by_name(context,
+                                                  source_project_id,
+                                                  source_security_group_name)
+            values['group_id'] = source_security_group['id']
+        elif cidr_ip:
+            # If this fails, it throws an exception. This is what we want.
+            IPy.IP(cidr_ip)
+            values['cidr'] = cidr_ip
+        else:
+            values['cidr'] = '0.0.0.0/0'
+
+        if ip_protocol and from_port and to_port:
+            from_port   = int(from_port)
+            to_port     = int(to_port)
+            ip_protocol = str(ip_protocol)
+
+            if ip_protocol.upper() not in ['TCP','UDP','ICMP']:
+                 raise InvalidInputException('%s is not a valid ipProtocol' %
+                                                 (ip_protocol,))
+            if ((min(from_port, to_port) < -1) or
+                (max(from_port, to_port) > 65535)):
+                 raise InvalidInputException('Invalid port range')
+
+            values['protocol'] = ip_protocol
+            values['from_port'] = from_port
+            values['to_port'] = to_port
+        else:
+            # If cidr based filtering, protocol and ports are mandatory
+            if 'cidr' in values:
+                return None
+
+        return values
+
+
+    def _security_group_rule_exists(self, security_group, values):
+        """Indicates whether the specified rule values are already
+           defined in the given security group.
+        """
+        for rule in security_group.rules:
+            if 'group_id' in values:
+                if rule['group_id'] == values['group_id']:
+                    return True
+            else:
+                is_duplicate = True
+                for key in ('cidr', 'from_port', 'to_port', 'protocol'):
+                    if rule[key] != values[key]:
+                        is_duplicate = False
+                        break
+                if is_duplicate:
+                    return True
+        return False
+
+
+    def revoke_security_group_ingress(self, context, group_name, **kwargs):
+        self._ensure_default_security_group(context)
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
+
+        criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
+        if criteria == None:
+            raise exception.ApiError("No rule for the specified parameters.")
+
+        for rule in security_group.rules:
+            match = True
+            for (k,v) in criteria.iteritems():
+                if getattr(rule, k, False) != v:
+                    match = False
+            if match:
+                db.security_group_rule_destroy(context, rule['id'])
+                self._trigger_refresh_security_group(security_group)
+                return True
+        raise exception.ApiError("No rule for the specified parameters.")
+
+    # TODO(soren): This has only been tested with Boto as the client.
+    #              Unfortunately, it seems Boto is using an old API
+    #              for these operations, so support for newer API versions
+    #              is sketchy.
+    def authorize_security_group_ingress(self, context, group_name, **kwargs):
+        self._ensure_default_security_group(context)
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
+
+        values = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
+        values['parent_group_id'] = security_group.id
+
+        if self._security_group_rule_exists(security_group, values):
+            raise exception.ApiError('This rule already exists in group %s' %
+                                     group_name)
+
+        security_group_rule = db.security_group_rule_create(context, values)
+
+        self._trigger_refresh_security_group(security_group)
+
         return True
+
+
+    def _get_source_project_id(self, context, source_security_group_owner_id):
+        if source_security_group_owner_id:
+        # Parse user:project for source group.
+            source_parts = source_security_group_owner_id.split(':')
+
+            # If no project name specified, assume it's same as user name.
+            # Since we're looking up by project name, the user name is not
+            # used here.  It's only read for EC2 API compatibility.
+            if len(source_parts) == 2:
+                source_project_id = source_parts[1]
+            else:
+                source_project_id = source_parts[0]
+        else:
+            source_project_id = context.project.id
+
+        return source_project_id
+
+
+    def create_security_group(self, context, group_name, group_description):
+        self._ensure_default_security_group(context)
+        if db.security_group_exists(context, context.project.id, group_name):
+            raise exception.ApiError('group %s already exists' % group_name)
+
+        group = {'user_id' : context.user.id,
+                 'project_id': context.project.id,
+                 'name': group_name,
+                 'description': group_description}
+        group_ref = db.security_group_create(context, group)
+
+        return {'securityGroupSet': [self._format_security_group(context,
+                                                                 group_ref)]}
+
 
     def delete_security_group(self, context, group_name, **kwargs):
+        security_group = db.security_group_get_by_name(context,
+                                                       context.project.id,
+                                                       group_name)
+        db.security_group_destroy(context, security_group.id)
         return True
 
-    def get_console_output(self, context, ec2_id_list, **kwargs):
-        # ec2_id_list is passed in as a list of instances
-        ec2_id = ec2_id_list[0]
+
+    def get_console_output(self, context, instance_id, **kwargs):
+        # instance_id is passed in as a list of instances
+        ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
-        return rpc.call('%s.%s' % (FLAGS.compute_topic,
-                                   instance_ref['host']),
-                        {"method": "get_console_output",
-                         "args": {"context": None,
-                                  "instance_id": instance_ref['id']}})
+        output = rpc.call('%s.%s' % (FLAGS.compute_topic,
+                                instance_ref['host']),
+                     { "method" : "get_console_output",
+                       "args"   : { "context": None,
+                                    "instance_id": instance_ref['id']}})
+
+        now = datetime.datetime.utcnow()
+        return { "InstanceId" : ec2_id,
+                 "Timestamp"  : now,
+                 "output"     : base64.b64encode(output) }
 
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():
@@ -545,14 +739,26 @@ class CloudController(object):
 
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
-        network_ref = db.project_get_network(context, context.project.id)
+        network_ref = self.network_manager.get_network(context)
         host = network_ref['host']
         if not host:
             host = rpc.call(FLAGS.network_topic,
                                   {"method": "set_network_host",
                                    "args": {"context": None,
-                                            "project_id": context.project.id}})
+                                            "network_id": network_ref['id']}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
+
+    def _ensure_default_security_group(self, context):
+        try:
+            db.security_group_get_by_name(context,
+                                          context.project.id,
+                                          'default')
+        except exception.NotFound:
+            values = { 'name'        : 'default',
+                       'description' : 'default',
+                       'user_id'     : context.user.id,
+                       'project_id'  : context.project.id }
+            group = db.security_group_create(context, values)
 
     def run_instances(self, context, **kwargs):
         instance_type = kwargs.get('instance_type', 'm1.small')
@@ -601,8 +807,17 @@ class CloudController(object):
                                       kwargs['key_name'])
             key_data = key_pair_ref['public_key']
 
-        # TODO: Get the real security group of launch in here
-        security_group = "default"
+        security_group_arg = kwargs.get('security_group', ["default"])
+        if not type(security_group_arg) is list:
+            security_group_arg = [security_group_arg]
+
+        security_groups = []
+        self._ensure_default_security_group(context)
+        for security_group_name in security_group_arg:
+            group = db.security_group_get_by_name(context,
+                                                  context.project.id,
+                                                  security_group_name)
+            security_groups.append(group['id'])
 
         reservation_id = utils.generate_uid('r')
         base_options = {}
@@ -616,12 +831,12 @@ class CloudController(object):
         base_options['user_id'] = context.user.id
         base_options['project_id'] = context.project.id
         base_options['user_data'] = kwargs.get('user_data', '')
-        base_options['security_group'] = security_group
-        base_options['instance_type'] = instance_type
+
         base_options['display_name'] = kwargs.get('display_name')
         base_options['display_description'] = kwargs.get('display_description')
 
         type_data = INSTANCE_TYPES[instance_type]
+        base_options['instance_type'] = instance_type
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
@@ -630,6 +845,10 @@ class CloudController(object):
             instance_ref = db.instance_create(context, base_options)
             inst_id = instance_ref['id']
 
+            for security_group_id in security_groups:
+                db.instance_add_security_group(context, inst_id,
+                                               security_group_id)
+
             inst = {}
             inst['mac_address'] = utils.generate_mac()
             inst['launch_index'] = num
@@ -637,12 +856,13 @@ class CloudController(object):
             ec2_id = internal_id_to_ec2_id(internal_id)
             inst['hostname'] = ec2_id
             db.instance_update(context, inst_id, inst)
+            # TODO(vish): This probably should be done in the scheduler
+            #             or in compute as a call.  The network should be
+            #             allocated after the host is assigned and setup
+            #             can happen at the same time.
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
                                                              vpn)
-
-            # TODO(vish): This probably should be done in the scheduler
-            #             network is setup when host is assigned
             network_topic = self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",
@@ -659,7 +879,12 @@ class CloudController(object):
         return self._format_run_instances(context, reservation_id)
 
 
-    def terminate_instances(self, context, ec2_id_list, **kwargs):
+    def terminate_instances(self, context, instance_id, **kwargs):
+        """Terminate each instance in instance_id, which is a list of ec2 ids.
+
+        instance_id is a kwarg so its name cannot be modified.
+        """
+        ec2_id_list = instance_id
         logging.debug("Going to start terminating instances")
         for id_str in ec2_id_list:
             internal_id = ec2_id_to_internal_id(id_str)

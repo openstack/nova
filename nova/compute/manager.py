@@ -64,14 +64,19 @@ class ComputeManager(manager.Manager):
 
     @defer.inlineCallbacks
     @exception.wrap_exception
+    def refresh_security_group(self, context, security_group_id, **_kwargs):
+        yield self.driver.refresh_security_group(security_group_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref['internal_id'] in self.driver.list_instances():
+        if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
         project_id = instance_ref['project_id']
-        self.network_manager.setup_compute_network(context, project_id)
+        self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
                                 {'host': self.host})
@@ -144,26 +149,10 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
-        # TODO(vish): Move this into the driver layer
-
         logging.debug("instance %s: getting console output", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        if FLAGS.connection_type == 'libvirt':
-            fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['internal_id'],
-                                                 'console.log'))
-            with open(fname, 'r') as f:
-                output = f.read()
-        else:
-            output = 'FAKE CONSOLE OUTPUT'
-
-        # TODO(termie): this stuff belongs in the API layer, no need to
-        #               munge the data we send to ourselves
-        output = {"InstanceId": instance_id,
-                  "Timestamp": "2",
-                  "output": base64.b64encode(output)}
-        return output
+        return self.driver.get_console_output(instance_ref)
 
     @defer.inlineCallbacks
     @exception.wrap_exception

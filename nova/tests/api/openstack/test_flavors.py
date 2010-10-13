@@ -21,8 +21,8 @@ import stubout
 import webob
 
 import nova.api
-from nova.api.rackspace import flavors
-from nova.tests.api.rackspace import fakes
+from nova.api.openstack import flavors
+from nova.tests.api.openstack import fakes
 
 
 class FlavorsTest(unittest.TestCase):
