@@ -222,6 +222,10 @@ DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
+# The service to use for image search and retrieval
+DEFINE_string('image_service', 'nova.image.service.LocalImageService',
+              'The service to use for retrieving and searching for images.')
+
 DEFINE_string('host', socket.gethostname(),
               'name of this node')
 

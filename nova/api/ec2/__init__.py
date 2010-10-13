@@ -27,8 +27,8 @@ import webob.exc
 from nova import exception
 from nova import flags
 from nova import wsgi
+from nova.api import context
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import context
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
 from nova.auth import manager
@@ -142,6 +142,8 @@ class Authorizer(wsgi.Middleware):
                 'CreateKeyPair': ['all'],
                 'DeleteKeyPair': ['all'],
                 'DescribeSecurityGroups': ['all'],
+                'AuthorizeSecurityGroupIngress': ['netadmin'],
+                'RevokeSecurityGroupIngress': ['netadmin'],
                 'CreateSecurityGroup': ['netadmin'],
                 'DeleteSecurityGroup': ['netadmin'],
                 'GetConsoleOutput': ['projectmanager', 'sysadmin'],
@@ -193,15 +195,15 @@ class Authorizer(wsgi.Middleware):
             return True
         if 'none' in roles:
             return False
-        return any(context.project.has_role(context.user.id, role) 
+        return any(context.project.has_role(context.user.id, role)
                    for role in roles)
-    
+
 
 class Executor(wsgi.Application):
 
     """Execute an EC2 API request.
 
-    Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and 
+    Executes 'ec2.action' upon 'ec2.controller', passing 'ec2.context' and
     'ec2.action_args' (all variables in WSGI environ.)  Returns an XML
     response, or a 400 upon failure.
     """

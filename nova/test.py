@@ -94,6 +94,7 @@ class TrialTestCase(unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
+        db.security_group_destroy_all(None)
 
         super(TrialTestCase, self).tearDown()
 

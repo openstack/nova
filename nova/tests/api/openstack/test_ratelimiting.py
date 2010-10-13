@@ -4,7 +4,7 @@ import time
 import unittest
 import webob
 
-import nova.api.rackspace.ratelimiting as ratelimiting
+import nova.api.openstack.ratelimiting as ratelimiting
 
 class LimiterTest(unittest.TestCase):
 

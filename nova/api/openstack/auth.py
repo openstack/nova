@@ -11,7 +11,7 @@ from nova import db
 from nova import flags
 from nova import manager
 from nova import utils
-from nova.api.rackspace import faults
+from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
@@ -19,7 +19,7 @@ class Context(object):
     pass
 
 class BasicApiAuthManager(object):
-    """ Implements a somewhat rudimentary version of Rackspace Auth"""
+    """ Implements a somewhat rudimentary version of OpenStack Auth"""
 
     def __init__(self, host=None, db_driver=None):
         if not host:
