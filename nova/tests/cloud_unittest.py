@@ -75,7 +75,6 @@ class CloudTestCase(test.TrialTestCase):
                                                     proxy=self.network)
         self.network_consumer.attach_to_eventlet()
 
-
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')

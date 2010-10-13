@@ -149,26 +149,10 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
-        # TODO(vish): Move this into the driver layer
-
         logging.debug("instance %s: getting console output", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        if FLAGS.connection_type == 'libvirt':
-            fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['internal_id'],
-                                                 'console.log'))
-            with open(fname, 'r') as f:
-                output = f.read()
-        else:
-            output = 'FAKE CONSOLE OUTPUT'
-
-        # TODO(termie): this stuff belongs in the API layer, no need to
-        #               munge the data we send to ourselves
-        output = {"InstanceId": instance_id,
-                  "Timestamp": "2",
-                  "output": base64.b64encode(output)}
-        return output
+        return self.driver.get_console_output(instance_ref)
 
     @defer.inlineCallbacks
     @exception.wrap_exception

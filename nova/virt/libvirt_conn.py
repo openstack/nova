@@ -50,6 +50,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.qemu.xml.template'),
                     'Libvirt XML Template for QEmu/KVM')
+flags.DEFINE_string('libvirt_xen_xml_template',
+                    utils.abspath('virt/libvirt.xen.xml.template'),
+                    'Libvirt XML Template for Xen')
 flags.DEFINE_string('libvirt_uml_xml_template',
                     utils.abspath('virt/libvirt.uml.xml.template'),
                     'Libvirt XML Template for user-mode-linux')
@@ -58,7 +61,7 @@ flags.DEFINE_string('injected_network_template',
                     'Template file for injected network')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
-                    'Libvirt domain type (valid options are: kvm, qemu, uml)')
+                    'Libvirt domain type (valid options are: kvm, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
@@ -110,6 +113,9 @@ class LibvirtConnection(object):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
             template_file = FLAGS.libvirt_uml_xml_template
+        elif FLAGS.libvirt_type == 'xen':
+            uri = FLAGS.libvirt_uri or 'xen:///'
+            template_file = FLAGS.libvirt_xen_xml_template
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
             template_file = FLAGS.libvirt_xml_template
@@ -248,6 +254,46 @@ class LibvirtConnection(object):
         timer.f = _wait_for_boot
         timer.start(interval=0.5, now=True)
         yield local_d
+
+    def _flush_xen_console(self, virsh_output):
+        logging.info('virsh said: %r' % (virsh_output,))
+        virsh_output = virsh_output[0].strip()
+
+        if virsh_output.startswith('/dev/'):
+            logging.info('cool, it\'s a device')
+            d = process.simple_execute("sudo dd if=%s iflag=nonblock" % virsh_output, check_exit_code=False)
+            d.addCallback(lambda r:r[0])
+            return d
+        else:
+            return ''
+
+    def _append_to_file(self, data, fpath):
+        logging.info('data: %r, fpath: %r' % (data, fpath))
+        fp = open(fpath, 'a+')
+        fp.write(data)
+        return fpath
+        
+    def _dump_file(self, fpath):
+        fp = open(fpath, 'r+')
+        contents = fp.read()
+        logging.info('Contents: %r' % (contents,))
+        return contents
+
+    @exception.wrap_exception
+    def get_console_output(self, instance):
+        console_log = os.path.join(FLAGS.instances_path, instance['internal_id'], 'console.log')
+        logging.info('console_log: %s' % console_log)
+        logging.info('FLAGS.libvirt_type: %s' % FLAGS.libvirt_type)
+        if FLAGS.libvirt_type == 'xen':
+            # Xen is spethial
+            d = process.simple_execute("virsh ttyconsole %s" % instance['name'])
+            d.addCallback(self._flush_xen_console)
+            d.addCallback(self._append_to_file, console_log)
+        else:
+            d = defer.succeed(console_log)
+        d.addCallback(self._dump_file)
+        return d
+
 
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml):
