@@ -64,12 +64,12 @@ class CloudTestCase(test.TrialTestCase):
         self.cloud = cloud.CloudController()
 
         # set up a service
-        self.compute = utils.import_class(FLAGS.compute_manager)()
+        self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                     topic=FLAGS.compute_topic,
                                                     proxy=self.compute)
         self.compute_consumer.attach_to_eventlet()
-        self.network = utils.import_class(FLAGS.network_manager)()
+        self.network = utils.import_object(FLAGS.network_manager)
         self.network_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                     topic=FLAGS.network_topic,
                                                     proxy=self.network)

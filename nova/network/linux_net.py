@@ -65,12 +65,12 @@ def init_host():
     # SNAT rule for outbound traffic.
     _confirm_rule("POSTROUTING", "-t nat -s %s "
              "-j SNAT --to-source %s"
-             % (FLAGS.private_range, FLAGS.routing_source_ip))
+             % (FLAGS.fixed_range, FLAGS.routing_source_ip))
 
     _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
-                  FLAGS.private_range)
+                  FLAGS.fixed_range)
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
-                  {'range': FLAGS.private_range})
+                  {'range': FLAGS.fixed_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""

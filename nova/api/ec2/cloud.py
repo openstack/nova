@@ -734,13 +734,13 @@ class CloudController(object):
 
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
-        network_ref = db.project_get_network(context, context.project.id)
+        network_ref = self.network_manager.get_network(context)
         host = network_ref['host']
         if not host:
             host = rpc.call(FLAGS.network_topic,
                                   {"method": "set_network_host",
                                    "args": {"context": None,
-                                            "project_id": context.project.id}})
+                                            "network_id": network_ref['id']}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
     def _ensure_default_security_group(self, context):
@@ -851,12 +851,13 @@ class CloudController(object):
             ec2_id = internal_id_to_ec2_id(internal_id)
             inst['hostname'] = ec2_id
             db.instance_update(context, inst_id, inst)
+            # TODO(vish): This probably should be done in the scheduler
+            #             or in compute as a call.  The network should be
+            #             allocated after the host is assigned and setup
+            #             can happen at the same time.
             address = self.network_manager.allocate_fixed_ip(context,
                                                              inst_id,
                                                              vpn)
-
-            # TODO(vish): This probably should be done in the scheduler
-            #             network is setup when host is assigned
             network_topic = self._get_network_topic(context)
             rpc.call(network_topic,
                      {"method": "setup_fixed_ip",

@@ -287,7 +287,7 @@ class LibvirtConnection(object):
 
         key = str(inst['key_data'])
         net = None
-        network_ref = db.project_get_network(None, project.id)
+        network_ref = db.network_get_by_instance(None, inst['id'])
         if network_ref['injected']:
             address = db.instance_get_fixed_address(None, inst['id'])
             with open(FLAGS.injected_network_template) as f:
@@ -320,7 +320,8 @@ class LibvirtConnection(object):
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug('instance %s: starting toXML method', instance['name'])
-        network = db.project_get_network(None, instance['project_id'])
+        network = db.project_get_network(None,
+                                         instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
         ip_address = db.instance_get_fixed_address({}, instance['id'])
