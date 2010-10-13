@@ -17,13 +17,13 @@
 
 from webob import exc
 
-from nova.api.rackspace import faults
+from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova import wsgi
-import nova.api.rackspace
+import nova.api.openstack
 
 class Controller(wsgi.Controller):
-    """Flavor controller for the Rackspace API."""
+    """Flavor controller for the OpenStack API."""
 
     _serialization_metadata = {
         'application/xml': {
@@ -41,7 +41,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
-        items = nova.api.rackspace.limited(items, req)
+        items = nova.api.openstack.limited(items, req)
         return dict(flavors=items)
 
     def show(self, req, id):
