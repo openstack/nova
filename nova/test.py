@@ -24,6 +24,7 @@ and some black magic for inline callbacks.
 
 import sys
 import time
+import datetime
 
 import mox
 import stubout
@@ -62,6 +63,7 @@ class TrialTestCase(unittest.TestCase):
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
+        self.start = datetime.datetime.utcnow()
         if db.network_count(None) != 5:
             network_manager.VlanManager().create_networks(None,
                                                           FLAGS.fixed_range,
@@ -84,6 +86,8 @@ class TrialTestCase(unittest.TestCase):
         self.stubs.UnsetAll()
         self.stubs.SmartUnsetAll()
         self.mox.VerifyAll()
+        # NOTE(vish): Clean up any ips associated during the test.
+        db.fixed_ip_disassociate_all_by_timeout(None, FLAGS.host, self.start)
         db.network_disassociate_all(None)
         rpc.Consumer.attach_to_twisted = self.originalAttach
         for x in self.injected:

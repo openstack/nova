@@ -320,7 +320,8 @@ class LibvirtConnection(object):
     def to_xml(self, instance):
         # TODO(termie): cache?
         logging.debug('instance %s: starting toXML method', instance['name'])
-        network = db.instance_get_fixed_by_instance(None, inst['id'])
+        network = db.project_get_network(None,
+                                         instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
         ip_address = db.instance_get_fixed_address({}, instance['id'])

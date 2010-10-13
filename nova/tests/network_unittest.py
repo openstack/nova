@@ -58,7 +58,8 @@ class NetworkTestCase(test.TrialTestCase):
             user_context = context.APIRequestContext(project=self.projects[i],
                                                      user=self.user)
             network_ref = self.network.get_network(user_context)
-            self.network.set_network_host(user_context, network_ref['id'])
+            self.network.set_network_host(context.get_admin_context(),
+                                          network_ref['id'])
         instance_ref = self._create_instance(0)
         self.instance_id = instance_ref['id']
         instance_ref = self._create_instance(1)
