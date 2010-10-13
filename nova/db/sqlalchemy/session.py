@@ -36,7 +36,8 @@ def get_session(autocommit=True, expire_on_commit=False):
     if not _MAKER:
         if not _ENGINE:
             _ENGINE = create_engine(FLAGS.sql_connection, echo=False)
-        _MAKER = sessionmaker(bind=_ENGINE,
-                              autocommit=autocommit,
-                              expire_on_commit=expire_on_commit)
-    return _MAKER()
+        _MAKER = (sessionmaker(bind=_ENGINE,
+                                autocommit=autocommit,
+                                expire_on_commit=expire_on_commit))
+    session =  _MAKER()
+    return session
