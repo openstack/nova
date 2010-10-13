@@ -39,6 +39,8 @@ flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
+flags.DEFINE_string('flat_network_dhcp_start', '192.168.0.2',
+                    'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
@@ -93,7 +95,7 @@ class NetworkManager(manager.Manager):
         """Gets a fixed ip from the pool"""
         raise NotImplementedError()
 
-    def deallocate_fixed_ip(self, context, instance_id, *args, **kwargs):
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool"""
         raise NotImplementedError()
 
@@ -135,6 +137,48 @@ class NetworkManager(manager.Manager):
         """Returns an floating ip to the pool"""
         self.db.floating_ip_deallocate(context, floating_address)
 
+    def lease_fixed_ip(self, context, mac, address):
+        """Called by dhcp-bridge when ip is leased"""
+        logging.debug("Leasing IP %s", address)
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        instance_ref = fixed_ip_ref['instance']
+        if not instance_ref:
+            raise exception.Error("IP %s leased that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s leased to bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
+        self.db.fixed_ip_update(context,
+                                fixed_ip_ref['address'],
+                                {'leased': True})
+        if not fixed_ip_ref['allocated']:
+            logging.warn("IP %s leased that was already deallocated", address)
+
+    def release_fixed_ip(self, context, mac, address):
+        """Called by dhcp-bridge when ip is released"""
+        logging.debug("Releasing IP %s", address)
+        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
+        instance_ref = fixed_ip_ref['instance']
+        if not instance_ref:
+            raise exception.Error("IP %s released that isn't associated" %
+                                  address)
+        if instance_ref['mac_address'] != mac:
+            raise exception.Error("IP %s released from bad mac %s vs %s" %
+                                  (address, instance_ref['mac_address'], mac))
+        if not fixed_ip_ref['leased']:
+            logging.warn("IP %s released that was not leased", address)
+        self.db.fixed_ip_update(context,
+                                fixed_ip_ref['str_id'],
+                                {'leased': False})
+        if not fixed_ip_ref['allocated']:
+            self.db.fixed_ip_disassociate(context, address)
+            # NOTE(vish): dhcp server isn't updated until next setup, this
+            #             means there will stale entries in the conf file
+            #             the code below will update the file if necessary
+            if FLAGS.update_dhcp_on_disassociate:
+                network_ref = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network_ref['id'])
+
     def get_network(self, context):
         """Get the network for the current context"""
         raise NotImplementedError()
@@ -143,7 +187,6 @@ class NetworkManager(manager.Manager):
                         *args, **kwargs):
         """Create networks based on parameters"""
         raise NotImplementedError()
-
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
@@ -243,6 +286,30 @@ class FlatManager(NetworkManager):
 
 
 
+class FlatDHCPManager(NetworkManager):
+    """Flat networking with dhcp"""
+
+    def setup_fixed_ip(self, context, address):
+        """Setup dhcp for this network"""
+        network_ref = db.fixed_ip_get_by_address(context, address)
+        self.driver.update_dhcp(context, network_ref['id'])
+
+    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
+        """Returns a fixed ip to the pool"""
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+
+    def _on_set_network_host(self, context, network_id):
+        """Called when this host becomes the host for a project"""
+        super(FlatDHCPManager, self)._on_set_network_host(context, network_id)
+        network_ref = self.db.network_get(context, network_id)
+        self.db.network_update(context,
+                               network_id,
+                               {'dhcp_start': FLAGS.flat_network_dhcp_start})
+        self.driver.ensure_bridge(network_ref['bridge'],
+                                  FLAGS.bridge_dev,
+                                  network_ref)
+
+
 class VlanManager(NetworkManager):
     """Vlan network with dhcp"""
 
@@ -285,8 +352,6 @@ class VlanManager(NetworkManager):
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool"""
         self.db.fixed_ip_update(context, address, {'allocated': False})
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-
 
     def setup_fixed_ip(self, context, address):
         """Sets forwarding rules and dhcp for fixed ip"""
@@ -297,48 +362,6 @@ class VlanManager(NetworkManager):
                                             network_ref['vpn_public_port'],
                                             network_ref['vpn_private_address'])
         self.driver.update_dhcp(context, network_ref['id'])
-
-    def lease_fixed_ip(self, context, mac, address):
-        """Called by dhcp-bridge when ip is leased"""
-        logging.debug("Leasing IP %s", address)
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        instance_ref = fixed_ip_ref['instance']
-        if not instance_ref:
-            raise exception.Error("IP %s leased that isn't associated" %
-                                  address)
-        if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s leased to bad mac %s vs %s" %
-                                  (address, instance_ref['mac_address'], mac))
-        self.db.fixed_ip_update(context,
-                                fixed_ip_ref['address'],
-                                {'leased': True})
-        if not fixed_ip_ref['allocated']:
-            logging.warn("IP %s leased that was already deallocated", address)
-
-    def release_fixed_ip(self, context, mac, address):
-        """Called by dhcp-bridge when ip is released"""
-        logging.debug("Releasing IP %s", address)
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        instance_ref = fixed_ip_ref['instance']
-        if not instance_ref:
-            raise exception.Error("IP %s released that isn't associated" %
-                                  address)
-        if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s released from bad mac %s vs %s" %
-                                  (address, instance_ref['mac_address'], mac))
-        if not fixed_ip_ref['leased']:
-            logging.warn("IP %s released that was not leased", address)
-        self.db.fixed_ip_update(context,
-                                fixed_ip_ref['str_id'],
-                                {'leased': False})
-        if not fixed_ip_ref['allocated']:
-            self.db.fixed_ip_disassociate(context, address)
-            # NOTE(vish): dhcp server isn't updated until next setup, this
-            #             means there will stale entries in the conf file
-            #             the code below will update the file if necessary
-            if FLAGS.update_dhcp_on_disassociate:
-                network_ref = self.db.fixed_ip_get_network(context, address)
-                self.driver.update_dhcp(context, network_ref['id'])
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts"""
