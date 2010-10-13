@@ -27,12 +27,14 @@ import urlparse
 import shutil
 
 from nova import flags
+from nova import process
 from nova.auth import manager
 from nova.auth import signer
 
 import logging
 import urllib2
 import os
+import sys
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('use_s3', True,
@@ -47,6 +49,24 @@ def fetch(image, path, user, project):
     return f(image, path, user, project)
 
 
+def _fetch_image_no_curl(url, path, headers):
+    request = urllib2.Request(url)
+    for (k, v) in headers.iteritems():
+        request.add_header(k, v)
+
+    def urlretrieve(urlfile, fpath):
+        chunk = 1*1024*1024
+        f = open(fpath, "wb")
+        while 1:
+            data = urlfile.read(chunk)
+            if not data:
+                break
+            f.write(data)
+
+    urlopened = urllib2.urlopen(request)
+    urlretrieve(urlopened, path)
+    logging.debug("Finished retreving %s -- placed in %s", url, path)
+    
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
     logging.debug("About to retrieve %s and place it in %s", url, path)
@@ -64,32 +84,22 @@ def _fetch_s3_image(image, path, user, project):
                                                                      url_path)
     headers['Authorization'] = 'AWS %s:%s' % (access, signature)
 
-    def urlretrieve(urlfile, fpath):
-        chunk = 1*1024*1024
-        f = open(fpath, "wb")
-        while 1:
-            data = urlfile.read(chunk)
-            if not data:
-                break
-            f.write(data)
-
-    request = urllib2.Request(url)
-    for (k, v) in headers.iteritems():
-        request.add_header(k, v)
-
-    urlopened = urllib2.urlopen(request)
-
-    urlretrieve(urlopened, path)
-
-    logging.debug("Finished retreving %s -- placed in %s", url, path)
-
-    return
-
+    if sys.platform.startswith('win'):
+        return _fetch_image_no_curl(url, path, headers)
+    else:
+        cmd = ['/usr/bin/curl', '--fail', '--silent', url]
+        for (k,v) in headers.iteritems():
+            cmd += ['-H', '%s: %s' % (k,v)]
+            cmd += ['-o', path]
+            return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
 def _fetch_local_image(image, path, user, project):
     source = _image_path(os.path.join(image,'image'))
     logging.debug("About to copy %s to %s", source, path)
-    return shutil.copy(source, path)
+    if sys.platform.startswith('win'):
+        return shutil.copy(source, path)
+    else:
+        return process.simple_execute('cp %s %s' % (source, path))
 
 
 def _image_path(path):
