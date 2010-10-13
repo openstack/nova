@@ -218,19 +218,45 @@ class ParallaxClient(object):
         """
         Tells parallax about an image's metadata
         """
-        pass
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            body = json.dumps(image_metadata)
+            c.request("POST", "images", body)
+            res = c.getresponse()
+            if res.status == 200:
+                # Parallax returns a JSONified dict(image=image_info)
+                data = json.loads(res.read())['image']
+                return data['id']
+            else:
+                # TODO(jaypipes): log the error?
+                return None
+        finally:
+            c.close()
 
     def update_image_metadata(self, image_id, image_metadata):
         """
         Updates Parallax's information about an image
         """
-        pass
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            body = json.dumps(image_metadata)
+            c.request("PUT", "images/%s" % image_id, body)
+            res = c.getresponse()
+            return res.status == 200
+        finally:
+            c.close()
 
     def delete_image_metadata(self, image_id):
         """
         Deletes Parallax's information about an image
         """
-        pass
+        try:
+            c = self.connection_type(self.netloc, self.port)
+            c.request("DELETE", "images/%s" % image_id)
+            res = c.getresponse()
+            return res.status == 200
+        finally:
+            c.close()
 
 
 class GlanceImageService(BaseImageService):
