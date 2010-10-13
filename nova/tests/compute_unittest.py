@@ -40,7 +40,8 @@ class ComputeTestCase(test.TrialTestCase):
     def setUp(self):  # pylint: disable-msg=C0103
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
-        self.flags(connection_type='fake')
+        self.flags(connection_type='fake',
+                   network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')

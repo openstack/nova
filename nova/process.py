@@ -113,7 +113,7 @@ class BackRelayWithInput(protocol.ProcessProtocol):
         if self.started_deferred:
             self.started_deferred.callback(self)
         if self.process_input:
-            self.transport.write(self.process_input)
+            self.transport.write(str(self.process_input))
         self.transport.closeStdin()
 
 def get_process_output(executable, args=None, env=None, path=None,

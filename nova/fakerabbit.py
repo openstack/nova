@@ -116,6 +116,7 @@ class Backend(object):
             message = Message(backend=self, body=message_data,
                               content_type=content_type,
                               content_encoding=content_encoding)
+            message.result = True
             logging.debug('Getting from %s: %s', queue, message)
             return message
 
