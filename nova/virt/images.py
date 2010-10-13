@@ -48,7 +48,6 @@ def fetch(image, path, user, project):
         f = _fetch_local_image
     return f(image, path, user, project)
 
-
 def _fetch_image_no_curl(url, path, headers):
     request = urllib2.Request(url)
     for (k, v) in headers.iteritems():
@@ -101,10 +100,8 @@ def _fetch_local_image(image, path, user, project):
     else:
         return process.simple_execute('cp %s %s' % (source, path))
 
-
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)
-
 
 def image_url(image):
     return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
