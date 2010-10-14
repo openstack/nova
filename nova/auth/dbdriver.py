@@ -23,6 +23,7 @@ Auth driver using the DB as its backend.
 import logging
 import sys
 
+from nova import context
 from nova import exception
 from nova import db
 
@@ -46,26 +47,26 @@ class DbDriver(object):
 
     def get_user(self, uid):
         """Retrieve user by id"""
-        return self._db_user_to_auth_user(db.user_get({}, uid))
+        return self._db_user_to_auth_user(db.user_get(context.get_admin_context(), uid))
 
     def get_user_from_access_key(self, access):
         """Retrieve user by access key"""
-        return self._db_user_to_auth_user(db.user_get_by_access_key({}, access))
+        return self._db_user_to_auth_user(db.user_get_by_access_key(context.get_admin_context(), access))
 
     def get_project(self, pid):
         """Retrieve project by id"""
-        return self._db_project_to_auth_projectuser(db.project_get({}, pid))
+        return self._db_project_to_auth_projectuser(db.project_get(context.get_admin_context(), pid))
 
     def get_users(self):
         """Retrieve list of users"""
-        return [self._db_user_to_auth_user(user) for user in db.user_get_all({})]
+        return [self._db_user_to_auth_user(user) for user in db.user_get_all(context.get_admin_context())]
 
     def get_projects(self, uid=None):
         """Retrieve list of projects"""
         if uid:
-            result = db.project_get_by_user({}, uid)
+            result = db.project_get_by_user(context.get_admin_context(), uid)
         else:
-            result = db.project_get_all({})
+            result = db.project_get_all(context.get_admin_context())
         return [self._db_project_to_auth_projectuser(proj) for proj in result]
 
     def create_user(self, name, access_key, secret_key, is_admin):
@@ -76,7 +77,7 @@ class DbDriver(object):
                    'is_admin'   : is_admin
                  }
         try:
-            user_ref = db.user_create({}, values)
+            user_ref = db.user_create(context.get_admin_context(), values)
             return self._db_user_to_auth_user(user_ref)
         except exception.Duplicate, e:
             raise exception.Duplicate('User %s already exists' % name)
@@ -98,7 +99,7 @@ class DbDriver(object):
     def create_project(self, name, manager_uid,
                        description=None, member_uids=None):
         """Create a project"""
-        manager = db.user_get({}, manager_uid)
+        manager = db.user_get(context.get_admin_context(), manager_uid)
         if not manager:
             raise exception.NotFound("Project can't be created because "
                                      "manager %s doesn't exist" % manager_uid)
@@ -113,7 +114,7 @@ class DbDriver(object):
         members = set([manager])
         if member_uids != None:
             for member_uid in member_uids:
-                member = db.user_get({}, member_uid)
+                member = db.user_get(context.get_admin_context(), member_uid)
                 if not member:
                     raise exception.NotFound("Project can't be created "
                                              "because user %s doesn't exist"
@@ -126,17 +127,20 @@ class DbDriver(object):
                    'description': description }
 
         try:
-            project = db.project_create({}, values)
+            project = db.project_create(context.get_admin_context(), values)
         except exception.Duplicate:
             raise exception.Duplicate("Project can't be created because "
                                       "project %s already exists" % name)
 
         for member in members:
-            db.project_add_member({}, project['id'], member['id'])
+            db.project_add_member(context.get_admin_context(),
+                                  project['id'],
+                                  member['id'])
 
         # This looks silly, but ensures that the members element has been
         # correctly populated
-        project_ref = db.project_get({}, project['id'])
+        project_ref = db.project_get(context.get_admin_context(),
+                                     project['id'])
         return self._db_project_to_auth_projectuser(project_ref)
 
     def modify_project(self, project_id, manager_uid=None, description=None):
@@ -145,7 +149,7 @@ class DbDriver(object):
             return
         values = {}
         if manager_uid:
-            manager = db.user_get({}, manager_uid)
+            manager = db.user_get(context.get_admin_context(), manager_uid)
             if not manager:
                 raise exception.NotFound("Project can't be modified because "
                                           "manager %s doesn't exist" %
@@ -154,17 +158,21 @@ class DbDriver(object):
         if description:
             values['description'] = description
 
-        db.project_update({}, project_id, values)
+        db.project_update(context.get_admin_context(), project_id, values)
 
     def add_to_project(self, uid, project_id):
         """Add user to project"""
         user, project = self._validate_user_and_project(uid, project_id)
-        db.project_add_member({}, project['id'], user['id'])
+        db.project_add_member(context.get_admin_context(),
+                              project['id'],
+                              user['id'])
 
     def remove_from_project(self, uid, project_id):
         """Remove user from project"""
         user, project = self._validate_user_and_project(uid, project_id)
-        db.project_remove_member({}, project['id'], user['id'])
+        db.project_remove_member(context.get_admin_context(),
+                                 project['id'],
+                                 user['id'])
 
     def is_in_project(self, uid, project_id):
         """Check if user is in project"""
@@ -183,34 +191,37 @@ class DbDriver(object):
     def add_role(self, uid, role, project_id=None):
         """Add role for user (or user and project)"""
         if not project_id:
-            db.user_add_role({}, uid, role)
+            db.user_add_role(context.get_admin_context(), uid, role)
             return
-        db.user_add_project_role({}, uid, project_id, role)
+        db.user_add_project_role(context.get_admin_context(),
+                                 uid, project_id, role)
 
     def remove_role(self, uid, role, project_id=None):
         """Remove role for user (or user and project)"""
         if not project_id:
-            db.user_remove_role({}, uid, role)
+            db.user_remove_role(context.get_admin_context(), uid, role)
             return
-        db.user_remove_project_role({}, uid, project_id, role)
+        db.user_remove_project_role(context.get_admin_context(),
+                                    uid, project_id, role)
 
     def get_user_roles(self, uid, project_id=None):
         """Retrieve list of roles for user (or user and project)"""
         if project_id is None:
-            roles = db.user_get_roles({}, uid)
+            roles = db.user_get_roles(context.get_admin_context(), uid)
             return roles
         else:
-            roles = db.user_get_roles_for_project({}, uid, project_id)
+            roles = db.user_get_roles_for_project(context.get_admin_context(),
+                                                  uid, project_id)
             return roles
 
     def delete_user(self, id):
         """Delete a user"""
-        user = db.user_get({}, id)
-        db.user_delete({}, user['id'])
+        user = db.user_get(context.get_admin_context(), id)
+        db.user_delete(context.get_admin_context(), user['id'])
 
     def delete_project(self, project_id):
         """Delete a project"""
-        db.project_delete({}, project_id)
+        db.project_delete(context.get_admin_context(), project_id)
 
     def modify_user(self, uid, access_key=None, secret_key=None, admin=None):
         """Modify an existing user"""
@@ -223,13 +234,13 @@ class DbDriver(object):
             values['secret_key'] = secret_key
         if admin is not None:
             values['is_admin'] = admin
-        db.user_update({}, uid, values)
+        db.user_update(context.get_admin_context(), uid, values)
 
     def _validate_user_and_project(self, user_id, project_id):
-        user = db.user_get({}, user_id)
+        user = db.user_get(context.get_admin_context(), user_id)
         if not user:
             raise exception.NotFound('User "%s" not found' % user_id)
-        project = db.project_get({}, project_id)
+        project = db.project_get(context.get_admin_context(), project_id)
         if not project:
             raise exception.NotFound('Project "%s" not found' % project_id)
         return user, project

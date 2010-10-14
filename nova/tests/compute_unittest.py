@@ -24,13 +24,13 @@ import logging
 
 from twisted.internet import defer
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.api import context
 
 FLAGS = flags.FLAGS
 
@@ -46,7 +46,7 @@ class ComputeTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = None
+        self.context = context.get_admin_context()
 
     def tearDown(self):  # pylint: disable-msg=C0103
         self.manager.delete_user(self.user)
@@ -73,13 +73,13 @@ class ComputeTestCase(test.TrialTestCase):
 
         yield self.compute.run_instance(self.context, instance_id)
 
-        instances = db.instance_get_all(None)
+        instances = db.instance_get_all(context.get_admin_context())
         logging.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         yield self.compute.terminate_instance(self.context, instance_id)
 
-        instances = db.instance_get_all(None)
+        instances = db.instance_get_all(context.get_admin_context())
         logging.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
 
@@ -97,8 +97,7 @@ class ComputeTestCase(test.TrialTestCase):
         self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
         yield self.compute.terminate_instance(self.context, instance_id)
-        self.context = context.get_admin_context(user=self.user,
-                                                 read_deleted=True)
+        self.context = self.context.elevated(True)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)

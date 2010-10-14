@@ -67,6 +67,7 @@ class AOEManager(manager.Manager):
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
         """Creates and exports the volume"""
+        context = context.elevated()
         logging.info("volume %s: creating", volume_id)
 
         volume_ref = self.db.volume_get(context, volume_id)
@@ -104,6 +105,7 @@ class AOEManager(manager.Manager):
     @defer.inlineCallbacks
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume"""
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
@@ -125,6 +127,7 @@ class AOEManager(manager.Manager):
 
         Returns path to device.
         """
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         yield self.driver.discover_volume(volume_ref['ec2_id'])
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,

@@ -85,7 +85,7 @@ class NetworkManager(manager.Manager):
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network"""
         logging.debug("setting network host")
-        host = self.db.network_set_host(None,
+        host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
         self._on_set_network_host(context, network_id)
@@ -227,9 +227,9 @@ class FlatManager(NetworkManager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        network_ref = self.db.network_get_by_bridge(None,
+        network_ref = self.db.network_get_by_bridge(context,
                                                     FLAGS.flat_network_bridge)
-        address = self.db.fixed_ip_associate_pool(None,
+        address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                   network_ref['id'],
                                                   instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})
@@ -338,12 +338,13 @@ class VlanManager(NetworkManager):
         # TODO(vish): This should probably be getting project_id from
         #             the instance, but it is another trip to the db.
         #             Perhaps this method should take an instance_ref.
-        network_ref = self.db.project_get_network(context, context.project.id)
+        network_ref = self.db.project_get_network(context.elevated(),
+                                                  context.project_id)
         if kwargs.get('vpn', None):
             address = network_ref['vpn_private_address']
             self.db.fixed_ip_associate(None, address, instance_id)
         else:
-            address = self.db.fixed_ip_associate_pool(None,
+            address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                       network_ref['id'],
                                                       instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})
@@ -402,7 +403,8 @@ class VlanManager(NetworkManager):
 
     def get_network(self, context):
         """Get the network for the current context"""
-        return self.db.project_get_network(None, context.project.id)
+        return self.db.project_get_network(context.elevated(),
+                                           context.project_id)
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network"""

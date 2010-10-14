@@ -25,9 +25,9 @@ import webob.dec
 import webob.exc
 
 from nova import exception
+from nova import context
 from nova import flags
 from nova import wsgi
-from nova.api import context
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
@@ -78,7 +78,10 @@ class Authenticate(wsgi.Middleware):
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
-        req.environ['ec2.context'] = context.APIRequestContext(user, project)
+        ctxt = context.RequestContext(user=user,
+                                      project=project,
+                                      remote_address=req.remote_addr)
+        req.environ['ec2.context'] = ctxt
         return self.application
 
 

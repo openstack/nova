@@ -24,8 +24,8 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import wsgi
+from nova import context
 from nova.api import cloud
-from nova.api.openstack import context
 from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -93,6 +93,7 @@ class Controller(wsgi.Controller):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db_driver = utils.import_object(db_driver)
+        self.network_manager = utils.import_object(FLAGS.network_manager)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -109,7 +110,8 @@ class Controller(wsgi.Controller):
         entity_maker - either _entity_detail or _entity_inst
         """
         user_id = req.environ['nova.context']['user']['id']
-        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
+        ctxt = context.RequestContext(user_id, user_id)
+        instance_list = self.db_driver.instance_get_all_by_user(ctxt, user_id)
         limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
@@ -117,7 +119,8 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_internal_id(None, int(id))
+        ctxt = context.RequestContext(user_id, user_id)
+        inst = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -126,9 +129,10 @@ class Controller(wsgi.Controller):
     def delete(self, req, id):
         """ Destroys a server """
         user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
+        ctxt = context.RequestContext(user_id, user_id)
+        instance = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
         if instance and instance['user_id'] == user_id:
-            self.db_driver.instance_destroy(None, id)
+            self.db_driver.instance_destroy(ctxt, id)
             return faults.Fault(exc.HTTPAccepted())
         return faults.Fault(exc.HTTPNotFound())
 
@@ -144,39 +148,43 @@ class Controller(wsgi.Controller):
         #except Exception, e:
         #    return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        rpc.cast(
-            FLAGS.compute_topic, {
-                "method": "run_instance",
-                "args": {"instance_id": inst['id']}})
+        user_id = req.environ['nova.context']['user']['id']
+        rpc.cast(context.RequestContext(user_id, user_id),
+                 FLAGS.compute_topic,
+                 {"method": "run_instance",
+                  "args": {"instance_id": inst['id']}})
         return _entity_inst(inst)
 
     def update(self, req, id):
         """ Updates the server name or password """
         user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
 
         inst_dict = self._deserialize(req.body, req)
 
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
+        instance = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        self.db_driver.instance_update(None, int(id),
-            _filter_params(inst_dict['server']))
+        self.db_driver.instance_update(ctxt,
+                                       int(id),
+                                       _filter_params(inst_dict['server']))
         return faults.Fault(exc.HTTPNoContent())
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and
         resize a server """
         user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
             raise faults.Fault(webob.exc.HTTPNotImplemented())
-        inst_ref = self.db.instance_get_by_internal_id(None, int(id))
+        inst_ref = self.db.instance_get_by_internal_id(ctxt, int(id))
         if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         cloud.reboot(id)
@@ -187,6 +195,7 @@ class Controller(wsgi.Controller):
         inst = {}
 
         user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
 
         flavor_id = env['server']['flavorId']
 
@@ -233,12 +242,8 @@ class Controller(wsgi.Controller):
         inst['vcpus'] = flavor['vcpus']
         inst['local_gb'] = flavor['local_gb']
 
-        ref = self.db_driver.instance_create(None, inst)
+        ref = self.db_driver.instance_create(ctxt, inst)
         inst['id'] = ref.internal_id
-        # TODO(dietz): this isn't explicitly necessary, but the networking
-        # calls depend on an object with a project_id property, and therefore
-        # should be cleaned up later
-        api_context = context.APIRequestContext(user_id)
 
         inst['mac_address'] = utils.generate_mac()
 
@@ -246,19 +251,19 @@ class Controller(wsgi.Controller):
         inst['launch_index'] = 0
 
         inst['hostname'] = str(ref.internal_id)
-        self.db_driver.instance_update(api_context, inst['id'], inst)
+        self.db_driver.instance_update(ctxt, inst['id'], inst)
 
         network_manager = utils.import_object(FLAGS.network_manager)
-        address = network_manager.allocate_fixed_ip(api_context,
+        address = network_manager.allocate_fixed_ip(ctxt,
             inst['id'])
 
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned
-        network_topic = self._get_network_topic(api_context, network_manager)
-        rpc.call(network_topic,
+        network_topic = self._get_network_topic(ctxt, network_manager)
+        rpc.call(ctxt,
+                 network_topic,
                  {"method": "setup_fixed_ip",
-                  "args": {"context": api_context,
-                           "address": address}})
+                  "args": {"address": address}})
         return inst
 
     def _get_network_topic(self, context, network_manager):
@@ -266,8 +271,8 @@ class Controller(wsgi.Controller):
         network_ref = network_manager.get_network(context)
         host = network_ref['host']
         if not host:
-            host = rpc.call(FLAGS.network_topic,
-                                  {"method": "set_network_host",
-                                   "args": {"context": context,
-                                            "network_id": network_ref['id']}})
-        return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+        return self.db_driver.queue_get_for(context, FLAGS.network_topic, host)

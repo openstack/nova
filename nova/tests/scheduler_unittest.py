@@ -19,6 +19,7 @@
 Tests For Scheduler
 """
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import service
@@ -50,22 +51,24 @@ class SchedulerTestCase(test.TrialTestCase):
     def test_fallback(self):
         scheduler = manager.SchedulerManager()
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        rpc.cast('topic.fallback_host',
+        ctxt = context.get_admin_context()
+        rpc.cast(ctxt,
+                 'topic.fallback_host',
                  {'method': 'noexist',
-                  'args': {'context': None,
-                           'num': 7}})
+                  'args': {'num': 7}})
         self.mox.ReplayAll()
-        scheduler.noexist(None, 'topic', num=7)
+        scheduler.noexist(ctxt, 'topic', num=7)
 
     def test_named_method(self):
         scheduler = manager.SchedulerManager()
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        rpc.cast('topic.named_host',
+        ctxt = context.get_admin_context()
+        rpc.cast(ctxt,
+                 'topic.named_host',
                  {'method': 'named_method',
-                  'args': {'context': None,
-                           'num': 7}})
+                  'args': {'num': 7}})
         self.mox.ReplayAll()
-        scheduler.named_method(None, 'topic', num=7)
+        scheduler.named_method(ctxt, 'topic', num=7)
 
 
 class SimpleDriverTestCase(test.TrialTestCase):
@@ -79,11 +82,10 @@ class SimpleDriverTestCase(test.TrialTestCase):
                    volume_driver='nova.volume.driver.FakeAOEDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
-        self.context = None
         self.manager = auth_manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = None
+        self.context = context.get_admin_context()
 
     def tearDown(self):  # pylint: disable-msg=C0103
         self.manager.delete_user(self.user)

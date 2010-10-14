@@ -83,7 +83,7 @@ class Bucket(object):
         os.makedirs(path)
 
         with open(path+'.json', 'w') as f:
-            json.dump({'ownerId': context.project.id}, f)
+            json.dump({'ownerId': context.project_id}, f)
 
     @property
     def metadata(self):
@@ -106,7 +106,7 @@ class Bucket(object):
 
     def is_authorized(self, context):
         try:
-            return context.user.is_admin() or self.owner_id == context.project.id
+            return context.user.is_admin() or self.owner_id == context.project_id
         except Exception, e:
             return False
 

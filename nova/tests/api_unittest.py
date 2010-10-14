@@ -25,6 +25,7 @@ import random
 import StringIO
 import webob
 
+from nova import context
 from nova import flags
 from nova import test
 from nova import api
@@ -131,7 +132,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
         # NOTE(vish): create depends on pool, so call helper directly
-        cloud._gen_key(None, user.id, keyname)
+        cloud._gen_key(context.get_admin_context(), user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]

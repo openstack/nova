@@ -71,6 +71,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
+        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
@@ -106,6 +107,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
+        context = context.elevated()
         logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -123,6 +125,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
+        context = context.elevated()
         self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -145,6 +148,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
+        context = context.elevated()
         logging.debug("instance %s: getting console output", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -154,6 +158,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
+        context = context.elevated()
         logging.debug("instance %s: attaching volume %s to %s", instance_id,
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
@@ -169,6 +174,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
+        context = context.elevated()
         logging.debug("instance %s: detaching volume %s",
                       instance_id,
                       volume_id)
