@@ -893,14 +893,20 @@ class CloudController(object):
                 instance_ref = db.instance_get_by_internal_id(context, 
                                                               internal_id)
             except exception.NotFound:
-                logging.warning("Instance %s was not found during terminate"
-                                % id_str)
+                logging.warning("Instance %s was not found during terminate",
+                                id_str)
                 continue
 
+            if (instance_ref['state_description'] == 'terminating'):
+                logging.warning("Instance %s is already being terminated",
+                              id_str)
+                continue
             now = datetime.datetime.utcnow()
             db.instance_update(context,
                                instance_ref['id'],
-                               {'terminated_at': now})
+                               {'state_description': 'terminating',
+                                'state': 0,
+                                'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -959,7 +965,8 @@ class CloudController(object):
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
         now = datetime.datetime.utcnow()
-        db.volume_update(context, volume_ref['id'], {'terminated_at': now})
+        db.volume_update(context, volume_ref['id'], {'status': 'deleting',
+                                                     'terminated_at': now})
         host = volume_ref['host']
         rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",

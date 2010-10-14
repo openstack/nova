@@ -62,7 +62,7 @@ class AOEManager(manager.Manager):
         for shelf_id in xrange(FLAGS.num_shelves):
             for blade_id in xrange(FLAGS.blades_per_shelf):
                 dev = {'shelf_id': shelf_id, 'blade_id': blade_id}
-                self.db.export_device_create(context, dev)
+                self.db.export_device_create_safe(context, dev)
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
@@ -95,20 +95,21 @@ class AOEManager(manager.Manager):
         yield self.driver.ensure_exports()
 
         now = datetime.datetime.utcnow()
-        self.db.volume_update(context, volume_id, {'status': 'available',
-                                                   'launched_at': now})
+        self.db.volume_update(context,
+                              volume_ref['id'], {'status': 'available',
+                                                 'launched_at': now})
         logging.debug("volume %s: created successfully", volume_id)
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
     def delete_volume(self, context, volume_id):
         """Deletes and unexports volume"""
-        logging.debug("Deleting volume with id of: %s", volume_id)
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
         if volume_ref['host'] != self.host:
             raise exception.Error("Volume is not local to this node")
+        logging.debug("Deleting volume with id of: %s", volume_id)
         shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
                                                                 volume_id)
         yield self.driver.remove_export(volume_ref['ec2_id'],

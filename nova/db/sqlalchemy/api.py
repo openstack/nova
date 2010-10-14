@@ -31,8 +31,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import exists
-from sqlalchemy.sql import func
+from sqlalchemy.sql import exists, func
 from sqlalchemy.orm.exc import NoResultFound
 
 FLAGS = flags.FLAGS
@@ -539,7 +538,7 @@ def instance_create(context, values):
     with session.begin():
         while instance_ref.internal_id == None:
             internal_id = utils.generate_uid(instance_ref.__prefix__)
-            if not instance_internal_id_exists(context, internal_id, 
+            if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
@@ -1023,12 +1022,15 @@ def export_device_count(context):
 
 
 @require_admin_context
-def export_device_create(context, values):
+def export_device_create_safe(context, values):
     export_device_ref = models.ExportDevice()
     for (key, value) in values.iteritems():
         export_device_ref[key] = value
-    export_device_ref.save()
-    return export_device_ref
+    try:
+        export_device_ref.save()
+        return export_device_ref
+    except IntegrityError:
+        return None
 
 
 ###################
@@ -1631,7 +1633,7 @@ def user_remove_project_role(context, user_id, project_id, role):
     with session.begin():
         session.execute('delete from user_project_role_association where ' + \
                         'user_id=:user_id and project_id=:project_id and ' + \
-                        'role=:role', { 'user_id'    : user_id, 
+                        'role=:role', { 'user_id'    : user_id,
                                         'project_id' : project_id,
                                         'role'       : role })
 
