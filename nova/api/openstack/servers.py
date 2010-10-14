@@ -26,7 +26,7 @@ from nova import utils
 from nova import wsgi
 from nova import context
 from nova.api import cloud
-from nova.api.rackspace import faults
+from nova.api.openstack import faults
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack

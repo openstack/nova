@@ -32,6 +32,7 @@ from tornado import ioloop
 from twisted.internet import defer
 from twisted.trial import unittest
 
+from nova import context
 from nova import db
 from nova import fakerabbit
 from nova import flags
@@ -64,8 +65,9 @@ class TrialTestCase(unittest.TestCase):
         #             now that we have some required db setup for the system
         #             to work properly.
         self.start = datetime.datetime.utcnow()
-        if db.network_count(None) != 5:
-            network_manager.VlanManager().create_networks(None,
+        ctxt = context.get_admin_context()
+        if db.network_count(ctxt) != 5:
+            network_manager.VlanManager().create_networks(ctxt,
                                                           FLAGS.fixed_range,
                                                           5, 16,
                                                           FLAGS.vlan_start,
@@ -87,8 +89,9 @@ class TrialTestCase(unittest.TestCase):
         self.stubs.SmartUnsetAll()
         self.mox.VerifyAll()
         # NOTE(vish): Clean up any ips associated during the test.
-        db.fixed_ip_disassociate_all_by_timeout(None, FLAGS.host, self.start)
-        db.network_disassociate_all(None)
+        ctxt = context.get_admin_context()
+        db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host, self.start)
+        db.network_disassociate_all(ctxt)
         rpc.Consumer.attach_to_twisted = self.originalAttach
         for x in self.injected:
             try:
@@ -98,7 +101,7 @@ class TrialTestCase(unittest.TestCase):
 
         if FLAGS.fake_rabbit:
             fakerabbit.reset_all()
-        db.security_group_destroy_all(None)
+        db.security_group_destroy_all(ctxt)
 
         super(TrialTestCase, self).tearDown()
 

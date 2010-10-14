@@ -17,11 +17,11 @@
 from xml.etree.ElementTree import fromstring as xml_to_tree
 from xml.dom.minidom import parseString as xml_to_dom
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
 from nova import utils
-from nova.api import context
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.virt import libvirt_conn
