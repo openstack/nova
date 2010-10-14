@@ -52,11 +52,6 @@ class QuotaError(exception.ApiError):
     """Quota Exceeeded"""
     pass
 
-../deploy/nova/api/ec2/cloud.py:                    db.security_group_get_by_name(context.admin(),
-../deploy/nova/api/ec2/cloud.py:        instance_ref = db.volume_get_instance(context.admin(), volume_ref['id'])
-../deploy/nova/api/ec2/cloud.py:                db.instance_add_security_group(context.admin(), inst_id,
-../deploy/nova/api/ec2/cloud.py:            rpc.cast(context.admin(),
-../deploy/nova/api/ec2/cloud.py:                self.network_manager.deallocate_fixed_ip(context.admin(),
 
 def _gen_key(context, user_id, key_name):
     """Generate a key
