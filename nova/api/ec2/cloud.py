@@ -271,7 +271,7 @@ class CloudController(object):
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
-                                                      context.project.id)
+                                                      context.project_id)
         groups = [self._format_security_group(context, g) for g in groups]
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
@@ -371,7 +371,7 @@ class CloudController(object):
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
         self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
 
         criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
@@ -396,7 +396,7 @@ class CloudController(object):
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
         self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
 
         values = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
@@ -426,18 +426,18 @@ class CloudController(object):
             else:
                 source_project_id = source_parts[0]
         else:
-            source_project_id = context.project.id
+            source_project_id = context.project_id
 
         return source_project_id
 
 
     def create_security_group(self, context, group_name, group_description):
         self._ensure_default_security_group(context)
-        if db.security_group_exists(context, context.project.id, group_name):
+        if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
         group = {'user_id' : context.user.id,
-                 'project_id': context.project.id,
+                 'project_id': context.project_id,
                  'name': group_name,
                  'description': group_description}
         group_ref = db.security_group_create(context, group)
@@ -448,7 +448,7 @@ class CloudController(object):
 
     def delete_security_group(self, context, group_name, **kwargs):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
         db.security_group_destroy(context, security_group.id)
         return True
@@ -474,7 +474,7 @@ class CloudController(object):
         if context.user.is_admin():
             volumes = db.volume_get_all(context)
         else:
-            volumes = db.volume_get_all_by_project(context, context.project.id)
+            volumes = db.volume_get_all_by_project(context, context.project_id)
 
         volumes = [self._format_volume(context, v) for v in volumes]
 
@@ -512,14 +512,14 @@ class CloudController(object):
         # check quota
         if quota.allowed_volumes(context, 1, size) < 1:
             logging.warn("Quota exceeeded for %s, tried to create %sG volume",
-                         context.project.id, size)
+                         context.project_id, size)
             raise QuotaError("Volume quota exceeded. You cannot "
                              "create a volume of size %s" %
                              size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
-        vol['project_id'] = context.project.id
+        vol['project_id'] = context.project_id
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
@@ -626,7 +626,7 @@ class CloudController(object):
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_all_by_project(context,
-                                                           context.project.id)
+                                                           context.project_id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -681,7 +681,7 @@ class CloudController(object):
             iterator = db.floating_ip_get_all(context)
         else:
             iterator = db.floating_ip_get_all_by_project(context,
-                                                         context.project.id)
+                                                         context.project_id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['address']
             instance_id = None
@@ -702,14 +702,14 @@ class CloudController(object):
         # check quota
         if quota.allowed_floating_ips(context, 1) < 1:
             logging.warn("Quota exceeeded for %s, tried to allocate address",
-                         context.project.id)
+                         context.project_id)
             raise QuotaError("Address quota exceeded. You cannot "
                              "allocate any more addresses")
         network_topic = self._get_network_topic(context)
         public_ip = rpc.call(context,
                              network_topic,
                          {"method": "allocate_floating_ip",
-                          "args": {"project_id": context.project.id}})
+                          "args": {"project_id": context.project_id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
@@ -759,13 +759,13 @@ class CloudController(object):
     def _ensure_default_security_group(self, context):
         try:
             db.security_group_get_by_name(context,
-                                          context.project.id,
+                                          context.project_id,
                                           'default')
         except exception.NotFound:
             values = { 'name'        : 'default',
                        'description' : 'default',
                        'user_id'     : context.user.id,
-                       'project_id'  : context.project.id }
+                       'project_id'  : context.project_id }
             group = db.security_group_create(context, values)
 
     def run_instances(self, context, **kwargs):
@@ -781,7 +781,7 @@ class CloudController(object):
                                                 instance_type)
         if num_instances < min_instances:
             logging.warn("Quota exceeeded for %s, tried to run %s instances",
-                         context.project.id, min_instances)
+                         context.project_id, min_instances)
             raise QuotaError("Instance quota exceeded. You can only "
                              "run %s more instances of this type." %
                              num_instances, "InstanceLimitExceeded")
@@ -823,7 +823,7 @@ class CloudController(object):
         self._ensure_default_security_group(context)
         for security_group_name in security_group_arg:
             group = db.security_group_get_by_name(context,
-                                                  context.project.id,
+                                                  context.project_id,
                                                   security_group_name)
             security_groups.append(group['id'])
 
@@ -837,7 +837,7 @@ class CloudController(object):
         base_options['key_data'] = key_data
         base_options['key_name'] = kwargs.get('key_name', None)
         base_options['user_id'] = context.user.id
-        base_options['project_id'] = context.project.id
+        base_options['project_id'] = context.project_id
         base_options['user_data'] = kwargs.get('user_data', '')
 
         base_options['display_name'] = kwargs.get('display_name')
