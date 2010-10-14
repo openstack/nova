@@ -258,7 +258,7 @@ def instance_get_all(context):
 
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
-    return IMPL.instance_get_all(context, user_id)
+    return IMPL.instance_get_all_by_user(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -340,6 +340,11 @@ def key_pair_get_all_by_user(context, user_id):
 ####################
 
 
+def network_associate(context, project_id):
+    """Associate a free network to a project."""
+    return IMPL.network_associate(context, project_id)
+
+
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)
@@ -360,9 +365,12 @@ def network_count_reserved_ips(context, network_id):
     return IMPL.network_count_reserved_ips(context, network_id)
 
 
-def network_create(context, values):
-    """Create a network from the values dictionary."""
-    return IMPL.network_create(context, values)
+def network_create_safe(context, values):
+    """Create a network from the values dict
+
+    The network is only returned if the create succeeds. If the create violates
+    constraints because the network already exists, no exception is raised."""
+    return IMPL.network_create_safe(context, values)
 
 
 def network_create_fixed_ips(context, network_id, num_vpn_clients):
@@ -370,9 +378,14 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
     return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
 
 
-def network_destroy(context, network_id):
-    """Destroy the network or raise if it does not exist."""
-    return IMPL.network_destroy(context, network_id)
+def network_disassociate(context, network_id):
+    """Disassociate the network from project or raise if it does not exist."""
+    return IMPL.network_disassociate(context, network_id)
+
+
+def network_disassociate_all(context):
+    """Disassociate all networks from projects."""
+    return IMPL.network_disassociate_all(context)
 
 
 def network_get(context, network_id):
@@ -387,8 +400,13 @@ def network_get_associated_fixed_ips(context, network_id):
 
 
 def network_get_by_bridge(context, bridge):
-    """Get an network or raise if it does not exist."""
+    """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_instance(context, instance_id):
+    """Get a network by instance id or raise if it does not exist."""
+    return IMPL.network_get_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):
@@ -399,19 +417,6 @@ def network_get_index(context, network_id):
 def network_get_vpn_ip(context, network_id):
     """Get non-conflicting index for network"""
     return IMPL.network_get_vpn_ip(context, network_id)
-
-
-def network_index_count(context):
-    """Return count of network indexes"""
-    return IMPL.network_index_count(context)
-
-
-def network_index_create_safe(context, values):
-    """Create a network index from the values dict
-
-    The index is not returned. If the create violates the unique
-    constraints because the index already exists, no exception is raised."""
-    return IMPL.network_index_create_safe(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
@@ -473,6 +478,22 @@ def export_device_create_safe(context, values):
 ###################
 
 
+def auth_destroy_token(context, token):
+    """Destroy an auth token"""
+    return IMPL.auth_destroy_token(context, token)
+
+def auth_get_token(context, token_hash):
+    """Retrieves a token given the hash representing it"""
+    return IMPL.auth_get_token(context, token_hash)
+
+def auth_create_token(context, token):
+    """Creates a new token"""
+    return IMPL.auth_create_token(context, token)
+
+
+###################
+
+
 def quota_create(context, values):
     """Create a quota from the values dictionary."""
     return IMPL.quota_create(context, values)
@@ -491,22 +512,6 @@ def quota_update(context, project_id, values):
 def quota_destroy(context, project_id):
     """Destroy the quota or raise if it does not exist."""
     return IMPL.quota_destroy(context, project_id)
-
-
-###################
-
-
-def auth_destroy_token(context, token):
-    """Destroy an auth token"""
-    return IMPL.auth_destroy_token(context, token)
-
-def auth_get_token(context, token_hash):
-    """Retrieves a token given the hash representing it"""
-    return IMPL.auth_get_token(context, token_hash)
-
-def auth_create_token(context, token):
-    """Creates a new token"""
-    return IMPL.auth_create_token(context, token_hash, token)
 
 
 ###################

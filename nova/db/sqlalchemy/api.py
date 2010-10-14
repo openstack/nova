@@ -804,6 +804,24 @@ def key_pair_get_all_by_user(context, user_id):
 
 
 @require_admin_context
+def network_associate(context, project_id):
+    session = get_session()
+    with session.begin():
+        network_ref = session.query(models.Network
+                             ).filter_by(deleted=False
+                             ).filter_by(project_id=None
+                             ).with_lockmode('update'
+                             ).first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not network_ref:
+            raise db.NoMoreNetworks()
+        network_ref['project_id'] = project_id
+        session.add(network_ref)
+    return network_ref
+
+
+@require_admin_context
 def network_count(context):
     session = get_session()
     return session.query(models.Network
@@ -843,31 +861,26 @@ def network_count_reserved_ips(context, network_id):
 
 
 @require_admin_context
-def network_create(context, values):
+def network_create_safe(context, values):
     network_ref = models.Network()
     for (key, value) in values.iteritems():
         network_ref[key] = value
-    network_ref.save()
-    return network_ref
+    try:
+        network_ref.save()
+        return network_ref
+    except IntegrityError:
+        return None
 
 
 @require_admin_context
-def network_destroy(context, network_id):
+def network_disassociate(context, network_id):
+    network_update(context, network_id, {'project_id': None})
+
+
+@require_admin_context
+def network_disassociate_all(context):
     session = get_session()
-    with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update networks set deleted=1 where id=:id',
-                        {'id': network_id})
-        session.execute('update fixed_ips set deleted=1 where network_id=:id',
-                        {'id': network_id})
-        session.execute('update floating_ips set deleted=1 '
-                        'where fixed_ip_id in '
-                        '(select id from fixed_ips '
-                        'where network_id=:id)',
-                        {'id': network_id})
-        session.execute('update network_indexes set network_id=NULL '
-                        'where network_id=:id',
-                        {'id': network_id})
+    session.execute('update networks set project_id=NULL')
 
 
 @require_context
@@ -917,48 +930,21 @@ def network_get_by_bridge(context, bridge):
 
     if not result:
         raise exception.NotFound('No network for bridge %s' % bridge)
-
     return result
 
 
 @require_admin_context
-def network_get_index(context, network_id):
+def network_get_by_instance(_context, instance_id):
     session = get_session()
-    with session.begin():
-        network_index = session.query(models.NetworkIndex
-                              ).filter_by(network_id=None
-                              ).filter_by(deleted=False
-                              ).with_lockmode('update'
-                              ).first()
-
-        if not network_index:
-            raise db.NoMoreNetworks()
-
-        network_index['network'] = network_get(context,
-                                               network_id,
-                                               session=session)
-        session.add(network_index)
-
-    return network_index['index']
-
-
-@require_admin_context
-def network_index_count(context):
-    session = get_session()
-    return session.query(models.NetworkIndex
-                 ).filter_by(deleted=can_read_deleted(context)
-                 ).count()
-
-
-@require_admin_context
-def network_index_create_safe(context, values):
-    network_index_ref = models.NetworkIndex()
-    for (key, value) in values.iteritems():
-        network_index_ref[key] = value
-    try:
-        network_index_ref.save()
-    except IntegrityError:
-        pass
+    rv = session.query(models.Network
+               ).filter_by(deleted=False
+               ).join(models.Network.fixed_ips
+               ).filter_by(instance_id=instance_id
+               ).filter_by(deleted=False
+               ).first()
+    if not rv:
+        raise exception.NotFound('No network for instance %s' % instance_id)
+    return rv
 
 
 @require_admin_context
@@ -998,15 +984,22 @@ def network_update(context, network_id, values):
 @require_context
 def project_get_network(context, project_id):
     session = get_session()
-    result= session.query(models.Network
+    rv = session.query(models.Network
                ).filter_by(project_id=project_id
                ).filter_by(deleted=False
                ).first()
-
-    if not result:
-        raise exception.NotFound('No network for project: %s' % project_id)
-
-    return result
+    if not rv:
+        try:
+            return network_associate(context, project_id)
+        except IntegrityError:
+            # NOTE(vish): We hit this if there is a race and two
+            #             processes are attempting to allocate the
+            #             network at the same time
+            rv = session.query(models.Network
+                       ).filter_by(project_id=project_id
+                       ).filter_by(deleted=False
+                       ).first()
+    return rv
 
 
 ###################
@@ -1050,7 +1043,8 @@ def auth_destroy_token(_context, token):
 def auth_get_token(_context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken
-                ).filter_by(token_hash=token_hash)
+                ).filter_by(token_hash=token_hash
+                ).first()
     if not tk:
         raise exception.NotFound('Token %s does not exist' % token_hash)
     return tk
@@ -1493,7 +1487,7 @@ def user_get_by_access_key(context, access_key, session=None):
                  ).first()
 
     if not result:
-        raise exception.NotFound('No user for id %s' % id)
+        raise exception.NotFound('No user for access key %s' % access_key)
 
     return result
 

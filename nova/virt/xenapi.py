@@ -294,6 +294,9 @@ class XenAPIConnection(object):
                 'num_cpu': rec['VCPUs_max'],
                 'cpu_time': 0}
 
+    def get_console_output(self, instance):
+        return 'FAKE CONSOLE OUTPUT'
+
     @utils.deferredToThread
     def _lookup(self, i):
         return self._lookup_blocking(i)

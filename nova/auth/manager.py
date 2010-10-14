@@ -484,13 +484,6 @@ class AuthManager(object):
                                               member_users)
             if project_dict:
                 project = Project(**project_dict)
-                try:
-                    self.network_manager.allocate_network(context,
-                                                          project.id)
-                except:
-                    drv.delete_project(project.id)
-                    raise
-
                 return project
 
     def modify_project(self, project, manager_user=None, description=None):
@@ -559,14 +552,6 @@ class AuthManager(object):
 
     def delete_project(self, project, context=None):
         """Deletes a project"""
-        try:
-            network_ref = db.project_get_network(context,
-                                                 Project.safe_id(project))
-            db.network_destroy(context, network_ref['id'])
-        except:
-            logging.exception('Could not destroy network for %s',
-                              project)
-
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 

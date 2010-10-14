@@ -20,21 +20,22 @@ from xml.dom.minidom import parseString as xml_to_dom
 from nova import db
 from nova import flags
 from nova import test
+from nova import utils
 from nova.api import context
 from nova.api.ec2 import cloud
 from nova.auth import manager
-
-# Needed to get FLAGS.instances_path defined:
-from nova.compute import manager as compute_manager
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
+flags.DECLARE('instances_path', 'nova.compute.manager')
 
 class LibvirtConnTestCase(test.TrialTestCase):
     def setUp(self):
+        super(LibvirtConnTestCase, self).setUp()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.network = utils.import_object(FLAGS.network_manager)
         FLAGS.instances_path = ''
 
     def test_get_uri_and_template(self):
@@ -51,11 +52,15 @@ class LibvirtConnTestCase(test.TrialTestCase):
                      'instance_type'  : 'm1.small'}
 
         instance_ref = db.instance_create(None, instance)
-        network_ref = db.project_get_network(None, self.project.id)
+        user_context = context.APIRequestContext(project=self.project,
+                                                 user=self.user)
+        network_ref = self.network.get_network(user_context)
+        self.network.set_network_host(context.get_admin_context(),
+                                      network_ref['id'])
 
         fixed_ip = { 'address'    : ip,
                      'network_id' : network_ref['id'] }
-                     
+
         fixed_ip_ref = db.fixed_ip_create(None, fixed_ip)
         db.fixed_ip_update(None, ip, { 'allocated'   : True,
                                           'instance_id' : instance_ref['id'] })
@@ -113,6 +118,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
 
 
     def tearDown(self):
+        super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
 

@@ -7,6 +7,7 @@ import webob.dec
 
 import nova.api
 import nova.api.openstack.auth
+import nova.auth.manager
 from nova import auth
 from nova.tests.api.openstack import fakes
 
@@ -26,7 +27,7 @@ class Test(unittest.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -40,7 +41,7 @@ class Test(unittest.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
             
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -71,8 +72,9 @@ class Test(unittest.TestCase):
             self.destroy_called = True
         
         def bad_token(meh, context, token_hash):
-            return { 'token_hash':token_hash,  
-                     'created_at':datetime.datetime(1990, 1, 1) }
+            return fakes.FakeToken(
+                    token_hash=token_hash,
+                    created_at=datetime.datetime(1990, 1, 1))
 
         self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
             destroy_token_mock)
