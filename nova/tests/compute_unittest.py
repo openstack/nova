@@ -97,7 +97,7 @@ class ComputeTestCase(test.TrialTestCase):
         self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
         yield self.compute.terminate_instance(self.context, instance_id)
-        self.context = self.context.admin(True)
+        self.context = self.context.elevated(True)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)

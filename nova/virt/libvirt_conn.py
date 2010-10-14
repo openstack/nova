@@ -376,7 +376,8 @@ class LibvirtConnection(object):
                                          instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
-        ip_address = db.instance_get_fixed_address({}, instance['id'])
+        ip_address = db.instance_get_fixed_address(context.get_admin_context(),
+                                                   instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         xml_info = {'type': FLAGS.libvirt_type,
@@ -648,7 +649,8 @@ class NWFilterFirewall(object):
                        ) % instance['name']
 
         if FLAGS.allow_project_net_traffic:
-            network_ref = db.project_get_network({}, instance['project_id'])
+            network_ref = db.project_get_network(context.get_admin_context(),
+                                                 instance['project_id'])
             net, mask = self._get_net_and_mask(network_ref['cidr'])
             project_filter = self.nova_project_filter(instance['project_id'],
                                                       net, mask)
@@ -673,7 +675,8 @@ class NWFilterFirewall(object):
 
 
     def security_group_to_nwfilter_xml(self, security_group_id):
-        security_group = db.security_group_get({}, security_group_id)
+        security_group = db.security_group_get(context.get_admin_context(),
+                                               security_group_id)
         rule_xml = ""
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"

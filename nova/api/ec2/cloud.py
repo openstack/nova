@@ -131,14 +131,14 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
-    def _trigger_refresh_security_group(self, security_group):
+    def _trigger_refresh_security_group(self, context, security_group):
         nodes = set([instance['host'] for instance in security_group.instances
                        if instance['host'] is not None])
         for node in nodes:
-            rpc.call('%s.%s' % (FLAGS.compute_topic, node),
+            rpc.cast(context,
+                     '%s.%s' % (FLAGS.compute_topic, node),
                      { "method": "refresh_security_group",
-                       "args": { "context": None,
-                                 "security_group_id": security_group.id}})
+                       "args": {"security_group_id": security_group.id}})
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
@@ -380,7 +380,7 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(security_group)
+                self._trigger_refresh_security_group(context, security_group)
                 return True
         raise exception.ApiError("No rule for the specified parameters.")
 
@@ -403,7 +403,7 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(security_group)
+        self._trigger_refresh_security_group(context, security_group)
 
         return True
 
@@ -454,11 +454,11 @@ class CloudController(object):
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
-        output = rpc.call('%s.%s' % (FLAGS.compute_topic,
-                                instance_ref['host']),
-                     { "method" : "get_console_output",
-                       "args"   : { "context": None,
-                                    "instance_id": instance_ref['id']}})
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance_ref['host']),
+                          {"method" : "get_console_output",
+                           "args"   : {"instance_id": instance_ref['id']}})
 
         now = datetime.datetime.utcnow()
         return { "InstanceId" : ec2_id,
@@ -543,10 +543,10 @@ class CloudController(object):
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
-                                {"method": "attach_volume",
-                                 "args": {"volume_id": volume_ref['id'],
-                                          "instance_id": instance_ref['id'],
-                                          "mountpoint": device}})
+                 {"method": "attach_volume",
+                  "args": {"volume_id": volume_ref['id'],
+                           "instance_id": instance_ref['id'],
+                           "mountpoint": device}})
         return {'attachTime': volume_ref['attach_time'],
                 'device': volume_ref['mountpoint'],
                 'instanceId': instance_ref['id'],
@@ -567,9 +567,9 @@ class CloudController(object):
             host = instance_ref['host']
             rpc.cast(context,
                      db.queue_get_for(context, FLAGS.compute_topic, host),
-                                {"method": "detach_volume",
-                                 "args": {"instance_id": instance_ref['id'],
-                                          "volume_id": volume_ref['id']}})
+                     {"method": "detach_volume",
+                      "args": {"instance_id": instance_ref['id'],
+                               "volume_id": volume_ref['id']}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
@@ -703,8 +703,8 @@ class CloudController(object):
         network_topic = self._get_network_topic(context)
         public_ip = rpc.call(context,
                              network_topic,
-                         {"method": "allocate_floating_ip",
-                          "args": {"project_id": context.project_id}})
+                             {"method": "allocate_floating_ip",
+                              "args": {"project_id": context.project_id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
@@ -747,8 +747,8 @@ class CloudController(object):
         if not host:
             host = rpc.call(context,
                             FLAGS.network_topic,
-                                  {"method": "set_network_host",
-                                   "args": {"network_id": network_ref['id']}})
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
     def _ensure_default_security_group(self, context):

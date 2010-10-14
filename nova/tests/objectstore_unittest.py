@@ -32,6 +32,7 @@ from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from twisted.internet import reactor, threads, defer
 from twisted.web import http, server
 
+from nova import context
 from nova import flags
 from nova import objectstore
 from nova import test
@@ -70,13 +71,7 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.auth_manager.create_user('admin_user', admin=True)
         self.auth_manager.create_project('proj1', 'user1', 'a proj', ['user1'])
         self.auth_manager.create_project('proj2', 'user2', 'a proj', ['user2'])
-
-        class Context(object):
-            """Dummy context for running tests."""
-            user = None
-            project = None
-
-        self.context = Context()
+        self.context = context.RequestContext('user1', 'proj1')
 
     def tearDown(self): # pylint: disable-msg=C0103
         """Tear down users and projects."""
@@ -89,8 +84,6 @@ class ObjectStoreTestCase(test.TrialTestCase):
 
     def test_buckets(self):
         """Test the bucket API."""
-        self.context.user = self.auth_manager.get_user('user1')
-        self.context.project = self.auth_manager.get_project('proj1')
         objectstore.bucket.Bucket.create('new_bucket', self.context)
         bucket = objectstore.bucket.Bucket('new_bucket')
 
@@ -98,14 +91,12 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.assert_(bucket.is_authorized(self.context))
 
         # another user is not authorized
-        self.context.user = self.auth_manager.get_user('user2')
-        self.context.project = self.auth_manager.get_project('proj2')
-        self.assertFalse(bucket.is_authorized(self.context))
+        context2 = context.RequestContext('user2', 'proj2')
+        self.assertFalse(bucket.is_authorized(context2))
 
         # admin is authorized to use bucket
-        self.context.user = self.auth_manager.get_user('admin_user')
-        self.context.project = None
-        self.assertTrue(bucket.is_authorized(self.context))
+        admin_context = context.RequestContext('admin_user', None)
+        self.assertTrue(bucket.is_authorized(admin_context))
 
         # new buckets are empty
         self.assertTrue(bucket.list_keys()['Contents'] == [])
@@ -143,8 +134,6 @@ class ObjectStoreTestCase(test.TrialTestCase):
     def do_test_images(self, manifest_file, expect_kernel_and_ramdisk,
                              image_bucket, image_name):
         "Test the image API."
-        self.context.user = self.auth_manager.get_user('user1')
-        self.context.project = self.auth_manager.get_project('proj1')
 
         # create a bucket for our bundle
         objectstore.bucket.Bucket.create(image_bucket, self.context)
@@ -179,9 +168,8 @@ class ObjectStoreTestCase(test.TrialTestCase):
             self.assertFalse('ramdiskId' in my_img.metadata)
 
         # verify image permissions
-        self.context.user = self.auth_manager.get_user('user2')
-        self.context.project = self.auth_manager.get_project('proj2')
-        self.assertFalse(my_img.is_authorized(self.context))
+        context2 = context.RequestContext('user2', 'proj2')
+        self.assertFalse(my_img.is_authorized(context2))
 
         # change user-editable fields
         my_img.update_user_editable_fields({'display_name': 'my cool image'})

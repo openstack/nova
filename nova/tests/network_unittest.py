@@ -55,7 +55,7 @@ class NetworkTestCase(test.TrialTestCase):
             project = self.manager.create_project(name, 'netuser', name)
             self.projects.append(project)
             # create the necessary network data for the project
-            user_context = context.APIRequestContext(project=self.projects[i],
+            user_context = context.RequestContext(project=self.projects[i],
                                                      user=self.user)
             network_ref = self.network.get_network(user_context)
             self.network.set_network_host(context.get_admin_context(),
@@ -80,6 +80,7 @@ class NetworkTestCase(test.TrialTestCase):
             mac = utils.generate_mac()
         project = self.projects[project_num]
         self.context._project = project
+        self.context.project_id = project.id
         return db.instance_create(self.context,
                                   {'project_id': project.id,
                                    'mac_address': mac})
@@ -89,10 +90,12 @@ class NetworkTestCase(test.TrialTestCase):
         if instance_id is None:
             instance_id = self.instance_id
         self.context._project = self.projects[project_num]
+        self.context.project_id = self.projects[project_num].id
         return self.network.allocate_fixed_ip(self.context, instance_id)
 
     def _deallocate_address(self, project_num, address):
         self.context._project = self.projects[project_num]
+        self.context.project_id = self.projects[project_num].id
         self.network.deallocate_fixed_ip(self.context, address)
 
 
@@ -100,13 +103,15 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
         self.context._project = self.projects[0]
+        self.context.project_id = self.projects[0].id
         pubnet = IPy.IP(flags.FLAGS.floating_range)
         address = str(pubnet[0])
         try:
             db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
-            db.floating_ip_create(context.get_admin_context(), {'address': address,
-                                         'host': FLAGS.host})
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': address,
+                                   'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.projects[0].id)
         fix_addr = self._create_address(0)
@@ -179,6 +184,7 @@ class NetworkTestCase(test.TrialTestCase):
             lease_ip(address2)
             lease_ip(address3)
             self.context._project = self.projects[i]
+            self.context.project_id = self.projects[i].id
             self.assertFalse(is_allocated_in_project(address,
                                                      self.projects[0].id))
             self.assertFalse(is_allocated_in_project(address2,
@@ -194,6 +200,7 @@ class NetworkTestCase(test.TrialTestCase):
         for instance_id in instance_ids:
             db.instance_destroy(context.get_admin_context(), instance_id)
         self.context._project = self.projects[0]
+        self.context.project_id = self.projects[0].id
         self.network.deallocate_fixed_ip(self.context, first)
         self._deallocate_address(0, first)
         release_ip(first)
@@ -208,16 +215,17 @@ class NetworkTestCase(test.TrialTestCase):
     def test_too_many_networks(self):
         """Ensure error is raised if we run out of networks"""
         projects = []
-        networks_left = FLAGS.num_networks - db.network_count(context.get_admin_context())
+        networks_left = (FLAGS.num_networks -
+                         db.network_count(context.get_admin_context()))
         for i in range(networks_left):
             project = self.manager.create_project('many%s' % i, self.user)
             projects.append(project)
-            db.project_get_network(None, project.id)
+            db.project_get_network(context.get_admin_context(), project.id)
         project = self.manager.create_project('last', self.user)
         projects.append(project)
         self.assertRaises(db.NoMoreNetworks,
                           db.project_get_network,
-                          None,
+                          context.get_admin_context(),
                           project.id)
         for project in projects:
             self.manager.delete_project(project)
