@@ -52,7 +52,7 @@ class RequestContext(object):
         self.remote_address = remote_address
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
-        if isinstance(timestamp, str):
+        if isinstance(timestamp, str) or isinstance(timestamp, unicode):
             timestamp = utils.parse_isotime(timestamp)
         self.timestamp = timestamp
         if not request_id:
