@@ -127,7 +127,7 @@ class LibvirtConnection(object):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
-        
+
         if read_only:
             return libvirt.openReadOnly(uri)
         else:
