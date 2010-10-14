@@ -116,10 +116,6 @@ class ComputeManager(manager.Manager):
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'shutting_down')
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?

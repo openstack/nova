@@ -466,12 +466,17 @@ def export_device_count(context):
     return IMPL.export_device_count(context)
 
 
-def export_device_create(context, values):
-    """Create an export_device from the values dictionary."""
-    return IMPL.export_device_create(context, values)
+def export_device_create_safe(context, values):
+    """Create an export_device from the values dictionary.
+
+    The device is not returned. If the create violates the unique
+    constraints because the shelf_id and blade_id already exist,
+    no exception is raised."""
+    return IMPL.export_device_create_safe(context, values)
 
 
 ###################
+
 
 def auth_destroy_token(context, token):
     """Destroy an auth token"""
