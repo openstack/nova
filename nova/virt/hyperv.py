@@ -161,8 +161,7 @@ class HyperVConnection(object):
             success = (ret_val == 0)
 
         if not success:
-            raise VmResourceAllocationException('Failed to create VM %s',
-                                                 instance.name)
+            raise Exception('Failed to create VM %s', instance.name)
 
         logging.debug('Created VM %s...', instance.name)
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance.name)[0]
