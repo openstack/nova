@@ -78,6 +78,11 @@ from nova.cloudpipe import pipelib
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('fixed_range', 'nova.network.manager')
+flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('network_size', 'nova.network.manager')
+flags.DECLARE('vlan_start', 'nova.network.manager')
+flags.DECLARE('vpn_start', 'nova.network.manager')
 
 
 class VpnCommands(object):
