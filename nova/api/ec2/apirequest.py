@@ -52,9 +52,11 @@ def _try_convert(value):
         return True
     if value == 'False':
         return False
-    if value == '0':
-        return 0
     valueneg = value[1:] if value[0] == '-' else value
+    if valueneg == '0':
+        return 0
+    if valueneg == '':
+        return value
     if valueneg[0] == '0':
         if valueneg[1] in 'xX':
             return int(value,16)
