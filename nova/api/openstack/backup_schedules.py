@@ -34,5 +34,5 @@ class Controller(wsgi.Controller):
         both create and update through a POST """
         return faults.Fault(exc.HTTPNotFound())
 
-    def delete(self, req, server_id):
+    def delete(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotFound())
