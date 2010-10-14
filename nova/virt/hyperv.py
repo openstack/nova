@@ -99,30 +99,6 @@ WMI_JOB_STATUS_STARTED = 4096
 WMI_JOB_STATE_RUNNING = 4
 WMI_JOB_STATE_COMPLETED = 7
 
-##### Exceptions
-
-
-class HyperVError(Exception):
-    """Base Exception class for all hyper-v errors."""
-    def __init__(self, *args):
-        Exception.__init__(self, *args)
-
-
-class VmResourceAllocationError(HyperVError):
-    """Raised when Hyper-V is unable to create or add a resource to
-    a VM
-    """
-    def __init__(self, *args):
-        HyperVError.__init__(self, *args)
-
-
-class VmOperationError(HyperVError):
-    """Raised when Hyper-V is unable to change the state of
-    a VM (start/stop/reboot/destroy)
-    """
-    def __init__(self, *args):
-        HyperVError.__init__(self, *args)
-
 
 def get_connection(_):
     global wmi
@@ -244,7 +220,7 @@ class HyperVConnection(object):
         #Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(diskdrive, vm)
         if new_resources is None:
-            raise VmResourceAllocationError('Failed to add diskdrive to VM %s',
+            raise Exception('Failed to add diskdrive to VM %s',
                                              vm_name)
         diskdrive_path = new_resources[0]
         logging.debug("New disk drive path is %s", diskdrive_path)
@@ -264,7 +240,7 @@ class HyperVConnection(object):
         #Add the new vhd object as a virtual hard disk to the vm.
         new_resources = self._add_virt_resource(vhddisk, vm)
         if new_resources is None:
-            raise VmResourceAllocationError('Failed to add vhd file to VM %s',
+            raise Exception('Failed to add vhd file to VM %s',
                                              vm_name)
         logging.info("Created disk for %s ", vm_name)
 
@@ -290,7 +266,7 @@ class HyperVConnection(object):
                                             "", extswitch.path_())
         if ret_val != 0:
             logging.error("Failed creating a new port on the external vswitch")
-            raise VmResourceAllocationError('Failed creating port for %s',
+            raise Exception('Failed creating port for %s',
                                              vm_name)
         logging.debug("Created switch port %s on switch %s",
                         vm_name, extswitch.path_())
@@ -302,7 +278,7 @@ class HyperVConnection(object):
         #Add the new nic to the vm.
         new_resources = self._add_virt_resource(new_nic_data, vm)
         if new_resources is None:
-            raise VmResourceAllocationError('Failed to add nic to VM %s',
+            raise Exception('Failed to add nic to VM %s',
                                              vm_name)
         logging.info("Created nic for %s ", vm_name)
 
@@ -327,7 +303,7 @@ class HyperVConnection(object):
         """Poll WMI job state for completion"""
         #Jobs have a path of the form:
         #\\WIN-P5IG7367DAG\root\virtualization:Msvm_ConcreteJob.InstanceID="8A496B9C-AF4D-4E98-BD3C-1128CD85320D"
-        inst_id = jobpath.split(':')[1].split('=')[1].strip('\"')
+        inst_id = jobpath.split('=')[1].strip('"')
         jobs = self._conn.Msvm_ConcreteJob(InstanceID=inst_id)
         if len(jobs) == 0:
             return False
@@ -401,7 +377,7 @@ class HyperVConnection(object):
         elif ret_val == 0:
             success = True
         if not success:
-            raise VmOperationError('Failed to destroy vm %s' % instance.name)
+            raise Exception('Failed to destroy vm %s' % instance.name)
         #Delete associated vhd disk files.
         for disk in diskfiles:
             vhdfile = self._cim_conn.CIM_DataFile(Name=disk)
@@ -467,7 +443,7 @@ class HyperVConnection(object):
         else:
             logging.error("Failed to change vm state of %s to %s",
                                 vm_name, req_state)
-            raise VmOperationError("Failed to change vm state of %s to %s",
+            raise Exception("Failed to change vm state of %s to %s",
                                         vm_name, req_state)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
