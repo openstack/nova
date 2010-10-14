@@ -25,7 +25,7 @@ import datetime
 
 # TODO(vish): clean up these imports
 from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -152,7 +152,7 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(10), unique=True)
+    internal_id = Column(Integer, unique=True)
 
     admin_pass = Column(String(255))
 
@@ -169,7 +169,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.ec2_id
+        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
@@ -187,7 +187,6 @@ class Instance(BASE, NovaBase):
     launch_index = Column(Integer)
     key_name = Column(String(255))
     key_data = Column(Text)
-    security_group = Column(String(255))
 
     state = Column(Integer)
     state_description = Column(String(255))
@@ -289,10 +288,66 @@ class ExportDevice(BASE, NovaBase):
                                            'ExportDevice.deleted==False)')
 
 
+class SecurityGroupInstanceAssociation(BASE, NovaBase):
+    __tablename__ = 'security_group_instance_association'
+    id = Column(Integer, primary_key=True)
+    security_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+
+class SecurityGroup(BASE, NovaBase):
+    """Represents a security group"""
+    __tablename__ = 'security_groups'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String(255))
+    description = Column(String(255))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    instances = relationship(Instance,
+                             secondary="security_group_instance_association",
+                             primaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
+                                               "SecurityGroup.deleted == False)",
+                             secondaryjoin="and_(SecurityGroupInstanceAssociation.instance_id == Instance.id,"
+                                                 "Instance.deleted == False)",
+                             backref='security_groups')
+
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+
+class SecurityGroupIngressRule(BASE, NovaBase):
+    """Represents a rule in a security group"""
+    __tablename__ = 'security_group_rules'
+    id = Column(Integer, primary_key=True)
+
+    parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    parent_group = relationship("SecurityGroup", backref="rules",
+                         foreign_keys=parent_group_id,
+                         primaryjoin="and_(SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,"
+                                          "SecurityGroupIngressRule.deleted == False)")
+
+    protocol = Column(String(5)) # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+    # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
+    # granting access for.
+    group_id = Column(Integer, ForeignKey('security_groups.id'))
+
+
 class KeyPair(BASE, NovaBase):
     """Represents a public key pair for ssh"""
     __tablename__ = 'key_pairs'
     id = Column(Integer, primary_key=True)
+
     name = Column(String(255))
 
     user_id = Column(String(255))
@@ -308,10 +363,13 @@ class KeyPair(BASE, NovaBase):
 class Network(BASE, NovaBase):
     """Represents a network"""
     __tablename__ = 'networks'
+    __table_args__ = (schema.UniqueConstraint("vpn_public_address",
+                                              "vpn_public_port"),
+                      {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
 
     injected = Column(Boolean, default=False)
-    cidr = Column(String(255))
+    cidr = Column(String(255), unique=True)
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -324,26 +382,11 @@ class Network(BASE, NovaBase):
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
-    project_id = Column(String(255))
+    # NOTE(vish): The unique constraint below helps avoid a race condition
+    #             when associating a network, but it also means that we
+    #             can't associate two networks with one project.
+    project_id = Column(String(255), unique=True)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-
-
-class NetworkIndex(BASE, NovaBase):
-    """Represents a unique offset for a network
-
-    Currently vlan number, vpn port, and fixed ip ranges are keyed off of
-    this index. These may ultimately need to be converted to separate
-    pools.
-    """
-    __tablename__ = 'network_indexes'
-    id = Column(Integer, primary_key=True)
-    index = Column(Integer, unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network,
-                           backref=backref('network_index', uselist=False),
-                           foreign_keys=network_id,
-                           primaryjoin='and_(NetworkIndex.network_id==Network.id,'
-                                            'NetworkIndex.deleted==False)')
 
 
 class AuthToken(BASE, NovaBase):
@@ -356,7 +399,6 @@ class AuthToken(BASE, NovaBase):
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
-
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -461,9 +503,10 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex,
-              AuthToken, UserProjectAssociation, User, Project)  # , Image, Host)
+    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+              FloatingIp, Network, SecurityGroup,
+              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
+              AuthToken, User, Project) # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

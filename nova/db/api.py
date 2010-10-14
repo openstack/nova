@@ -258,7 +258,7 @@ def instance_get_all(context):
 
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
-    return IMPL.instance_get_all(context, user_id)
+    return IMPL.instance_get_all_by_user(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -280,9 +280,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_ec2_id(context, ec2_id):
+def instance_get_by_internal_id(context, internal_id):
     """Get an instance by ec2 id."""
-    return IMPL.instance_get_by_ec2_id(context, ec2_id)
+    return IMPL.instance_get_by_internal_id(context, internal_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -302,6 +302,11 @@ def instance_update(context, instance_id, values):
 
     """
     return IMPL.instance_update(context, instance_id, values)
+
+
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    return IMPL.instance_add_security_group(context, instance_id, security_group_id)
 
 
 ###################
@@ -335,6 +340,11 @@ def key_pair_get_all_by_user(context, user_id):
 ####################
 
 
+def network_associate(context, project_id):
+    """Associate a free network to a project."""
+    return IMPL.network_associate(context, project_id)
+
+
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)
@@ -355,9 +365,12 @@ def network_count_reserved_ips(context, network_id):
     return IMPL.network_count_reserved_ips(context, network_id)
 
 
-def network_create(context, values):
-    """Create a network from the values dictionary."""
-    return IMPL.network_create(context, values)
+def network_create_safe(context, values):
+    """Create a network from the values dict
+
+    The network is only returned if the create succeeds. If the create violates
+    constraints because the network already exists, no exception is raised."""
+    return IMPL.network_create_safe(context, values)
 
 
 def network_create_fixed_ips(context, network_id, num_vpn_clients):
@@ -365,9 +378,14 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
     return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
 
 
-def network_destroy(context, network_id):
-    """Destroy the network or raise if it does not exist."""
-    return IMPL.network_destroy(context, network_id)
+def network_disassociate(context, network_id):
+    """Disassociate the network from project or raise if it does not exist."""
+    return IMPL.network_disassociate(context, network_id)
+
+
+def network_disassociate_all(context):
+    """Disassociate all networks from projects."""
+    return IMPL.network_disassociate_all(context)
 
 
 def network_get(context, network_id):
@@ -382,8 +400,13 @@ def network_get_associated_fixed_ips(context, network_id):
 
 
 def network_get_by_bridge(context, bridge):
-    """Get an network or raise if it does not exist."""
+    """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_instance(context, instance_id):
+    """Get a network by instance id or raise if it does not exist."""
+    return IMPL.network_get_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):
@@ -394,19 +417,6 @@ def network_get_index(context, network_id):
 def network_get_vpn_ip(context, network_id):
     """Get non-conflicting index for network"""
     return IMPL.network_get_vpn_ip(context, network_id)
-
-
-def network_index_count(context):
-    """Return count of network indexes"""
-    return IMPL.network_index_count(context)
-
-
-def network_index_create_safe(context, values):
-    """Create a network index from the values dict
-
-    The index is not returned. If the create violates the unique
-    constraints because the index already exists, no exception is raised."""
-    return IMPL.network_index_create_safe(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
@@ -432,7 +442,11 @@ def network_update(context, network_id, values):
 
 
 def project_get_network(context, project_id):
-    """Return the network associated with the project."""
+    """Return the network associated with the project.
+
+    Raises NotFound if no such network can be found.
+
+    """
     return IMPL.project_get_network(context, project_id)
 
 
@@ -469,7 +483,7 @@ def auth_get_token(context, token_hash):
 
 def auth_create_token(context, token):
     """Creates a new token"""
-    return IMPL.auth_create_token(context, token_hash, token)
+    return IMPL.auth_create_token(context, token)
 
 
 ###################
@@ -565,6 +579,71 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+####################
+
+
+def security_group_get_all(context):
+    """Get all security groups"""
+    return IMPL.security_group_get_all(context)
+
+
+def security_group_get(context, security_group_id):
+    """Get security group by its internal id"""
+    return IMPL.security_group_get(context, security_group_id)
+
+
+def security_group_get_by_name(context, project_id, group_name):
+    """Returns a security group with the specified name from a project"""
+    return IMPL.security_group_get_by_name(context, project_id, group_name)
+
+
+def security_group_get_by_project(context, project_id):
+    """Get all security groups belonging to a project"""
+    return IMPL.security_group_get_by_project(context, project_id)
+
+
+def security_group_get_by_instance(context, instance_id):
+    """Get security groups to which the instance is assigned"""
+    return IMPL.security_group_get_by_instance(context, instance_id)
+
+
+def security_group_exists(context, project_id, group_name):
+    """Indicates if a group name exists in a project"""
+    return IMPL.security_group_exists(context, project_id, group_name)
+
+
+def security_group_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_create(context, values)
+
+
+def security_group_destroy(context, security_group_id):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy(context, security_group_id)
+
+
+def security_group_destroy_all(context):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy_all(context)
+
+
+####################
+
+
+def security_group_rule_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_rule_create(context, values)
+
+
+def security_group_rule_get_by_security_group(context, security_group_id):
+    """Get all rules for a a given security group"""
+    return IMPL.security_group_rule_get_by_security_group(context, security_group_id)
+
+def security_group_rule_destroy(context, security_group_rule_id):
+    """Deletes a security group rule"""
+    return IMPL.security_group_rule_destroy(context, security_group_rule_id)
 
 
 ###################

@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from base64 import b64decode
 import json
 import logging
 from M2Crypto import BIO
@@ -63,11 +64,16 @@ class CloudTestCase(test.TrialTestCase):
         self.cloud = cloud.CloudController()
 
         # set up a service
-        self.compute = utils.import_class(FLAGS.compute_manager)
+        self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
                                                     topic=FLAGS.compute_topic,
                                                     proxy=self.compute)
-        self.compute_consumer.attach_to_twisted()
+        self.compute_consumer.attach_to_eventlet()
+        self.network = utils.import_object(FLAGS.network_manager)
+        self.network_consumer = rpc.AdapterConsumer(connection=self.conn,
+                                                    topic=FLAGS.network_topic,
+                                                    proxy=self.network)
+        self.network_consumer.attach_to_eventlet()
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
@@ -85,15 +91,17 @@ class CloudTestCase(test.TrialTestCase):
         return cloud._gen_key(self.context, self.context.user.id, name)
 
     def test_console_output(self):
-        if FLAGS.connection_type == 'fake':
-            logging.debug("Can't test instances without a real virtual env.")
-            return
-        instance_id = 'foo'
-        inst = yield self.compute.run_instance(instance_id)
-        output = yield self.cloud.get_console_output(self.context, [instance_id])
-        logging.debug(output)
-        self.assert_(output)
-        rv = yield self.compute.terminate_instance(instance_id)
+        image_id = FLAGS.default_image
+        instance_type = FLAGS.default_instance_type
+        max_count = 1
+        kwargs = {'image_id': image_id,
+                  'instance_type': instance_type,
+                  'max_count': max_count }
+        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        instance_id = rv['instancesSet'][0]['instanceId']
+        output = yield self.cloud.get_console_output(context=self.context, instance_id=[instance_id])
+        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
+        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
 
 
     def test_key_generation(self):
@@ -236,7 +244,8 @@ class CloudTestCase(test.TrialTestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create({}, {})
-        self.cloud.update_instance(self.context, inst['ec2_id'],
+        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get({}, inst['id'])
         self.assertEqual('c00l 1m4g3', inst['display_name'])

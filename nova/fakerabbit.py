@@ -22,6 +22,7 @@ import logging
 import Queue as queue
 
 from carrot.backends import base
+from eventlet import greenthread
 
 
 class Message(base.BaseMessage):
@@ -38,6 +39,7 @@ class Exchange(object):
     def publish(self, message, routing_key=None):
         logging.debug('(%s) publish (key: %s) %s',
                       self.name, routing_key, message)
+        routing_key = routing_key.split('.')[0]
         if routing_key in self._routes:
             for f in self._routes[routing_key]:
                 logging.debug('Publishing to route %s', f)
@@ -94,6 +96,18 @@ class Backend(object):
             self._exchanges[exchange].bind(self._queues[queue].push,
                                            routing_key)
 
+        def declare_consumer(self, queue, callback, *args, **kwargs):
+            self.current_queue = queue
+            self.current_callback = callback
+
+        def consume(self, *args, **kwargs):
+            while True:
+                item = self.get(self.current_queue)
+                if item:
+                    self.current_callback(item)
+                    raise StopIteration()
+                greenthread.sleep(0)
+
         def get(self, queue, no_ack=False):
             if not queue in self._queues or not self._queues[queue].size():
                 return None
@@ -102,6 +116,7 @@ class Backend(object):
             message = Message(backend=self, body=message_data,
                               content_type=content_type,
                               content_encoding=content_encoding)
+            message.result = True
             logging.debug('Getting from %s: %s', queue, message)
             return message
 

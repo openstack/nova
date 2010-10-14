@@ -52,13 +52,14 @@ class NetworkTestCase(test.TrialTestCase):
         self.context = context.APIRequestContext(project=None, user=self.user)
         for i in range(5):
             name = 'project%s' % i
-            self.projects.append(self.manager.create_project(name,
-                                                             'netuser',
-                                                             name))
+            project = self.manager.create_project(name, 'netuser', name)
+            self.projects.append(project)
             # create the necessary network data for the project
-            user_context = context.get_admin_context(user=self.user)
-
-            self.network.set_network_host(user_context, self.projects[i].id)
+            user_context = context.APIRequestContext(project=self.projects[i],
+                                                     user=self.user)
+            network_ref = self.network.get_network(user_context)
+            self.network.set_network_host(context.get_admin_context(),
+                                          network_ref['id'])
         instance_ref = self._create_instance(0)
         self.instance_id = instance_ref['id']
         instance_ref = self._create_instance(1)
@@ -99,7 +100,7 @@ class NetworkTestCase(test.TrialTestCase):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
         self.context.project = self.projects[0]
-        pubnet = IPy.IP(flags.FLAGS.public_range)
+        pubnet = IPy.IP(flags.FLAGS.floating_range)
         address = str(pubnet[0])
         try:
             db.floating_ip_get_by_address(None, address)
@@ -109,6 +110,7 @@ class NetworkTestCase(test.TrialTestCase):
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.projects[0].id)
         fix_addr = self._create_address(0)
+        lease_ip(fix_addr)
         self.assertEqual(float_addr, str(pubnet[0]))
         self.network.associate_floating_ip(self.context, float_addr, fix_addr)
         address = db.instance_get_floating_address(None, self.instance_id)
@@ -118,6 +120,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.assertEqual(address, None)
         self.network.deallocate_floating_ip(self.context, float_addr)
         self.network.deallocate_fixed_ip(self.context, fix_addr)
+        release_ip(fix_addr)
 
     def test_allocate_deallocate_fixed_ip(self):
         """Makes sure that we can allocate and deallocate a fixed ip"""
@@ -190,8 +193,10 @@ class NetworkTestCase(test.TrialTestCase):
             release_ip(address3)
         for instance_id in instance_ids:
             db.instance_destroy(None, instance_id)
-        release_ip(first)
+        self.context.project = self.projects[0]
+        self.network.deallocate_fixed_ip(self.context, first)
         self._deallocate_address(0, first)
+        release_ip(first)
 
     def test_vpn_ip_and_port_looks_valid(self):
         """Ensure the vpn ip and port are reasonable"""
@@ -207,10 +212,13 @@ class NetworkTestCase(test.TrialTestCase):
         for i in range(networks_left):
             project = self.manager.create_project('many%s' % i, self.user)
             projects.append(project)
+            db.project_get_network(None, project.id)
+        project = self.manager.create_project('last', self.user)
+        projects.append(project)
         self.assertRaises(db.NoMoreNetworks,
-                          self.manager.create_project,
-                          'boom',
-                          self.user)
+                          db.project_get_network,
+                          None,
+                          project.id)
         for project in projects:
             self.manager.delete_project(project)
 
@@ -223,7 +231,9 @@ class NetworkTestCase(test.TrialTestCase):
 
         address2 = self._create_address(0)
         self.assertEqual(address, address2)
+        lease_ip(address)
         self.network.deallocate_fixed_ip(self.context, address2)
+        release_ip(address)
 
     def test_available_ips(self):
         """Make sure the number of available ips for the network is correct

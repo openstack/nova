@@ -10,7 +10,6 @@ auto eth0
 iface eth0 inet static
         address %(address)s
         netmask %(netmask)s
-        network %(network)s
         broadcast %(broadcast)s
         gateway %(gateway)s
         dns-nameservers %(dns)s

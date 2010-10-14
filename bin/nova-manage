@@ -52,6 +52,7 @@
   CLI interface for nova management.
 """
 
+import logging
 import os
 import sys
 import time
@@ -72,6 +73,7 @@ from nova import flags
 from nova import quota
 from nova import utils
 from nova.auth import manager
+from nova.network import manager as network_manager
 from nova.cloudpipe import pipelib
 
 
@@ -88,11 +90,16 @@ class VpnCommands(object):
     def list(self):
         """Print a listing of the VPNs for all projects."""
         print "%-12s\t" % 'project',
-        print "%-12s\t" % 'ip:port',
+        print "%-20s\t" % 'ip:port',
         print "%s" % 'state'
         for project in self.manager.get_projects():
             print "%-12s\t" % project.name,
-            print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
+
+            try:
+                s = "%s:%s" % (project.vpn_ip, project.vpn_port)
+            except exception.NotFound:
+                s = "None"
+            print "%-20s\t" % s,
 
             vpn = self._vpn_for(project.id)
             if vpn:
@@ -114,7 +121,7 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all():
+        for instance in db.instance_get_all(None):
             if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
@@ -371,6 +378,29 @@ class FloatingIpCommands(object):
                                   floating_ip['address'],
                                   instance)
 
+class NetworkCommands(object):
+    """Class for managing networks."""
+
+    def create(self, fixed_range=None, num_networks=None,
+               network_size=None, vlan_start=None, vpn_start=None):
+        """Creates fixed ips for host by range
+        arguments: [fixed_range=FLAG], [num_networks=FLAG],
+                   [network_size=FLAG], [vlan_start=FLAG],
+                   [vpn_start=FLAG]"""
+        if not fixed_range:
+            fixed_range = FLAGS.fixed_range
+        if not num_networks:
+            num_networks = FLAGS.num_networks
+        if not network_size:
+            network_size = FLAGS.network_size
+        if not vlan_start:
+            vlan_start = FLAGS.vlan_start
+        if not vpn_start:
+            vpn_start = FLAGS.vpn_start
+        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager.create_networks(None, fixed_range, int(num_networks),
+                                    int(network_size), int(vlan_start),
+                                    int(vpn_start))
 
 CATEGORIES = [
     ('user', UserCommands),
@@ -378,7 +408,8 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
-    ('floating', FloatingIpCommands)
+    ('floating', FloatingIpCommands),
+    ('network', NetworkCommands)
 ]
 
 
@@ -417,6 +448,10 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile('/etc/nova/nova-manage.conf')
     argv = FLAGS(sys.argv)
+
+    if FLAGS.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
@@ -444,9 +479,9 @@ def main():
         fn(*argv)
         sys.exit(0)
     except TypeError:
-        print "Wrong number of arguments supplied"
+        print "Possible wrong number of arguments supplied"
         print "%s %s: %s" % (category, action, fn.__doc__)
-        sys.exit(2)
+        raise
 
 if __name__ == '__main__':
     main()
