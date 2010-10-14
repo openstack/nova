@@ -259,17 +259,16 @@ class Controller(wsgi.Controller):
 
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned
-        ctxt = context.RequestContext(user_id, user_id)
-        network_topic = self._get_network_topic(ctxt)
+        network_topic = self._get_network_topic(ctxt, network_manager)
         rpc.call(ctxt,
                  network_topic,
                  {"method": "setup_fixed_ip",
                   "args": {"address": address}})
         return inst
 
-    def _get_network_topic(self, context):
+    def _get_network_topic(self, context, network_manager):
         """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
+        network_ref = network_manager.get_network(context)
         host = network_ref['host']
         if not host:
             host = rpc.call(context,
