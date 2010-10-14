@@ -201,7 +201,7 @@ class AuthManager(object):
 
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
-        if not cls._instance:
+        if not cls._instance or ('new' in kwargs and kwargs['new']):
             cls._instance = super(AuthManager, cls).__new__(cls)
         return cls._instance
 
