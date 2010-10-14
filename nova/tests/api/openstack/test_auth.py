@@ -6,27 +6,28 @@ import webob
 import webob.dec
 
 import nova.api
-import nova.api.rackspace.auth
+import nova.api.openstack.auth
+import nova.auth.manager
 from nova import auth
-from nova.tests.api.rackspace import test_helper
+from nova.tests.api.openstack import fakes
 
 class Test(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.rackspace.auth.BasicApiAuthManager,
-            '__init__', test_helper.fake_auth_init)
-        test_helper.FakeAuthManager.auth_data = {}
-        test_helper.FakeAuthDatabase.data = {}
-        test_helper.stub_out_rate_limiting(self.stubs)
-        test_helper.stub_for_testing(self.stubs)
+        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+            '__init__', fakes.fake_auth_init)
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_networking(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        test_helper.fake_data_store = {}
+        fakes.fake_data_store = {}
 
     def test_authorize_user(self):
-        f = test_helper.FakeAuthManager()
-        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
+        f = fakes.FakeAuthManager()
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -39,8 +40,8 @@ class Test(unittest.TestCase):
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
     def test_authorize_token(self):
-        f = test_helper.FakeAuthManager()
-        f.add_user('derp', { 'uid': 1, 'name':'herp' } )
+        f = fakes.FakeAuthManager()
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
             
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -55,8 +56,8 @@ class Test(unittest.TestCase):
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.rackspace, 'APIRouter',
-            test_helper.FakeRouter)
+        self.stubs.Set(nova.api.openstack, 'APIRouter',
+            fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(nova.api.API())
@@ -71,13 +72,14 @@ class Test(unittest.TestCase):
             self.destroy_called = True
         
         def bad_token(meh, context, token_hash):
-            return { 'token_hash':token_hash,  
-                     'created_at':datetime.datetime(1990, 1, 1) }
+            return fakes.FakeToken(
+                    token_hash=token_hash,
+                    created_at=datetime.datetime(1990, 1, 1))
 
-        self.stubs.Set(test_helper.FakeAuthDatabase, 'auth_destroy_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
             destroy_token_mock)
 
-        self.stubs.Set(test_helper.FakeAuthDatabase, 'auth_get_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_get_token',
             bad_token)
 
         req = webob.Request.blank('/v1.0/')

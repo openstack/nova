@@ -145,6 +145,8 @@ class Authorizer(wsgi.Middleware):
                 'CreateKeyPair': ['all'],
                 'DeleteKeyPair': ['all'],
                 'DescribeSecurityGroups': ['all'],
+                'AuthorizeSecurityGroupIngress': ['netadmin'],
+                'RevokeSecurityGroupIngress': ['netadmin'],
                 'CreateSecurityGroup': ['netadmin'],
                 'DeleteSecurityGroup': ['netadmin'],
                 'GetConsoleOutput': ['projectmanager', 'sysadmin'],

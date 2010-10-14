@@ -28,6 +28,11 @@ from nova import flags
 from nova import utils
 
 
+def _bin_file(script):
+    """Return the absolute path to scipt in the bin directory"""
+    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
@@ -38,7 +43,9 @@ flags.DEFINE_string('networks_path', utils.abspath('../networks'),
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
 flags.DEFINE_string('bridge_dev', 'eth0',
-                    'network device for bridges')
+                        'network device for bridges')
+flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
+                        'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '127.0.0.1',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
@@ -58,12 +65,12 @@ def init_host():
     # SNAT rule for outbound traffic.
     _confirm_rule("POSTROUTING", "-t nat -s %s "
              "-j SNAT --to-source %s"
-             % (FLAGS.private_range, FLAGS.routing_source_ip))
+             % (FLAGS.fixed_range, FLAGS.routing_source_ip))
 
     _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
-                  FLAGS.private_range)
+                  FLAGS.fixed_range)
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
-                  {'range': FLAGS.private_range})
+                  {'range': FLAGS.fixed_range})
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -139,16 +146,16 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
         _execute("sudo brctl addif %s %s" % (bridge, interface))
-        if net_attrs:
-            _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                    (bridge,
-                     net_attrs['gateway'],
-                     net_attrs['broadcast'],
-                     net_attrs['netmask']))
-        else:
-            _execute("sudo ifconfig %s up" % bridge)
-        _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
-        _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
+    if net_attrs:
+        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
+                (bridge,
+                 net_attrs['gateway'],
+                 net_attrs['broadcast'],
+                 net_attrs['netmask']))
+    else:
+        _execute("sudo ifconfig %s up" % bridge)
+    _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
+    _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
 
 
 def get_dhcp_hosts(context, network_id):
@@ -172,17 +179,22 @@ def update_dhcp(context, network_id):
     signal causing it to reload, otherwise spawn a new instance
     """
     network_ref = db.network_get(context, network_id)
-    with open(_dhcp_file(network_ref['vlan'], 'conf'), 'w') as f:
+
+    conffile = _dhcp_file(network_ref['bridge'], 'conf')
+    with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_id))
 
-    pid = _dnsmasq_pid_for(network_ref['vlan'])
+    # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
+    os.chmod(conffile, 0644)
+
+    pid = _dnsmasq_pid_for(network_ref['bridge'])
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
         # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
         #           correct dnsmasq process
         try:
-            os.kill(pid, signal.SIGHUP)
+            _execute('sudo kill -HUP %d' % pid)
             return
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Hupping dnsmasq threw %s", exc)
@@ -238,12 +250,12 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
-           ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
+           ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
            ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-           ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
-           ' --dhcp-script=%s' % _bin_file('nova-dhcpbridge'),
+           ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
+           ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
     return ''.join(cmd)
 
@@ -254,31 +266,30 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            os.kill(pid, signal.SIGTERM)
+            _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
             logging.debug("Killing dnsmasq threw %s", exc)
 
 
-def _dhcp_file(vlan, kind):
-    """Return path to a pid, leases or conf file for a vlan"""
+def _dhcp_file(bridge, kind):
+    """Return path to a pid, leases or conf file for a bridge"""
 
-    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
+    if not os.path.exists(FLAGS.networks_path):
+        os.makedirs(FLAGS.networks_path)
+    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path,
+                                              bridge,
+                                              kind))
 
 
-def _bin_file(script):
-    """Return the absolute path to scipt in the bin directory"""
-    return os.path.abspath(os.path.join(__file__, "../../../bin", script))
-
-
-def _dnsmasq_pid_for(vlan):
-    """Returns he pid for prior dnsmasq instance for a vlan
+def _dnsmasq_pid_for(bridge):
+    """Returns the pid for prior dnsmasq instance for a bridge
 
     Returns None if no pid file exists
 
     If machine has rebooted pid might be incorrect (caller should check)
     """
 
-    pid_file = _dhcp_file(vlan, 'pid')
+    pid_file = _dhcp_file(bridge, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

@@ -70,7 +70,7 @@ flags.DEFINE_string('credential_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s',
                     'Subject for certificate for users')
-flags.DEFINE_string('auth_driver', 'nova.auth.ldapdriver.FakeLdapDriver',
+flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
 
@@ -485,13 +485,6 @@ class AuthManager(object):
                                               member_users)
             if project_dict:
                 project = Project(**project_dict)
-                try:
-                    ctxt = context.get_admin_context()
-                    self.network_manager.allocate_network(ctxt,
-                                                          project.id)
-                except:
-                    drv.delete_project(project.id)
-                    raise
                 return project
 
     def modify_project(self, project, manager_user=None, description=None):
@@ -560,14 +553,6 @@ class AuthManager(object):
 
     def delete_project(self, project):
         """Deletes a project"""
-        try:
-            ctxt = context.get_admin_context()
-            network_ref = db.project_get_network(ctxt,
-                                                 Project.safe_id(project))
-            db.network_destroy(ctxt, network_ref['id'])
-        except:
-            logging.exception('Could not destroy network for %s',
-                              project)
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 
@@ -657,7 +642,10 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        try:
+            (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        except exception.NotFound:
+            vpn_ip = None
         if vpn_ip:
             configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())

@@ -92,6 +92,9 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.host = '127.0.0.1'
 
         self.app = api.API()
+
+    def expect_http(self, host=None, is_secure=False):
+        """Returns a new EC2 connection"""
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
@@ -101,9 +104,6 @@ class ApiEc2TestCase(test.BaseTestCase):
                 path='/services/Cloud')
 
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
-
-    def expect_http(self, host=None, is_secure=False):
-        """Returns a new EC2 connection"""
         http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
         # pylint: disable-msg=E1103
@@ -139,3 +139,185 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.assertEquals(len(results), 1)
         self.manager.delete_project(project)
         self.manager.delete_user(user)
+
+    def test_get_all_security_groups(self):
+        """Test that we can retrieve security groups"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        rv = self.ec2.get_all_security_groups()
+
+        self.assertEquals(len(rv), 1)
+        self.assertEquals(rv[0].name, 'default')
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_create_delete_security_group(self):
+        """Test that we can create a security group"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                      for x in range(random.randint(4, 8)))
+
+        self.ec2.create_security_group(security_group_name, 'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        self.assertEquals(len(rv), 2)
+        self.assertTrue(security_group_name in [group.name for group in rv])
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_authorize_revoke_security_group_cidr(self):
+        """
+        Test that we can add and remove CIDR based rules
+        to a security group
+        """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                      for x in range(random.randint(4, 8)))
+
+        group = self.ec2.create_security_group(security_group_name, 'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.authorize('tcp', 80, 81, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(int(group.rules[0].from_port), 80)
+                self.assertEquals(int(group.rules[0].to_port), 81)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]),  '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.revoke('tcp', 80, 81, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        rv = self.ec2.get_all_security_groups()
+
+        self.assertEqual(len(rv), 1)
+        self.assertEqual(rv[0].name, 'default')
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+        return
+
+    def test_authorize_revoke_security_group_foreign_group(self):
+        """
+        Test that we can grant and revoke another security group access
+        to a security group
+        """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                      for x in range(random.randint(4, 8)))
+        other_security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                                          for x in range(random.randint(4, 8)))
+
+        group = self.ec2.create_security_group(security_group_name, 'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        other_group = self.ec2.create_security_group(other_security_group_name,
+                                                     'some other group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.authorize(src_group=other_group)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]),
+                                  '%s-%s' % (other_security_group_name, 'fake'))
+
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+
+        for group in rv:
+            if group.name == security_group_name:
+                self.expect_http()
+                self.mox.ReplayAll()
+                group.connection = self.ec2
+                group.revoke(src_group=other_group)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+        return

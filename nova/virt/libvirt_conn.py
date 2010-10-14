@@ -25,8 +25,10 @@ import logging
 import os
 import shutil
 
+import IPy
 from twisted.internet import defer
 from twisted.internet import task
+from twisted.internet import threads
 
 from nova import context
 from nova import db
@@ -34,6 +36,7 @@ from nova import exception
 from nova import flags
 from nova import process
 from nova import utils
+#from nova.api import context
 from nova.auth import manager
 from nova.compute import disk
 from nova.compute import instance_types
@@ -48,6 +51,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.qemu.xml.template'),
                     'Libvirt XML Template for QEmu/KVM')
+flags.DEFINE_string('libvirt_xen_xml_template',
+                    utils.abspath('virt/libvirt.xen.xml.template'),
+                    'Libvirt XML Template for Xen')
 flags.DEFINE_string('libvirt_uml_xml_template',
                     utils.abspath('virt/libvirt.uml.xml.template'),
                     'Libvirt XML Template for user-mode-linux')
@@ -56,11 +62,14 @@ flags.DEFINE_string('injected_network_template',
                     'Template file for injected network')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
-                    'Libvirt domain type (valid options are: kvm, qemu, uml)')
+                    'Libvirt domain type (valid options are: kvm, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+flags.DEFINE_bool('allow_project_net_traffic',
+                  True,
+                  'Whether to allow in project network traffic')
 
 
 def get_connection(read_only):
@@ -105,6 +114,9 @@ class LibvirtConnection(object):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
             template_file = FLAGS.libvirt_uml_xml_template
+        elif FLAGS.libvirt_type == 'xen':
+            uri = FLAGS.libvirt_uri or 'xen:///'
+            template_file = FLAGS.libvirt_xen_xml_template
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
             template_file = FLAGS.libvirt_xml_template
@@ -135,7 +147,7 @@ class LibvirtConnection(object):
         d.addCallback(lambda _: self._cleanup(instance))
         # FIXME: What does this comment mean?
         # TODO(termie): short-circuit me for tests
-        # WE'LL save this for when we do shutdown,
+       # WE'LL save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
         timer = task.LoopingCall(f=None)
         def _wait_for_shutdown():
@@ -217,6 +229,7 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
+        yield NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
         yield self._create_image(instance, xml)
         yield self._conn.createXML(xml, 0)
         # TODO(termie): this should actually register
@@ -245,6 +258,46 @@ class LibvirtConnection(object):
         timer.f = _wait_for_boot
         timer.start(interval=0.5, now=True)
         yield local_d
+
+    def _flush_xen_console(self, virsh_output):
+        logging.info('virsh said: %r' % (virsh_output,))
+        virsh_output = virsh_output[0].strip()
+
+        if virsh_output.startswith('/dev/'):
+            logging.info('cool, it\'s a device')
+            d = process.simple_execute("sudo dd if=%s iflag=nonblock" % virsh_output, check_exit_code=False)
+            d.addCallback(lambda r:r[0])
+            return d
+        else:
+            return ''
+
+    def _append_to_file(self, data, fpath):
+        logging.info('data: %r, fpath: %r' % (data, fpath))
+        fp = open(fpath, 'a+')
+        fp.write(data)
+        return fpath
+
+    def _dump_file(self, fpath):
+        fp = open(fpath, 'r+')
+        contents = fp.read()
+        logging.info('Contents: %r' % (contents,))
+        return contents
+
+    @exception.wrap_exception
+    def get_console_output(self, instance):
+        console_log = os.path.join(FLAGS.instances_path, instance['internal_id'], 'console.log')
+        logging.info('console_log: %s' % console_log)
+        logging.info('FLAGS.libvirt_type: %s' % FLAGS.libvirt_type)
+        if FLAGS.libvirt_type == 'xen':
+            # Xen is spethial
+            d = process.simple_execute("virsh ttyconsole %s" % instance['name'])
+            d.addCallback(self._flush_xen_console)
+            d.addCallback(self._append_to_file, console_log)
+        else:
+            d = defer.succeed(console_log)
+        d.addCallback(self._dump_file)
+        return d
+
 
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml):
@@ -284,14 +337,13 @@ class LibvirtConnection(object):
 
         key = str(inst['key_data'])
         net = None
-        network_ref = db.project_get_network(context.get_admin_context(),
-                                             project.id)
+        network_ref = db.network_get_by_instance(context.get_admin_context(),
+                                                 inst['id'])
         if network_ref['injected']:
             address = db.instance_get_fixed_address(context.get_admin_context(),
                                                     inst['id'])
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
-                                  'network': network_ref['network'],
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
                                   'broadcast': network_ref['broadcast'],
@@ -324,6 +376,9 @@ class LibvirtConnection(object):
                                          instance['project_id'])
         # FIXME(vish): stick this in db
         instance_type = instance_types.INSTANCE_TYPES[instance['instance_type']]
+        ip_address = db.instance_get_fixed_address({}, instance['id'])
+        # Assume that the gateway also acts as the dhcp server.
+        dhcp_server = network['gateway']
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -331,7 +386,9 @@ class LibvirtConnection(object):
                     'memory_kb': instance_type['memory_mb'] * 1024,
                     'vcpus': instance_type['vcpus'],
                     'bridge_name': network['bridge'],
-                    'mac_address': instance['mac_address']}
+                    'mac_address': instance['mac_address'],
+                    'ip_address': ip_address,
+                    'dhcp_server': dhcp_server }
         libvirt_xml = self.libvirt_xml % xml_info
         logging.debug('instance %s: finished toXML method', instance['name'])
 
@@ -445,3 +502,195 @@ class LibvirtConnection(object):
         """
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
+
+
+    def refresh_security_group(self, security_group_id):
+        fw = NWFilterFirewall(self._conn)
+        fw.ensure_security_group_filter(security_group_id)
+
+
+class NWFilterFirewall(object):
+    """
+    This class implements a network filtering mechanism versatile
+    enough for EC2 style Security Group filtering by leveraging
+    libvirt's nwfilter.
+
+    First, all instances get a filter ("nova-base-filter") applied.
+    This filter drops all incoming ipv4 and ipv6 connections.
+    Outgoing connections are never blocked.
+
+    Second, every security group maps to a nwfilter filter(*).
+    NWFilters can be updated at runtime and changes are applied
+    immediately, so changes to security groups can be applied at
+    runtime (as mandated by the spec).
+
+    Security group rules are named "nova-secgroup-<id>" where <id>
+    is the internal id of the security group. They're applied only on
+    hosts that have instances in the security group in question.
+
+    Updates to security groups are done by updating the data model
+    (in response to API calls) followed by a request sent to all
+    the nodes with instances in the security group to refresh the
+    security group.
+
+    Each instance has its own NWFilter, which references the above
+    mentioned security group NWFilters. This was done because
+    interfaces can only reference one filter while filters can
+    reference multiple other filters. This has the added benefit of
+    actually being able to add and remove security groups from an
+    instance at run time. This functionality is not exposed anywhere,
+    though.
+
+    Outstanding questions:
+
+    The name is unique, so would there be any good reason to sync
+    the uuid across the nodes (by assigning it from the datamodel)?
+
+
+    (*) This sentence brought to you by the redundancy department of
+        redundancy.
+    """
+
+    def __init__(self, get_connection):
+        self._conn = get_connection
+
+
+    nova_base_filter = '''<filter name='nova-base' chain='root'>
+                            <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
+                            <filterref filter='no-mac-spoofing'/>
+                            <filterref filter='no-ip-spoofing'/>
+                            <filterref filter='no-arp-spoofing'/>
+                            <filterref filter='allow-dhcp-server'/>
+                            <filterref filter='nova-allow-dhcp-server'/>
+                            <filterref filter='nova-base-ipv4'/>
+                            <filterref filter='nova-base-ipv6'/>
+                          </filter>'''
+
+    nova_dhcp_filter = '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
+                            <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                              <rule action='accept' direction='out'
+                                    priority='100'>
+                                <udp srcipaddr='0.0.0.0'
+                                     dstipaddr='255.255.255.255'
+                                     srcportstart='68'
+                                     dstportstart='67'/>
+                              </rule>
+                              <rule action='accept' direction='in' priority='100'>
+                                <udp srcipaddr='$DHCPSERVER'
+                                     srcportstart='67'
+                                     dstportstart='68'/>
+                              </rule>
+                            </filter>'''
+
+    def nova_base_ipv4_filter(self):
+        retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
+        for protocol in ['tcp', 'udp', 'icmp']:
+            for direction,action,priority in [('out','accept', 399),
+                                     ('inout','drop', 400)]:
+                retval += """<rule action='%s' direction='%s' priority='%d'>
+                               <%s />
+                             </rule>""" % (action, direction,
+                                              priority, protocol)
+        retval += '</filter>'
+        return retval
+
+
+    def nova_base_ipv6_filter(self):
+        retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
+        for protocol in ['tcp', 'udp', 'icmp']:
+            for direction,action,priority in [('out','accept',399),
+                                     ('inout','drop',400)]:
+                retval += """<rule action='%s' direction='%s' priority='%d'>
+                               <%s-ipv6 />
+                             </rule>""" % (action, direction,
+                                             priority, protocol)
+        retval += '</filter>'
+        return retval
+
+
+    def nova_project_filter(self, project, net, mask):
+        retval = "<filter name='nova-project-%s' chain='ipv4'>" % project
+        for protocol in ['tcp', 'udp', 'icmp']:
+            retval += """<rule action='accept' direction='in' priority='200'>
+                           <%s srcipaddr='%s' srcipmask='%s' />
+                         </rule>""" % (protocol, net, mask)
+        retval += '</filter>'
+        return retval
+
+
+    def _define_filter(self, xml):
+        if callable(xml):
+            xml = xml()
+        d = threads.deferToThread(self._conn.nwfilterDefineXML, xml)
+        return d
+
+
+    @staticmethod
+    def _get_net_and_mask(cidr):
+        net = IPy.IP(cidr)
+        return str(net.net()), str(net.netmask())
+
+    @defer.inlineCallbacks
+    def setup_nwfilters_for_instance(self, instance):
+        """
+        Creates an NWFilter for the given instance. In the process,
+        it makes sure the filters for the security groups as well as
+        the base filter are all in place.
+        """
+
+        yield self._define_filter(self.nova_base_ipv4_filter)
+        yield self._define_filter(self.nova_base_ipv6_filter)
+        yield self._define_filter(self.nova_dhcp_filter)
+        yield self._define_filter(self.nova_base_filter)
+
+        nwfilter_xml = ("<filter name='nova-instance-%s' chain='root'>\n" +
+                         "  <filterref filter='nova-base' />\n"
+                       ) % instance['name']
+
+        if FLAGS.allow_project_net_traffic:
+            network_ref = db.project_get_network({}, instance['project_id'])
+            net, mask = self._get_net_and_mask(network_ref['cidr'])
+            project_filter = self.nova_project_filter(instance['project_id'],
+                                                      net, mask)
+            yield self._define_filter(project_filter)
+
+            nwfilter_xml += ("  <filterref filter='nova-project-%s' />\n"
+                            ) % instance['project_id']
+
+        for security_group in instance.security_groups:
+            yield self.ensure_security_group_filter(security_group['id'])
+
+            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
+                            ) % security_group['id']
+        nwfilter_xml += "</filter>"
+
+        yield self._define_filter(nwfilter_xml)
+        return
+
+    def ensure_security_group_filter(self, security_group_id):
+        return self._define_filter(
+                   self.security_group_to_nwfilter_xml(security_group_id))
+
+
+    def security_group_to_nwfilter_xml(self, security_group_id):
+        security_group = db.security_group_get({}, security_group_id)
+        rule_xml = ""
+        for rule in security_group.rules:
+            rule_xml += "<rule action='accept' direction='in' priority='300'>"
+            if rule.cidr:
+                net, mask = self._get_net_and_mask(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % (rule.protocol, net, mask)
+                if rule.protocol in ['tcp', 'udp']:
+                    rule_xml += "dstportstart='%s' dstportend='%s' " % \
+                                (rule.from_port, rule.to_port)
+                elif rule.protocol == 'icmp':
+                    logging.info('rule.protocol: %r, rule.from_port: %r, rule.to_port: %r' % (rule.protocol, rule.from_port, rule.to_port))
+                    if rule.from_port != -1:
+                        rule_xml += "type='%s' " % rule.from_port
+                    if rule.to_port != -1:
+                        rule_xml += "code='%s' " % rule.to_port
+
+                rule_xml += '/>\n'
+            rule_xml += "</rule>\n"
+        xml = '''<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>''' % (security_group_id, rule_xml,)
+        return xml

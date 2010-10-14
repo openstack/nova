@@ -22,6 +22,8 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
+from twisted.application.app import startApplication
+
 from nova import context
 from nova import exception
 from nova import flags
@@ -98,6 +100,7 @@ class ServiceTestCase(test.BaseTestCase):
         self.mox.ReplayAll()
 
         app = service.Service.create(host=host, binary=binary)
+        startApplication(app, False)
         self.assert_(app)
 
     # We're testing sort of weird behavior in how report_state decides

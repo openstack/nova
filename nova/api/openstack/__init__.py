@@ -17,7 +17,7 @@
 #    under the License.
 
 """
-WSGI middleware for Rackspace API controllers.
+WSGI middleware for OpenStack API controllers.
 """
 
 import json
@@ -31,30 +31,30 @@ import webob
 from nova import flags
 from nova import utils
 from nova import wsgi
-from nova.api.rackspace import faults
-from nova.api.rackspace import backup_schedules
-from nova.api.rackspace import flavors
-from nova.api.rackspace import images
-from nova.api.rackspace import ratelimiting
-from nova.api.rackspace import servers
-from nova.api.rackspace import sharedipgroups
+from nova.api.openstack import faults
+from nova.api.openstack import backup_schedules
+from nova.api.openstack import flavors
+from nova.api.openstack import images
+from nova.api.openstack import ratelimiting
+from nova.api.openstack import servers
+from nova.api.openstack import sharedipgroups
 from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('nova_api_auth',
-    'nova.api.rackspace.auth.BasicApiAuthManager', 
-    'The auth mechanism to use for the Rackspace API implemenation')
+    'nova.api.openstack.auth.BasicApiAuthManager', 
+    'The auth mechanism to use for the OpenStack API implemenation')
 
 class API(wsgi.Middleware):
-    """WSGI entry point for all Rackspace API requests."""
+    """WSGI entry point for all OpenStack API requests."""
 
     def __init__(self):
         app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
         super(API, self).__init__(app)
 
 class AuthMiddleware(wsgi.Middleware):
-    """Authorize the rackspace API request or return an HTTP Forbidden."""
+    """Authorize the openstack API request or return an HTTP Forbidden."""
 
     def __init__(self, application):
         self.auth_driver = utils.import_class(FLAGS.nova_api_auth)()
@@ -145,7 +145,7 @@ class RateLimitingMiddleware(wsgi.Middleware):
 
 class APIRouter(wsgi.Router):
     """
-    Routes requests on the Rackspace API to the appropriate controller
+    Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
 

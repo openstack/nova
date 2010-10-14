@@ -53,11 +53,17 @@ class Service(object, service.Service):
         self.host = host
         self.binary = binary
         self.topic = topic
-        manager_class = utils.import_class(manager)
-        self.manager = manager_class(host=host, *args, **kwargs)
+        self.manager_class_name = manager
+        super(Service, self).__init__(*args, **kwargs)
+        self.saved_args, self.saved_kwargs = args, kwargs
+
+
+    def startService(self):  # pylint: disable-msg C0103
+        manager_class = utils.import_class(self.manager_class_name)
+        self.manager = manager_class(host=self.host, *self.saved_args,
+                                                     **self.saved_kwargs)
         self.manager.init_host()
         self.model_disconnected = False
-        super(Service, self).__init__(*args, **kwargs)
         ctxt = context.get_admin_context()
         try:
             service_ref = db.service_get_by_args(ctxt,
