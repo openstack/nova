@@ -60,8 +60,7 @@ def add_lease(mac, ip_address, _hostname, _interface):
         rpc.cast(context.get_admin_context(),
                  "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
-                  "args": {"context": None,
-                           "mac": mac,
+                  "args": {"mac": mac,
                            "address": ip_address}})
 
 
@@ -82,8 +81,7 @@ def del_lease(mac, ip_address, _hostname, _interface):
         rpc.cast(context.get_admin_context(),
                  "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
-                  "args": {"context": None,
-                           "mac": mac,
+                  "args": {"mac": mac,
                            "address": ip_address}})
 
 
