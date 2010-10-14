@@ -67,6 +67,7 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -338,6 +339,16 @@ class ProjectCommands(object):
         arguments: project user"""
         self.manager.remove_from_project(user, project)
 
+    def scrub(self, project):
+        """Deletes data associated with project
+        arguments: project"""
+        ctxt = context.get_admin_context()
+        network_ref = db.project_get_network(ctxt, project)
+        db.network_disassociate(ctxt, network_ref['id'])
+        groups = db.security_group_get_by_project(ctxt, project)
+        for group in groups:
+            db.security_group_destroy(ctxt, group['id'])
+
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
@@ -451,7 +462,7 @@ def main():
 
     if FLAGS.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
