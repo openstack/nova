@@ -258,7 +258,7 @@ def instance_get_all(context):
 
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
-    return IMPL.instance_get_all(context, user_id)
+    return IMPL.instance_get_all_by_user(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -483,7 +483,7 @@ def auth_get_token(context, token_hash):
 
 def auth_create_token(context, token):
     """Creates a new token"""
-    return IMPL.auth_create_token(context, token_hash, token)
+    return IMPL.auth_create_token(context, token)
 
 
 ###################
