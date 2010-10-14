@@ -175,9 +175,9 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_create_token(context, token):
-        fakeToken = FakeToken(created_at=datetime.datetime.now(), **token)
-        FakeAuthDatabase.data[fakeToken.token_hash] = fakeToken
-        return fakeToken
+        fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
+        FakeAuthDatabase.data[fake_token.token_hash] = fake_token
+        return fake_token
 
     @staticmethod
     def auth_destroy_token(context, token):
