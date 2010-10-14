@@ -23,6 +23,7 @@ RequestContext: context for requests that persist through all of nova.
 import datetime
 import random
 
+from nova import exception
 from nova import utils
 
 class RequestContext(object):
@@ -67,7 +68,10 @@ class RequestContext(object):
         #             file from manager.
         from nova.auth import manager
         if not self._user:
-            self._user = manager.AuthManager().get_user(self.user_id)
+            try:
+                self._user = manager.AuthManager().get_user(self.user_id)
+            except exception.NotFound:
+                pass
         return self._user
 
     @property
@@ -76,7 +80,10 @@ class RequestContext(object):
         #             file from manager.
         from nova.auth import manager
         if not self._project:
-            self._project = manager.AuthManager().get_project(self.project_id)
+            try:
+                self._project = manager.AuthManager().get_project(self.project_id)
+            except exception.NotFound:
+                pass
         return self._project
 
     def to_dict(self):
