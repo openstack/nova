@@ -52,6 +52,11 @@ class QuotaError(exception.ApiError):
     """Quota Exceeeded"""
     pass
 
+../deploy/nova/api/ec2/cloud.py:                    db.security_group_get_by_name(context.admin(),
+../deploy/nova/api/ec2/cloud.py:        instance_ref = db.volume_get_instance(context.admin(), volume_ref['id'])
+../deploy/nova/api/ec2/cloud.py:                db.instance_add_security_group(context.admin(), inst_id,
+../deploy/nova/api/ec2/cloud.py:            rpc.cast(context.admin(),
+../deploy/nova/api/ec2/cloud.py:                self.network_manager.deallocate_fixed_ip(context.admin(),
 
 def _gen_key(context, user_id, key_name):
     """Generate a key
@@ -310,7 +315,7 @@ class CloudController(object):
                 source_security_group_owner_id)
 
             source_security_group = \
-                    db.security_group_get_by_name(context,
+                    db.security_group_get_by_name(context.elevated(),
                                                   source_project_id,
                                                   source_security_group_name)
             values['group_id'] = source_security_group['id']
@@ -556,7 +561,8 @@ class CloudController(object):
 
     def detach_volume(self, context, volume_id, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
-        instance_ref = db.volume_get_instance(context, volume_ref['id'])
+        instance_ref = db.volume_get_instance(context.elevated(),
+                                              volume_ref['id'])
         if not instance_ref:
             raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
@@ -842,13 +848,15 @@ class CloudController(object):
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
+        elevated = context.elevated()
 
         for num in range(num_instances):
             instance_ref = db.instance_create(context, base_options)
             inst_id = instance_ref['id']
 
             for security_group_id in security_groups:
-                db.instance_add_security_group(context, inst_id,
+                db.instance_add_security_group(elevated,
+                                               inst_id,
                                                security_group_id)
 
             inst = {}
@@ -866,7 +874,7 @@ class CloudController(object):
                                                              inst_id,
                                                              vpn)
             network_topic = self._get_network_topic(context)
-            rpc.call(context,
+            rpc.cast(elevated,
                      network_topic,
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
@@ -924,7 +932,8 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                self.network_manager.deallocate_fixed_ip(context, address)
+                self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                         address)
 
             host = instance_ref['host']
             if host:

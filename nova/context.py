@@ -41,9 +41,10 @@ class RequestContext(object):
             self._project = None
             self.project_id = project
         if is_admin is None:
-            if not user:
-                user = self.user
-            self.is_admin = user.is_admin()
+            if self.user_id and self.user:
+                self.is_admin = self.user.is_admin()
+            else:
+                self.is_admin = False
         else:
             self.is_admin = is_admin
         self.read_deleted = read_deleted
@@ -91,7 +92,7 @@ class RequestContext(object):
     def from_dict(cls, values):
         return cls(**values)
 
-    def admin(self, read_deleted=False):
+    def elevated(self, read_deleted=False):
         """Return a version of this context with admin flag set"""
         return RequestContext(self.user_id,
                               self.project_id,

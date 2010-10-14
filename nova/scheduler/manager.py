@@ -54,10 +54,11 @@ class SchedulerManager(manager.Manager):
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
+        elevated = context.elevated()
         try:
-            host = getattr(self.driver, driver_method)(context, *args, **kwargs)
+            host = getattr(self.driver, driver_method)(elevated, *args, **kwargs)
         except AttributeError:
-            host = self.driver.schedule(context, topic, *args, **kwargs)
+            host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         rpc.cast(context,
                  db.queue_get_for(context, topic, host),
