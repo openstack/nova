@@ -22,7 +22,6 @@ Handling of VM disk images.
 """
 
 import logging
-import os
 import os.path
 import shutil
 import sys
@@ -34,6 +33,7 @@ from nova import flags
 from nova import process
 from nova.auth import manager
 from nova.auth import signer
+from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
@@ -55,7 +55,7 @@ def _fetch_image_no_curl(url, path, headers):
         request.add_header(k, v)
 
     def urlretrieve(urlfile, fpath):
-        chunk = 1*1024*1024
+        chunk = 1 * 1024 * 1024
         f = open(fpath, "wb")
         while 1:
             data = urlfile.read(chunk)
@@ -66,7 +66,8 @@ def _fetch_image_no_curl(url, path, headers):
     urlopened = urllib2.urlopen(request)
     urlretrieve(urlopened, path)
     logging.debug("Finished retreving %s -- placed in %s", url, path)
-    
+
+
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
     logging.debug("About to retrieve %s and place it in %s", url, path)
@@ -93,13 +94,15 @@ def _fetch_s3_image(image, path, user, project):
             cmd += ['-o', path]
             return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
 
+
 def _fetch_local_image(image, path, user, project):
-    source = _image_path(os.path.join(image,'image'))
+    source = _image_path(os.path.join(image, 'image'))
     logging.debug("About to copy %s to %s", source, path)
     if sys.platform.startswith('win'):
         return shutil.copy(source, path)
     else:
         return process.simple_execute('cp %s %s' % (source, path))
+
 
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)

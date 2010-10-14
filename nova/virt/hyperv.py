@@ -20,21 +20,21 @@ Uses Windows Management Instrumentation (WMI) calls to interact with Hyper-V
 Hyper-V WMI usage:
     http://msdn.microsoft.com/en-us/library/cc723875%28v=VS.85%29.aspx
 The Hyper-V object model briefly:
-    The physical computer and its hosted virtual machines are each represented 
-    by the Msvm_ComputerSystem class. 
+    The physical computer and its hosted virtual machines are each represented
+    by the Msvm_ComputerSystem class.
 
-    Each virtual machine is associated with a 
-    Msvm_VirtualSystemGlobalSettingData (vs_gs_data) instance and one or more 
-    Msvm_VirtualSystemSettingData (vmsetting) instances. For each vmsetting 
-    there is a series of Msvm_ResourceAllocationSettingData (rasd) objects. 
-    The rasd objects describe the settings for each device in a virtual machine.
-    Together, the vs_gs_data, vmsettings and rasds describe the configuration 
+    Each virtual machine is associated with a
+    Msvm_VirtualSystemGlobalSettingData (vs_gs_data) instance and one or more
+    Msvm_VirtualSystemSettingData (vmsetting) instances. For each vmsetting
+    there is a series of Msvm_ResourceAllocationSettingData (rasd) objects.
+    The rasd objects describe the settings for each device in a VM.
+    Together, the vs_gs_data, vmsettings and rasds describe the configuration
     of the virtual machine.
 
-    Creating new resources such as disks and nics involves cloning a default 
-    rasd object and appropriately modifying the clone and calling the 
+    Creating new resources such as disks and nics involves cloning a default
+    rasd object and appropriately modifying the clone and calling the
     AddVirtualSystemResources WMI method
-    Changing resources such as memory uses the ModifyVirtualSystemResources 
+    Changing resources such as memory uses the ModifyVirtualSystemResources
     WMI method
 
 Using the Python WMI library:
@@ -47,10 +47,10 @@ Using the Python WMI library:
     The parameters and return tuples of WMI method calls can gleaned by
     examining the doc string. For example:
     >>> vs_man_svc.ModifyVirtualSystemResources.__doc__
-    ModifyVirtualSystemResources (ComputerSystem, ResourceSettingData[]) 
+    ModifyVirtualSystemResources (ComputerSystem, ResourceSettingData[])
                  => (Job, ReturnValue)'
-    When passing setting data (ResourceSettingData) to the WMI method, 
-    an XML representation of the data is passed in using the GetText_(1) method.
+    When passing setting data (ResourceSettingData) to the WMI method,
+    an XML representation of the data is passed in using GetText_(1).
     Available methods on a service can be determined using method.keys():
     >>> vs_man_svc.methods.keys()
     vmsettings and rasds for a vm can be retrieved using the 'associators'
@@ -65,22 +65,23 @@ import logging
 import time
 
 from twisted.internet import defer
-import wmi
 
 from nova import exception
 from nova import flags
-from nova.auth.manager import AuthManager
+from nova.auth import manager
 from nova.compute import power_state
 from nova.virt import images
+
+wmi = None
 
 
 FLAGS = flags.FLAGS
 
 
 HYPERV_POWER_STATE = {
-    3   : power_state.SHUTDOWN,
-    2  : power_state.RUNNING,
-    32768   : power_state.PAUSED,
+    3 : power_state.SHUTDOWN,
+    2 : power_state.RUNNING,
+    32768 : power_state.PAUSED,
 }
 
 
@@ -98,15 +99,42 @@ WMI_JOB_STATUS_STARTED = 4096
 WMI_JOB_STATE_RUNNING = 4
 WMI_JOB_STATE_COMPLETED = 7
 
+##### Exceptions
+
+
+class HyperVError(Exception):
+    """Base Exception class for all hyper-v errors."""
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
+
+
+class VmResourceAllocationError(HyperVError):
+    """Raised when Hyper-V is unable to create or add a resource to
+    a VM
+    """
+    def __init__(self, *args):
+        HyperVError.__init__(self, *args)
+
+
+class VmOperationError(HyperVError):
+    """Raised when Hyper-V is unable to change the state of
+    a VM (start/stop/reboot/destroy)
+    """
+    def __init__(self, *args):
+        HyperVError.__init__(self, *args)
+
 
 def get_connection(_):
+    global wmi
+    if wmi is None:
+        wmi = __import__('wmi')
     return HyperVConnection()
 
 
 class HyperVConnection(object):
     def __init__(self):
-        self._conn = wmi.WMI(moniker = '//./root/virtualization')
-        self._cim_conn = wmi.WMI(moniker = '//./root/cimv2')
+        self._conn = wmi.WMI(moniker='//./root/virtualization')
+        self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 
     def list_instances(self):
         """ Return the names of all the instances known to Hyper-V. """
@@ -121,20 +149,22 @@ class HyperVConnection(object):
         if vm is not None:
             raise exception.Duplicate('Attempted to create duplicate name %s' %
                             instance.name)
-    
-        user = AuthManager().get_user(instance['user_id'])
-        project = AuthManager().get_project(instance['project_id'])
+
+        user = manager.AuthManager().get_user(instance['user_id'])
+        project = manager.AuthManager().get_project(instance['project_id'])
         #Fetch the file, assume it is a VHD file.
-        vhdfile = os.path.join(FLAGS.instances_path, instance['str_id'])+".vhd"
+        base_vhd_filename = os.path.join(FLAGS.instances_path,
+                                         instance['str_id'])
+        vhdfile = "%s.vhd" % (base_vhd_filename)
         yield images.fetch(instance['image_id'], vhdfile, user, project)
-        
+
         try:
             yield self._create_vm(instance)
 
             yield self._create_disk(instance['name'], vhdfile)
             yield self._create_nic(instance['name'], instance['mac_address'])
-        
-            logging.debug ('Starting VM %s ', instance.name)
+
+            logging.debug('Starting VM %s ', instance.name)
             yield self._set_vm_state(instance['name'], 'Enabled')
             logging.info('Started VM %s ', instance.name)
         except Exception as exn:
@@ -147,23 +177,24 @@ class HyperVConnection(object):
 
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
         vs_gs_data.ElementName = instance['name']
-        (job, ret_val) =  vs_man_svc.DefineVirtualSystem(
+        (job, ret_val) = vs_man_svc.DefineVirtualSystem(
                                         [], None, vs_gs_data.GetText_(1))[1:]
-        if ret_val == WMI_JOB_STATUS_STARTED: 
+        if ret_val == WMI_JOB_STATUS_STARTED:
             success = self._check_job_status(job)
         else:
             success = (ret_val == 0)
-        
-        if not success:
-            raise Exception('Failed to create VM %s', instance.name)
-            
-        logging.debug('Created VM %s...', instance.name)
-        vm = self._conn.Msvm_ComputerSystem (ElementName=instance.name)[0]
 
-        vmsettings = vm.associators(wmi_result_class=
-                                    'Msvm_VirtualSystemSettingData')
+        if not success:
+            raise VmResourceAllocationException('Failed to create VM %s',
+                                                 instance.name)
+
+        logging.debug('Created VM %s...', instance.name)
+        vm = self._conn.Msvm_ComputerSystem(ElementName=instance.name)[0]
+
+        vmsettings = vm.associators(
+                          wmi_result_class='Msvm_VirtualSystemSettingData')
         vmsetting = [s for s in vmsettings
-                        if s.SettingType == 3][0] #avoid snapshots
+                        if s.SettingType == 3][0]  # avoid snapshots
         memsetting = vmsetting.associators(wmi_result_class=
                                            'Msvm_MemorySettingData')[0]
         #No Dynamic Memory, so reservation, limit and quantity are identical.
@@ -174,7 +205,6 @@ class HyperVConnection(object):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                                         vm.path_(), [memsetting.GetText_(1)])
-        
         logging.debug('Set memory for vm %s...', instance.name)
         procsetting = vmsetting.associators(wmi_result_class=
                                            'Msvm_ProcessorSettingData')[0]
@@ -185,41 +215,39 @@ class HyperVConnection(object):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                                         vm.path_(), [procsetting.GetText_(1)])
-        
         logging.debug('Set vcpus for vm %s...', instance.name)
-        
+
     def _create_disk(self, vm_name, vhdfile):
         """Create a disk and attach it to the vm"""
-        logging.debug("Creating disk for %s by attaching disk file %s", \
+        logging.debug("Creating disk for %s by attaching disk file %s",
                         vm_name, vhdfile)
         #Find the IDE controller for the vm.
-        vms = self._conn.MSVM_ComputerSystem (ElementName=vm_name)
+        vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
         vm = vms[0]
         vmsettings = vm.associators(
                         wmi_result_class='Msvm_VirtualSystemSettingData')
         rasds = vmsettings[0].associators(
                         wmi_result_class='MSVM_ResourceAllocationSettingData')
         ctrller = [r for r in rasds
-                    if r.ResourceSubType == 'Microsoft Emulated IDE Controller'\
-                                         and r.Address == "0" ]
+                   if r.ResourceSubType == 'Microsoft Emulated IDE Controller'\
+                                         and r.Address == "0"]
         #Find the default disk drive object for the vm and clone it.
         diskdflt = self._conn.query(
-                    "SELECT * FROM Msvm_ResourceAllocationSettingData \
-                    WHERE ResourceSubType LIKE 'Microsoft Synthetic Disk Drive'\
-                    AND InstanceID LIKE '%Default%'")[0]
+                  "SELECT * FROM Msvm_ResourceAllocationSettingData \
+                   WHERE ResourceSubType LIKE 'Microsoft Synthetic Disk Drive'\
+                   AND InstanceID LIKE '%Default%'")[0]
         diskdrive = self._clone_wmi_obj(
                     'Msvm_ResourceAllocationSettingData', diskdflt)
         #Set the IDE ctrller as parent.
-        diskdrive.Parent = ctrller[0].path_() 
+        diskdrive.Parent = ctrller[0].path_()
         diskdrive.Address = 0
         #Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(diskdrive, vm)
-        
         if new_resources is None:
-            raise Exception('Failed to add diskdrive to VM %s', vm_name)
-            
+            raise VmResourceAllocationError('Failed to add diskdrive to VM %s',
+                                             vm_name)
         diskdrive_path = new_resources[0]
-        logging.debug("New disk drive path is " + diskdrive_path)
+        logging.debug("New disk drive path is %s", diskdrive_path)
         #Find the default VHD disk object.
         vhddefault = self._conn.query(
                 "SELECT * FROM Msvm_ResourceAllocationSettingData \
@@ -230,64 +258,66 @@ class HyperVConnection(object):
         vhddisk = self._clone_wmi_obj(
                 'Msvm_ResourceAllocationSettingData', vhddefault)
         #Set the new drive as the parent.
-        vhddisk.Parent = diskdrive_path 
+        vhddisk.Parent = diskdrive_path
         vhddisk.Connection = [vhdfile]
 
         #Add the new vhd object as a virtual hard disk to the vm.
         new_resources = self._add_virt_resource(vhddisk, vm)
         if new_resources is None:
-            raise Exception('Failed to add vhd file to VM %s', vm_name)
+            raise VmResourceAllocationError('Failed to add vhd file to VM %s',
+                                             vm_name)
         logging.info("Created disk for %s ", vm_name)
-       
+
     def _create_nic(self, vm_name, mac):
         """Create a (emulated) nic and attach it to the vm"""
         logging.debug("Creating nic for %s ", vm_name)
         #Find the vswitch that is connected to the physical nic.
-        vms = self._conn.Msvm_ComputerSystem (ElementName=vm_name)
+        vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
         extswitch = self._find_external_network()
         vm = vms[0]
-        switch_svc = self._conn.Msvm_VirtualSwitchManagementService ()[0]
+        switch_svc = self._conn.Msvm_VirtualSwitchManagementService()[0]
         #Find the default nic and clone it to create a new nic for the vm.
-        #Use Msvm_SyntheticEthernetPortSettingData for Windows VMs or Linux with
+        #Use Msvm_SyntheticEthernetPortSettingData for Windows or Linux with
         #Linux Integration Components installed.
         emulatednics_data = self._conn.Msvm_EmulatedEthernetPortSettingData()
         default_nic_data = [n for n in emulatednics_data
-                            if n.InstanceID.rfind('Default') >0 ]
+                            if n.InstanceID.rfind('Default') > 0]
         new_nic_data = self._clone_wmi_obj(
                                       'Msvm_EmulatedEthernetPortSettingData',
                                       default_nic_data[0])
-        
         #Create a port on the vswitch.
-        (created_sw, ret_val) = switch_svc.CreateSwitchPort(vm_name, vm_name,
+        (new_port, ret_val) = switch_svc.CreateSwitchPort(vm_name, vm_name,
                                             "", extswitch.path_())
         if ret_val != 0:
-            logging.debug("Failed to create a new port on the external network")
-            return
+            logging.error("Failed creating a new port on the external vswitch")
+            raise VmResourceAllocationError('Failed creating port for %s',
+                                             vm_name)
         logging.debug("Created switch port %s on switch %s",
                         vm_name, extswitch.path_())
         #Connect the new nic to the new port.
-        new_nic_data.Connection = [created_sw]
+        new_nic_data.Connection = [new_port]
         new_nic_data.ElementName = vm_name + ' nic'
         new_nic_data.Address = ''.join(mac.split(':'))
         new_nic_data.StaticMacAddress = 'TRUE'
         #Add the new nic to the vm.
         new_resources = self._add_virt_resource(new_nic_data, vm)
         if new_resources is None:
-            raise Exception('Failed to add nic to VM %s', vm_name)
+            raise VmResourceAllocationError('Failed to add nic to VM %s',
+                                             vm_name)
         logging.info("Created nic for %s ", vm_name)
 
     def _add_virt_resource(self, res_setting_data, target_vm):
         """Add a new resource (disk/nic) to the VM"""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        (job, new_resources, return_val) = vs_man_svc.\
+        (job, new_resources, ret_val) = vs_man_svc.\
                     AddVirtualSystemResources([res_setting_data.GetText_(1)],
                                                 target_vm.path_())
         success = True
-        if return_val == WMI_JOB_STATUS_STARTED: 
+        if ret_val == WMI_JOB_STATUS_STARTED:
             success = self._check_job_status(job)
         else:
-            success = (return_val == 0)
-        if success:    
+            success = (ret_val == 0)
+        if success:
             return new_resources
         else:
             return None
@@ -295,24 +325,23 @@ class HyperVConnection(object):
     #TODO: use the reactor to poll instead of sleep
     def _check_job_status(self, jobpath):
         """Poll WMI job state for completion"""
+        #Jobs have a path of the form:
+        #\\WIN-P5IG7367DAG\root\virtualization:Msvm_ConcreteJob.InstanceID="8A496B9C-AF4D-4E98-BD3C-1128CD85320D"
         inst_id = jobpath.split(':')[1].split('=')[1].strip('\"')
         jobs = self._conn.Msvm_ConcreteJob(InstanceID=inst_id)
         if len(jobs) == 0:
             return False
         job = jobs[0]
-        while job.JobState == WMI_JOB_STATE_RUNNING: 
+        while job.JobState == WMI_JOB_STATE_RUNNING:
             time.sleep(0.1)
             job = self._conn.Msvm_ConcreteJob(InstanceID=inst_id)[0]
-        
-        if job.JobState != WMI_JOB_STATE_COMPLETED: 
-            logging.debug("WMI job failed: " + job.ErrorSummaryDescription)
+        if job.JobState != WMI_JOB_STATE_COMPLETED:
+            logging.debug("WMI job failed: %s", job.ErrorSummaryDescription)
             return False
-        
-        logging.debug("WMI job succeeded: " + job.Description + ",Elapsed = " \
-                      + job.ElapsedTime)
-
+        logging.debug("WMI job succeeded: %s, Elapsed=%s ", job.Description,
+                      job.ElapsedTime)
         return True
-        
+
     def _find_external_network(self):
         """Find the vswitch that is connected to the physical nic.
            Assumes only one physical nic on the host
@@ -321,16 +350,15 @@ class HyperVConnection(object):
         bound = self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')
         if len(bound) == 0:
             return None
-        
         return self._conn.Msvm_ExternalEthernetPort(IsBound='TRUE')[0]\
             .associators(wmi_result_class='Msvm_SwitchLANEndpoint')[0]\
             .associators(wmi_result_class='Msvm_SwitchPort')[0]\
-            .associators(wmi_result_class='Msvm_VirtualSwitch')[0]   
+            .associators(wmi_result_class='Msvm_VirtualSwitch')[0]
 
     def _clone_wmi_obj(self, wmi_class, wmi_obj):
         """Clone a WMI object"""
-        cl = self._conn.__getattr__(wmi_class) #get the class
-        newinst = cl.new() 
+        cl = self._conn.__getattr__(wmi_class)  # get the class
+        newinst = cl.new()
         #Copy the properties from the original.
         for prop in wmi_obj._properties:
             newinst.Properties_.Item(prop).Value =\
@@ -343,8 +371,8 @@ class HyperVConnection(object):
         vm = yield self._lookup(instance.name)
         if vm is None:
             raise exception.NotFound('instance not present %s' % instance.name)
-        self._set_vm_state(instance.name, 'Reboot')            
-        
+        self._set_vm_state(instance.name, 'Reboot')
+
     @defer.inlineCallbacks
     def destroy(self, instance):
         """Destroy the VM. Also destroy the associated VHD disk files"""
@@ -352,7 +380,7 @@ class HyperVConnection(object):
         vm = yield self._lookup(instance.name)
         if vm is None:
             defer.returnValue(None)
-        vm = self._conn.Msvm_ComputerSystem (ElementName=instance.name)[0]
+        vm = self._conn.Msvm_ComputerSystem(ElementName=instance.name)[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         #Stop the VM first.
         self._set_vm_state(instance.name, 'Disabled')
@@ -361,26 +389,26 @@ class HyperVConnection(object):
         rasds = vmsettings[0].associators(wmi_result_class=
                                           'MSVM_ResourceAllocationSettingData')
         disks = [r for r in rasds \
-                    if r.ResourceSubType == 'Microsoft Virtual Hard Disk' ]
+                    if r.ResourceSubType == 'Microsoft Virtual Hard Disk']
         diskfiles = []
         #Collect disk file information before destroying the VM.
         for disk in disks:
             diskfiles.extend([c for c in disk.Connection])
         #Nuke the VM. Does not destroy disks.
         (job, ret_val) = vs_man_svc.DestroyVirtualSystem(vm.path_())
-        if ret_val == WMI_JOB_STATUS_STARTED: 
+        if ret_val == WMI_JOB_STATUS_STARTED:
             success = self._check_job_status(job)
         elif ret_val == 0:
             success = True
         if not success:
-            raise Exception('Failed to destroy vm %s' % instance.name)
+            raise VmOperationError('Failed to destroy vm %s' % instance.name)
         #Delete associated vhd disk files.
         for disk in diskfiles:
             vhdfile = self._cim_conn.CIM_DataFile(Name=disk)
             for vf in vhdfile:
                 vf.Delete()
                 logging.debug("Deleted disk %s vm %s", vhdfile, instance.name)
-        
+
     def get_info(self, instance_id):
         """Get information about the VM"""
         vm = self._lookup(instance_id)
@@ -390,10 +418,10 @@ class HyperVConnection(object):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = vm.associators(wmi_result_class=
                                         'Msvm_VirtualSystemSettingData')
-        settings_paths = [ v.path_() for v in vmsettings]
+        settings_paths = [v.path_() for v in vmsettings]
         #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
         summary_info = vs_man_svc.GetSummaryInformation(
-                                            [4,100,103,105], settings_paths)[1]
+                                       [4, 100, 103, 105], settings_paths)[1]
         info = summary_info[0]
         logging.debug("Got Info for vm %s: state=%s, mem=%s, num_cpu=%s, \
                     cpu_time=%s", instance_id,
@@ -401,16 +429,16 @@ class HyperVConnection(object):
                     str(info.MemoryUsage),
                     str(info.NumberOfProcessors),
                     str(info.UpTime))
-                    
+
         return {'state': HYPERV_POWER_STATE[info.EnabledState],
                 'max_mem': info.MemoryUsage,
                 'mem': info.MemoryUsage,
                 'num_cpu': info.NumberOfProcessors,
                 'cpu_time': info.UpTime}
-    
+
     def _lookup(self, i):
-        vms = self._conn.Msvm_ComputerSystem (ElementName=i)
-        n = len(vms) 
+        vms = self._conn.Msvm_ComputerSystem(ElementName=i)
+        n = len(vms)
         if n == 0:
             return None
         elif n > 1:
@@ -420,34 +448,36 @@ class HyperVConnection(object):
 
     def _set_vm_state(self, vm_name, req_state):
         """Set the desired state of the VM"""
-        vms = self._conn.Msvm_ComputerSystem (ElementName=vm_name)
+        vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
         if len(vms) == 0:
             return False
-        status = vms[0].RequestStateChange(REQ_POWER_STATE[req_state])
-        job = status[0]
-        return_val = status[1]
-        if return_val == WMI_JOB_STATUS_STARTED: 
+        (job, ret_val) = vms[0].RequestStateChange(REQ_POWER_STATE[req_state])
+        success = False
+        if ret_val == WMI_JOB_STATUS_STARTED:
             success = self._check_job_status(job)
-        elif return_val == 0:
+        elif ret_val == 0:
+            success = True
+        elif ret_val == 32775:
+            #Invalid state for current operation. Typically means it is
+            #already in the state requested
             success = True
         if success:
             logging.info("Successfully changed vm state of %s to %s",
                                 vm_name, req_state)
-            return True
         else:
-            logging.debug("Failed to change vm state of %s to %s",
+            logging.error("Failed to change vm state of %s to %s",
                                 vm_name, req_state)
-            return False
-    
+            raise VmOperationError("Failed to change vm state of %s to %s",
+                                        vm_name, req_state)
+
     def attach_volume(self, instance_name, device_path, mountpoint):
-        vm =  self._lookup(instance_name)
+        vm = self._lookup(instance_name)
         if vm is None:
             raise exception.NotFound('Cannot attach volume to missing %s vm' %
                             instance_name)
 
     def detach_volume(self, instance_name, mountpoint):
-        vm =  self._lookup(instance_name)
+        vm = self._lookup(instance_name)
         if vm is None:
             raise exception.NotFound('Cannot detach volume from missing %s ' %
                             instance_name)
-
