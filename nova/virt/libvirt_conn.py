@@ -72,6 +72,7 @@ flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
 
+
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
@@ -126,6 +127,7 @@ class LibvirtConnection(object):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
                 'root',
                 None]
+        
         if read_only:
             return libvirt.openReadOnly(uri)
         else:

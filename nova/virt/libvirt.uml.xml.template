@@ -12,7 +12,7 @@
             <target dev='ubd0' bus='uml'/>
         </disk>
         <interface type='bridge'>
-        	<source bridge='${bridge_name}'/>
+            <source bridge='${bridge_name}'/>
             <mac address='${mac_address}'/>
             <filterref filter="nova-instance-${name}">
                 <parameter name="IP" value="${ip_address}" />

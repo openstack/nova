@@ -87,9 +87,7 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
 
 
 @defer.inlineCallbacks
-def inject_data(    image, key=None, net=None, dns=None, 
-                    remove_network_udev=False, 
-                    partition=None, execute=None):
+def inject_data(image, key=None, net=None, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -137,11 +135,6 @@ def inject_data(    image, key=None, net=None, dns=None,
                     yield _inject_key_into_fs(key, tmpdir, execute=execute)
                 if net:
                     yield _inject_net_into_fs(net, tmpdir, execute=execute)
-                if dns:
-                    yield _inject_dns_into_fs(dns, tmpdir, execute=execute)
-                if remove_network_udev:
-                    yield _remove_network_udev(tmpdir, execute=execute)
-
             finally:
                 # unmount device
                 yield execute('sudo umount %s' % mapped_device)
@@ -170,17 +163,4 @@ def _inject_key_into_fs(key, fs, execute=None):
 def _inject_net_into_fs(net, fs, execute=None):
     netfile = os.path.join(fs, 'etc', 'network', 'interfaces')
     yield execute('sudo tee %s' % netfile, net)
-
-@defer.inlineCallbacks
-def _inject_dns_into_fs(dns, fs, execute=None):
-    dnsfile = os.path.join(fs, 'etc', 'resolv.conf')
-    yield execute('sudo tee %s' % dnsfile, dns)
-
-@defer.inlineCallbacks
-def _remove_network_udev(fs, execute=None):
-    # TODO(justinsb): This is correct for Ubuntu, but might not be right for
-    #  other distros.  There is a much bigger discussion to be had about what
-    #  we inject and how we inject it.
-    rulesfile = os.path.join(fs, 'etc', 'udev', 'rules.d', '70-persistent-net.rules')
-    yield execute('rm -f %s' % rulesfile)
 

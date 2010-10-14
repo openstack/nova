@@ -23,7 +23,7 @@
             <target dev='sda' />
         </disk>
         <interface type='bridge'>
-        	<source bridge='${bridge_name}'/>
+            <source bridge='${bridge_name}'/>
             <mac address='${mac_address}'/>
         </interface>
         <console type="file">
