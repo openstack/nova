@@ -18,7 +18,7 @@
 
 """
 Wrappers around standard crypto, including root and intermediate CAs,
-SSH keypairs and x509 certificates.
+SSH key_pairs and x509 certificates.
 """
 
 import base64

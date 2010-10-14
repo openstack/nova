@@ -28,6 +28,7 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+from eventlet import greenthread
 from twisted.internet import defer
 from twisted.internet import task
 
@@ -46,9 +47,9 @@ LOG.setLevel(logging.DEBUG)
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls):
+    def instance(cls, new=False):
         """Returns the instance"""
-        if not hasattr(cls, '_instance'):
+        if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
                           userid=FLAGS.rabbit_userid,
@@ -60,7 +61,10 @@ class Connection(carrot_connection.BrokerConnection):
 
             # NOTE(vish): magic is fun!
             # pylint: disable-msg=W0142
-            cls._instance = cls(**params)
+            if new:
+                return cls(**params)
+            else:
+                cls._instance = cls(**params)
         return cls._instance
 
     @classmethod
@@ -80,21 +84,6 @@ class Consumer(messaging.Consumer):
     def __init__(self, *args, **kwargs):
         self.failed_connection = False
         super(Consumer, self).__init__(*args, **kwargs)
-
-    # TODO(termie): it would be nice to give these some way of automatically
-    #               cleaning up after themselves
-    def attach_to_tornado(self, io_inst=None):
-        """Attach a callback to tornado that fires 10 times a second"""
-        from tornado import ioloop
-        if io_inst is None:
-            io_inst = ioloop.IOLoop.instance()
-
-        injected = ioloop.PeriodicCallback(
-            lambda: self.fetch(enable_callbacks=True), 100, io_loop=io_inst)
-        injected.start()
-        return injected
-
-    attachToTornado = attach_to_tornado
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
@@ -119,10 +108,19 @@ class Consumer(messaging.Consumer):
                 logging.exception("Failed to fetch message from queue")
                 self.failed_connection = True
 
+    def attach_to_eventlet(self):
+        """Only needed for unit tests!"""
+        def fetch_repeatedly():
+            while True:
+                self.fetch(enable_callbacks=True)
+                greenthread.sleep(0.1)
+        greenthread.spawn(fetch_repeatedly)
+
     def attach_to_twisted(self):
         """Attach a callback to twisted that fires 10 times a second"""
         loop = task.LoopingCall(self.fetch, enable_callbacks=True)
         loop.start(interval=0.1)
+        return loop
 
 
 class Publisher(messaging.Publisher):
@@ -265,6 +263,41 @@ def call(topic, msg):
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
 
+    class WaitMessage(object):
+
+        def __call__(self, data, message):
+            """Acks message and sets result."""
+            message.ack()
+            if data['failure']:
+                self.result = RemoteError(*data['failure'])
+            else:
+                self.result = data['result']
+
+    wait_msg = WaitMessage()
+    conn = Connection.instance(True)
+    consumer = DirectConsumer(connection=conn, msg_id=msg_id)
+    consumer.register_callback(wait_msg)
+
+    conn = Connection.instance()
+    publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher.send(msg)
+    publisher.close()
+
+    try:
+        consumer.wait(limit=1)
+    except StopIteration:
+        pass
+    consumer.close()
+    return wait_msg.result
+
+
+def call_twisted(topic, msg):
+    """Sends a message on a topic and wait for a response"""
+    LOG.debug("Making asynchronous call...")
+    msg_id = uuid.uuid4().hex
+    msg.update({'_msg_id': msg_id})
+    LOG.debug("MSG_ID is %s" % (msg_id))
+
     conn = Connection.instance()
     d = defer.Deferred()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
@@ -278,7 +311,7 @@ def call(topic, msg):
             return d.callback(data['result'])
 
     consumer.register_callback(deferred_receive)
-    injected = consumer.attach_to_tornado()
+    injected = consumer.attach_to_twisted()
 
     # clean up after the injected listened and return x
     d.addCallback(lambda x: injected.stop() and x or x)

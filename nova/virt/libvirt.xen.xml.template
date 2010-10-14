@@ -1,0 +1,35 @@
+<domain type='${type}'>
+    <name>${name}</name>
+    <os>
+        <type>linux</type>
+#if $getVar('kernel', None)
+        <kernel>${kernel}</kernel>
+    #if $getVar('ramdisk', None)
+        <initrd>${ramdisk}</initrd>
+    #end if
+        <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
+#end if
+        <root>/dev/xvda1</root>
+        <cmdline>ro</cmdline>
+    </os>
+    <features>
+        <acpi/>
+    </features>
+    <memory>${memory_kb}</memory>
+    <vcpu>${vcpus}</vcpu>
+    <devices>
+        <disk type='file'>
+            <source file='${disk}'/>
+            <target dev='sda' />
+        </disk>
+        <interface type='bridge'>
+        	<source bridge='${bridge_name}'/>
+            <mac address='${mac_address}'/>
+        </interface>
+        <console type="file">
+            <source path='${basepath}/console.log'/>
+            <target port='1'/>
+        </console>
+    </devices>
+</domain>
+

@@ -21,14 +21,17 @@
 Utility methods for working with WSGI servers
 """
 
+import json
 import logging
 import sys
+from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True)
 import routes
 import routes.middleware
+import webob
 import webob.dec
 import webob.exc
 
@@ -83,7 +86,7 @@ class Application(object):
         raise NotImplementedError("You must implement __call__")
 
 
-class Middleware(Application): # pylint: disable-msg=W0223
+class Middleware(Application):
     """
     Base WSGI middleware wrapper. These classes require an application to be
     initialized that will be called next.  By default the middleware will
@@ -95,7 +98,7 @@ class Middleware(Application): # pylint: disable-msg=W0223
         self.application = application
 
     @webob.dec.wsgify
-    def __call__(self, req):
+    def __call__(self, req): # pylint: disable-msg=W0221
         """Override to implement middleware behavior."""
         return self.application
 
@@ -113,7 +116,7 @@ class Debug(Middleware):
         resp = req.get_response(self.application)
 
         print ("*" * 40) + " RESPONSE HEADERS"
-        for (key, value) in resp.headers:
+        for (key, value) in resp.headers.iteritems():
             print key, "=", value
         print
 
@@ -127,7 +130,7 @@ class Debug(Middleware):
         Iterator that prints the contents of a wrapper string iterator
         when iterated.
         """
-        print ("*" * 40) + "BODY"
+        print ("*" * 40) + " BODY"
         for part in app_iter:
             sys.stdout.write(part)
             sys.stdout.flush()
@@ -176,8 +179,9 @@ class Router(object):
         """
         return self._router
 
+    @staticmethod
     @webob.dec.wsgify
-    def _dispatch(self, req):
+    def _dispatch(req):
         """
         Called by self._router after matching the incoming request to a route
         and putting the information into req.environ.  Either returns 404
@@ -195,8 +199,10 @@ class Controller(object):
     WSGI app that reads routing information supplied by RoutesMiddleware
     and calls the requested action method upon itself.  All action methods
     must, in addition to their normal parameters, accept a 'req' argument
-    which is the incoming webob.Request.
+    which is the incoming webob.Request.  They raise a webob.exc exception,
+    or return a dict which will be serialized by requested content type.
     """
+
     @webob.dec.wsgify
     def __call__(self, req):
         """
@@ -208,12 +214,35 @@ class Controller(object):
         del arg_dict['controller']
         del arg_dict['action']
         arg_dict['req'] = req
-        return method(**arg_dict)
+        result = method(**arg_dict)
+        if type(result) is dict:
+            return self._serialize(result, req) 
+        else:
+            return result
 
+    def _serialize(self, data, request):
+        """
+        Serialize the given dict to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.to_content_type(data)
+
+    def _deserialize(self, data, request):
+        """
+        Deserialize the request body to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.deserialize(data)
 
 class Serializer(object):
     """
-    Serializes a dictionary to a Content Type specified by a WSGI environment.
+    Serializes and deserializes dictionaries to certain MIME types.
     """
 
     def __init__(self, environ, metadata=None):
@@ -222,33 +251,83 @@ class Serializer(object):
         'metadata' is an optional dict mapping MIME types to information
         needed to serialize a dictionary to that type.
         """
-        self.environ = environ
         self.metadata = metadata or {}
+        req = webob.Request(environ)
+        suffix = req.path_info.split('.')[-1].lower()
+        if suffix == 'json':
+            self.handler = self._to_json
+        elif suffix == 'xml':
+            self.handler = self._to_xml
+        elif 'application/json' in req.accept:
+            self.handler = self._to_json
+        elif 'application/xml' in req.accept:
+            self.handler = self._to_xml
+        else:
+            self.handler = self._to_json # default
 
     def to_content_type(self, data):
         """
-        Serialize a dictionary into a string.  The format of the string
-        will be decided based on the Content Type requested in self.environ:
-        by Accept: header, or by URL suffix.
+        Serialize a dictionary into a string.
+        
+        The format of the string will be decided based on the Content Type
+        requested in self.environ: by Accept: header, or by URL suffix.
         """
-        mimetype = 'application/xml'
-        # TODO(gundlach): determine mimetype from request
+        return self.handler(data)
 
-        if mimetype == 'application/json':
-            import json
-            return json.dumps(data)
-        elif mimetype == 'application/xml':
-            metadata = self.metadata.get('application/xml', {})
-            # We expect data to contain a single key which is the XML root.
-            root_key = data.keys()[0]
-            from xml.dom import minidom
-            doc = minidom.Document()
-            node = self._to_xml_node(doc, metadata, root_key, data[root_key])
-            return node.toprettyxml(indent='    ')
+    def deserialize(self, datastring):
+        """
+        Deserialize a string to a dictionary.
+        
+        The string must be in the format of a supported MIME type.
+        """
+        datastring = datastring.strip()
+        try:
+            is_xml = (datastring[0] == '<')
+            if not is_xml:
+                return json.loads(datastring)
+            return self._from_xml(datastring)
+        except:
+            return None
+
+    def _from_xml(self, datastring):
+        xmldata = self.metadata.get('application/xml', {})
+        plurals = set(xmldata.get('plurals', {}))
+        node = minidom.parseString(datastring).childNodes[0]
+        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+    def _from_xml_node(self, node, listnames):
+        """
+        Convert a minidom node to a simple Python type.
+        
+        listnames is a collection of names of XML nodes whose subnodes should
+        be considered list items.
+        """
+        if len(node.childNodes) == 1 and node.childNodes[0].nodeType == 3:
+            return node.childNodes[0].nodeValue
+        elif node.nodeName in listnames:
+            return [self._from_xml_node(n, listnames) for n in node.childNodes]
         else:
-            return repr(data)
+            result = dict()
+            for attr in node.attributes.keys():
+                result[attr] = node.attributes[attr].nodeValue
+            for child in node.childNodes:
+                if child.nodeType != node.TEXT_NODE:
+                    result[child.nodeName] = self._from_xml_node(child, listnames)
+            return result
+
+    def _to_json(self, data):
+        return json.dumps(data)
+
+    def _to_xml(self, data):
+        metadata = self.metadata.get('application/xml', {})
+        # We expect data to contain a single key which is the XML root.
+        root_key = data.keys()[0]
+        doc = minidom.Document()
+        node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+        return node.toprettyxml(indent='    ')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
+        """Recursive method to convert data members to XML nodes."""
         result = doc.createElement(nodename)
         if type(data) is list:
             singular = metadata.get('plurals', {}).get(nodename, None)
@@ -262,7 +341,7 @@ class Serializer(object):
                 result.appendChild(node)
         elif type(data) is dict:
             attrs = metadata.get('attributes', {}).get(nodename, {})
-            for k,v in data.items():
+            for k, v in data.items():
                 if k in attrs:
                     result.setAttribute(k, str(v))
                 else:

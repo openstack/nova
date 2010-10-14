@@ -1,25 +1,26 @@
-<domain type='%(type)s'>
-    <name>%(name)s</name>
-    <memory>%(memory_kb)s</memory>
+<domain type='${type}'>
+    <name>${name}</name>
+    <memory>${memory_kb}</memory>
     <os>
-        <type>%(type)s</type>
+        <type>${type}</type>
         <kernel>/usr/bin/linux</kernel>
         <root>/dev/ubda1</root>
     </os>
     <devices>
         <disk type='file'>
-            <source file='%(basepath)s/disk'/>
+            <source file='${disk}'/>
             <target dev='ubd0' bus='uml'/>
         </disk>
         <interface type='bridge'>
-            <source bridge='%(bridge_name)s'/>
-            <mac address='%(mac_address)s'/>
+        	<source bridge='${bridge_name}'/>
+            <mac address='${mac_address}'/>
+            <filterref filter="nova-instance-${name}">
+                <parameter name="IP" value="${ip_address}" />
+                <parameter name="DHCPSERVER" value="${dhcp_server}" />
+            </filterref>
         </interface>
-        <console type="pty" />
-        <serial type="file">
-            <source path='%(basepath)s/console.log'/>
-            <target port='1'/>
-        </serial>
+        <console type="file">
+            <source path='${basepath}/console.log'/>
+        </console>
     </devices>
-    <nova>%(nova)s</nova>
 </domain>

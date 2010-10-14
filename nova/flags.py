@@ -22,6 +22,7 @@ where they're used.
 """
 
 import getopt
+import os
 import socket
 import sys
 
@@ -34,7 +35,7 @@ class FlagValues(gflags.FlagValues):
     Unknown flags will be ignored when parsing the command line, but the
     command line will be kept so that it can be replayed if new flags are
     defined after the initial parsing.
-    
+
     """
 
     def __init__(self):
@@ -50,7 +51,7 @@ class FlagValues(gflags.FlagValues):
         # leftover args at the end
         sneaky_unparsed_args = {"value": None}
         original_argv = list(argv)
-        
+
         if self.IsGnuGetOpt():
             orig_getopt = getattr(getopt, 'gnu_getopt')
             orig_name = 'gnu_getopt'
@@ -74,14 +75,14 @@ class FlagValues(gflags.FlagValues):
             unparsed_args = sneaky_unparsed_args['value']
             if unparsed_args:
                 if self.IsGnuGetOpt():
-                    args = argv[:1] + unparsed
+                    args = argv[:1] + unparsed_args
                 else:
                     args = argv[:1] + original_argv[-len(unparsed_args):]
             else:
                 args = argv[:1]
         finally:
             setattr(getopt, orig_name, orig_getopt)
-        
+
         # Store the arguments for later, we'll need them for new flags
         # added at runtime
         self.__dict__['__stored_argv'] = original_argv
@@ -92,7 +93,7 @@ class FlagValues(gflags.FlagValues):
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
-    
+
     def IsDirty(self, name):
         return name in self.__dict__['__dirty']
 
@@ -113,12 +114,12 @@ class FlagValues(gflags.FlagValues):
         for k in self.__dict__['__dirty']:
             setattr(self, k, getattr(new_flags, k))
         self.ClearDirty()
-        
+
     def __setitem__(self, name, flag):
         gflags.FlagValues.__setitem__(self, name, flag)
         if self.WasAlreadyParsed():
             self.SetDirty(name)
-    
+
     def __getitem__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
@@ -141,6 +142,7 @@ def _wrapper(func):
     return _wrapped
 
 
+DEFINE = _wrapper(gflags.DEFINE)
 DEFINE_string = _wrapper(gflags.DEFINE_string)
 DEFINE_integer = _wrapper(gflags.DEFINE_integer)
 DEFINE_bool = _wrapper(gflags.DEFINE_bool)
@@ -165,11 +167,14 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
+DEFINE_list('region_list',
+            [],
+            'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
-#DEFINE_string('cloud_topic', 'cloud', 'the topic clouds listen on')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
+DEFINE_string('scheduler_topic', 'scheduler', 'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
 DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
@@ -183,6 +188,8 @@ DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
+DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
+DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
 
@@ -204,9 +211,26 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
+DEFINE_string('sql_connection',
+              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'connection string for sql database')
+
+DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
+              'Manager for compute')
+DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
+              'Manager for network')
+DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+              'Manager for volume')
+DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
+              'Manager for scheduler')
+
+# The service to use for image search and retrieval
+DEFINE_string('image_service', 'nova.image.service.LocalImageService',
+              'The service to use for retrieving and searching for images.')
+
+DEFINE_string('host', socket.gethostname(),
+              'name of this node')
+
 # UNUSED
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
-DEFINE_string('node_name', socket.gethostname(),
-              'name of this node')
-

@@ -30,20 +30,24 @@ from nova import datastore
 
 SCOPE_BASE = 0
 SCOPE_ONELEVEL = 1 # not implemented
-SCOPE_SUBTREE  = 2
+SCOPE_SUBTREE = 2
 MOD_ADD = 0
 MOD_DELETE = 1
+MOD_REPLACE = 2
 
 
-class NO_SUCH_OBJECT(Exception):
+class NO_SUCH_OBJECT(Exception): # pylint: disable-msg=C0103
+    """Duplicate exception class from real LDAP module."""
     pass
 
 
-class OBJECT_CLASS_VIOLATION(Exception):
+class OBJECT_CLASS_VIOLATION(Exception): # pylint: disable-msg=C0103
+    """Duplicate exception class from real LDAP module."""
     pass
 
 
-def initialize(uri):
+def initialize(_uri):
+    """Opens a fake connection with an LDAP server."""
     return FakeLDAP()
 
 
@@ -68,7 +72,7 @@ def _match_query(query, attrs):
         # cut off the ! and the nested parentheses
         return not _match_query(query[2:-1], attrs)
 
-    (k, sep, v) = inner.partition('=')
+    (k, _sep, v) = inner.partition('=')
     return _match(k, v, attrs)
 
 
@@ -85,20 +89,20 @@ def _paren_groups(source):
         if source[pos] == ')':
             count -= 1
             if count == 0:
-                result.append(source[start:pos+1])
+                result.append(source[start:pos + 1])
     return result
 
 
-def _match(k, v, attrs):
+def _match(key, value, attrs):
     """Match a given key and value against an attribute list."""
-    if k not in attrs:
+    if key not in attrs:
         return False
-    if k != "objectclass":
-        return v in attrs[k]
+    if key != "objectclass":
+        return value in attrs[key]
     # it is an objectclass check, so check subclasses
-    values = _subs(v)
-    for value in values:
-        if value in attrs[k]:
+    values = _subs(value)
+    for v in values:
+        if v in attrs[key]:
             return True
     return False
 
@@ -145,6 +149,7 @@ def _to_json(unencoded):
 class FakeLDAP(object):
     #TODO(vish): refactor this class to use a wrapper instead of accessing
     #            redis directly
+    """Fake LDAP connection."""
 
     def simple_bind_s(self, dn, password):
         """This method is ignored, but provided for compatibility."""
@@ -171,7 +176,7 @@ class FakeLDAP(object):
         Args:
         dn -- a dn
         attrs -- a list of tuples in the following form:
-            ([MOD_ADD | MOD_DELETE], attribute, value)
+            ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
         redis = datastore.Redis.instance()
@@ -181,6 +186,8 @@ class FakeLDAP(object):
             values = _from_json(redis.hget(key, k))
             if cmd == MOD_ADD:
                 values.append(v)
+            elif cmd == MOD_REPLACE:
+                values = [v]
             else:
                 values.remove(v)
             values = redis.hset(key, k, _to_json(values))
@@ -207,6 +214,7 @@ class FakeLDAP(object):
             # get the attributes from redis
             attrs = redis.hgetall(key)
             # turn the values from redis into lists
+            # pylint: disable-msg=E1103
             attrs = dict([(k, _from_json(v))
                           for k, v in attrs.iteritems()])
             # filter the objects by query
@@ -215,12 +223,12 @@ class FakeLDAP(object):
                 attrs = dict([(k, v) for k, v in attrs.iteritems()
                               if not fields or k in fields])
                 objects.append((key[len(self.__redis_prefix):], attrs))
+            # pylint: enable-msg=E1103
         if objects == []:
             raise NO_SUCH_OBJECT()
         return objects
 
     @property
-    def __redis_prefix(self):
+    def __redis_prefix(self): # pylint: disable-msg=R0201
+        """Get the prefix to use for all redis keys."""
         return 'ldap:'
-
-

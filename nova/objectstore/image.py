@@ -82,6 +82,16 @@ class Image(object):
         with open(os.path.join(self.path, 'info.json'), 'w') as f:
             json.dump(md, f)
 
+    def update_user_editable_fields(self, args):
+        """args is from the request parameters, so requires extra cleaning"""
+        fields = {'display_name': 'displayName', 'description': 'description'}
+        info = self.metadata
+        for field in fields.keys():
+            if field in args:
+                info[fields[field]] = args[field]
+        with open(os.path.join(self.path, 'info.json'), 'w') as f:
+            json.dump(info, f)
+
     @staticmethod
     def all():
         images = []
@@ -181,14 +191,14 @@ class Image(object):
             if kernel_id == 'true':
                 image_type = 'kernel'
         except:
-            pass
+            kernel_id = None
 
         try:
             ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
             if ramdisk_id == 'true':
                 image_type = 'ramdisk'
         except:
-            pass
+            ramdisk_id = None
 
         info = {
             'imageId': image_id,
@@ -198,6 +208,12 @@ class Image(object):
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
             'imageType' : image_type
         }
+
+        if kernel_id:
+            info['kernelId'] = kernel_id
+
+        if ramdisk_id:
+            info['ramdiskId'] = ramdisk_id
 
         def write_state(state):
             info['imageState'] = state

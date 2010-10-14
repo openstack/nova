@@ -21,8 +21,18 @@
   Daemon for Nova RRD based instance resource monitoring.
 """
 
+import os
 import logging
+import sys
 from twisted.application import service
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
 
 from nova import twistd
 from nova.compute import monitor
@@ -35,9 +45,10 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     logging.warn('Starting instance monitor')
-    m = monitor.InstanceMonitor()
+    # pylint: disable-msg=C0103
+    monitor = monitor.InstanceMonitor()
 
     # This is the parent service that twistd will be looking for when it
     # parses this file, return it so that we can get it into globals below
     application = service.Application('nova-instancemonitor')
-    m.setServiceParent(application)
+    monitor.setServiceParent(application)

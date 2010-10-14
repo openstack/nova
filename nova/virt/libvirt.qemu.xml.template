@@ -24,11 +24,14 @@
             <source bridge='${bridge_name}'/>
             <mac address='${mac_address}'/>
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
+            <filterref filter="nova-instance-%(name)s">
+                <parameter name="IP" value="%(ip_address)s" />
+                <parameter name="DHCPSERVER" value="%(dhcp_server)s" />
+            </filterref>
         </interface>
         <serial type="file">
             <source path='${basepath}/console.log'/>
             <target port='1'/>
         </serial>
     </devices>
-    <nova>${nova}</nova>
 </domain>
