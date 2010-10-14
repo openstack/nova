@@ -246,7 +246,7 @@ class Controller(wsgi.Controller):
         inst['launch_index'] = 0
 
         inst['hostname'] = str(ref.internal_id)
-        self.db_driver.instance_update(None, inst['id'], inst)
+        self.db_driver.instance_update(api_context, inst['id'], inst)
 
         network_manager = utils.import_object(FLAGS.network_manager)
         address = network_manager.allocate_fixed_ip(api_context,
@@ -254,20 +254,20 @@ class Controller(wsgi.Controller):
 
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned
-        network_topic = self._get_network_topic(None)
+        network_topic = self._get_network_topic(api_context, network_manager)
         rpc.call(network_topic,
                  {"method": "setup_fixed_ip",
-                  "args": {"context": None,
+                  "args": {"context": api_context,
                            "address": address}})
         return inst
 
-    def _get_network_topic(self, context):
+    def _get_network_topic(self, context, network_manager):
         """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
+        network_ref = network_manager.get_network(context)
         host = network_ref['host']
         if not host:
             host = rpc.call(FLAGS.network_topic,
                                   {"method": "set_network_host",
-                                   "args": {"context": None,
+                                   "args": {"context": context,
                                             "network_id": network_ref['id']}})
         return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
