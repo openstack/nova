@@ -29,12 +29,8 @@ FLAGS = flags.FLAGS
 
 
 def reboot(instance_id, context=None):
-    """Reboot the given instance.
-
-    #TODO(gundlach) not actually sure what context is used for by ec2 here
-    -- I think we can just remove it and use None all the time.
-    """
-    instance_ref = db.instance_get_by_ec2_id(context, instance_id)
+    """Reboot the given instance."""
+    instance_ref = db.instance_get_by_internal_id(context, instance_id)
     host = instance_ref['host']
     rpc.cast(context,
              db.queue_get_for(context, FLAGS.compute_topic, host),

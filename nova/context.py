@@ -63,7 +63,7 @@ class RequestContext(object):
 
     @property
     def user(self):
-        # NOTE(visn): Delay import of manager, so that we can import this
+        # NOTE(vish): Delay import of manager, so that we can import this
         #             file from manager.
         from nova.auth import manager
         if not self._user:
@@ -72,7 +72,7 @@ class RequestContext(object):
 
     @property
     def project(self):
-        # NOTE(visn): Delay import of manager, so that we can import this
+        # NOTE(vish): Delay import of manager, so that we can import this
         #             file from manager.
         from nova.auth import manager
         if not self._project:
@@ -85,7 +85,7 @@ class RequestContext(object):
                 'is_admin': self.is_admin,
                 'read_deleted': self.read_deleted,
                 'remote_address': self.remote_address,
-                'timestamp': utils.isotime(),
+                'timestamp': utils.isotime(self.timestamp),
                 'request_id': self.request_id}
 
     @classmethod
