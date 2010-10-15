@@ -22,9 +22,9 @@ Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
+import datetime
 import sys
 import time
-import datetime
 
 import mox
 import stubout
@@ -79,31 +79,34 @@ class TrialTestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
         self.injected = []
-        self._monkeyPatchAttach()
+        self._monkey_patch_attach()
+        self._original_flags = FLAGS.FlagValuesDict()
 
     def tearDown(self): # pylint: disable-msg=C0103
         """Runs after each test method to finalize/tear down test environment"""
-        self.reset_flags()
-        self.mox.UnsetStubs()
-        self.stubs.UnsetAll()
-        self.stubs.SmartUnsetAll()
-        self.mox.VerifyAll()
-        # NOTE(vish): Clean up any ips associated during the test.
-        ctxt = context.get_admin_context()
-        db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host, self.start)
-        db.network_disassociate_all(ctxt)
-        rpc.Consumer.attach_to_twisted = self.originalAttach
-        for x in self.injected:
-            try:
-                x.stop()
-            except AssertionError:
-                pass
+        try:
+            self.mox.UnsetStubs()
+            self.stubs.UnsetAll()
+            self.stubs.SmartUnsetAll()
+            self.mox.VerifyAll()
+            # NOTE(vish): Clean up any ips associated during the test.
+            ctxt = context.get_admin_context()
+            db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host, self.start)
+            db.network_disassociate_all(ctxt)
+            rpc.Consumer.attach_to_twisted = self.originalAttach
+            for x in self.injected:
+                try:
+                    x.stop()
+                except AssertionError:
+                    pass
 
-        if FLAGS.fake_rabbit:
-            fakerabbit.reset_all()
-        db.security_group_destroy_all(ctxt)
+            if FLAGS.fake_rabbit:
+                fakerabbit.reset_all()
 
-        super(TrialTestCase, self).tearDown()
+            db.security_group_destroy_all(ctxt)
+            super(TrialTestCase, self).tearDown()
+        finally:
+            self.reset_flags()
 
     def flags(self, **kw):
         """Override flag variables for a test"""
@@ -117,7 +120,8 @@ class TrialTestCase(unittest.TestCase):
 
     def reset_flags(self):
         """Resets all flag variables for the test.  Runs after each test"""
-        for k, v in self.flag_overrides.iteritems():
+        FLAGS.Reset()
+        for k, v in self._original_flags.iteritems():
             setattr(FLAGS, k, v)
 
     def run(self, result=None):
@@ -143,7 +147,7 @@ class TrialTestCase(unittest.TestCase):
         _wrapped.func_name = func.func_name
         return _wrapped
 
-    def _monkeyPatchAttach(self):
+    def _monkey_patch_attach(self):
         self.originalAttach = rpc.Consumer.attach_to_twisted
         def _wrapped(innerSelf):
             rv = self.originalAttach(innerSelf)
@@ -170,12 +174,6 @@ class BaseTestCase(TrialTestCase):
         self._waiting = None
         self._done_waiting = False
         self._timed_out = False
-
-    def tearDown(self):# pylint: disable-msg=C0103
-        """Runs after each test method to finalize/tear down test environment"""
-        super(BaseTestCase, self).tearDown()
-        if FLAGS.fake_rabbit:
-            fakerabbit.reset_all()
 
     def _wait_for_test(self, timeout=60):
         """ Push the ioloop along to wait for our test to complete. """

@@ -90,6 +90,12 @@ class FlagValues(gflags.FlagValues):
         self.ClearDirty()
         return args
 
+    def Reset(self):
+        gflags.FlagValues.Reset(self)
+        self.__dict__['__dirty'] = []
+        self.__dict__['__was_already_parsed'] = False
+        self.__dict__['__stored_argv'] = []
+
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
