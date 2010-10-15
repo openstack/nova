@@ -285,16 +285,15 @@ class LibvirtConnection(object):
 
     @exception.wrap_exception
     def get_console_output(self, instance):
-        console_log = os.path.join(FLAGS.instances_path, instance['internal_id'], 'console.log')
-        logging.info('console_log: %s' % console_log)
-        logging.info('FLAGS.libvirt_type: %s' % FLAGS.libvirt_type)
+        console_log = os.path.join(FLAGS.instances_path, instance['name'], 'console.log')
+        d = process.simple_execute('sudo chown %d %s' % (os.getuid(), console_log))
         if FLAGS.libvirt_type == 'xen':
             # Xen is spethial
-            d = process.simple_execute("virsh ttyconsole %s" % instance['name'])
+            d.addCallback(lambda _: process.simple_execute("virsh ttyconsole %s" % instance['name']))
             d.addCallback(self._flush_xen_console)
             d.addCallback(self._append_to_file, console_log)
         else:
-            d = defer.succeed(console_log)
+            d.addCallback(lambda _: defer.succeed(console_log))
         d.addCallback(self._dump_file)
         return d
 
