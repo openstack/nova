@@ -24,8 +24,30 @@ library to work with nova.
 """
 
 import json
+import redis
 
-from nova import datastore
+from nova import flags
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('redis_host', '127.0.0.1',
+                    'Host that redis is running on.')
+flags.DEFINE_integer('redis_port', 6379,
+                    'Port that redis is running on.')
+flags.DEFINE_integer('redis_db', 0, 'Multiple DB keeps tests away')
+
+class Redis(object):
+    def __init__(self):
+        if hasattr(self.__class__, '_instance'):
+            raise Exception('Attempted to instantiate singleton')
+
+    @classmethod
+    def instance(cls):
+        if not hasattr(cls, '_instance'):
+            inst = redis.Redis(host=FLAGS.redis_host,
+                               port=FLAGS.redis_port,
+                               db=FLAGS.redis_db)
+            cls._instance = inst
+        return cls._instance
 
 
 SCOPE_BASE = 0
@@ -164,11 +186,11 @@ class FakeLDAP(object):
         key = "%s%s" % (self.__redis_prefix, dn)
 
         value_dict = dict([(k, _to_json(v)) for k, v in attr])
-        datastore.Redis.instance().hmset(key, value_dict)
+        Redis.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
-        datastore.Redis.instance().delete("%s%s" % (self.__redis_prefix, dn))
+        Redis.instance().delete("%s%s" % (self.__redis_prefix, dn))
 
     def modify_s(self, dn, attrs):
         """Modify the object at dn using the attribute list.
@@ -179,7 +201,7 @@ class FakeLDAP(object):
             ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
-        redis = datastore.Redis.instance()
+        redis = Redis.instance()
         key = "%s%s" % (self.__redis_prefix, dn)
 
         for cmd, k, v in attrs:
@@ -204,7 +226,7 @@ class FakeLDAP(object):
         """
         if scope != SCOPE_BASE and scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
-        redis = datastore.Redis.instance()
+        redis = Redis.instance()
         if scope == SCOPE_BASE:
             keys = ["%s%s" % (self.__redis_prefix, dn)]
         else:
@@ -232,3 +254,5 @@ class FakeLDAP(object):
     def __redis_prefix(self): # pylint: disable-msg=R0201
         """Get the prefix to use for all redis keys."""
         return 'ldap:'
+
+

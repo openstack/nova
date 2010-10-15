@@ -80,7 +80,7 @@ class AuthManagerTestCase(object):
         FLAGS.auth_driver = self.auth_driver
         super(AuthManagerTestCase, self).setUp()
         self.flags(connection_type='fake')
-        self.manager = manager.AuthManager()
+        self.manager = manager.AuthManager(new=True)
 
     def test_create_and_find_user(self):
         with user_generator(self.manager):
@@ -117,7 +117,7 @@ class AuthManagerTestCase(object):
                 self.assert_(filter(lambda u: u.id == 'test1', users))
                 self.assert_(filter(lambda u: u.id == 'test2', users))
                 self.assert_(not filter(lambda u: u.id == 'test3', users))
-        
+
     def test_can_add_and_remove_user_role(self):
         with user_generator(self.manager):
             self.assertFalse(self.manager.has_role('test1', 'itsec'))
@@ -323,6 +323,19 @@ class AuthManagerTestCase(object):
 
 class AuthManagerLdapTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+
+    def __init__(self, *args, **kwargs):
+        AuthManagerTestCase.__init__(self)
+        test.TrialTestCase.__init__(self, *args, **kwargs)
+        import nova.auth.fakeldap as fakeldap
+        FLAGS.redis_db = 8
+        if FLAGS.flush_db:
+            logging.info("Flushing redis datastore")
+            try:
+                r = fakeldap.Redis.instance()
+                r.flushdb()
+            except:
+                self.skip = True
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
