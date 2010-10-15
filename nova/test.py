@@ -79,7 +79,7 @@ class TrialTestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
         self.injected = []
-        self._monkeyPatchAttach()
+        self._monkey_patch_attach()
         self._original_flags = FLAGS.FlagValuesDict()
 
     def tearDown(self): # pylint: disable-msg=C0103
@@ -147,7 +147,7 @@ class TrialTestCase(unittest.TestCase):
         _wrapped.func_name = func.func_name
         return _wrapped
 
-    def _monkeyPatchAttach(self):
+    def _monkey_patch_attach(self):
         self.originalAttach = rpc.Consumer.attach_to_twisted
         def _wrapped(innerSelf):
             rv = self.originalAttach(innerSelf)
