@@ -407,7 +407,8 @@ class NetworkCommands(object):
         if not vpn_start:
             vpn_start = FLAGS.vpn_start
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.create_networks(None, fixed_range, int(num_networks),
+        net_manager.create_networks(context.get_admin_context(),
+                                    fixed_range, int(num_networks),
                                     int(network_size), int(vlan_start),
                                     int(vpn_start))
 
