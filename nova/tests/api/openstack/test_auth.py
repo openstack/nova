@@ -106,5 +106,40 @@ class Test(unittest.TestCase):
         result = req.get_response(nova.api.API())
         self.assertEqual(result.status, '401 Unauthorized')
 
+
+class TestLimiter(unittest.TestCase):
+    def setUp(self):
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+            '__init__', fakes.fake_auth_init)
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        fakes.fake_data_store = {}
+
+    def test_authorize_token(self):
+        f = fakes.FakeAuthManager()
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-User'] = 'herp'
+        req.headers['X-Auth-Key'] = 'derp'
+        result = req.get_response(nova.api.API())
+        self.assertEqual(len(result.headers['X-Auth-Token']), 40)
+
+        token = result.headers['X-Auth-Token']
+        self.stubs.Set(nova.api.openstack, 'APIRouter',
+            fakes.FakeRouter)
+        req = webob.Request.blank('/v1.0/fake')
+        req.method = 'POST'
+        req.headers['X-Auth-Token'] = token
+        result = req.get_response(nova.api.API())
+        self.assertEqual(result.status, '200 OK')
+        self.assertEqual(result.headers['X-Test-Success'], 'True')
+
+
 if __name__ == '__main__':
     unittest.main()
