@@ -51,6 +51,8 @@ class TwistdServerOptions(ServerOptions):
 
 
 class FlagParser(object):
+    # this is a required attribute for gflags
+    syntactic_help = ''
     def __init__(self, parser):
         self.parser = parser
 
@@ -81,6 +83,8 @@ def WrapTwistedOptions(wrapped):
             reflect.accumulateClassList(self.__class__, 'optFlags', twistd_flags)
             for flag in twistd_flags:
                 key = flag[0].replace('-', '_')
+                if hasattr(FLAGS, key):
+                    continue
                 flags.DEFINE_boolean(key, None, str(flag[-1]))
 
         def _absorbParameters(self):
@@ -88,6 +92,8 @@ def WrapTwistedOptions(wrapped):
             reflect.accumulateClassList(self.__class__, 'optParameters', twistd_params)
             for param in twistd_params:
                 key = param[0].replace('-', '_')
+                if hasattr(FLAGS, key):
+                    continue
                 if len(param) > 4:
                     flags.DEFINE(FlagParser(param[4]),
                                  key, param[2], str(param[3]),
