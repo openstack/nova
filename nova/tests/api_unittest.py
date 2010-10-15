@@ -30,6 +30,7 @@ from nova import flags
 from nova import test
 from nova import api
 from nova.api.ec2 import cloud
+from nova.api.ec2 import apirequest
 from nova.auth import manager
 
 
@@ -81,6 +82,22 @@ class FakeHttplibConnection(object):
         """Required for compatibility with boto/tornado"""
         pass
 
+
+class XmlConversionTestCase(test.BaseTestCase):
+    """Unit test api xml conversion"""
+    def test_number_conversion(self):
+        conv = apirequest._try_convert
+        self.assertEqual(conv('None'), None)
+        self.assertEqual(conv('True'), True)
+        self.assertEqual(conv('False'), False)
+        self.assertEqual(conv('0'), 0)
+        self.assertEqual(conv('42'), 42)
+        self.assertEqual(conv('3.14'), 3.14)
+        self.assertEqual(conv('-57.12'), -57.12)
+        self.assertEqual(conv('0x57'), 0x57)
+        self.assertEqual(conv('-0x57'), -0x57)
+        self.assertEqual(conv('-'), '-')
+        self.assertEqual(conv('-0'), 0)
 
 class ApiEc2TestCase(test.BaseTestCase):
     """Unit test for the cloud controller on an EC2 API"""
