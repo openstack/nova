@@ -324,7 +324,7 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('disk')):
            yield images.fetch(inst.image_id, basepath('disk-raw'), user, project)
 
-        using_kernel = inst.kernel_id and True
+        using_kernel = inst.kernel_id
         if using_kernel:
             if not os.path.exists(basepath('kernel')):
                 yield images.fetch(inst.kernel_id, basepath('kernel'), user, project)
