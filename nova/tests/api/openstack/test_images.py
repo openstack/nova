@@ -150,7 +150,7 @@ class GlanceImageServiceTest(unittest.TestCase,
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
-        self.service = utils.import_object('nova.image.service.GlanceImageService')
+        self.service = utils.import_object('nova.image.services.glance.GlanceImageService')
         self.service.delete_all()
 
     def tearDown(self):
@@ -188,7 +188,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def setUp(self):
         self.orig_image_service = FLAGS.image_service
-        FLAGS.image_service = 'nova.image.service.GlanceImageService'
+        FLAGS.image_service = 'nova.image.services.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
