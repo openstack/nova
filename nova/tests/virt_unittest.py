@@ -17,11 +17,11 @@
 from xml.etree.ElementTree import fromstring as xml_to_tree
 from xml.dom.minidom import parseString as xml_to_dom
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
 from nova import utils
-from nova.api import context
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.virt import libvirt_conn
@@ -51,9 +51,9 @@ class LibvirtConnTestCase(test.TrialTestCase):
                      'bridge'         : 'br101',
                      'instance_type'  : 'm1.small'}
 
-        instance_ref = db.instance_create(None, instance)
-        user_context = context.APIRequestContext(project=self.project,
-                                                 user=self.user)
+        user_context = context.RequestContext(project=self.project,
+                                              user=self.user)
+        instance_ref = db.instance_create(user_context, instance)
         network_ref = self.network.get_network(user_context)
         self.network.set_network_host(context.get_admin_context(),
                                       network_ref['id'])
@@ -61,9 +61,10 @@ class LibvirtConnTestCase(test.TrialTestCase):
         fixed_ip = { 'address'    : ip,
                      'network_id' : network_ref['id'] }
 
-        fixed_ip_ref = db.fixed_ip_create(None, fixed_ip)
-        db.fixed_ip_update(None, ip, { 'allocated'   : True,
-                                          'instance_id' : instance_ref['id'] })
+        ctxt = context.get_admin_context()
+        fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
+        db.fixed_ip_update(ctxt, ip, {'allocated': True,
+                                      'instance_id': instance_ref['id'] })
 
         type_uri_map = { 'qemu' : ('qemu:///system',
                               [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -132,7 +133,7 @@ class NWFilterTestCase(test.TrialTestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.APIRequestContext(self.user, self.project)
+        self.context = context.RequestContext(self.user, self.project)
 
         self.fake_libvirt_connection = Mock()
 

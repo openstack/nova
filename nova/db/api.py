@@ -258,7 +258,7 @@ def instance_get_all(context):
 
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
-    return IMPL.instance_get_all(context, user_id)
+    return IMPL.instance_get_all_by_user(context, user_id)
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -466,12 +466,17 @@ def export_device_count(context):
     return IMPL.export_device_count(context)
 
 
-def export_device_create(context, values):
-    """Create an export_device from the values dictionary."""
-    return IMPL.export_device_create(context, values)
+def export_device_create_safe(context, values):
+    """Create an export_device from the values dictionary.
+
+    The device is not returned. If the create violates the unique
+    constraints because the shelf_id and blade_id already exist,
+    no exception is raised."""
+    return IMPL.export_device_create_safe(context, values)
 
 
 ###################
+
 
 def auth_destroy_token(context, token):
     """Destroy an auth token"""
@@ -483,7 +488,7 @@ def auth_get_token(context, token_hash):
 
 def auth_create_token(context, token):
     """Creates a new token"""
-    return IMPL.auth_create_token(context, token_hash, token)
+    return IMPL.auth_create_token(context, token)
 
 
 ###################

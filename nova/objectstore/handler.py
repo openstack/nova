@@ -52,10 +52,10 @@ from twisted.web import resource
 from twisted.web import server
 from twisted.web import static
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova.auth import manager
-from nova.api.ec2 import context
 from nova.objectstore import bucket
 from nova.objectstore import image
 
@@ -131,7 +131,7 @@ def get_context(request):
                                           request.uri,
                                           headers=request.getAllHeaders(),
                                           check_type='s3')
-        return context.APIRequestContext(user, project)
+        return context.RequestContext(user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized
@@ -144,7 +144,7 @@ class ErrorHandlingResource(resource.Resource):
     #                   plugged in to the right place in twisted...
     #                   This doesn't look like it's the right place
     #                   (consider exceptions in getChild; or after
-    #                   NOT_DONE_YET is returned     
+    #                   NOT_DONE_YET is returned
     def render(self, request):
         """Renders the response as XML"""
         try:
@@ -255,7 +255,7 @@ class ObjectResource(ErrorHandlingResource):
 
     def render_GET(self, request):
         """Returns the object
-        
+
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
@@ -273,7 +273,7 @@ class ObjectResource(ErrorHandlingResource):
 
     def render_PUT(self, request):
         """Modifies/inserts the object and returns a result code
-        
+
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
@@ -291,7 +291,7 @@ class ObjectResource(ErrorHandlingResource):
 
     def render_DELETE(self, request):
         """Deletes the object and returns a result code
-        
+
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """

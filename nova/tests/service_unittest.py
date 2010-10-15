@@ -24,6 +24,7 @@ import mox
 
 from twisted.application.app import startApplication
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova import rpc
@@ -47,6 +48,7 @@ class ServiceTestCase(test.BaseTestCase):
     def setUp(self):  # pylint: disable=C0103
         super(ServiceTestCase, self).setUp()
         self.mox.StubOutWithMock(service, 'db')
+        self.context = context.get_admin_context()
 
     def test_create(self):
         host = 'foo'
@@ -90,10 +92,10 @@ class ServiceTestCase(test.BaseTestCase):
                        'report_count': 0,
                        'id': 1}
 
-        service.db.service_get_by_args(None,
+        service.db.service_get_by_args(mox.IgnoreArg(),
                                        host,
                                        binary).AndRaise(exception.NotFound())
-        service.db.service_create(None,
+        service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
 
@@ -113,10 +115,10 @@ class ServiceTestCase(test.BaseTestCase):
                        'report_count': 0,
                        'id': 1}
         service.db.__getattr__('report_state')
-        service.db.service_get_by_args(None,
+        service.db.service_get_by_args(self.context,
                                        host,
                                        binary).AndReturn(service_ref)
-        service.db.service_update(None, service_ref['id'],
+        service.db.service_update(self.context, service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
@@ -135,13 +137,13 @@ class ServiceTestCase(test.BaseTestCase):
                        'id': 1}
 
         service.db.__getattr__('report_state')
-        service.db.service_get_by_args(None,
+        service.db.service_get_by_args(self.context,
                                       host,
                                       binary).AndRaise(exception.NotFound())
-        service.db.service_create(None,
+        service.db.service_create(self.context,
                                   service_create).AndReturn(service_ref)
-        service.db.service_get(None, service_ref['id']).AndReturn(service_ref)
-        service.db.service_update(None, service_ref['id'],
+        service.db.service_get(self.context, service_ref['id']).AndReturn(service_ref)
+        service.db.service_update(self.context, service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
@@ -157,7 +159,7 @@ class ServiceTestCase(test.BaseTestCase):
                        'id': 1}
 
         service.db.__getattr__('report_state')
-        service.db.service_get_by_args(None,
+        service.db.service_get_by_args(self.context,
                                        host,
                                        binary).AndRaise(Exception())
 
@@ -176,10 +178,10 @@ class ServiceTestCase(test.BaseTestCase):
                        'id': 1}
 
         service.db.__getattr__('report_state')
-        service.db.service_get_by_args(None,
+        service.db.service_get_by_args(self.context,
                                        host,
                                        binary).AndReturn(service_ref)
-        service.db.service_update(None, service_ref['id'],
+        service.db.service_update(self.context, service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()

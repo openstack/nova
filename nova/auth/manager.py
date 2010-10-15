@@ -28,6 +28,7 @@ import tempfile
 import uuid
 import zipfile
 
+from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
@@ -201,7 +202,7 @@ class AuthManager(object):
 
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
-        if not cls._instance:
+        if not cls._instance or ('new' in kwargs and kwargs['new']):
             cls._instance = super(AuthManager, cls).__new__(cls)
         return cls._instance
 
@@ -454,7 +455,7 @@ class AuthManager(object):
             return [Project(**project_dict) for project_dict in project_list]
 
     def create_project(self, name, manager_user, description=None,
-                       member_users=None, context=None):
+                       member_users=None):
         """Create a project
 
         @type name: str
@@ -531,7 +532,7 @@ class AuthManager(object):
                                             Project.safe_id(project))
 
     @staticmethod
-    def get_project_vpn_data(project, context=None):
+    def get_project_vpn_data(project):
         """Gets vpn ip and port for project
 
         @type project: Project or project_id
@@ -542,7 +543,7 @@ class AuthManager(object):
         not been allocated for user.
         """
 
-        network_ref = db.project_get_network(context,
+        network_ref = db.project_get_network(context.get_admin_context(),
                                              Project.safe_id(project))
 
         if not network_ref['vpn_public_port']:
@@ -550,7 +551,7 @@ class AuthManager(object):
         return (network_ref['vpn_public_address'],
                 network_ref['vpn_public_port'])
 
-    def delete_project(self, project, context=None):
+    def delete_project(self, project):
         """Deletes a project"""
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
@@ -613,7 +614,8 @@ class AuthManager(object):
 
         Additionally deletes all users key_pairs"""
         uid = User.safe_id(user)
-        db.key_pair_destroy_all_by_user(None, uid)
+        db.key_pair_destroy_all_by_user(context.get_admin_context(),
+                                        uid)
         with self.driver() as drv:
             drv.delete_user(uid)
 

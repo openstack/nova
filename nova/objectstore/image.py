@@ -72,7 +72,7 @@ class Image(object):
         try:
             return (self.metadata['isPublic'] and readonly) or \
                    context.user.is_admin() or \
-                   self.metadata['imageOwnerId'] == context.project.id
+                   self.metadata['imageOwnerId'] == context.project_id
         except:
             return False
 
@@ -133,11 +133,11 @@ class Image(object):
 
         @type public: bool
         @param public: determine if this is a public image or private
-        
+
         @rtype: str
         @return: a string with the image id
         """
-        
+
         image_type = 'machine'
         image_id = utils.generate_uid('ami')
 
@@ -162,7 +162,7 @@ class Image(object):
             'imageType': image_type,
             'state': 'available'
         }
-        
+
         if type(kernel) is str and len(kernel) > 0:
             info['kernelId'] = kernel
 
@@ -203,7 +203,7 @@ class Image(object):
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
-            'imageOwnerId': context.project.id,
+            'imageOwnerId': context.project_id,
             'isPublic': False, # FIXME: grab public from manifest
             'architecture': 'x86_64', # FIXME: grab architecture from manifest
             'imageType' : image_type
@@ -249,13 +249,13 @@ class Image(object):
     @staticmethod
     def decrypt_image(encrypted_filename, encrypted_key, encrypted_iv, cloud_private_key, decrypted_filename):
         key, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
                 process_input=encrypted_key,
                 check_exit_code=False)
         if err:
             raise exception.Error("Failed to decrypt private key: %s" % err)
         iv, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
                 process_input=encrypted_iv,
                 check_exit_code=False)
         if err:

@@ -28,6 +28,7 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -63,20 +64,22 @@ class Service(object, service.Service):
                                                      **self.saved_kwargs)
         self.manager.init_host()
         self.model_disconnected = False
+        ctxt = context.get_admin_context()
         try:
-            service_ref = db.service_get_by_args(None,
-                                               self.host,
-                                               self.binary)
+            service_ref = db.service_get_by_args(ctxt,
+                                                 self.host,
+                                                 self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
-            self._create_service_ref()
+            self._create_service_ref(ctxt)
 
 
-    def _create_service_ref(self):
-        service_ref = db.service_create(None, {'host': self.host,
-                                               'binary': self.binary,
-                                               'topic': self.topic,
-                                               'report_count': 0})
+    def _create_service_ref(self, context):
+        service_ref = db.service_create(context,
+                                        {'host': self.host,
+                                         'binary': self.binary,
+                                         'topic': self.topic,
+                                         'report_count': 0})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
@@ -142,31 +145,32 @@ class Service(object, service.Service):
         service_obj.setServiceParent(application)
         return application
 
-    def kill(self, context=None):
+    def kill(self):
         """Destroy the service object in the datastore"""
         try:
-            db.service_destroy(context, self.service_id)
+            db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
 
     @defer.inlineCallbacks
-    def periodic_tasks(self, context=None):
+    def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
-        yield self.manager.periodic_tasks(context)
+        yield self.manager.periodic_tasks(context.get_admin_context())
 
     @defer.inlineCallbacks
-    def report_state(self, context=None):
+    def report_state(self):
         """Update the state of this service in the datastore."""
+        ctxt = context.get_admin_context()
         try:
             try:
-                service_ref = db.service_get(context, self.service_id)
+                service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
                 logging.debug("The service database object disappeared, "
                               "Recreating it.")
-                self._create_service_ref()
-                service_ref = db.service_get(context, self.service_id)
+                self._create_service_ref(ctxt)
+                service_ref = db.service_get(ctxt, self.service_id)
 
-            db.service_update(context,
+            db.service_update(ctxt,
                              self.service_id,
                              {'report_count': service_ref['report_count'] + 1})
 

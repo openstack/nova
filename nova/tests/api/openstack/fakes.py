@@ -170,6 +170,10 @@ def stub_out_glance(stubs, initial_fixtures=[]):
     stubs.Set(nova.image.services.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
 
+class FakeToken(object):
+    def __init__(self, **kwargs):
+        for k,v in kwargs.iteritems():
+            setattr(self, k, v)
 
 class FakeAuthDatabase(object):
     data = {}
@@ -180,12 +184,13 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_create_token(context, token):
-        token['created_at'] = datetime.datetime.now()
-        FakeAuthDatabase.data[token['token_hash']] = token
+        fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
+        FakeAuthDatabase.data[fake_token.token_hash] = fake_token
+        return fake_token
 
     @staticmethod
     def auth_destroy_token(context, token):
-        if FakeAuthDatabase.data.has_key(token['token_hash']):
+        if token.token_hash in FakeAuthDatabase.data:
             del FakeAuthDatabase.data['token_hash']
 
 
@@ -197,7 +202,7 @@ class FakeAuthManager(object):
 
     def get_user(self, uid):
         for k, v in FakeAuthManager.auth_data.iteritems():
-            if v['uid'] == uid:
+            if v.id == uid:
                 return v
         return None
 

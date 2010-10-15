@@ -24,6 +24,7 @@ import logging
 
 from twisted.internet import defer
 
+from nova import exception
 from nova import flags
 from nova import process
 
@@ -33,12 +34,33 @@ flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
 flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
+flags.DEFINE_string('num_shell_tries', 3,
+                    'number of times to attempt to run flakey shell commands')
 
 
 class AOEDriver(object):
     """Executes commands relating to AOE volumes"""
     def __init__(self, execute=process.simple_execute, *args, **kwargs):
         self._execute = execute
+
+    @defer.inlineCallbacks
+    def _try_execute(self, command):
+        # NOTE(vish): Volume commands can partially fail due to timing, but
+        #             running them a second time on failure will usually
+        #             recover nicely.
+        tries = 0
+        while True:
+            try:
+                yield self._execute(command)
+                defer.returnValue(True)
+            except exception.ProcessExecutionError:
+                tries = tries + 1
+                if tries >= FLAGS.num_shell_tries:
+                    raise
+                logging.exception("Recovering from a failed execute."
+                                  "Try number %s", tries)
+                yield self._execute("sleep %s" % tries ** 2)
+
 
     @defer.inlineCallbacks
     def create_volume(self, volume_name, size):
@@ -49,22 +71,22 @@ class AOEDriver(object):
             sizestr = '100M'
         else:
             sizestr = '%sG' % size
-        yield self._execute(
-                "sudo lvcreate -L %s -n %s %s" % (sizestr,
-                                                  volume_name,
-                                                  FLAGS.volume_group))
+        yield self._try_execute("sudo lvcreate -L %s -n %s %s" %
+                            (sizestr,
+                             volume_name,
+                             FLAGS.volume_group))
 
     @defer.inlineCallbacks
     def delete_volume(self, volume_name):
         """Deletes a logical volume"""
-        yield self._execute(
-                "sudo lvremove -f %s/%s" % (FLAGS.volume_group,
-                                            volume_name))
+        yield self._try_execute("sudo lvremove -f %s/%s" %
+                                (FLAGS.volume_group,
+                                 volume_name))
 
     @defer.inlineCallbacks
     def create_export(self, volume_name, shelf_id, blade_id):
         """Creates an export for a logical volume"""
-        yield self._execute(
+        yield self._try_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (shelf_id,
                  blade_id,
@@ -81,16 +103,22 @@ class AOEDriver(object):
     @defer.inlineCallbacks
     def remove_export(self, _volume_name, shelf_id, blade_id):
         """Removes an export for a logical volume"""
-        yield self._execute(
-                "sudo vblade-persist stop %s %s" % (shelf_id, blade_id))
-        yield self._execute(
-                "sudo vblade-persist destroy %s %s" % (shelf_id, blade_id))
+        yield self._try_execute("sudo vblade-persist stop %s %s" %
+                                (shelf_id, blade_id))
+        yield self._try_execute("sudo vblade-persist destroy %s %s" %
+                                (shelf_id, blade_id))
 
     @defer.inlineCallbacks
     def ensure_exports(self):
         """Runs all existing exports"""
-        # NOTE(ja): wait for blades to appear
-        yield self._execute("sleep 5")
+        # NOTE(vish): The standard _try_execute does not work here
+        #             because these methods throw errors if other
+        #             volumes on this host are in the process of
+        #             being created.  The good news is the command
+        #             still works for the other volumes, so we
+        #             just wait a bit for the current volume to
+        #             be ready and ignore any errors.
+        yield self._execute("sleep 2")
         yield self._execute("sudo vblade-persist auto all",
                             check_exit_code=False)
         yield self._execute("sudo vblade-persist start all",

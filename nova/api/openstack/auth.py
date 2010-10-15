@@ -24,9 +24,9 @@ class BasicApiAuthManager(object):
     def __init__(self, host=None, db_driver=None):
         if not host:
             host = FLAGS.host
-        self.host = host                                                                                                                                     
+        self.host = host
         if not db_driver:
-            db_driver = FLAGS.db_driver                                                                                                                      
+            db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
         self.auth = auth.manager.AuthManager()
         self.context = Context()
@@ -40,20 +40,19 @@ class BasicApiAuthManager(object):
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         try:
-            username, key = req.headers['X-Auth-User'], \
-                req.headers['X-Auth-Key']
+            username = req.headers['X-Auth-User']
+            key = req.headers['X-Auth-Key']
         except KeyError:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        username, key = req.headers['X-Auth-User'], req.headers['X-Auth-Key']
         token, user = self._authorize_user(username, key)
         if user and token:
             res = webob.Response()
-            res.headers['X-Auth-Token'] = token['token_hash']
+            res.headers['X-Auth-Token'] = token.token_hash
             res.headers['X-Server-Management-Url'] = \
-                token['server_management_url']
-            res.headers['X-Storage-Url'] = token['storage_url']
-            res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
+                token.server_management_url
+            res.headers['X-Storage-Url'] = token.storage_url
+            res.headers['X-CDN-Management-Url'] = token.cdn_management_url
             res.content_type = 'text/plain'
             res.status = '204'
             return res
@@ -65,34 +64,35 @@ class BasicApiAuthManager(object):
         
         If the token has expired, returns None
         If the token is not found, returns None
-        Otherwise returns the token
+        Otherwise returns dict(id=(the authorized user's id))
 
         This method will also remove the token if the timestamp is older than
         2 days ago.
         """
         token = self.db.auth_get_token(self.context, token_hash) 
         if token:
-            delta = datetime.datetime.now() - token['created_at']
+            delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
                 self.db.auth_destroy_token(self.context, token)
             else:
-                user = self.auth.get_user(token['user_id'])
-                return { 'id':user['uid'] }
+                #TODO(gundlach): Why not just return dict(id=token.user_id)?
+                user = self.auth.get_user(token.user_id)
+                return {'id': user.id}
         return None
 
     def _authorize_user(self, username, key):
         """ Generates a new token and assigns it to a user """
         user = self.auth.get_user_from_access_key(key)
-        if user and user['name'] == username:
+        if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
                 time.time())).hexdigest()
-            token = {}
-            token['token_hash'] = token_hash
-            token['cdn_management_url'] = ''
-            token['server_management_url'] = self._get_server_mgmt_url()
-            token['storage_url'] = ''
-            token['user_id'] = user['uid']
-            self.db.auth_create_token(self.context, token)
+            token_dict = {}
+            token_dict['token_hash'] = token_hash
+            token_dict['cdn_management_url'] = ''
+            token_dict['server_management_url'] = self._get_server_mgmt_url()
+            token_dict['storage_url'] = ''
+            token_dict['user_id'] = user.id
+            token = self.db.auth_create_token(self.context, token_dict)
             return token, user
         return None, None 
 

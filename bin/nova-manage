@@ -67,17 +67,22 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
 from nova import quota
 from nova import utils
 from nova.auth import manager
-from nova.network import manager as network_manager
 from nova.cloudpipe import pipelib
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('fixed_range', 'nova.network.manager')
+flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('network_size', 'nova.network.manager')
+flags.DECLARE('vlan_start', 'nova.network.manager')
+flags.DECLARE('vpn_start', 'nova.network.manager')
 
 
 class VpnCommands(object):
@@ -121,7 +126,7 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all(None):
+        for instance in db.instance_get_all(context.get_admin_context()):
             if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
@@ -323,13 +328,14 @@ class ProjectCommands(object):
     def quota(self, project_id, key=None, value=None):
         """Set or display quotas for project
         arguments: project_id [key] [value]"""
+        ctxt = context.get_admin_context()
         if key:
             quo = {'project_id': project_id, key: value}
             try:
-                db.quota_update(None, project_id, quo)
+                db.quota_update(ctxt, project_id, quo)
             except exception.NotFound:
-                db.quota_create(None, quo)
-        project_quota = quota.get_quota(None, project_id)
+                db.quota_create(ctxt, quo)
+        project_quota = quota.get_quota(ctxt, project_id)
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)
 
@@ -353,23 +359,26 @@ class FloatingIpCommands(object):
         """Creates floating ips for host by range
         arguments: host ip_range"""
         for address in IPy.IP(range):
-            db.floating_ip_create(None, {'address': str(address),
-                                         'host': host})
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': str(address),
+                                   'host': host})
 
     def delete(self, ip_range):
         """Deletes floating ips by range
         arguments: range"""
         for address in IPy.IP(ip_range):
-            db.floating_ip_destroy(None, str(address))
+            db.floating_ip_destroy(context.get_admin_context(),
+                                   str(address))
 
 
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
         arguments: [host]"""
+        ctxt = context.get_admin_context()
         if host == None:
-            floating_ips = db.floating_ip_get_all(None)
+            floating_ips = db.floating_ip_get_all(ctxt)
         else:
-            floating_ips = db.floating_ip_get_all_by_host(None, host)
+            floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
@@ -451,7 +460,7 @@ def main():
 
     if FLAGS.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"

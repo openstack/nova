@@ -33,7 +33,6 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
-from sqlalchemy.orm.exc import NoResultFound
 
 FLAGS = flags.FLAGS
 
@@ -43,6 +42,7 @@ def is_admin_context(context):
     if not context:
         warnings.warn('Use of empty request context is deprecated',
                       DeprecationWarning)
+        raise Exception('die')
         return True
     return context.is_admin
 
@@ -51,7 +51,9 @@ def is_user_context(context):
     """Indicates if the request context is a normal user."""
     if not context:
         return False
-    if not context.user or not context.project:
+    if context.is_admin:
+        return False
+    if not context.user_id or not context.project_id:
         return False
     return True
 
@@ -63,7 +65,7 @@ def authorize_project_context(context, project_id):
     if is_user_context(context):
         if not context.project:
             raise exception.NotAuthorized()
-        elif context.project.id != project_id:
+        elif context.project_id != project_id:
             raise exception.NotAuthorized()
 
 
@@ -74,7 +76,7 @@ def authorize_user_context(context, user_id):
     if is_user_context(context):
         if not context.user:
             raise exception.NotAuthorized()
-        elif context.user.id != user_id:
+        elif context.user_id != user_id:
             raise exception.NotAuthorized()
 
 
@@ -324,7 +326,7 @@ def floating_ip_destroy(context, address):
     session = get_session()
     with session.begin():
         # TODO(devcamcar): Ensure address belongs to user.
-        floating_ip_ref = get_floating_ip_by_address(context,
+        floating_ip_ref = floating_ip_get_by_address(context,
                                                      address,
                                                      session=session)
         floating_ip_ref.delete(session=session)
@@ -539,7 +541,7 @@ def instance_create(context, values):
     with session.begin():
         while instance_ref.internal_id == None:
             internal_id = utils.generate_uid(instance_ref.__prefix__)
-            if not instance_internal_id_exists(context, internal_id, 
+            if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
@@ -581,7 +583,7 @@ def instance_get(context, instance_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Instance
                        ).options(joinedload('security_groups')
-                       ).filter_by(project_id=context.project.id
+                       ).filter_by(project_id=context.project_id
                        ).filter_by(id=instance_id
                        ).filter_by(deleted=False
                        ).first()
@@ -640,7 +642,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance
                      ).options(joinedload_all('fixed_ip.floating_ips')
                      ).options(joinedload('security_groups')
-                     ).filter_by(project_id=context.project.id
+                     ).filter_by(project_id=context.project_id
                      ).filter_by(reservation_id=reservation_id
                      ).filter_by(deleted=False
                      ).all()
@@ -659,7 +661,7 @@ def instance_get_by_internal_id(context, internal_id):
     elif is_user_context(context):
         result = session.query(models.Instance
                        ).options(joinedload('security_groups')
-                       ).filter_by(project_id=context.project.id
+                       ).filter_by(project_id=context.project_id
                        ).filter_by(internal_id=internal_id
                        ).filter_by(deleted=False
                        ).first()
@@ -897,7 +899,7 @@ def network_get(context, network_id, session=None):
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Network
-                       ).filter_by(project_id=context.project.id
+                       ).filter_by(project_id=context.project_id
                        ).filter_by(id=network_id
                        ).filter_by(deleted=False
                        ).first()
@@ -1023,12 +1025,15 @@ def export_device_count(context):
 
 
 @require_admin_context
-def export_device_create(context, values):
+def export_device_create_safe(context, values):
     export_device_ref = models.ExportDevice()
     for (key, value) in values.iteritems():
         export_device_ref[key] = value
-    export_device_ref.save()
-    return export_device_ref
+    try:
+        export_device_ref.save()
+        return export_device_ref
+    except IntegrityError:
+        return None
 
 
 ###################
@@ -1041,7 +1046,8 @@ def auth_destroy_token(_context, token):
 def auth_get_token(_context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken
-                ).filter_by(token_hash=token_hash)
+                ).filter_by(token_hash=token_hash
+                ).first()
     if not tk:
         raise exception.NotFound('Token %s does not exist' % token_hash)
     return tk
@@ -1197,7 +1203,7 @@ def volume_get(context, volume_id, session=None):
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Volume
-                       ).filter_by(project_id=context.project.id
+                       ).filter_by(project_id=context.project_id
                        ).filter_by(id=volume_id
                        ).filter_by(deleted=False
                        ).first()
@@ -1237,7 +1243,7 @@ def volume_get_by_ec2_id(context, ec2_id):
                        ).first()
     elif is_user_context(context):
         result = session.query(models.Volume
-                       ).filter_by(project_id=context.project.id
+                       ).filter_by(project_id=context.project_id
                        ).filter_by(ec2_id=ec2_id
                        ).filter_by(deleted=False
                        ).first()
@@ -1484,7 +1490,7 @@ def user_get_by_access_key(context, access_key, session=None):
                  ).first()
 
     if not result:
-        raise exception.NotFound('No user for id %s' % id)
+        raise exception.NotFound('No user for access key %s' % access_key)
 
     return result
 
@@ -1630,7 +1636,7 @@ def user_remove_project_role(context, user_id, project_id, role):
     with session.begin():
         session.execute('delete from user_project_role_association where ' + \
                         'user_id=:user_id and project_id=:project_id and ' + \
-                        'role=:role', { 'user_id'    : user_id, 
+                        'role=:role', { 'user_id'    : user_id,
                                         'project_id' : project_id,
                                         'role'       : role })
 

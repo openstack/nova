@@ -28,6 +28,7 @@ import logging
 import os
 import time
 
+from nova import context
 import IPy
 
 from nova import crypto
@@ -117,9 +118,9 @@ class CloudController(object):
             utils.runthis("Generating root CA: %s", "sh genrootca.sh")
             os.chdir(start)
 
-    def _get_mpi_data(self, project_id):
+    def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in db.instance_get_all_by_project(None, project_id):
+        for instance in db.instance_get_all_by_project(context, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                     INSTANCE_TYPES[instance['instance_type']]['vcpus'])
@@ -130,20 +131,21 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
-    def _trigger_refresh_security_group(self, security_group):
+    def _trigger_refresh_security_group(self, context, security_group):
         nodes = set([instance['host'] for instance in security_group.instances
                        if instance['host'] is not None])
         for node in nodes:
-            rpc.call('%s.%s' % (FLAGS.compute_topic, node),
+            rpc.cast(context,
+                     '%s.%s' % (FLAGS.compute_topic, node),
                      { "method": "refresh_security_group",
-                       "args": { "context": None,
-                                 "security_group_id": security_group.id}})
+                       "args": {"security_group_id": security_group.id}})
 
     def get_metadata(self, address):
-        instance_ref = db.fixed_ip_get_instance(None, address)
+        ctxt = context.get_admin_context()
+        instance_ref = db.fixed_ip_get_instance(ctxt, address)
         if instance_ref is None:
             return None
-        mpi = self._get_mpi_data(instance_ref['project_id'])
+        mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {
                 '0': {
@@ -154,7 +156,7 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        floating_ip = db.instance_get_floating_address(None,
+        floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
@@ -162,7 +164,7 @@ class CloudController(object):
                 'ami-id': instance_ref['image_id'],
                 'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
-                'block-device-mapping': {  # TODO(vish): replace with real data
+                'block-device-mapping': { # TODO(vish): replace with real data
                     'ami': 'sda1',
                     'ephemeral0': 'sda2',
                     'root': '/dev/sda1',
@@ -244,7 +246,7 @@ class CloudController(object):
         return {'keypairsSet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
-        data = _gen_key(None, context.user.id, key_name)
+        data = _gen_key(context, context.user.id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
@@ -264,7 +266,7 @@ class CloudController(object):
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
-                                                      context.project.id)
+                                                      context.project_id)
         groups = [self._format_security_group(context, g) for g in groups]
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
@@ -308,7 +310,7 @@ class CloudController(object):
                 source_security_group_owner_id)
 
             source_security_group = \
-                    db.security_group_get_by_name(context,
+                    db.security_group_get_by_name(context.elevated(),
                                                   source_project_id,
                                                   source_security_group_name)
             values['group_id'] = source_security_group['id']
@@ -364,7 +366,7 @@ class CloudController(object):
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
         self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
 
         criteria = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
@@ -378,7 +380,7 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(security_group)
+                self._trigger_refresh_security_group(context, security_group)
                 return True
         raise exception.ApiError("No rule for the specified parameters.")
 
@@ -389,7 +391,7 @@ class CloudController(object):
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
         self._ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
 
         values = self._authorize_revoke_rule_args_to_dict(context, **kwargs)
@@ -401,7 +403,7 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(security_group)
+        self._trigger_refresh_security_group(context, security_group)
 
         return True
 
@@ -419,18 +421,18 @@ class CloudController(object):
             else:
                 source_project_id = source_parts[0]
         else:
-            source_project_id = context.project.id
+            source_project_id = context.project_id
 
         return source_project_id
 
 
     def create_security_group(self, context, group_name, group_description):
         self._ensure_default_security_group(context)
-        if db.security_group_exists(context, context.project.id, group_name):
+        if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
         group = {'user_id' : context.user.id,
-                 'project_id': context.project.id,
+                 'project_id': context.project_id,
                  'name': group_name,
                  'description': group_description}
         group_ref = db.security_group_create(context, group)
@@ -441,7 +443,7 @@ class CloudController(object):
 
     def delete_security_group(self, context, group_name, **kwargs):
         security_group = db.security_group_get_by_name(context,
-                                                       context.project.id,
+                                                       context.project_id,
                                                        group_name)
         db.security_group_destroy(context, security_group.id)
         return True
@@ -452,11 +454,11 @@ class CloudController(object):
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
-        output = rpc.call('%s.%s' % (FLAGS.compute_topic,
-                                instance_ref['host']),
-                     { "method" : "get_console_output",
-                       "args"   : { "context": None,
-                                    "instance_id": instance_ref['id']}})
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance_ref['host']),
+                          {"method" : "get_console_output",
+                           "args"   : {"instance_id": instance_ref['id']}})
 
         now = datetime.datetime.utcnow()
         return { "InstanceId" : ec2_id,
@@ -467,7 +469,7 @@ class CloudController(object):
         if context.user.is_admin():
             volumes = db.volume_get_all(context)
         else:
-            volumes = db.volume_get_all_by_project(context, context.project.id)
+            volumes = db.volume_get_all_by_project(context, context.project_id)
 
         volumes = [self._format_volume(context, v) for v in volumes]
 
@@ -505,14 +507,14 @@ class CloudController(object):
         # check quota
         if quota.allowed_volumes(context, 1, size) < 1:
             logging.warn("Quota exceeeded for %s, tried to create %sG volume",
-                         context.project.id, size)
+                         context.project_id, size)
             raise QuotaError("Volume quota exceeded. You cannot "
                              "create a volume of size %s" %
                              size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
-        vol['project_id'] = context.project.id
+        vol['project_id'] = context.project_id
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
@@ -520,10 +522,10 @@ class CloudController(object):
         vol['display_description'] = kwargs.get('display_description')
         volume_ref = db.volume_create(context, vol)
 
-        rpc.cast(FLAGS.scheduler_topic,
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
                  {"method": "create_volume",
-                  "args": {"context": None,
-                           "topic": FLAGS.volume_topic,
+                  "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume_ref['id']}})
 
         return {'volumeSet': [self._format_volume(context, volume_ref)]}
@@ -539,12 +541,12 @@ class CloudController(object):
         internal_id = ec2_id_to_internal_id(instance_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
         host = instance_ref['host']
-        rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
-                                {"method": "attach_volume",
-                                 "args": {"context": None,
-                                          "volume_id": volume_ref['id'],
-                                          "instance_id": instance_ref['id'],
-                                          "mountpoint": device}})
+        rpc.cast(context,
+                 db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"volume_id": volume_ref['id'],
+                           "instance_id": instance_ref['id'],
+                           "mountpoint": device}})
         return {'attachTime': volume_ref['attach_time'],
                 'device': volume_ref['mountpoint'],
                 'instanceId': instance_ref['id'],
@@ -554,7 +556,8 @@ class CloudController(object):
 
     def detach_volume(self, context, volume_id, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
-        instance_ref = db.volume_get_instance(context, volume_ref['id'])
+        instance_ref = db.volume_get_instance(context.elevated(),
+                                              volume_ref['id'])
         if not instance_ref:
             raise exception.ApiError("Volume isn't attached to anything!")
         # TODO(vish): abstract status checking?
@@ -562,11 +565,11 @@ class CloudController(object):
             raise exception.ApiError("Volume is already detached")
         try:
             host = instance_ref['host']
-            rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
-                                {"method": "detach_volume",
-                                 "args": {"context": None,
-                                          "instance_id": instance_ref['id'],
-                                          "volume_id": volume_ref['id']}})
+            rpc.cast(context,
+                     db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "detach_volume",
+                      "args": {"instance_id": instance_ref['id'],
+                               "volume_id": volume_ref['id']}})
         except exception.NotFound:
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
@@ -601,7 +604,7 @@ class CloudController(object):
         return self._format_describe_instances(context)
 
     def _format_describe_instances(self, context):
-        return { 'reservationSet': self._format_instances(context) }
+        return {'reservationSet': self._format_instances(context)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id)
@@ -618,7 +621,7 @@ class CloudController(object):
                 instances = db.instance_get_all(context)
             else:
                 instances = db.instance_get_all_by_project(context,
-                                                           context.project.id)
+                                                           context.project_id)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -673,7 +676,7 @@ class CloudController(object):
             iterator = db.floating_ip_get_all(context)
         else:
             iterator = db.floating_ip_get_all_by_project(context,
-                                                         context.project.id)
+                                                         context.project_id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['address']
             instance_id = None
@@ -694,24 +697,24 @@ class CloudController(object):
         # check quota
         if quota.allowed_floating_ips(context, 1) < 1:
             logging.warn("Quota exceeeded for %s, tried to allocate address",
-                         context.project.id)
+                         context.project_id)
             raise QuotaError("Address quota exceeded. You cannot "
                              "allocate any more addresses")
         network_topic = self._get_network_topic(context)
-        public_ip = rpc.call(network_topic,
-                         {"method": "allocate_floating_ip",
-                          "args": {"context": None,
-                                   "project_id": context.project.id}})
+        public_ip = rpc.call(context,
+                             network_topic,
+                             {"method": "allocate_floating_ip",
+                              "args": {"project_id": context.project_id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
         # NOTE(vish): Should we make sure this works?
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "deallocate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address']}})
+                  "args": {"floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, ec2_id, public_ip, **kwargs):
@@ -721,20 +724,20 @@ class CloudController(object):
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "associate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address'],
+                  "args": {"floating_address": floating_ip_ref['address'],
                            "fixed_address": fixed_address}})
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         network_topic = self._get_network_topic(context)
-        rpc.cast(network_topic,
+        rpc.cast(context,
+                 network_topic,
                  {"method": "disassociate_floating_ip",
-                  "args": {"context": None,
-                           "floating_address": floating_ip_ref['address']}})
+                  "args": {"floating_address": floating_ip_ref['address']}})
         return {'disassociateResponse': ["Address disassociated."]}
 
     def _get_network_topic(self, context):
@@ -742,22 +745,22 @@ class CloudController(object):
         network_ref = self.network_manager.get_network(context)
         host = network_ref['host']
         if not host:
-            host = rpc.call(FLAGS.network_topic,
-                                  {"method": "set_network_host",
-                                   "args": {"context": None,
-                                            "network_id": network_ref['id']}})
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
     def _ensure_default_security_group(self, context):
         try:
             db.security_group_get_by_name(context,
-                                          context.project.id,
+                                          context.project_id,
                                           'default')
         except exception.NotFound:
             values = { 'name'        : 'default',
                        'description' : 'default',
                        'user_id'     : context.user.id,
-                       'project_id'  : context.project.id }
+                       'project_id'  : context.project_id }
             group = db.security_group_create(context, values)
 
     def run_instances(self, context, **kwargs):
@@ -773,7 +776,7 @@ class CloudController(object):
                                                 instance_type)
         if num_instances < min_instances:
             logging.warn("Quota exceeeded for %s, tried to run %s instances",
-                         context.project.id, min_instances)
+                         context.project_id, min_instances)
             raise QuotaError("Instance quota exceeded. You can only "
                              "run %s more instances of this type." %
                              num_instances, "InstanceLimitExceeded")
@@ -815,7 +818,7 @@ class CloudController(object):
         self._ensure_default_security_group(context)
         for security_group_name in security_group_arg:
             group = db.security_group_get_by_name(context,
-                                                  context.project.id,
+                                                  context.project_id,
                                                   security_group_name)
             security_groups.append(group['id'])
 
@@ -829,7 +832,7 @@ class CloudController(object):
         base_options['key_data'] = key_data
         base_options['key_name'] = kwargs.get('key_name', None)
         base_options['user_id'] = context.user.id
-        base_options['project_id'] = context.project.id
+        base_options['project_id'] = context.project_id
         base_options['user_data'] = kwargs.get('user_data', '')
 
         base_options['display_name'] = kwargs.get('display_name')
@@ -840,13 +843,15 @@ class CloudController(object):
         base_options['memory_mb'] = type_data['memory_mb']
         base_options['vcpus'] = type_data['vcpus']
         base_options['local_gb'] = type_data['local_gb']
+        elevated = context.elevated()
 
         for num in range(num_instances):
             instance_ref = db.instance_create(context, base_options)
             inst_id = instance_ref['id']
 
             for security_group_id in security_groups:
-                db.instance_add_security_group(context, inst_id,
+                db.instance_add_security_group(elevated,
+                                               inst_id,
                                                security_group_id)
 
             inst = {}
@@ -864,15 +869,15 @@ class CloudController(object):
                                                              inst_id,
                                                              vpn)
             network_topic = self._get_network_topic(context)
-            rpc.call(network_topic,
+            rpc.cast(elevated,
+                     network_topic,
                      {"method": "setup_fixed_ip",
-                      "args": {"context": None,
-                               "address": address}})
+                      "args": {"address": address}})
 
-            rpc.cast(FLAGS.scheduler_topic,
+            rpc.cast(context,
+                     FLAGS.scheduler_topic,
                      {"method": "run_instance",
-                      "args": {"context": None,
-                               "topic": FLAGS.compute_topic,
+                      "args": {"topic": FLAGS.compute_topic,
                                "instance_id": inst_id}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
                       (context.project.name, context.user.name, inst_id))
@@ -890,17 +895,23 @@ class CloudController(object):
             internal_id = ec2_id_to_internal_id(id_str)
             logging.debug("Going to try and terminate %s" % id_str)
             try:
-                instance_ref = db.instance_get_by_internal_id(context, 
+                instance_ref = db.instance_get_by_internal_id(context,
                                                               internal_id)
             except exception.NotFound:
-                logging.warning("Instance %s was not found during terminate"
-                                % id_str)
+                logging.warning("Instance %s was not found during terminate",
+                                id_str)
                 continue
 
+            if (instance_ref['state_description'] == 'terminating'):
+                logging.warning("Instance %s is already being terminated",
+                              id_str)
+                continue
             now = datetime.datetime.utcnow()
             db.instance_update(context,
                                instance_ref['id'],
-                               {'terminated_at': now})
+                               {'state_description': 'terminating',
+                                'state': 0,
+                                'terminated_at': now})
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -910,10 +921,10 @@ class CloudController(object):
                 #             disassociated.  We may need to worry about
                 #             checking this later.  Perhaps in the scheduler?
                 network_topic = self._get_network_topic(context)
-                rpc.cast(network_topic,
+                rpc.cast(context,
+                         network_topic,
                          {"method": "disassociate_floating_ip",
-                          "args": {"context": None,
-                                   "floating_address": address}})
+                          "args": {"floating_address": address}})
 
             address = db.instance_get_fixed_address(context,
                                                     instance_ref['id'])
@@ -922,14 +933,15 @@ class CloudController(object):
                 # NOTE(vish): Currently, nothing needs to be done on the
                 #             network node until release. If this changes,
                 #             we will need to cast here.
-                self.network_manager.deallocate_fixed_ip(context, address)
+                self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                         address)
 
             host = instance_ref['host']
             if host:
-                rpc.cast(db.queue_get_for(context, FLAGS.compute_topic, host),
+                rpc.cast(context,
+                         db.queue_get_for(context, FLAGS.compute_topic, host),
                          {"method": "terminate_instance",
-                          "args": {"context": None,
-                                   "instance_id": instance_ref['id']}})
+                          "args": {"instance_id": instance_ref['id']}})
             else:
                 db.instance_destroy(context, instance_ref['id'])
         return True
@@ -947,10 +959,9 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            db_context = {}
             internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = db.instance_get_by_internal_id(db_context, internal_id)
-            db.instance_update(db_context, inst['id'], kwargs)
+            inst = db.instance_get_by_internal_id(context, internal_id)
+            db.instance_update(context, inst['id'], kwargs)
         return True
 
     def delete_volume(self, context, volume_id, **kwargs):
@@ -959,12 +970,13 @@ class CloudController(object):
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
         now = datetime.datetime.utcnow()
-        db.volume_update(context, volume_ref['id'], {'terminated_at': now})
+        db.volume_update(context, volume_ref['id'], {'status': 'deleting',
+                                                     'terminated_at': now})
         host = volume_ref['host']
-        rpc.cast(db.queue_get_for(context, FLAGS.volume_topic, host),
+        rpc.cast(context,
+                 db.queue_get_for(context, FLAGS.volume_topic, host),
                             {"method": "delete_volume",
-                             "args": {"context": None,
-                                      "volume_id": volume_ref['id']}})
+                             "args": {"volume_id": volume_ref['id']}})
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):
