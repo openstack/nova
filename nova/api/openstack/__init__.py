@@ -106,11 +106,11 @@ class RateLimitingMiddleware(wsgi.Middleware):
         If the request should be rate limited, return a 413 status with a 
         Retry-After header giving the time when the request would succeed.
         """
-        username = req.headers['X-Auth-User']
+        user_id = req.environ['nova.context']['user']['id']
         action_name = self.get_action_name(req)
         if not action_name: # not rate limited
             return self.application
-        delay = self.get_delay(action_name, username)
+        delay = self.get_delay(action_name, user_id)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
             exc = webob.exc.HTTPRequestEntityTooLarge(
