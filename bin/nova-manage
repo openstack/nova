@@ -297,10 +297,10 @@ class ProjectCommands(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
-    def add(self, project, user):
+    def add(self, project_id, user_id):
         """Adds user to project
-        arguments: project user"""
-        self.manager.add_to_project(user, project)
+        arguments: project_id user_id"""
+        self.manager.add_to_project(user_id, project_id)
 
     def create(self, name, project_manager, description=None):
         """Creates a new project
@@ -339,10 +339,20 @@ class ProjectCommands(object):
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)
 
-    def remove(self, project, user):
+    def remove(self, project_id, user_id):
         """Removes user from project
-        arguments: project user"""
-        self.manager.remove_from_project(user, project)
+        arguments: project_id user_id"""
+        self.manager.remove_from_project(user_id, project_id)
+
+    def scrub(self, project_id):
+        """Deletes data associated with project
+        arguments: project_id"""
+        ctxt = context.get_admin_context()
+        network_ref = db.project_get_network(ctxt, project_id)
+        db.network_disassociate(ctxt, network_ref['id'])
+        groups = db.security_group_get_by_project(ctxt, project_id)
+        for group in groups:
+            db.security_group_destroy(ctxt, group['id'])
 
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
