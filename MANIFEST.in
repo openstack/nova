@@ -1,22 +1,30 @@
-include HACKING LICENSE run_tests.py run_tests.sh 
+include HACKING LICENSE run_tests.py run_tests.sh
 include README builddeb.sh exercise_rsapi.py
-include ChangeLog
+include ChangeLog MANIFEST.in pylintrc
 graft CA
 graft doc
 graft smoketests
 graft tools
+include nova/api/openstack/notes.txt
 include nova/auth/novarc.template
 include nova/auth/slap.sh
 include nova/cloudpipe/bootscript.sh
 include nova/cloudpipe/client.ovpn.template
 include nova/compute/fakevirtinstance.xml
 include nova/compute/interfaces.template
-include nova/compute/libvirt.xml.template
+include nova/virt/interfaces.template
+include nova/virt/libvirt.qemu.xml.template
+include nova/virt/libvirt.uml.xml.template
+include nova/virt/libvirt.xen.xml.template
 include nova/tests/CA/
 include nova/tests/CA/cacert.pem
 include nova/tests/CA/private/
 include nova/tests/CA/private/cakey.pem
 include nova/tests/bundle/
 include nova/tests/bundle/1mb.manifest.xml
+include nova/tests/bundle/1mb.no_kernel_or_ramdisk.manifest.xml
 include nova/tests/bundle/1mb.part.0
 include nova/tests/bundle/1mb.part.1
+include plugins/xenapi/README
+include plugins/xenapi/etc/xapi.d/plugins/objectstore
+include plugins/xenapi/etc/xapi.d/plugins/pluginlib_nova.py
