@@ -15,6 +15,7 @@ include nova/compute/interfaces.template
 include nova/virt/interfaces.template
 include nova/virt/libvirt.qemu.xml.template
 include nova/virt/libvirt.uml.xml.template
+include nova/virt/libvirt.xen.xml.template
 include nova/tests/CA/
 include nova/tests/CA/cacert.pem
 include nova/tests/CA/private/
