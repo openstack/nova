@@ -32,8 +32,8 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-FLAGS.define_int('minimum_root_size', 1024 * 1024 * 1024 * 10,
-                 'minimum size in bytes of root partition')
+flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
+                     'minimum size in bytes of root partition')
 
 
 @defer.inlineCallbacks
