@@ -329,10 +329,10 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('ramdisk')):
            yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user, project)
 
-        execute = lambda cmd, process_input=None: \
+        execute = lambda cmd, process_input=None, check_exit_code=True: \
                   process.simple_execute(cmd=cmd,
                                          process_input=process_input,
-                                         check_exit_code=True)
+                                         check_exit_code=check_exit_code)
 
         key = str(inst['key_data'])
         net = None
@@ -359,10 +359,13 @@ class LibvirtConnection(object):
         if os.path.exists(basepath('disk')):
             yield process.simple_execute('rm -f %s' % basepath('disk'))
 
-        bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]['local_gb']
-                 * 1024 * 1024 * 1024)
-        yield disk.partition(
-                basepath('disk-raw'), basepath('disk'), bytes, execute=execute)
+        local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
+                                                    ['local_gb']
+                                                    * 1024 * 1024 * 1024)
+
+        resize = inst['instance_type'] != 'm1.tiny'
+        yield disk.partition(basepath('disk-raw'), basepath('disk'),
+                             local_bytes, resize, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
             yield process.simple_execute('sudo chown root %s' %

@@ -28,10 +28,17 @@ import tempfile
 from twisted.internet import defer
 
 from nova import exception
+from nova import flags
+
+
+FLAGS = flags.FLAGS
+FLAGS.define_int('minimum_root_size', 1024 * 1024 * 1024 * 10,
+                 'minimum size in bytes of root partition')
 
 
 @defer.inlineCallbacks
-def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
+def partition(infile, outfile, local_bytes=0, resize=True,
+              local_type='ext2', execute=None):
     """Takes a single partition represented by infile and writes a bootable
     drive image into outfile.
 
@@ -49,7 +56,14 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     """
     sector_size = 512
     file_size = os.path.getsize(infile)
-    if file_size % sector_size != 0:
+    if resize and file_size < FLAGS.minimum_root_size:
+        last_sector = FLAGS.minimum_root_size / sector_size - 1
+        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                      % (infile, last_sector, sector_size))
+        yield execute('e2fsck -fp %s' % infile, check_exit_code=False)
+        yield execute('resize2fs %s' % infile)
+        file_size = FLAGS.minimum_root_size
+    elif file_size % sector_size != 0:
         logging.warn("Input partition size not evenly divisible by"
                      " sector size: %d / %d", file_size, sector_size)
     primary_sectors = file_size / sector_size
