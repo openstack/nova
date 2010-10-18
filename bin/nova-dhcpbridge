@@ -63,9 +63,10 @@ def add_lease(mac, ip_address, _hostname, _interface):
                            "address": ip_address}})
 
 
-def old_lease(_mac, _ip_address, _hostname, _interface):
-    """Do nothing, just an old lease update."""
+def old_lease(mac, ip_address, hostname, interface):
+    """Update just as add lease."""
     logging.debug("Adopted old lease or got a change of mac/hostname")
+    add_lease(mac, ip_address, hostname, interface)
 
 
 def del_lease(mac, ip_address, _hostname, _interface):
