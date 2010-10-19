@@ -49,13 +49,14 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all public images in detail."""
         try:
-            data = self._service.detail()
+            images = self._service.detail()
+            images = nova.api.openstack.limited(images, req)
         except NotImplementedError:
             # Emulate detail() using repeated calls to show()
             images = self._service.index()
             images = nova.api.openstack.limited(images, req)
-            data = [self._service.show(i['id']) for i in images]
-        return dict(images=data)
+            images = [self._service.show(i['id']) for i in images]
+        return dict(images=images)
 
     def show(self, req, id):
         """Return data about the given image id."""

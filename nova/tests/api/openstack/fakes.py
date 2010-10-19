@@ -80,6 +80,7 @@ def stub_out_image_service(stubs):
 
     stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
 
+
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
@@ -170,10 +171,12 @@ def stub_out_glance(stubs, initial_fixtures=[]):
     stubs.Set(nova.image.services.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
 
+
 class FakeToken(object):
     def __init__(self, **kwargs):
         for k,v in kwargs.iteritems():
             setattr(self, k, v)
+
 
 class FakeAuthDatabase(object):
     data = {}
