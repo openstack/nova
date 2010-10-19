@@ -318,6 +318,8 @@ class ImageResource(ErrorHandlingResource):
 
     def render_GET(self, request):
         """Returns the image file"""
+        if not self.img.is_authorized(request.context, True):
+            raise exception.NotAuthorized
         return static.File(self.img.image_path,
                            defaultType='application/octet-stream'
                           ).render_GET(request)
