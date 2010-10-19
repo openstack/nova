@@ -59,7 +59,10 @@ class APITest(unittest.TestCase):
 
         api.application = fail
         resp = Request.blank('/').get_response(api)
-        self.assertTrue('cloudServersFault' in resp.body, resp.body)
+        self.assertTrue('{"cloudServersFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
-
+        api.application = fail
+        resp = Request.blank('/.xml').get_response(api)
+        self.assertTrue('<cloudServersFault' in resp.body, resp.body)
+        self.assertEqual(resp.status_int, 500, resp.body)
