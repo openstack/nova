@@ -119,7 +119,7 @@ def get_context(request):
         # Authorization Header format: 'AWS <access>:<secret>'
         authorization_header = request.getHeader('Authorization')
         if not authorization_header:
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
         auth_header_value = authorization_header.split(' ')[1]
         access, _ignored, secret = auth_header_value.rpartition(':')
         am = manager.AuthManager()
@@ -134,7 +134,7 @@ def get_context(request):
         return context.RequestContext(user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s", ex)
-        raise exception.NotAuthorized
+        raise exception.NotAuthorized()
 
 class ErrorHandlingResource(resource.Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for
@@ -209,7 +209,7 @@ class BucketResource(ErrorHandlingResource):
             return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         prefix = get_argument(request, "prefix", u"")
         marker = get_argument(request, "marker", u"")
@@ -239,7 +239,7 @@ class BucketResource(ErrorHandlingResource):
         bucket_object = bucket.Bucket(self.name)
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         bucket_object.delete()
         request.setResponseCode(204)
@@ -262,7 +262,7 @@ class ObjectResource(ErrorHandlingResource):
         logging.debug("Getting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         obj = self.bucket[urllib.unquote(self.name)]
         request.setHeader("Content-Type", "application/unknown")
@@ -280,7 +280,7 @@ class ObjectResource(ErrorHandlingResource):
         logging.debug("Putting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         key = urllib.unquote(self.name)
         request.content.seek(0, 0)
@@ -301,7 +301,7 @@ class ObjectResource(ErrorHandlingResource):
                       self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         del self.bucket[urllib.unquote(self.name)]
         request.setResponseCode(204)
@@ -319,7 +319,7 @@ class ImageResource(ErrorHandlingResource):
     def render_GET(self, request):
         """Returns the image file"""
         if not self.img.is_authorized(request.context, True):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
         return static.File(self.img.image_path,
                            defaultType='application/octet-stream'
                           ).render_GET(request)
@@ -371,12 +371,12 @@ class ImagesResource(resource.Resource):
         image_path = os.path.join(FLAGS.images_path, image_id)
         if not image_path.startswith(FLAGS.images_path) or \
            os.path.exists(image_path):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         bucket_object = bucket.Bucket(image_location.split("/")[0])
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         p = multiprocessing.Process(target=image.Image.register_aws_image,
                 args=(image_id, image_location, request.context))
@@ -391,7 +391,7 @@ class ImagesResource(resource.Resource):
         image_object = image.Image(image_id)
         if not image_object.is_authorized(request.context):
             logging.debug("not authorized for render_POST in images")
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         operation = get_argument(request, 'operation', u'')
         if operation:
@@ -413,7 +413,7 @@ class ImagesResource(resource.Resource):
         image_object = image.Image(image_id)
 
         if not image_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         image_object.delete()
 
