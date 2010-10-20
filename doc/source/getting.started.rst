@@ -18,23 +18,20 @@
 Getting Started with Nova
 =========================
 
+This code base is continually changing so dependencies also change. 
 
-GOTTA HAVE A nova.pth file added or it WONT WORK (will write setup.py file soon)
-
-Create a file named nova.pth in your python libraries directory
-(usually /usr/local/lib/python2.6/dist-packages) with a single line that points
-to the directory where you checked out the source (that contains the nova/
-directory).
-
-DEPENDENCIES
+Dependencies
 ------------
 
 Related servers we rely on
 
 * RabbitMQ: messaging queue, used for all communication between components
-* OpenLDAP: users, groups (maybe cut)
+* OpenLDAP: users, groups 
+
+Optional servers
+
 * ReDIS: Remote Dictionary Store (for fast, shared state data)
-* nginx: HTTP server to handle serving large files (because Tornado can't)
+* nginx: HTTP server to handle serving large files 
 
 Python libraries we don't vendor
 
@@ -44,7 +41,6 @@ Python libraries we don't vendor
 
 Vendored python libaries (don't require any installation)
 
-* Tornado: scalable non blocking web server for api requests
 * Twisted: just for the twisted.internet.defer package
 * boto: python api for aws api
 * IPy: library for managing ip addresses
@@ -60,35 +56,14 @@ Installation
 --------------
 ::
 
-    # system libraries and tools
-    apt-get install -y aoetools vlan curl
-    modprobe aoe
-
-    # python libraries
-    apt-get install -y python-setuptools python-dev python-pycurl python-m2crypto
-
-    # ON THE CLOUD CONTROLLER
-    apt-get install -y rabbitmq-server dnsmasq nginx
-    # build redis from 2.0.0-rc1 source
-    # setup ldap (slap.sh as root will remove ldap and reinstall it)
-    NOVA_PATH/nova/auth/slap.sh
-    /etc/init.d/rabbitmq-server start
-
-    # ON VOLUME NODE:
-    apt-get install -y vblade-persist
-
-    # ON THE COMPUTE NODE:
-    apt-get install -y python-libvirt
-    apt-get install -y kpartx kvm libvirt-bin
-    modprobe kvm
-
-    # optional packages
-    apt-get install -y euca2ools
+    Due to many changes it's best to rely on the 'OpenStack wiki <http://wiki.openstack.org>' for installation instructions.
 
 Configuration
 ---------------
 
-ON CLOUD CONTROLLER
+These instructions are incomplete, but we are actively updating the 'OpenStack wiki <http://wiki.openstack.org>' with more configuration information.
+
+On the cloud controller
 
 * Add yourself to the libvirtd group, log out, and log back in
 * fix hardcoded ec2 metadata/userdata uri ($IP is the IP of the cloud), and masqurade all traffic from launched instances
@@ -137,7 +112,7 @@ Running
 Launch servers
 
 * rabbitmq
-* redis
+* redis (optional)
 * slapd
 * nginx
 

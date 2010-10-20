@@ -15,18 +15,21 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Welcome to nova's documentation!
+Welcome to Nova's documentation!
 ================================
 
-Nova is a cloud computing fabric controller (the main part of an IaaS system) built to match the popular AWS EC2 and S3 APIs. 
-It is written in Python, using the Tornado and Twisted frameworks, and relies on the standard AMQP messaging protocol, 
-and the Redis distributed KVS.
-Nova is intended to be easy to extend, and adapt. For example, it currently uses 
+Nova is a cloud computing fabric controller (the main part of an IaaS system). 
+It is written in Python and relies on the standard AMQP messaging protocol, uses the Twisted framework,
+and optionally uses the Redis distributed key value store for authorization.
+
+Nova is intended to be easy to extend and adapt. For example, it currently uses 
 an LDAP server for users and groups, but also includes a fake LDAP server,
 that stores data in Redis. It has extensive test coverage, and uses the 
-Sphinx toolkit (the same as Python itself) for code and user documentation.
+Sphinx toolkit (the same as Python itself) for code and developer documentation. 
+Additional documentation is available on the 
+'OpenStack wiki <http://wiki.openstack.org>'_.
 While Nova is currently in Beta use within several organizations, the codebase
-is very much under active development - there are bugs!
+is very much under active development - please test it and log bugs!
 
 Contents:
 
