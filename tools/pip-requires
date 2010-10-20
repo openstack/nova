@@ -5,7 +5,7 @@ IPy==0.70
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
-boto==1.9b1
+boto==1.9b
 carrot==0.10.5
 eventlet==0.9.12
 lockfile==0.8
