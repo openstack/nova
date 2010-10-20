@@ -29,6 +29,7 @@ from nova import flags
 from nova import exception as exc
 import nova.api.openstack.auth
 from nova.image import service
+from nova.image.services import glance
 from nova.wsgi import Router
 
 
@@ -79,6 +80,7 @@ def stub_out_image_service(stubs):
 
     stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
 
+
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
@@ -108,63 +110,73 @@ def stub_out_networking(stubs):
     FLAGS.FAKE_subdomain = 'api'
 
 
-def stub_out_glance(stubs):
+def stub_out_glance(stubs, initial_fixtures=[]):
 
     class FakeParallaxClient:
 
-        def __init__(self):
-            self.fixtures = {}
+        def __init__(self, initial_fixtures):
+            self.fixtures = initial_fixtures
 
-        def fake_get_images(self):
+        def fake_get_image_index(self):
+            return [dict(id=f['id'], name=f['name'])
+                    for f in self.fixtures]
+
+        def fake_get_image_details(self):
             return self.fixtures
 
         def fake_get_image_metadata(self, image_id):
-            for k, f in self.fixtures.iteritems():
-                if k == image_id:
+            for f in self.fixtures:
+                if f['id'] == image_id:
                     return f
             return None
 
         def fake_add_image_metadata(self, image_data):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_data['id'] = id
-            self.fixtures[id] = image_data
+            self.fixtures.append(image_data)
             return id
 
         def fake_update_image_metadata(self, image_id, image_data):
             
-            if image_id not in self.fixtures.keys():
+            f = self.fake_get_image_metadata(image_id)
+            if not f:
                 raise exc.NotFound
 
-            self.fixtures[image_id].update(image_data)
+            f.update(image_data)
 
         def fake_delete_image_metadata(self, image_id):
             
-            if image_id not in self.fixtures.keys():
+            f = self.fake_get_image_metadata(image_id)
+            if not f:
                 raise exc.NotFound
 
-            del self.fixtures[image_id]
+            self.fixtures.remove(f)
 
         def fake_delete_all(self):
-            self.fixtures = {}
+            self.fixtures = []
 
-    fake_parallax_client = FakeParallaxClient()
-    stubs.Set(nova.image.service.ParallaxClient, 'get_images',
-              fake_parallax_client.fake_get_images)
-    stubs.Set(nova.image.service.ParallaxClient, 'get_image_metadata',
+    fake_parallax_client = FakeParallaxClient(initial_fixtures)
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_index',
+              fake_parallax_client.fake_get_image_index)
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_details',
+              fake_parallax_client.fake_get_image_details)
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_metadata',
               fake_parallax_client.fake_get_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'add_image_metadata',
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'add_image_metadata',
               fake_parallax_client.fake_add_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'update_image_metadata',
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'update_image_metadata',
               fake_parallax_client.fake_update_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'delete_image_metadata',
+    stubs.Set(nova.image.services.glance.ParallaxClient, 'delete_image_metadata',
               fake_parallax_client.fake_delete_image_metadata)
-    stubs.Set(nova.image.service.GlanceImageService, 'delete_all',
+    stubs.Set(nova.image.services.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
+
 
 class FakeToken(object):
     def __init__(self, **kwargs):
         for k,v in kwargs.iteritems():
             setattr(self, k, v)
+
 
 class FakeAuthDatabase(object):
     data = {}
