@@ -167,11 +167,9 @@ def get_dhcp_hosts(context, network_id):
     return '\n'.join(hosts)
 
 
-# TODO(ja): if the system has restarted or pid numbers have wrapped
-#           then you cannot be certain that the pid refers to the
-#           dnsmasq.  As well, sending a HUP only reloads the hostfile,
-#           so any configuration options (like dchp-range, vlan, ...)
-#           aren't reloaded
+# NOTE(ja): Sending a HUP only reloads the hostfile, so any
+#           configuration options (like dchp-range, vlan, ...)
+#           aren't reloaded.
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -191,13 +189,15 @@ def update_dhcp(context, network_id):
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
-        #           correct dnsmasq process
-        try:
-            _execute('sudo kill -HUP %d' % pid)
-            return
-        except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug("Hupping dnsmasq threw %s", exc)
+        out, _err = _execute('cat /proc/%d/cmdline' % pid, check_exit_code=False)
+        if conffile in out:
+            try:
+                _execute('sudo kill -HUP %d' % pid)
+                return
+            except Exception as exc:  # pylint: disable-msg=W0703
+                logging.debug("Hupping dnsmasq threw %s", exc)
+        else:
+            logging.debug("Pid %d is stale, relaunching dnsmasq", pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
