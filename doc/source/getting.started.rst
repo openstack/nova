@@ -26,22 +26,22 @@ Dependencies
 Related servers we rely on
 
 * RabbitMQ: messaging queue, used for all communication between components
-* OpenLDAP: users, groups 
 
 Optional servers
 
-* ReDIS: Remote Dictionary Store (for fast, shared state data)
-* nginx: HTTP server to handle serving large files 
+* OpenLDAP: By default, the auth server uses the RDBMS-backed datastore by setting FLAGS.auth_driver to 'nova.auth.dbdriver.DbDriver'. But OpenLDAP (or LDAP) could be configured.
+* ReDIS: By default, this is not enabled as the auth driver. 
 
 Python libraries we don't vendor
 
 * M2Crypto: python library interface for openssl
 * curl
-* XenAPI: Needed only for Xen Cloud Platform or XenServer support.  Available from http://wiki.xensource.com/xenwiki/XCP_SDK or http://community.citrix.com/cdn/xs/sdks.
+* XenAPI: Needed only for Xen Cloud Platform or XenServer support. Available from http://wiki.xensource.com/xenwiki/XCP_SDK or http://community.citrix.com/cdn/xs/sdks.
 
 Vendored python libaries (don't require any installation)
 
 * Twisted: just for the twisted.internet.defer package
+* Tornado: scalable non blocking web server for api requests
 * boto: python api for aws api
 * IPy: library for managing ip addresses
 
@@ -54,19 +54,19 @@ Recommended
 
 Installation
 --------------
-::
 
-    Due to many changes it's best to rely on the 'OpenStack wiki <http://wiki.openstack.org>' for installation instructions.
+    Due to many changes it's best to rely on the `OpenStack wiki <http://wiki.openstack.org>`_ for installation instructions.
 
 Configuration
 ---------------
 
-These instructions are incomplete, but we are actively updating the 'OpenStack wiki <http://wiki.openstack.org>' with more configuration information.
+These instructions are incomplete, but we are actively updating the `OpenStack wiki <http://wiki.openstack.org>`_ with more configuration information.
 
 On the cloud controller
 
 * Add yourself to the libvirtd group, log out, and log back in
-* fix hardcoded ec2 metadata/userdata uri ($IP is the IP of the cloud), and masqurade all traffic from launched instances
+* Fix hardcoded ec2 metadata/userdata uri ($IP is the IP of the cloud), and masqurade all traffic from launched instances
+
 ::
 
     iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
@@ -94,9 +94,9 @@ On the cloud controller
     }
   }
 
-ON VOLUME NODE
+On the volume node
 
-* create a filesystem (you can use an actual disk if you have one spare, default is /dev/sdb)
+* Create a filesystem (you can use an actual disk if you have one spare, default is /dev/sdb)
 
 ::
 
@@ -113,8 +113,6 @@ Launch servers
 
 * rabbitmq
 * redis (optional)
-* slapd
-* nginx
 
 Launch nova components
 
