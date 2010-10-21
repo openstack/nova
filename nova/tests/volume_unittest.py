@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 
 class VolumeTestCase(test.TrialTestCase):
     """Test Case for volumes"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
         self.compute = utils.import_object(FLAGS.compute_manager)

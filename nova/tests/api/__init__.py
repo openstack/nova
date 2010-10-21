@@ -32,10 +32,10 @@ from nova.tests.api.fakes import APIStub
 
 class Test(unittest.TestCase):
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         self.stubs = stubout.StubOutForTesting()
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         self.stubs.UnsetAll()
 
     def _request(self, url, subdomain, **kwargs):

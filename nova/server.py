@@ -54,11 +54,11 @@ def stop(pidfile):
     """
     # Get the pid from the pidfile
     try:
-        pid = int(open(pidfile,'r').read().strip())
+        pid = int(open(pidfile, 'r').read().strip())
     except IOError:
         message = "pidfile %s does not exist. Daemon not running?\n"
         sys.stderr.write(message % pidfile)
-        return # not an error in a restart
+        return
 
     # Try killing the daemon process
     try:
@@ -143,6 +143,5 @@ def daemonize(args, name, main):
             stderr=stderr,
             uid=FLAGS.uid,
             gid=FLAGS.gid,
-            files_preserve=files_to_keep
-            ):
+            files_preserve=files_to_keep):
         main(args)

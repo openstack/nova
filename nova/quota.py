@@ -37,6 +37,7 @@ flags.DEFINE_integer('quota_gigabytes', 1000,
 flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 
+
 def get_quota(context, project_id):
     rval = {'instances': FLAGS.quota_instances,
             'cores': FLAGS.quota_cores,
@@ -51,6 +52,7 @@ def get_quota(context, project_id):
     except exception.NotFound:
         pass
     return rval
+
 
 def allowed_instances(context, num_instances, instance_type):
     """Check quota and return min(num_instances, allowed_instances)"""
@@ -92,4 +94,3 @@ def allowed_floating_ips(context, num_floating_ips):
     quota = get_quota(context, project_id)
     allowed_floating_ips = quota['floating_ips'] - used_floating_ips
     return min(num_floating_ips, allowed_floating_ips)
-
