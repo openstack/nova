@@ -39,11 +39,44 @@ flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
 
 class FakeManager(manager.Manager):
     """Fake manager for tests"""
-    pass
+    def test_method(self):
+        return 'manager'
+
+
+class ExtendedService(service.Service):
+    def test_method(self):
+        return 'service'
+
+
+class ServiceManagerTestCase(test.BaseTestCase):
+    """Test cases for Services"""
+
+    def test_attribute_error_for_no_manager(self):
+        serv = service.Service('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        self.assertRaises(AttributeError, getattr, serv, 'test_method')
+
+    def test_message_gets_to_manager(self):
+        serv = service.Service('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        self.assertEqual(serv.test_method(), 'manager')
+
+    def test_override_manager_method(self):
+        serv = ExtendedService('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        self.assertEqual(serv.test_method(), 'service')
 
 
 class ServiceTestCase(test.BaseTestCase):
-    """Test cases for rpc"""
+    """Test cases for Services"""
 
     def setUp(self):  # pylint: disable=C0103
         super(ServiceTestCase, self).setUp()
@@ -54,6 +87,11 @@ class ServiceTestCase(test.BaseTestCase):
         host = 'foo'
         binary = 'nova-fake'
         topic = 'fake'
+
+        # NOTE(vish): Create was moved out of mox replay to make sure that
+        #             the looping calls are created in StartService.
+        app = service.Service.create(host=host, binary=binary)
+
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
@@ -99,7 +137,6 @@ class ServiceTestCase(test.BaseTestCase):
                                   service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
 
-        app = service.Service.create(host=host, binary=binary)
         startApplication(app, False)
         self.assert_(app)
 
@@ -190,3 +227,4 @@ class ServiceTestCase(test.BaseTestCase):
         rv = yield s.report_state(host, binary)
 
         self.assert_(not s.model_disconnected)
+
