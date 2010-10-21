@@ -34,30 +34,32 @@ import nova.image.service
 
 FLAGS = flags.FLAGS
 
+
 def _filter_params(inst_dict):
     """ Extracts all updatable parameters for a server update request """
     keys = dict(name='name', admin_pass='adminPass')
     new_attrs = {}
     for k, v in keys.items():
-        if inst_dict.has_key(v):
+        if v in inst_dict:
             new_attrs[k] = inst_dict[v]
     return new_attrs
+
 
 def _entity_list(entities):
     """ Coerces a list of servers into proper dictionary format """
     return dict(servers=entities)
 
+
 def _entity_detail(inst):
     """ Maps everything to Rackspace-like attributes for return"""
     power_mapping = {
-        power_state.NOSTATE:  'build',
-        power_state.RUNNING:  'active',
-        power_state.BLOCKED:  'active',
-        power_state.PAUSED:   'suspended',
+        power_state.NOSTATE: 'build',
+        power_state.RUNNING: 'active',
+        power_state.BLOCKED: 'active',
+        power_state.PAUSED: 'suspended',
         power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF:  'active',
-        power_state.CRASHED:  'error'
-    }
+        power_state.SHUTOFF: 'active',
+        power_state.CRASHED: 'error'}
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
@@ -73,9 +75,11 @@ def _entity_detail(inst):
 
     return dict(server=inst_dict)
 
+
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name """
     return dict(server=dict(id=inst['id'], name=inst['server_name']))
+
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
@@ -83,11 +87,8 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "server": [ "id", "imageId", "name", "flavorId", "hostId",
-                            "status", "progress", "progress" ]
-            }
-        }
-    }
+                "server": ["id", "imageId", "name", "flavorId", "hostId",
+                           "status", "progress", "progress"]}}}
 
     def __init__(self, db_driver=None):
         if not db_driver:
@@ -209,7 +210,7 @@ class Controller(wsgi.Controller):
         image = img_service.show(image_id)
 
         if not image:
-            raise Exception, "Image not found"
+            raise Exception("Image not found")
 
         inst['server_name'] = env['server']['name']
         inst['image_id'] = image_id

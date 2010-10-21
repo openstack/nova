@@ -15,8 +15,10 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+
 class Context(object):
     pass
+
 
 class BasicApiAuthManager(object):
     """ Implements a somewhat rudimentary version of OpenStack Auth"""
@@ -61,7 +63,7 @@ class BasicApiAuthManager(object):
 
     def authorize_token(self, token_hash):
         """ retrieves user information from the datastore given a token
-        
+
         If the token has expired, returns None
         If the token is not found, returns None
         Otherwise returns dict(id=(the authorized user's id))
@@ -69,7 +71,7 @@ class BasicApiAuthManager(object):
         This method will also remove the token if the timestamp is older than
         2 days ago.
         """
-        token = self.db.auth_get_token(self.context, token_hash) 
+        token = self.db.auth_get_token(self.context, token_hash)
         if token:
             delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
@@ -94,8 +96,7 @@ class BasicApiAuthManager(object):
             token_dict['user_id'] = user.id
             token = self.db.auth_create_token(self.context, token_dict)
             return token, user
-        return None, None 
+        return None, None
 
     def _get_server_mgmt_url(self):
         return 'https://%s/v1.0/' % self.host
-        

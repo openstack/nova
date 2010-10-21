@@ -62,7 +62,8 @@ class Authenticate(wsgi.Middleware):
 
         # Make a copy of args for authentication and signature verification.
         auth_params = dict(req.params)
-        auth_params.pop('Signature') # not part of authentication args
+        # Not part of authentication args
+        auth_params.pop('Signature')
 
         # Authenticate the request.
         try:
@@ -109,9 +110,11 @@ class Router(wsgi.Middleware):
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
         try:
-            action = req.params['Action'] # raise KeyError if omitted
+            # Raise KeyError if omitted
+            action = req.params['Action']
             for non_arg in non_args:
-                args.pop(non_arg) # remove, but raise KeyError if omitted
+                # Remove, but raise KeyError if omitted
+                args.pop(non_arg)
         except:
             raise webob.exc.HTTPBadRequest()
 
@@ -184,7 +187,8 @@ class Authorizer(wsgi.Middleware):
         context = req.environ['ec2.context']
         controller_name = req.environ['ec2.controller'].__class__.__name__
         action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action, ['none'])
+        allowed_roles = self.action_roles[controller_name].get(action,
+                                                               ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
@@ -242,4 +246,3 @@ class Executor(wsgi.Application):
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>?</RequestID></Response>') % (code, message)
         return resp
-

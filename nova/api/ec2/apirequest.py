@@ -44,6 +44,7 @@ def _underscore_to_xmlcase(str):
     res = _underscore_to_camelcase(str)
     return res[:1].lower() + res[1:]
 
+
 def _try_convert(value):
     """Return a non-string if possible"""
     if value == 'None':
@@ -59,12 +60,12 @@ def _try_convert(value):
         return value
     if valueneg[0] == '0':
         if valueneg[1] in 'xX':
-            return int(value,16)
+            return int(value, 16)
         elif valueneg[1] in 'bB':
-            return int(value,2)
+            return int(value, 2)
         else:
             try:
-                return int(value,8)
+                return int(value, 8)
             except ValueError:
                 pass
     try:
@@ -79,6 +80,7 @@ def _try_convert(value):
         return complex(value)
     except ValueError:
         return value
+
 
 class APIRequest(object):
     def __init__(self, controller, action):
