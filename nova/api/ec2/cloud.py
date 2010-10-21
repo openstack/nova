@@ -97,6 +97,7 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.compute_manager = utils.import_object(FLAGS.compute_manager)
         self.setup()
 
     def __str__(self):
@@ -846,27 +847,29 @@ class CloudController(object):
         elevated = context.elevated()
 
         for num in range(num_instances):
-            instance_ref = db.instance_create(context, base_options)
-            inst_id = instance_ref['id']
+            
+            instance_data = base_options
+            instance_data['mac_address'] = utils.generate_mac()
+            instance_data['launch_index'] = num
 
-            for security_group_id in security_groups:
-                db.instance_add_security_group(elevated,
-                                               inst_id,
-                                               security_group_id)
+            instance_ref = self.compute_manager.create_instance(context,
+                                                           instance_data,
+                                                           security_groups)
 
-            inst = {}
-            inst['mac_address'] = utils.generate_mac()
-            inst['launch_index'] = num
             internal_id = instance_ref['internal_id']
             ec2_id = internal_id_to_ec2_id(internal_id)
-            inst['hostname'] = ec2_id
-            db.instance_update(context, inst_id, inst)
+            instance_ref['hostname'] = ec2_id
+
+            self.compute_manager.update_instance(context,
+                                                 instance_ref['id'],
+                                                 instance_ref)
+
             # TODO(vish): This probably should be done in the scheduler
             #             or in compute as a call.  The network should be
             #             allocated after the host is assigned and setup
             #             can happen at the same time.
             address = self.network_manager.allocate_fixed_ip(context,
-                                                             inst_id,
+                                                             instance_ref['id'],
                                                              vpn)
             network_topic = self._get_network_topic(context)
             rpc.cast(elevated,
@@ -878,9 +881,9 @@ class CloudController(object):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": inst_id}})
+                               "instance_id": instance_ref['id']}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
-                      (context.project.name, context.user.name, inst_id))
+                      (context.project.name, context.user.name, instance_ref['id']))
         return self._format_run_instances(context, reservation_id)
 
 
@@ -907,11 +910,13 @@ class CloudController(object):
                               id_str)
                 continue
             now = datetime.datetime.utcnow()
-            db.instance_update(context,
-                               instance_ref['id'],
-                               {'state_description': 'terminating',
-                                'state': 0,
-                                'terminated_at': now})
+            updated_data = {'state_description': 'terminating',
+                            'state': 0,
+                            'terminated_at': now}
+            self.compute_manager.update_instance(context,
+                                                 instance_ref['id'],
+                                                 updated_data)
+
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])

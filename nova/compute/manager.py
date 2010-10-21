@@ -67,6 +67,41 @@ class ComputeManager(manager.Manager):
     def refresh_security_group(self, context, security_group_id, **_kwargs):
         yield self.driver.refresh_security_group(security_group_id)
 
+
+    def create_instance(self, context, instance_data, security_groups=[]):
+        """Creates the instance in the datastore and returns the
+        new instance as a mapping
+
+        :param context: The security context
+        :param instance_data: mapping of instance options
+        :param security_groups: list of security group ids to
+                                attach to the instance
+
+        :retval Returns a mapping of the instance information
+                that has just been created
+
+        """
+        instance_ref = self.db.instance_create(context, instance_data)
+        inst_id = instance_ref['id']
+
+        elevated = context.elevated()
+        for security_group_id in security_groups:
+            self.db.instance_add_security_group(elevated,
+                                                inst_id,
+                                                security_group_id)
+        return instance_ref
+
+    def update_instance(self, context, instance_id, instance_data):
+        """Updates the instance in the datastore
+
+        :param context: The security context
+        :param instance_data: mapping of instance options
+
+        :retval None
+
+        """
+        self.db.instance_update(context, instance_id, instance_data)
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):

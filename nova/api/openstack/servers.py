@@ -94,6 +94,7 @@ class Controller(wsgi.Controller):
             db_driver = FLAGS.db_driver
         self.db_driver = utils.import_object(db_driver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.compute_manager = utils.import_object(FLAGS.compute_manager)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -241,34 +242,30 @@ class Controller(wsgi.Controller):
         inst['memory_mb'] = flavor['memory_mb']
         inst['vcpus'] = flavor['vcpus']
         inst['local_gb'] = flavor['local_gb']
-
-        ref = self.db_driver.instance_create(ctxt, inst)
-        inst['id'] = ref.internal_id
-
         inst['mac_address'] = utils.generate_mac()
-
-        #TODO(dietz) is this necessary?
         inst['launch_index'] = 0
 
-        inst['hostname'] = str(ref.internal_id)
-        self.db_driver.instance_update(ctxt, inst['id'], inst)
+        ref = self.compute_manager.create_instance(ctxt, inst)
+        inst['id'] = ref['internal_id']
 
-        network_manager = utils.import_object(FLAGS.network_manager)
-        address = network_manager.allocate_fixed_ip(ctxt,
-            inst['id'])
+        inst['hostname'] = str(ref['internal_id'])
+        self.compute_manager.update_instance(ctxt, inst['id'], inst)
+
+        address = self.network_manager.allocate_fixed_ip(ctxt,
+                                                         inst['id'])
 
         # TODO(vish): This probably should be done in the scheduler
         #             network is setup when host is assigned
-        network_topic = self._get_network_topic(ctxt, network_manager)
+        network_topic = self._get_network_topic(ctxt)
         rpc.call(ctxt,
                  network_topic,
                  {"method": "setup_fixed_ip",
                   "args": {"address": address}})
         return inst
 
-    def _get_network_topic(self, context, network_manager):
+    def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
-        network_ref = network_manager.get_network(context)
+        network_ref = self.network_manager.get_network(context)
         host = network_ref['host']
         if not host:
             host = rpc.call(context,
