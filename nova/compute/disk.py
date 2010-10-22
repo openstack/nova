@@ -34,6 +34,8 @@ from nova import flags
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
+flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
+                     'block_size to use for dd')
 
 
 @defer.inlineCallbacks
@@ -81,23 +83,26 @@ def partition(infile, outfile, local_bytes=0, resize=True,
 
     # create an empty file
     yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                  % (outfile, last_sector, sector_size))
+                  % (outfile, mbr_last, sector_size))
 
     # make mbr partition
     yield execute('parted --script %s mklabel msdos' % outfile)
+
+    # append primary file
+    yield execute('dd if=%s of=%s bs=%s conv=notrunc,fsync oflag=append'
+                  % (infile, outfile, FLAGS.block_size))
 
     # make primary partition
     yield execute('parted --script %s mkpart primary %ds %ds'
                   % (outfile, primary_first, primary_last))
 
-    # make local partition
     if local_bytes > 0:
+        # make the file bigger
+        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                      % (outfile, last_sector, sector_size))
+        # make and format local partition
         yield execute('parted --script %s mkpartfs primary %s %ds %ds'
                       % (outfile, local_type, local_first, local_last))
-
-    # copy file into partition
-    yield execute('dd if=%s of=%s bs=%d seek=%d conv=notrunc,fsync'
-                  % (infile, outfile, sector_size, primary_first))
 
 
 @defer.inlineCallbacks
