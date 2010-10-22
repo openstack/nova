@@ -226,6 +226,7 @@ class FakeConnection(object):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT'
 
+
 class FakeInstance(object):
     def __init__(self):
         self._state = power_state.NOSTATE

@@ -30,12 +30,11 @@ CRASHED = 0x06
 
 def name(code):
     d = {
-        NOSTATE : 'pending',
-        RUNNING : 'running',
-        BLOCKED : 'blocked',
-        PAUSED  : 'paused',
+        NOSTATE: 'pending',
+        RUNNING: 'running',
+        BLOCKED: 'blocked',
+        PAUSED: 'paused',
         SHUTDOWN: 'shutdown',
-        SHUTOFF : 'shutdown',
-        CRASHED : 'crashed',
-    }
+        SHUTOFF: 'shutdown',
+        CRASHED: 'crashed'}
     return d[code]

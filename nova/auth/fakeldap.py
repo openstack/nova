@@ -35,6 +35,7 @@ flags.DEFINE_integer('redis_port', 6379,
                     'Port that redis is running on.')
 flags.DEFINE_integer('redis_db', 0, 'Multiple DB keeps tests away')
 
+
 class Redis(object):
     def __init__(self):
         if hasattr(self.__class__, '_instance'):
@@ -51,19 +52,19 @@ class Redis(object):
 
 
 SCOPE_BASE = 0
-SCOPE_ONELEVEL = 1 # not implemented
+SCOPE_ONELEVEL = 1  # Not implemented
 SCOPE_SUBTREE = 2
 MOD_ADD = 0
 MOD_DELETE = 1
 MOD_REPLACE = 2
 
 
-class NO_SUCH_OBJECT(Exception): # pylint: disable-msg=C0103
+class NO_SUCH_OBJECT(Exception):  # pylint: disable-msg=C0103
     """Duplicate exception class from real LDAP module."""
     pass
 
 
-class OBJECT_CLASS_VIOLATION(Exception): # pylint: disable-msg=C0103
+class OBJECT_CLASS_VIOLATION(Exception):  # pylint: disable-msg=C0103
     """Duplicate exception class from real LDAP module."""
     pass
 
@@ -251,8 +252,6 @@ class FakeLDAP(object):
         return objects
 
     @property
-    def __redis_prefix(self): # pylint: disable-msg=R0201
+    def __redis_prefix(self):  # pylint: disable-msg=R0201
         """Get the prefix to use for all redis keys."""
         return 'ldap:'
-
-

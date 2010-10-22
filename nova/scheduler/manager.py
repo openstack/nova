@@ -56,7 +56,8 @@ class SchedulerManager(manager.Manager):
         driver_method = 'schedule_%s' % method
         elevated = context.elevated()
         try:
-            host = getattr(self.driver, driver_method)(elevated, *args, **kwargs)
+            host = getattr(self.driver, driver_method)(elevated, *args,
+                                                       **kwargs)
         except AttributeError:
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 

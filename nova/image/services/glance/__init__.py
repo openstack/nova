@@ -30,6 +30,7 @@ import nova.image.service
 
 FLAGS = flags.FLAGS
 
+
 class TellerClient(object):
 
     def __init__(self):
@@ -153,7 +154,6 @@ class ParallaxClient(object):
 
 
 class GlanceImageService(nova.image.service.BaseImageService):
-    
     """Provides storage and retrieval of disk image objects within Glance."""
 
     def __init__(self):
@@ -202,10 +202,10 @@ class GlanceImageService(nova.image.service.BaseImageService):
 
     def delete(self, image_id):
         """
-        Delete the given image. 
-        
+        Delete the given image.
+
         :raises NotFound if the image does not exist.
-        
+
         """
         self.parallax.delete_image_metadata(image_id)
 

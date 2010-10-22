@@ -53,6 +53,7 @@ flags.DEFINE_bool('use_nova_chains', False,
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
+
 def init_host():
     """Basic networking setup goes here"""
     # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
@@ -71,6 +72,7 @@ def init_host():
                   FLAGS.fixed_range)
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
                   {'range': FLAGS.fixed_range})
+
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -103,7 +105,7 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _confirm_rule("FORWARD","-d %s -p %s --dport %s -j ACCEPT"
+        _confirm_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
 
@@ -189,7 +191,8 @@ def update_dhcp(context, network_id):
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat /proc/%d/cmdline' % pid, check_exit_code=False)
+        out, _err = _execute('cat /proc/%d/cmdline' % pid,
+                             check_exit_code=False)
         if conffile in out:
             try:
                 _execute('sudo kill -HUP %d' % pid)
@@ -233,7 +236,8 @@ def _confirm_rule(chain, cmd):
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()
-    _execute("sudo iptables --delete %s %s" % (chain, cmd), check_exit_code=False)
+    _execute("sudo iptables --delete %s %s" % (chain, cmd),
+             check_exit_code=False)
     _execute("sudo iptables -I %s %s" % (chain, cmd))
 
 

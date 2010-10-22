@@ -294,24 +294,26 @@ class LdapDriver(object):
 
     def __find_dns(self, dn, query=None, scope=None):
         """Find dns by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the DNs
+        # Just return the DNs
         return [dn for dn, _attributes in res]
 
     def __find_objects(self, dn, query=None, scope=None):
         """Find objects by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the attributes
+        # Just return the attributes
         return [attributes for dn, attributes in res]
 
     def __find_role_dns(self, tree):
@@ -480,6 +482,6 @@ class LdapDriver(object):
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self): # pylint: disable-msg=W0231
+    def __init__(self):  # pylint: disable-msg=W0231
         __import__('nova.auth.fakeldap')
         self.ldap = sys.modules['nova.auth.fakeldap']

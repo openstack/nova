@@ -69,7 +69,8 @@ class Bucket(object):
         """Create a new bucket owned by a project.
 
         @bucket_name: a string representing the name of the bucket to create
-        @context: a nova.auth.api.ApiContext object representing who owns the bucket.
+        @context: a nova.auth.api.ApiContext object representing who owns the
+                  bucket.
 
         Raises:
             NotAuthorized: if the bucket is already exists or has invalid name
@@ -77,12 +78,12 @@ class Bucket(object):
         path = os.path.abspath(os.path.join(
             FLAGS.buckets_path, bucket_name))
         if not path.startswith(os.path.abspath(FLAGS.buckets_path)) or \
-           os.path.exists(path):
-               raise exception.NotAuthorized()
+            os.path.exists(path):
+                raise exception.NotAuthorized()
 
         os.makedirs(path)
 
-        with open(path+'.json', 'w') as f:
+        with open(path + '.json', 'w') as f:
             json.dump({'ownerId': context.project_id}, f)
 
     @property
@@ -99,22 +100,25 @@ class Bucket(object):
     @property
     def owner_id(self):
         try:
-            with open(self.path+'.json') as f:
+            with open(self.path + '.json') as f:
                 return json.load(f)['ownerId']
         except:
             return None
 
     def is_authorized(self, context):
         try:
-            return context.user.is_admin() or self.owner_id == context.project_id
+            return context.user.is_admin() or \
+                   self.owner_id == context.project_id
         except Exception, e:
             return False
 
     def list_keys(self, prefix='', marker=None, max_keys=1000, terse=False):
         object_names = []
+        path_length = len(self.path)
         for root, dirs, files in os.walk(self.path):
             for file_name in files:
-                object_names.append(os.path.join(root, file_name)[len(self.path)+1:])
+                object_name = os.path.join(root, file_name)[path_length + 1:]
+                object_names.append(object_name)
         object_names.sort()
         contents = []
 
@@ -164,7 +168,7 @@ class Bucket(object):
         if len(os.listdir(self.path)) > 0:
             raise exception.NotEmpty()
         os.rmdir(self.path)
-        os.remove(self.path+'.json')
+        os.remove(self.path + '.json')
 
     def __getitem__(self, key):
         return stored.Object(self, key)
