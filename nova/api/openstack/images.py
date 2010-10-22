@@ -27,16 +27,14 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "image": [ "id", "name", "updated", "created", "status",
-                           "serverId", "progress" ]
-            }
-        }
-    }
+                "image": ["id", "name", "updated", "created", "status",
+                          "serverId", "progress"]}}}
 
     def __init__(self):
         self._service = utils.import_object(FLAGS.image_service)
@@ -72,6 +70,6 @@ class Controller(wsgi.Controller):
         raise faults.Fault(exc.HTTPNotFound())
 
     def update(self, req, id):
-        # Users may not modify public images, and that's all that 
+        # Users may not modify public images, and that's all that
         # we support for now.
         raise faults.Fault(exc.HTTPNotFound())

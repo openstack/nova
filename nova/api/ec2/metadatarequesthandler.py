@@ -27,7 +27,6 @@ from nova.api.ec2 import cloud
 
 
 class MetadataRequestHandler(object):
-
     """Serve metadata from the EC2 API."""
 
     def print_data(self, data):
@@ -43,7 +42,8 @@ class MetadataRequestHandler(object):
                     else:
                         output += '/'
                 output += '\n'
-            return output[:-1] # cut off last \n
+            # Cut off last \n
+            return output[:-1]
         elif isinstance(data, list):
             return '\n'.join(data)
         else:
@@ -65,7 +65,8 @@ class MetadataRequestHandler(object):
         cc = cloud.CloudController()
         meta_data = cc.get_metadata(req.remote_addr)
         if meta_data is None:
-            logging.error('Failed to get metadata for ip: %s' % req.remote_addr)
+            logging.error('Failed to get metadata for ip: %s' %
+                          req.remote_addr)
             raise webob.exc.HTTPNotFound()
         data = self.lookup(req.path_info, meta_data)
         if data is None:

@@ -55,7 +55,7 @@ class Fault(webob.exc.HTTPException):
         if code == 413:
             retry = self.wrapped_exc.headers['Retry-After']
             fault_data[fault_name]['retryAfter'] = retry
-        # 'code' is an attribute on the fault tag itself 
+        # 'code' is an attribute on the fault tag itself
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
         serializer = wsgi.Serializer(req.environ, metadata)
         self.wrapped_exc.body = serializer.to_content_type(fault_data)

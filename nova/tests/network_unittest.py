@@ -35,7 +35,7 @@ FLAGS = flags.FLAGS
 
 class NetworkTestCase(test.TrialTestCase):
     """Test cases for network code"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
@@ -65,7 +65,7 @@ class NetworkTestCase(test.TrialTestCase):
         instance_ref = self._create_instance(1)
         self.instance2_id = instance_ref['id']
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         super(NetworkTestCase, self).tearDown()
         # TODO(termie): this should really be instantiating clean datastores
         #               in between runs, one failure kills all the tests

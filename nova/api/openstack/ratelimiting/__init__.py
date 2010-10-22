@@ -13,6 +13,7 @@ PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
+
 class Limiter(object):
 
     """Class providing rate limiting of arbitrary actions."""
@@ -101,7 +102,8 @@ class WSGIApp(object):
             return webob.exc.HTTPForbidden(
                     headers={'X-Wait-Seconds': "%.2f" % delay})
         else:
-            return '' # 200 OK
+            # 200 OK
+            return ''
 
 
 class WSGIAppProxy(object):
@@ -109,7 +111,7 @@ class WSGIAppProxy(object):
     """Limiter lookalike that proxies to a ratelimiting.WSGIApp."""
 
     def __init__(self, service_host):
-        """Creates a proxy pointing to a ratelimiting.WSGIApp at the given 
+        """Creates a proxy pointing to a ratelimiting.WSGIApp at the given
         host."""
         self.service_host = service_host
 
@@ -118,5 +120,6 @@ class WSGIAppProxy(object):
         conn.request('POST', '/limiter/%s/%s' % (username, action))
         resp = conn.getresponse()
         if resp.status == 200:
-            return None # no delay
+            # No delay
+            return None
         return float(resp.getheader('X-Wait-Seconds'))

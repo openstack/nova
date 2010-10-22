@@ -39,6 +39,7 @@ from nova import server
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('api_port', 8773, 'API port')
 
+
 def main(_args):
     from nova import api
     from nova import wsgi

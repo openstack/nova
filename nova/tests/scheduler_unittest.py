@@ -44,7 +44,7 @@ class TestDriver(driver.Scheduler):
 
 class SchedulerTestCase(test.TrialTestCase):
     """Test case for scheduler"""
-    def setUp(self):  # pylint: disable=C0103
+    def setUp(self):
         super(SchedulerTestCase, self).setUp()
         self.flags(scheduler_driver='nova.tests.scheduler_unittest.TestDriver')
 
@@ -73,7 +73,7 @@ class SchedulerTestCase(test.TrialTestCase):
 
 class SimpleDriverTestCase(test.TrialTestCase):
     """Test case for simple driver"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(SimpleDriverTestCase, self).setUp()
         self.flags(connection_type='fake',
                    max_cores=4,
@@ -87,7 +87,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.get_admin_context()
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
 

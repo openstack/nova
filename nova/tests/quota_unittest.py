@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 
 class QuotaTestCase(test.TrialTestCase):
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -51,7 +51,7 @@ class QuotaTestCase(test.TrialTestCase):
         self.context = context.RequestContext(project=self.project,
                                               user=self.user)
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         manager.AuthManager().delete_project(self.project)
         manager.AuthManager().delete_user(self.user)
         super(QuotaTestCase, self).tearDown()

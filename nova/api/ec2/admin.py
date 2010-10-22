@@ -73,7 +73,7 @@ class AdminController(object):
     def describe_users(self, _context, **_kwargs):
         """Returns all users - should be changed to deal with a list."""
         return {'userSet':
-            [user_dict(u) for u in manager.AuthManager().get_users()] }
+                [user_dict(u) for u in manager.AuthManager().get_users()]}
 
     def register_user(self, _context, name, **_kwargs):
         """Creates a new user, and returns generated credentials."""
@@ -91,7 +91,7 @@ class AdminController(object):
     def describe_roles(self, context, project_roles=True, **kwargs):
         """Returns a list of allowed roles."""
         roles = manager.AuthManager().get_roles(project_roles)
-        return { 'roles': [{'role': r} for r in roles]}
+        return {'roles': [{'role': r} for r in roles]}
 
     def describe_user_roles(self, context, user, project=None, **kwargs):
         """Returns a list of roles for the given user.
@@ -99,7 +99,7 @@ class AdminController(object):
            Specifying project will return only project specific roles.
         """
         roles = manager.AuthManager().get_user_roles(user, project=project)
-        return { 'roles': [{'role': r} for r in roles]}
+        return {'roles': [{'role': r} for r in roles]}
 
     def modify_user_role(self, context, user, role, project=None,
                          operation='add', **kwargs):
@@ -155,9 +155,10 @@ class AdminController(object):
             'members': [{'member': m} for m in project.member_ids]}
         return result
 
-    def modify_project_member(self, context, user, project, operation, **kwargs):
+    def modify_project_member(self, context, user, project, operation,
+                              **kwargs):
         """Add or remove a user from a project."""
-        if operation =='add':
+        if operation == 'add':
             manager.AuthManager().add_to_project(user, project)
         elif operation == 'remove':
             manager.AuthManager().remove_from_project(user, project)

@@ -101,7 +101,7 @@ class XmlConversionTestCase(test.BaseTestCase):
 
 class ApiEc2TestCase(test.BaseTestCase):
     """Unit test for the cloud controller on an EC2 API"""
-    def setUp(self): # pylint: disable-msg=C0103,C0111
+    def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
         self.manager = manager.AuthManager()

@@ -78,7 +78,7 @@ class ServiceManagerTestCase(test.BaseTestCase):
 class ServiceTestCase(test.BaseTestCase):
     """Test cases for Services"""
 
-    def setUp(self):  # pylint: disable=C0103
+    def setUp(self):
         super(ServiceTestCase, self).setUp()
         self.mox.StubOutWithMock(service, 'db')
         self.context = context.get_admin_context()

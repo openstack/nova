@@ -94,11 +94,11 @@ class Middleware(Application):
     behavior.
     """
 
-    def __init__(self, application): # pylint: disable-msg=W0231
+    def __init__(self, application):  # pylint: disable-msg=W0231
         self.application = application
 
     @webob.dec.wsgify
-    def __call__(self, req): # pylint: disable-msg=W0221
+    def __call__(self, req):  # pylint: disable-msg=W0221
         """Override to implement middleware behavior."""
         return self.application
 
@@ -216,7 +216,7 @@ class Controller(object):
         arg_dict['req'] = req
         result = method(**arg_dict)
         if type(result) is dict:
-            return self._serialize(result, req) 
+            return self._serialize(result, req)
         else:
             return result
 
@@ -239,6 +239,7 @@ class Controller(object):
         _metadata = getattr(type(self), "_serialization_metadata", {})
         serializer = Serializer(request.environ, _metadata)
         return serializer.deserialize(data)
+
 
 class Serializer(object):
     """
@@ -263,12 +264,13 @@ class Serializer(object):
         elif 'application/xml' in req.accept:
             self.handler = self._to_xml
         else:
-            self.handler = self._to_json # default
+            # This is the default
+            self.handler = self._to_json
 
     def to_content_type(self, data):
         """
         Serialize a dictionary into a string.
-        
+
         The format of the string will be decided based on the Content Type
         requested in self.environ: by Accept: header, or by URL suffix.
         """
@@ -277,7 +279,7 @@ class Serializer(object):
     def deserialize(self, datastring):
         """
         Deserialize a string to a dictionary.
-        
+
         The string must be in the format of a supported MIME type.
         """
         datastring = datastring.strip()
@@ -298,7 +300,7 @@ class Serializer(object):
     def _from_xml_node(self, node, listnames):
         """
         Convert a minidom node to a simple Python type.
-        
+
         listnames is a collection of names of XML nodes whose subnodes should
         be considered list items.
         """
@@ -312,7 +314,8 @@ class Serializer(object):
                 result[attr] = node.attributes[attr].nodeValue
             for child in node.childNodes:
                 if child.nodeType != node.TEXT_NODE:
-                    result[child.nodeName] = self._from_xml_node(child, listnames)
+                    result[child.nodeName] = self._from_xml_node(child,
+                                                                 listnames)
             return result
 
     def _to_json(self, data):
@@ -347,7 +350,8 @@ class Serializer(object):
                 else:
                     node = self._to_xml_node(doc, metadata, k, v)
                     result.appendChild(node)
-        else: # atom
+        else:
+            # Type is atom
             node = doc.createTextNode(str(data))
             result.appendChild(node)
         return result

@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 class RpcTestCase(test.TrialTestCase):
     """Test cases for rpc"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance()
         self.receiver = TestReceiver()

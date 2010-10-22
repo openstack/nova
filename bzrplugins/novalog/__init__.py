@@ -17,13 +17,14 @@
 import bzrlib.log
 from bzrlib.osutils import format_date
 
-#
-# This is mostly stolen from bzrlib.log.GnuChangelogLogFormatter
-# The difference is that it logs the author rather than the committer
-# which for Nova always is Tarmac.
-#
+
 class NovaLogFormat(bzrlib.log.GnuChangelogLogFormatter):
+    """This is mostly stolen from bzrlib.log.GnuChangelogLogFormatter
+    The difference is that it logs the author rather than the committer
+    which for Nova always is Tarmac."""
+
     preferred_levels = 1
+
     def log_revision(self, revision):
         """Log a revision, either merged or not."""
         to_file = self.to_file
@@ -38,13 +39,14 @@ class NovaLogFormat(bzrlib.log.GnuChangelogLogFormatter):
         to_file.write('%s  %s\n\n' % (date_str, ", ".join(authors)))
 
         if revision.delta is not None and revision.delta.has_changed():
-            for c in revision.delta.added + revision.delta.removed + revision.delta.modified:
+            for c in revision.delta.added + revision.delta.removed + \
+                     revision.delta.modified:
                 path, = c[:1]
                 to_file.write('\t* %s:\n' % (path,))
             for c in revision.delta.renamed:
-                oldpath,newpath = c[:2]
+                oldpath, newpath = c[:2]
                 # For renamed files, show both the old and the new path
-                to_file.write('\t* %s:\n\t* %s:\n' % (oldpath,newpath))
+                to_file.write('\t* %s:\n\t* %s:\n' % (oldpath, newpath))
             to_file.write('\n')
 
         if not revision.rev.message:
@@ -56,4 +58,3 @@ class NovaLogFormat(bzrlib.log.GnuChangelogLogFormatter):
             to_file.write('\n')
 
 bzrlib.log.register_formatter('novalog', NovaLogFormat)
-
