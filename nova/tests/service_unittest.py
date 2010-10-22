@@ -179,7 +179,8 @@ class ServiceTestCase(test.BaseTestCase):
                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(self.context,
                                   service_create).AndReturn(service_ref)
-        service.db.service_get(self.context, service_ref['id']).AndReturn(service_ref)
+        service.db.service_get(self.context,
+                               service_ref['id']).AndReturn(service_ref)
         service.db.service_update(self.context, service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
@@ -227,4 +228,3 @@ class ServiceTestCase(test.BaseTestCase):
         rv = yield s.report_state(host, binary)
 
         self.assert_(not s.model_disconnected)
-

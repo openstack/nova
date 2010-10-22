@@ -32,8 +32,8 @@ from nova.tests.api.openstack import fakes
 
 
 FLAGS = flags.FLAGS
-
 FLAGS.verbose = True
+
 
 def return_server(context, id):
     return stub_instance(id)
@@ -44,10 +44,8 @@ def return_servers(context, user_id=1):
 
 
 def stub_instance(id, user_id=1):
-    return Instance(
-        id=id, state=0, image_id=10, server_name='server%s'%id,
-        user_id=user_id
-    )
+    return Instance(id=id, state=0, image_id=10, server_name='server%s' % id,
+                    user_id=user_id)
 
 
 class ServersTest(unittest.TestCase):
@@ -61,9 +59,10 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id', return_server)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_user', 
-            return_servers)
+        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id',
+                       return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+                       return_servers)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -79,17 +78,17 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         res = req.get_response(nova.api.API())
         res_dict = json.loads(res.body)
-        
+
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
-            self.assertEqual(s['name'], 'server%d'%i)
+            self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
     def test_create_instance(self):
         def server_update(context, id, params):
-            pass 
+            pass
 
         def instance_create(context, inst):
             class Foo(object):
@@ -98,9 +97,9 @@ class ServersTest(unittest.TestCase):
 
         def fake_method(*args, **kwargs):
             pass
-        
+
         def project_get_network(context, user_id):
-            return dict(id='1', host='localhost') 
+            return dict(id='1', host='localhost')
 
         def queue_get_for(context, *args):
             return 'network_topic'
@@ -114,11 +113,10 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
-            
+
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
-            personality = {}
-        ))
+            personality={}))
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -188,44 +186,41 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(nova.api.API())
         res_dict = json.loads(res.body)
-        
+
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
-            self.assertEqual(s['name'], 'server%d'%i)
+            self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             i += 1
 
     def test_server_reboot(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
-            personality = {}
-        ))
+            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
-        req.content_type= 'application/json'
+        req.content_type = 'application/json'
         req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
 
     def test_server_rebuild(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
-            personality = {}
-        ))
+            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
-        req.content_type= 'application/json'
+        req.content_type = 'application/json'
         req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
 
     def test_server_resize(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
-            personality = {}
-        ))
+            personality={}))
         req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
-        req.content_type= 'application/json'
+        req.content_type = 'application/json'
         req.body = json.dumps(body)
         res = req.get_response(nova.api.API())
 
@@ -234,8 +229,9 @@ class ServersTest(unittest.TestCase):
         req.method = 'DELETE'
 
         self.server_delete_called = False
+
         def instance_destroy_mock(context, id):
-            self.server_delete_called = True 
+            self.server_delete_called = True
 
         self.stubs.Set(nova.db.api, 'instance_destroy',
             instance_destroy_mock)

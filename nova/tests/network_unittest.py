@@ -98,7 +98,6 @@ class NetworkTestCase(test.TrialTestCase):
         self.context.project_id = self.projects[project_num].id
         self.network.deallocate_fixed_ip(self.context, address)
 
-
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
@@ -118,10 +117,12 @@ class NetworkTestCase(test.TrialTestCase):
         lease_ip(fix_addr)
         self.assertEqual(float_addr, str(pubnet[0]))
         self.network.associate_floating_ip(self.context, float_addr, fix_addr)
-        address = db.instance_get_floating_address(context.get_admin_context(), self.instance_id)
+        address = db.instance_get_floating_address(context.get_admin_context(),
+                                                   self.instance_id)
         self.assertEqual(address, float_addr)
         self.network.disassociate_floating_ip(self.context, float_addr)
-        address = db.instance_get_floating_address(context.get_admin_context(), self.instance_id)
+        address = db.instance_get_floating_address(context.get_admin_context(),
+                                                   self.instance_id)
         self.assertEqual(address, None)
         self.network.deallocate_floating_ip(self.context, float_addr)
         self.network.deallocate_fixed_ip(self.context, fix_addr)
@@ -254,18 +255,24 @@ class NetworkTestCase(test.TrialTestCase):
         There are ips reserved at the bottom and top of the range.
         services (network, gateway, CloudPipe, broadcast)
         """
-        network = db.project_get_network(context.get_admin_context(), self.projects[0].id)
+        network = db.project_get_network(context.get_admin_context(),
+                                         self.projects[0].id)
         net_size = flags.FLAGS.network_size
-        total_ips = (db.network_count_available_ips(context.get_admin_context(), network['id']) +
-                     db.network_count_reserved_ips(context.get_admin_context(), network['id']) +
-                     db.network_count_allocated_ips(context.get_admin_context(), network['id']))
+        admin_context = context.get_admin_context()
+        total_ips = (db.network_count_available_ips(admin_context,
+                                                    network['id']) +
+                     db.network_count_reserved_ips(admin_context,
+                                                   network['id']) +
+                     db.network_count_allocated_ips(admin_context,
+                                                    network['id']))
         self.assertEqual(total_ips, net_size)
 
     def test_too_many_addresses(self):
         """Test for a NoMoreAddresses exception when all fixed ips are used.
         """
-        network = db.project_get_network(context.get_admin_context(), self.projects[0].id)
-        num_available_ips = db.network_count_available_ips(context.get_admin_context(),
+        admin_context = context.get_admin_context()
+        network = db.project_get_network(admin_context, self.projects[0].id)
+        num_available_ips = db.network_count_available_ips(admin_context,
                                                            network['id'])
         addresses = []
         instance_ids = []
@@ -276,8 +283,9 @@ class NetworkTestCase(test.TrialTestCase):
             addresses.append(address)
             lease_ip(address)
 
-        self.assertEqual(db.network_count_available_ips(context.get_admin_context(),
-                                                        network['id']), 0)
+        ip_count = db.network_count_available_ips(context.get_admin_context(),
+                                                  network['id'])
+        self.assertEqual(ip_count, 0)
         self.assertRaises(db.NoMoreAddresses,
                           self.network.allocate_fixed_ip,
                           self.context,
@@ -287,14 +295,15 @@ class NetworkTestCase(test.TrialTestCase):
             self.network.deallocate_fixed_ip(self.context, addresses[i])
             release_ip(addresses[i])
             db.instance_destroy(context.get_admin_context(), instance_ids[i])
-        self.assertEqual(db.network_count_available_ips(context.get_admin_context(),
-                                                        network['id']),
-                         num_available_ips)
+        ip_count = db.network_count_available_ips(context.get_admin_context(),
+                                                  network['id'])
+        self.assertEqual(ip_count, num_available_ips)
 
 
 def is_allocated_in_project(address, project_id):
     """Returns true if address is in specified project"""
-    project_net = db.project_get_network(context.get_admin_context(), project_id)
+    project_net = db.project_get_network(context.get_admin_context(),
+                                         project_id)
     network = db.fixed_ip_get_network(context.get_admin_context(), address)
     instance = db.fixed_ip_get_instance(context.get_admin_context(), address)
     # instance exists until release
@@ -308,8 +317,10 @@ def binpath(script):
 
 def lease_ip(private_ip):
     """Run add command on dhcpbridge"""
-    network_ref = db.fixed_ip_get_network(context.get_admin_context(), private_ip)
-    instance_ref = db.fixed_ip_get_instance(context.get_admin_context(), private_ip)
+    network_ref = db.fixed_ip_get_network(context.get_admin_context(),
+                                          private_ip)
+    instance_ref = db.fixed_ip_get_instance(context.get_admin_context(),
+                                            private_ip)
     cmd = "%s add %s %s fake" % (binpath('nova-dhcpbridge'),
                                  instance_ref['mac_address'],
                                  private_ip)
@@ -322,8 +333,10 @@ def lease_ip(private_ip):
 
 def release_ip(private_ip):
     """Run del command on dhcpbridge"""
-    network_ref = db.fixed_ip_get_network(context.get_admin_context(), private_ip)
-    instance_ref = db.fixed_ip_get_instance(context.get_admin_context(), private_ip)
+    network_ref = db.fixed_ip_get_network(context.get_admin_context(),
+                                          private_ip)
+    instance_ref = db.fixed_ip_get_instance(context.get_admin_context(),
+                                            private_ip)
     cmd = "%s del %s %s fake" % (binpath('nova-dhcpbridge'),
                                  instance_ref['mac_address'],
                                  private_ip)
