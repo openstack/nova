@@ -134,8 +134,8 @@ class NovaBase(object):
 #    """Represents a host where services are running"""
 #    __tablename__ = 'hosts'
 #    id = Column(String(255), primary_key=True)
-#
-#
+
+
 class Service(BASE, NovaBase):
     """Represents a running service on a host"""
     __tablename__ = 'services'
@@ -277,7 +277,8 @@ class Quota(BASE, NovaBase):
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
     __tablename__ = 'export_devices'
-    __table_args__ = (schema.UniqueConstraint("shelf_id", "blade_id"), {'mysql_engine': 'InnoDB'})
+    __table_args__ = (schema.UniqueConstraint("shelf_id", "blade_id"),
+                      {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
@@ -308,10 +309,13 @@ class SecurityGroup(BASE, NovaBase):
 
     instances = relationship(Instance,
                              secondary="security_group_instance_association",
-                             primaryjoin="and_(SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,"
-                                               "SecurityGroup.deleted == False)",
-                             secondaryjoin="and_(SecurityGroupInstanceAssociation.instance_id == Instance.id,"
-                                                 "Instance.deleted == False)",
+                             primaryjoin='and_('
+        'SecurityGroup.id == '
+            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroup.deleted == False)',
+                             secondaryjoin='and_('
+        'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        'Instance.deleted == False)',
                              backref='security_groups')
 
     @property
@@ -330,11 +334,12 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
     parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
     parent_group = relationship("SecurityGroup", backref="rules",
-                         foreign_keys=parent_group_id,
-                         primaryjoin="and_(SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,"
-                                          "SecurityGroupIngressRule.deleted == False)")
+                                foreign_keys=parent_group_id,
+                                primaryjoin='and_('
+        'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
+        'SecurityGroupIngressRule.deleted == False)')
 
-    protocol = Column(String(5)) # "tcp", "udp", or "icmp"
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
     from_port = Column(Integer)
     to_port = Column(Integer)
     cidr = Column(String(255))
@@ -414,8 +419,9 @@ class FixedIp(BASE, NovaBase):
     instance = relationship(Instance,
                             backref=backref('fixed_ip', uselist=False),
                             foreign_keys=instance_id,
-                            primaryjoin='and_(FixedIp.instance_id==Instance.id,'
-                                             'FixedIp.deleted==False)')
+                            primaryjoin='and_('
+                                'FixedIp.instance_id == Instance.id,'
+                                'FixedIp.deleted == False)')
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
@@ -455,13 +461,13 @@ class UserProjectRoleAssociation(BASE, NovaBase):
     __tablename__ = 'user_project_role_association'
     user_id = Column(String(255), primary_key=True)
     user = relationship(User,
-                        primaryjoin=user_id==User.id,
+                        primaryjoin=user_id == User.id,
                         foreign_keys=[User.id],
                         uselist=False)
 
     project_id = Column(String(255), primary_key=True)
     project = relationship(Project,
-                           primaryjoin=project_id==Project.id,
+                           primaryjoin=project_id == Project.id,
                            foreign_keys=[Project.id],
                            uselist=False)
 
@@ -485,7 +491,6 @@ class UserProjectAssociation(BASE, NovaBase):
     project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
 
 
-
 class FloatingIp(BASE, NovaBase):
     """Represents a floating ip that dynamically forwards to a fixed ip"""
     __tablename__ = 'floating_ips'
@@ -495,8 +500,9 @@ class FloatingIp(BASE, NovaBase):
     fixed_ip = relationship(FixedIp,
                             backref=backref('floating_ips'),
                             foreign_keys=fixed_ip_id,
-                            primaryjoin='and_(FloatingIp.fixed_ip_id==FixedIp.id,'
-                                             'FloatingIp.deleted==False)')
+                            primaryjoin='and_('
+                                'FloatingIp.fixed_ip_id == FixedIp.id,'
+                                'FloatingIp.deleted == False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
@@ -507,7 +513,7 @@ def register_models():
     models = (Service, Instance, Volume, ExportDevice, FixedIp,
               FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project) # , Image, Host
+              AuthToken, User, Project)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

@@ -34,6 +34,7 @@ from nova.scheduler import driver
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
 
+
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
     def schedule(context, topic, *args, **kwargs):
@@ -41,6 +42,7 @@ class TestDriver(driver.Scheduler):
 
     def schedule_named_method(context, topic, num):
         return 'named_host'
+
 
 class SchedulerTestCase(test.TrialTestCase):
     """Test case for scheduler"""

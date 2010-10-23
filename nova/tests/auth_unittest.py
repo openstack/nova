@@ -28,6 +28,7 @@ from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 
+
 class user_generator(object):
     def __init__(self, manager, **user_state):
         if 'name' not in user_state:
@@ -40,6 +41,7 @@ class user_generator(object):
 
     def __exit__(self, value, type, trace):
         self.manager.delete_user(self.user)
+
 
 class project_generator(object):
     def __init__(self, manager, **project_state):
@@ -55,6 +57,7 @@ class project_generator(object):
 
     def __exit__(self, value, type, trace):
         self.manager.delete_project(self.project)
+
 
 class user_and_project_generator(object):
     def __init__(self, manager, user_state={}, project_state={}):
@@ -74,6 +77,7 @@ class user_and_project_generator(object):
     def __exit__(self, value, type, trace):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
+
 
 class AuthManagerTestCase(object):
     def setUp(self):
@@ -96,7 +100,7 @@ class AuthManagerTestCase(object):
             self.assertEqual('private-party', u.access)
 
     def test_004_signature_is_valid(self):
-        #self.assertTrue(self.manager.authenticate( **boto.generate_url ... ? ? ? ))
+        #self.assertTrue(self.manager.authenticate(**boto.generate_url ...? ))
         pass
         #raise NotImplementedError
 
@@ -127,7 +131,7 @@ class AuthManagerTestCase(object):
             self.assertFalse(self.manager.has_role('test1', 'itsec'))
 
     def test_can_create_and_get_project(self):
-        with user_and_project_generator(self.manager) as (u,p):
+        with user_and_project_generator(self.manager) as (u, p):
             self.assert_(self.manager.get_user('test1'))
             self.assert_(self.manager.get_user('test1'))
             self.assert_(self.manager.get_project('testproj'))
@@ -321,6 +325,7 @@ class AuthManagerTestCase(object):
             self.assertEqual('secret', user.secret)
             self.assertTrue(user.is_admin())
 
+
 class AuthManagerLdapTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
@@ -336,6 +341,7 @@ class AuthManagerLdapTestCase(AuthManagerTestCase, test.TrialTestCase):
                 r.flushdb()
             except:
                 self.skip = True
+
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'

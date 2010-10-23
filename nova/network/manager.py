@@ -49,7 +49,8 @@ flags.DEFINE_string('vpn_ip', utils.get_my_ip(),
 flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
 flags.DEFINE_integer('network_size', 256,
                         'Number of addresses in each private subnet')
-flags.DEFINE_string('floating_range', '4.4.4.0/24', 'Floating IP address block')
+flags.DEFINE_string('floating_range', '4.4.4.0/24',
+                    'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_integer('cnt_vpn_clients', 5,
                      'Number of addresses reserved for vpn clients')
@@ -287,7 +288,6 @@ class FlatManager(NetworkManager):
         self.db.network_update(context, network_id, net)
 
 
-
 class FlatDHCPManager(NetworkManager):
     """Flat networking with dhcp"""
 
@@ -432,4 +432,3 @@ class VlanManager(NetworkManager):
         """Number of reserved ips at the top of the range"""
         parent_reserved = super(VlanManager, self)._top_reserved_ips
         return parent_reserved + FLAGS.cnt_vpn_clients
-

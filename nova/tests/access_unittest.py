@@ -29,8 +29,11 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+
+
 class Context(object):
     pass
+
 
 class AccessTestCase(test.TrialTestCase):
     def setUp(self):
@@ -56,9 +59,11 @@ class AccessTestCase(test.TrialTestCase):
         self.project.add_role(self.testnet, 'netadmin')
         self.project.add_role(self.testsys, 'sysadmin')
         #user is set in each test
+
         def noopWSGIApp(environ, start_response):
             start_response('200 OK', [])
             return ['']
+
         self.mw = ec2.Authorizer(noopWSGIApp)
         self.mw.action_roles = {'str': {
                 '_allow_all': ['all'],
@@ -80,7 +85,7 @@ class AccessTestCase(test.TrialTestCase):
 
     def response_status(self, user, methodName):
         ctxt = context.RequestContext(user, self.project)
-        environ = {'ec2.context' : ctxt,
+        environ = {'ec2.context': ctxt,
                    'ec2.controller': 'some string',
                    'ec2.action': methodName}
         req = webob.Request.blank('/', environ)

@@ -1,3 +1,20 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import datetime
 import unittest
 
@@ -11,7 +28,9 @@ import nova.auth.manager
 from nova import auth
 from nova.tests.api.openstack import fakes
 
+
 class Test(unittest.TestCase):
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
@@ -42,7 +61,7 @@ class Test(unittest.TestCase):
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
         f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
-            
+
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
@@ -63,14 +82,14 @@ class Test(unittest.TestCase):
         result = req.get_response(nova.api.API())
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
-    
+
     def test_token_expiry(self):
         self.destroy_called = False
         token_hash = 'bacon'
 
         def destroy_token_mock(meh, context, token):
             self.destroy_called = True
-        
+
         def bad_token(meh, context, token_hash):
             return fakes.FakeToken(
                     token_hash=token_hash,

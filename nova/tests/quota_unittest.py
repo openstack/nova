@@ -141,12 +141,13 @@ class QuotaTestCase(test.TrialTestCase):
         try:
             db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
-            db.floating_ip_create(context.get_admin_context(), {'address': address,
-                                         'host': FLAGS.host})
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': address, 'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
         # NOTE(vish): This assert never fails. When cloud attempts to
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address, self.context)
+        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address,
+                          self.context)

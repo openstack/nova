@@ -74,12 +74,12 @@ def partition(infile, outfile, local_bytes=0, resize=True,
                      " by sector size: %d / %d", local_bytes, sector_size)
     local_sectors = local_bytes / sector_size
 
-    mbr_last = 62 # a
-    primary_first = mbr_last + 1 # b
-    primary_last = primary_first + primary_sectors - 1 # c
-    local_first = primary_last + 1 # d
-    local_last = local_first + local_sectors - 1 # e
-    last_sector = local_last # e
+    mbr_last = 62  # a
+    primary_first = mbr_last + 1  # b
+    primary_last = primary_first + primary_sectors - 1  # c
+    local_first = primary_last + 1  # d
+    local_last = local_first + local_sectors - 1  # e
+    last_sector = local_last  # e
 
     # create an empty file
     yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
@@ -162,7 +162,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
     sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
-    yield execute('sudo mkdir -p %s' % sshdir) # existing dir doesn't matter
+    yield execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
@@ -174,4 +174,3 @@ def _inject_net_into_fs(net, fs, execute=None):
     netfile = os.path.join(os.path.join(os.path.join(
             fs, 'etc'), 'network'), 'interfaces')
     yield execute('sudo tee %s' % netfile, net)
-

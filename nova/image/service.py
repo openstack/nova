@@ -30,7 +30,8 @@ flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
 flags.DEFINE_string('glance_teller_port', '9191',
                     'Port for Glance\'s Teller service')
 flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
-                    'IP address or URL where Glance\'s Parallax service resides')
+                    'IP address or URL where Glance\'s Parallax service '
+                    'resides')
 flags.DEFINE_string('glance_parallax_port', '9292',
                     'Port for Glance\'s Parallax service')
 
@@ -120,10 +121,10 @@ class BaseImageService(object):
 
     def delete(self, image_id):
         """
-        Delete the given image. 
-        
+        Delete the given image.
+
         :raises NotFound if the image does not exist.
-        
+
         """
         raise NotImplementedError
 
@@ -131,14 +132,14 @@ class BaseImageService(object):
 class LocalImageService(BaseImageService):
 
     """Image service storing images to local disk.
-    
+
     It assumes that image_ids are integers."""
 
     def __init__(self):
         self._path = "/tmp/nova/images"
         try:
             os.makedirs(self._path)
-        except OSError: # exists
+        except OSError:  # Exists
             pass
 
     def _path_to(self, image_id):
@@ -156,7 +157,7 @@ class LocalImageService(BaseImageService):
 
     def show(self, id):
         try:
-            return pickle.load(open(self._path_to(id))) 
+            return pickle.load(open(self._path_to(id)))
         except IOError:
             raise exception.NotFound
 
@@ -164,7 +165,7 @@ class LocalImageService(BaseImageService):
         """
         Store the image data and return the new image id.
         """
-        id = random.randint(0, 2**32-1)
+        id = random.randint(0, 2 ** 32 - 1)
         data['id'] = id
         self.update(id, data)
         return id

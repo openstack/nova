@@ -90,7 +90,7 @@ class BaseImageServiceTests(object):
         id = self.service.create(fixture)
 
         fixture['status'] = 'in progress'
-        
+
         self.service.update(id, fixture)
         new_image_data = self.service.show(id)
         self.assertEquals('in progress', new_image_data['status'])
@@ -121,7 +121,7 @@ class BaseImageServiceTests(object):
 
         num_images = len(self.service.index())
         self.assertEquals(2, num_images, str(self.service.index()))
-        
+
         self.service.delete(ids[0])
 
         num_images = len(self.service.index())
@@ -135,7 +135,8 @@ class LocalImageServiceTest(unittest.TestCase,
 
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.service = utils.import_object('nova.image.service.LocalImageService')
+        service_class = 'nova.image.service.LocalImageService'
+        self.service = utils.import_object(service_class)
 
     def tearDown(self):
         self.service.delete_all()
@@ -150,7 +151,8 @@ class GlanceImageServiceTest(unittest.TestCase,
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
-        self.service = utils.import_object('nova.image.services.glance.GlanceImageService')
+        service_class = 'nova.image.services.glance.GlanceImageService'
+        self.service = utils.import_object(service_class)
         self.service.delete_all()
 
     def tearDown(self):
@@ -172,8 +174,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'deleted': False,
          'is_public': True,
          'status': 'available',
-         'image_type': 'kernel'
-        },
+         'image_type': 'kernel'},
         {'id': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
          'created_at': str(datetime.datetime.utcnow()),
@@ -182,9 +183,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'deleted': False,
          'is_public': True,
          'status': 'available',
-         'image_type': 'ramdisk'
-        },
-    ]
+         'image_type': 'ramdisk'}]
 
     def setUp(self):
         self.orig_image_service = FLAGS.image_service
@@ -211,7 +210,8 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
                          in self.IMAGE_FIXTURES]
 
         for image in res_dict['images']:
-            self.assertEquals(1, fixture_index.count(image), "image %s not in fixture index!" % str(image)) 
+            self.assertEquals(1, fixture_index.count(image),
+                              "image %s not in fixture index!" % str(image))
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
@@ -219,4 +219,5 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
         res_dict = json.loads(res.body)
 
         for image in res_dict['images']:
-            self.assertEquals(1, self.IMAGE_FIXTURES.count(image), "image %s not in fixtures!" % str(image))
+            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
+                              "image %s not in fixtures!" % str(image))

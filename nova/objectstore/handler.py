@@ -136,6 +136,7 @@ def get_context(request):
         logging.debug("Authentication Failure: %s", ex)
         raise exception.NotAuthorized()
 
+
 class ErrorHandlingResource(resource.Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for
     exceptions thrown after NOT_DONE_YET is returned.
@@ -162,7 +163,7 @@ class S3(ErrorHandlingResource):
     def __init__(self):
         ErrorHandlingResource.__init__(self)
 
-    def getChild(self, name, request): # pylint: disable-msg=C0103
+    def getChild(self, name, request):  # pylint: disable-msg=C0103
         """Returns either the image or bucket resource"""
         request.context = get_context(request)
         if name == '':
@@ -172,7 +173,7 @@ class S3(ErrorHandlingResource):
         else:
             return BucketResource(name)
 
-    def render_GET(self, request): # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable-msg=R0201
         """Renders the GET request for a list of buckets as XML"""
         logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() \
@@ -321,11 +322,13 @@ class ImageResource(ErrorHandlingResource):
         if not self.img.is_authorized(request.context, True):
             raise exception.NotAuthorized()
         return static.File(self.img.image_path,
-                           defaultType='application/octet-stream'
-                          ).render_GET(request)
+                           defaultType='application/octet-stream').\
+                           render_GET(request)
+
 
 class ImagesResource(resource.Resource):
     """A web resource representing a list of images"""
+
     def getChild(self, name, _request):
         """Returns itself or an ImageResource if no name given"""
         if name == '':
@@ -333,7 +336,7 @@ class ImagesResource(resource.Resource):
         else:
             return ImageResource(name)
 
-    def render_GET(self, request): # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable-msg=R0201
         """ returns a json listing of all images
             that a user has permissions to see """
 
@@ -362,7 +365,7 @@ class ImagesResource(resource.Resource):
         request.finish()
         return server.NOT_DONE_YET
 
-    def render_PUT(self, request): # pylint: disable-msg=R0201
+    def render_PUT(self, request):  # pylint: disable-msg=R0201
         """ create a new registered image """
 
         image_id = get_argument(request, 'image_id', u'')
@@ -383,7 +386,7 @@ class ImagesResource(resource.Resource):
         p.start()
         return ''
 
-    def render_POST(self, request): # pylint: disable-msg=R0201
+    def render_POST(self, request):  # pylint: disable-msg=R0201
         """Update image attributes: public/private"""
 
         # image_id required for all requests
@@ -397,7 +400,7 @@ class ImagesResource(resource.Resource):
         if operation:
             # operation implies publicity toggle
             logging.debug("handling publicity toggle")
-            image_object.set_public(operation=='add')
+            image_object.set_public(operation == 'add')
         else:
             # other attributes imply update
             logging.debug("update user fields")
@@ -407,7 +410,7 @@ class ImagesResource(resource.Resource):
             image_object.update_user_editable_fields(clean_args)
         return ''
 
-    def render_DELETE(self, request): # pylint: disable-msg=R0201
+    def render_DELETE(self, request):  # pylint: disable-msg=R0201
         """Delete a registered image"""
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)

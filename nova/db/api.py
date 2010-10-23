@@ -256,9 +256,11 @@ def instance_get_all(context):
     """Get all instances."""
     return IMPL.instance_get_all(context)
 
+
 def instance_get_all_by_user(context, user_id):
     """Get all instances."""
     return IMPL.instance_get_all_by_user(context, user_id)
+
 
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
@@ -306,7 +308,8 @@ def instance_update(context, instance_id, values):
 
 def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance"""
-    return IMPL.instance_add_security_group(context, instance_id, security_group_id)
+    return IMPL.instance_add_security_group(context, instance_id,
+                                            security_group_id)
 
 
 ###################
@@ -482,9 +485,11 @@ def auth_destroy_token(context, token):
     """Destroy an auth token"""
     return IMPL.auth_destroy_token(context, token)
 
+
 def auth_get_token(context, token_hash):
     """Retrieves a token given the hash representing it"""
     return IMPL.auth_get_token(context, token_hash)
+
 
 def auth_create_token(context, token):
     """Creates a new token"""
@@ -644,7 +649,9 @@ def security_group_rule_create(context, values):
 
 def security_group_rule_get_by_security_group(context, security_group_id):
     """Get all rules for a a given security group"""
-    return IMPL.security_group_rule_get_by_security_group(context, security_group_id)
+    return IMPL.security_group_rule_get_by_security_group(context,
+                                                          security_group_id)
+
 
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule"""
@@ -767,4 +774,3 @@ def host_get_networks(context, host):
     network host
     """
     return IMPL.host_get_networks(context, host)
-
