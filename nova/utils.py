@@ -29,6 +29,9 @@ import subprocess
 import socket
 import sys
 
+from eventlet import event
+from eventlet import greenthread
+
 from twisted.internet.threads import deferToThread
 
 from nova import exception
@@ -212,3 +215,36 @@ def deferredToThread(f):
     def g(*args, **kwargs):
         return deferToThread(f, *args, **kwargs)
     return g
+
+
+class LoopingCall(object):
+    def __init__(self, f=None, *args, **kw):
+        self.args = args
+        self.kw = kw
+        self.f = f
+        self._running = False
+
+    def start(self, interval, now=True):
+        self._running = True
+        done = event.Event()
+        def _inner():
+            if not now:
+                greenthread.sleep(interval)
+            try:
+                while self._running:
+                    self.f(*self.args, **self.kw)
+                    greenthread.sleep(interval)
+            except Exception:
+                logging.exception('hhmm')
+                done.send_exception(*sys.exc_info())
+                return
+            
+            done.send(True)
+        
+        greenthread.spawn(_inner)
+        return done    
+        
+    def stop(self):
+        self._running = False
+
+

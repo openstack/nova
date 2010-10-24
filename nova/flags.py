@@ -139,6 +139,8 @@ class FlagValues(gflags.FlagValues):
 
 FLAGS = FlagValues()
 
+gflags.FLAGS = FLAGS
+
 
 def _wrapper(func):
     def _wrapped(*args, **kw):
@@ -159,6 +161,11 @@ DEFINE_list = _wrapper(gflags.DEFINE_list)
 DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
+DEFINE_flag = _wrapper(gflags.DEFINE_flag)
+
+HelpFlag = gflags.HelpFlag
+HelpshortFlag = gflags.HelpshortFlag
+HelpXMLFlag = gflags.HelpXMLFlag
 
 
 def DECLARE(name, module_string, flag_values=FLAGS):

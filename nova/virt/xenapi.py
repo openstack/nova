@@ -36,11 +36,10 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 """
 
 import logging
+import sys
 import xmlrpclib
 
-from twisted.internet import defer
-from twisted.internet import reactor
-from twisted.internet import task
+from eventlet import tpool
 
 from nova import db
 from nova import flags
@@ -110,36 +109,33 @@ class XenAPIConnection(object):
         return [self._conn.xenapi.VM.get_name_label(vm) \
                 for vm in self._conn.xenapi.VM.get_all()]
 
-    @defer.inlineCallbacks
     def spawn(self, instance):
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is not None:
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
 
         network = db.project_get_network(None, instance.project_id)
-        network_ref = \
-            yield self._find_network_with_bridge(network.bridge)
+        network_ref = self._find_network_with_bridge(network.bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
-        vdi_uuid = yield self._fetch_image(
+        vdi_uuid = self._fetch_image(
             instance.image_id, user, project, True)
-        kernel = yield self._fetch_image(
+        kernel = self._fetch_image(
             instance.kernel_id, user, project, False)
-        ramdisk = yield self._fetch_image(
+        ramdisk = self._fetch_image(
             instance.ramdisk_id, user, project, False)
-        vdi_ref = yield self._call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        vdi_ref = self._call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-        vm_ref = yield self._create_vm(instance, kernel, ramdisk)
-        yield self._create_vbd(vm_ref, vdi_ref, 0, True)
+        vm_ref = self._create_vm(instance, kernel, ramdisk)
+        self._create_vbd(vm_ref, vdi_ref, 0, True)
         if network_ref:
-            yield self._create_vif(vm_ref, network_ref, instance.mac_address)
+            self._create_vif(vm_ref, network_ref, instance.mac_address)
         logging.debug('Starting VM %s...', vm_ref)
-        yield self._call_xenapi('VM.start', vm_ref, False, False)
+        self._call_xenapi('VM.start', vm_ref, False, False)
         logging.info('Spawning VM %s created %s.', instance.name, vm_ref)
 
-    @defer.inlineCallbacks
     def _create_vm(self, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
@@ -177,11 +173,10 @@ class XenAPIConnection(object):
             'other_config': {},
             }
         logging.debug('Created VM %s...', instance.name)
-        vm_ref = yield self._call_xenapi('VM.create', rec)
+        vm_ref = self._call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
-        defer.returnValue(vm_ref)
+        return vm_ref
 
-    @defer.inlineCallbacks
     def _create_vbd(self, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
@@ -200,12 +195,11 @@ class XenAPIConnection(object):
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
         logging.debug('Creating VBD for VM %s, VDI %s ... ', vm_ref, vdi_ref)
-        vbd_ref = yield self._call_xenapi('VBD.create', vbd_rec)
+        vbd_ref = self._call_xenapi('VBD.create', vbd_rec)
         logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
                       vdi_ref)
-        defer.returnValue(vbd_ref)
+        return vbd_ref
 
-    @defer.inlineCallbacks
     def _create_vif(self, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
@@ -221,24 +215,22 @@ class XenAPIConnection(object):
         vif_rec['qos_algorithm_params'] = {}
         logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
                       network_ref)
-        vif_ref = yield self._call_xenapi('VIF.create', vif_rec)
+        vif_ref = self._call_xenapi('VIF.create', vif_rec)
         logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
                       vm_ref, network_ref)
-        defer.returnValue(vif_ref)
+        return vif_ref
 
-    @defer.inlineCallbacks
     def _find_network_with_bridge(self, bridge):
         expr = 'field "bridge" = "%s"' % bridge
-        networks = yield self._call_xenapi('network.get_all_records_where',
-                                           expr)
+        networks = self._call_xenapi('network.get_all_records_where',
+                                     expr)
         if len(networks) == 1:
-            defer.returnValue(networks.keys()[0])
+            return networks.keys()[0]
         elif len(networks) > 1:
             raise Exception('Found non-unique network for bridge %s' % bridge)
         else:
             raise Exception('Found no network for bridge %s' % bridge)
 
-    @defer.inlineCallbacks
     def _fetch_image(self, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
@@ -255,33 +247,31 @@ class XenAPIConnection(object):
         args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
-        task = yield self._async_call_plugin('objectstore', fn, args)
-        uuid = yield self._wait_for_task(task)
-        defer.returnValue(uuid)
+        task = self._async_call_plugin('objectstore', fn, args)
+        uuid = self._wait_for_task(task)
+        return uuid
 
-    @defer.inlineCallbacks
     def reboot(self, instance):
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is None:
             raise Exception('instance not present %s' % instance.name)
-        task = yield self._call_xenapi('Async.VM.clean_reboot', vm)
-        yield self._wait_for_task(task)
+        task = self._call_xenapi('Async.VM.clean_reboot', vm)
+        self._wait_for_task(task)
 
-    @defer.inlineCallbacks
     def destroy(self, instance):
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
-            defer.returnValue(None)
+            return
         try:
-            task = yield self._call_xenapi('Async.VM.hard_shutdown', vm)
-            yield self._wait_for_task(task)
+            task = self._call_xenapi('Async.VM.hard_shutdown', vm)
+            self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
         try:
-            task = yield self._call_xenapi('Async.VM.destroy', vm)
-            yield self._wait_for_task(task)
+            task = self._call_xenapi('Async.VM.destroy', vm)
+            self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
 
@@ -299,7 +289,6 @@ class XenAPIConnection(object):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT'
 
-    @utils.deferredToThread
     def _lookup(self, i):
         return self._lookup_blocking(i)
 
@@ -316,35 +305,32 @@ class XenAPIConnection(object):
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
-        d = defer.Deferred()
-        reactor.callLater(0, self._poll_task, task, d)
-        return d
 
-    @utils.deferredToThread
-    def _poll_task(self, task, deferred):
+        done = event.Event()
+        loop = utis.LoopingTask(self._poll_task, task, done)
+        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
+        return done.wait()
+
+    def _poll_task(self, task, done):
         """Poll the given XenAPI task, and fire the given Deferred if we
         get a result."""
         try:
-            #logging.debug('Polling task %s...', task)
             status = self._conn.xenapi.task.get_status(task)
             if status == 'pending':
-                reactor.callLater(FLAGS.xenapi_task_poll_interval,
-                                  self._poll_task, task, deferred)
+                return
             elif status == 'success':
                 result = self._conn.xenapi.task.get_result(task)
                 logging.info('Task %s status: success.  %s', task, result)
-                deferred.callback(_parse_xmlrpc_value(result))
+                done.send(_parse_xmlrpc_value(result))
             else:
                 error_info = self._conn.xenapi.task.get_error_info(task)
                 logging.warn('Task %s status: %s.  %s', task, status,
                              error_info)
-                deferred.errback(XenAPI.Failure(error_info))
-            #logging.debug('Polling task %s done.', task)
+                done.send_exception(XenAPI.Failure(error_info))   
         except Exception, exc:
             logging.warn(exc)
-            deferred.errback(exc)
+            done.send_exception(*sys.exc_info())
 
-    @utils.deferredToThread
     def _call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread.  Returns
         a Deferred for the result."""
@@ -353,11 +339,10 @@ class XenAPIConnection(object):
             f = f.__getattr__(m)
         return f(*args)
 
-    @utils.deferredToThread
     def _async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
         Deferred with the task reference."""
-        return _unwrap_plugin_exceptions(
+        return tpool.execute(_unwrap_plugin_exceptions,
             self._conn.xenapi.Async.host.call_plugin,
             self._get_xenapi_host(), plugin, fn, args)
 

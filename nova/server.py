@@ -135,9 +135,9 @@ def daemonize(args, name, main):
     with daemon.DaemonContext(
             detach_process=FLAGS.daemonize,
             working_directory=FLAGS.working_directory,
-            pidfile=pidlockfile.TimeoutPIDLockFile(FLAGS.pidfile,
-                                                   acquire_timeout=1,
-                                                   threaded=False),
+            #pidfile=pidlockfile.TimeoutPIDLockFile(FLAGS.pidfile,
+            #                                       acquire_timeout=1,
+            #                                       threaded=False),
             stdin=stdin,
             stdout=stdout,
             stderr=stderr,

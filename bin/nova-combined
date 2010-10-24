@@ -27,6 +27,8 @@ eventlet.monkey_patch()
 import os
 import sys
 
+from eventlet import greenthread
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -35,7 +37,25 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import api
+from nova import flags
 from nova import service_eventlet
+from nova import wsgi
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('api_port', 8773, 'API port')
+
 
 if __name__ == '__main__':
-    service_eventlet.serve()
+    FLAGS(sys.argv)
+    
+    compute = service_eventlet.Service.create(binary='nova-compute')
+    network = service_eventlet.Service.create(binary='nova-network')
+    volume = service_eventlet.Service.create(binary='nova-volume')
+    scheduler = service_eventlet.Service.create(binary='nova-scheduler')
+    #objectstore = service_eventlet.Service.create(binary='nova-objectstore')
+
+    service_eventlet.serve(compute, network, volume, scheduler)
+    wsgi.run_server(api.API(), FLAGS.api_port)
+    

@@ -39,7 +39,6 @@ class Manager(object):
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
 
-    @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval"""
         yield
