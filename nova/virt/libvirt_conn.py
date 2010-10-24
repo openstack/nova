@@ -484,7 +484,7 @@ class LibvirtConnection(object):
         try:
             virt_dom = self._conn.lookupByName(instance_name)
         except:
-            raise NotFound("Instance %s not found" % instance_name)
+            raise exception.NotFound("Instance %s not found" % instance_name)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
