@@ -15,20 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
+from nova import wsgi
 
-from nova.api.rackspace import flavors
-from nova.tests.api.test_helper import *
 
-class FlavorsTest(unittest.TestCase):
-    def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-
-    def test_get_flavor_list(self):
-        pass
-
-    def test_get_flavor_by_id(self):
-        pass
+class Controller(wsgi.Controller):
+    pass

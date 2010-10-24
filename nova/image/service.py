@@ -18,73 +18,177 @@
 import cPickle as pickle
 import os.path
 import random
-import string
 
-class ImageService(object):
-    """Provides storage and retrieval of disk image objects."""
+from nova import flags
+from nova import exception
 
-    @staticmethod
-    def load():
-        """Factory method to return image service."""
-        #TODO(gundlach): read from config.
-        class_ = LocalImageService
-        return class_()
+FLAGS = flags.FLAGS
+
+
+flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
+                    'IP address or URL where Glance\'s Teller service resides')
+flags.DEFINE_string('glance_teller_port', '9191',
+                    'Port for Glance\'s Teller service')
+flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
+                    'IP address or URL where Glance\'s Parallax service '
+                    'resides')
+flags.DEFINE_string('glance_parallax_port', '9292',
+                    'Port for Glance\'s Parallax service')
+
+
+class BaseImageService(object):
+
+    """Base class for providing image search and retrieval services"""
 
     def index(self):
         """
-        Return a dict from opaque image id to image data.
+        Returns a sequence of mappings of id and name information about
+        images.
+
+        :retval a sequence of mappings with the following signature:
+
+            [
+            {'id': opaque id of image,
+             'name': name of image
+             }, ...
+            ]
+
         """
+        raise NotImplementedError
+
+    def detail(self):
+        """
+        Returns a sequence of mappings of detailed information about images.
+
+        :retval a sequence of mappings with the following signature:
+
+            [
+            {'id': opaque id of image,
+             'name': name of image,
+             'created_at': creation timestamp,
+             'updated_at': modification timestamp,
+             'deleted_at': deletion timestamp or None,
+             'deleted': boolean indicating if image has been deleted,
+             'status': string description of image status,
+             'is_public': boolean indicating if image is public
+             }, ...
+            ]
+
+        If the service does not implement a method that provides a detailed
+        set of information about images, then the method should raise
+        NotImplementedError, in which case Nova will emulate this method
+        with repeated calls to show() for each image received from the
+        index() method.
+        """
+        raise NotImplementedError
 
     def show(self, id):
         """
         Returns a dict containing image data for the given opaque image id.
+
+        :retval a mapping with the following signature:
+
+            {'id': opaque id of image,
+             'name': name of image,
+             'created_at': creation timestamp,
+             'updated_at': modification timestamp,
+             'deleted_at': deletion timestamp or None,
+             'deleted': boolean indicating if image has been deleted,
+             'status': string description of image status,
+             'is_public': boolean indicating if image is public
+             }, ...
+
+        :raises NotFound if the image does not exist
         """
+        raise NotImplementedError
+
+    def create(self, data):
+        """
+        Store the image data and return the new image id.
+
+        :raises AlreadyExists if the image already exist.
+
+        """
+        raise NotImplementedError
+
+    def update(self, image_id, data):
+        """Replace the contents of the given image with the new data.
+
+        :raises NotFound if the image does not exist.
+
+        """
+        raise NotImplementedError
+
+    def delete(self, image_id):
+        """
+        Delete the given image.
+
+        :raises NotFound if the image does not exist.
+
+        """
+        raise NotImplementedError
 
 
-class GlanceImageService(ImageService):
-    """Provides storage and retrieval of disk image objects within Glance."""
-    # TODO(gundlach): once Glance has an API, build this.
-    pass
+class LocalImageService(BaseImageService):
 
+    """Image service storing images to local disk.
 
-class LocalImageService(ImageService):
-    """Image service storing images to local disk."""
+    It assumes that image_ids are integers."""
 
     def __init__(self):
         self._path = "/tmp/nova/images"
         try:
             os.makedirs(self._path)
-        except OSError: # exists
+        except OSError:  # Exists
             pass
 
-    def _path_to(self, image_id=''):
-        return os.path.join(self._path, image_id)
+    def _path_to(self, image_id):
+        return os.path.join(self._path, str(image_id))
 
     def _ids(self):
         """The list of all image ids."""
-        return os.listdir(self._path)
+        return [int(i) for i in os.listdir(self._path)]
 
     def index(self):
-        return [ self.show(id) for id in self._ids() ]
+        return [dict(id=i['id'], name=i['name']) for i in self.detail()]
+
+    def detail(self):
+        return [self.show(id) for id in self._ids()]
 
     def show(self, id):
-        return pickle.load(open(self._path_to(id))) 
+        try:
+            return pickle.load(open(self._path_to(id)))
+        except IOError:
+            raise exception.NotFound
 
     def create(self, data):
         """
         Store the image data and return the new image id.
         """
-        id = ''.join(random.choice(string.letters) for _ in range(20))
+        id = random.randint(0, 2 ** 32 - 1)
         data['id'] = id
         self.update(id, data)
         return id
 
     def update(self, image_id, data):
         """Replace the contents of the given image with the new data."""
-        pickle.dump(data, open(self._path_to(image_id), 'w'))
+        try:
+            pickle.dump(data, open(self._path_to(image_id), 'w'))
+        except IOError:
+            raise exception.NotFound
 
     def delete(self, image_id):
         """
         Delete the given image.  Raises OSError if the image does not exist.
         """
-        os.unlink(self._path_to(image_id))
+        try:
+            os.unlink(self._path_to(image_id))
+        except IOError:
+            raise exception.NotFound
+
+    def delete_all(self):
+        """
+        Clears out all images in local directory
+        """
+        for id in self._ids():
+            os.unlink(self._path_to(id))

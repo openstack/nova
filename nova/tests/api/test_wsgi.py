@@ -72,7 +72,7 @@ class Test(unittest.TestCase):
             """Test controller to call from router."""
             test = self
 
-            def show(self, req, id): # pylint: disable-msg=W0622,C0103
+            def show(self, req, id):  # pylint: disable-msg=W0622,C0103
                 """Default action called for requests with an ID."""
                 self.test.assertEqual(req.path_info, '/tests/123')
                 self.test.assertEqual(id, '123')
@@ -91,6 +91,57 @@ class Test(unittest.TestCase):
         result = webob.Request.blank('/test/123').get_response(Router())
         self.assertNotEqual(result.body, "123")
 
-    def test_serializer(self):
-        # TODO(eday): Placeholder for serializer testing.
-        pass
+
+class SerializerTest(unittest.TestCase):
+
+    def match(self, url, accept, expect):
+        input_dict = dict(servers=dict(a=(2, 3)))
+        expected_xml = '<servers><a>(2,3)</a></servers>'
+        expected_json = '{"servers":{"a":[2,3]}}'
+        req = webob.Request.blank(url, headers=dict(Accept=accept))
+        result = wsgi.Serializer(req.environ).to_content_type(input_dict)
+        result = result.replace('\n', '').replace(' ', '')
+        if expect == 'xml':
+            self.assertEqual(result, expected_xml)
+        elif expect == 'json':
+            self.assertEqual(result, expected_json)
+        else:
+            raise "Bad expect value"
+
+    def test_basic(self):
+        self.match('/servers/4.json', None, expect='json')
+        self.match('/servers/4', 'application/json', expect='json')
+        self.match('/servers/4', 'application/xml', expect='xml')
+        self.match('/servers/4.xml',  None, expect='xml')
+
+    def test_defaults_to_json(self):
+        self.match('/servers/4', None, expect='json')
+        self.match('/servers/4', 'text/html', expect='json')
+
+    def test_suffix_takes_precedence_over_accept_header(self):
+        self.match('/servers/4.xml', 'application/json', expect='xml')
+        self.match('/servers/4.xml.', 'application/json', expect='json')
+
+    def test_deserialize(self):
+        xml = """
+            <a a1="1" a2="2">
+              <bs><b>1</b><b>2</b><b>3</b><b><c c1="1"/></b></bs>
+              <d><e>1</e></d>
+              <f>1</f>
+            </a>
+            """.strip()
+        as_dict = dict(a={
+                'a1': '1',
+                'a2': '2',
+                'bs': ['1', '2', '3', {'c': dict(c1='1')}],
+                'd': {'e': '1'},
+                'f': '1'})
+        metadata = {'application/xml': dict(plurals={'bs': 'b', 'ts': 't'})}
+        serializer = wsgi.Serializer({}, metadata)
+        self.assertEqual(serializer.deserialize(xml), as_dict)
+
+    def test_deserialize_empty_xml(self):
+        xml = """<a></a>"""
+        as_dict = {"a": {}}
+        serializer = wsgi.Serializer({})
+        self.assertEqual(serializer.deserialize(xml), as_dict)

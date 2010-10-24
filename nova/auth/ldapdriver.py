@@ -99,13 +99,6 @@ class LdapDriver(object):
         dn = FLAGS.ldap_user_subtree
         return self.__to_user(self.__find_object(dn, query))
 
-    def get_key_pair(self, uid, key_name):
-        """Retrieve key pair by uid and key name"""
-        dn = 'cn=%s,%s' % (key_name,
-                           self.__uid_to_dn(uid))
-        attr = self.__find_object(dn, '(objectclass=novaKeyPair)')
-        return self.__to_key_pair(uid, attr)
-
     def get_project(self, pid):
         """Retrieve project by id"""
         dn = 'cn=%s,%s' % (pid,
@@ -118,12 +111,6 @@ class LdapDriver(object):
         attrs = self.__find_objects(FLAGS.ldap_user_subtree,
                                   '(objectclass=novaUser)')
         return [self.__to_user(attr) for attr in attrs]
-
-    def get_key_pairs(self, uid):
-        """Retrieve list of key pairs"""
-        attrs = self.__find_objects(self.__uid_to_dn(uid),
-                                  '(objectclass=novaKeyPair)')
-        return [self.__to_key_pair(uid, attr) for attr in attrs]
 
     def get_projects(self, uid=None):
         """Retrieve list of projects"""
@@ -153,21 +140,6 @@ class LdapDriver(object):
         ]
         self.conn.add_s(self.__uid_to_dn(name), attr)
         return self.__to_user(dict(attr))
-
-    def create_key_pair(self, uid, key_name, public_key, fingerprint):
-        """Create a key pair"""
-        # TODO(vish): possibly refactor this to store keys in their own ou
-        #   and put dn reference in the user object
-        attr = [
-            ('objectclass', ['novaKeyPair']),
-            ('cn', [key_name]),
-            ('sshPublicKey', [public_key]),
-            ('keyFingerprint', [fingerprint]),
-        ]
-        self.conn.add_s('cn=%s,%s' % (key_name,
-                                      self.__uid_to_dn(uid)),
-                                      attr)
-        return self.__to_key_pair(uid, dict(attr))
 
     def create_project(self, name, manager_uid,
                        description=None, member_uids=None):
@@ -201,6 +173,24 @@ class LdapDriver(object):
             ('member', members)]
         self.conn.add_s('cn=%s,%s' % (name, FLAGS.ldap_project_subtree), attr)
         return self.__to_project(dict(attr))
+
+    def modify_project(self, project_id, manager_uid=None, description=None):
+        """Modify an existing project"""
+        if not manager_uid and not description:
+            return
+        attr = []
+        if manager_uid:
+            if not self.__user_exists(manager_uid):
+                raise exception.NotFound("Project can't be modified because "
+                                         "manager %s doesn't exist" %
+                                         manager_uid)
+            manager_dn = self.__uid_to_dn(manager_uid)
+            attr.append((self.ldap.MOD_REPLACE, 'projectManager', manager_dn))
+        if description:
+            attr.append((self.ldap.MOD_REPLACE, 'description', description))
+        self.conn.modify_s('cn=%s,%s' % (project_id,
+                                         FLAGS.ldap_project_subtree),
+                           attr)
 
     def add_to_project(self, uid, project_id):
         """Add user to project"""
@@ -265,18 +255,8 @@ class LdapDriver(object):
         """Delete a user"""
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s doesn't exist" % uid)
-        self.__delete_key_pairs(uid)
         self.__remove_from_all(uid)
-        self.conn.delete_s('uid=%s,%s' % (uid,
-                                          FLAGS.ldap_user_subtree))
-
-    def delete_key_pair(self, uid, key_name):
-        """Delete a key pair"""
-        if not self.__key_pair_exists(uid, key_name):
-            raise exception.NotFound("Key Pair %s doesn't exist for user %s" %
-                            (key_name, uid))
-        self.conn.delete_s('cn=%s,uid=%s,%s' % (key_name, uid,
-                                          FLAGS.ldap_user_subtree))
+        self.conn.delete_s(self.__uid_to_dn(uid))
 
     def delete_project(self, project_id):
         """Delete a project"""
@@ -284,13 +264,22 @@ class LdapDriver(object):
         self.__delete_roles(project_dn)
         self.__delete_group(project_dn)
 
+    def modify_user(self, uid, access_key=None, secret_key=None, admin=None):
+        """Modify an existing project"""
+        if not access_key and not secret_key and admin is None:
+            return
+        attr = []
+        if access_key:
+            attr.append((self.ldap.MOD_REPLACE, 'accessKey', access_key))
+        if secret_key:
+            attr.append((self.ldap.MOD_REPLACE, 'secretKey', secret_key))
+        if admin is not None:
+            attr.append((self.ldap.MOD_REPLACE, 'isAdmin', str(admin).upper()))
+        self.conn.modify_s(self.__uid_to_dn(uid), attr)
+
     def __user_exists(self, uid):
         """Check if user exists"""
         return self.get_user(uid) != None
-
-    def __key_pair_exists(self, uid, key_name):
-        """Check if key pair exists"""
-        return self.get_key_pair(uid, key_name) != None
 
     def __project_exists(self, project_id):
         """Check if project exists"""
@@ -305,24 +294,26 @@ class LdapDriver(object):
 
     def __find_dns(self, dn, query=None, scope=None):
         """Find dns by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the DNs
+        # Just return the DNs
         return [dn for dn, _attributes in res]
 
     def __find_objects(self, dn, query=None, scope=None):
         """Find objects by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the attributes
+        # Just return the attributes
         return [attributes for dn, attributes in res]
 
     def __find_role_dns(self, tree):
@@ -340,13 +331,6 @@ class LdapDriver(object):
     def __group_exists(self, dn):
         """Check if group exists"""
         return self.__find_object(dn, '(objectclass=groupOfNames)') != None
-
-    def __delete_key_pairs(self, uid):
-        """Delete all key pairs for user"""
-        keys = self.get_key_pairs(uid)
-        if keys != None:
-            for key in keys:
-                self.delete_key_pair(uid, key['name'])
 
     @staticmethod
     def __role_to_dn(role, project_id=None):
@@ -472,18 +456,6 @@ class LdapDriver(object):
             'secret': attr['secretKey'][0],
             'admin': (attr['isAdmin'][0] == 'TRUE')}
 
-    @staticmethod
-    def __to_key_pair(owner, attr):
-        """Convert ldap attributes to KeyPair object"""
-        if attr == None:
-            return None
-        return {
-            'id': attr['cn'][0],
-            'name': attr['cn'][0],
-            'owner_id': owner,
-            'public_key': attr['sshPublicKey'][0],
-            'fingerprint': attr['keyFingerprint'][0]}
-
     def __to_project(self, attr):
         """Convert ldap attributes to Project object"""
         if attr == None:
@@ -510,6 +482,6 @@ class LdapDriver(object):
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self): # pylint: disable-msg=W0231
+    def __init__(self):  # pylint: disable-msg=W0231
         __import__('nova.auth.fakeldap')
         self.ldap = sys.modules['nova.auth.fakeldap']

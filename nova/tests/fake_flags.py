@@ -24,7 +24,7 @@ flags.DECLARE('volume_driver', 'nova.volume.manager')
 FLAGS.volume_driver = 'nova.volume.driver.FakeAOEDriver'
 FLAGS.connection_type = 'fake'
 FLAGS.fake_rabbit = True
-FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('fake_network', 'nova.network.manager')

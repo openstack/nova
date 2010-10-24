@@ -235,6 +235,9 @@ class FakeConnection(object):
         """
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 
+    def get_console_output(self, instance):
+        return 'FAKE CONSOLE OUTPUT'
+
 
 class FakeInstance(object):
     def __init__(self):

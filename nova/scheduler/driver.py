@@ -31,9 +31,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last checkin for up service')
 
+
 class NoValidHost(exception.Error):
     """There is no valid host for the command."""
     pass
+
 
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""
@@ -42,7 +44,8 @@ class Scheduler(object):
     def service_is_up(service):
         """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
-        elapsed = datetime.datetime.now() - last_heartbeat
+        # Timestamps in DB are UTC.
+        elapsed = datetime.datetime.utcnow() - last_heartbeat
         return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):

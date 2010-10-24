@@ -18,7 +18,7 @@
 
 """
 Wrappers around standard crypto, including root and intermediate CAs,
-SSH keypairs and x509 certificates.
+SSH key_pairs and x509 certificates.
 """
 
 import base64
@@ -39,9 +39,12 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ca_file', 'cacert.pem', 'Filename of root CA')
-flags.DEFINE_string('keys_path', utils.abspath('../keys'), 'Where we keep our keys')
-flags.DEFINE_string('ca_path', utils.abspath('../CA'), 'Where we keep our root CA')
-flags.DEFINE_boolean('use_intermediate_ca', False, 'Should we use intermediate CAs for each project?')
+flags.DEFINE_string('keys_path', utils.abspath('../keys'),
+                    'Where we keep our keys')
+flags.DEFINE_string('ca_path', utils.abspath('../CA'),
+                    'Where we keep our root CA')
+flags.DEFINE_boolean('use_intermediate_ca', False,
+                     'Should we use intermediate CAs for each project?')
 
 
 def ca_path(project_id):
@@ -55,11 +58,11 @@ def fetch_ca(project_id=None, chain=True):
         project_id = None
     buffer = ""
     if project_id:
-        with open(ca_path(project_id),"r") as cafile:
+        with open(ca_path(project_id), "r") as cafile:
             buffer += cafile.read()
         if not chain:
             return buffer
-    with open(ca_path(None),"r") as cafile:
+    with open(ca_path(None), "r") as cafile:
         buffer += cafile.read()
     return buffer
 
@@ -88,17 +91,18 @@ def generate_key_pair(bits=1024):
 
 
 def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
-    rsa_key = M2Crypto.RSA.load_pub_key_bio(M2Crypto.BIO.MemoryBuffer(ssl_public_key))
+    pub_key_buffer = M2Crypto.BIO.MemoryBuffer(ssl_public_key)
+    rsa_key = M2Crypto.RSA.load_pub_key_bio(pub_key_buffer)
     e, n = rsa_key.pub()
 
     key_type = 'ssh-rsa'
 
     key_data = struct.pack('>I', len(key_type))
     key_data += key_type
-    key_data += '%s%s' % (e,n)
+    key_data += '%s%s' % (e, n)
 
     b64_blob = base64.b64encode(key_data)
-    return '%s %s %s@%s\n' %(key_type, b64_blob, name, suffix)
+    return '%s %s %s@%s\n' % (key_type, b64_blob, name, suffix)
 
 
 def generate_x509_cert(subject, bits=1024):
@@ -106,8 +110,11 @@ def generate_x509_cert(subject, bits=1024):
     keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
     csrfile = os.path.join(tmpdir, 'temp.csr')
     logging.debug("openssl genrsa -out %s %s" % (keyfile, bits))
-    utils.runthis("Generating private key: %s", "openssl genrsa -out %s %s" % (keyfile, bits))
-    utils.runthis("Generating CSR: %s", "openssl req -new -key %s -out %s -batch -subj %s" % (keyfile, csrfile, subject))
+    utils.runthis("Generating private key: %s",
+                  "openssl genrsa -out %s %s" % (keyfile, bits))
+    utils.runthis("Generating CSR: %s",
+                  "openssl req -new -key %s -out %s -batch -subj %s" %
+                  (keyfile, csrfile, subject))
     private_key = open(keyfile).read()
     csr = open(csrfile).read()
     shutil.rmtree(tmpdir)
@@ -123,7 +130,8 @@ def sign_csr(csr_text, intermediate=None):
     if not os.path.exists(user_ca):
         start = os.getcwd()
         os.chdir(FLAGS.ca_path)
-        utils.runthis("Generating intermediate CA: %s", "sh geninter.sh %s" % (intermediate))
+        utils.runthis("Generating intermediate CA: %s",
+                      "sh geninter.sh %s" % (intermediate))
         os.chdir(start)
     return _sign_csr(csr_text, user_ca)
 
@@ -137,7 +145,10 @@ def _sign_csr(csr_text, ca_folder):
     start = os.getcwd()
     # Change working dir to CA
     os.chdir(ca_folder)
-    utils.runthis("Signing cert: %s", "openssl ca -batch -out %s/outbound.crt -config ./openssl.cnf -infiles %s/inbound.csr" % (tmpfolder, tmpfolder))
+    utils.runthis("Signing cert: %s",
+                  "openssl ca -batch -out %s/outbound.crt "
+                  "-config ./openssl.cnf -infiles %s/inbound.csr" %
+                  (tmpfolder, tmpfolder))
     os.chdir(start)
     with open("%s/outbound.crt" % (tmpfolder), "r") as crtfile:
         return crtfile.read()
@@ -148,10 +159,11 @@ def mkreq(bits, subject="foo", ca=0):
     req = M2Crypto.X509.Request()
     rsa = M2Crypto.RSA.gen_key(bits, 65537, callback=lambda: None)
     pk.assign_rsa(rsa)
-    rsa = None # should not be freed here
+    # Should not be freed here
+    rsa = None
     req.set_pubkey(pk)
     req.set_subject(subject)
-    req.sign(pk,'sha512')
+    req.sign(pk, 'sha512')
     assert req.verify(pk)
     pk2 = req.get_pubkey()
     assert req.verify(pk2)
@@ -165,7 +177,8 @@ def mkcacert(subject='nova', years=1):
     cert = M2Crypto.X509.X509()
     cert.set_serial_number(1)
     cert.set_version(2)
-    cert.set_subject(sub) # FIXME subject is not set in mkreq yet
+    # FIXME subject is not set in mkreq yet
+    cert.set_subject(sub)
     t = long(time.time()) + time.timezone
     now = M2Crypto.ASN1.ASN1_UTCTIME()
     now.set_time(t)
@@ -189,7 +202,6 @@ def mkcacert(subject='nova', years=1):
     return cert, pk, pkey
 
 
-
 # Copyright (c) 2006-2009 Mitch Garnaat http://garnaat.org/
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -211,6 +223,7 @@ def mkcacert(subject='nova', years=1):
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 # http://code.google.com/p/boto
+
 
 def compute_md5(fp):
     """

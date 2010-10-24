@@ -15,20 +15,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.rackspace import base
-from nova.compute import instance_types
 from webob import exc
 
-class Controller(base.Controller):
-    """Flavor controller for the Rackspace API."""
+from nova.api.openstack import faults
+from nova.compute import instance_types
+from nova import wsgi
+import nova.api.openstack
+
+
+class Controller(wsgi.Controller):
+    """Flavor controller for the OpenStack API."""
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "flavor": [ "id", "name", "ram", "disk" ]
-            }
-        }
-    }
+                "flavor": ["id", "name", "ram", "disk"]}}}
 
     def index(self, req):
         """Return all flavors in brief."""
@@ -38,6 +39,7 @@ class Controller(base.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
+        items = nova.api.openstack.limited(items, req)
         return dict(flavors=items)
 
     def show(self, req, id):
@@ -47,7 +49,7 @@ class Controller(base.Controller):
                 item = dict(ram=val['memory_mb'], disk=val['local_gb'],
                             id=val['flavorid'], name=name)
                 return dict(flavor=item)
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self):
         """Return the list of all flavorids."""

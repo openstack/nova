@@ -90,6 +90,12 @@ class FlagValues(gflags.FlagValues):
         self.ClearDirty()
         return args
 
+    def Reset(self):
+        gflags.FlagValues.Reset(self)
+        self.__dict__['__dirty'] = []
+        self.__dict__['__was_already_parsed'] = False
+        self.__dict__['__stored_argv'] = []
+
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
@@ -167,11 +173,15 @@ def DECLARE(name, module_string, flag_values=FLAGS):
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
+DEFINE_list('region_list',
+            [],
+            'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
-DEFINE_string('scheduler_topic', 'scheduler', 'the topic scheduler nodes listen on')
+DEFINE_string('scheduler_topic', 'scheduler',
+              'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
 DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
@@ -185,6 +195,8 @@ DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
+DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
+DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
 
@@ -216,6 +228,10 @@ DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
+
+# The service to use for image search and retrieval
+DEFINE_string('image_service', 'nova.image.service.LocalImageService',
+              'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
               'name of this node')

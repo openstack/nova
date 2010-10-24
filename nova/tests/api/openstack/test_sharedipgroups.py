@@ -17,8 +17,10 @@
 
 import unittest
 
-from nova.api.rackspace import sharedipgroups
-from nova.tests.api.test_helper import *
+import stubout
+
+from nova.api.openstack import sharedipgroups
+
 
 class SharedIpGroupsTest(unittest.TestCase):
     def setUp(self):
@@ -35,6 +37,3 @@ class SharedIpGroupsTest(unittest.TestCase):
 
     def test_delete_shared_ip_group(self):
         pass
-
-
-

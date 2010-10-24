@@ -15,26 +15,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.image.service
-from nova.api.rackspace import base
-from nova.api.rackspace import _id_translator
 from webob import exc
 
-class Controller(base.Controller):
+from nova import flags
+from nova import utils
+from nova import wsgi
+import nova.api.openstack
+import nova.image.service
+from nova.api.openstack import faults
+
+
+FLAGS = flags.FLAGS
+
+
+class Controller(wsgi.Controller):
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "image": [ "id", "name", "updated", "created", "status",
-                           "serverId", "progress" ]
-            }
-        }
-    }
+                "image": ["id", "name", "updated", "created", "status",
+                          "serverId", "progress"]}}}
 
     def __init__(self):
-        self._service = nova.image.service.ImageService.load()
-        self._id_translator = _id_translator.RackspaceAPIIdTranslator(
-                "image", self._service.__class__.__name__)
+        self._service = utils.import_object(FLAGS.image_service)
 
     def index(self, req):
         """Return all public images in brief."""
@@ -43,28 +46,30 @@ class Controller(base.Controller):
 
     def detail(self, req):
         """Return all public images in detail."""
-        data = self._service.index()
-        for img in data:
-            img['id'] = self._id_translator.to_rs_id(img['id'])
-        return dict(images=data)
+        try:
+            images = self._service.detail()
+            images = nova.api.openstack.limited(images, req)
+        except NotImplementedError:
+            # Emulate detail() using repeated calls to show()
+            images = self._service.index()
+            images = nova.api.openstack.limited(images, req)
+            images = [self._service.show(i['id']) for i in images]
+        return dict(images=images)
 
     def show(self, req, id):
         """Return data about the given image id."""
-        opaque_id = self._id_translator.from_rs_id(id)
-        img = self._service.show(opaque_id)
-        img['id'] = id
-        return dict(image=img)
+        return dict(image=self._service.show(id))
 
     def delete(self, req, id):
         # Only public images are supported for now.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
         # Only public images are supported for now, so a request to
         # make a backup of a server cannot be supproted.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())
 
     def update(self, req, id):
-        # Users may not modify public images, and that's all that 
+        # Users may not modify public images, and that's all that
         # we support for now.
-        raise exc.HTTPNotFound()
+        raise faults.Fault(exc.HTTPNotFound())

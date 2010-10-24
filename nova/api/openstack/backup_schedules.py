@@ -15,4 +15,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-class Controller(object): pass
+import time
+from webob import exc
+
+from nova import wsgi
+from nova.api.openstack import faults
+import nova.image.service
+
+
+class Controller(wsgi.Controller):
+    def __init__(self):
+        pass
+
+    def index(self, req, server_id):
+        return faults.Fault(exc.HTTPNotFound())
+
+    def create(self, req, server_id):
+        """ No actual update method required, since the existing API allows
+        both create and update through a POST """
+        return faults.Fault(exc.HTTPNotFound())
+
+    def delete(self, req, server_id, id):
+        return faults.Fault(exc.HTTPNotFound())

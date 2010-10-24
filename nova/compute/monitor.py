@@ -85,8 +85,7 @@ RRD_VALUES = {
         'RRA:MAX:0.5:6:800',
         'RRA:MAX:0.5:24:800',
         'RRA:MAX:0.5:444:800',
-        ]
-    }
+        ]}
 
 
 utcnow = datetime.datetime.utcnow
@@ -97,15 +96,12 @@ def update_rrd(instance, name, data):
     Updates the specified RRD file.
     """
     filename = os.path.join(instance.get_rrd_path(), '%s.rrd' % name)
-    
+
     if not os.path.exists(filename):
         init_rrd(instance, name)
-    
+
     timestamp = int(time.mktime(utcnow().timetuple()))
-    rrdtool.update (
-        filename,
-        '%d:%s' % (timestamp, data)
-    )
+    rrdtool.update(filename, '%d:%s' % (timestamp, data))
 
 
 def init_rrd(instance, name):
@@ -113,29 +109,28 @@ def init_rrd(instance, name):
     Initializes the specified RRD file.
     """
     path = os.path.join(FLAGS.monitoring_rrd_path, instance.instance_id)
-    
+
     if not os.path.exists(path):
         os.makedirs(path)
-    
+
     filename = os.path.join(path, '%s.rrd' % name)
-    
+
     if not os.path.exists(filename):
-        rrdtool.create (
+        rrdtool.create(
             filename,
             '--step', '%d' % FLAGS.monitoring_instances_step,
             '--start', '0',
-            *RRD_VALUES[name]
-        )
+            *RRD_VALUES[name])
 
-        
+
 def graph_cpu(instance, duration):
     """
     Creates a graph of cpu usage for the specified instance and duration.
     """
     path = instance.get_rrd_path()
     filename = os.path.join(path, 'cpu-%s.png' % duration)
-    
-    rrdtool.graph (
+
+    rrdtool.graph(
         filename,
         '--disable-rrdtool-tag',
         '--imgformat', 'PNG',
@@ -146,9 +141,8 @@ def graph_cpu(instance, duration):
         '-l', '0',
         '-u', '100',
         'DEF:cpu=%s:cpu:AVERAGE' % os.path.join(path, 'cpu.rrd'),
-        'AREA:cpu#eacc00:% CPU',
-    )
-    
+        'AREA:cpu#eacc00:% CPU',)
+
     store_graph(instance.instance_id, filename)
 
 
@@ -158,8 +152,8 @@ def graph_net(instance, duration):
     """
     path = instance.get_rrd_path()
     filename = os.path.join(path, 'net-%s.png' % duration)
-    
-    rrdtool.graph (
+
+    rrdtool.graph(
         filename,
         '--disable-rrdtool-tag',
         '--imgformat', 'PNG',
@@ -174,20 +168,19 @@ def graph_net(instance, duration):
         'DEF:rx=%s:rx:AVERAGE' % os.path.join(path, 'net.rrd'),
         'DEF:tx=%s:tx:AVERAGE' % os.path.join(path, 'net.rrd'),
         'AREA:rx#00FF00:In traffic',
-        'LINE1:tx#0000FF:Out traffic',
-    )
-    
+        'LINE1:tx#0000FF:Out traffic',)
+
     store_graph(instance.instance_id, filename)
 
-    
+
 def graph_disk(instance, duration):
     """
     Creates a graph of disk usage for the specified duration.
-    """        
+    """
     path = instance.get_rrd_path()
     filename = os.path.join(path, 'disk-%s.png' % duration)
-    
-    rrdtool.graph (
+
+    rrdtool.graph(
         filename,
         '--disable-rrdtool-tag',
         '--imgformat', 'PNG',
@@ -202,9 +195,8 @@ def graph_disk(instance, duration):
         'DEF:rd=%s:rd:AVERAGE' % os.path.join(path, 'disk.rrd'),
         'DEF:wr=%s:wr:AVERAGE' % os.path.join(path, 'disk.rrd'),
         'AREA:rd#00FF00:Read',
-        'LINE1:wr#0000FF:Write',
-    )
-    
+        'LINE1:wr#0000FF:Write',)
+
     store_graph(instance.instance_id, filename)
 
 
@@ -224,17 +216,16 @@ def store_graph(instance_id, filename):
         is_secure=False,
         calling_format=boto.s3.connection.OrdinaryCallingFormat(),
         port=FLAGS.s3_port,
-        host=FLAGS.s3_host
-    )
+        host=FLAGS.s3_host)
     bucket_name = '_%s.monitor' % instance_id
-    
+
     # Object store isn't creating the bucket like it should currently
     # when it is first requested, so have to catch and create manually.
     try:
         bucket = s3.get_bucket(bucket_name)
     except Exception:
         bucket = s3.create_bucket(bucket_name)
-            
+
     key = boto.s3.Key(bucket)
     key.key = os.path.basename(filename)
     key.set_contents_from_filename(filename)
@@ -247,18 +238,18 @@ class Instance(object):
         self.last_updated = datetime.datetime.min
         self.cputime = 0
         self.cputime_last_updated = None
-        
+
         init_rrd(self, 'cpu')
         init_rrd(self, 'net')
         init_rrd(self, 'disk')
-        
+
     def needs_update(self):
         """
         Indicates whether this instance is due to have its statistics updated.
         """
         delta = utcnow() - self.last_updated
         return delta.seconds >= FLAGS.monitoring_instances_step
-        
+
     def update(self):
         """
         Updates the instances statistics and stores the resulting graphs
@@ -271,7 +262,7 @@ class Instance(object):
             if data != None:
                 logging.debug('CPU: %s', data)
                 update_rrd(self, 'cpu', data)
-        
+
             data = self.fetch_net_stats()
             logging.debug('NET: %s', data)
             update_rrd(self, 'net', data)
@@ -279,7 +270,7 @@ class Instance(object):
             data = self.fetch_disk_stats()
             logging.debug('DISK: %s', data)
             update_rrd(self, 'disk', data)
-            
+
             # TODO(devcamcar): Turn these into pool.ProcessPool.execute() calls
             # and make the methods @defer.inlineCallbacks.
             graph_cpu(self, '1d')
@@ -297,13 +288,13 @@ class Instance(object):
             logging.exception('unexpected error during update')
 
         self.last_updated = utcnow()
-        
+
     def get_rrd_path(self):
         """
         Returns the path to where RRD files are stored.
         """
         return os.path.join(FLAGS.monitoring_rrd_path, self.instance_id)
-        
+
     def fetch_cpu_stats(self):
         """
         Returns cpu usage statistics for this instance.
@@ -327,17 +318,17 @@ class Instance(object):
         # Calculate the number of seconds between samples.
         d = self.cputime_last_updated - cputime_last_updated
         t = d.days * 86400 + d.seconds
-        
+
         logging.debug('t = %d', t)
 
         # Calculate change over time in number of nanoseconds of CPU time used.
         cputime_delta = self.cputime - cputime_last
-        
+
         logging.debug('cputime_delta = %s', cputime_delta)
 
         # Get the number of virtual cpus in this domain.
         vcpus = int(info['num_cpu'])
- 
+
         logging.debug('vcpus = %d', vcpus)
 
         # Calculate CPU % used and cap at 100.
@@ -349,9 +340,9 @@ class Instance(object):
         """
         rd = 0
         wr = 0
-    
+
         disks = self.conn.get_disks(self.instance_id)
-    
+
         # Aggregate the read and write totals.
         for disk in disks:
             try:
@@ -363,7 +354,7 @@ class Instance(object):
                 logging.error('Cannot get blockstats for "%s" on "%s"',
                               disk, self.instance_id)
                 raise
-        
+
         return '%d:%d' % (rd, wr)
 
     def fetch_net_stats(self):
@@ -372,9 +363,9 @@ class Instance(object):
         """
         rx = 0
         tx = 0
-    
+
         interfaces = self.conn.get_interfaces(self.instance_id)
-    
+
         # Aggregate the in and out totals.
         for interface in interfaces:
             try:
@@ -385,7 +376,7 @@ class Instance(object):
                 logging.error('Cannot get ifstats for "%s" on "%s"',
                               interface, self.instance_id)
                 raise
-                
+
         return '%d:%d' % (rx, tx)
 
 
@@ -400,16 +391,16 @@ class InstanceMonitor(object, service.Service):
         """
         self._instances = {}
         self._loop = task.LoopingCall(self.updateInstances)
-    
+
     def startService(self):
         self._instances = {}
         self._loop.start(interval=FLAGS.monitoring_instances_delay)
         service.Service.startService(self)
-        
+
     def stopService(self):
         self._loop.stop()
         service.Service.stopService(self)
-    
+
     def updateInstances(self):
         """
         Update resource usage for all running instances.
@@ -420,20 +411,20 @@ class InstanceMonitor(object, service.Service):
             logging.exception('unexpected exception getting connection')
             time.sleep(FLAGS.monitoring_instances_delay)
             return
-    
+
         domain_ids = conn.list_instances()
         try:
-           self.updateInstances_(conn, domain_ids)
+            self.updateInstances_(conn, domain_ids)
         except Exception, exn:
-           logging.exception('updateInstances_')
+            logging.exception('updateInstances_')
 
     def updateInstances_(self, conn, domain_ids):
         for domain_id in domain_ids:
-            if not domain_id in self._instances:                    
+            if not domain_id in self._instances:
                 instance = Instance(conn, domain_id)
                 self._instances[domain_id] = instance
                 logging.debug('Found instance: %s', domain_id)
-        
+
         for key in self._instances.keys():
             instance = self._instances[key]
             if instance.needs_update():

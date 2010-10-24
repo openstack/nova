@@ -38,6 +38,7 @@ class ProcessTestCase(test.TrialTestCase):
     def test_execute_stdout(self):
         pool = process.ProcessPool(2)
         d = pool.simple_execute('echo test')
+
         def _check(rv):
             self.assertEqual(rv[0], 'test\n')
             self.assertEqual(rv[1], '')
@@ -49,6 +50,7 @@ class ProcessTestCase(test.TrialTestCase):
     def test_execute_stderr(self):
         pool = process.ProcessPool(2)
         d = pool.simple_execute('cat BAD_FILE', check_exit_code=False)
+
         def _check(rv):
             self.assertEqual(rv[0], '')
             self.assert_('No such file' in rv[1])
@@ -72,6 +74,7 @@ class ProcessTestCase(test.TrialTestCase):
         d4 = pool.simple_execute('sleep 0.005')
 
         called = []
+
         def _called(rv, name):
             called.append(name)
 

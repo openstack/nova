@@ -18,6 +18,7 @@
 
 import logging
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -25,15 +26,14 @@ from nova import quota
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.endpoint import cloud
-from nova.endpoint import api
+from nova.api.ec2 import cloud
 
 
 FLAGS = flags.FLAGS
 
 
 class QuotaTestCase(test.TrialTestCase):
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -48,11 +48,10 @@ class QuotaTestCase(test.TrialTestCase):
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('admin', 'admin', 'admin')
         self.network = utils.import_object(FLAGS.network_manager)
-        self.context = api.APIRequestContext(handler=None,
-                                             project=self.project,
-                                             user=self.user)
+        self.context = context.RequestContext(project=self.project,
+                                              user=self.user)
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         manager.AuthManager().delete_project(self.project)
         manager.AuthManager().delete_user(self.user)
         super(QuotaTestCase, self).tearDown()
@@ -95,11 +94,11 @@ class QuotaTestCase(test.TrialTestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
-        self.assertFailure(self.cloud.run_instances(self.context,
-                                                    min_count=1,
-                                                    max_count=1,
-                                                    instance_type='m1.small'),
-                           cloud.QuotaError)
+        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
+                                            self.context,
+                                            min_count=1,
+                                            max_count=1,
+                                            instance_type='m1.small')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -107,11 +106,11 @@ class QuotaTestCase(test.TrialTestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
-        self.assertFailure(self.cloud.run_instances(self.context,
-                                                    min_count=1,
-                                                    max_count=1,
-                                                    instance_type='m1.small'),
-                           cloud.QuotaError)
+        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
+                                            self.context,
+                                            min_count=1,
+                                            max_count=1,
+                                            instance_type='m1.small')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -120,10 +119,9 @@ class QuotaTestCase(test.TrialTestCase):
         for i in range(FLAGS.quota_volumes):
             volume_id = self._create_volume()
             volume_ids.append(volume_id)
-        self.assertRaises(cloud.QuotaError,
-                          self.cloud.create_volume,
-                          self.context,
-                          size=10)
+        self.assertRaises(cloud.QuotaError, self.cloud.create_volume,
+                                            self.context,
+                                            size=10)
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -141,15 +139,15 @@ class QuotaTestCase(test.TrialTestCase):
     def test_too_many_addresses(self):
         address = '192.168.0.100'
         try:
-            db.floating_ip_get_by_address(None, address)
+            db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
-            db.floating_ip_create(None, {'address': address,
-                                         'host': FLAGS.host})
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': address, 'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
         # NOTE(vish): This assert never fails. When cloud attempts to
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertFailure(self.cloud.allocate_address(self.context),
-                           cloud.QuotaError)
+        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address,
+                          self.context)

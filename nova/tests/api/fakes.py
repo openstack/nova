@@ -15,25 +15,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
-from nova.api.rackspace import images
-from nova.tests.api.test_helper import *
-
-class ImagesTest(unittest.TestCase):
-    def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-
-    def test_get_image_list(self):
-        pass
-
-    def test_delete_image(self):
-        pass
-    
-    def test_create_image(self):
-        pass
+import webob.dec
+from nova import wsgi
 
 
+class APIStub(object):
+    """Class to verify request and mark it was called."""
+    @webob.dec.wsgify
+    def __call__(self, req):
+        return req.path_info

@@ -23,60 +23,19 @@ from boto.ec2 import regioninfo
 import httplib
 import random
 import StringIO
-from tornado import httpserver
-from twisted.internet import defer
+import webob
 
+from nova import context
 from nova import flags
 from nova import test
+from nova import api
+from nova.api.ec2 import cloud
+from nova.api.ec2 import apirequest
 from nova.auth import manager
-from nova.endpoint import api
-from nova.endpoint import cloud
 
 
 FLAGS = flags.FLAGS
-
-
-# NOTE(termie): These are a bunch of helper methods and classes to short
-#               circuit boto calls and feed them into our tornado handlers,
-#               it's pretty damn circuitous so apologies if you have to fix
-#               a bug in it
-# NOTE(jaypipes) The pylint disables here are for R0913 (too many args) which
-#                isn't controllable since boto's HTTPRequest needs that many 
-#                args, and for the version-differentiated import of tornado's 
-#                httputil.
-# NOTE(jaypipes): The disable-msg=E1101 and E1103 below is because pylint is
-#                 unable to introspect the deferred's return value properly
-
-def boto_to_tornado(method, path, headers, data, # pylint: disable-msg=R0913
-                    host, connection=None):
-    """ translate boto requests into tornado requests
-
-    connection should be a FakeTornadoHttpConnection instance
-    """
-    try:
-        headers = httpserver.HTTPHeaders()
-    except AttributeError:
-        from tornado import httputil # pylint: disable-msg=E0611
-        headers = httputil.HTTPHeaders()
-    for k, v in headers.iteritems():
-        headers[k] = v
-
-    req = httpserver.HTTPRequest(method=method,
-                                 uri=path,
-                                 headers=headers,
-                                 body=data,
-                                 host=host,
-                                 remote_ip='127.0.0.1',
-                                 connection=connection)
-    return req
-
-
-def raw_to_httpresponse(response_string):
-    """translate a raw tornado http response into an httplib.HTTPResponse"""
-    sock = FakeHttplibSocket(response_string)
-    resp = httplib.HTTPResponse(sock)
-    resp.begin()
-    return resp
+FLAGS.FAKE_subdomain = 'ec2'
 
 
 class FakeHttplibSocket(object):
@@ -89,116 +48,82 @@ class FakeHttplibSocket(object):
         return self._buffer
 
 
-class FakeTornadoStream(object):
-    """a fake stream to satisfy tornado's assumptions, trivial"""
-    def set_close_callback(self, _func):
-        """Dummy callback for stream"""
-        pass
-
-
-class FakeTornadoConnection(object):
-    """A fake connection object for tornado to pass to its handlers
-
-    web requests are expected to write to this as they get data and call
-    finish when they are done with the request, we buffer the writes and
-    kick off a callback when it is done so that we can feed the result back
-    into boto.
-    """
-    def __init__(self, deferred):
-        self._deferred = deferred
-        self._buffer = StringIO.StringIO()
-
-    def write(self, chunk):
-        """Writes a chunk of data to the internal buffer"""
-        self._buffer.write(chunk)
-
-    def finish(self):
-        """Finalizes the connection and returns the buffered data via the
-        deferred callback.
-        """
-        data = self._buffer.getvalue()
-        self._deferred.callback(data)
-
-    xheaders = None
-
-    @property
-    def stream(self): # pylint: disable-msg=R0201
-        """Required property for interfacing with tornado"""
-        return FakeTornadoStream()
-
-
 class FakeHttplibConnection(object):
     """A fake httplib.HTTPConnection for boto to use
 
     requests made via this connection actually get translated and routed into
-    our tornado app, we then wait for the response and turn it back into
+    our WSGI app, we then wait for the response and turn it back into
     the httplib.HTTPResponse that boto expects.
     """
     def __init__(self, app, host, is_secure=False):
         self.app = app
         self.host = host
-        self.deferred = defer.Deferred()
 
     def request(self, method, path, data, headers):
-        """Creates a connection to a fake tornado and sets
-        up a deferred request with the supplied data and
-        headers"""
-        conn = FakeTornadoConnection(self.deferred)
-        request = boto_to_tornado(connection=conn,
-                                  method=method,
-                                  path=path,
-                                  headers=headers,
-                                  data=data,
-                                  host=self.host)
-        self.app(request)
-        self.deferred.addCallback(raw_to_httpresponse)
+        req = webob.Request.blank(path)
+        req.method = method
+        req.body = data
+        req.headers = headers
+        req.headers['Accept'] = 'text/html'
+        req.host = self.host
+        # Call the WSGI app, get the HTTP response
+        resp = str(req.get_response(self.app))
+        # For some reason, the response doesn't have "HTTP/1.0 " prepended; I
+        # guess that's a function the web server usually provides.
+        resp = "HTTP/1.0 %s" % resp
+        sock = FakeHttplibSocket(resp)
+        self.http_response = httplib.HTTPResponse(sock)
+        self.http_response.begin()
 
     def getresponse(self):
-        """A bit of deferred magic for catching the response
-        from the previously deferred request"""
-        @defer.inlineCallbacks
-        def _waiter():
-            """Callback that simply yields the deferred's
-            return value."""
-            result = yield self.deferred
-            defer.returnValue(result)
-        d = _waiter()
-        # NOTE(termie): defer.returnValue above should ensure that
-        #               this deferred has already been called by the time
-        #               we get here, we are going to cheat and return
-        #               the result of the callback
-        return d.result # pylint: disable-msg=E1101
+        return self.http_response
 
     def close(self):
         """Required for compatibility with boto/tornado"""
         pass
 
 
+class XmlConversionTestCase(test.BaseTestCase):
+    """Unit test api xml conversion"""
+    def test_number_conversion(self):
+        conv = apirequest._try_convert
+        self.assertEqual(conv('None'), None)
+        self.assertEqual(conv('True'), True)
+        self.assertEqual(conv('False'), False)
+        self.assertEqual(conv('0'), 0)
+        self.assertEqual(conv('42'), 42)
+        self.assertEqual(conv('3.14'), 3.14)
+        self.assertEqual(conv('-57.12'), -57.12)
+        self.assertEqual(conv('0x57'), 0x57)
+        self.assertEqual(conv('-0x57'), -0x57)
+        self.assertEqual(conv('-'), '-')
+        self.assertEqual(conv('-0'), 0)
+
+
 class ApiEc2TestCase(test.BaseTestCase):
     """Unit test for the cloud controller on an EC2 API"""
-    def setUp(self): # pylint: disable-msg=C0103,C0111
+    def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
         self.manager = manager.AuthManager()
-        self.cloud = cloud.CloudController()
 
         self.host = '127.0.0.1'
 
-        self.app = api.APIServerApplication({'Cloud': self.cloud})
+        self.app = api.API()
+
+    def expect_http(self, host=None, is_secure=False):
+        """Returns a new EC2 connection"""
         self.ec2 = boto.connect_ec2(
                 aws_access_key_id='fake',
                 aws_secret_access_key='fake',
                 is_secure=False,
                 region=regioninfo.RegionInfo(None, 'test', self.host),
-                port=FLAGS.cc_port,
+                port=8773,
                 path='/services/Cloud')
 
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
-
-    def expect_http(self, host=None, is_secure=False):
-        """Returns a new EC2 connection"""
         http = FakeHttplibConnection(
-                self.app, '%s:%d' % (self.host, FLAGS.cc_port), False)
+                self.app, '%s:8773' % (self.host), False)
         # pylint: disable-msg=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(http)
         return http
@@ -214,7 +139,6 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 
-
     def test_get_all_key_pairs(self):
         """Test that, after creating a user and project and generating
          a key pair, that the API call to list key pairs works properly"""
@@ -224,10 +148,195 @@ class ApiEc2TestCase(test.BaseTestCase):
                           for x in range(random.randint(4, 8)))
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
-        self.manager.generate_key_pair(user.id, keyname)
+        # NOTE(vish): create depends on pool, so call helper directly
+        cloud._gen_key(context.get_admin_context(), user.id, keyname)
 
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
         self.assertEquals(len(results), 1)
         self.manager.delete_project(project)
         self.manager.delete_user(user)
+
+    def test_get_all_security_groups(self):
+        """Test that we can retrieve security groups"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        rv = self.ec2.get_all_security_groups()
+
+        self.assertEquals(len(rv), 1)
+        self.assertEquals(rv[0].name, 'default')
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_create_delete_security_group(self):
+        """Test that we can create a security group"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
+                                      for x in range(random.randint(4, 8)))
+
+        self.ec2.create_security_group(security_group_name, 'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        self.assertEquals(len(rv), 2)
+        self.assertTrue(security_group_name in [group.name for group in rv])
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_authorize_revoke_security_group_cidr(self):
+        """
+        Test that we can add and remove CIDR based rules
+        to a security group
+        """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
+                                      for x in range(random.randint(4, 8)))
+
+        group = self.ec2.create_security_group(security_group_name,
+                                               'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.authorize('tcp', 80, 81, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(int(group.rules[0].from_port), 80)
+                self.assertEquals(int(group.rules[0].to_port), 81)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]),  '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.revoke('tcp', 80, 81, '0.0.0.0/0')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        rv = self.ec2.get_all_security_groups()
+
+        self.assertEqual(len(rv), 1)
+        self.assertEqual(rv[0].name, 'default')
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+        return
+
+    def test_authorize_revoke_security_group_foreign_group(self):
+        """
+        Test that we can grant and revoke another security group access
+        to a security group
+        """
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        project = self.manager.create_project('fake', 'fake', 'fake')
+
+        # At the moment, you need both of these to actually be netadmin
+        self.manager.add_role('fake', 'netadmin')
+        project.add_role('fake', 'netadmin')
+
+        rand_string = 'sdiuisudfsdcnpaqwertasd'
+        security_group_name = "".join(random.choice(rand_string)
+                                      for x in range(random.randint(4, 8)))
+        other_security_group_name = "".join(random.choice(rand_string)
+                                      for x in range(random.randint(4, 8)))
+
+        group = self.ec2.create_security_group(security_group_name,
+                                               'test group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        other_group = self.ec2.create_security_group(other_security_group_name,
+                                                     'some other group')
+
+        self.expect_http()
+        self.mox.ReplayAll()
+        group.connection = self.ec2
+
+        group.authorize(src_group=other_group)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+
+        # I don't bother checkng that we actually find it here,
+        # because the create/delete unit test further up should
+        # be good enough for that.
+        for group in rv:
+            if group.name == security_group_name:
+                self.assertEquals(len(group.rules), 1)
+                self.assertEquals(len(group.rules[0].grants), 1)
+                self.assertEquals(str(group.rules[0].grants[0]), '%s-%s' %
+                                  (other_security_group_name, 'fake'))
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        rv = self.ec2.get_all_security_groups()
+
+        for group in rv:
+            if group.name == security_group_name:
+                self.expect_http()
+                self.mox.ReplayAll()
+                group.connection = self.ec2
+                group.revoke(src_group=other_group)
+
+        self.expect_http()
+        self.mox.ReplayAll()
+
+        self.ec2.delete_security_group(security_group_name)
+
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+        return

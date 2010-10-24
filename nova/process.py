@@ -36,6 +36,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('process_pool_size', 4,
                      'Number of processes to use in the process pool')
 
+
 # This is based on _BackRelay from twister.internal.utils, but modified to
 #  capture both stdout and stderr, without odd stderr handling, and also to
 #  handle stdin
@@ -55,8 +56,8 @@ class BackRelayWithInput(protocol.ProcessProtocol):
         will be called back when the process ends.  This C{Deferred} is also
         associated with the L{_ProcessExecutionError} which C{deferred} fires
         with earlier in this case so that users can determine when the process
-        has actually ended, in addition to knowing when bytes have been received
-        via stderr.
+        has actually ended, in addition to knowing when bytes have been
+        received via stderr.
     """
 
     def __init__(self, deferred, cmd, started_deferred=None,
@@ -93,7 +94,7 @@ class BackRelayWithInput(protocol.ProcessProtocol):
         if self.deferred is not None:
             stdout, stderr = self.stdout.getvalue(), self.stderr.getvalue()
             exit_code = reason.value.exitCode
-            if self.check_exit_code and exit_code <> 0:
+            if self.check_exit_code and exit_code != 0:
                 self.deferred.errback(self._build_execution_error(exit_code))
             else:
                 try:
@@ -101,20 +102,22 @@ class BackRelayWithInput(protocol.ProcessProtocol):
                         reason.trap(error.ProcessDone)
                     self.deferred.callback((stdout, stderr))
                 except:
-                    # NOTE(justinsb): This logic is a little suspicious to me...
-                    # If the callback throws an exception, then errback will be
-                    # called also. However, this is what the unit tests test for...
-                    self.deferred.errback(self._build_execution_error(exit_code))
+                    # NOTE(justinsb): This logic is a little suspicious to me.
+                    # If the callback throws an exception, then errback will
+                    # be called also. However, this is what the unit tests
+                    # test for.
+                    exec_error = self._build_execution_error(exit_code)
+                    self.deferred.errback(exec_error)
         elif self.on_process_ended is not None:
             self.on_process_ended.errback(reason)
-
 
     def connectionMade(self):
         if self.started_deferred:
             self.started_deferred.callback(self)
         if self.process_input:
-            self.transport.write(self.process_input)
+            self.transport.write(str(self.process_input))
         self.transport.closeStdin()
+
 
 def get_process_output(executable, args=None, env=None, path=None,
                        process_reactor=None, check_exit_code=True,
@@ -142,7 +145,7 @@ def get_process_output(executable, args=None, env=None, path=None,
     if not args is None:
         args = [str(x) for x in args]
     process_reactor.spawnProcess(process_handler, executable,
-                                 (executable,)+tuple(args), env, path)
+                                 (executable,) + tuple(args), env, path)
     return deferred
 
 
@@ -193,9 +196,11 @@ class ProcessPool(object):
 
 class SharedPool(object):
     _instance = None
+
     def __init__(self):
         if SharedPool._instance is None:
             self.__class__._instance = ProcessPool()
+
     def __getattr__(self, key):
         return getattr(self._instance, key)
 

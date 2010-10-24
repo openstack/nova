@@ -20,10 +20,8 @@
 Handles all code relating to instances (guest vms)
 """
 
-import base64
 import datetime
 import logging
-import os
 
 from twisted.internet import defer
 
@@ -59,19 +57,29 @@ class ComputeManager(manager.Manager):
         """Update the state of an instance from the driver info"""
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
-        state = self.driver.get_info(instance_ref.name)['state']
+        try:
+            info = self.driver.get_info(instance_ref['name'])
+            state = info['state']
+        except exception.NotFound:
+            state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def refresh_security_group(self, context, security_group_id, **_kwargs):
+        yield self.driver.refresh_security_group(security_group_id)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
+        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref['str_id'] in self.driver.list_instances():
+        if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
         project_id = instance_ref['project_id']
-        self.network_manager.setup_compute_network(context, project_id)
+        self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
                                 {'host': self.host})
@@ -101,6 +109,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
+        context = context.elevated()
         logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
@@ -109,10 +118,6 @@ class ComputeManager(manager.Manager):
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
 
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'shutting_down')
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
@@ -122,7 +127,16 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
+        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
+        self._update_state(context, instance_id)
+
+        if instance_ref['state'] != power_state.RUNNING:
+            raise logging.Warn('trying to reboot a non-running '
+                               'instance: %s (state: %s excepted: %s)',
+                               instance_ref['internal_id'],
+                               instance_ref['state'],
+                               power_state.RUNNING)
 
         logging.debug('instance %s: rebooting', instance_ref['name'])
         self.db.instance_set_state(context,
@@ -136,9 +150,11 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
+        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: rescuing', instance_ref['name'])
+        logging.debug('instance %s: rescuing',
+                      instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -150,9 +166,11 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
+        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: unrescuing', instance_ref['name'])
+        logging.debug('instance %s: unrescuing',
+                      instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -163,37 +181,23 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
-        # TODO(vish): Move this into the driver layer
-
+        context = context.elevated()
         logging.debug("instance %s: getting console output", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        if FLAGS.connection_type == 'libvirt':
-            fname = os.path.abspath(os.path.join(FLAGS.instances_path,
-                                                 instance_ref['str_id'],
-                                                 'console.log'))
-            with open(fname, 'r') as f:
-                output = f.read()
-        else:
-            output = 'FAKE CONSOLE OUTPUT'
-
-        # TODO(termie): this stuff belongs in the API layer, no need to
-        #               munge the data we send to ourselves
-        output = {"InstanceId": instance_id,
-                  "Timestamp": "2",
-                  "output": base64.b64encode(output)}
-        return output
+        return self.driver.get_console_output(instance_ref)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
+        context = context.elevated()
         logging.debug("instance %s: attaching volume %s to %s", instance_id,
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = yield self.volume_manager.setup_compute_volume(context,
                                                                   volume_id)
-        yield self.driver.attach_volume(instance_ref['str_id'],
+        yield self.driver.attach_volume(instance_ref['ec2_id'],
                                         dev_path,
                                         mountpoint)
         self.db.volume_attached(context, volume_id, instance_id, mountpoint)
@@ -203,12 +207,13 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
+        context = context.elevated()
         logging.debug("instance %s: detaching volume %s",
                       instance_id,
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        self.driver.detach_volume(instance_ref['str_id'],
-                                  volume_ref['mountpoint'])
+        yield self.driver.detach_volume(instance_ref['ec2_id'],
+                                        volume_ref['mountpoint'])
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)

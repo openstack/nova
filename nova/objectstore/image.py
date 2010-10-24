@@ -48,8 +48,8 @@ class Image(object):
         self.image_id = image_id
         self.path = os.path.abspath(os.path.join(FLAGS.images_path, image_id))
         if not self.path.startswith(os.path.abspath(FLAGS.images_path)) or \
-           not os.path.isdir(self.path):
-             raise exception.NotFound
+            not os.path.isdir(self.path):
+                raise exception.NotFound
 
     @property
     def image_path(self):
@@ -72,7 +72,7 @@ class Image(object):
         try:
             return (self.metadata['isPublic'] and readonly) or \
                    context.user.is_admin() or \
-                   self.metadata['imageOwnerId'] == context.project.id
+                   self.metadata['imageOwnerId'] == context.project_id
         except:
             return False
 
@@ -81,6 +81,16 @@ class Image(object):
         md['isPublic'] = state
         with open(os.path.join(self.path, 'info.json'), 'w') as f:
             json.dump(md, f)
+
+    def update_user_editable_fields(self, args):
+        """args is from the request parameters, so requires extra cleaning"""
+        fields = {'display_name': 'displayName', 'description': 'description'}
+        info = self.metadata
+        for field in fields.keys():
+            if field in args:
+                info[fields[field]] = args[field]
+        with open(os.path.join(self.path, 'info.json'), 'w') as f:
+            json.dump(info, f)
 
     @staticmethod
     def all():
@@ -117,17 +127,17 @@ class Image(object):
                        a string of the image id for the kernel
 
         @type ramdisk: bool or str
-        @param ramdisk: either TRUE meaning this partition is a ramdisk image or
-                        a string of the image id for the ramdisk
+        @param ramdisk: either TRUE meaning this partition is a ramdisk image
+                        or a string of the image id for the ramdisk
 
 
         @type public: bool
         @param public: determine if this is a public image or private
-        
+
         @rtype: str
         @return: a string with the image id
         """
-        
+
         image_type = 'machine'
         image_id = utils.generate_uid('ami')
 
@@ -150,9 +160,8 @@ class Image(object):
             'isPublic': public,
             'architecture': 'x86_64',
             'imageType': image_type,
-            'state': 'available'
-        }
-        
+            'state': 'available'}
+
         if type(kernel) is str and len(kernel) > 0:
             info['kernelId'] = kernel
 
@@ -170,7 +179,7 @@ class Image(object):
         os.makedirs(image_path)
 
         bucket_name = image_location.split("/")[0]
-        manifest_path = image_location[len(bucket_name)+1:]
+        manifest_path = image_location[len(bucket_name) + 1:]
         bucket_object = bucket.Bucket(bucket_name)
 
         manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
@@ -181,23 +190,28 @@ class Image(object):
             if kernel_id == 'true':
                 image_type = 'kernel'
         except:
-            pass
+            kernel_id = None
 
         try:
             ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
             if ramdisk_id == 'true':
                 image_type = 'ramdisk'
         except:
-            pass
+            ramdisk_id = None
 
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
-            'imageOwnerId': context.project.id,
-            'isPublic': False, # FIXME: grab public from manifest
-            'architecture': 'x86_64', # FIXME: grab architecture from manifest
-            'imageType' : image_type
-        }
+            'imageOwnerId': context.project_id,
+            'isPublic': False,  # FIXME: grab public from manifest
+            'architecture': 'x86_64',  # FIXME: grab architecture from manifest
+            'imageType': image_type}
+
+        if kernel_id:
+            info['kernelId'] = kernel_id
+
+        if ramdisk_id:
+            info['ramdiskId'] = ramdisk_id
 
         def write_state(state):
             info['imageState'] = state
@@ -214,42 +228,49 @@ class Image(object):
         write_state('decrypting')
 
         # FIXME: grab kernelId and ramdiskId from bundle manifest
-        encrypted_key = binascii.a2b_hex(manifest.find("image/ec2_encrypted_key").text)
-        encrypted_iv = binascii.a2b_hex(manifest.find("image/ec2_encrypted_iv").text)
+        hex_key = manifest.find("image/ec2_encrypted_key").text
+        encrypted_key = binascii.a2b_hex(hex_key)
+        hex_iv = manifest.find("image/ec2_encrypted_iv").text
+        encrypted_iv = binascii.a2b_hex(hex_iv)
         cloud_private_key = os.path.join(FLAGS.ca_path, "private/cakey.pem")
 
         decrypted_filename = os.path.join(image_path, 'image.tar.gz')
-        Image.decrypt_image(encrypted_filename, encrypted_key, encrypted_iv, cloud_private_key, decrypted_filename)
+        Image.decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,
+                            cloud_private_key, decrypted_filename)
 
         write_state('untarring')
 
         image_file = Image.untarzip_image(image_path, decrypted_filename)
-        shutil.move(os.path.join(image_path, image_file), os.path.join(image_path, 'image'))
+        shutil.move(os.path.join(image_path, image_file),
+                    os.path.join(image_path, 'image'))
 
         write_state('available')
         os.unlink(decrypted_filename)
         os.unlink(encrypted_filename)
 
     @staticmethod
-    def decrypt_image(encrypted_filename, encrypted_key, encrypted_iv, cloud_private_key, decrypted_filename):
+    def decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,
+                      cloud_private_key, decrypted_filename):
         key, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
                 process_input=encrypted_key,
                 check_exit_code=False)
         if err:
             raise exception.Error("Failed to decrypt private key: %s" % err)
         iv, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key, 
+                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
                 process_input=encrypted_iv,
                 check_exit_code=False)
         if err:
-            raise exception.Error("Failed to decrypt initialization vector: %s" % err)
+            raise exception.Error("Failed to decrypt initialization "
+                                  "vector: %s" % err)
         _out, err = utils.execute(
                 'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'
                  % (encrypted_filename, key, iv, decrypted_filename),
                  check_exit_code=False)
         if err:
-            raise exception.Error("Failed to decrypt image file %s : %s" % (encrypted_filename, err))
+            raise exception.Error("Failed to decrypt image file %s : %s" %
+                                  (encrypted_filename, err))
 
     @staticmethod
     def untarzip_image(path, filename):

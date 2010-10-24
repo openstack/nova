@@ -17,42 +17,32 @@
 
 import unittest
 
-from nova.api.rackspace import servers
-from nova.tests.api.test_helper import *
+import stubout
+import webob
 
-class ServersTest(unittest.TestCase):
+import nova.api
+from nova.api.openstack import flavors
+from nova.tests.api.openstack import fakes
+
+
+class FlavorsTest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
 
-    def test_get_server_list(self):
+    def test_get_flavor_list(self):
+        req = webob.Request.blank('/v1.0/flavors')
+        res = req.get_response(nova.api.API())
+
+    def test_get_flavor_by_id(self):
         pass
 
-    def test_create_instance(self):
-        pass
-
-    def test_get_server_by_id(self):
-        pass
-
-    def test_get_backup_schedule(self):
-        pass
-
-    def test_get_server_details(self):
-        pass
-
-    def test_get_server_ips(self):
-        pass
-
-    def test_server_reboot(self):
-        pass
-
-    def test_server_rebuild(self):
-        pass
-
-    def test_server_resize(self):
-        pass
-
-    def test_delete_server_instance(self):
-        pass
+if __name__ == '__main__':
+    unittest.main()

@@ -28,10 +28,19 @@ import tempfile
 from twisted.internet import defer
 
 from nova import exception
+from nova import flags
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
+                     'minimum size in bytes of root partition')
+flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
+                     'block_size to use for dd')
 
 
 @defer.inlineCallbacks
-def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
+def partition(infile, outfile, local_bytes=0, resize=True,
+              local_type='ext2', execute=None):
     """Takes a single partition represented by infile and writes a bootable
     drive image into outfile.
 
@@ -49,7 +58,14 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
     """
     sector_size = 512
     file_size = os.path.getsize(infile)
-    if file_size % sector_size != 0:
+    if resize and file_size < FLAGS.minimum_root_size:
+        last_sector = FLAGS.minimum_root_size / sector_size - 1
+        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                      % (infile, last_sector, sector_size))
+        yield execute('e2fsck -fp %s' % infile, check_exit_code=False)
+        yield execute('resize2fs %s' % infile)
+        file_size = FLAGS.minimum_root_size
+    elif file_size % sector_size != 0:
         logging.warn("Input partition size not evenly divisible by"
                      " sector size: %d / %d", file_size, sector_size)
     primary_sectors = file_size / sector_size
@@ -58,32 +74,35 @@ def partition(infile, outfile, local_bytes=0, local_type='ext2', execute=None):
                      " by sector size: %d / %d", local_bytes, sector_size)
     local_sectors = local_bytes / sector_size
 
-    mbr_last = 62 # a
-    primary_first = mbr_last + 1 # b
-    primary_last = primary_first + primary_sectors - 1 # c
-    local_first = primary_last + 1 # d
-    local_last = local_first + local_sectors - 1 # e
-    last_sector = local_last # e
+    mbr_last = 62  # a
+    primary_first = mbr_last + 1  # b
+    primary_last = primary_first + primary_sectors - 1  # c
+    local_first = primary_last + 1  # d
+    local_last = local_first + local_sectors - 1  # e
+    last_sector = local_last  # e
 
     # create an empty file
     yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                  % (outfile, last_sector, sector_size))
+                  % (outfile, mbr_last, sector_size))
 
     # make mbr partition
     yield execute('parted --script %s mklabel msdos' % outfile)
+
+    # append primary file
+    yield execute('dd if=%s of=%s bs=%s conv=notrunc,fsync oflag=append'
+                  % (infile, outfile, FLAGS.block_size))
 
     # make primary partition
     yield execute('parted --script %s mkpart primary %ds %ds'
                   % (outfile, primary_first, primary_last))
 
-    # make local partition
     if local_bytes > 0:
+        # make the file bigger
+        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                      % (outfile, last_sector, sector_size))
+        # make and format local partition
         yield execute('parted --script %s mkpartfs primary %s %ds %ds'
                       % (outfile, local_type, local_first, local_last))
-
-    # copy file into partition
-    yield execute('dd if=%s of=%s bs=%d seek=%d conv=notrunc,fsync'
-                  % (infile, outfile, sector_size, primary_first))
 
 
 @defer.inlineCallbacks
@@ -143,7 +162,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
     sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
-    yield execute('sudo mkdir -p %s' % sshdir) # existing dir doesn't matter
+    yield execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
@@ -155,4 +174,3 @@ def _inject_net_into_fs(net, fs, execute=None):
     netfile = os.path.join(os.path.join(os.path.join(
             fs, 'etc'), 'network'), 'interfaces')
     yield execute('sudo tee %s' % netfile, net)
-
