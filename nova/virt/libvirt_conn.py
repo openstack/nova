@@ -99,7 +99,7 @@ class LibvirtConnection(object):
     def __init__(self, read_only):
         (self.libvirt_uri,
          template_file,
-         rescue_file)= self.get_uri_and_templates()
+         rescue_file) = self.get_uri_and_templates()
 
         self.libvirt_xml = open(template_file).read()
         self.rescue_xml = open(rescue_file).read()
@@ -258,6 +258,7 @@ class LibvirtConnection(object):
 
         d = defer.Deferred()
         timer = task.LoopingCall(f=None)
+
         def _wait_for_rescue():
             try:
                 state = self.get_info(instance['name'])['state']
@@ -273,6 +274,7 @@ class LibvirtConnection(object):
                                       power_state.SHUTDOWN)
                 timer.stop()
                 d.callback(None)
+
         timer.f = _wait_for_rescue
         timer.start(interval=0.5, now=True)
         yield d
@@ -441,7 +443,7 @@ class LibvirtConnection(object):
                                                     * 1024 * 1024 * 1024)
 
         resize = True
-        if inst['instance_type'] == 'm1.tiny' or prefix=='rescue':
+        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
             resize = False
         yield disk.partition(basepath('disk-raw'), basepath('disk'),
                              local_bytes, resize, execute=execute)
