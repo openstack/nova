@@ -26,7 +26,10 @@ import base64
 import datetime
 import logging
 import os
+import random
+import subprocess
 import time
+import uuid
 
 from nova import context
 import IPy
@@ -435,6 +438,31 @@ class CloudController(object):
                                                        group_name)
         db.security_group_destroy(context, security_group.id)
         return True
+
+    def create_console(self, context, kind, instance_id, **_kwargs):
+        """Create a Console"""
+
+        instance_ref = db.instance_get(context, instance_id)
+
+        def get_port():
+            for i in xrange(0,100): # don't loop forever
+                port = random.randint(10000, 12000)
+                cmd = "netcat 0.0.0.0 %s -w 2 < /dev/null" % (port,)
+                # this Popen  will exit with 0 only if the port is in use,
+                # so a nonzero return value implies it is unused
+                port_is_unused = subprocess.Popen(cmd, shell=True).wait()
+                if port_is_unused:
+                    return port
+            raise 'Unable to find an open port'
+
+        port = get_port()
+        token = str(uuid.uuid4())
+
+        host = instance_ref['host']
+        cmd = "%s/tools/ajaxterm/ajaxterm.py --command 'ssh %s' -t %s -p %s" \
+            % (utils.novadir(), host, token, port)
+        port_is_unused = subprocess.Popen(cmd, shell=True) #TODO error check
+        return {'url': 'http://%s:%s/?token=%s' % (FLAGS.cc_dmz, port, token)}
 
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances

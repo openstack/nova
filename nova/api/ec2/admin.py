@@ -21,15 +21,10 @@ Admin API controller, exposed through http via the api worker.
 """
 
 import base64
-import uuid
-import subprocess
-import random
 
 from nova import db
 from nova import exception
 from nova.auth import manager
-from utils import novadir
-
 
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
@@ -186,29 +181,4 @@ class AdminController(object):
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
         return host_dict(db.host_get(name))
-
-    @admin_only
-    def create_console(self, _context, kind, instance_id, **_kwargs):
-        """Create a Console"""
-        #instance = db.instance_get(_context, instance_id)
-
-        def get_port():
-            for i in xrange(0,100): # don't loop forever
-                port = int(random.uniform(10000, 12000))
-                cmd = "netcat 0.0.0.0 " + str(port) + " -w 2  < /dev/null"
-                # this Popen  will exit with 0 only if the port is in use, 
-                # so a nonzero return value implies it is unused
-                port_is_unused = subprocess.Popen(cmd, shell=True).wait()
-                if port_is_unused:
-                    return port
-            raise 'Unable to find an open port'
-
-        port = str(get_port())
-        token = str(uuid.uuid4())
-
-        host = '127.0.0.1' #TODO add actual host
-        cmd = novadir() + "tools/ajaxterm//ajaxterm.py --command 'ssh root@" + host + "' -t " \
-                + token + " -p " + port
-        port_is_unused = subprocess.Popen(cmd, shell=True) #TODO error check
-        return {'url': 'http://tonbuntu:' + port + '/?token=' + token } #TODO - s/tonbuntu/api_server_public_ip
 
