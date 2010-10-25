@@ -23,6 +23,7 @@ WSGI middleware for OpenStack API controllers.
 import json
 import time
 
+import logging
 import routes
 import webob.dec
 import webob.exc
@@ -53,6 +54,15 @@ class API(wsgi.Middleware):
     def __init__(self):
         app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
         super(API, self).__init__(app)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        try:
+            return req.get_response(self.application)
+        except Exception as ex:
+            logging.warn("Caught error: %s" % str(ex))
+            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            return faults.Fault(exc)
 
 
 class AuthMiddleware(wsgi.Middleware):
