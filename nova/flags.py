@@ -224,7 +224,7 @@ DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
-DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')

@@ -1041,6 +1041,30 @@ def export_device_create_safe(context, values):
 ###################
 
 
+@require_admin_context
+def target_id_count_by_host(context, host):
+    session = get_session()
+    return session.query(models.TargetId).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(host=host).\
+                   count()
+
+
+@require_admin_context
+def target_id_create_safe(context, values):
+    target_id_ref = models.TargetId()
+    for (key, value) in values.iteritems():
+        target_id_ref[key] = value
+    try:
+        target_id_ref.save()
+        return target_id_ref
+    except IntegrityError:
+        return None
+
+
+###################
+
+
 def auth_destroy_token(_context, token):
     session = get_session()
     session.delete(token)
@@ -1131,6 +1155,25 @@ def volume_allocate_shelf_and_blade(context, volume_id):
 
 
 @require_admin_context
+def volume_allocate_target_id(context, volume_id, host):
+    session = get_session()
+    with session.begin():
+        target_id_ref = session.query(models.TargetId).\
+                                filter_by(volume=None).\
+                                filter_by(host=host).\
+                                filter_by(deleted=False).\
+                                with_lockmode('update').\
+                                first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not target_id_ref:
+            raise db.NoMoreTargets()
+        target_id_ref.volume_id = volume_id
+        session.add(target_id_ref)
+    return target_id_ref.target_id
+
+
+@require_admin_context
 def volume_attached(context, volume_id, instance_id, mountpoint):
     session = get_session()
     with session.begin():
@@ -1181,6 +1224,9 @@ def volume_destroy(context, volume_id):
         session.execute('update export_devices set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
+        session.execute('update target_ids set volume_id=NULL '
+                        'where volume_id=:id',
+                        {'id': volume_id})
 
 
 @require_admin_context
@@ -1222,6 +1268,17 @@ def volume_get(context, volume_id, session=None):
 def volume_get_all(context):
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def volume_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -1232,6 +1289,7 @@ def volume_get_all_by_project(context, project_id):
 
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -1297,6 +1355,19 @@ def volume_get_shelf_and_blade(context, volume_id):
                                  volume_id)
 
     return (result.shelf_id, result.blade_id)
+
+
+@require_admin_context
+def volume_get_target_id(context, volume_id):
+    session = get_session()
+    result = session.query(models.TargetId).\
+                     filter_by(volume_id=volume_id).\
+                     first()
+    if not result:
+        raise exception.NotFound('No target id found for volume %s' %
+                                 volume_id)
+
+    return result.target_id
 
 
 @require_context

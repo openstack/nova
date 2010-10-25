@@ -255,6 +255,11 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    @property
+    def name(self):
+        return self.ec2_id
+
+
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project"""
@@ -288,6 +293,22 @@ class ExportDevice(BASE, NovaBase):
                           foreign_keys=volume_id,
                           primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
                                            'ExportDevice.deleted==False)')
+
+
+class TargetId(BASE, NovaBase):
+    """Represates an iscsi target_id for a given host"""
+    __tablename__ = 'target_ids'
+    __table_args__ = (schema.UniqueConstraint("target_id", "host"),
+                      {'mysql_engine': 'InnoDB'})
+    id = Column(Integer, primary_key=True)
+    target_id = Column(Integer)
+    host = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume,
+                          backref=backref('target_id', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(TargetId.volume_id==Volume.id,'
+                                           'TargetId.deleted==False)')
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
@@ -510,7 +531,7 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+    models = (Service, Instance, Volume, ExportDevice, TargetId, FixedIp,
               FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
               AuthToken, User, Project)  # , Image, Host

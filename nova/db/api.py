@@ -48,6 +48,11 @@ class NoMoreNetworks(exception.Error):
     pass
 
 
+class NoMoreTargets(exception.Error):
+    """No more available blades"""
+    pass
+
+
 ###################
 
 
@@ -481,6 +486,23 @@ def export_device_create_safe(context, values):
 ###################
 
 
+def target_id_count_by_host(context, host):
+    """Return count of export devices."""
+    return IMPL.target_id_count_by_host(context, host)
+
+
+def target_id_create_safe(context, values):
+    """Create an target_id from the values dictionary.
+
+    The device is not returned. If the create violates the unique
+    constraints because the target_id and host already exist,
+    no exception is raised."""
+    return IMPL.target_id_create_safe(context, values)
+
+
+###############
+
+
 def auth_destroy_token(context, token):
     """Destroy an auth token"""
     return IMPL.auth_destroy_token(context, token)
@@ -527,6 +549,11 @@ def volume_allocate_shelf_and_blade(context, volume_id):
     return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
 
 
+def volume_allocate_target_id(context, volume_id, host):
+    """Atomically allocate a free target_id from the pool."""
+    return IMPL.volume_allocate_target_id(context, volume_id, host)
+
+
 def volume_attached(context, volume_id, instance_id, mountpoint):
     """Ensure that a volume is set as attached."""
     return IMPL.volume_attached(context, volume_id, instance_id, mountpoint)
@@ -562,9 +589,9 @@ def volume_get_all(context):
     return IMPL.volume_get_all(context)
 
 
-def volume_get_instance(context, volume_id):
-    """Get the instance that a volume is attached to."""
-    return IMPL.volume_get_instance(context, volume_id)
+def volume_get_all_by_host(context, host):
+    """Get all volumes belonging to a host."""
+    return IMPL.volume_get_all_by_host(context, host)
 
 
 def volume_get_all_by_project(context, project_id):
@@ -577,9 +604,19 @@ def volume_get_by_ec2_id(context, ec2_id):
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
+def volume_get_instance(context, volume_id):
+    """Get the instance that a volume is attached to."""
+    return IMPL.volume_get_instance(context, volume_id)
+
+
 def volume_get_shelf_and_blade(context, volume_id):
     """Get the shelf and blade allocated to the volume."""
     return IMPL.volume_get_shelf_and_blade(context, volume_id)
+
+
+def volume_get_target_id(context, volume_id):
+    """Get the target id allocated to the volume."""
+    return IMPL.volume_get_target_id(context, volume_id)
 
 
 def volume_update(context, volume_id, values):
