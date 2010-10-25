@@ -133,4 +133,3 @@ class VolumeManager(manager.Manager):
             defer.returnValue(True)
         else:
             yield self.driver.undiscover_volume(volume_ref)
-

@@ -266,7 +266,6 @@ class Volume(BASE, NovaBase):
         return self.ec2_id
 
 
-
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project"""
     __tablename__ = 'quotas'

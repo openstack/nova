@@ -194,8 +194,8 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
         if instance_ref['name'] not in self.driver.list_instances():
-            logging.warn("Detaching volume from instance %s that isn't running",
-                     instance_ref['name'])
+            logging.warn("Detaching volume from unknown instance %s",
+                         instance_ref['name'])
         else:
             yield self.driver.detach_volume(instance_ref['name'],
                                             volume_ref['mountpoint'])
