@@ -132,11 +132,11 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
-            raise logging.Warn('trying to reboot a non-running '
-                               'instance: %s (state: %s excepted: %s)',
-                               instance_ref['internal_id'],
-                               instance_ref['state'],
-                               power_state.RUNNING)
+            logging.warn('trying to reboot a non-running '
+                         'instance: %s (state: %s excepted: %s)',
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
 
         logging.debug('instance %s: rebooting', instance_ref['name'])
         self.db.instance_set_state(context,
