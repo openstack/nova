@@ -119,7 +119,7 @@ def get_context(request):
         # Authorization Header format: 'AWS <access>:<secret>'
         authorization_header = request.getHeader('Authorization')
         if not authorization_header:
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
         auth_header_value = authorization_header.split(' ')[1]
         access, _ignored, secret = auth_header_value.rpartition(':')
         am = manager.AuthManager()
@@ -134,7 +134,8 @@ def get_context(request):
         return context.RequestContext(user, project)
     except exception.Error as ex:
         logging.debug("Authentication Failure: %s", ex)
-        raise exception.NotAuthorized
+        raise exception.NotAuthorized()
+
 
 class ErrorHandlingResource(resource.Resource):
     """Maps exceptions to 404 / 401 codes.  Won't work for
@@ -162,7 +163,7 @@ class S3(ErrorHandlingResource):
     def __init__(self):
         ErrorHandlingResource.__init__(self)
 
-    def getChild(self, name, request): # pylint: disable-msg=C0103
+    def getChild(self, name, request):  # pylint: disable-msg=C0103
         """Returns either the image or bucket resource"""
         request.context = get_context(request)
         if name == '':
@@ -172,7 +173,7 @@ class S3(ErrorHandlingResource):
         else:
             return BucketResource(name)
 
-    def render_GET(self, request): # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable-msg=R0201
         """Renders the GET request for a list of buckets as XML"""
         logging.debug('List of buckets requested')
         buckets = [b for b in bucket.Bucket.all() \
@@ -209,7 +210,7 @@ class BucketResource(ErrorHandlingResource):
             return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         prefix = get_argument(request, "prefix", u"")
         marker = get_argument(request, "marker", u"")
@@ -239,7 +240,7 @@ class BucketResource(ErrorHandlingResource):
         bucket_object = bucket.Bucket(self.name)
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         bucket_object.delete()
         request.setResponseCode(204)
@@ -262,7 +263,7 @@ class ObjectResource(ErrorHandlingResource):
         logging.debug("Getting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         obj = self.bucket[urllib.unquote(self.name)]
         request.setHeader("Content-Type", "application/unknown")
@@ -280,7 +281,7 @@ class ObjectResource(ErrorHandlingResource):
         logging.debug("Putting object: %s / %s", self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         key = urllib.unquote(self.name)
         request.content.seek(0, 0)
@@ -301,7 +302,7 @@ class ObjectResource(ErrorHandlingResource):
                       self.name)
 
         if not self.bucket.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         del self.bucket[urllib.unquote(self.name)]
         request.setResponseCode(204)
@@ -318,12 +319,16 @@ class ImageResource(ErrorHandlingResource):
 
     def render_GET(self, request):
         """Returns the image file"""
+        if not self.img.is_authorized(request.context, True):
+            raise exception.NotAuthorized()
         return static.File(self.img.image_path,
-                           defaultType='application/octet-stream'
-                          ).render_GET(request)
+                           defaultType='application/octet-stream').\
+                           render_GET(request)
+
 
 class ImagesResource(resource.Resource):
     """A web resource representing a list of images"""
+
     def getChild(self, name, _request):
         """Returns itself or an ImageResource if no name given"""
         if name == '':
@@ -331,7 +336,7 @@ class ImagesResource(resource.Resource):
         else:
             return ImageResource(name)
 
-    def render_GET(self, request): # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable-msg=R0201
         """ returns a json listing of all images
             that a user has permissions to see """
 
@@ -360,7 +365,7 @@ class ImagesResource(resource.Resource):
         request.finish()
         return server.NOT_DONE_YET
 
-    def render_PUT(self, request): # pylint: disable-msg=R0201
+    def render_PUT(self, request):  # pylint: disable-msg=R0201
         """ create a new registered image """
 
         image_id = get_argument(request, 'image_id', u'')
@@ -369,19 +374,19 @@ class ImagesResource(resource.Resource):
         image_path = os.path.join(FLAGS.images_path, image_id)
         if not image_path.startswith(FLAGS.images_path) or \
            os.path.exists(image_path):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         bucket_object = bucket.Bucket(image_location.split("/")[0])
 
         if not bucket_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         p = multiprocessing.Process(target=image.Image.register_aws_image,
                 args=(image_id, image_location, request.context))
         p.start()
         return ''
 
-    def render_POST(self, request): # pylint: disable-msg=R0201
+    def render_POST(self, request):  # pylint: disable-msg=R0201
         """Update image attributes: public/private"""
 
         # image_id required for all requests
@@ -389,13 +394,13 @@ class ImagesResource(resource.Resource):
         image_object = image.Image(image_id)
         if not image_object.is_authorized(request.context):
             logging.debug("not authorized for render_POST in images")
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         operation = get_argument(request, 'operation', u'')
         if operation:
             # operation implies publicity toggle
             logging.debug("handling publicity toggle")
-            image_object.set_public(operation=='add')
+            image_object.set_public(operation == 'add')
         else:
             # other attributes imply update
             logging.debug("update user fields")
@@ -405,13 +410,13 @@ class ImagesResource(resource.Resource):
             image_object.update_user_editable_fields(clean_args)
         return ''
 
-    def render_DELETE(self, request): # pylint: disable-msg=R0201
+    def render_DELETE(self, request):  # pylint: disable-msg=R0201
         """Delete a registered image"""
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
 
         if not image_object.is_authorized(request.context):
-            raise exception.NotAuthorized
+            raise exception.NotAuthorized()
 
         image_object.delete()
 

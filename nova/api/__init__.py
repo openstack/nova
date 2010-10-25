@@ -31,12 +31,13 @@ from nova.api import openstack
 from nova.api.ec2 import metadatarequesthandler
 
 
-flags.DEFINE_string('osapi_subdomain', 'api', 
+flags.DEFINE_string('osapi_subdomain', 'api',
                     'subdomain running the OpenStack API')
-flags.DEFINE_string('ec2api_subdomain', 'ec2', 
+flags.DEFINE_string('ec2api_subdomain', 'ec2',
                     'subdomain running the EC2 API')
-flags.DEFINE_string('FAKE_subdomain', None, 
-                    'set to api or ec2 to fake the subdomain of the host for testing')
+flags.DEFINE_string('FAKE_subdomain', None,
+                    'set to api or ec2 to fake the subdomain of the host '
+                    'for testing')
 FLAGS = flags.FLAGS
 
 
@@ -44,7 +45,7 @@ class API(wsgi.Router):
     """Routes top-level requests to the appropriate controller."""
 
     def __init__(self):
-        osapidomain =  {'sub_domain': [FLAGS.osapi_subdomain]}
+        osapidomain = {'sub_domain': [FLAGS.osapi_subdomain]}
         ec2domain = {'sub_domain': [FLAGS.ec2api_subdomain]}
         # If someone wants to pretend they're hitting the OSAPI subdomain
         # on their local box, they can set FAKE_subdomain to 'api', which
@@ -55,7 +56,7 @@ class API(wsgi.Router):
             ec2domain = {}
         mapper = routes.Mapper()
         mapper.sub_domains = True
-        mapper.connect("/", controller=self.osapi_versions, 
+        mapper.connect("/", controller=self.osapi_versions,
                             conditions=osapidomain)
         mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
                             conditions=osapidomain)
@@ -107,5 +108,3 @@ class API(wsgi.Router):
             '2009-04-04',
         ]
         return ''.join('%s\n' % v for v in versions)
-
-

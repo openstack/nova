@@ -25,10 +25,10 @@ import httplib
 from boto.ec2.regioninfo import RegionInfo
 
 
-DEFAULT_CLC_URL='http://127.0.0.1:8773'
-DEFAULT_REGION='nova'
-DEFAULT_ACCESS_KEY='admin'
-DEFAULT_SECRET_KEY='admin'
+DEFAULT_CLC_URL = 'http://127.0.0.1:8773'
+DEFAULT_REGION = 'nova'
+DEFAULT_ACCESS_KEY = 'admin'
+DEFAULT_SECRET_KEY = 'admin'
 
 
 class UserInfo(object):
@@ -199,9 +199,7 @@ class NovaAdminClient(object):
 
     def connection_for(self, username, project, clc_url=None, region=None,
                        **kwargs):
-        """
-        Returns a boto ec2 connection for the given username.
-        """
+        """Returns a boto ec2 connection for the given username."""
         if not clc_url:
             clc_url = self.clc_url
         if not region:
@@ -220,36 +218,37 @@ class NovaAdminClient(object):
                                 **kwargs)
 
     def split_clc_url(self, clc_url):
-        """
-        Splits a cloud controller endpoint url.
-        """
+        """Splits a cloud controller endpoint url."""
         parts = httplib.urlsplit(clc_url)
         is_secure = parts.scheme == 'https'
         ip, port = parts.netloc.split(':')
         return {'ip': ip, 'port': int(port), 'is_secure': is_secure}
 
     def get_users(self):
-        """ grabs the list of all users """
+        """Grabs the list of all users."""
         return self.apiconn.get_list('DescribeUsers', {}, [('item', UserInfo)])
 
     def get_user(self, name):
-        """ grab a single user by name """
-        user = self.apiconn.get_object('DescribeUser', {'Name': name}, UserInfo)
-
+        """Grab a single user by name."""
+        user = self.apiconn.get_object('DescribeUser', {'Name': name},
+                                       UserInfo)
         if user.username != None:
             return user
 
     def has_user(self, username):
-        """ determine if user exists """
+        """Determine if user exists."""
         return self.get_user(username) != None
 
     def create_user(self, username):
-        """ creates a new user, returning the userinfo object with access/secret """
-        return self.apiconn.get_object('RegisterUser', {'Name': username}, UserInfo)
+        """Creates a new user, returning the userinfo object with
+        access/secret."""
+        return self.apiconn.get_object('RegisterUser', {'Name': username},
+                                       UserInfo)
 
     def delete_user(self, username):
-        """ deletes a user """
-        return self.apiconn.get_object('DeregisterUser', {'Name': username}, UserInfo)
+        """Deletes a user."""
+        return self.apiconn.get_object('DeregisterUser', {'Name': username},
+                                       UserInfo)
 
     def get_roles(self, project_roles=True):
         """Returns a list of available roles."""
@@ -258,11 +257,10 @@ class NovaAdminClient(object):
                                      [('item', UserRole)])
 
     def get_user_roles(self, user, project=None):
-        """Returns a list of roles for the given user.
-           Omitting project will return any global roles that the user has.
-           Specifying project will return only project specific roles.
-        """
-        params = {'User':user}
+        """Returns a list of roles for the given user. Omitting project will
+        return any global roles that the user has. Specifying project will
+        return only project specific roles."""
+        params = {'User': user}
         if project:
             params['Project'] = project
         return self.apiconn.get_list('DescribeUserRoles',
@@ -270,24 +268,19 @@ class NovaAdminClient(object):
                                      [('item', UserRole)])
 
     def add_user_role(self, user, role, project=None):
-        """
-        Add a role to a user either globally or for a specific project.
-        """
+        """Add a role to a user either globally or for a specific project."""
         return self.modify_user_role(user, role, project=project,
                                      operation='add')
 
     def remove_user_role(self, user, role, project=None):
-        """
-        Remove a role from a user either globally or for a specific project.
-        """
+        """Remove a role from a user either globally or for a specific
+        project."""
         return self.modify_user_role(user, role, project=project,
                                      operation='remove')
 
     def modify_user_role(self, user, role, project=None, operation='add',
                          **kwargs):
-        """
-        Add or remove a role for a user and project.
-        """
+        """Add or remove a role for a user and project."""
         params = {'User': user,
                   'Role': role,
                   'Project': project,
@@ -295,9 +288,7 @@ class NovaAdminClient(object):
         return self.apiconn.get_status('ModifyUserRole', params)
 
     def get_projects(self, user=None):
-        """
-        Returns a list of all projects.
-        """
+        """Returns a list of all projects."""
         if user:
             params = {'User': user}
         else:
@@ -307,9 +298,7 @@ class NovaAdminClient(object):
                                      [('item', ProjectInfo)])
 
     def get_project(self, name):
-        """
-        Returns a single project with the specified name.
-        """
+        """Returns a single project with the specified name."""
         project = self.apiconn.get_object('DescribeProject',
                                           {'Name': name},
                                           ProjectInfo)
@@ -319,9 +308,7 @@ class NovaAdminClient(object):
 
     def create_project(self, projectname, manager_user, description=None,
                        member_users=None):
-        """
-        Creates a new project.
-        """
+        """Creates a new project."""
         params = {'Name': projectname,
                   'ManagerUser': manager_user,
                   'Description': description,
@@ -329,50 +316,38 @@ class NovaAdminClient(object):
         return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
 
     def delete_project(self, projectname):
-        """
-        Permanently deletes the specified project.
-        """
+        """Permanently deletes the specified project."""
         return self.apiconn.get_object('DeregisterProject',
                                        {'Name': projectname},
                                        ProjectInfo)
 
     def get_project_members(self, name):
-        """
-        Returns a list of members of a project.
-        """
+        """Returns a list of members of a project."""
         return self.apiconn.get_list('DescribeProjectMembers',
                                      {'Name': name},
                                      [('item', ProjectMember)])
 
     def add_project_member(self, user, project):
-        """
-        Adds a user to a project.
-        """
+        """Adds a user to a project."""
         return self.modify_project_member(user, project, operation='add')
 
     def remove_project_member(self, user, project):
-        """
-        Removes a user from a project.
-        """
+        """Removes a user from a project."""
         return self.modify_project_member(user, project, operation='remove')
 
     def modify_project_member(self, user, project, operation='add'):
-        """
-        Adds or removes a user from a project.
-        """
+        """Adds or removes a user from a project."""
         params = {'User': user,
                   'Project': project,
                   'Operation': operation}
         return self.apiconn.get_status('ModifyProjectMember', params)
 
     def get_zip(self, user, project):
-        """
-        Returns the content of a zip file containing novarc and access credentials.
-        """
+        """Returns the content of a zip file containing novarc and access
+        credentials."""
         params = {'Name': user, 'Project': project}
         zip = self.apiconn.get_object('GenerateX509ForUser', params, UserInfo)
         return zip.file
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
-

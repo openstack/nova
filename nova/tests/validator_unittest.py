@@ -35,7 +35,8 @@ class ValidationTestCase(test.TrialTestCase):
         self.assertTrue(type_case("foo", 5, 1))
         self.assertRaises(TypeError, type_case, "bar", "5", 1)
         self.assertRaises(TypeError, type_case, None, 5, 1)
-        
+
+
 @validate.typetest(instanceid=str, size=int, number_of_instances=int)
 def type_case(instanceid, size, number_of_instances):
     return True

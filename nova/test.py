@@ -58,7 +58,7 @@ def skip_if_fake(func):
 
 class TrialTestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Run before each test method to initialize test environment"""
         super(TrialTestCase, self).setUp()
         # NOTE(vish): We need a better method for creating fixtures for tests
@@ -82,8 +82,9 @@ class TrialTestCase(unittest.TestCase):
         self._monkey_patch_attach()
         self._original_flags = FLAGS.FlagValuesDict()
 
-    def tearDown(self): # pylint: disable-msg=C0103
-        """Runs after each test method to finalize/tear down test environment"""
+    def tearDown(self):
+        """Runs after each test method to finalize/tear down test
+        environment."""
         try:
             self.mox.UnsetStubs()
             self.stubs.UnsetAll()
@@ -91,7 +92,8 @@ class TrialTestCase(unittest.TestCase):
             self.mox.VerifyAll()
             # NOTE(vish): Clean up any ips associated during the test.
             ctxt = context.get_admin_context()
-            db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host, self.start)
+            db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
+                                                    self.start)
             db.network_disassociate_all(ctxt)
             rpc.Consumer.attach_to_twisted = self.originalAttach
             for x in self.injected:
@@ -149,6 +151,7 @@ class TrialTestCase(unittest.TestCase):
 
     def _monkey_patch_attach(self):
         self.originalAttach = rpc.Consumer.attach_to_twisted
+
         def _wrapped(innerSelf):
             rv = self.originalAttach(innerSelf)
             self.injected.append(rv)
@@ -164,7 +167,7 @@ class BaseTestCase(TrialTestCase):
 
     DEPRECATED: This is being removed once Tornado is gone, use TrialTestCase.
     """
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Run before each test method to initialize test environment"""
         super(BaseTestCase, self).setUp()
         # TODO(termie): we could possibly keep a more global registry of
@@ -179,7 +182,9 @@ class BaseTestCase(TrialTestCase):
         """ Push the ioloop along to wait for our test to complete. """
         self._waiting = self.ioloop.add_timeout(time.time() + timeout,
                                                 self._timeout)
+
         def _wait():
+
             """Wrapped wait function. Called on timeout."""
             if self._timed_out:
                 self.fail('test timed out')
@@ -198,7 +203,7 @@ class BaseTestCase(TrialTestCase):
         if self._waiting:
             try:
                 self.ioloop.remove_timeout(self._waiting)
-            except Exception: # pylint: disable-msg=W0703
+            except Exception:  # pylint: disable-msg=W0703
                 # TODO(jaypipes): This produces a pylint warning.  Should
                 # we really be catching Exception and then passing here?
                 pass
@@ -219,9 +224,11 @@ class BaseTestCase(TrialTestCase):
 
         Example (callback chain, ugly):
 
-        d = self.compute.terminate_instance(instance_id) # a Deferred instance
+        # A deferred instance
+        d = self.compute.terminate_instance(instance_id)
         def _describe(_):
-            d_desc = self.compute.describe_instances() # another Deferred instance
+            # Another deferred instance
+            d_desc = self.compute.describe_instances()
             return d_desc
         def _checkDescribe(rv):
             self.assertEqual(rv, [])

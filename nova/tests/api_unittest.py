@@ -99,9 +99,10 @@ class XmlConversionTestCase(test.BaseTestCase):
         self.assertEqual(conv('-'), '-')
         self.assertEqual(conv('-0'), 0)
 
+
 class ApiEc2TestCase(test.BaseTestCase):
     """Unit test for the cloud controller on an EC2 API"""
-    def setUp(self): # pylint: disable-msg=C0103,C0111
+    def setUp(self):
         super(ApiEc2TestCase, self).setUp()
 
         self.manager = manager.AuthManager()
@@ -137,7 +138,6 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.assertEqual(self.ec2.get_all_instances(), [])
         self.manager.delete_project(project)
         self.manager.delete_user(user)
-
 
     def test_get_all_key_pairs(self):
         """Test that, after creating a user and project and generating
@@ -183,7 +183,7 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
 
-        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
 
         self.ec2.create_security_group(security_group_name, 'test group')
@@ -217,10 +217,11 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
 
-        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd")
                                       for x in range(random.randint(4, 8)))
 
-        group = self.ec2.create_security_group(security_group_name, 'test group')
+        group = self.ec2.create_security_group(security_group_name,
+                                               'test group')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -282,12 +283,14 @@ class ApiEc2TestCase(test.BaseTestCase):
         self.manager.add_role('fake', 'netadmin')
         project.add_role('fake', 'netadmin')
 
-        security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+        rand_string = 'sdiuisudfsdcnpaqwertasd'
+        security_group_name = "".join(random.choice(rand_string)
                                       for x in range(random.randint(4, 8)))
-        other_security_group_name = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
-                                          for x in range(random.randint(4, 8)))
+        other_security_group_name = "".join(random.choice(rand_string)
+                                      for x in range(random.randint(4, 8)))
 
-        group = self.ec2.create_security_group(security_group_name, 'test group')
+        group = self.ec2.create_security_group(security_group_name,
+                                               'test group')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -313,9 +316,8 @@ class ApiEc2TestCase(test.BaseTestCase):
             if group.name == security_group_name:
                 self.assertEquals(len(group.rules), 1)
                 self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]),
-                                  '%s-%s' % (other_security_group_name, 'fake'))
-
+                self.assertEquals(str(group.rules[0].grants[0]), '%s-%s' %
+                                  (other_security_group_name, 'fake'))
 
         self.expect_http()
         self.mox.ReplayAll()

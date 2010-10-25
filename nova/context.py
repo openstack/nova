@@ -26,7 +26,9 @@ import random
 from nova import exception
 from nova import utils
 
+
 class RequestContext(object):
+
     def __init__(self, user, project, is_admin=None, read_deleted=False,
                  remote_address=None, timestamp=None, request_id=None):
         if hasattr(user, 'id'):
@@ -56,10 +58,8 @@ class RequestContext(object):
             timestamp = utils.parse_isotime(timestamp)
         self.timestamp = timestamp
         if not request_id:
-            request_id = ''.join(
-                    [random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-')
-                     for x in xrange(20)]
-                    )
+            chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-'
+            request_id = ''.join([random.choice(chars) for x in xrange(20)])
         self.request_id = request_id
 
     @property
@@ -81,7 +81,8 @@ class RequestContext(object):
         from nova.auth import manager
         if not self._project:
             try:
-                self._project = manager.AuthManager().get_project(self.project_id)
+                auth_manager = manager.AuthManager()
+                self._project = auth_manager.get_project(self.project_id)
             except exception.NotFound:
                 pass
         return self._project

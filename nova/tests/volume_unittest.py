@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 
 class VolumeTestCase(test.TrialTestCase):
     """Test Case for volumes"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
         self.compute = utils.import_object(FLAGS.compute_manager)
@@ -59,7 +59,8 @@ class VolumeTestCase(test.TrialTestCase):
         """Test volume can be created and deleted"""
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
-        self.assertEqual(volume_id, db.volume_get(context.get_admin_context(), volume_id).id)
+        self.assertEqual(volume_id, db.volume_get(context.get_admin_context(),
+                         volume_id).id)
 
         yield self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.NotFound,
@@ -114,7 +115,8 @@ class VolumeTestCase(test.TrialTestCase):
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
-            db.volume_attached(self.context, volume_id, instance_id, mountpoint)
+            db.volume_attached(self.context, volume_id, instance_id,
+                               mountpoint)
         else:
             yield self.compute.attach_volume(self.context,
                                              instance_id,
@@ -154,7 +156,8 @@ class VolumeTestCase(test.TrialTestCase):
         def _check(volume_id):
             """Make sure blades aren't duplicated"""
             volume_ids.append(volume_id)
-            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(context.get_admin_context(),
+            admin_context = context.get_admin_context()
+            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(admin_context,
                                                                  volume_id)
             shelf_blade = '%s.%s' % (shelf_id, blade_id)
             self.assert_(shelf_blade not in shelf_blades)

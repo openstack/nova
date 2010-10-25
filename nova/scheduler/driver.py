@@ -31,9 +31,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last checkin for up service')
 
+
 class NoValidHost(exception.Error):
     """There is no valid host for the command."""
     pass
+
 
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""

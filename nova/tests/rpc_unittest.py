@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 class RpcTestCase(test.TrialTestCase):
     """Test cases for rpc"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance()
         self.receiver = TestReceiver()
@@ -41,7 +41,7 @@ class RpcTestCase(test.TrialTestCase):
                                             topic='test',
                                             proxy=self.receiver)
         self.consumer.attach_to_twisted()
-        self.context= context.get_admin_context()
+        self.context = context.get_admin_context()
 
     def test_call_succeed(self):
         """Get a value through rpc call"""
@@ -67,9 +67,9 @@ class RpcTestCase(test.TrialTestCase):
         to an int in the test.
         """
         value = 42
-        self.assertFailure(rpc.call_twisted(self.context,
-                                            'test', {"method": "fail",
-                                                     "args": {"value": value}}),
+        self.assertFailure(rpc.call_twisted(self.context, 'test',
+                                            {"method": "fail",
+                                             "args": {"value": value}}),
                            rpc.RemoteError)
         try:
             yield rpc.call_twisted(self.context,
@@ -101,4 +101,3 @@ class TestReceiver(object):
     def fail(context, value):
         """Raises an exception with the value sent in"""
         raise Exception(value)
-

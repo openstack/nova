@@ -61,7 +61,6 @@ class AOEDriver(object):
                                   "Try number %s", tries)
                 yield self._execute("sleep %s" % tries ** 2)
 
-
     @defer.inlineCallbacks
     def create_volume(self, volume_name, size):
         """Creates a logical volume"""

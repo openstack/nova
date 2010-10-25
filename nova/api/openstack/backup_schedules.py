@@ -22,6 +22,7 @@ from nova import wsgi
 from nova.api.openstack import faults
 import nova.image.service
 
+
 class Controller(wsgi.Controller):
     def __init__(self):
         pass

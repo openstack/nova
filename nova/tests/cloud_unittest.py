@@ -46,12 +46,12 @@ from nova.objectstore import image
 
 FLAGS = flags.FLAGS
 
-
 # Temp dirs for working with image attributes through the cloud controller
 # (stole this from objectstore_unittest.py)
 OSS_TEMPDIR = tempfile.mkdtemp(prefix='test_oss-')
 IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
+
 
 class CloudTestCase(test.TrialTestCase):
     def setUp(self):
@@ -97,16 +97,16 @@ class CloudTestCase(test.TrialTestCase):
         max_count = 1
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
-                  'max_count': max_count }
+                  'max_count': max_count}
         rv = yield self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(context=self.context, instance_id=[instance_id])
+        output = yield self.cloud.get_console_output(context=self.context,
+                                                     instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
         rv = yield self.cloud.terminate_instances(self.context, [instance_id])
-
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -146,8 +146,10 @@ class CloudTestCase(test.TrialTestCase):
                   'max_count': max_count}
         rv = yield self.cloud.run_instances(self.context, **kwargs)
         # TODO: check for proper response
-        instance = rv['reservationSet'][0][rv['reservationSet'][0].keys()[0]][0]
-        logging.debug("Need to watch instance %s until it's running..." % instance['instance_id'])
+        instance_id = rv['reservationSet'][0].keys()[0]
+        instance = rv['reservationSet'][0][instance_id][0]
+        logging.debug("Need to watch instance %s until it's running..." %
+                      instance['instance_id'])
         while True:
             rv = yield defer.succeed(time.sleep(1))
             info = self.cloud._get_instance(instance['instance_id'])
@@ -157,14 +159,15 @@ class CloudTestCase(test.TrialTestCase):
         self.assert_(rv)
 
         if connection_type != 'fake':
-            time.sleep(45) # Should use boto for polling here
+            time.sleep(45)  # Should use boto for polling here
         for reservations in rv['reservationSet']:
             # for res_id in reservations.keys():
-            #  logging.debug(reservations[res_id])
-             # for instance in reservations[res_id]:
-           for instance in reservations[reservations.keys()[0]]:
-               logging.debug("Terminating instance %s" % instance['instance_id'])
-               rv = yield self.compute.terminate_instance(instance['instance_id'])
+            #     logging.debug(reservations[res_id])
+            # for instance in reservations[res_id]:
+            for instance in reservations[reservations.keys()[0]]:
+                instance_id = instance['instance_id']
+                logging.debug("Terminating instance %s" % instance_id)
+                rv = yield self.compute.terminate_instance(instance_id)
 
     def test_instance_update_state(self):
         def instance(num):
@@ -183,8 +186,7 @@ class CloudTestCase(test.TrialTestCase):
                 'groups': ['default'],
                 'product_codes': None,
                 'state': 0x01,
-                'user_data': ''
-            }
+                'user_data': ''}
         rv = self.cloud._format_describe_instances(self.context)
         self.assert_(len(rv['reservationSet']) == 0)
 
@@ -199,7 +201,9 @@ class CloudTestCase(test.TrialTestCase):
         #self.assert_(len(rv['reservationSet'][0]['instances_set']) == 5)
         # report 4 nodes each having 1 of the instances
         #for i in xrange(4):
-        #    self.cloud.update_state('instances', {('node-%s' % i): {('i-%s' % i): instance(i)}})
+        #    self.cloud.update_state('instances',
+        #                            {('node-%s' % i): {('i-%s' % i):
+        #                                               instance(i)}})
 
         # one instance should be pending still
         #self.assert_(len(self.cloud.instances['pending'].keys()) == 1)
@@ -217,8 +221,10 @@ class CloudTestCase(test.TrialTestCase):
     @staticmethod
     def _fake_set_image_description(ctxt, image_id, description):
         from nova.objectstore import handler
+
         class req:
             pass
+
         request = req()
         request.context = ctxt
         request.args = {'image_id': [image_id],

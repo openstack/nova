@@ -130,7 +130,6 @@ class Backend(object):
                 self._exchanges[exchange].publish(
                         message, routing_key=routing_key)
 
-
     __instance = None
 
     def __init__(self, *args, **kwargs):

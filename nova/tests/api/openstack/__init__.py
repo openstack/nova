@@ -27,11 +27,13 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
 
     def test_get_action_name(self):
         middleware = RateLimitingMiddleware(APIStub())
+
         def verify(method, url, action_name):
             req = Request.blank(url)
             req.method = method
             action = middleware.get_action_name(req)
             self.assertEqual(action, action_name)
+
         verify('PUT', '/servers/4', 'PUT')
         verify('DELETE', '/servers/4', 'DELETE')
         verify('POST', '/images/4', 'POST')
@@ -60,7 +62,7 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         middleware = RateLimitingMiddleware(APIStub())
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
         self.exhaust(middleware, 'POST', '/images/4', 'usr2', 10)
-        self.assertTrue(set(middleware.limiter._levels) == 
+        self.assertTrue(set(middleware.limiter._levels) ==
                         set(['usr1:POST', 'usr1:POST servers', 'usr2:POST']))
 
     def test_POST_servers_action_correctly_ratelimited(self):
@@ -85,19 +87,19 @@ class LimiterTest(unittest.TestCase):
     def test_limiter(self):
         items = range(2000)
         req = Request.blank('/')
-        self.assertEqual(limited(items, req), items[ :1000])
+        self.assertEqual(limited(items, req), items[:1000])
         req = Request.blank('/?offset=0')
-        self.assertEqual(limited(items, req), items[ :1000])
+        self.assertEqual(limited(items, req), items[:1000])
         req = Request.blank('/?offset=3')
         self.assertEqual(limited(items, req), items[3:1003])
         req = Request.blank('/?offset=2005')
         self.assertEqual(limited(items, req), [])
         req = Request.blank('/?limit=10')
-        self.assertEqual(limited(items, req), items[ :10])
+        self.assertEqual(limited(items, req), items[:10])
         req = Request.blank('/?limit=0')
-        self.assertEqual(limited(items, req), items[ :1000])
+        self.assertEqual(limited(items, req), items[:1000])
         req = Request.blank('/?limit=3000')
-        self.assertEqual(limited(items, req), items[ :1000])
+        self.assertEqual(limited(items, req), items[:1000])
         req = Request.blank('/?offset=1&limit=3')
         self.assertEqual(limited(items, req), items[1:4])
         req = Request.blank('/?offset=3&limit=0')

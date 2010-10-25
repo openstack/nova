@@ -57,7 +57,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 class ObjectStoreTestCase(test.TrialTestCase):
     """Test objectstore API directly."""
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Setup users and projects."""
         super(ObjectStoreTestCase, self).setUp()
         self.flags(buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
@@ -73,7 +73,7 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.auth_manager.create_project('proj2', 'user2', 'a proj', ['user2'])
         self.context = context.RequestContext('user1', 'proj1')
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         """Tear down users and projects."""
         self.auth_manager.delete_project('proj1')
         self.auth_manager.delete_project('proj2')
@@ -181,7 +181,7 @@ class ObjectStoreTestCase(test.TrialTestCase):
 class TestHTTPChannel(http.HTTPChannel):
     """Dummy site required for twisted.web"""
 
-    def checkPersistence(self, _, __): # pylint: disable-msg=C0103
+    def checkPersistence(self, _, __):  # pylint: disable-msg=C0103
         """Otherwise we end up with an unclean reactor."""
         return False
 
@@ -194,7 +194,7 @@ class TestSite(server.Site):
 class S3APITestCase(test.TrialTestCase):
     """Test objectstore through S3 API."""
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Setup users, projects, and start a test server."""
         super(S3APITestCase, self).setUp()
 
@@ -217,7 +217,6 @@ class S3APITestCase(test.TrialTestCase):
         # pylint: enable-msg=E1101
         self.tcp_port = self.listening_port.getHost().port
 
-
         if not boto.config.has_section('Boto'):
             boto.config.add_section('Boto')
         boto.config.set('Boto', 'num_retries', '0')
@@ -234,11 +233,11 @@ class S3APITestCase(test.TrialTestCase):
 
         self.conn.get_http_connection = get_http_connection
 
-    def _ensure_no_buckets(self, buckets): # pylint: disable-msg=C0111
+    def _ensure_no_buckets(self, buckets):  # pylint: disable-msg=C0111
         self.assertEquals(len(buckets), 0, "Bucket list was not empty")
         return True
 
-    def _ensure_one_bucket(self, buckets, name): # pylint: disable-msg=C0111
+    def _ensure_one_bucket(self, buckets, name):  # pylint: disable-msg=C0111
         self.assertEquals(len(buckets), 1,
                           "Bucket list didn't have exactly one element in it")
         self.assertEquals(buckets[0].name, name, "Wrong name")
@@ -309,7 +308,7 @@ class S3APITestCase(test.TrialTestCase):
         deferred.addCallback(self._ensure_no_buckets)
         return deferred
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         """Tear down auth and test server."""
         self.auth_manager.delete_user('admin')
         self.auth_manager.delete_project('admin')
