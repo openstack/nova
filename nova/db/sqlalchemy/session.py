@@ -19,37 +19,26 @@
 Session Handling for SQLAlchemy backend
 """
 
-import logging
-
 from sqlalchemy import create_engine
-from sqlalchemy.orm import create_session
+from sqlalchemy.orm import sessionmaker
 
 from nova import flags
 
 FLAGS = flags.FLAGS
 
-
-def managed_session(autocommit=True):
-    """Helper method to grab session manager"""
-    return SessionExecutionManager(autocommit=autocommit)
+_ENGINE = None
+_MAKER = None
 
 
-class SessionExecutionManager:
-    """Session manager supporting with .. as syntax"""
-    _engine = None
-    _session = None
-
-    def __init__(self, autocommit):
-        if not self._engine:
-            self._engine = create_engine(FLAGS.sql_connection, echo=False)
-        self._session = create_session(bind=self._engine,
-                                       autocommit=autocommit)
-
-    def __enter__(self):
-        return self._session
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type:
-            logging.exception("Rolling back due to failed transaction")
-            self._session.rollback()
-        self._session.close()
+def get_session(autocommit=True, expire_on_commit=False):
+    """Helper method to grab session"""
+    global _ENGINE
+    global _MAKER
+    if not _MAKER:
+        if not _ENGINE:
+            _ENGINE = create_engine(FLAGS.sql_connection, echo=False)
+        _MAKER = (sessionmaker(bind=_ENGINE,
+                                autocommit=autocommit,
+                                expire_on_commit=expire_on_commit))
+    session = _MAKER()
+    return session

@@ -16,18 +16,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Decorators for argument validation, courtesy of 
-  http://rmi.net/~lutz/rangetest.html
-"""
+"""Decorators for argument validation, courtesy of
+http://rmi.net/~lutz/rangetest.html"""
 
-def rangetest(**argchecks):                 # validate ranges for both+defaults
-    def onDecorator(func):                  # onCall remembers func and argchecks
+
+def rangetest(**argchecks):
+    """Validate ranges for both + defaults"""
+
+    def onDecorator(func):
+        """onCall remembers func and argchecks"""
         import sys
         code = func.__code__ if sys.version_info[0] == 3 else func.func_code
-        allargs  = code.co_varnames[:code.co_argcount]
+        allargs = code.co_varnames[:code.co_argcount]
         funcname = func.__name__
-        
+
         def onCall(*pargs, **kargs):
             # all pargs match first N args by position
             # the rest must be in kargs or omitted defaults
@@ -38,7 +40,8 @@ def rangetest(**argchecks):                 # validate ranges for both+defaults
                 # for all args to be checked
                 if argname in kargs:
                     # was passed by name
-                    if float(kargs[argname]) < low or float(kargs[argname]) > high:
+                    if float(kargs[argname]) < low or \
+                       float(kargs[argname]) > high:
                         errmsg = '{0} argument "{1}" not in {2}..{3}'
                         errmsg = errmsg.format(funcname, argname, low, high)
                         raise TypeError(errmsg)
@@ -46,9 +49,12 @@ def rangetest(**argchecks):                 # validate ranges for both+defaults
                 elif argname in positionals:
                     # was passed by position
                     position = positionals.index(argname)
-                    if float(pargs[position]) < low or float(pargs[position]) > high:
-                        errmsg = '{0} argument "{1}" with value of {4} not in {2}..{3}'
-                        errmsg = errmsg.format(funcname, argname, low, high, pargs[position])
+                    if float(pargs[position]) < low or \
+                       float(pargs[position]) > high:
+                        errmsg = '{0} argument "{1}" with value of {4} ' \
+                                 'not in {2}..{3}'
+                        errmsg = errmsg.format(funcname, argname, low, high,
+                                               pargs[position])
                         raise TypeError(errmsg)
                 else:
                     pass
@@ -62,9 +68,9 @@ def typetest(**argchecks):
     def onDecorator(func):
         import sys
         code = func.__code__ if sys.version_info[0] == 3 else func.func_code
-        allargs  = code.co_varnames[:code.co_argcount]
+        allargs = code.co_varnames[:code.co_argcount]
         funcname = func.__name__
-    
+
         def onCall(*pargs, **kargs):
             positionals = list(allargs)[:len(pargs)]
             for (argname, typeof) in argchecks.items():
@@ -76,12 +82,13 @@ def typetest(**argchecks):
                 elif argname in positionals:
                     position = positionals.index(argname)
                     if not isinstance(pargs[position], typeof):
-                        errmsg = '{0} argument "{1}" with value of {2} not of type {3}'
-                        errmsg = errmsg.format(funcname, argname, pargs[position], typeof)
+                        errmsg = '{0} argument "{1}" with value of {2} ' \
+                                 'not of type {3}'
+                        errmsg = errmsg.format(funcname, argname,
+                                               pargs[position], typeof)
                         raise TypeError(errmsg)
                 else:
                     pass
             return func(*pargs, **kargs)
         return onCall
     return onDecorator
-

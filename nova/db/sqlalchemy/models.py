@@ -24,13 +24,14 @@ import sys
 import datetime
 
 # TODO(vish): clean up these imports
-from sqlalchemy.orm import relationship, backref, validates, exc
-from sqlalchemy.sql import func
-from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship, backref, exc, object_mapper
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import ForeignKeyConstraint
 
-from nova.db.sqlalchemy.session import managed_session
+from nova.db.sqlalchemy.session import get_session
 
 from nova import auth
 from nova import exception
@@ -46,53 +47,10 @@ class NovaBase(object):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
     __prefix__ = 'none'
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
-
-    @classmethod
-    def all(cls, session=None):
-        """Get all objects of this type"""
-        if session:
-            return session.query(cls) \
-                          .filter_by(deleted=False) \
-                          .all()
-        else:
-            with managed_session() as sess:
-                return cls.all(session=sess)
-
-    @classmethod
-    def count(cls, session=None):
-        """Count objects of this type"""
-        if session:
-            return session.query(cls) \
-                          .filter_by(deleted=False) \
-                          .count()
-        else:
-            with managed_session() as sess:
-                return cls.count(session=sess)
-
-    @classmethod
-    def find(cls, obj_id, session=None):
-        """Find object by id"""
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(id=obj_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for id %s" % obj_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find(obj_id, session=sess)
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None):
-        """Find object by str_id"""
-        int_id = int(str_id.rpartition('-')[2])
-        return cls.find(int_id, session=session)
 
     @property
     def str_id(self):
@@ -101,16 +59,21 @@ class NovaBase(object):
 
     def save(self, session=None):
         """Save this object"""
-        if session:
-            session.add(self)
+        if not session:
+            session = get_session()
+        session.add(self)
+        try:
             session.flush()
-        else:
-            with managed_session() as sess:
-                self.save(session=sess)
+        except IntegrityError, e:
+            if str(e).endswith('is not unique'):
+                raise exception.Duplicate(str(e))
+            else:
+                raise
 
     def delete(self, session=None):
         """Delete this object"""
         self.deleted = True
+        self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -119,72 +82,69 @@ class NovaBase(object):
     def __getitem__(self, key):
         return getattr(self, key)
 
+    def __iter__(self):
+        self._i = iter(object_mapper(self).columns)
+        return self
 
-class Image(BASE, NovaBase):
-    """Represents an image in the datastore"""
-    __tablename__ = 'images'
-    __prefix__ = 'ami'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    image_type = Column(String(255))
-    public = Column(Boolean, default=False)
-    state = Column(String(255))
-    location = Column(String(255))
-    arch = Column(String(255))
-    default_kernel_id = Column(String(255))
-    default_ramdisk_id = Column(String(255))
+    def next(self):
+        n = self._i.next().name
+        return n, getattr(self, n)
 
-    @validates('image_type')
-    def validate_image_type(self, key, image_type):
-        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-
-    @validates('state')
-    def validate_state(self, key, state):
-        assert(state in ['available', 'pending', 'disabled'])
-
-    @validates('default_kernel_id')
-    def validate_kernel_id(self, key, val):
-        if val != 'machine':
-            assert(val is None)
-
-    @validates('default_ramdisk_id')
-    def validate_ramdisk_id(self, key, val):
-        if val != 'machine':
-            assert(val is None)
-
-
-class Host(BASE, NovaBase):
-    """Represents a host where services are running"""
-    __tablename__ = 'hosts'
-    id = Column(String(255), primary_key=True)
+# TODO(vish): Store images in the database instead of file system
+#class Image(BASE, NovaBase):
+#    """Represents an image in the datastore"""
+#    __tablename__ = 'images'
+#    __prefix__ = 'ami'
+#    id = Column(Integer, primary_key=True)
+#    ec2_id = Column(String(12), unique=True)
+#    user_id = Column(String(255))
+#    project_id = Column(String(255))
+#    image_type = Column(String(255))
+#    public = Column(Boolean, default=False)
+#    state = Column(String(255))
+#    location = Column(String(255))
+#    arch = Column(String(255))
+#    default_kernel_id = Column(String(255))
+#    default_ramdisk_id = Column(String(255))
+#
+#    @validates('image_type')
+#    def validate_image_type(self, key, image_type):
+#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
+#
+#    @validates('state')
+#    def validate_state(self, key, state):
+#        assert(state in ['available', 'pending', 'disabled'])
+#
+#    @validates('default_kernel_id')
+#    def validate_kernel_id(self, key, val):
+#        if val != 'machine':
+#            assert(val is None)
+#
+#    @validates('default_ramdisk_id')
+#    def validate_ramdisk_id(self, key, val):
+#        if val != 'machine':
+#            assert(val is None)
+#
+#
+# TODO(vish): To make this into its own table, we need a good place to
+#             create the host entries. In config somwhere? Or the first
+#             time any object sets host? This only becomes particularly
+#             important if we need to store per-host data.
+#class Host(BASE, NovaBase):
+#    """Represents a host where services are running"""
+#    __tablename__ = 'hosts'
+#    id = Column(String(255), primary_key=True)
 
 
 class Service(BASE, NovaBase):
     """Represents a running service on a host"""
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
-
-    @classmethod
-    def find_by_args(cls, host, binary, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(host=host) \
-                              .filter_by(binary=binary) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for %s, %s" % (host,
-                                                                  binary))
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_args(host, binary, session=sess)
+    disabled = Column(Boolean, default=False)
 
 
 class Instance(BASE, NovaBase):
@@ -192,6 +152,9 @@ class Instance(BASE, NovaBase):
     __tablename__ = 'instances'
     __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
+    internal_id = Column(Integer, unique=True)
+
+    admin_pass = Column(String(255))
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -206,11 +169,17 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return self.str_id
+        return "instance-%d" % self.internal_id
 
-    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
-    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+    image_id = Column(String(255))
+    kernel_id = Column(String(255))
+    ramdisk_id = Column(String(255))
+
+    server_name = Column(String(255))
+
+#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
 #    kernel = relationship(Kernel, backref=backref('instances', order_by=id))
 #    project = relationship(Project, backref=backref('instances', order_by=id))
@@ -218,30 +187,30 @@ class Instance(BASE, NovaBase):
     launch_index = Column(Integer)
     key_name = Column(String(255))
     key_data = Column(Text)
-    security_group = Column(String(255))
 
     state = Column(Integer)
     state_description = Column(String(255))
 
-    hostname = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
 
-    instance_type = Column(Integer)
+    hostname = Column(String(255))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
+
+    instance_type = Column(String(255))
 
     user_data = Column(Text)
 
     reservation_id = Column(String(255))
     mac_address = Column(String(255))
 
-    def set_state(self, state_code, state_description=None):
-        """Set the code and description of an instance"""
-        # TODO(devcamcar): Move this out of models and into driver
-        from nova.compute import power_state
-        self.state = state_code
-        if not state_description:
-            state_description = power_state.name(state_code)
-        self.state_description = state_description
-        self.save()
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -260,38 +229,153 @@ class Volume(BASE, NovaBase):
     __tablename__ = 'volumes'
     __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
+    ec2_id = Column(String(12), unique=True)
 
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    host = Column(String(255), ForeignKey('hosts.id'))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance,
+                            backref=backref('volumes'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(Volume.instance_id==Instance.id,'
+                                             'Volume.deleted==False)')
     mountpoint = Column(String(255))
     attach_time = Column(String(255))  # TODO(vish): datetime
     status = Column(String(255))  # TODO(vish): enum?
     attach_status = Column(String(255))  # TODO(vish): enum
 
+    scheduled_at = Column(DateTime)
+    launched_at = Column(DateTime)
+    terminated_at = Column(DateTime)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
+
+class Quota(BASE, NovaBase):
+    """Represents quota overrides for a project"""
+    __tablename__ = 'quotas'
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(String(255))
+
+    instances = Column(Integer)
+    cores = Column(Integer)
+    volumes = Column(Integer)
+    gigabytes = Column(Integer)
+    floating_ips = Column(Integer)
+
+    @property
+    def str_id(self):
+        return self.project_id
+
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
     __tablename__ = 'export_devices'
+    __table_args__ = (schema.UniqueConstraint("shelf_id", "blade_id"),
+                      {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
-    volume = relationship(Volume, backref=backref('export_device',
-                                                  uselist=False))
+    volume = relationship(Volume,
+                          backref=backref('export_device', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
+                                           'ExportDevice.deleted==False)')
+
+
+class SecurityGroupInstanceAssociation(BASE, NovaBase):
+    __tablename__ = 'security_group_instance_association'
+    id = Column(Integer, primary_key=True)
+    security_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+
+class SecurityGroup(BASE, NovaBase):
+    """Represents a security group"""
+    __tablename__ = 'security_groups'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String(255))
+    description = Column(String(255))
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    instances = relationship(Instance,
+                             secondary="security_group_instance_association",
+                             primaryjoin='and_('
+        'SecurityGroup.id == '
+            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroup.deleted == False)',
+                             secondaryjoin='and_('
+        'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        'Instance.deleted == False)',
+                             backref='security_groups')
+
+    @property
+    def user(self):
+        return auth.manager.AuthManager().get_user(self.user_id)
+
+    @property
+    def project(self):
+        return auth.manager.AuthManager().get_project(self.project_id)
+
+
+class SecurityGroupIngressRule(BASE, NovaBase):
+    """Represents a rule in a security group"""
+    __tablename__ = 'security_group_rules'
+    id = Column(Integer, primary_key=True)
+
+    parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    parent_group = relationship("SecurityGroup", backref="rules",
+                                foreign_keys=parent_group_id,
+                                primaryjoin='and_('
+        'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
+        'SecurityGroupIngressRule.deleted == False)')
+
+    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
+    from_port = Column(Integer)
+    to_port = Column(Integer)
+    cidr = Column(String(255))
+
+    # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
+    # granting access for.
+    group_id = Column(Integer, ForeignKey('security_groups.id'))
+
+
+class KeyPair(BASE, NovaBase):
+    """Represents a public key pair for ssh"""
+    __tablename__ = 'key_pairs'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String(255))
+
+    user_id = Column(String(255))
+
+    fingerprint = Column(String(255))
+    public_key = Column(Text)
+
+    @property
+    def str_id(self):
+        return '%s.%s' % (self.user_id, self.name)
 
 
 class Network(BASE, NovaBase):
     """Represents a network"""
     __tablename__ = 'networks'
+    __table_args__ = (schema.UniqueConstraint("vpn_public_address",
+                                              "vpn_public_port"),
+                      {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
 
     injected = Column(Boolean, default=False)
-    cidr = Column(String(255))
+    cidr = Column(String(255), unique=True)
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -304,23 +388,23 @@ class Network(BASE, NovaBase):
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
-    project_id = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
+    # NOTE(vish): The unique constraint below helps avoid a race condition
+    #             when associating a network, but it also means that we
+    #             can't associate two networks with one project.
+    project_id = Column(String(255), unique=True)
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
-class NetworkIndex(BASE, NovaBase):
-    """Represents a unique offset for a network
-
-    Currently vlan number, vpn port, and fixed ip ranges are keyed off of
-    this index. These may ultimately need to be converted to separate
-    pools.
-    """
-    __tablename__ = 'network_indexes'
-    id = Column(Integer, primary_key=True)
-    index = Column(Integer)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('network_index',
-                                                    uselist=False))
+class AuthToken(BASE, NovaBase):
+    """Represents an authorization token for all API transactions. Fields
+    are a string representing the actual token and a user id for mapping
+    to the actual user"""
+    __tablename__ = 'auth_tokens'
+    token_hash = Column(String(255), primary_key=True)
+    user_id = Column(Integer)
+    server_manageent_url = Column(String(255))
+    storage_url = Column(String(255))
+    cdn_management_url = Column(String(255))
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -332,8 +416,12 @@ class FixedIp(BASE, NovaBase):
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance, backref=backref('fixed_ip',
-                                                      uselist=False))
+    instance = relationship(Instance,
+                            backref=backref('fixed_ip', uselist=False),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_('
+                                'FixedIp.instance_id == Instance.id,'
+                                'FixedIp.deleted == False)')
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
@@ -342,20 +430,65 @@ class FixedIp(BASE, NovaBase):
     def str_id(self):
         return self.address
 
-    @classmethod
-    def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(address=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for address %s" % str_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
+
+class User(BASE, NovaBase):
+    """Represents a user"""
+    __tablename__ = 'users'
+    id = Column(String(255), primary_key=True)
+
+    name = Column(String(255))
+    access_key = Column(String(255))
+    secret_key = Column(String(255))
+
+    is_admin = Column(Boolean)
+
+
+class Project(BASE, NovaBase):
+    """Represents a project"""
+    __tablename__ = 'projects'
+    id = Column(String(255), primary_key=True)
+    name = Column(String(255))
+    description = Column(String(255))
+
+    project_manager = Column(String(255), ForeignKey(User.id))
+
+    members = relationship(User,
+                           secondary='user_project_association',
+                           backref='projects')
+
+
+class UserProjectRoleAssociation(BASE, NovaBase):
+    __tablename__ = 'user_project_role_association'
+    user_id = Column(String(255), primary_key=True)
+    user = relationship(User,
+                        primaryjoin=user_id == User.id,
+                        foreign_keys=[User.id],
+                        uselist=False)
+
+    project_id = Column(String(255), primary_key=True)
+    project = relationship(Project,
+                           primaryjoin=project_id == Project.id,
+                           foreign_keys=[Project.id],
+                           uselist=False)
+
+    role = Column(String(255), primary_key=True)
+    ForeignKeyConstraint(['user_id',
+                          'project_id'],
+                         ['user_project_association.user_id',
+                          'user_project_association.project_id'])
+
+
+class UserRoleAssociation(BASE, NovaBase):
+    __tablename__ = 'user_role_association'
+    user_id = Column(String(255), ForeignKey('users.id'), primary_key=True)
+    user = relationship(User, backref='roles')
+    role = Column(String(255), primary_key=True)
+
+
+class UserProjectAssociation(BASE, NovaBase):
+    __tablename__ = 'user_project_association'
+    user_id = Column(String(255), ForeignKey(User.id), primary_key=True)
+    project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
 
 
 class FloatingIp(BASE, NovaBase):
@@ -364,36 +497,23 @@ class FloatingIp(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
     fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp, backref=backref('floating_ips'))
-
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_('
+                                'FloatingIp.fixed_ip_id == FixedIp.id,'
+                                'FloatingIp.deleted == False)')
     project_id = Column(String(255))
-    host = Column(String(255), ForeignKey('hosts.id'))
-
-    @property
-    def str_id(self):
-        return self.address
-
-    @classmethod
-    def find_by_str(cls, str_id, session=None):
-        if session:
-            try:
-                return session.query(cls) \
-                              .filter_by(address=str_id) \
-                              .filter_by(deleted=False) \
-                              .one()
-            except exc.NoResultFound:
-                new_exc = exception.NotFound("No model for address %s" % str_id)
-                raise new_exc.__class__, new_exc, sys.exc_info()[2]
-        else:
-            with managed_session() as sess:
-                return cls.find_by_str(str_id, session=sess)
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Image, Host, Service, Instance, Volume, ExportDevice,
-              FixedIp, FloatingIp, Network, NetworkIndex)
+    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+              FloatingIp, Network, SecurityGroup,
+              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
+              AuthToken, User, Project)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

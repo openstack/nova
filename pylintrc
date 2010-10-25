@@ -1,7 +1,8 @@
 [Messages Control]
 # W0511: TODOs in code comments are fine.
 # W0142: *args and **kwargs are fine.
-disable-msg=W0511,W0142
+# W0622: Redefining id is fine.
+disable-msg=W0511,W0142,W0622
 
 [Basic]
 # Variable names can be 1 to 31 characters long, with lowercase and underscores
@@ -12,7 +13,7 @@ argument-rgx=[a-z_][a-z0-9_]{1,30}$
 
 # Method names should be at least 3 characters long
 # and be lowecased with underscores
-method-rgx=[a-z_][a-z0-9_]{2,50}$
+method-rgx=([a-z_][a-z0-9_]{2,50}|setUp|tearDown)$
 
 # Module names matching nova-* are ok (files in bin/)
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+)|(nova-[a-z0-9_-]+))$

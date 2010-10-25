@@ -30,10 +30,9 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
-                            sqlalchemy='nova.db.sqlalchemy.api')
+                           sqlalchemy='nova.db.sqlalchemy.api')
 
 
-# TODO(vish): where should these exceptions go?
 class NoMoreAddresses(exception.Error):
     """No more available addresses"""
     pass
@@ -121,9 +120,24 @@ def floating_ip_allocate_address(context, host, project_id):
     return IMPL.floating_ip_allocate_address(context, host, project_id)
 
 
-def floating_ip_create(context, address, host):
-    """Create a floating ip for a given address on the specified host."""
-    return IMPL.floating_ip_create(context, address, host)
+def floating_ip_create(context, values):
+    """Create a floating ip from the values dictionary."""
+    return IMPL.floating_ip_create(context, values)
+
+
+def floating_ip_count_by_project(context, project_id):
+    """Count floating ips used by project."""
+    return IMPL.floating_ip_count_by_project(context, project_id)
+
+
+def floating_ip_deallocate(context, address):
+    """Deallocate an floating ip by address"""
+    return IMPL.floating_ip_deallocate(context, address)
+
+
+def floating_ip_destroy(context, address):
+    """Destroy the floating_ip or raise if it does not exist."""
+    return IMPL.floating_ip_destroy(context, address)
 
 
 def floating_ip_disassociate(context, address):
@@ -134,11 +148,6 @@ def floating_ip_disassociate(context, address):
     return IMPL.floating_ip_disassociate(context, address)
 
 
-def floating_ip_deallocate(context, address):
-    """Deallocate an floating ip by address"""
-    return IMPL.floating_ip_deallocate(context, address)
-
-
 def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
     """Associate an floating ip to a fixed_ip by address."""
     return IMPL.floating_ip_fixed_ip_associate(context,
@@ -146,25 +155,43 @@ def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
                                                fixed_address)
 
 
+def floating_ip_get_all(context):
+    """Get all floating ips."""
+    return IMPL.floating_ip_get_all(context)
+
+
+def floating_ip_get_all_by_host(context, host):
+    """Get all floating ips by host."""
+    return IMPL.floating_ip_get_all_by_host(context, host)
+
+
+def floating_ip_get_all_by_project(context, project_id):
+    """Get all floating ips by project."""
+    return IMPL.floating_ip_get_all_by_project(context, project_id)
+
+
 def floating_ip_get_by_address(context, address):
     """Get a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-def floating_ip_get_instance(context, address):
-    """Get an instance for a floating ip by address."""
-    return IMPL.floating_ip_get_instance(context, address)
-
-
 ####################
 
 
-def fixed_ip_allocate(context, network_id):
-    """Allocate free fixed ip and return the address.
+def fixed_ip_associate(context, address, instance_id):
+    """Associate fixed ip to instance.
+
+    Raises if fixed ip is not available.
+    """
+    return IMPL.fixed_ip_associate(context, address, instance_id)
+
+
+def fixed_ip_associate_pool(context, network_id, instance_id):
+    """Find free ip in network and associate it to instance.
 
     Raises if one is not available.
     """
-    return IMPL.fixed_ip_allocate(context, network_id)
+    return IMPL.fixed_ip_associate_pool(context, network_id, instance_id)
 
 
 def fixed_ip_create(context, values):
@@ -172,9 +199,14 @@ def fixed_ip_create(context, values):
     return IMPL.fixed_ip_create(context, values)
 
 
-def fixed_ip_deallocate(context, address):
-    """Deallocate a fixed ip by address."""
-    return IMPL.fixed_ip_deallocate(context, address)
+def fixed_ip_disassociate(context, address):
+    """Disassociate a fixed ip from an instance by address."""
+    return IMPL.fixed_ip_disassociate(context, address)
+
+
+def fixed_ip_disassociate_all_by_timeout(context, host, time):
+    """Disassociate old fixed ips from host"""
+    return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -192,16 +224,6 @@ def fixed_ip_get_network(context, address):
     return IMPL.fixed_ip_get_network(context, address)
 
 
-def fixed_ip_instance_associate(context, address, instance_id):
-    """Associate a fixed ip to an instance by address."""
-    return IMPL.fixed_ip_instance_associate(context, address, instance_id)
-
-
-def fixed_ip_instance_disassociate(context, address):
-    """Disassociate a fixed ip from an instance by address."""
-    return IMPL.fixed_ip_instance_disassociate(context, address)
-
-
 def fixed_ip_update(context, address, values):
     """Create a fixed ip from the values dictionary."""
     return IMPL.fixed_ip_update(context, address, values)
@@ -213,6 +235,11 @@ def fixed_ip_update(context, address, values):
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return IMPL.instance_create(context, values)
+
+
+def instance_data_get_for_project(context, project_id):
+    """Get (instance_count, core_count) for project."""
+    return IMPL.instance_data_get_for_project(context, project_id)
 
 
 def instance_destroy(context, instance_id):
@@ -230,14 +257,19 @@ def instance_get_all(context):
     return IMPL.instance_get_all(context)
 
 
-def instance_get_by_project(context, project_id):
+def instance_get_all_by_user(context, user_id):
+    """Get all instances."""
+    return IMPL.instance_get_all_by_user(context, user_id)
+
+
+def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
-    return IMPL.instance_get_by_project(context, project_id)
+    return IMPL.instance_get_all_by_project(context, project_id)
 
 
-def instance_get_by_reservation(context, reservation_id):
+def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
-    return IMPL.instance_get_by_reservation(context, reservation_id)
+    return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
 def instance_get_fixed_address(context, instance_id):
@@ -250,14 +282,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_str(context, str_id):
-    """Get an instance by string id."""
-    return IMPL.instance_get_by_str(context, str_id)
-
-
-def instance_get_host(context, instance_id):
-    """Get the host that the instance is running on."""
-    return IMPL.instance_get_host(context, instance_id)
+def instance_get_by_internal_id(context, internal_id):
+    """Get an instance by ec2 id."""
+    return IMPL.instance_get_by_internal_id(context, internal_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -265,9 +292,9 @@ def instance_is_vpn(context, instance_id):
     return IMPL.instance_is_vpn(context, instance_id)
 
 
-def instance_state(context, instance_id, state, description=None):
+def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
-    return IMPL.instance_state(context, instance_id, state, description)
+    return IMPL.instance_set_state(context, instance_id, state, description)
 
 
 def instance_update(context, instance_id, values):
@@ -279,7 +306,46 @@ def instance_update(context, instance_id, values):
     return IMPL.instance_update(context, instance_id, values)
 
 
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    return IMPL.instance_add_security_group(context, instance_id,
+                                            security_group_id)
+
+
+###################
+
+
+def key_pair_create(context, values):
+    """Create a key_pair from the values dictionary."""
+    return IMPL.key_pair_create(context, values)
+
+
+def key_pair_destroy(context, user_id, name):
+    """Destroy the key_pair or raise if it does not exist."""
+    return IMPL.key_pair_destroy(context, user_id, name)
+
+
+def key_pair_destroy_all_by_user(context, user_id):
+    """Destroy all key_pairs by user."""
+    return IMPL.key_pair_destroy_all_by_user(context, user_id)
+
+
+def key_pair_get(context, user_id, name):
+    """Get a key_pair or raise if it does not exist."""
+    return IMPL.key_pair_get(context, user_id, name)
+
+
+def key_pair_get_all_by_user(context, user_id):
+    """Get all key_pairs by user."""
+    return IMPL.key_pair_get_all_by_user(context, user_id)
+
+
 ####################
+
+
+def network_associate(context, project_id):
+    """Associate a free network to a project."""
+    return IMPL.network_associate(context, project_id)
 
 
 def network_count(context):
@@ -302,9 +368,12 @@ def network_count_reserved_ips(context, network_id):
     return IMPL.network_count_reserved_ips(context, network_id)
 
 
-def network_create(context, values):
-    """Create a network from the values dictionary."""
-    return IMPL.network_create(context, values)
+def network_create_safe(context, values):
+    """Create a network from the values dict
+
+    The network is only returned if the create succeeds. If the create violates
+    constraints because the network already exists, no exception is raised."""
+    return IMPL.network_create_safe(context, values)
 
 
 def network_create_fixed_ips(context, network_id, num_vpn_clients):
@@ -312,9 +381,14 @@ def network_create_fixed_ips(context, network_id, num_vpn_clients):
     return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
 
 
-def network_destroy(context, network_id):
-    """Destroy the network or raise if it does not exist."""
-    return IMPL.network_destroy(context, network_id)
+def network_disassociate(context, network_id):
+    """Disassociate the network from project or raise if it does not exist."""
+    return IMPL.network_disassociate(context, network_id)
+
+
+def network_disassociate_all(context):
+    """Disassociate all networks from projects."""
+    return IMPL.network_disassociate_all(context)
 
 
 def network_get(context, network_id):
@@ -329,13 +403,13 @@ def network_get_associated_fixed_ips(context, network_id):
 
 
 def network_get_by_bridge(context, bridge):
-    """Get an network or raise if it does not exist."""
+    """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
 
 
-def network_get_host(context, network_id):
-    """Get host assigned to network or raise"""
-    return IMPL.network_get_host(context, network_id)
+def network_get_by_instance(context, instance_id):
+    """Get a network by instance id or raise if it does not exist."""
+    return IMPL.network_get_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):
@@ -346,16 +420,6 @@ def network_get_index(context, network_id):
 def network_get_vpn_ip(context, network_id):
     """Get non-conflicting index for network"""
     return IMPL.network_get_vpn_ip(context, network_id)
-
-
-def network_index_count(context):
-    """Return count of network indexes"""
-    return IMPL.network_index_count(context)
-
-
-def network_index_create(context, values):
-    """Create a network index from the values dict"""
-    return IMPL.network_index_create(context, values)
 
 
 def network_set_cidr(context, network_id, cidr):
@@ -381,7 +445,11 @@ def network_update(context, network_id, values):
 
 
 def project_get_network(context, project_id):
-    """Return the network associated with the project."""
+    """Return the network associated with the project.
+
+    Raises NotFound if no such network can be found.
+
+    """
     return IMPL.project_get_network(context, project_id)
 
 
@@ -401,9 +469,54 @@ def export_device_count(context):
     return IMPL.export_device_count(context)
 
 
-def export_device_create(context, values):
-    """Create an export_device from the values dictionary."""
-    return IMPL.export_device_create(context, values)
+def export_device_create_safe(context, values):
+    """Create an export_device from the values dictionary.
+
+    The device is not returned. If the create violates the unique
+    constraints because the shelf_id and blade_id already exist,
+    no exception is raised."""
+    return IMPL.export_device_create_safe(context, values)
+
+
+###################
+
+
+def auth_destroy_token(context, token):
+    """Destroy an auth token"""
+    return IMPL.auth_destroy_token(context, token)
+
+
+def auth_get_token(context, token_hash):
+    """Retrieves a token given the hash representing it"""
+    return IMPL.auth_get_token(context, token_hash)
+
+
+def auth_create_token(context, token):
+    """Creates a new token"""
+    return IMPL.auth_create_token(context, token)
+
+
+###################
+
+
+def quota_create(context, values):
+    """Create a quota from the values dictionary."""
+    return IMPL.quota_create(context, values)
+
+
+def quota_get(context, project_id):
+    """Retrieve a quota or raise if it does not exist."""
+    return IMPL.quota_get(context, project_id)
+
+
+def quota_update(context, project_id, values):
+    """Update a quota from the values dictionary."""
+    return IMPL.quota_update(context, project_id, values)
+
+
+def quota_destroy(context, project_id):
+    """Destroy the quota or raise if it does not exist."""
+    return IMPL.quota_destroy(context, project_id)
 
 
 ###################
@@ -422,6 +535,11 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 def volume_create(context, values):
     """Create a volume from the values dictionary."""
     return IMPL.volume_create(context, values)
+
+
+def volume_data_get_for_project(context, project_id):
+    """Get (volume_count, gigabytes) for project."""
+    return IMPL.volume_data_get_for_project(context, project_id)
 
 
 def volume_destroy(context, volume_id):
@@ -444,19 +562,19 @@ def volume_get_all(context):
     return IMPL.volume_get_all(context)
 
 
-def volume_get_by_project(context, project_id):
+def volume_get_instance(context, volume_id):
+    """Get the instance that a volume is attached to."""
+    return IMPL.volume_get_instance(context, volume_id)
+
+
+def volume_get_all_by_project(context, project_id):
     """Get all volumes belonging to a project."""
-    return IMPL.volume_get_by_project(context, project_id)
+    return IMPL.volume_get_all_by_project(context, project_id)
 
 
-def volume_get_by_str(context, str_id):
-    """Get a volume by string id."""
-    return IMPL.volume_get_by_str(context, str_id)
-
-
-def volume_get_host(context, volume_id):
-    """Get the host that the volume is running on."""
-    return IMPL.volume_get_host(context, volume_id)
+def volume_get_by_ec2_id(context, ec2_id):
+    """Get a volume by ec2 id."""
+    return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
 def volume_get_shelf_and_blade(context, volume_id):
@@ -471,3 +589,188 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+####################
+
+
+def security_group_get_all(context):
+    """Get all security groups"""
+    return IMPL.security_group_get_all(context)
+
+
+def security_group_get(context, security_group_id):
+    """Get security group by its internal id"""
+    return IMPL.security_group_get(context, security_group_id)
+
+
+def security_group_get_by_name(context, project_id, group_name):
+    """Returns a security group with the specified name from a project"""
+    return IMPL.security_group_get_by_name(context, project_id, group_name)
+
+
+def security_group_get_by_project(context, project_id):
+    """Get all security groups belonging to a project"""
+    return IMPL.security_group_get_by_project(context, project_id)
+
+
+def security_group_get_by_instance(context, instance_id):
+    """Get security groups to which the instance is assigned"""
+    return IMPL.security_group_get_by_instance(context, instance_id)
+
+
+def security_group_exists(context, project_id, group_name):
+    """Indicates if a group name exists in a project"""
+    return IMPL.security_group_exists(context, project_id, group_name)
+
+
+def security_group_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_create(context, values)
+
+
+def security_group_destroy(context, security_group_id):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy(context, security_group_id)
+
+
+def security_group_destroy_all(context):
+    """Deletes a security group"""
+    return IMPL.security_group_destroy_all(context)
+
+
+####################
+
+
+def security_group_rule_create(context, values):
+    """Create a new security group"""
+    return IMPL.security_group_rule_create(context, values)
+
+
+def security_group_rule_get_by_security_group(context, security_group_id):
+    """Get all rules for a a given security group"""
+    return IMPL.security_group_rule_get_by_security_group(context,
+                                                          security_group_id)
+
+
+def security_group_rule_destroy(context, security_group_rule_id):
+    """Deletes a security group rule"""
+    return IMPL.security_group_rule_destroy(context, security_group_rule_id)
+
+
+###################
+
+
+def user_get(context, id):
+    """Get user by id"""
+    return IMPL.user_get(context, id)
+
+
+def user_get_by_uid(context, uid):
+    """Get user by uid"""
+    return IMPL.user_get_by_uid(context, uid)
+
+
+def user_get_by_access_key(context, access_key):
+    """Get user by access key"""
+    return IMPL.user_get_by_access_key(context, access_key)
+
+
+def user_create(context, values):
+    """Create a new user"""
+    return IMPL.user_create(context, values)
+
+
+def user_delete(context, id):
+    """Delete a user"""
+    return IMPL.user_delete(context, id)
+
+
+def user_get_all(context):
+    """Create a new user"""
+    return IMPL.user_get_all(context)
+
+
+def user_add_role(context, user_id, role):
+    """Add another global role for user"""
+    return IMPL.user_add_role(context, user_id, role)
+
+
+def user_remove_role(context, user_id, role):
+    """Remove global role from user"""
+    return IMPL.user_remove_role(context, user_id, role)
+
+
+def user_get_roles(context, user_id):
+    """Get global roles for user"""
+    return IMPL.user_get_roles(context, user_id)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    """Add project role for user"""
+    return IMPL.user_add_project_role(context, user_id, project_id, role)
+
+
+def user_remove_project_role(context, user_id, project_id, role):
+    """Remove project role from user"""
+    return IMPL.user_remove_project_role(context, user_id, project_id, role)
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    """Return list of roles a user holds on project"""
+    return IMPL.user_get_roles_for_project(context, user_id, project_id)
+
+
+def user_update(context, user_id, values):
+    """Update user"""
+    return IMPL.user_update(context, user_id, values)
+
+
+def project_get(context, id):
+    """Get project by id"""
+    return IMPL.project_get(context, id)
+
+
+def project_create(context, values):
+    """Create a new project"""
+    return IMPL.project_create(context, values)
+
+
+def project_add_member(context, project_id, user_id):
+    """Add user to project"""
+    return IMPL.project_add_member(context, project_id, user_id)
+
+
+def project_get_all(context):
+    """Get all projects"""
+    return IMPL.project_get_all(context)
+
+
+def project_get_by_user(context, user_id):
+    """Get all projects of which the given user is a member"""
+    return IMPL.project_get_by_user(context, user_id)
+
+
+def project_remove_member(context, project_id, user_id):
+    """Remove the given user from the given project"""
+    return IMPL.project_remove_member(context, project_id, user_id)
+
+
+def project_update(context, project_id, values):
+    """Update Remove the given user from the given project"""
+    return IMPL.project_update(context, project_id, values)
+
+
+def project_delete(context, project_id):
+    """Delete project"""
+    return IMPL.project_delete(context, project_id)
+
+
+###################
+
+
+def host_get_networks(context, host):
+    """Return all networks for which the given host is the designated
+    network host
+    """
+    return IMPL.host_get_networks(context, host)

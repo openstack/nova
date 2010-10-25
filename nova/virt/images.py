@@ -29,6 +29,7 @@ from nova import flags
 from nova import process
 from nova.auth import manager
 from nova.auth import signer
+from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
@@ -61,8 +62,8 @@ def _fetch_s3_image(image, path, user, project):
     headers['Authorization'] = 'AWS %s:%s' % (access, signature)
 
     cmd = ['/usr/bin/curl', '--fail', '--silent', url]
-    for (k,v) in headers.iteritems():
-        cmd += ['-H', '%s: %s' % (k,v)]
+    for (k, v) in headers.iteritems():
+        cmd += ['-H', '%s: %s' % (k, v)]
 
     cmd += ['-o', path]
     return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])

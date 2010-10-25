@@ -37,9 +37,7 @@ flags.DEFINE_string('scheduler_driver',
 
 
 class SchedulerManager(manager.Manager):
-    """
-    Chooses a host to run instances on.
-    """
+    """Chooses a host to run instances on."""
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
@@ -56,13 +54,15 @@ class SchedulerManager(manager.Manager):
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
+        elevated = context.elevated()
         try:
-            host = getattr(self.driver, driver_method)(context, *args, **kwargs)
+            host = getattr(self.driver, driver_method)(elevated, *args,
+                                                       **kwargs)
         except AttributeError:
-            host = self.driver.schedule(context, topic, *args, **kwargs)
+            host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
-        kwargs.update({"context": None})
-        rpc.cast(db.queue_get_for(context, topic, host),
+        rpc.cast(context,
+                 db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        logging.debug("Casting to %s %s for %s", topic, host, self.method)
+        logging.debug("Casting to %s %s for %s", topic, host, method)

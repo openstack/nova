@@ -19,64 +19,162 @@
 Implementation of SQLAlchemy backend
 """
 
+import warnings
+
 from nova import db
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy.session import managed_session
+from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload_all
+from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
 
 FLAGS = flags.FLAGS
 
-# NOTE(vish): disabling docstring pylint because the docstrings are
-#             in the interface definition
-# pylint: disable-msg=C0111
+
+def is_admin_context(context):
+    """Indicates if the request context is an administrator."""
+    if not context:
+        warnings.warn('Use of empty request context is deprecated',
+                      DeprecationWarning)
+        raise Exception('die')
+        return True
+    return context.is_admin
+
+
+def is_user_context(context):
+    """Indicates if the request context is a normal user."""
+    if not context:
+        return False
+    if context.is_admin:
+        return False
+    if not context.user_id or not context.project_id:
+        return False
+    return True
+
+
+def authorize_project_context(context, project_id):
+    """Ensures that the request context has permission to access the
+       given project.
+    """
+    if is_user_context(context):
+        if not context.project:
+            raise exception.NotAuthorized()
+        elif context.project_id != project_id:
+            raise exception.NotAuthorized()
+
+
+def authorize_user_context(context, user_id):
+    """Ensures that the request context has permission to access the
+       given user.
+    """
+    if is_user_context(context):
+        if not context.user:
+            raise exception.NotAuthorized()
+        elif context.user_id != user_id:
+            raise exception.NotAuthorized()
+
+
+def can_read_deleted(context):
+    """Indicates if the context has access to deleted objects."""
+    if not context:
+        return False
+    return context.read_deleted
+
+
+def require_admin_context(f):
+    """Decorator used to indicate that the method requires an
+       administrator context.
+    """
+    def wrapper(*args, **kwargs):
+        if not is_admin_context(args[0]):
+            raise exception.NotAuthorized()
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def require_context(f):
+    """Decorator used to indicate that the method requires either
+       an administrator or normal user context.
+    """
+    def wrapper(*args, **kwargs):
+        if not is_admin_context(args[0]) and not is_user_context(args[0]):
+            raise exception.NotAuthorized()
+        return f(*args, **kwargs)
+    return wrapper
+
 
 ###################
 
-
+@require_admin_context
 def service_destroy(context, service_id):
-    service_ref = service_get(context, service_id)
-    service_ref.delete()
+    session = get_session()
+    with session.begin():
+        service_ref = service_get(context, service_id, session=session)
+        service_ref.delete(session=session)
 
-def service_get(_context, service_id):
-    return models.Service.find(service_id)
+
+@require_admin_context
+def service_get(context, service_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Service).\
+                     filter_by(id=service_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound('No service for id %s' % service_id)
+
+    return result
 
 
+@require_admin_context
 def service_get_all_by_topic(context, topic):
-    with managed_session() as session:
-        return session.query(models.Service) \
-                      .filter_by(deleted=False) \
-                      .filter_by(topic=topic) \
-                      .all()
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=False).\
+                   filter_by(topic=topic).\
+                   all()
 
 
-def _service_get_all_topic_subquery(_context, session, topic, subq, label):
+@require_admin_context
+def _service_get_all_topic_subquery(context, session, topic, subq, label):
     sort_value = getattr(subq.c, label)
-    return session.query(models.Service, sort_value) \
-                  .filter_by(topic=topic) \
-                  .filter_by(deleted=False) \
-                  .outerjoin((subq, models.Service.host == subq.c.host)) \
-                  .order_by(sort_value) \
-                  .all()
+    return session.query(models.Service, func.coalesce(sort_value, 0)).\
+                   filter_by(topic=topic).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=False).\
+                   outerjoin((subq, models.Service.host == subq.c.host)).\
+                   order_by(sort_value).\
+                   all()
 
 
+@require_admin_context
 def service_get_all_compute_sorted(context):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         # NOTE(vish): The intended query is below
-        #             SELECT services.*, inst_count.instance_count
+        #             SELECT services.*, COALESCE(inst_cores.instance_cores,
+        #                                         0)
         #             FROM services LEFT OUTER JOIN
-        #             (SELECT host, count(*) AS instance_count
-        #              FROM instances GROUP BY host) AS inst_count
-        #             ON services.host = inst_count.host
+        #             (SELECT host, SUM(instances.vcpus) AS instance_cores
+        #              FROM instances GROUP BY host) AS inst_cores
+        #             ON services.host = inst_cores.host
         topic = 'compute'
-        label = 'instance_count'
+        label = 'instance_cores'
         subq = session.query(models.Instance.host,
-                             func.count('*').label(label)) \
-                      .filter_by(deleted=False) \
-                      .group_by(models.Instance.host) \
-                      .subquery()
+                             func.sum(models.Instance.vcpus).label(label)).\
+                       filter_by(deleted=False).\
+                       group_by(models.Instance.host).\
+                       subquery()
         return _service_get_all_topic_subquery(context,
                                                session,
                                                topic,
@@ -84,15 +182,17 @@ def service_get_all_compute_sorted(context):
                                                label)
 
 
+@require_admin_context
 def service_get_all_network_sorted(context):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         topic = 'network'
         label = 'network_count'
         subq = session.query(models.Network.host,
-                             func.count('*').label(label)) \
-                      .filter_by(deleted=False) \
-                      .group_by(models.Network.host) \
-                      .subquery()
+                             func.count(models.Network.id).label(label)).\
+                       filter_by(deleted=False).\
+                       group_by(models.Network.host).\
+                       subquery()
         return _service_get_all_topic_subquery(context,
                                                session,
                                                topic,
@@ -100,15 +200,17 @@ def service_get_all_network_sorted(context):
                                                label)
 
 
+@require_admin_context
 def service_get_all_volume_sorted(context):
-    with managed_session() as session:
+    session = get_session()
+    with session.begin():
         topic = 'volume'
-        label = 'volume_count'
+        label = 'volume_gigabytes'
         subq = session.query(models.Volume.host,
-                             func.count('*').label(label)) \
-                      .filter_by(deleted=False) \
-                      .group_by(models.Volume.host) \
-                      .subquery()
+                             func.sum(models.Volume.size).label(label)).\
+                       filter_by(deleted=False).\
+                       group_by(models.Volume.host).\
+                       subquery()
         return _service_get_all_topic_subquery(context,
                                                session,
                                                topic,
@@ -116,69 +218,129 @@ def service_get_all_volume_sorted(context):
                                                label)
 
 
-def service_get_by_args(_context, host, binary):
-    return models.Service.find_by_args(host, binary)
+@require_admin_context
+def service_get_by_args(context, host, binary):
+    session = get_session()
+    result = session.query(models.Service).\
+                     filter_by(host=host).\
+                     filter_by(binary=binary).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+    if not result:
+        raise exception.NotFound('No service for %s, %s' % (host, binary))
+
+    return result
 
 
-def service_create(_context, values):
+@require_admin_context
+def service_create(context, values):
     service_ref = models.Service()
     for (key, value) in values.iteritems():
         service_ref[key] = value
     service_ref.save()
-    return service_ref.id
+    return service_ref
 
 
+@require_admin_context
 def service_update(context, service_id, values):
-    service_ref = service_get(context, service_id)
-    for (key, value) in values.iteritems():
-        service_ref[key] = value
-    service_ref.save()
+    session = get_session()
+    with session.begin():
+        service_ref = service_get(context, service_id, session=session)
+        for (key, value) in values.iteritems():
+            service_ref[key] = value
+        service_ref.save(session=session)
 
 
 ###################
 
 
-def floating_ip_allocate_address(_context, host, project_id):
-    with managed_session(autocommit=False) as session:
-        floating_ip_ref = session.query(models.FloatingIp) \
-                                 .filter_by(host=host) \
-                                 .filter_by(fixed_ip_id=None) \
-                                 .filter_by(deleted=False) \
-                                 .with_lockmode('update') \
-                                 .first()
+@require_context
+def floating_ip_allocate_address(context, host, project_id):
+    authorize_project_context(context, project_id)
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = session.query(models.FloatingIp).\
+                                  filter_by(host=host).\
+                                  filter_by(fixed_ip_id=None).\
+                                  filter_by(project_id=None).\
+                                  filter_by(deleted=False).\
+                                  with_lockmode('update').\
+                                  first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not floating_ip_ref:
             raise db.NoMoreAddresses()
         floating_ip_ref['project_id'] = project_id
         session.add(floating_ip_ref)
-        session.commit()
-        return floating_ip_ref['address']
+    return floating_ip_ref['address']
 
 
-def floating_ip_create(_context, address, host):
+@require_context
+def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
-    floating_ip_ref['address'] = address
-    floating_ip_ref['host'] = host
+    for (key, value) in values.iteritems():
+        floating_ip_ref[key] = value
     floating_ip_ref.save()
-    return floating_ip_ref
+    return floating_ip_ref['address']
 
 
-def floating_ip_fixed_ip_associate(_context, floating_address, fixed_address):
-    with managed_session(autocommit=False) as session:
-        floating_ip_ref = models.FloatingIp.find_by_str(floating_address,
-                                                        session=session)
-        fixed_ip_ref = models.FixedIp.find_by_str(fixed_address,
-                                                  session=session)
+@require_context
+def floating_ip_count_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+    session = get_session()
+    return session.query(models.FloatingIp).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   count()
+
+
+@require_context
+def floating_ip_fixed_ip_associate(context, floating_address, fixed_address):
+    session = get_session()
+    with session.begin():
+        # TODO(devcamcar): How to ensure floating_id belongs to user?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     floating_address,
+                                                     session=session)
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               fixed_address,
+                                               session=session)
         floating_ip_ref.fixed_ip = fixed_ip_ref
         floating_ip_ref.save(session=session)
-        session.commit()
 
 
-def floating_ip_disassociate(_context, address):
-    with managed_session(autocommit=False) as session:
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
+@require_context
+def floating_ip_deallocate(context, address):
+    session = get_session()
+    with session.begin():
+        # TODO(devcamcar): How to ensure floating id belongs to user?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
+        floating_ip_ref['project_id'] = None
+        floating_ip_ref.save(session=session)
+
+
+@require_context
+def floating_ip_destroy(context, address):
+    session = get_session()
+    with session.begin():
+        # TODO(devcamcar): Ensure address belongs to user.
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
+        floating_ip_ref.delete(session=session)
+
+
+@require_context
+def floating_ip_disassociate(context, address):
+    session = get_session()
+    with session.begin():
+        # TODO(devcamcar): Ensure address belongs to user.
+        #                  Does get_floating_ip_by_address handle this?
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
         fixed_ip_ref = floating_ip_ref.fixed_ip
         if fixed_ip_ref:
             fixed_ip_address = fixed_ip_ref['address']
@@ -186,56 +348,106 @@ def floating_ip_disassociate(_context, address):
             fixed_ip_address = None
         floating_ip_ref.fixed_ip = None
         floating_ip_ref.save(session=session)
-        session.commit()
-        return fixed_ip_address
+    return fixed_ip_address
 
 
-def floating_ip_deallocate(_context, address):
-    with managed_session(autocommit=False) as session:
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
-        floating_ip_ref['project_id'] = None
-        floating_ip_ref.save(session=session)
+@require_admin_context
+def floating_ip_get_all(context):
+    session = get_session()
+    return session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.instance')).\
+                   filter_by(deleted=False).\
+                   all()
 
 
-def floating_ip_get_by_address(_context, address):
-    return models.FloatingIp.find_by_str(address)
+@require_admin_context
+def floating_ip_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.instance')).\
+                   filter_by(host=host).\
+                   filter_by(deleted=False).\
+                   all()
 
 
-def floating_ip_get_instance(_context, address):
-    with managed_session() as session:
-        floating_ip_ref = models.FloatingIp.find_by_str(address,
-                                                        session=session)
-        return floating_ip_ref.fixed_ip.instance
+@require_context
+def floating_ip_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+    session = get_session()
+    return session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.instance')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_context
+def floating_ip_get_by_address(context, address, session=None):
+    # TODO(devcamcar): Ensure the address belongs to user.
+    if not session:
+        session = get_session()
+
+    result = session.query(models.FloatingIp).\
+                     filter_by(address=address).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+    if not result:
+        raise exception.NotFound('No fixed ip for address %s' % address)
+
+    return result
 
 
 ###################
 
 
-def fixed_ip_allocate(_context, network_id):
-    with managed_session(autocommit=False) as session:
+@require_context
+def fixed_ip_associate(context, address, instance_id):
+    session = get_session()
+    with session.begin():
+        instance = instance_get(context, instance_id, session=session)
+        fixed_ip_ref = session.query(models.FixedIp).\
+                               filter_by(address=address).\
+                               filter_by(deleted=False).\
+                               filter_by(instance=None).\
+                               with_lockmode('update').\
+                               first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not fixed_ip_ref:
+            raise db.NoMoreAddresses()
+        fixed_ip_ref.instance = instance
+        session.add(fixed_ip_ref)
+
+
+@require_admin_context
+def fixed_ip_associate_pool(context, network_id, instance_id):
+    session = get_session()
+    with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
                               models.FixedIp.network_id == None)
-        fixed_ip_ref = session.query(models.FixedIp) \
-                              .filter(network_or_none) \
-                              .filter_by(reserved=False) \
-                              .filter_by(allocated=False) \
-                              .filter_by(leased=False) \
-                              .filter_by(deleted=False) \
-                              .with_lockmode('update') \
-                              .first()
+        fixed_ip_ref = session.query(models.FixedIp).\
+                               filter(network_or_none).\
+                               filter_by(reserved=False).\
+                               filter_by(deleted=False).\
+                               filter_by(instance=None).\
+                               with_lockmode('update').\
+                               first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip_ref:
             raise db.NoMoreAddresses()
         if not fixed_ip_ref.network:
-            fixed_ip_ref.network = models.Network.find(network_id)
-        fixed_ip_ref['allocated'] = True
+            fixed_ip_ref.network = network_get(context,
+                                           network_id,
+                                           session=session)
+        fixed_ip_ref.instance = instance_get(context,
+                                             instance_id,
+                                             session=session)
         session.add(fixed_ip_ref)
-        session.commit()
-        return fixed_ip_ref['address']
+    return fixed_ip_ref['address']
 
 
+@require_context
 def fixed_ip_create(_context, values):
     fixed_ip_ref = models.FixedIp()
     for (key, value) in values.iteritems():
@@ -244,105 +456,247 @@ def fixed_ip_create(_context, values):
     return fixed_ip_ref['address']
 
 
-def fixed_ip_get_by_address(_context, address):
-    return models.FixedIp.find_by_str(address)
-
-
-def fixed_ip_get_instance(_context, address):
-    with managed_session() as session:
-        return models.FixedIp.find_by_str(address, session=session).instance
-
-
-def fixed_ip_get_network(_context, address):
-    with managed_session() as session:
-        return models.FixedIp.find_by_str(address, session=session).network
-
-
-def fixed_ip_deallocate(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    fixed_ip_ref['allocated'] = False
-    fixed_ip_ref.save()
-
-
-def fixed_ip_instance_associate(_context, address, instance_id):
-    with managed_session(autocommit=False) as session:
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
-        instance_ref = models.Instance.find(instance_id, session=session)
-        fixed_ip_ref.instance = instance_ref
-        fixed_ip_ref.save(session=session)
-        session.commit()
-
-
-def fixed_ip_instance_disassociate(_context, address):
-    with managed_session(autocommit=False) as session:
-        fixed_ip_ref = models.FixedIp.find_by_str(address, session=session)
+@require_context
+def fixed_ip_disassociate(context, address):
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               address,
+                                               session=session)
         fixed_ip_ref.instance = None
         fixed_ip_ref.save(session=session)
-        session.commit()
 
 
+@require_admin_context
+def fixed_ip_disassociate_all_by_timeout(_context, host, time):
+    session = get_session()
+    # NOTE(vish): The nested select is because sqlite doesn't support
+    #             JOINs in UPDATEs.
+    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
+                                                  'leased = 0 '
+                             'WHERE network_id IN (SELECT id FROM networks '
+                                                  'WHERE host = :host) '
+                             'AND updated_at < :time '
+                             'AND instance_id IS NOT NULL '
+                             'AND allocated = 0',
+                    {'host': host,
+                     'time': time.isoformat()})
+    return result.rowcount
+
+
+@require_context
+def fixed_ip_get_by_address(context, address, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.FixedIp).\
+                     filter_by(address=address).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     options(joinedload('network')).\
+                     options(joinedload('instance')).\
+                     first()
+    if not result:
+        raise exception.NotFound('No floating ip for address %s' % address)
+
+    if is_user_context(context):
+        authorize_project_context(context, result.instance.project_id)
+
+    return result
+
+
+@require_context
+def fixed_ip_get_instance(context, address):
+        fixed_ip_ref = fixed_ip_get_by_address(context, address)
+        return fixed_ip_ref.instance
+
+
+@require_admin_context
+def fixed_ip_get_network(context, address):
+        fixed_ip_ref = fixed_ip_get_by_address(context, address)
+        return fixed_ip_ref.network
+
+
+@require_context
 def fixed_ip_update(context, address, values):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    for (key, value) in values.iteritems():
-        fixed_ip_ref[key] = value
-    fixed_ip_ref.save()
+    session = get_session()
+    with session.begin():
+        fixed_ip_ref = fixed_ip_get_by_address(context,
+                                               address,
+                                               session=session)
+        for (key, value) in values.iteritems():
+            fixed_ip_ref[key] = value
+        fixed_ip_ref.save(session=session)
 
 
 ###################
 
 
-def instance_create(_context, values):
+#TODO(gundlach): instance_create and volume_create are nearly identical
+#and should be refactored.  I expect there are other copy-and-paste
+#functions between the two of them as well.
+@require_context
+def instance_create(context, values):
     instance_ref = models.Instance()
     for (key, value) in values.iteritems():
         instance_ref[key] = value
-    instance_ref.save()
-    return instance_ref.id
+
+    session = get_session()
+    with session.begin():
+        while instance_ref.internal_id == None:
+            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            if not instance_internal_id_exists(context, internal_id,
+                                               session=session):
+                instance_ref.internal_id = internal_id
+        instance_ref.save(session=session)
+    return instance_ref
 
 
+@require_admin_context
+def instance_data_get_for_project(context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Instance.id),
+                           func.sum(models.Instance.vcpus)).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=False).\
+                     first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
+
+
+@require_context
 def instance_destroy(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    instance_ref.delete()
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
+        instance_ref.delete(session=session)
 
 
-def instance_get(_context, instance_id):
-    return models.Instance.find(instance_id)
+@require_context
+def instance_get(context, instance_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Instance).\
+                         options(joinedload('security_groups')).\
+                         filter_by(id=instance_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Instance).\
+                         options(joinedload('security_groups')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=instance_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.NotFound('No instance for id %s' % instance_id)
+
+    return result
 
 
-def instance_get_all(_context):
-    return models.Instance.all()
+@require_admin_context
+def instance_get_all(context):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
 
 
-def instance_get_by_project(_context, project_id):
-    with managed_session() as session:
-        return session.query(models.Instance) \
-                      .filter_by(project_id=project_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+@require_admin_context
+def instance_get_all_by_user(context, user_id):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(user_id=user_id).\
+                   all()
 
 
-def instance_get_by_reservation(_context, reservation_id):
-    with managed_session() as session:
-        return session.query(models.Instance) \
-                      .filter_by(reservation_id=reservation_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+@require_context
+def instance_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
 
 
-def instance_get_by_str(_context, str_id):
-    return models.Instance.find_by_str(str_id)
+@require_context
+def instance_get_all_by_reservation(context, reservation_id):
+    session = get_session()
+
+    if is_admin_context(context):
+        return session.query(models.Instance).\
+                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload('security_groups')).\
+                       filter_by(reservation_id=reservation_id).\
+                       filter_by(deleted=can_read_deleted(context)).\
+                       all()
+    elif is_user_context(context):
+        return session.query(models.Instance).\
+                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload('security_groups')).\
+                       filter_by(project_id=context.project_id).\
+                       filter_by(reservation_id=reservation_id).\
+                       filter_by(deleted=False).\
+                       all()
 
 
-def instance_get_fixed_address(_context, instance_id):
-    with managed_session() as session:
-        instance_ref = models.Instance.find(instance_id, session=session)
+@require_context
+def instance_get_by_internal_id(context, internal_id):
+    session = get_session()
+
+    if is_admin_context(context):
+        result = session.query(models.Instance).\
+                         options(joinedload('security_groups')).\
+                         filter_by(internal_id=internal_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Instance).\
+                         options(joinedload('security_groups')).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(internal_id=internal_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.NotFound('Instance %s not found' % (internal_id))
+
+    return result
+
+
+@require_context
+def instance_internal_id_exists(context, internal_id, session=None):
+    if not session:
+        session = get_session()
+    return session.query(exists().\
+                         where(models.Instance.internal_id == internal_id)).\
+                   one()[0]
+
+
+@require_context
+def instance_get_fixed_address(context, instance_id):
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
         return instance_ref.fixed_ip['address']
 
 
-def instance_get_floating_address(_context, instance_id):
-    with managed_session() as session:
-        instance_ref = models.Instance.find(instance_id, session=session)
+@require_context
+def instance_get_floating_address(context, instance_id):
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
         if not instance_ref.fixed_ip.floating_ips:
@@ -351,186 +705,306 @@ def instance_get_floating_address(_context, instance_id):
         return instance_ref.fixed_ip.floating_ips[0]['address']
 
 
-def instance_get_host(context, instance_id):
-    instance_ref = instance_get(context, instance_id)
-    return instance_ref['host']
-
-
+@require_admin_context
 def instance_is_vpn(context, instance_id):
+    # TODO(vish): Move this into image code somewhere
     instance_ref = instance_get(context, instance_id)
     return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
-def instance_state(context, instance_id, state, description=None):
-    instance_ref = instance_get(context, instance_id)
-    instance_ref.set_state(state, description)
+@require_admin_context
+def instance_set_state(context, instance_id, state, description=None):
+    # TODO(devcamcar): Move this out of models and into driver
+    from nova.compute import power_state
+    if not description:
+        description = power_state.name(state)
+    db.instance_update(context,
+                       instance_id,
+                       {'state': state,
+                        'state_description': description})
 
 
+@require_context
 def instance_update(context, instance_id, values):
-    instance_ref = instance_get(context, instance_id)
-    for (key, value) in values.iteritems():
-        instance_ref[key] = value
-    instance_ref.save()
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
+        for (key, value) in values.iteritems():
+            instance_ref[key] = value
+        instance_ref.save(session=session)
+
+
+def instance_add_security_group(context, instance_id, security_group_id):
+    """Associate the given security group with the given instance"""
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
+        security_group_ref = security_group_get(context,
+                                                security_group_id,
+                                                session=session)
+        instance_ref.security_groups += [security_group_ref]
+        instance_ref.save(session=session)
 
 
 ###################
 
 
-def network_count(_context):
-    return models.Network.count()
-
-
-def network_count_allocated_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(allocated=True) \
-                      .filter_by(deleted=False) \
-                      .count()
-
-
-def network_count_available_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(allocated=False) \
-                      .filter_by(reserved=False) \
-                      .filter_by(deleted=False) \
-                      .count()
-
-
-def network_count_reserved_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter_by(reserved=True) \
-                      .filter_by(deleted=False) \
-                      .count()
-
-
-def network_create(_context, values):
-    network_ref = models.Network()
+@require_context
+def key_pair_create(context, values):
+    key_pair_ref = models.KeyPair()
     for (key, value) in values.iteritems():
-        network_ref[key] = value
-    network_ref.save()
+        key_pair_ref[key] = value
+    key_pair_ref.save()
+    return key_pair_ref
+
+
+@require_context
+def key_pair_destroy(context, user_id, name):
+    authorize_user_context(context, user_id)
+    session = get_session()
+    with session.begin():
+        key_pair_ref = key_pair_get(context, user_id, name, session=session)
+        key_pair_ref.delete(session=session)
+
+
+@require_context
+def key_pair_destroy_all_by_user(context, user_id):
+    authorize_user_context(context, user_id)
+    session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update key_pairs set deleted=1 where user_id=:id',
+                        {'id': user_id})
+
+
+@require_context
+def key_pair_get(context, user_id, name, session=None):
+    authorize_user_context(context, user_id)
+
+    if not session:
+        session = get_session()
+
+    result = session.query(models.KeyPair).\
+                     filter_by(user_id=user_id).\
+                     filter_by(name=name).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+    if not result:
+        raise exception.NotFound('no keypair for user %s, name %s' %
+                                 (user_id, name))
+    return result
+
+
+@require_context
+def key_pair_get_all_by_user(context, user_id):
+    authorize_user_context(context, user_id)
+    session = get_session()
+    return session.query(models.KeyPair).\
+                   filter_by(user_id=user_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+###################
+
+
+@require_admin_context
+def network_associate(context, project_id):
+    session = get_session()
+    with session.begin():
+        network_ref = session.query(models.Network).\
+                               filter_by(deleted=False).\
+                               filter_by(project_id=None).\
+                               with_lockmode('update').\
+                               first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not network_ref:
+            raise db.NoMoreNetworks()
+        network_ref['project_id'] = project_id
+        session.add(network_ref)
     return network_ref
 
 
-def network_destroy(_context, network_id):
-    with managed_session(autocommit=False) as session:
-        # TODO(vish): do we have to use sql here?
-        session.execute('update networks set deleted=1 where id=:id',
-                        {'id': network_id})
-        session.execute('update fixed_ips set deleted=1 where network_id=:id',
-                        {'id': network_id})
-        session.execute('update floating_ips set deleted=1 '
-                        'where fixed_ip_id in '
-                        '(select id from fixed_ips '
-                        'where network_id=:id)',
-                        {'id': network_id})
-        session.execute('update network_indexes set network_id=NULL '
-                        'where network_id=:id',
-                        {'id': network_id})
-        session.commit()
+@require_admin_context
+def network_count(context):
+    session = get_session()
+    return session.query(models.Network).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   count()
 
 
-def network_get(_context, network_id):
-    return models.Network.find(network_id)
+@require_admin_context
+def network_count_allocated_ips(context, network_id):
+    session = get_session()
+    return session.query(models.FixedIp).\
+                   filter_by(network_id=network_id).\
+                   filter_by(allocated=True).\
+                   filter_by(deleted=False).\
+                   count()
 
 
+@require_admin_context
+def network_count_available_ips(context, network_id):
+    session = get_session()
+    return session.query(models.FixedIp).\
+                   filter_by(network_id=network_id).\
+                   filter_by(allocated=False).\
+                   filter_by(reserved=False).\
+                   filter_by(deleted=False).\
+                   count()
+
+
+@require_admin_context
+def network_count_reserved_ips(context, network_id):
+    session = get_session()
+    return session.query(models.FixedIp).\
+                   filter_by(network_id=network_id).\
+                   filter_by(reserved=True).\
+                   filter_by(deleted=False).\
+                   count()
+
+
+@require_admin_context
+def network_create_safe(context, values):
+    network_ref = models.Network()
+    for (key, value) in values.iteritems():
+        network_ref[key] = value
+    try:
+        network_ref.save()
+        return network_ref
+    except IntegrityError:
+        return None
+
+
+@require_admin_context
+def network_disassociate(context, network_id):
+    network_update(context, network_id, {'project_id': None})
+
+
+@require_admin_context
+def network_disassociate_all(context):
+    session = get_session()
+    session.execute('update networks set project_id=NULL')
+
+
+@require_context
+def network_get(context, network_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Network).\
+                         filter_by(id=network_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Network).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=network_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.NotFound('No network for id %s' % network_id)
+
+    return result
+
+
+# NOTE(vish): pylint complains because of the long method name, but
+#             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
-def network_get_associated_fixed_ips(_context, network_id):
-    with managed_session() as session:
-        return session.query(models.FixedIp) \
-                      .filter_by(network_id=network_id) \
-                      .filter(models.FixedIp.instance_id != None) \
-                      .filter_by(deleted=False) \
-                      .all()
+@require_admin_context
+def network_get_associated_fixed_ips(context, network_id):
+    session = get_session()
+    return session.query(models.FixedIp).\
+                   options(joinedload_all('instance')).\
+                   filter_by(network_id=network_id).\
+                   filter(models.FixedIp.instance_id != None).\
+                   filter_by(deleted=False).\
+                   all()
 
 
-def network_get_by_bridge(_context, bridge):
-    with managed_session() as session:
-        rv = session.query(models.Network) \
-                    .filter_by(bridge=bridge) \
-                    .filter_by(deleted=False) \
-                    .first()
-        if not rv:
-            raise exception.NotFound('No network for bridge %s' % bridge)
-        return rv
+@require_admin_context
+def network_get_by_bridge(context, bridge):
+    session = get_session()
+    result = session.query(models.Network).\
+                 filter_by(bridge=bridge).\
+                 filter_by(deleted=False).\
+                 first()
+
+    if not result:
+        raise exception.NotFound('No network for bridge %s' % bridge)
+    return result
 
 
-def network_get_host(context, network_id):
-    network_ref = network_get(context, network_id)
+@require_admin_context
+def network_get_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        raise exception.NotFound('No network for instance %s' % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_set_host(context, network_id, host_id):
+    session = get_session()
+    with session.begin():
+        network_ref = session.query(models.Network).\
+                              filter_by(id=network_id).\
+                              filter_by(deleted=False).\
+                              with_lockmode('update').\
+                              first()
+        if not network_ref:
+            raise exception.NotFound('No network for id %s' % network_id)
+
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not network_ref['host']:
+            network_ref['host'] = host_id
+            session.add(network_ref)
+
     return network_ref['host']
 
 
-def network_get_index(_context, network_id):
-    with managed_session(autocommit=False) as session:
-        network_index = session.query(models.NetworkIndex) \
-                               .filter_by(network_id=None) \
-                               .filter_by(deleted=False) \
-                               .with_lockmode('update') \
-                               .first()
-        if not network_index:
-            raise db.NoMoreNetworks()
-        network_index['network'] = models.Network.find(network_id,
-                                                       session=session)
-        session.add(network_index)
-        session.commit()
-        return network_index['index']
-
-
-def network_index_count(_context):
-    return models.NetworkIndex.count()
-
-
-def network_index_create(_context, values):
-    network_index_ref = models.NetworkIndex()
-    for (key, value) in values.iteritems():
-        network_index_ref[key] = value
-    network_index_ref.save()
-
-
-def network_set_host(_context, network_id, host_id):
-    with managed_session(autocommit=False) as session:
-        network = session.query(models.Network) \
-                         .filter_by(id=network_id) \
-                         .filter_by(deleted=False) \
-                         .with_lockmode('update') \
-                         .first()
-        if not network:
-            raise exception.NotFound("Couldn't find network with %s" %
-                                     network_id)
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if network.host:
-            session.commit()
-            return network['host']
-        network['host'] = host_id
-        session.add(network)
-        session.commit()
-        return network['host']
-
-
+@require_context
 def network_update(context, network_id, values):
-    network_ref = network_get(context, network_id)
-    for (key, value) in values.iteritems():
-        network_ref[key] = value
-    network_ref.save()
+    session = get_session()
+    with session.begin():
+        network_ref = network_get(context, network_id, session=session)
+        for (key, value) in values.iteritems():
+            network_ref[key] = value
+        network_ref.save(session=session)
 
 
 ###################
 
 
-def project_get_network(_context, project_id):
-    with managed_session() as session:
-        rv = session.query(models.Network) \
-                    .filter_by(project_id=project_id) \
-                    .filter_by(deleted=False) \
-                    .first()
-        if not rv:
-            raise exception.NotFound('No network for project: %s' % project_id)
-        return rv
+@require_context
+def project_get_network(context, project_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(project_id=project_id).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        try:
+            return network_associate(context, project_id)
+        except IntegrityError:
+            # NOTE(vish): We hit this if there is a race and two
+            #             processes are attempting to allocate the
+            #             network at the same time
+            rv = session.query(models.Network).\
+                         filter_by(project_id=project_id).\
+                         filter_by(deleted=False).\
+                         first()
+    return rv
 
 
 ###################
@@ -540,115 +1014,679 @@ def queue_get_for(_context, topic, physical_node_id):
     # FIXME(ja): this should be servername?
     return "%s.%s" % (topic, physical_node_id)
 
+
 ###################
 
 
-def export_device_count(_context):
-    return models.ExportDevice.count()
+@require_admin_context
+def export_device_count(context):
+    session = get_session()
+    return session.query(models.ExportDevice).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   count()
 
 
-def export_device_create(_context, values):
+@require_admin_context
+def export_device_create_safe(context, values):
     export_device_ref = models.ExportDevice()
     for (key, value) in values.iteritems():
         export_device_ref[key] = value
-    export_device_ref.save()
-    return export_device_ref
+    try:
+        export_device_ref.save()
+        return export_device_ref
+    except IntegrityError:
+        return None
 
 
 ###################
 
 
-def volume_allocate_shelf_and_blade(_context, volume_id):
-    with managed_session(autocommit=False) as session:
-        export_device = session.query(models.ExportDevice) \
-                               .filter_by(volume=None) \
-                               .filter_by(deleted=False) \
-                               .with_lockmode('update') \
-                               .first()
+def auth_destroy_token(_context, token):
+    session = get_session()
+    session.delete(token)
+
+
+def auth_get_token(_context, token_hash):
+    session = get_session()
+    tk = session.query(models.AuthToken).\
+                  filter_by(token_hash=token_hash).\
+                  first()
+    if not tk:
+        raise exception.NotFound('Token %s does not exist' % token_hash)
+    return tk
+
+
+def auth_create_token(_context, token):
+    tk = models.AuthToken()
+    for k, v in token.iteritems():
+        tk[k] = v
+    tk.save()
+    return tk
+
+
+###################
+
+
+@require_admin_context
+def quota_get(context, project_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Quota).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+    if not result:
+        raise exception.NotFound('No quota for project_id %s' % project_id)
+
+    return result
+
+
+@require_admin_context
+def quota_create(context, values):
+    quota_ref = models.Quota()
+    for (key, value) in values.iteritems():
+        quota_ref[key] = value
+    quota_ref.save()
+    return quota_ref
+
+
+@require_admin_context
+def quota_update(context, project_id, values):
+    session = get_session()
+    with session.begin():
+        quota_ref = quota_get(context, project_id, session=session)
+        for (key, value) in values.iteritems():
+            quota_ref[key] = value
+        quota_ref.save(session=session)
+
+
+@require_admin_context
+def quota_destroy(context, project_id):
+    session = get_session()
+    with session.begin():
+        quota_ref = quota_get(context, project_id, session=session)
+        quota_ref.delete(session=session)
+
+
+###################
+
+
+@require_admin_context
+def volume_allocate_shelf_and_blade(context, volume_id):
+    session = get_session()
+    with session.begin():
+        export_device = session.query(models.ExportDevice).\
+                                filter_by(volume=None).\
+                                filter_by(deleted=False).\
+                                with_lockmode('update').\
+                                first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not export_device:
             raise db.NoMoreBlades()
         export_device.volume_id = volume_id
         session.add(export_device)
-        session.commit()
-        return (export_device.shelf_id, export_device.blade_id)
+    return (export_device.shelf_id, export_device.blade_id)
 
 
+@require_admin_context
 def volume_attached(context, volume_id, instance_id, mountpoint):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref.instance_id = instance_id
-    volume_ref['status'] = 'in-use'
-    volume_ref['mountpoint'] = mountpoint
-    volume_ref['attach_status'] = 'attached'
-    volume_ref.save()
+    session = get_session()
+    with session.begin():
+        volume_ref = volume_get(context, volume_id, session=session)
+        volume_ref['status'] = 'in-use'
+        volume_ref['mountpoint'] = mountpoint
+        volume_ref['attach_status'] = 'attached'
+        volume_ref.instance = instance_get(context, instance_id,
+                                           session=session)
+        volume_ref.save(session=session)
 
 
-def volume_create(_context, values):
+@require_context
+def volume_create(context, values):
     volume_ref = models.Volume()
     for (key, value) in values.iteritems():
         volume_ref[key] = value
-    volume_ref.save()
+
+    session = get_session()
+    with session.begin():
+        while volume_ref.ec2_id == None:
+            ec2_id = utils.generate_uid(volume_ref.__prefix__)
+            if not volume_ec2_id_exists(context, ec2_id, session=session):
+                volume_ref.ec2_id = ec2_id
+        volume_ref.save(session=session)
     return volume_ref
 
 
-def volume_destroy(_context, volume_id):
-    with managed_session(autocommit=False) as session:
+@require_admin_context
+def volume_data_get_for_project(context, project_id):
+    session = get_session()
+    result = session.query(func.count(models.Volume.id),
+                           func.sum(models.Volume.size)).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=False).\
+                     first()
+    # NOTE(vish): convert None to 0
+    return (result[0] or 0, result[1] or 0)
+
+
+@require_admin_context
+def volume_destroy(context, volume_id):
+    session = get_session()
+    with session.begin():
         # TODO(vish): do we have to use sql here?
         session.execute('update volumes set deleted=1 where id=:id',
                         {'id': volume_id})
         session.execute('update export_devices set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
-        session.commit()
 
 
+@require_admin_context
 def volume_detached(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    volume_ref['instance_id'] = None
-    volume_ref['mountpoint'] = None
-    volume_ref['status'] = 'available'
-    volume_ref['attach_status'] = 'detached'
-    volume_ref.save()
+    session = get_session()
+    with session.begin():
+        volume_ref = volume_get(context, volume_id, session=session)
+        volume_ref['status'] = 'available'
+        volume_ref['mountpoint'] = None
+        volume_ref['attach_status'] = 'detached'
+        volume_ref.instance = None
+        volume_ref.save(session=session)
 
 
-def volume_get(_context, volume_id):
-    return models.Volume.find(volume_id)
+@require_context
+def volume_get(context, volume_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Volume).\
+                         filter_by(id=volume_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Volume).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=volume_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.NotFound('No volume for id %s' % volume_id)
+
+    return result
 
 
-def volume_get_all(_context):
-    return models.Volume.all()
+@require_admin_context
+def volume_get_all(context):
+    session = get_session()
+    return session.query(models.Volume).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
 
 
-def volume_get_by_project(_context, project_id):
-    with managed_session() as session:
-        return session.query(models.Volume) \
-                      .filter_by(project_id=project_id) \
-                      .filter_by(deleted=False) \
-                      .all()
+@require_context
+def volume_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.Volume).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
 
 
-def volume_get_by_str(_context, str_id):
-    return models.Volume.find_by_str(str_id)
+@require_context
+def volume_get_by_ec2_id(context, ec2_id):
+    session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Volume).\
+                         filter_by(ec2_id=ec2_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Volume).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(ec2_id=ec2_id).\
+                         filter_by(deleted=False).\
+                         first()
+    else:
+        raise exception.NotAuthorized()
+
+    if not result:
+        raise exception.NotFound('Volume %s not found' % ec2_id)
+
+    return result
 
 
-def volume_get_host(context, volume_id):
-    volume_ref = volume_get(context, volume_id)
-    return volume_ref['host']
+@require_context
+def volume_ec2_id_exists(context, ec2_id, session=None):
+    if not session:
+        session = get_session()
+
+    return session.query(exists().\
+                   where(models.Volume.id == ec2_id)).\
+                   one()[0]
 
 
-def volume_get_shelf_and_blade(_context, volume_id):
-    with managed_session() as session:
-        export_device = session.query(models.ExportDevice) \
-                               .filter_by(volume_id=volume_id) \
-                               .first()
-        if not export_device:
-            raise exception.NotFound()
-        return (export_device.shelf_id, export_device.blade_id)
+@require_admin_context
+def volume_get_instance(context, volume_id):
+    session = get_session()
+    result = session.query(models.Volume).\
+                     filter_by(id=volume_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     options(joinedload('instance')).\
+                     first()
+    if not result:
+        raise exception.NotFound('Volume %s not found' % ec2_id)
+
+    return result.instance
 
 
+@require_admin_context
+def volume_get_shelf_and_blade(context, volume_id):
+    session = get_session()
+    result = session.query(models.ExportDevice).\
+                     filter_by(volume_id=volume_id).\
+                     first()
+    if not result:
+        raise exception.NotFound('No export device found for volume %s' %
+                                 volume_id)
+
+    return (result.shelf_id, result.blade_id)
+
+
+@require_context
 def volume_update(context, volume_id, values):
-    volume_ref = volume_get(context, volume_id)
+    session = get_session()
+    with session.begin():
+        volume_ref = volume_get(context, volume_id, session=session)
+        for (key, value) in values.iteritems():
+            volume_ref[key] = value
+        volume_ref.save(session=session)
+
+
+###################
+
+
+@require_context
+def security_group_get_all(context):
+    session = get_session()
+    return session.query(models.SecurityGroup).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   options(joinedload_all('rules')).\
+                   all()
+
+
+@require_context
+def security_group_get(context, security_group_id, session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroup).\
+                         filter_by(deleted=can_read_deleted(context),).\
+                         filter_by(id=security_group_id).\
+                         options(joinedload_all('rules')).\
+                         first()
+    else:
+        result = session.query(models.SecurityGroup).\
+                         filter_by(deleted=False).\
+                         filter_by(id=security_group_id).\
+                         filter_by(project_id=context.project_id).\
+                         options(joinedload_all('rules')).\
+                         first()
+    if not result:
+        raise exception.NotFound("No secuity group with id %s" %
+                                 security_group_id)
+    return result
+
+
+@require_context
+def security_group_get_by_name(context, project_id, group_name):
+    session = get_session()
+    result = session.query(models.SecurityGroup).\
+                        filter_by(project_id=project_id).\
+                        filter_by(name=group_name).\
+                        filter_by(deleted=False).\
+                        options(joinedload_all('rules')).\
+                        options(joinedload_all('instances')).\
+                        first()
+    if not result:
+        raise exception.NotFound(
+            'No security group named %s for project: %s' \
+             % (group_name, project_id))
+    return result
+
+
+@require_context
+def security_group_get_by_project(context, project_id):
+    session = get_session()
+    return session.query(models.SecurityGroup).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   options(joinedload_all('rules')).\
+                   all()
+
+
+@require_context
+def security_group_get_by_instance(context, instance_id):
+    session = get_session()
+    return session.query(models.SecurityGroup).\
+                   filter_by(deleted=False).\
+                   options(joinedload_all('rules')).\
+                   join(models.SecurityGroup.instances).\
+                   filter_by(id=instance_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_context
+def security_group_exists(context, project_id, group_name):
+    try:
+        group = security_group_get_by_name(context, project_id, group_name)
+        return group != None
+    except exception.NotFound:
+        return False
+
+
+@require_context
+def security_group_create(context, values):
+    security_group_ref = models.SecurityGroup()
+    # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
+    # once save() is called.  This will get cleaned up in next orm pass.
+    security_group_ref.rules
     for (key, value) in values.iteritems():
-        volume_ref[key] = value
-    volume_ref.save()
+        security_group_ref[key] = value
+    security_group_ref.save()
+    return security_group_ref
+
+
+@require_context
+def security_group_destroy(context, security_group_id):
+    session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update security_groups set deleted=1 where id=:id',
+                        {'id': security_group_id})
+        session.execute('update security_group_rules set deleted=1 '
+                        'where group_id=:id',
+                        {'id': security_group_id})
+
+
+@require_context
+def security_group_destroy_all(context, session=None):
+    if not session:
+        session = get_session()
+    with session.begin():
+        # TODO(vish): do we have to use sql here?
+        session.execute('update security_groups set deleted=1')
+        session.execute('update security_group_rules set deleted=1')
+
+
+###################
+
+
+@require_context
+def security_group_rule_get(context, security_group_rule_id, session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         filter_by(id=security_group_rule_id).\
+                         first()
+    else:
+        # TODO(vish): Join to group and check for project_id
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=False).\
+                         filter_by(id=security_group_rule_id).\
+                         first()
+    if not result:
+        raise exception.NotFound("No secuity group rule with id %s" %
+                                 security_group_rule_id)
+    return result
+
+
+@require_context
+def security_group_rule_create(context, values):
+    security_group_rule_ref = models.SecurityGroupIngressRule()
+    for (key, value) in values.iteritems():
+        security_group_rule_ref[key] = value
+    security_group_rule_ref.save()
+    return security_group_rule_ref
+
+
+@require_context
+def security_group_rule_destroy(context, security_group_rule_id):
+    session = get_session()
+    with session.begin():
+        security_group_rule = security_group_rule_get(context,
+                                                      security_group_rule_id,
+                                                      session=session)
+        security_group_rule.delete(session=session)
+
+
+###################
+
+@require_admin_context
+def user_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User).\
+                     filter_by(id=id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound('No user for id %s' % id)
+
+    return result
+
+
+@require_admin_context
+def user_get_by_access_key(context, access_key, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.User).\
+                   filter_by(access_key=access_key).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   first()
+
+    if not result:
+        raise exception.NotFound('No user for access key %s' % access_key)
+
+    return result
+
+
+@require_admin_context
+def user_create(_context, values):
+    user_ref = models.User()
+    for (key, value) in values.iteritems():
+        user_ref[key] = value
+    user_ref.save()
+    return user_ref
+
+
+@require_admin_context
+def user_delete(context, id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_association '
+                        'where user_id=:id', {'id': id})
+        session.execute('delete from user_role_association '
+                        'where user_id=:id', {'id': id})
+        session.execute('delete from user_project_role_association '
+                        'where user_id=:id', {'id': id})
+        user_ref = user_get(context, id, session=session)
+        session.delete(user_ref)
+
+
+def user_get_all(context):
+    session = get_session()
+    return session.query(models.User).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+def project_create(_context, values):
+    project_ref = models.Project()
+    for (key, value) in values.iteritems():
+        project_ref[key] = value
+    project_ref.save()
+    return project_ref
+
+
+def project_add_member(context, project_id, user_id):
+    session = get_session()
+    with session.begin():
+        project_ref = project_get(context, project_id, session=session)
+        user_ref = user_get(context, user_id, session=session)
+
+        project_ref.members += [user_ref]
+        project_ref.save(session=session)
+
+
+def project_get(context, id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Project).\
+                     filter_by(deleted=False).\
+                     filter_by(id=id).\
+                     options(joinedload_all('members')).\
+                     first()
+
+    if not result:
+        raise exception.NotFound("No project with id %s" % id)
+
+    return result
+
+
+def project_get_all(context):
+    session = get_session()
+    return session.query(models.Project).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   options(joinedload_all('members')).\
+                   all()
+
+
+def project_get_by_user(context, user_id):
+    session = get_session()
+    user = session.query(models.User).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   options(joinedload_all('projects')).\
+                   first()
+    return user.projects
+
+
+def project_remove_member(context, project_id, user_id):
+    session = get_session()
+    project = project_get(context, project_id, session=session)
+    user = user_get(context, user_id, session=session)
+
+    if user in project.members:
+        project.members.remove(user)
+        project.save(session=session)
+
+
+def user_update(context, user_id, values):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        for (key, value) in values.iteritems():
+            user_ref[key] = value
+        user_ref.save(session=session)
+
+
+def project_update(context, project_id, values):
+    session = get_session()
+    with session.begin():
+        project_ref = project_get(context, project_id, session=session)
+        for (key, value) in values.iteritems():
+            project_ref[key] = value
+        project_ref.save(session=session)
+
+
+def project_delete(context, id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_association '
+                        'where project_id=:id', {'id': id})
+        session.execute('delete from user_project_role_association '
+                        'where project_id=:id', {'id': id})
+        project_ref = project_get(context, id, session=session)
+        session.delete(project_ref)
+
+
+def user_get_roles(context, user_id):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        return [role.role for role in user_ref['roles']]
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserProjectRoleAssociation).\
+                   filter_by(user_id=user_id).\
+                   filter_by(project_id=project_id).\
+                   all()
+        return [association.role for association in res]
+
+
+def user_remove_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from user_project_role_association where '
+                        'user_id=:user_id and project_id=:project_id and '
+                        'role=:role', {'user_id': user_id,
+                                       'project_id': project_id,
+                                       'role': role})
+
+
+def user_remove_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserRoleAssociation).\
+                    filter_by(user_id=user_id).\
+                    filter_by(role=role).\
+                    all()
+        for role in res:
+            session.delete(role)
+
+
+def user_add_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        models.UserRoleAssociation(user=user_ref, role=role).\
+               save(session=session)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
+        models.UserProjectRoleAssociation(user_id=user_ref['id'],
+                                          project_id=project_ref['id'],
+                                          role=role).save(session=session)
+
+
+###################
+
+
+@require_admin_context
+def host_get_networks(context, host):
+    session = get_session()
+    with session.begin():
+        return session.query(models.Network).\
+                       filter_by(deleted=False).\
+                       filter_by(host=host).\
+                       all()

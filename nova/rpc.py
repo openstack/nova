@@ -28,13 +28,14 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+from eventlet import greenthread
 from twisted.internet import defer
 from twisted.internet import task
 
 from nova import exception
 from nova import fakerabbit
 from nova import flags
-
+from nova import context
 
 FLAGS = flags.FLAGS
 
@@ -46,9 +47,9 @@ LOG.setLevel(logging.DEBUG)
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls):
+    def instance(cls, new=False):
         """Returns the instance"""
-        if not hasattr(cls, '_instance'):
+        if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
                           userid=FLAGS.rabbit_userid,
@@ -60,7 +61,10 @@ class Connection(carrot_connection.BrokerConnection):
 
             # NOTE(vish): magic is fun!
             # pylint: disable-msg=W0142
-            cls._instance = cls(**params)
+            if new:
+                return cls(**params)
+            else:
+                cls._instance = cls(**params)
         return cls._instance
 
     @classmethod
@@ -80,21 +84,6 @@ class Consumer(messaging.Consumer):
     def __init__(self, *args, **kwargs):
         self.failed_connection = False
         super(Consumer, self).__init__(*args, **kwargs)
-
-    # TODO(termie): it would be nice to give these some way of automatically
-    #               cleaning up after themselves
-    def attach_to_tornado(self, io_inst=None):
-        """Attach a callback to tornado that fires 10 times a second"""
-        from tornado import ioloop
-        if io_inst is None:
-            io_inst = ioloop.IOLoop.instance()
-
-        injected = ioloop.PeriodicCallback(
-            lambda: self.fetch(enable_callbacks=True), 100, io_loop=io_inst)
-        injected.start()
-        return injected
-
-    attachToTornado = attach_to_tornado
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
@@ -119,10 +108,19 @@ class Consumer(messaging.Consumer):
                 logging.exception("Failed to fetch message from queue")
                 self.failed_connection = True
 
+    def attach_to_eventlet(self):
+        """Only needed for unit tests!"""
+        def fetch_repeatedly():
+            while True:
+                self.fetch(enable_callbacks=True)
+                greenthread.sleep(0.1)
+        greenthread.spawn(fetch_repeatedly)
+
     def attach_to_twisted(self):
         """Attach a callback to twisted that fires 10 times a second"""
         loop = task.LoopingCall(self.fetch, enable_callbacks=True)
         loop.start(interval=0.1)
+        return loop
 
 
 class Publisher(messaging.Publisher):
@@ -163,6 +161,8 @@ class AdapterConsumer(TopicConsumer):
         LOG.debug('received %s' % (message_data))
         msg_id = message_data.pop('_msg_id', None)
 
+        ctxt = _unpack_context(message_data)
+
         method = message_data.get('method')
         args = message_data.get('args', {})
         message.ack()
@@ -179,7 +179,7 @@ class AdapterConsumer(TopicConsumer):
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
         # pylint: disable-msg=W0142
-        d = defer.maybeDeferred(node_func, **node_args)
+        d = defer.maybeDeferred(node_func, context=ctxt, **node_args)
         if msg_id:
             d.addCallback(lambda rval: msg_reply(msg_id, rval, None))
             d.addErrback(lambda e: msg_reply(msg_id, None, e))
@@ -258,12 +258,73 @@ class RemoteError(exception.Error):
                                                          traceback))
 
 
-def call(topic, msg):
+def _unpack_context(msg):
+    """Unpack context from msg."""
+    context_dict = {}
+    for key in list(msg.keys()):
+        if key.startswith('_context_'):
+            value = msg.pop(key)
+            context_dict[key[9:]] = value
+    LOG.debug('unpacked context: %s', context_dict)
+    return context.RequestContext.from_dict(context_dict)
+
+
+def _pack_context(msg, context):
+    """Pack context into msg.
+
+    Values for message keys need to be less than 255 chars, so we pull
+    context out into a bunch of separate keys. If we want to support
+    more arguments in rabbit messages, we may want to do the same
+    for args at some point.
+    """
+    context = dict([('_context_%s' % key, value)
+                   for (key, value) in context.to_dict().iteritems()])
+    msg.update(context)
+
+
+def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
+    _pack_context(msg, context)
+
+    class WaitMessage(object):
+
+        def __call__(self, data, message):
+            """Acks message and sets result."""
+            message.ack()
+            if data['failure']:
+                self.result = RemoteError(*data['failure'])
+            else:
+                self.result = data['result']
+
+    wait_msg = WaitMessage()
+    conn = Connection.instance(True)
+    consumer = DirectConsumer(connection=conn, msg_id=msg_id)
+    consumer.register_callback(wait_msg)
+
+    conn = Connection.instance()
+    publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher.send(msg)
+    publisher.close()
+
+    try:
+        consumer.wait(limit=1)
+    except StopIteration:
+        pass
+    consumer.close()
+    return wait_msg.result
+
+
+def call_twisted(context, topic, msg):
+    """Sends a message on a topic and wait for a response"""
+    LOG.debug("Making asynchronous call...")
+    msg_id = uuid.uuid4().hex
+    msg.update({'_msg_id': msg_id})
+    LOG.debug("MSG_ID is %s" % (msg_id))
+    _pack_context(msg, context)
 
     conn = Connection.instance()
     d = defer.Deferred()
@@ -278,7 +339,7 @@ def call(topic, msg):
             return d.callback(data['result'])
 
     consumer.register_callback(deferred_receive)
-    injected = consumer.attach_to_tornado()
+    injected = consumer.attach_to_twisted()
 
     # clean up after the injected listened and return x
     d.addCallback(lambda x: injected.stop() and x or x)
@@ -289,9 +350,10 @@ def call(topic, msg):
     return d
 
 
-def cast(topic, msg):
+def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
     LOG.debug("Making asynchronous cast...")
+    _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)

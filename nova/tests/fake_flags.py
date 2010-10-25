@@ -20,11 +20,11 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
-flags.DECLARE('fake_storage', 'nova.volume.manager')
-FLAGS.fake_storage = True
+flags.DECLARE('volume_driver', 'nova.volume.manager')
+FLAGS.volume_driver = 'nova.volume.driver.FakeAOEDriver'
 FLAGS.connection_type = 'fake'
 FLAGS.fake_rabbit = True
-FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('fake_network', 'nova.network.manager')
@@ -37,4 +37,3 @@ FLAGS.num_shelves = 2
 FLAGS.blades_per_shelf = 4
 FLAGS.verbose = True
 FLAGS.sql_connection = 'sqlite:///nova.sqlite'
-#FLAGS.sql_connection = 'mysql://root@localhost/test'

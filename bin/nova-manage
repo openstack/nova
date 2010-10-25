@@ -17,23 +17,73 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# Interactive shell based on Django:
+#
+# Copyright (c) 2005, the Lawrence Journal-World
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     1. Redistributions of source code must retain the above copyright notice,
+#        this list of conditions and the following disclaimer.
+#
+#     2. Redistributions in binary form must reproduce the above copyright
+#        notice, this list of conditions and the following disclaimer in the
+#        documentation and/or other materials provided with the distribution.
+#
+#     3. Neither the name of Django nor the names of its contributors may be
+#        used to endorse or promote products derived from this software without
+#        specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 """
   CLI interface for nova management.
-  Connects to the running ADMIN api in the api daemon.
 """
 
+import logging
+import os
 import sys
 import time
 
+import IPy
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
+from nova import context
 from nova import db
+from nova import exception
 from nova import flags
+from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
-from nova.endpoint import cloud
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('fixed_range', 'nova.network.manager')
+flags.DECLARE('num_networks', 'nova.network.manager')
+flags.DECLARE('network_size', 'nova.network.manager')
+flags.DECLARE('vlan_start', 'nova.network.manager')
+flags.DECLARE('vpn_start', 'nova.network.manager')
 
 
 class VpnCommands(object):
@@ -41,16 +91,21 @@ class VpnCommands(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
-        self.pipe = pipelib.CloudPipe(cloud.CloudController())
+        self.pipe = pipelib.CloudPipe()
 
     def list(self):
         """Print a listing of the VPNs for all projects."""
         print "%-12s\t" % 'project',
-        print "%-12s\t" % 'ip:port',
+        print "%-20s\t" % 'ip:port',
         print "%s" % 'state'
         for project in self.manager.get_projects():
             print "%-12s\t" % project.name,
-            print "%s:%s\t" % (project.vpn_ip, project.vpn_port),
+
+            try:
+                s = "%s:%s" % (project.vpn_ip, project.vpn_port)
+            except exception.NotFound:
+                s = "None"
+            print "%-20s\t" % s,
 
             vpn = self._vpn_for(project.id)
             if vpn:
@@ -72,7 +127,7 @@ class VpnCommands(object):
 
     def _vpn_for(self, project_id):
         """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all():
+        for instance in db.instance_get_all(context.get_admin_context()):
             if (instance['image_id'] == FLAGS.vpn_image_id
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']
@@ -90,6 +145,68 @@ class VpnCommands(object):
     def run(self, project_id):
         """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
+
+
+class ShellCommands(object):
+    def bpython(self):
+        """Runs a bpython shell.
+
+        Falls back to Ipython/python shell if unavailable"""
+        self.run('bpython')
+
+    def ipython(self):
+        """Runs an Ipython shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('ipython')
+
+    def python(self):
+        """Runs a python shell.
+
+        Falls back to Python shell if unavailable"""
+        self.run('python')
+
+    def run(self, shell=None):
+        """Runs a Python interactive interpreter.
+
+        args: [shell=bpython]"""
+        if not shell:
+            shell = 'bpython'
+
+        if shell == 'bpython':
+            try:
+                import bpython
+                bpython.embed()
+            except ImportError:
+                shell = 'ipython'
+        if shell == 'ipython':
+            try:
+                import IPython
+                # Explicitly pass an empty list as arguments, because
+                # otherwise IPython would use sys.argv from this script.
+                shell = IPython.Shell.IPShell(argv=[])
+                shell.mainloop()
+            except ImportError:
+                shell = 'python'
+
+        if shell == 'python':
+            import code
+            try:
+                # Try activating rlcompleter, because it's handy.
+                import readline
+            except ImportError:
+                pass
+            else:
+                # We don't have to wrap the following import in a 'try',
+                # because we already know 'readline' was imported successfully.
+                import rlcompleter
+                readline.parse_and_bind("tab:complete")
+            code.interact()
+
+    def script(self, path):
+        """Runs the script from the specifed path with flags set properly.
+        arguments: path"""
+        exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
 
 class RoleCommands(object):
@@ -121,6 +238,12 @@ class RoleCommands(object):
 class UserCommands(object):
     """Class for managing users."""
 
+    @staticmethod
+    def _print_export(user):
+        """Print export variables to use with API."""
+        print 'export EC2_ACCESS_KEY=%s' % user.access
+        print 'export EC2_SECRET_KEY=%s' % user.secret
+
     def __init__(self):
         self.manager = manager.AuthManager()
 
@@ -128,13 +251,13 @@ class UserCommands(object):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, True)
-        print_export(user)
+        self._print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
         user = self.manager.create_user(name, access, secret, False)
-        print_export(user)
+        self._print_export(user)
 
     def delete(self, name):
         """deletes an existing user
@@ -146,7 +269,7 @@ class UserCommands(object):
         arguments: name"""
         user = self.manager.get_user(name)
         if user:
-            print_export(user)
+            self._print_export(user)
         else:
             print "User %s doesn't exist" % name
 
@@ -156,11 +279,18 @@ class UserCommands(object):
         for user in self.manager.get_users():
             print user.name
 
-
-def print_export(user):
-    """Print export variables to use with API."""
-    print 'export EC2_ACCESS_KEY=%s' % user.access
-    print 'export EC2_SECRET_KEY=%s' % user.secret
+    def modify(self, name, access_key, secret_key, is_admin):
+        """update a users keys & admin flag
+        arguments: accesskey secretkey admin
+        leave any field blank to ignore it, admin should be 'T', 'F', or blank
+        """
+        if not is_admin:
+            is_admin = None
+        elif is_admin.upper()[0] == 'T':
+            is_admin = True
+        else:
+            is_admin = False
+        self.manager.modify_user(name, access_key, secret_key, is_admin)
 
 
 class ProjectCommands(object):
@@ -169,10 +299,10 @@ class ProjectCommands(object):
     def __init__(self):
         self.manager = manager.AuthManager()
 
-    def add(self, project, user):
+    def add(self, project_id, user_id):
         """Adds user to project
-        arguments: project user"""
-        self.manager.add_to_project(user, project)
+        arguments: project_id user_id"""
+        self.manager.add_to_project(user_id, project_id)
 
     def create(self, name, project_manager, description=None):
         """Creates a new project
@@ -187,7 +317,7 @@ class ProjectCommands(object):
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(project_id, user_id)
+        rc = self.manager.get_environment_rc(user_id, project_id)
         with open(filename, 'w') as f:
             f.write(rc)
 
@@ -197,10 +327,34 @@ class ProjectCommands(object):
         for project in self.manager.get_projects():
             print project.name
 
-    def remove(self, project, user):
+    def quota(self, project_id, key=None, value=None):
+        """Set or display quotas for project
+        arguments: project_id [key] [value]"""
+        ctxt = context.get_admin_context()
+        if key:
+            quo = {'project_id': project_id, key: value}
+            try:
+                db.quota_update(ctxt, project_id, quo)
+            except exception.NotFound:
+                db.quota_create(ctxt, quo)
+        project_quota = quota.get_quota(ctxt, project_id)
+        for key, value in project_quota.iteritems():
+            print '%s: %s' % (key, value)
+
+    def remove(self, project_id, user_id):
         """Removes user from project
-        arguments: project user"""
-        self.manager.remove_from_project(user, project)
+        arguments: project_id user_id"""
+        self.manager.remove_from_project(user_id, project_id)
+
+    def scrub(self, project_id):
+        """Deletes data associated with project
+        arguments: project_id"""
+        ctxt = context.get_admin_context()
+        network_ref = db.project_get_network(ctxt, project_id)
+        db.network_disassociate(ctxt, network_ref['id'])
+        groups = db.security_group_get_by_project(ctxt, project_id)
+        for group in groups:
+            db.security_group_destroy(ctxt, group['id'])
 
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
@@ -210,12 +364,74 @@ class ProjectCommands(object):
             f.write(zip_file)
 
 
+class FloatingIpCommands(object):
+    """Class for managing floating ip."""
+
+    def create(self, host, range):
+        """Creates floating ips for host by range
+        arguments: host ip_range"""
+        for address in IPy.IP(range):
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': str(address),
+                                   'host': host})
+
+    def delete(self, ip_range):
+        """Deletes floating ips by range
+        arguments: range"""
+        for address in IPy.IP(ip_range):
+            db.floating_ip_destroy(context.get_admin_context(),
+                                   str(address))
+
+    def list(self, host=None):
+        """Lists all floating ips (optionally by host)
+        arguments: [host]"""
+        ctxt = context.get_admin_context()
+        if host == None:
+            floating_ips = db.floating_ip_get_all(ctxt)
+        else:
+            floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
+        for floating_ip in floating_ips:
+            instance = None
+            if floating_ip['fixed_ip']:
+                instance = floating_ip['fixed_ip']['instance']['ec2_id']
+            print "%s\t%s\t%s" % (floating_ip['host'],
+                                  floating_ip['address'],
+                                  instance)
+
+
+class NetworkCommands(object):
+    """Class for managing networks."""
+
+    def create(self, fixed_range=None, num_networks=None,
+               network_size=None, vlan_start=None, vpn_start=None):
+        """Creates fixed ips for host by range
+        arguments: [fixed_range=FLAG], [num_networks=FLAG],
+                   [network_size=FLAG], [vlan_start=FLAG],
+                   [vpn_start=FLAG]"""
+        if not fixed_range:
+            fixed_range = FLAGS.fixed_range
+        if not num_networks:
+            num_networks = FLAGS.num_networks
+        if not network_size:
+            network_size = FLAGS.network_size
+        if not vlan_start:
+            vlan_start = FLAGS.vlan_start
+        if not vpn_start:
+            vpn_start = FLAGS.vpn_start
+        net_manager = utils.import_object(FLAGS.network_manager)
+        net_manager.create_networks(context.get_admin_context(),
+                                    fixed_range, int(num_networks),
+                                    int(network_size), int(vlan_start),
+                                    int(vpn_start))
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
+    ('shell', ShellCommands),
     ('vpn', VpnCommands),
-]
+    ('floating', FloatingIpCommands),
+    ('network', NetworkCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -253,6 +469,10 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile('/etc/nova/nova-manage.conf')
     argv = FLAGS(sys.argv)
+
+    if FLAGS.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
@@ -280,9 +500,9 @@ def main():
         fn(*argv)
         sys.exit(0)
     except TypeError:
-        print "Wrong number of arguments supplied"
+        print "Possible wrong number of arguments supplied"
         print "%s %s: %s" % (category, action, fn.__doc__)
-        sys.exit(2)
+        raise
 
 if __name__ == '__main__':
     main()

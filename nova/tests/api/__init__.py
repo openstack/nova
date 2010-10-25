@@ -25,35 +25,57 @@ import stubout
 import webob
 import webob.dec
 
+import nova.exception
 from nova import api
-from nova.tests.api.test_helper import *
+from nova.tests.api.fakes import APIStub
+
 
 class Test(unittest.TestCase):
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         self.stubs = stubout.StubOutForTesting()
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         self.stubs.UnsetAll()
 
-    def test_rackspace(self):
-        self.stubs.Set(api.rackspace, 'API', APIStub)
-        result = webob.Request.blank('/v1.0/cloud').get_response(api.API())
+    def _request(self, url, subdomain, **kwargs):
+        environ_keys = {'HTTP_HOST': '%s.example.com' % subdomain}
+        environ_keys.update(kwargs)
+        req = webob.Request.blank(url, environ_keys)
+        return req.get_response(api.API())
+
+    def test_openstack(self):
+        self.stubs.Set(api.openstack, 'API', APIStub)
+        result = self._request('/v1.0/cloud', 'api')
         self.assertEqual(result.body, "/cloud")
 
     def test_ec2(self):
         self.stubs.Set(api.ec2, 'API', APIStub)
-        result = webob.Request.blank('/ec2/cloud').get_response(api.API())
+        result = self._request('/services/cloud', 'ec2')
         self.assertEqual(result.body, "/cloud")
 
     def test_not_found(self):
         self.stubs.Set(api.ec2, 'API', APIStub)
-        self.stubs.Set(api.rackspace, 'API', APIStub)
-        result = webob.Request.blank('/test/cloud').get_response(api.API())
+        self.stubs.Set(api.openstack, 'API', APIStub)
+        result = self._request('/test/cloud', 'ec2')
         self.assertNotEqual(result.body, "/cloud")
 
-    def test_query_api_version(self):
-        pass
+    def test_query_api_versions(self):
+        result = self._request('/', 'api')
+        self.assertTrue('CURRENT' in result.body)
+
+    def test_metadata(self):
+        def go(url):
+            result = self._request(url, 'ec2', REMOTE_ADDR='128.192.151.2')
+        # Each should get to the ORM layer and fail to find the IP
+        self.assertRaises(nova.exception.NotFound, go, '/latest/')
+        self.assertRaises(nova.exception.NotFound, go, '/2009-04-04/')
+        self.assertRaises(nova.exception.NotFound, go, '/1.0/')
+
+    def test_ec2_root(self):
+        result = self._request('/', 'ec2')
+        self.assertTrue('2007-12-15\n' in result.body)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -21,14 +21,17 @@
 Utility methods for working with WSGI servers
 """
 
+import json
 import logging
 import sys
+from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True)
 import routes
 import routes.middleware
+import webob
 import webob.dec
 import webob.exc
 
@@ -91,11 +94,11 @@ class Middleware(Application):
     behavior.
     """
 
-    def __init__(self, application): # pylint: disable-msg=W0231
+    def __init__(self, application):  # pylint: disable-msg=W0231
         self.application = application
 
     @webob.dec.wsgify
-    def __call__(self, req): # pylint: disable-msg=W0221
+    def __call__(self, req):  # pylint: disable-msg=W0221
         """Override to implement middleware behavior."""
         return self.application
 
@@ -213,7 +216,7 @@ class Controller(object):
         arg_dict['req'] = req
         result = method(**arg_dict)
         if type(result) is dict:
-            return self._serialize(result, req) 
+            return self._serialize(result, req)
         else:
             return result
 
@@ -227,10 +230,20 @@ class Controller(object):
         serializer = Serializer(request.environ, _metadata)
         return serializer.to_content_type(data)
 
+    def _deserialize(self, data, request):
+        """
+        Deserialize the request body to the response type requested in request.
+        Uses self._serialization_metadata if it exists, which is a dict mapping
+        MIME types to information needed to serialize to that type.
+        """
+        _metadata = getattr(type(self), "_serialization_metadata", {})
+        serializer = Serializer(request.environ, _metadata)
+        return serializer.deserialize(data)
+
 
 class Serializer(object):
     """
-    Serializes a dictionary to a Content Type specified by a WSGI environment.
+    Serializes and deserializes dictionaries to certain MIME types.
     """
 
     def __init__(self, environ, metadata=None):
@@ -239,31 +252,79 @@ class Serializer(object):
         'metadata' is an optional dict mapping MIME types to information
         needed to serialize a dictionary to that type.
         """
-        self.environ = environ
         self.metadata = metadata or {}
-        self._methods = {
-            'application/json': self._to_json,
-            'application/xml': self._to_xml}
+        req = webob.Request(environ)
+        suffix = req.path_info.split('.')[-1].lower()
+        if suffix == 'json':
+            self.handler = self._to_json
+        elif suffix == 'xml':
+            self.handler = self._to_xml
+        elif 'application/json' in req.accept:
+            self.handler = self._to_json
+        elif 'application/xml' in req.accept:
+            self.handler = self._to_xml
+        else:
+            # This is the default
+            self.handler = self._to_json
 
     def to_content_type(self, data):
         """
-        Serialize a dictionary into a string.  The format of the string
-        will be decided based on the Content Type requested in self.environ:
-        by Accept: header, or by URL suffix.
+        Serialize a dictionary into a string.
+
+        The format of the string will be decided based on the Content Type
+        requested in self.environ: by Accept: header, or by URL suffix.
         """
-        mimetype = 'application/xml'
-        # TODO(gundlach): determine mimetype from request
-        return self._methods.get(mimetype, repr)(data)
+        return self.handler(data)
+
+    def deserialize(self, datastring):
+        """
+        Deserialize a string to a dictionary.
+
+        The string must be in the format of a supported MIME type.
+        """
+        datastring = datastring.strip()
+        try:
+            is_xml = (datastring[0] == '<')
+            if not is_xml:
+                return json.loads(datastring)
+            return self._from_xml(datastring)
+        except:
+            return None
+
+    def _from_xml(self, datastring):
+        xmldata = self.metadata.get('application/xml', {})
+        plurals = set(xmldata.get('plurals', {}))
+        node = minidom.parseString(datastring).childNodes[0]
+        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+    def _from_xml_node(self, node, listnames):
+        """
+        Convert a minidom node to a simple Python type.
+
+        listnames is a collection of names of XML nodes whose subnodes should
+        be considered list items.
+        """
+        if len(node.childNodes) == 1 and node.childNodes[0].nodeType == 3:
+            return node.childNodes[0].nodeValue
+        elif node.nodeName in listnames:
+            return [self._from_xml_node(n, listnames) for n in node.childNodes]
+        else:
+            result = dict()
+            for attr in node.attributes.keys():
+                result[attr] = node.attributes[attr].nodeValue
+            for child in node.childNodes:
+                if child.nodeType != node.TEXT_NODE:
+                    result[child.nodeName] = self._from_xml_node(child,
+                                                                 listnames)
+            return result
 
     def _to_json(self, data):
-        import json
         return json.dumps(data)
 
     def _to_xml(self, data):
         metadata = self.metadata.get('application/xml', {})
         # We expect data to contain a single key which is the XML root.
         root_key = data.keys()[0]
-        from xml.dom import minidom
         doc = minidom.Document()
         node = self._to_xml_node(doc, metadata, root_key, data[root_key])
         return node.toprettyxml(indent='    ')
@@ -289,7 +350,8 @@ class Serializer(object):
                 else:
                     node = self._to_xml_node(doc, metadata, k, v)
                     result.appendChild(node)
-        else: # atom
+        else:
+            # Type is atom
             node = doc.createTextNode(str(data))
             result.appendChild(node)
         return result

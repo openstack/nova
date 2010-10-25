@@ -27,14 +27,10 @@ from nova.scheduler import driver
 
 
 class ChanceScheduler(driver.Scheduler):
-    """
-    Implements Scheduler as a random node selector
-    """
+    """Implements Scheduler as a random node selector."""
 
     def schedule(self, context, topic, *_args, **_kwargs):
-        """
-        Picks a host that is up at random
-        """
+        """Picks a host that is up at random."""
 
         hosts = self.hosts_up(context, topic)
         if not hosts:
