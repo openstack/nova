@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova.auth import manager
 
+
 def user_dict(user, base64_file=None):
     """Convert the user object to a result dict"""
     if user:
