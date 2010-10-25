@@ -176,8 +176,8 @@ class ComputeManager(manager.Manager):
                                     instance_id,
                                     mountpoint)
         except Exception:
-            logging.debug("instance %s: attach failed to %s, removing export",
-                          instance_id, mountpoint)
+            logging.exception("instance %s: attach failed %s, removing",
+                              instance_id, mountpoint)
             yield self.volume_manager.remove_compute_volume(context,
                                                             volume_id)
             raise
