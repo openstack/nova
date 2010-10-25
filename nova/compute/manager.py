@@ -111,6 +111,9 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
+        volumes = instance_ref.get('volumes', []) or []
+        for volume in volumes:
+            self.detach_volume(instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'

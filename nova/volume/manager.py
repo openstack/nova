@@ -112,7 +112,7 @@ class VolumeManager(manager.Manager):
 
         Returns path to device.
         """
-        context = context.admin()
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['host'] == self.host:
             # NOTE(vish): No need to discover local volumes.
@@ -124,7 +124,7 @@ class VolumeManager(manager.Manager):
     @defer.inlineCallbacks
     def remove_compute_volume(self, context, volume_id):
         """Remove remote volume on compute host """
-        context = context.admin()
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['host'] == self.host:
             # NOTE(vish): No need to undiscover local volumes.

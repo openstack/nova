@@ -21,6 +21,7 @@ Drivers for volumes
 """
 
 import logging
+import os
 
 from twisted.internet import defer
 
@@ -80,12 +81,10 @@ class VolumeDriver(object):
                 yield self._execute("sleep %s" % tries ** 2)
 
     def check_for_setup_error(self):
-        """Returns an error if prerequesits aren't met"""
-        # NOTE(vish): makes sure that the volume group exists
-        (_out, err) = self._sync_exec("vgs %s" % FLAGS.volume_group,
-                                      check_exit_code=False)
-        if err:
-            raise exception.Error(err)
+        """Returns an error if prerequisites aren't met"""
+        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+            raise exception.Error("volume group %s doesn't exist"
+                                  % FLAGS.volume_group)
 
     @defer.inlineCallbacks
     def create_volume(self, volume):
