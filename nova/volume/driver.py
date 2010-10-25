@@ -108,7 +108,10 @@ class VolumeDriver(object):
     @defer.inlineCallbacks
     def local_path(self, volume):
         yield  # NOTE(vish): stops deprecation warning
-        defer.returnValue("/dev/%s/%s" % (FLAGS.volume_group, volume['name']))
+        escaped_group = FLAGS.volume_group.replace('-', '--')
+        escaped_name = volume['name'].replace('-', '--')
+        defer.returnValue("/dev/mapper/%s-%s" % (escaped_group,
+                                                 escaped_name))
 
     def ensure_export(self, context, volume):
         """Safely and synchronously recreates an export for a logical volume"""

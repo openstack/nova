@@ -182,19 +182,46 @@ class LibvirtConnection(object):
     @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
-        yield process.simple_execute("sudo virsh attach-disk %s %s %s" %
-                                     (instance_name,
-                                      device_path,
-                                      mountpoint.rpartition('/dev/')[2]))
+        virt_dom = self._conn.lookupByName(instance_name)
+        mount_device = mountpoint.rpartition("/")[2]
+        xml = """<disk type='block'>
+                     <driver name='qemu' type='raw'/>
+                     <source dev='%s'/>
+                     <target dev='%s' bus='virtio'/>
+                 </disk>""" % (device_path, mount_device)
+        virt_dom.attachDevice(xml)
+        yield
+
+    def _get_disk_xml(self, xml, device):
+        """Returns the xml for the disk mounted at device"""
+        try:
+            doc = libxml2.parseDoc(xml)
+        except:
+            return None
+        ctx = doc.xpathNewContext()
+        try:
+            ret = ctx.xpathEval('/domain/devices/disk')
+            for node in ret:
+                for child in node.children:
+                    if child.name == 'target':
+                        if child.prop('dev') == device:
+                            return str(node)
+        finally:
+            if ctx != None:
+                ctx.xpathFreeContext()
+            if doc != None:
+                doc.freeDoc()
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
-        # NOTE(vish): despite the documentation, virsh detach-disk just
-        # wants the device name without the leading /dev/
-        yield process.simple_execute("sudo virsh detach-disk %s %s" %
-                                     (instance_name,
-                                      mountpoint.rpartition('/dev/')[2]))
+        virt_dom = self._conn.lookupByName(instance_name)
+        mount_device = mountpoint.rpartition("/")[2]
+        xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
+        if not xml:
+            raise exception.NotFound("No disk at %s" % mount_device)
+        virt_dom.detachDevice(xml)
+        yield
 
     @defer.inlineCallbacks
     @exception.wrap_exception
