@@ -39,6 +39,8 @@ flags.DEFINE_string('storage_availability_zone',
                     'availability zone of this service')
 flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
                     'Driver to use for volume creation')
+flags.DEFINE_boolean('use_local_volumes', True,
+                     'if True, will not discover local volumes')
 
 
 class VolumeManager(manager.Manager):
@@ -61,7 +63,7 @@ class VolumeManager(manager.Manager):
         volumes = self.db.volume_get_all_by_host(ctxt, self.host)
         logging.debug("Re-exporting %s volumes", len(volumes))
         for volume in volumes:
-            self.driver.ensure_export(context, volume)
+            self.driver.ensure_export(ctxt, volume)
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
@@ -100,6 +102,8 @@ class VolumeManager(manager.Manager):
             raise exception.Error("Volume is still attached")
         if volume_ref['host'] != self.host:
             raise exception.Error("Volume is not local to this node")
+        logging.debug("volume %s: removing export", volume_ref['name'])
+        yield self.driver.remove_export(context, volume_ref)
         logging.debug("volume %s: deleting", volume_ref['name'])
         yield self.driver.delete_volume(volume_ref)
         self.db.volume_destroy(context, volume_id)
@@ -114,8 +118,7 @@ class VolumeManager(manager.Manager):
         """
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['host'] == self.host:
-            # NOTE(vish): No need to discover local volumes.
+        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
             path = yield self.driver.local_path(volume_ref)
         else:
             path = yield self.driver.discover_volume(volume_ref)
@@ -126,8 +129,7 @@ class VolumeManager(manager.Manager):
         """Remove remote volume on compute host """
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
-        if volume_ref['host'] == self.host:
-            # NOTE(vish): No need to undiscover local volumes.
+        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
             defer.returnValue(True)
         else:
             yield self.driver.undiscover_volume(volume_ref)

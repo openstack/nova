@@ -82,6 +82,12 @@ class NovaBase(object):
     def __getitem__(self, key):
         return getattr(self, key)
 
+    def get(self, key, default=None):
+        try:
+            return getattr(self, key)
+        except AttributeError, KeyError:
+            return default
+
     def __iter__(self):
         self._i = iter(object_mapper(self).columns)
         return self

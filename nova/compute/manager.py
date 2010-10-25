@@ -113,7 +113,7 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         volumes = instance_ref.get('volumes', []) or []
         for volume in volumes:
-            self.detach_volume(instance_id, volume['id'])
+            self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
@@ -176,6 +176,8 @@ class ComputeManager(manager.Manager):
                                     instance_id,
                                     mountpoint)
         except Exception:
+            logging.debug("instance %s: attach failed to %s, removing export",
+                          instance_id, mountpoint)
             yield self.volume_manager.remove_compute_volume(context,
                                                             volume_id)
             raise

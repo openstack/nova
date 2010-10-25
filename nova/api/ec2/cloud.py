@@ -467,7 +467,7 @@ class CloudController(object):
         instance_data = None
         if volume.get('instance', None):
             internal_id = volume['instance']['internal_id']
-            ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_ec2_id = internal_id_to_ec2_id(internal_id)
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
@@ -522,7 +522,10 @@ class CloudController(object):
                   "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume_ref['id']}})
 
-        return {'volumeSet': [self._format_volume(context, volume_ref)]}
+        # TODO(vish): Instance should be None at db layer instead of
+        #             trying to lazy load, but for now we turn it into
+        #             a dict to avoid an error.
+        return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)

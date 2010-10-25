@@ -49,8 +49,8 @@ flags.DEFINE_integer('iscsi_target_ids',
                     'Number of iscsi target ids per host')
 flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
-flags.DEFINE_string('iscsi_ip_prefix', '127.0.0',
-                    'only connect to the specified ip')
+flags.DEFINE_string('iscsi_ip_prefix', '127.0',
+                    'discover volumes on the ip that starts with this prefix')
 
 
 class VolumeDriver(object):
@@ -107,6 +107,7 @@ class VolumeDriver(object):
 
     @defer.inlineCallbacks
     def local_path(self, volume):
+        yield  # NOTE(vish): stops deprecation warning
         defer.returnValue("/dev/%s/%s" % (FLAGS.volume_group, volume['name']))
 
     def ensure_export(self, context, volume):
@@ -261,7 +262,7 @@ class ISCSIDriver(VolumeDriver):
     @defer.inlineCallbacks
     def remove_export(self, context, volume):
         """Removes an export for a logical volume"""
-        target_id = self.db.volume_get_target_id(context, volume['name'])
+        target_id = self.db.volume_get_target_id(context, volume['id'])
         yield self._execute("sudo ietadm --op delete --tid=%s "
                             "--lun=0" % target_id)
         yield self._execute("sudo ietadm --op delete --tid=%s" %
@@ -282,7 +283,7 @@ class ISCSIDriver(VolumeDriver):
     def discover_volume(self, volume):
         """Discover volume on a remote host"""
         (iscsi_name,
-         iscsi_portal) = yield self._get_name_and_portal(volume['id'],
+         iscsi_portal) = yield self._get_name_and_portal(volume['name'],
                                                          volume['host'])
         yield self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
                             (iscsi_name, iscsi_portal))
