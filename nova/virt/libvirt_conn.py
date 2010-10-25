@@ -51,6 +51,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('libvirt_rescue_xml_template',
                     utils.abspath('virt/libvirt.rescue.qemu.xml.template'),
                     'Libvirt RESCUE XML Template for QEmu/KVM')
+flags.DEFINE_string('libvirt_rescue_xen_xml_template',
+                    utils.abspath('virt/libvirt.rescue.xen.xml.template'),
+                    'Libvirt RESCUE XML Template for xen')
 flags.DEFINE_string('libvirt_rescue_uml_xml_template',
                     utils.abspath('virt/libvirt.rescue.uml.xml.template'),
                     'Libvirt RESCUE XML Template for user-mode-linux')
