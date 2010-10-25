@@ -535,7 +535,8 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
-            raise exception.ApiError("Invalid device. Example /dev/vdb")
+            raise exception.ApiError("Invalid device specified: %s. "
+                                     "Example device: /dev/vdb" % device)
         # TODO(vish): abstract status checking?
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
