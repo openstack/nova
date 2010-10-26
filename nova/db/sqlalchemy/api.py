@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend
 """
 
+import random
 import warnings
 
 from nova import db
@@ -542,7 +543,8 @@ def instance_create(context, values):
     session = get_session()
     with session.begin():
         while instance_ref.internal_id == None:
-            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            # Instances have integer internal ids.
+            internal_id = random.randint(0, 2 ** 32 - 1)
             if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
@@ -1152,7 +1154,7 @@ def volume_create(context, values):
     session = get_session()
     with session.begin():
         while volume_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(volume_ref.__prefix__)
+            ec2_id = utils.generate_uid('vol')
             if not volume_ec2_id_exists(context, ec2_id, session=session):
                 volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
