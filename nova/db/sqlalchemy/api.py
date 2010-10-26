@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend
 """
 
+import random
 import warnings
 
 from nova import db
@@ -542,7 +543,8 @@ def instance_create(context, values):
     session = get_session()
     with session.begin():
         while instance_ref.internal_id == None:
-            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            # Instances have integer internal ids.
+            internal_id = random.randint(0, 2 ** 32 - 1)
             if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
@@ -1042,22 +1044,22 @@ def export_device_create_safe(context, values):
 
 
 @require_admin_context
-def target_id_count_by_host(context, host):
+def iscsi_target_count_by_host(context, host):
     session = get_session()
-    return session.query(models.TargetId).\
+    return session.query(models.IscsiTarget).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(host=host).\
                    count()
 
 
 @require_admin_context
-def target_id_create_safe(context, values):
-    target_id_ref = models.TargetId()
+def iscsi_target_create_safe(context, values):
+    iscsi_target_ref = models.IscsiTarget()
     for (key, value) in values.iteritems():
-        target_id_ref[key] = value
+        iscsi_target_ref[key] = value
     try:
-        target_id_ref.save()
-        return target_id_ref
+        iscsi_target_ref.save()
+        return iscsi_target_ref
     except IntegrityError:
         return None
 
@@ -1155,10 +1157,10 @@ def volume_allocate_shelf_and_blade(context, volume_id):
 
 
 @require_admin_context
-def volume_allocate_target_id(context, volume_id, host):
+def volume_allocate_iscsi_target(context, volume_id, host):
     session = get_session()
     with session.begin():
-        target_id_ref = session.query(models.TargetId).\
+        iscsi_target_ref = session.query(models.IscsiTarget).\
                                 filter_by(volume=None).\
                                 filter_by(host=host).\
                                 filter_by(deleted=False).\
@@ -1166,11 +1168,11 @@ def volume_allocate_target_id(context, volume_id, host):
                                 first()
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
-        if not target_id_ref:
+        if not iscsi_target_ref:
             raise db.NoMoreTargets()
-        target_id_ref.volume_id = volume_id
-        session.add(target_id_ref)
-    return target_id_ref.target_id
+        iscsi_target_ref.volume_id = volume_id
+        session.add(iscsi_target_ref)
+    return iscsi_target_ref.target_num
 
 
 @require_admin_context
@@ -1195,7 +1197,7 @@ def volume_create(context, values):
     session = get_session()
     with session.begin():
         while volume_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(volume_ref.__prefix__)
+            ec2_id = utils.generate_uid('vol')
             if not volume_ec2_id_exists(context, ec2_id, session=session):
                 volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
@@ -1224,7 +1226,7 @@ def volume_destroy(context, volume_id):
         session.execute('update export_devices set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
-        session.execute('update target_ids set volume_id=NULL '
+        session.execute('update iscsi_targets set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
 
@@ -1358,16 +1360,16 @@ def volume_get_shelf_and_blade(context, volume_id):
 
 
 @require_admin_context
-def volume_get_target_id(context, volume_id):
+def volume_get_iscsi_target_num(context, volume_id):
     session = get_session()
-    result = session.query(models.TargetId).\
+    result = session.query(models.IscsiTarget).\
                      filter_by(volume_id=volume_id).\
                      first()
     if not result:
         raise exception.NotFound('No target id found for volume %s' %
                                  volume_id)
 
-    return result.target_id
+    return result.target_num
 
 
 @require_context

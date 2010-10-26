@@ -28,6 +28,7 @@ import random
 import subprocess
 import socket
 import sys
+from xml.sax import saxutils
 
 from twisted.internet.threads import deferToThread
 
@@ -131,13 +132,9 @@ def runthis(prompt, cmd, check_exit_code=True):
 
 
 def generate_uid(topic, size=8):
-    if topic == "i":
-        # Instances have integer internal ids.
-        return random.randint(0, 2 ** 32 - 1)
-    else:
-        characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-        choices = [random.choice(characters) for x in xrange(size)]
-        return '%s-%s' % (topic, ''.join(choices))
+    characters = '01234567890abcdefghijklmnopqrstuvwxyz'
+    choices = [random.choice(characters) for x in xrange(size)]
+    return '%s-%s' % (topic, ''.join(choices))
 
 
 def generate_mac():
@@ -212,3 +209,27 @@ def deferredToThread(f):
     def g(*args, **kwargs):
         return deferToThread(f, *args, **kwargs)
     return g
+
+
+def xhtml_escape(value):
+    """Escapes a string so it is valid within XML or XHTML.
+    
+    Code is directly from the utf8 function in
+    http://github.com/facebook/tornado/blob/master/tornado/escape.py
+    
+    """
+    return saxutils.escape(value, {'"': "&quot;"})
+
+
+def utf8(value):
+    """Try to turn a string into utf-8 if possible.
+
+    Code is directly from the utf8 function in
+    http://github.com/facebook/tornado/blob/master/tornado/escape.py
+
+    """
+    if isinstance(value, unicode):
+        return value.encode("utf-8")
+    assert isinstance(value, str)
+    return value
+    

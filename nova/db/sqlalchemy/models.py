@@ -20,11 +20,9 @@
 SQLAlchemy models for nova data
 """
 
-import sys
 import datetime
 
-# TODO(vish): clean up these imports
-from sqlalchemy.orm import relationship, backref, exc, object_mapper
+from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
@@ -46,16 +44,10 @@ class NovaBase(object):
     """Base class for Nova Models"""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
-    __prefix__ = 'none'
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
-
-    @property
-    def str_id(self):
-        """Get string id of object (generally prefix + '-' + id)"""
-        return "%s-%s" % (self.__prefix__, self.id)
 
     def save(self, session=None):
         """Save this object"""
@@ -100,7 +92,6 @@ class NovaBase(object):
 #class Image(BASE, NovaBase):
 #    """Represents an image in the datastore"""
 #    __tablename__ = 'images'
-#    __prefix__ = 'ami'
 #    id = Column(Integer, primary_key=True)
 #    ec2_id = Column(String(12), unique=True)
 #    user_id = Column(String(255))
@@ -156,7 +147,6 @@ class Service(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm"""
     __tablename__ = 'instances'
-    __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
     internal_id = Column(Integer, unique=True)
 
@@ -233,7 +223,6 @@ class Instance(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm"""
     __tablename__ = 'volumes'
-    __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
     ec2_id = Column(String(12), unique=True)
 
@@ -279,10 +268,6 @@ class Quota(BASE, NovaBase):
     gigabytes = Column(Integer)
     floating_ips = Column(Integer)
 
-    @property
-    def str_id(self):
-        return self.project_id
-
 
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on"""
@@ -300,20 +285,20 @@ class ExportDevice(BASE, NovaBase):
                                            'ExportDevice.deleted==False)')
 
 
-class TargetId(BASE, NovaBase):
-    """Represates an iscsi target_id for a given host"""
-    __tablename__ = 'target_ids'
-    __table_args__ = (schema.UniqueConstraint("target_id", "host"),
+class IscsiTarget(BASE, NovaBase):
+    """Represates an iscsi target for a given host"""
+    __tablename__ = 'iscsi_targets'
+    __table_args__ = (schema.UniqueConstraint("target_num", "host"),
                       {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
-    target_id = Column(Integer)
+    target_num = Column(Integer)
     host = Column(String(255))
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
-                          backref=backref('target_id', uselist=False),
+                          backref=backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
-                          primaryjoin='and_(TargetId.volume_id==Volume.id,'
-                                           'TargetId.deleted==False)')
+                          primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
+                                           'IscsiTarget.deleted==False)')
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
@@ -387,10 +372,6 @@ class KeyPair(BASE, NovaBase):
     fingerprint = Column(String(255))
     public_key = Column(Text)
 
-    @property
-    def str_id(self):
-        return '%s.%s' % (self.user_id, self.name)
-
 
 class Network(BASE, NovaBase):
     """Represents a network"""
@@ -451,10 +432,6 @@ class FixedIp(BASE, NovaBase):
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
-
-    @property
-    def str_id(self):
-        return self.address
 
 
 class User(BASE, NovaBase):
@@ -536,7 +513,7 @@ class FloatingIp(BASE, NovaBase):
 def register_models():
     """Register Models and create metadata"""
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, TargetId, FixedIp,
+    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
               FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
               AuthToken, User, Project)  # , Image, Host

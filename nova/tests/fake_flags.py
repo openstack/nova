@@ -33,9 +33,9 @@ FLAGS.num_networks = 5
 FLAGS.fake_network = True
 flags.DECLARE('num_shelves', 'nova.volume.driver')
 flags.DECLARE('blades_per_shelf', 'nova.volume.driver')
-flags.DECLARE('iscsi_target_ids', 'nova.volume.driver')
+flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
 FLAGS.num_shelves = 2
 FLAGS.blades_per_shelf = 4
-FLAGS.iscsi_target_ids = 8
+FLAGS.iscsi_num_targets = 8
 FLAGS.verbose = True
 FLAGS.sql_connection = 'sqlite:///nova.sqlite'

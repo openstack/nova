@@ -25,6 +25,7 @@ datastore.
 import base64
 import datetime
 import logging
+import re
 import os
 import time
 
@@ -529,6 +530,9 @@ class CloudController(object):
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
+        if not re.match("^/dev/[a-z]d[a-z]+$", device):
+            raise exception.ApiError("Invalid device specified: %s. "
+                                     "Example device: /dev/vdb" % device)
         # TODO(vish): abstract status checking?
         if volume_ref['status'] != "available":
             raise exception.ApiError("Volume status must be available")
@@ -942,8 +946,21 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
-        for id_str in instance_id:
-            cloud.reboot(id_str, context=context)
+        for ec2_id in instance_id:
+            internal_id = ec2_id_to_internal_id(ec2_id)
+            cloud.reboot(internal_id, context=context)
+        return True
+
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.rescue(internal_id, context=context)
+        return True
+
+    def unrescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.unrescue(internal_id, context=context)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):

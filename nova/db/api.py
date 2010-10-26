@@ -486,18 +486,18 @@ def export_device_create_safe(context, values):
 ###################
 
 
-def target_id_count_by_host(context, host):
+def iscsi_target_count_by_host(context, host):
     """Return count of export devices."""
-    return IMPL.target_id_count_by_host(context, host)
+    return IMPL.iscsi_target_count_by_host(context, host)
 
 
-def target_id_create_safe(context, values):
-    """Create an target_id from the values dictionary.
+def iscsi_target_create_safe(context, values):
+    """Create an iscsi_target from the values dictionary.
 
     The device is not returned. If the create violates the unique
-    constraints because the target_id and host already exist,
+    constraints because the iscsi_target and host already exist,
     no exception is raised."""
-    return IMPL.target_id_create_safe(context, values)
+    return IMPL.iscsi_target_create_safe(context, values)
 
 
 ###############
@@ -549,9 +549,9 @@ def volume_allocate_shelf_and_blade(context, volume_id):
     return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
 
 
-def volume_allocate_target_id(context, volume_id, host):
-    """Atomically allocate a free target_id from the pool."""
-    return IMPL.volume_allocate_target_id(context, volume_id, host)
+def volume_allocate_iscsi_target(context, volume_id, host):
+    """Atomically allocate a free iscsi_target from the pool."""
+    return IMPL.volume_allocate_iscsi_target(context, volume_id, host)
 
 
 def volume_attached(context, volume_id, instance_id, mountpoint):
@@ -614,9 +614,9 @@ def volume_get_shelf_and_blade(context, volume_id):
     return IMPL.volume_get_shelf_and_blade(context, volume_id)
 
 
-def volume_get_target_id(context, volume_id):
-    """Get the target id allocated to the volume."""
-    return IMPL.volume_get_target_id(context, volume_id)
+def volume_get_iscsi_target_num(context, volume_id):
+    """Get the target num (tid) allocated to the volume."""
+    return IMPL.volume_get_iscsi_target_num(context, volume_id)
 
 
 def volume_update(context, volume_id, values):

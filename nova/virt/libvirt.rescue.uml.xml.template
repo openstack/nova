@@ -1,0 +1,26 @@
+<domain type='%(type)s'>
+    <name>%(name)s</name>
+    <memory>%(memory_kb)s</memory>
+    <os>
+        <type>%(type)s</type>
+        <kernel>/usr/bin/linux</kernel>
+        <root>/dev/ubda1</root>
+    </os>
+    <devices>
+        <disk type='file'>
+            <source file='%(basepath)s/rescue-disk'/>
+            <target dev='ubd0' bus='uml'/>
+        </disk>
+        <disk type='file'>
+            <source file='%(basepath)s/disk'/>
+            <target dev='ubd1' bus='uml'/>
+        </disk>
+        <interface type='bridge'>
+            <source bridge='%(bridge_name)s'/>
+            <mac address='%(mac_address)s'/>
+        </interface>
+        <console type="file">
+            <source path='%(basepath)s/console.log'/>
+        </console>
+    </devices>
+</domain>

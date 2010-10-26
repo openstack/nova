@@ -44,7 +44,7 @@ flags.DEFINE_integer('num_shelves',
 flags.DEFINE_integer('blades_per_shelf',
                     16,
                     'Number of vblade blades per shelf')
-flags.DEFINE_integer('iscsi_target_ids',
+flags.DEFINE_integer('iscsi_num_targets',
                     100,
                     'Number of iscsi target ids per host')
 flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
@@ -224,52 +224,54 @@ class ISCSIDriver(VolumeDriver):
 
     def ensure_export(self, context, volume):
         """Safely and synchronously recreates an export for a logical volume"""
-        target_id = self.db.volume_get_target_id(context, volume['id'])
+        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._sync_exec("sudo ietadm --op new "
                         "--tid=%s --params Name=%s" %
-                        (target_id, iscsi_name),
+                        (iscsi_target, iscsi_name),
                         check_exit_code=False)
         self._sync_exec("sudo ietadm --op new --tid=%s "
                         "--lun=0 --params Path=%s,Type=fileio" %
-                        (target_id, volume_path),
+                        (iscsi_target, volume_path),
                         check_exit_code=False)
 
-    def _ensure_target_ids(self, context, host):
+    def _ensure_iscsi_targets(self, context, host):
         """Ensure that target ids have been created in datastore"""
-        host_target_ids = self.db.target_id_count_by_host(context, host)
-        if host_target_ids >= FLAGS.iscsi_target_ids:
+        host_iscsi_targets = self.db.iscsi_target_count_by_host(context, host)
+        if host_iscsi_targets >= FLAGS.iscsi_num_targets:
             return
         # NOTE(vish): Target ids start at 1, not 0.
-        for target_id in xrange(1, FLAGS.iscsi_target_ids + 1):
-            target = {'host': host, 'target_id': target_id}
-            self.db.target_id_create_safe(context, target)
+        for target_num in xrange(1, FLAGS.iscsi_num_targets + 1):
+            target = {'host': host, 'target_num': target_num}
+            self.db.iscsi_target_create_safe(context, target)
 
     @defer.inlineCallbacks
     def create_export(self, context, volume):
         """Creates an export for a logical volume"""
-        self._ensure_target_ids(context, volume['host'])
-        target_id = self.db.volume_allocate_target_id(context,
+        self._ensure_iscsi_targets(context, volume['host'])
+        iscsi_target = self.db.volume_allocate_iscsi_target(context,
                                                       volume['id'],
                                                       volume['host'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         yield self._execute("sudo ietadm --op new "
                             "--tid=%s --params Name=%s" %
-                            (target_id, iscsi_name))
+                            (iscsi_target, iscsi_name))
         yield self._execute("sudo ietadm --op new --tid=%s "
                             "--lun=0 --params Path=%s,Type=fileio" %
-                            (target_id, volume_path))
+                            (iscsi_target, volume_path))
 
     @defer.inlineCallbacks
     def remove_export(self, context, volume):
         """Removes an export for a logical volume"""
-        target_id = self.db.volume_get_target_id(context, volume['id'])
+        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+                                                           volume['id'])
         yield self._execute("sudo ietadm --op delete --tid=%s "
-                            "--lun=0" % target_id)
+                            "--lun=0" % iscsi_target)
         yield self._execute("sudo ietadm --op delete --tid=%s" %
-                            target_id)
+                            iscsi_target)
 
     @defer.inlineCallbacks
     def _get_name_and_portal(self, volume_name, host):

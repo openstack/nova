@@ -85,7 +85,7 @@ class VolumeTestCase(test.TrialTestCase):
     def test_too_many_volumes(self):
         """Ensure that NoMoreTargets is raised when we run out of volumes"""
         vols = []
-        total_slots = FLAGS.iscsi_target_ids
+        total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
             yield self.volume.create_volume(self.context, volume_id)
@@ -157,12 +157,13 @@ class VolumeTestCase(test.TrialTestCase):
             """Make sure targets aren't duplicated"""
             volume_ids.append(volume_id)
             admin_context = context.get_admin_context()
-            target_id = db.volume_get_target_id(admin_context, volume_id)
-            self.assert_(target_id not in targets)
-            targets.append(target_id)
-            logging.debug("Target %s allocated", target_id)
+            iscsi_target = db.volume_get_iscsi_target_num(admin_context,
+                                                          volume_id)
+            self.assert_(iscsi_target not in targets)
+            targets.append(iscsi_target)
+            logging.debug("Target %s allocated", iscsi_target)
         deferreds = []
-        total_slots = FLAGS.iscsi_target_ids
+        total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
             d = self.volume.create_volume(self.context, volume_id)
