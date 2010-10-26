@@ -48,24 +48,8 @@ from twisted.scripts import trial as trial_script
 from nova import flags
 from nova import twistd
 
-from nova.tests.access_unittest import *
 from nova.tests.auth_unittest import *
-from nova.tests.api_unittest import *
-from nova.tests.cloud_unittest import *
-from nova.tests.compute_unittest import *
-from nova.tests.flags_unittest import *
-from nova.tests.network_unittest import *
-from nova.tests.objectstore_unittest import *
-from nova.tests.process_unittest import *
-from nova.tests.quota_unittest import *
-from nova.tests.rpc_unittest import *
-from nova.tests.scheduler_unittest import *
 from nova.tests.service_unittest import *
-from nova.tests.twistd_unittest import *
-from nova.tests.validator_unittest import *
-from nova.tests.virt_unittest import *
-from nova.tests.volume_unittest import *
-from nova.tests.virt_unittest import *
 
 
 FLAGS = flags.FLAGS
