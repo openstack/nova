@@ -936,8 +936,21 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
-        for id_str in instance_id:
-            cloud.reboot(id_str, context=context)
+        for ec2_id in instance_id:
+            internal_id = ec2_id_to_internal_id(ec2_id)
+            cloud.reboot(internal_id, context=context)
+        return True
+
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.rescue(internal_id, context=context)
+        return True
+
+    def unrescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.unrescue(internal_id, context=context)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
