@@ -171,7 +171,7 @@ class NetworkManager(manager.Manager):
         if not fixed_ip_ref['leased']:
             logging.warn("IP %s released that was not leased", address)
         self.db.fixed_ip_update(context,
-                                fixed_ip_ref['str_id'],
+                                fixed_ip_ref['address'],
                                 {'leased': False})
         if not fixed_ip_ref['allocated']:
             self.db.fixed_ip_disassociate(context, address)
