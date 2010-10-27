@@ -836,29 +836,30 @@ class CloudController(object):
         elevated = context.elevated()
 
         for num in range(num_instances):
-            
+
             instance_data = base_options
-            instance_data['mac_address'] = utils.generate_mac()
-            instance_data['launch_index'] = num
 
             instance_ref = self.compute_manager.create_instance(context,
-                                                           instance_data,
-                                                           security_groups)
+                                           instance_data,
+                                           security_groups,
+                                           mac_address=utils.generate_mac(),
+                                           launch_index=num)
+            inst_id = instance_ref['id']
 
             internal_id = instance_ref['internal_id']
             ec2_id = internal_id_to_ec2_id(internal_id)
-            instance_ref['hostname'] = ec2_id
 
             self.compute_manager.update_instance(context,
-                                                 instance_ref['id'],
-                                                 instance_ref)
+                                                 inst_id,
+                                                 instance_ref,
+                                                 hostname=ec2_id)
 
             # TODO(vish): This probably should be done in the scheduler
             #             or in compute as a call.  The network should be
             #             allocated after the host is assigned and setup
             #             can happen at the same time.
             address = self.network_manager.allocate_fixed_ip(context,
-                                                             instance_ref['id'],
+                                                             inst_id,
                                                              vpn)
             network_topic = self._get_network_topic(context)
             rpc.cast(elevated,
@@ -870,9 +871,9 @@ class CloudController(object):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_ref['id']}})
+                               "instance_id": inst_id}})
             logging.debug("Casting to scheduler for %s/%s's instance %s" %
-                      (context.project.name, context.user.name, instance_ref['id']))
+                      (context.project.name, context.user.name, inst_id))
         return self._format_run_instances(context, reservation_id)
 
     def terminate_instances(self, context, instance_id, **kwargs):
