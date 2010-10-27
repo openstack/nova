@@ -79,7 +79,6 @@ def _match_query(query, attrs):
 
     &, |, and ! are supported in the query. No syntax checking is performed,
     so malformed querys will not work correctly.
-
     """
     # cut off the parentheses
     inner = query[1:-1]

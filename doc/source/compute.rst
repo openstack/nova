@@ -15,32 +15,34 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Compute Documentation
-=====================
-
 
 from etherpad todo
 ------------------
 
-::
   * FIX RST IMPORT ERRORS
   * Compute Manager
     * public methods
     * responsibilities
   * Compute Driver
     * public methods
-    * libvirt implementation
-      - kvm/qemu
-      - uml
+    * libvirt implementation (kvm/qemu vs uml)
     * xen implementation
     * hyperv implementation
 
 
-legacy docs
------------
+Compute Documentation
+=====================
 
 This page contains the Compute Package documentation.
 
+
+The :mod:`manager` Module
+-------------------------
+
+.. automodule:: nova.compute.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 The :mod:`disk` Module
 ----------------------
@@ -50,45 +52,37 @@ The :mod:`disk` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`exception` Module
----------------------------
+The :mod:`instance_types` Module
+--------------------------------
 
-.. automodule:: nova.compute.exception
+.. automodule:: nova.compute.instance_types
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`model` Module
+The :mod:`power_state` Module
+-----------------------------
+
+.. automodule:: nova.compute.power_state
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`monitor` Module
 -------------------------
 
-.. automodule:: nova.compute.model
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    
-The :mod:`network` Module
--------------------------
-
-.. automodule:: nova.compute.network
+.. automodule:: nova.compute.monitor
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`node` Module
-----------------------
-
-.. automodule:: nova.compute.node
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    
 RELATED TESTS
----------------
+-------------
 
-The :mod:`node_unittest` Module
--------------------------------
+The :mod:`compute_unittest` Module
+----------------------------------
 
-.. automodule:: nova.tests.node_unittest
+.. automodule:: nova.tests.compute_unittest
     :members:
     :undoc-members:
     :show-inheritance:

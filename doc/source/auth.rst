@@ -127,7 +127,7 @@ CloudAudit queries may spawn long-running processes (similar to launching instan
 RBAC of CloudAudit API calls is critical, since detailed system information is a system vulnerability.
 
 Type declarations
----------------------
+-----------------
 *	Data declarations – Volumes and Objects
 *	System declarations – Instances
 
@@ -198,10 +198,26 @@ The :mod:`signer` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`auth` Module
------------------------
+The :mod:`manager` Module
+-------------------------
 
 .. automodule:: nova.auth.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`ldapdriver` Module
+----------------------------
+
+.. automodule:: nova.auth.ldapdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`dbdriver` Module
+----------------------------
+
+.. automodule:: nova.auth.dbdriver
     :members:
     :undoc-members:
     :show-inheritance:
@@ -223,7 +239,7 @@ The :mod:`access_unittest` Module
     :show-inheritance:
 
 The :mod:`ec2` Module
-------------------------
+---------------------
 
 .. automodule:: nova.api.ec2
     :members:
