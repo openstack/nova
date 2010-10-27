@@ -15,19 +15,7 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Administration Guide
-====================
+Nova Quickstart
+=========================
 
-How to deploy, monitor, and debug Nova.
-
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   quickstart
-   getting.started
-   multi.node.install
-   flags
+http://github.com/vishvananda/novascript

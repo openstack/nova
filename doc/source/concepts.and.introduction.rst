@@ -15,6 +15,7 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+
 Concepts and Introduction
 =========================
 
@@ -32,9 +33,17 @@ This document does not attempt to explain fundamental concepts of cloud
 computing, IaaS, virtualization, or other related technologies.  Instead, it
 focues on describing how Nova's implementation of those concepts is achieved.
 
+This page outlines concepts that you will need to understand as a user or
+administrator of an OpenStack installation.  Each section links to more more
+detailed information in the `Administration Guide`_, but you'll probably want
+to read this section straight-through before tackling the specifics presented
+in the administration guide.
 
-Concept: Projects
------------------
+.. _`Administration Guide`: administration.guide.html
+
+
+Concept: Users and Projects
+---------------------------
 
 Projects
 
@@ -72,7 +81,7 @@ Concept: Networking
 -------------------
 
 * Simple networking
-* NASA-Style Networking
+* VLAN Networking
 
 
 Concept: Services
@@ -93,8 +102,8 @@ Concept: Plugins
 LazyPluggable
 
 
-Concept: IPC
-------------
+Concept: IPC/RPC
+----------------
 
 Rabbit!
 
@@ -121,3 +130,9 @@ Concept: Manager Pattern
 ------------------------
 
 Managers
+
+
+Concept: Security Groups
+------------------------
+
+Security groups

@@ -15,19 +15,7 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Administration Guide
-====================
+Multi-Node Nova
+===============
 
-How to deploy, monitor, and debug Nova.
-
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   quickstart
-   getting.started
-   multi.node.install
-   flags
+http://etherpad.openstack.org/NovaMultinodeInstall
