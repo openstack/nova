@@ -17,4 +17,6 @@
 
 from nova import wsgi
 
-class Controller(wsgi.Controller): pass
+
+class Controller(wsgi.Controller):
+    pass

@@ -29,6 +29,7 @@ FLAGS = flags.FLAGS
 _ENGINE = None
 _MAKER = None
 
+
 def get_session(autocommit=True, expire_on_commit=False):
     """Helper method to grab session"""
     global _ENGINE
@@ -39,5 +40,5 @@ def get_session(autocommit=True, expire_on_commit=False):
         _MAKER = (sessionmaker(bind=_ENGINE,
                                 autocommit=autocommit,
                                 expire_on_commit=expire_on_commit))
-    session =  _MAKER()
+    session = _MAKER()
     return session

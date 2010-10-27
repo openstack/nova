@@ -75,12 +75,11 @@ flags.DEFINE_float('xenapi_task_poll_interval',
 
 
 XENAPI_POWER_STATE = {
-    'Halted'   : power_state.SHUTDOWN,
-    'Running'  : power_state.RUNNING,
-    'Paused'   : power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN, # FIXME
-    'Crashed'  : power_state.CRASHED
-}
+    'Halted': power_state.SHUTDOWN,
+    'Running': power_state.RUNNING,
+    'Paused': power_state.PAUSED,
+    'Suspended': power_state.SHUTDOWN,  # FIXME
+    'Crashed': power_state.CRASHED}
 
 
 def get_connection(_):
@@ -90,12 +89,15 @@ def get_connection(_):
     # library when not using XenAPI.
     global XenAPI
     if XenAPI is None:
-       XenAPI = __import__('XenAPI')
+        XenAPI = __import__('XenAPI')
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
     if not url or password is None:
-        raise Exception('Must specify xenapi_connection_url, xenapi_connection_username (optionally), and xenapi_connection_password to use connection_type=xenapi') 
+        raise Exception('Must specify xenapi_connection_url, '
+                        'xenapi_connection_username (optionally), and '
+                        'xenapi_connection_password to use '
+                        'connection_type=xenapi')
     return XenAPIConnection(url, username, password)
 
 
@@ -141,7 +143,7 @@ class XenAPIConnection(object):
     def _create_vm(self, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
-        
+
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
@@ -183,7 +185,7 @@ class XenAPIConnection(object):
     def _create_vbd(self, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
-        
+
         vbd_rec = {}
         vbd_rec['VM'] = vm_ref
         vbd_rec['VDI'] = vdi_ref
@@ -207,10 +209,10 @@ class XenAPIConnection(object):
     def _create_vif(self, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
-        
+
         vif_rec = {}
         vif_rec['device'] = '0'
-        vif_rec['network']= network_ref
+        vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address
         vif_rec['MTU'] = '1500'
@@ -303,7 +305,7 @@ class XenAPIConnection(object):
 
     def _lookup_blocking(self, i):
         vms = self._conn.xenapi.VM.get_by_name_label(i)
-        n = len(vms) 
+        n = len(vms)
         if n == 0:
             return None
         elif n > 1:

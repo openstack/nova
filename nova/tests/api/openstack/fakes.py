@@ -37,7 +37,7 @@ from nova.wsgi import Router
 FLAGS = flags.FLAGS
 
 
-class Context(object): 
+class Context(object):
     pass
 
 
@@ -85,11 +85,11 @@ def stub_out_image_service(stubs):
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
-    
-    stubs.Set(nova.api.openstack.AuthMiddleware, 
-        '__init__', fake_auth_init) 
-    stubs.Set(nova.api.openstack.AuthMiddleware, 
-        '__call__', fake_wsgi) 
+
+    stubs.Set(nova.api.openstack.AuthMiddleware,
+        '__init__', fake_auth_init)
+    stubs.Set(nova.api.openstack.AuthMiddleware,
+        '__call__', fake_wsgi)
 
 
 def stub_out_rate_limiting(stubs):
@@ -106,7 +106,7 @@ def stub_out_rate_limiting(stubs):
 
 def stub_out_networking(stubs):
     def get_my_ip():
-        return '127.0.0.1' 
+        return '127.0.0.1'
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
     FLAGS.FAKE_subdomain = 'api'
 
@@ -138,7 +138,6 @@ def stub_out_glance(stubs, initial_fixtures=[]):
             return id
 
         def fake_update_image_metadata(self, image_id, image_data):
-            
             f = self.fake_get_image_metadata(image_id)
             if not f:
                 raise exc.NotFound
@@ -146,7 +145,6 @@ def stub_out_glance(stubs, initial_fixtures=[]):
             f.update(image_data)
 
         def fake_delete_image_metadata(self, image_id):
-            
             f = self.fake_get_image_metadata(image_id)
             if not f:
                 raise exc.NotFound
@@ -165,9 +163,11 @@ def stub_out_glance(stubs, initial_fixtures=[]):
               fake_parallax_client.fake_get_image_metadata)
     stubs.Set(nova.image.services.glance.ParallaxClient, 'add_image_metadata',
               fake_parallax_client.fake_add_image_metadata)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'update_image_metadata',
+    stubs.Set(nova.image.services.glance.ParallaxClient,
+              'update_image_metadata',
               fake_parallax_client.fake_update_image_metadata)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'delete_image_metadata',
+    stubs.Set(nova.image.services.glance.ParallaxClient,
+              'delete_image_metadata',
               fake_parallax_client.fake_delete_image_metadata)
     stubs.Set(nova.image.services.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
@@ -175,7 +175,7 @@ def stub_out_glance(stubs, initial_fixtures=[]):
 
 class FakeToken(object):
     def __init__(self, **kwargs):
-        for k,v in kwargs.iteritems():
+        for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
 
@@ -201,7 +201,7 @@ class FakeAuthDatabase(object):
 class FakeAuthManager(object):
     auth_data = {}
 
-    def add_user(self, key, user):        
+    def add_user(self, key, user):
         FakeAuthManager.auth_data[key] = user
 
     def get_user(self, uid):

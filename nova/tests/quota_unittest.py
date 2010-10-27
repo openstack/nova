@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 
 class QuotaTestCase(test.TrialTestCase):
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -51,7 +51,7 @@ class QuotaTestCase(test.TrialTestCase):
         self.context = context.RequestContext(project=self.project,
                                               user=self.user)
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         manager.AuthManager().delete_project(self.project)
         manager.AuthManager().delete_user(self.user)
         super(QuotaTestCase, self).tearDown()
@@ -141,12 +141,13 @@ class QuotaTestCase(test.TrialTestCase):
         try:
             db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
-            db.floating_ip_create(context.get_admin_context(), {'address': address,
-                                         'host': FLAGS.host})
+            db.floating_ip_create(context.get_admin_context(),
+                                  {'address': address, 'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
         # NOTE(vish): This assert never fails. When cloud attempts to
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address, self.context)
+        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address,
+                          self.context)

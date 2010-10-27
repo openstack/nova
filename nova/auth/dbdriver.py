@@ -47,19 +47,23 @@ class DbDriver(object):
 
     def get_user(self, uid):
         """Retrieve user by id"""
-        return self._db_user_to_auth_user(db.user_get(context.get_admin_context(), uid))
+        user = db.user_get(context.get_admin_context(), uid)
+        return self._db_user_to_auth_user(user)
 
     def get_user_from_access_key(self, access):
         """Retrieve user by access key"""
-        return self._db_user_to_auth_user(db.user_get_by_access_key(context.get_admin_context(), access))
+        user = db.user_get_by_access_key(context.get_admin_context(), access)
+        return self._db_user_to_auth_user(user)
 
     def get_project(self, pid):
         """Retrieve project by id"""
-        return self._db_project_to_auth_projectuser(db.project_get(context.get_admin_context(), pid))
+        project = db.project_get(context.get_admin_context(), pid)
+        return self._db_project_to_auth_projectuser(project)
 
     def get_users(self):
         """Retrieve list of users"""
-        return [self._db_user_to_auth_user(user) for user in db.user_get_all(context.get_admin_context())]
+        return [self._db_user_to_auth_user(user)
+                for user in db.user_get_all(context.get_admin_context())]
 
     def get_projects(self, uid=None):
         """Retrieve list of projects"""
@@ -71,11 +75,10 @@ class DbDriver(object):
 
     def create_user(self, name, access_key, secret_key, is_admin):
         """Create a user"""
-        values = { 'id'         : name,
-                   'access_key' : access_key,
-                   'secret_key' : secret_key,
-                   'is_admin'   : is_admin
-                 }
+        values = {'id': name,
+                  'access_key': access_key,
+                  'secret_key': secret_key,
+                  'is_admin': is_admin}
         try:
             user_ref = db.user_create(context.get_admin_context(), values)
             return self._db_user_to_auth_user(user_ref)
@@ -83,18 +86,19 @@ class DbDriver(object):
             raise exception.Duplicate('User %s already exists' % name)
 
     def _db_user_to_auth_user(self, user_ref):
-        return { 'id'     : user_ref['id'],
-                 'name'   : user_ref['id'],
-                 'access' : user_ref['access_key'],
-                 'secret' : user_ref['secret_key'],
-                 'admin'  : user_ref['is_admin'] }
+        return {'id': user_ref['id'],
+                'name': user_ref['id'],
+                'access': user_ref['access_key'],
+                'secret': user_ref['secret_key'],
+                'admin': user_ref['is_admin']}
 
     def _db_project_to_auth_projectuser(self, project_ref):
-        return { 'id'                 : project_ref['id'],
-                 'name'               : project_ref['name'],
-                 'project_manager_id' : project_ref['project_manager'],
-                 'description'        : project_ref['description'],
-                 'member_ids'         : [member['id'] for member in project_ref['members']] }
+        member_ids = [member['id'] for member in project_ref['members']]
+        return {'id': project_ref['id'],
+                'name': project_ref['name'],
+                'project_manager_id': project_ref['project_manager'],
+                'description': project_ref['description'],
+                'member_ids': member_ids}
 
     def create_project(self, name, manager_uid,
                        description=None, member_uids=None):
@@ -121,10 +125,10 @@ class DbDriver(object):
                                              % member_uid)
                 members.add(member)
 
-        values = { 'id'         : name,
-                   'name'       : name,
-                   'project_manager' : manager['id'],
-                   'description': description }
+        values = {'id': name,
+                  'name': name,
+                  'project_manager': manager['id'],
+                  'description': description}
 
         try:
             project = db.project_create(context.get_admin_context(), values)
@@ -244,4 +248,3 @@ class DbDriver(object):
         if not project:
             raise exception.NotFound('Project "%s" not found' % project_id)
         return user, project
-

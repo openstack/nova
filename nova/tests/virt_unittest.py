@@ -29,11 +29,13 @@ from nova.virt import libvirt_conn
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
+
 class LibvirtConnTestCase(test.TrialTestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.user = self.manager.create_user('fake', 'fake', 'fake',
+                                             admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         FLAGS.instances_path = ''
@@ -41,15 +43,15 @@ class LibvirtConnTestCase(test.TrialTestCase):
     def test_get_uri_and_template(self):
         ip = '10.11.12.13'
 
-        instance = { 'internal_id'    : 1,
-                     'memory_kb'      : '1024000',
-                     'basepath'       : '/some/path',
-                     'bridge_name'    : 'br100',
-                     'mac_address'    : '02:12:34:46:56:67',
-                     'vcpus'          : 2,
-                     'project_id'     : 'fake',
-                     'bridge'         : 'br101',
-                     'instance_type'  : 'm1.small'}
+        instance = {'internal_id': 1,
+                    'memory_kb': '1024000',
+                    'basepath': '/some/path',
+                    'bridge_name': 'br100',
+                    'mac_address': '02:12:34:46:56:67',
+                    'vcpus': 2,
+                    'project_id': 'fake',
+                    'bridge': 'br101',
+                    'instance_type': 'm1.small'}
 
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
@@ -58,40 +60,38 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.network.set_network_host(context.get_admin_context(),
                                       network_ref['id'])
 
-        fixed_ip = { 'address'    : ip,
-                     'network_id' : network_ref['id'] }
+        fixed_ip = {'address': ip,
+                    'network_id': network_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
         db.fixed_ip_update(ctxt, ip, {'allocated': True,
-                                      'instance_id': instance_ref['id'] })
+                                      'instance_id': instance_ref['id']})
 
-        type_uri_map = { 'qemu' : ('qemu:///system',
-                              [(lambda t: t.find('.').get('type'), 'qemu'),
-                               (lambda t: t.find('./os/type').text, 'hvm'),
-                               (lambda t: t.find('./devices/emulator'), None)]),
-                         'kvm' : ('qemu:///system',
-                              [(lambda t: t.find('.').get('type'), 'kvm'),
-                               (lambda t: t.find('./os/type').text, 'hvm'),
-                               (lambda t: t.find('./devices/emulator'), None)]),
-                         'uml' : ('uml:///system',
-                              [(lambda t: t.find('.').get('type'), 'uml'),
-                               (lambda t: t.find('./os/type').text, 'uml')]),
-                       }
+        type_uri_map = {'qemu': ('qemu:///system',
+                             [(lambda t: t.find('.').get('type'), 'qemu'),
+                              (lambda t: t.find('./os/type').text, 'hvm'),
+                              (lambda t: t.find('./devices/emulator'), None)]),
+                        'kvm': ('qemu:///system',
+                             [(lambda t: t.find('.').get('type'), 'kvm'),
+                              (lambda t: t.find('./os/type').text, 'hvm'),
+                              (lambda t: t.find('./devices/emulator'), None)]),
+                        'uml': ('uml:///system',
+                             [(lambda t: t.find('.').get('type'), 'uml'),
+                              (lambda t: t.find('./os/type').text, 'uml')])}
 
-        common_checks = [(lambda t: t.find('.').tag, 'domain'),
-                         (lambda t: \
-                             t.find('./devices/interface/filterref/parameter') \
-                              .get('name'), 'IP'),
-                         (lambda t: \
-                             t.find('./devices/interface/filterref/parameter') \
-                              .get('value'), '10.11.12.13')]
+        common_checks = [
+            (lambda t: t.find('.').tag, 'domain'),
+            (lambda t: t.find('./devices/interface/filterref/parameter').\
+                         get('name'), 'IP'),
+            (lambda t: t.find('./devices/interface/filterref/parameter').\
+                         get('value'), '10.11.12.13')]
 
-        for (libvirt_type,(expected_uri, checks)) in type_uri_map.iteritems():
+        for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
 
-            uri, template = conn.get_uri_and_template()
+            uri, _template, _rescue = conn.get_uri_and_templates()
             self.assertEquals(uri, expected_uri)
 
             xml = conn.to_xml(instance_ref)
@@ -111,19 +111,20 @@ class LibvirtConnTestCase(test.TrialTestCase):
         # implementation doesn't fiddle around with the FLAGS.
         testuri = 'something completely different'
         FLAGS.libvirt_uri = testuri
-        for (libvirt_type,(expected_uri, checks)) in type_uri_map.iteritems():
+        for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
-            uri, template = conn.get_uri_and_template()
+            uri, _template, _rescue = conn.get_uri_and_templates()
             self.assertEquals(uri, testuri)
-
 
     def tearDown(self):
         super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
 
+
 class NWFilterTestCase(test.TrialTestCase):
+
     def setUp(self):
         super(NWFilterTestCase, self).setUp()
 
@@ -131,7 +132,8 @@ class NWFilterTestCase(test.TrialTestCase):
             pass
 
         self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('fake', 'fake', 'fake', admin=True)
+        self.user = self.manager.create_user('fake', 'fake', 'fake',
+                                             admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext(self.user, self.project)
 
@@ -142,7 +144,6 @@ class NWFilterTestCase(test.TrialTestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()
@@ -155,7 +156,6 @@ class NWFilterTestCase(test.TrialTestCase):
                                                           to_port='81',
                                                           ip_protocol='tcp',
                                                           cidr_ip='0.0.0.0/0')
-
 
         security_group = db.security_group_get_by_name(self.context,
                                                        'fake',
@@ -182,14 +182,11 @@ class NWFilterTestCase(test.TrialTestCase):
         self.assertEqual(ip_conditions[0].getAttribute('srcipmask'), '0.0.0.0')
         self.assertEqual(ip_conditions[0].getAttribute('dstportstart'), '80')
         self.assertEqual(ip_conditions[0].getAttribute('dstportend'), '81')
-
-
         self.teardown_security_group()
 
     def teardown_security_group(self):
         cloud_controller = cloud.CloudController()
         cloud_controller.delete_security_group(self.context, 'testgroup')
-
 
     def setup_and_return_security_group(self):
         cloud_controller = cloud.CloudController()
@@ -244,16 +241,19 @@ class NWFilterTestCase(test.TrialTestCase):
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',
                              'no-mac-spoofing']:
-                self.assertTrue(required in self.recursive_depends[instance_filter],
-                            "Instance's filter does not include %s" % required)
+                self.assertTrue(required in
+                                self.recursive_depends[instance_filter],
+                                "Instance's filter does not include %s" %
+                                required)
 
         self.security_group = self.setup_and_return_security_group()
 
-        db.instance_add_security_group(self.context, inst_id, self.security_group.id)
+        db.instance_add_security_group(self.context, inst_id,
+                                       self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
         d = self.fw.setup_nwfilters_for_instance(instance)
         d.addCallback(_ensure_all_called)
-        d.addCallback(lambda _:self.teardown_security_group())
+        d.addCallback(lambda _: self.teardown_security_group())
 
         return d

@@ -23,6 +23,7 @@ WSGI middleware for OpenStack API controllers.
 import json
 import time
 
+import logging
 import routes
 import webob.dec
 import webob.exc
@@ -43,8 +44,9 @@ from nova.auth import manager
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('nova_api_auth',
-    'nova.api.openstack.auth.BasicApiAuthManager', 
+    'nova.api.openstack.auth.BasicApiAuthManager',
     'The auth mechanism to use for the OpenStack API implemenation')
+
 
 class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
@@ -52,6 +54,16 @@ class API(wsgi.Middleware):
     def __init__(self):
         app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
         super(API, self).__init__(app)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        try:
+            return req.get_response(self.application)
+        except Exception as ex:
+            logging.warn("Caught error: %s" % str(ex))
+            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            return faults.Fault(exc)
+
 
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the openstack API request or return an HTTP Forbidden."""
@@ -62,7 +74,7 @@ class AuthMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        if not req.headers.has_key("X-Auth-Token"):
+        if 'X-Auth-Token' not in req.headers:
             return self.auth_driver.authenticate(req)
 
         user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
@@ -70,10 +82,11 @@ class AuthMiddleware(wsgi.Middleware):
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        if not req.environ.has_key('nova.context'):
+        if 'nova.context' not in req.environ:
             req.environ['nova.context'] = {}
         req.environ['nova.context']['user'] = user
         return self.application
+
 
 class RateLimitingMiddleware(wsgi.Middleware):
     """Rate limit incoming requests according to the OpenStack rate limits."""
@@ -87,7 +100,7 @@ class RateLimitingMiddleware(wsgi.Middleware):
         """
         super(RateLimitingMiddleware, self).__init__(application)
         if not service_host:
-            #TODO(gundlach): These limits were based on limitations of Cloud 
+            #TODO(gundlach): These limits were based on limitations of Cloud
             #Servers.  We should revisit them in Nova.
             self.limiter = ratelimiting.Limiter(limits={
                     'DELETE': (100, ratelimiting.PER_MINUTE),
@@ -102,13 +115,14 @@ class RateLimitingMiddleware(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         """Rate limit the request.
-        
-        If the request should be rate limited, return a 413 status with a 
+
+        If the request should be rate limited, return a 413 status with a
         Retry-After header giving the time when the request would succeed.
         """
         user_id = req.environ['nova.context']['user']['id']
         action_name = self.get_action_name(req)
-        if not action_name: # not rate limited
+        if not action_name:
+            # Not rate limited
             return self.application
         delay = self.get_delay(action_name, user_id)
         if delay:
@@ -152,13 +166,13 @@ class APIRouter(wsgi.Router):
     def __init__(self):
         mapper = routes.Mapper()
         mapper.resource("server", "servers", controller=servers.Controller(),
-                        collection={ 'detail': 'GET'},
-                        member={'action':'POST'})
+                        collection={'detail': 'GET'},
+                        member={'action': 'POST'})
 
-        mapper.resource("backup_schedule", "backup_schedules", 
+        mapper.resource("backup_schedule", "backup_schedules",
                         controller=backup_schedules.Controller(),
-                        parent_resource=dict(member_name='server', 
-                        collection_name = 'servers')) 
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
 
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
@@ -172,7 +186,7 @@ class APIRouter(wsgi.Router):
 
 def limited(items, req):
     """Return a slice of items according to requested offset and limit.
-    
+
     items - a sliceable
     req - wobob.Request possibly containing offset and limit GET variables.
           offset is where to start in the list, and limit is the maximum number
@@ -187,4 +201,3 @@ def limited(items, req):
     limit = min(1000, limit)
     range_end = offset + limit
     return items[offset:range_end]
-

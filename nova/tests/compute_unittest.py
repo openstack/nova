@@ -37,7 +37,7 @@ FLAGS = flags.FLAGS
 
 class ComputeTestCase(test.TrialTestCase):
     """Test case for compute"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -48,7 +48,7 @@ class ComputeTestCase(test.TrialTestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.get_admin_context()
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
         super(ComputeTestCase, self).tearDown()

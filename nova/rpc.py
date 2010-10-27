@@ -268,6 +268,7 @@ def _unpack_context(msg):
     LOG.debug('unpacked context: %s', context_dict)
     return context.RequestContext.from_dict(context_dict)
 
+
 def _pack_context(msg, context):
     """Pack context into msg.
 
@@ -279,6 +280,7 @@ def _pack_context(msg, context):
     context = dict([('_context_%s' % key, value)
                    for (key, value) in context.to_dict().iteritems()])
     msg.update(context)
+
 
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""

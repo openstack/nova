@@ -32,10 +32,10 @@ from nova.tests.api.fakes import APIStub
 
 class Test(unittest.TestCase):
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         self.stubs = stubout.StubOutForTesting()
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         self.stubs.UnsetAll()
 
     def _request(self, url, subdomain, **kwargs):
@@ -66,8 +66,7 @@ class Test(unittest.TestCase):
 
     def test_metadata(self):
         def go(url):
-            result = self._request(url, 'ec2', 
-                                   REMOTE_ADDR='128.192.151.2')
+            result = self._request(url, 'ec2', REMOTE_ADDR='128.192.151.2')
         # Each should get to the ORM layer and fail to find the IP
         self.assertRaises(nova.exception.NotFound, go, '/latest/')
         self.assertRaises(nova.exception.NotFound, go, '/2009-04-04/')
@@ -76,7 +75,6 @@ class Test(unittest.TestCase):
     def test_ec2_root(self):
         result = self._request('/', 'ec2')
         self.assertTrue('2007-12-15\n' in result.body)
-
 
 
 if __name__ == '__main__':

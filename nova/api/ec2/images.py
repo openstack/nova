@@ -43,6 +43,7 @@ def modify(context, image_id, operation):
 
     return True
 
+
 def update(context, image_id, attributes):
     """update an image's attributes / info.json"""
     attributes.update({"image_id": image_id})
@@ -51,6 +52,7 @@ def update(context, image_id, attributes):
         bucket='_images',
         query_args=qs(attributes))
     return True
+
 
 def register(context, image_location):
     """ rpc call to register a new image based from a manifest """
@@ -64,13 +66,14 @@ def register(context, image_location):
 
     return image_id
 
+
 def list(context, filter_list=[]):
     """ return a list of all images that a user can see
 
     optionally filtered by a list of image_id """
 
     if FLAGS.connection_type == 'fake':
-        return [{ 'imageId' : 'bar'}]
+        return [{'imageId': 'bar'}]
 
     # FIXME: send along the list of only_images to check for
     response = conn(context).make_request(
@@ -81,6 +84,7 @@ def list(context, filter_list=[]):
     if not filter_list is None:
         return [i for i in result if i['imageId'] in filter_list]
     return result
+
 
 def get(context, image_id):
     """return a image object if the context has permissions"""

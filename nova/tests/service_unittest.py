@@ -23,8 +23,8 @@ Unit Tests for remote procedure calls using queue
 import mox
 
 from twisted.application.app import startApplication
+from twisted.internet import defer
 
-from nova import context
 from nova import exception
 from nova import flags
 from nova import rpc
@@ -39,21 +39,58 @@ flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
 
 class FakeManager(manager.Manager):
     """Fake manager for tests"""
-    pass
+    def test_method(self):
+        return 'manager'
 
 
-class ServiceTestCase(test.BaseTestCase):
-    """Test cases for rpc"""
+class ExtendedService(service.Service):
+    def test_method(self):
+        return 'service'
 
-    def setUp(self):  # pylint: disable=C0103
+
+class ServiceManagerTestCase(test.TrialTestCase):
+    """Test cases for Services"""
+
+    def test_attribute_error_for_no_manager(self):
+        serv = service.Service('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        self.assertRaises(AttributeError, getattr, serv, 'test_method')
+
+    def test_message_gets_to_manager(self):
+        serv = service.Service('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        self.assertEqual(serv.test_method(), 'manager')
+
+    def test_override_manager_method(self):
+        serv = ExtendedService('test',
+                               'test',
+                               'test',
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        self.assertEqual(serv.test_method(), 'service')
+
+
+class ServiceTestCase(test.TrialTestCase):
+    """Test cases for Services"""
+
+    def setUp(self):
         super(ServiceTestCase, self).setUp()
         self.mox.StubOutWithMock(service, 'db')
-        self.context = context.get_admin_context()
 
     def test_create(self):
         host = 'foo'
         binary = 'nova-fake'
         topic = 'fake'
+
+        # NOTE(vish): Create was moved out of mox replay to make sure that
+        #             the looping calls are created in StartService.
+        app = service.Service.create(host=host, binary=binary)
+
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
@@ -99,7 +136,6 @@ class ServiceTestCase(test.BaseTestCase):
                                   service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
 
-        app = service.Service.create(host=host, binary=binary)
         startApplication(app, False)
         self.assert_(app)
 
@@ -107,86 +143,103 @@ class ServiceTestCase(test.BaseTestCase):
     # whether it is disconnected, it looks for a variable on itself called
     # 'model_disconnected' and report_state doesn't really do much so this
     # these are mostly just for coverage
-    def test_report_state(self):
-        host = 'foo'
-        binary = 'bar'
-        service_ref = {'host': host,
-                       'binary': binary,
-                       'report_count': 0,
-                       'id': 1}
-        service.db.__getattr__('report_state')
-        service.db.service_get_by_args(self.context,
-                                       host,
-                                       binary).AndReturn(service_ref)
-        service.db.service_update(self.context, service_ref['id'],
-                                  mox.ContainsKeyValue('report_count', 1))
-
-        self.mox.ReplayAll()
-        s = service.Service()
-        rv = yield s.report_state(host, binary)
-
+    @defer.inlineCallbacks
     def test_report_state_no_service(self):
         host = 'foo'
         binary = 'bar'
+        topic = 'test'
         service_create = {'host': host,
                           'binary': binary,
+                          'topic': topic,
                           'report_count': 0}
         service_ref = {'host': host,
-                       'binary': binary,
-                       'report_count': 0,
-                       'id': 1}
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0,
+                          'id': 1}
 
-        service.db.__getattr__('report_state')
-        service.db.service_get_by_args(self.context,
+        service.db.service_get_by_args(mox.IgnoreArg(),
                                       host,
                                       binary).AndRaise(exception.NotFound())
-        service.db.service_create(self.context,
+        service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
-        service.db.service_get(self.context, service_ref['id']).AndReturn(service_ref)
-        service.db.service_update(self.context, service_ref['id'],
+        service.db.service_get(mox.IgnoreArg(),
+                               service_ref['id']).AndReturn(service_ref)
+        service.db.service_update(mox.IgnoreArg(), service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
-        s = service.Service()
-        rv = yield s.report_state(host, binary)
+        serv = service.Service(host,
+                               binary,
+                               topic,
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        yield serv.report_state()
 
+    @defer.inlineCallbacks
     def test_report_state_newly_disconnected(self):
         host = 'foo'
         binary = 'bar'
+        topic = 'test'
+        service_create = {'host': host,
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0}
         service_ref = {'host': host,
-                       'binary': binary,
-                       'report_count': 0,
-                       'id': 1}
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0,
+                          'id': 1}
 
-        service.db.__getattr__('report_state')
-        service.db.service_get_by_args(self.context,
-                                       host,
-                                       binary).AndRaise(Exception())
+        service.db.service_get_by_args(mox.IgnoreArg(),
+                                      host,
+                                      binary).AndRaise(exception.NotFound())
+        service.db.service_create(mox.IgnoreArg(),
+                                  service_create).AndReturn(service_ref)
+        service.db.service_get(mox.IgnoreArg(),
+                               mox.IgnoreArg()).AndRaise(Exception())
 
         self.mox.ReplayAll()
-        s = service.Service()
-        rv = yield s.report_state(host, binary)
+        serv = service.Service(host,
+                               binary,
+                               topic,
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        yield serv.report_state()
+        self.assert_(serv.model_disconnected)
 
-        self.assert_(s.model_disconnected)
-
+    @defer.inlineCallbacks
     def test_report_state_newly_connected(self):
         host = 'foo'
         binary = 'bar'
+        topic = 'test'
+        service_create = {'host': host,
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0}
         service_ref = {'host': host,
-                       'binary': binary,
-                       'report_count': 0,
-                       'id': 1}
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0,
+                          'id': 1}
 
-        service.db.__getattr__('report_state')
-        service.db.service_get_by_args(self.context,
-                                       host,
-                                       binary).AndReturn(service_ref)
-        service.db.service_update(self.context, service_ref['id'],
+        service.db.service_get_by_args(mox.IgnoreArg(),
+                                      host,
+                                      binary).AndRaise(exception.NotFound())
+        service.db.service_create(mox.IgnoreArg(),
+                                  service_create).AndReturn(service_ref)
+        service.db.service_get(mox.IgnoreArg(),
+                               service_ref['id']).AndReturn(service_ref)
+        service.db.service_update(mox.IgnoreArg(), service_ref['id'],
                                   mox.ContainsKeyValue('report_count', 1))
 
         self.mox.ReplayAll()
-        s = service.Service()
-        s.model_disconnected = True
-        rv = yield s.report_state(host, binary)
+        serv = service.Service(host,
+                               binary,
+                               topic,
+                               'nova.tests.service_unittest.FakeManager')
+        serv.startService()
+        serv.model_disconnected = True
+        yield serv.report_state()
 
-        self.assert_(not s.model_disconnected)
+        self.assert_(not serv.model_disconnected)
