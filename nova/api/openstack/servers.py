@@ -246,11 +246,11 @@ class Controller(wsgi.Controller):
         inst['mac_address'] = utils.generate_mac()
         inst['launch_index'] = 0
 
-        ref = self.compute_manager.create_instance(ctxt, inst)
+        ref = self.compute_manager.create_instance(ctxt, **inst)
         inst['id'] = ref['internal_id']
 
         inst['hostname'] = str(ref['internal_id'])
-        self.compute_manager.update_instance(ctxt, inst['id'], inst)
+        self.compute_manager.update_instance(ctxt, inst['id'], **inst)
 
         address = self.network_manager.allocate_fixed_ip(ctxt,
                                                          inst['id'])

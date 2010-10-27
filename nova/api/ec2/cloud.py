@@ -837,13 +837,11 @@ class CloudController(object):
 
         for num in range(num_instances):
 
-            instance_data = base_options
-
             instance_ref = self.compute_manager.create_instance(context,
-                                           instance_data,
                                            security_groups,
                                            mac_address=utils.generate_mac(),
-                                           launch_index=num)
+                                           launch_index=num,
+                                           **base_options)
             inst_id = instance_ref['id']
 
             internal_id = instance_ref['internal_id']
@@ -851,7 +849,6 @@ class CloudController(object):
 
             self.compute_manager.update_instance(context,
                                                  inst_id,
-                                                 instance_ref,
                                                  hostname=ec2_id)
 
             # TODO(vish): This probably should be done in the scheduler
@@ -903,8 +900,10 @@ class CloudController(object):
                             'state': 0,
                             'terminated_at': now}
             self.compute_manager.update_instance(context,
-                                                 instance_ref['id'],
-                                                 updated_data)
+                                         instance_ref['id'],
+                                         state_description='terminating',
+                                         state=0,
+                                         terminated_at=now)
 
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
