@@ -89,7 +89,6 @@ class AuthBase(object):
         This method will return the id of the object if the object
         is of this class, otherwise it will return the original object.
         This allows methods to accept objects or ids as paramaters.
-
         """
         if isinstance(obj, cls):
             return obj.id

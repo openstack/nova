@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Auth Documentation
-==================    
+.. _auth:
 
+Auth Documentation
+==================
 
 from etherpad todo
 ------------------
@@ -39,7 +40,7 @@ Roles-Based Access Control of AWS-style APIs using SAML Assertions
 “Achieving FIPS 199 Moderate certification of a hybrid cloud environment using CloudAudit and declarative C.I.A. classifications”
 
 Introduction
---------------
+------------
 
 We will investigate one method for integrating an AWS-style API with US eAuthentication-compatible federated authentication systems, to achieve access controls and limits based on traditional operational roles.
 Additionally, we will look at how combining this approach, with an implementation of the CloudAudit APIs, will allow us to achieve a certification under FIPS 199 Moderate classification for a hybrid cloud environment.
@@ -54,24 +55,26 @@ Typical implementations of US eAuth authentication systems are structured as fol
   [ SUN Identity Manager or other SAML Policy Controller ]
   	--> maps URLs to groups…
   [ Apache Policy Agent in front of eAuth-secured Web Application ]
-       
+
 In more ideal implementations, the remainder of the application-specific account information is stored either in extended schema on the LDAP server itself, via the use of a translucent LDAP proxy, or in an independent datastore keyed off of the UID provided via SAML assertion.
 
-Basic AWS API call structure
-----------------------------
+.. _auth_roles:
 
-AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:  
+Roles
+-----
+
+AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:
 
 *	System User
 *	System Administrator
 *	Network Administrator
 *	Project Manager
 *	Cloud Administrator
-*	(IT-Sec?)         
+*	IT-Security
 
-There is an additional, conceptual end-user that may or may not have API access:             
+There is an additional, conceptual end-user that may or may not have API access:
 
-*	(EXTERNAL) End-user / Third-party User    
+*	(EXTERNAL) End-user / Third-party User
 
 Basic operations are available to any System User:
 
@@ -106,7 +109,7 @@ Cloud Administrator:
 Enhancements
 ------------
 
-*	SAML Token passing 
+*	SAML Token passing
 *	REST interfaces
 *	SOAP interfaces
 
@@ -151,7 +154,7 @@ Dirty Cloud – Hybrid Data Centers
 *	CloudAudit bridge interfaces
 *	Anything in the ARP table
 
-A hybrid cloud environment provides dedicated, potentially co-located physical hardware with a network interconnect to the project or users’ cloud virtual network. 
+A hybrid cloud environment provides dedicated, potentially co-located physical hardware with a network interconnect to the project or users’ cloud virtual network.
 
 This interconnect is typically a bridged VPN connection. Any machines that can be bridged into a hybrid environment in this fashion (at Layer 2) must implement a minimum version of the CloudAudit spec, such that they can be queried to provide a complete picture of the IT-sec runtime environment.
 
@@ -167,7 +170,7 @@ The Details
 System limits
 -------------
 
-The following limits need to be defined and enforced:  
+The following limits need to be defined and enforced:
 
 *	Total number of instances allowed (user / project)
 *	Total number of instances, per instance type (user / project)
@@ -195,18 +198,18 @@ The :mod:`signer` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`users` Module
+The :mod:`auth` Module
 -----------------------
 
-.. automodule:: nova.auth.users
+.. automodule:: nova.auth.manager
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`users_unittest` Module
+The :mod:`auth_unittest` Module
 --------------------------------
 
-.. automodule:: nova.tests.users_unittest
+.. automodule:: nova.tests.auth_unittest
     :members:
     :undoc-members:
     :show-inheritance:
@@ -219,4 +222,11 @@ The :mod:`access_unittest` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`ec2` Module
+------------------------
+
+.. automodule:: nova.api.ec2
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
