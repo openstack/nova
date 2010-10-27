@@ -208,12 +208,15 @@ class ComputeManager(manager.Manager):
                                     volume_id,
                                     instance_id,
                                     mountpoint)
-        except Exception:
+        except Exception as exc:  # pylint: disable-msg=W0702
+            # NOTE(vish): The inline callback eats the exception info so we
+            #             log the traceback here and reraise the same
+            #             ecxception below.
             logging.exception("instance %s: attach failed %s, removing",
                               instance_id, mountpoint)
             yield self.volume_manager.remove_compute_volume(context,
                                                             volume_id)
-            raise
+            raise exc
         defer.returnValue(True)
 
     @defer.inlineCallbacks
