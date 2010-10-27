@@ -195,18 +195,34 @@ The :mod:`signer` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`users` Module
------------------------
+The :mod:`manager` Module
+-------------------------
 
-.. automodule:: nova.auth.users
+.. automodule:: nova.auth.manager
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`users_unittest` Module
+The :mod:`ldapdriver` Module
+----------------------------
+
+.. automodule:: nova.auth.ldapdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`dbdriver` Module
+----------------------------
+
+.. automodule:: nova.auth.dbdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`auth_unittest` Module
 --------------------------------
 
-.. automodule:: nova.tests.users_unittest
+.. automodule:: nova.tests.auth_unittest
     :members:
     :undoc-members:
     :show-inheritance:
