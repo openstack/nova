@@ -30,4 +30,6 @@ Contents
    quickstart
    getting.started
    multi.node.install
+   services
    flags
+   monitoring

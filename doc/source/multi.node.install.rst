@@ -19,3 +19,7 @@ Multi-Node Nova
 ===============
 
 http://etherpad.openstack.org/NovaMultinodeInstall
+
+* Puppet
+* Chef
+* PXE

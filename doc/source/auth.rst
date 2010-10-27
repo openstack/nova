@@ -18,6 +18,21 @@
 Auth Documentation
 ==================    
 
+
+from etherpad todo
+------------------
+
+::
+  * FIX RST IMPORT ERRORS
+  * Manager
+  * Driver
+    * ldap
+    * fakeldap
+    * redisectomy
+
+legacy docs
+-----------
+
 Nova provides RBAC (Role-based access control) of the AWS-type APIs. We define the following roles:
 
 Roles-Based Access Control of AWS-style APIs using SAML Assertions

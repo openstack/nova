@@ -18,6 +18,25 @@
 nova Networking
 ================
 
+
+from etherpad todo
+------------------
+::
+  * Network Manager
+    * overview (use vish email)
+    * public methods
+    * responsibilities
+    * Vlan + DHCP implementation
+    * Flat + DHCP implementation
+    * Flat impleplementation
+  * Network Driver
+    * public methods
+    * hardware specific commands
+
+
+legacy docs
+-----------
+
 The nova networking components manage private networks, public IP addressing, VPN connectivity, and firewall rules.
 
 Components

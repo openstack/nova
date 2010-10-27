@@ -15,44 +15,13 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Monitoring
+==========
 
-Nova is written in python
+* components
+* throughput
+* exceptions
+* hardware
 
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   database
-   storage
-   compute
-   network      
-   auth  
-
-
-Older Contents
---------------
-
-.. toctree::
-   :maxdepth: 1
-
-   architecture
-   endpoint
-   nova
-   fakes
-   binaries
-   modules
-   packages
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+* ganglia
+* syslog

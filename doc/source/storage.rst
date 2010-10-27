@@ -18,6 +18,22 @@
 Storage in the Nova Cloud
 =========================
 
+
+from etherpad todo
+-------------------
+::
+    * Volume Manager
+      * public methods
+      * responsibilities
+    * Volume Driver
+      * public methods
+      * AoE implementation
+      * ISCSI implementation
+
+
+legacy docs
+-----------
+
 There are three primary classes of storage in a nova cloud environment:
 
 * Ephemeral Storage (local disk within an instance)

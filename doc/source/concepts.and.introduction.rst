@@ -45,7 +45,10 @@ in the administration guide.
 Concept: Users and Projects
 ---------------------------
 
-Projects
+* access to images is limited by project
+* access/secret are per user
+* keypairs are per user
+* quotas are per project
 
 
 Concept: Virtualization
@@ -55,6 +58,7 @@ Concept: Virtualization
 * UML
 * XEN
 * HyperV
+* qemu
 
 
 Concept: Volumes
@@ -70,6 +74,13 @@ Concept: Quotas
 * Override for project
 
 
+Concept: RBAC
+-------------
+
+* Intersecting Roles
+* cloudadmin vs. user admin flag
+
+
 Concept: API
 ------------
 
@@ -80,14 +91,30 @@ Concept: API
 Concept: Networking
 -------------------
 
-* Simple networking
-* VLAN Networking
+* VLAN
+  * Cloudpipe
+    * Certificates (See also: CA)
+* Flat Networking
+* Flat with DHCP
+* How to generate addresses
+* Floating Addresses
 
 
 Concept: Services
 -----------------
 
-Services
+* nova-api
+* nova-scheduler
+* nova-compute
+* nova-volume
+* nova-network
+* nova-instancemonitor
+
+
+Concept: nova-manage
+--------------------
+
+nova manage
 
 
 Concept: Flags
@@ -99,7 +126,13 @@ python-gflags
 Concept: Plugins
 ----------------
 
-LazyPluggable
+* Managers/Drivers: utils.import_object from string flag
+* virt/connections: conditional loading from string flag
+* db: LazyPluggable via string flag
+* auth_manager: utils.import_class based on string flag
+* Volumes: moving to pluggable driver instead of manager
+* Network: pluggable managers
+* Compute: same driver used, but pluggable at connection
 
 
 Concept: IPC/RPC
@@ -111,28 +144,33 @@ Rabbit!
 Concept: Fakes
 --------------
 
-Fakes
+* auth
+* ldap
 
 
 Concept: Scheduler
 ------------------
 
-Scheduler
-
-
-Concept: ORM
-------------
-
-ORM
-
-
-Concept: Manager Pattern
-------------------------
-
-Managers
+* simple
+* random
 
 
 Concept: Security Groups
 ------------------------
 
 Security groups
+
+
+Concept: Certificate Authority
+------------------------------
+
+Per-project CA
+* Images
+* VPNs
+
+
+Concept: Images
+---------------
+
+* launching
+* bundling
