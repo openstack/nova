@@ -17,19 +17,22 @@
 
 .. _auth:
 
-Auth Documentation
-==================
-
-from etherpad todo
-------------------
+Authentication and Authorization Development Guide
+==================================================
 
 ::
 
-  * Manager
-  * Driver
-    * ldap
-    * fakeldap
-    * redisectomy
+    TOOD(todd);
+        * Authentication
+            * Manager
+            * Driver
+                * ldap
+                * fakeldap
+                * redisectomy
+        * Authorizztion
+            * RBAC
+            * Quotas
+
 
 legacy docs
 -----------

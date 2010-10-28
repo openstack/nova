@@ -28,7 +28,7 @@ Contents
    :maxdepth: 1
 
    database
-   storage
+   volume
    compute
    network      
    auth  
@@ -41,13 +41,17 @@ Older Contents
    :maxdepth: 1
 
    architecture
-   endpoint
    nova
    fakes
    binaries
    modules
    packages
 
+
+Removed
+-------
+
+* endpoint
 
 Indices and tables
 ------------------

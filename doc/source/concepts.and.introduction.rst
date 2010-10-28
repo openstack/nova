@@ -66,11 +66,24 @@ Concept: Instances
 
 An 'instance' is a word for a virtual machine that runs inside the cloud.
 
-Concept: Volumes
+Concept: Storage
 ----------------
 
+Volumes
+~~~~~~~
 A 'volume' is a detachable block storage device.  You can think of it as a usb hard drive.  It can only be attached to one instance at a time, and it behaves
 
+Ephemeral
+~~~~~~~~~
+::
+
+    TODO(vish): document
+
+Swift
+~~~~~
+::
+
+    TODO(vish): document
 
 Concept: Quotas
 ---------------
@@ -104,17 +117,17 @@ Nova has a concept of Fixed Ips and Floating ips.  Fixed ips are assigned to an 
 There are multiple strategies available for implementing fixed ips:
 
 Flat Mode
-^^^^^^^^^
+~~~~~~~~~
 
 The simplest networking mode.  Each instance receives a fixed ip from the pool.  All instances are attached to the same bridge (br100) by default.  The bridge must be configured manually.  The networking configuration is injected into the instance before it is booted.  Note that this currently only works on linux-style systems that keep networking configuration in /etc/network/interfaces.
 
 Flat DHCP Mode
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed ips by doing a dhcpdiscover.
 
 VLAN DHCP Mode
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code name cloudpipe) needs to be created.  Nova generates a certificate and key for the userto access the vpn and starts the vpn automatically.
 
@@ -136,7 +149,7 @@ Concept: nova-manage
 --------------------
 
 Introduction
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 
 The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of nova, such as user creation,
@@ -151,7 +164,7 @@ For example, to obtain a list of all projects:
 ``nova-manage project list``
 
 User Maintenance
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 * user admin: creates a new admin and prints exports
     * arguments: name [access] [secret]
@@ -168,7 +181,7 @@ User Maintenance
     *  leave any field blank to ignore it, admin should be 'T', 'F', or blank
 
 Project Maintenance
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 * project add: Adds user to project
     * arguments: project user
@@ -190,7 +203,7 @@ Project Maintenance
     * arguments: project_id user_id [filename='nova.zip]
 
 User Role Management
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 * role add: adds role to user
     * if project is specified, adds project specific role
@@ -205,7 +218,7 @@ User Role Management
 
 
 Nova Shell
-^^^^^^^^^^
+~~~~~~~~~~
 
 * shell bpython
     * start a new bpython shell
@@ -219,7 +232,7 @@ Nova Shell
     * arguments: path
 
 VPN Management
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 * vpn list: Print a listing of the VPNs for all projects.
     * arguments: none
@@ -230,7 +243,7 @@ VPN Management
 
 
 Floating IP Management
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 
 * floating create: Creates floating ips for host by range
     * arguments: host ip_range
@@ -240,7 +253,7 @@ Floating IP Management
     * arguments: none
 
 Network Management
-^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~
 
 * network create: Creates fixed ips for host by range
     * arguments: [fixed_range=FLAG], [num_networks=FLAG],

@@ -15,9 +15,42 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Volume Documentation
-====================
-                           
+Volume Programming Guide
+=========================
+
+::
+
+    TODO(todd): document for iSCSI & AoE (see 'Old Docs')
+                pep-257
+
+
+The :mod:`nova.volume.manager` Module
+-------------------------------------
+
+.. automodule:: nova.volume.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`nova.volume.driver` Module
+-------------------------------------
+
+.. automodule:: nova.volume.driver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Tests
+-----
+
+.. automodule:: nova.tests.volume_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Old Docs
+--------
+
 Nova uses ata-over-ethernet (AoE) to export storage volumes from multiple storage nodes. These AoE exports are attached (using libvirt) directly to running instances.
 
 Nova volumes are exported over the primary system VLAN (usually VLAN 1), and not over individual VLANs.
@@ -26,20 +59,4 @@ AoE exports are numbered according to a "shelf and blade" syntax. In order to av
 
 The underlying volumes are LVM logical volumes, created on demand within a single large volume group. 
 
-
-The :mod:`storage` Module
--------------------------
-
-.. automodule:: nova.volume.storage
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`storage_unittest` Module
-----------------------------------
-
-.. automodule:: nova.tests.storage_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
 

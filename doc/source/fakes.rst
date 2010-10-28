@@ -19,7 +19,7 @@ Nova Fakes
 ==========
 
 The :mod:`virt.fake` Module
---------------------------
+---------------------------
 
 .. automodule:: nova.virt.fake
     :members:

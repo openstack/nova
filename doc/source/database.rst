@@ -15,51 +15,37 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Objectstore Documentation
-=========================
+Database Programming Guide
+==========================
 
-This page contains the Objectstore Package documentation.
+::
 
+    TODO(todd): should sqlalchemy.api be here?
+                pep-256 on db/api.py and models.py (periods)
+                document register_models (where should it be called from?)
 
-The :mod:`bucket` Module
-------------------------
+The :mod:`api` Module
+---------------------
 
-.. automodule:: nova.objectstore.bucket
+.. automodule:: nova.db.api
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`handler` Module
--------------------------
 
-.. automodule:: nova.objectstore.handler
+Drivers
+-------
+
+The :mod:`sqlalchemy` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.db.sqlalchemy.api
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`image` Module
------------------------
 
-.. automodule:: nova.objectstore.image
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`stored` Module
-------------------------
-
-.. automodule:: nova.objectstore.stored
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-RELATED TESTS
--------------
-
-The :mod:`objectstore_unittest` Module
---------------------------------------
-
-.. automodule:: nova.tests.objectstore_unittest
+.. automodule:: nova.db.sqlalchemy.models
     :members:
     :undoc-members:
     :show-inheritance:

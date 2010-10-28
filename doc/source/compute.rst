@@ -16,71 +16,116 @@
       under the License.
 
 
-from etherpad todo
-------------------
-
-  * FIX RST IMPORT ERRORS
-  * Compute Manager
-    * public methods
-    * responsibilities
-  * Compute Driver
-    * public methods
-    * libvirt implementation (kvm/qemu vs uml)
-    * xen implementation
-    * hyperv implementation
-
-
-Compute Documentation
-=====================
+Virtualization Programming Guide
+================================
 
 This page contains the Compute Package documentation.
 
 
+::
+
+    TODO(todd): Document drivers
+
+
+Manager
+-------
+
+Documentation for the compute manager and related files.  For reading about
+a specific virtualization backend, read Drivers_.
+
+
 The :mod:`manager` Module
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.manager
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`disk` Module
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.disk
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`instance_types` Module
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.instance_types
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`power_state` Module
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.power_state
     :members:
     :undoc-members:
     :show-inheritance:
 
+
+Drivers
+-------
+
+
+Libvirt Implementations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Libvirt: KVM
+^^^^^^^^^^^^
+
+KVM Driver
+
+
+Libvirt: QEMU
+^^^^^^^^^^^^^
+
+QEMU Driver
+
+
+Libvirt: UML
+^^^^^^^^^^^^
+
+User Mode Linux Driver
+
+
+XEN
+~~~
+
+Xen Driver
+
+
+Hyper-V
+~~~~~~~
+
+Hyper-V Driver
+
+
+Monitoring
+----------
+
 The :mod:`monitor` Module
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.monitor
     :members:
     :undoc-members:
     :show-inheritance:
 
-RELATED TESTS
--------------
+
+Tests
+-----
+
 
 The :mod:`compute_unittest` Module
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.compute_unittest
     :members:

@@ -28,7 +28,11 @@ Modules:
 
    auth
    compute
-   endpoint
    fakes
    nova
    volume
+
+Removed:
+--------
+
+* endpoint
