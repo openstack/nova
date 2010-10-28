@@ -15,23 +15,32 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-nova Networking
-================
+Networking Programming Guide
+============================
 
-
-from etherpad todo
-------------------
 ::
-  * Network Manager
-    * overview (use vish email)
-    * public methods
-    * responsibilities
-    * Vlan + DHCP implementation
-    * Flat + DHCP implementation
-    * Flat impleplementation
-  * Network Driver
-    * public methods
-    * hardware specific commands
+
+    TODO(todd): 
+        * document how managers work
+        * document backend (linux-net)
+        * document hardware specific commands
+        * pep 257
+
+The :mod:`Manager` module
+-------------------------
+
+.. automodule:: nova.network.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`LinuxNet` driver
+--------------------------
+
+.. automodule:: nova.network.linux_net
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 legacy docs

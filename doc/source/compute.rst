@@ -16,8 +16,8 @@
       under the License.
 
 
-Compute
-=======
+Virtualization Programming Guide
+================================
 
 This page contains the Compute Package documentation.
 
