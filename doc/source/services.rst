@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,17 +15,18 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Services
-========
+.. _service_manager_driver:
 
-Admin guide should go beyoned concepts & introduction by talking about how
-each service interacts with each other, what requirements for deployment are,
-monotoring, logging, etc
+Services Managers and Drivers
+=============================
 
+Describe division of responsibilities for each component.
 
-* nova-api
-* nova-scheduler
-* nova-compute
-* nova-volume
-* nova-network
-* nova-instancemonitor
+Service
+-------
+
+Manager
+-------
+
+Driver
+------

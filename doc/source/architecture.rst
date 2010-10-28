@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -30,14 +30,16 @@ Below you will find a helpful explanation.
 
 ::
 
-              [ User Manager ] ---- ( LDAP )
-                        |  
-                        |                / [ Storage ] - ( ATAoE )
-  [ API server ] -> [ Cloud ]  < AMQP >   
-                        |                \ [ Nodes ]   - ( libvirt/kvm )
-                    < HTTP >
-                        |
-                     [ S3  ]
+                    [ Auth  Manager ] ---- ( LDAP )
+                            |
+                            |
+                            |
+                            |                / [ Storage ] - ( ATAoE/iSCSI )
+  [ Web Dashboard ] -> [ nova-api ]  < AMQP > -
+                            |                \ [ Nodes ]   - ( libvirt/kvm )
+                         < HTTP >
+                            |
+                    [ nova-objectstore ]
 
 
 * API: receives http requests from boto, converts commands to/from API format, and sending requests to cloud controller

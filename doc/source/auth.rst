@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,6 +14,8 @@
       WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
       License for the specific language governing permissions and limitations
       under the License.
+
+.. _auth:
 
 Authentication and Authorization Development Guide
 ==================================================
@@ -41,7 +43,7 @@ Roles-Based Access Control of AWS-style APIs using SAML Assertions
 “Achieving FIPS 199 Moderate certification of a hybrid cloud environment using CloudAudit and declarative C.I.A. classifications”
 
 Introduction
---------------
+------------
 
 We will investigate one method for integrating an AWS-style API with US eAuthentication-compatible federated authentication systems, to achieve access controls and limits based on traditional operational roles.
 Additionally, we will look at how combining this approach, with an implementation of the CloudAudit APIs, will allow us to achieve a certification under FIPS 199 Moderate classification for a hybrid cloud environment.
@@ -56,59 +58,62 @@ Typical implementations of US eAuth authentication systems are structured as fol
   [ SUN Identity Manager or other SAML Policy Controller ]
   	--> maps URLs to groups…
   [ Apache Policy Agent in front of eAuth-secured Web Application ]
-       
+
 In more ideal implementations, the remainder of the application-specific account information is stored either in extended schema on the LDAP server itself, via the use of a translucent LDAP proxy, or in an independent datastore keyed off of the UID provided via SAML assertion.
 
-Basic AWS API call structure
-----------------------------
+.. _auth_roles:
 
-AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:  
+Roles
+-----
 
-*	System User
-*	System Administrator
+AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:
+
+*	Base User
+*	System Administrator/Developer (currently have the same permissions)
 *	Network Administrator
 *	Project Manager
-*	Cloud Administrator
-*	(IT-Sec?)         
+*	Cloud Administrator/IT-Security (currently have the same permissions)
 
-There is an additional, conceptual end-user that may or may not have API access:             
+There is an additional, conceptual end-user that may or may not have API access:
 
-*	(EXTERNAL) End-user / Third-party User    
+*	(EXTERNAL) End-user / Third-party User
 
-Basic operations are available to any System User:
+Basic operations are available to any :
 
-*	Launch Instance
-*	Terminate Instance (their own)
-*	Create keypair
-*	Delete keypair
-*	Create, Upload, Delete: Buckets and Keys (Object Store) – their own
-*	Create, Attach, Delete Volume (Block Store) – their own
+*	Describe Instances
+*	Describe Images
+*	Describe Volumes
+*	Describe Keypairs
+*	Create Keypair
+*	Delete Keypair
+*	Create, Upload, Delete: Buckets and Keys (Object Store)
 
-System Administrators:
+System Administrators/Developers/Project Manager:
 
+*	Create, Attach, Delete Volume (Block Store)
+*	Launch, Reboot, Terminate Instance
 *	Register/Unregister Machine Image (project-wide)
-*	Change Machine Image properties (public / private)
 *	Request / Review CloudAudit Scans
-
-Network Administrator:
-
-*	Change Firewall Rules, define Security Groups
-*	Allocate, Associate, Deassociate Public IP addresses
 
 Project Manager:
 
-*	Launch and Terminate Instances (project-wide)
-*	CRUD of Object and Block store (project-wide)
+*	Add and remove other users (currently no api)
+*	Set roles (currently no api)
 
-Cloud Administrator:
+Network Administrator:
 
-*	Register / Unregister Kernel and Ramdisk Images
-*	Register / Unregister Machine Image (any)
+*	Change Machine Image properties (public / private)
+*	Change Firewall Rules, define Security Groups
+*	Allocate, Associate, Deassociate Public IP addresses
+
+Cloud Administrator/IT-Security:
+
+*	All permissions
 
 Enhancements
 ------------
 
-*	SAML Token passing 
+*	SAML Token passing
 *	REST interfaces
 *	SOAP interfaces
 
@@ -126,7 +131,7 @@ CloudAudit queries may spawn long-running processes (similar to launching instan
 RBAC of CloudAudit API calls is critical, since detailed system information is a system vulnerability.
 
 Type declarations
----------------------
+-----------------
 *	Data declarations – Volumes and Objects
 *	System declarations – Instances
 
@@ -153,7 +158,7 @@ Dirty Cloud – Hybrid Data Centers
 *	CloudAudit bridge interfaces
 *	Anything in the ARP table
 
-A hybrid cloud environment provides dedicated, potentially co-located physical hardware with a network interconnect to the project or users’ cloud virtual network. 
+A hybrid cloud environment provides dedicated, potentially co-located physical hardware with a network interconnect to the project or users’ cloud virtual network.
 
 This interconnect is typically a bridged VPN connection. Any machines that can be bridged into a hybrid environment in this fashion (at Layer 2) must implement a minimum version of the CloudAudit spec, such that they can be queried to provide a complete picture of the IT-sec runtime environment.
 
@@ -169,7 +174,7 @@ The Details
 System limits
 -------------
 
-The following limits need to be defined and enforced:  
+The following limits need to be defined and enforced:
 
 *	Total number of instances allowed (user / project)
 *	Total number of instances, per instance type (user / project)
@@ -237,4 +242,11 @@ The :mod:`access_unittest` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`ec2` Module
+---------------------
+
+.. automodule:: nova.api.ec2
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
