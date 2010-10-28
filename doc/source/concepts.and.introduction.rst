@@ -135,6 +135,9 @@ Concept: Services
 * nova-network
 * nova-instancemonitor
 
+
+.. _manage_usage:
+
 Concept: nova-manage
 --------------------
 

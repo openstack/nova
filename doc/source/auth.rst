@@ -24,7 +24,7 @@ from etherpad todo
 ------------------
 
 ::
-  * FIX RST IMPORT ERRORS
+
   * Manager
   * Driver
     * ldap
@@ -65,46 +65,47 @@ Roles
 
 AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:
 
-*	System User
-*	System Administrator
+*	Base User
+*	System Administrator/Developer (currently have the same permissions)
 *	Network Administrator
 *	Project Manager
-*	Cloud Administrator
-*	IT-Security
+*	Cloud Administrator/IT-Security (currently have the same permissions)
 
 There is an additional, conceptual end-user that may or may not have API access:
 
 *	(EXTERNAL) End-user / Third-party User
 
-Basic operations are available to any System User:
+Basic operations are available to any :
 
-*	Launch Instance
-*	Terminate Instance (their own)
-*	Create keypair
-*	Delete keypair
-*	Create, Upload, Delete: Buckets and Keys (Object Store) – their own
-*	Create, Attach, Delete Volume (Block Store) – their own
+*	Describe Instances
+*	Describe Images
+*	Describe Volumes
+*	Describe Keypairs
+*	Create Keypair
+*	Delete Keypair
+*	Create, Upload, Delete: Buckets and Keys (Object Store)
 
-System Administrators:
+System Administrators/Developers/Project Manager:
 
+*	Create, Attach, Delete Volume (Block Store)
+*	Launch, Reboot, Terminate Instance
 *	Register/Unregister Machine Image (project-wide)
-*	Change Machine Image properties (public / private)
 *	Request / Review CloudAudit Scans
-
-Network Administrator:
-
-*	Change Firewall Rules, define Security Groups
-*	Allocate, Associate, Deassociate Public IP addresses
 
 Project Manager:
 
-*	Launch and Terminate Instances (project-wide)
-*	CRUD of Object and Block store (project-wide)
+*	Add and remove other users (currently no api)
+*	Set roles (currently no api)
 
-Cloud Administrator:
+Network Administrator:
 
-*	Register / Unregister Kernel and Ramdisk Images
-*	Register / Unregister Machine Image (any)
+*	Change Machine Image properties (public / private)
+*	Change Firewall Rules, define Security Groups
+*	Allocate, Associate, Deassociate Public IP addresses
+
+Cloud Administrator/IT-Security:
+
+*	All permissions
 
 Enhancements
 ------------
