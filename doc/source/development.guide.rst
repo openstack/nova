@@ -41,13 +41,17 @@ Older Contents
    :maxdepth: 1
 
    architecture
-   endpoint
    nova
    fakes
    binaries
    modules
    packages
 
+
+Removed
+-------
+
+* endpoint
 
 Indices and tables
 ------------------
