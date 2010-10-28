@@ -28,9 +28,9 @@ responding to calls to check it state, attaching persistent as well as terminati
 
 :instances_path:  Where instances are kept on disk
 :compute_driver:  Name of class that is used to handle virtualization, loaded
-                  by `nova.utils.import_object`
+                  by :func:`nova.utils.import_object`
 :volume_manager:  Name of class that handles persistent storage, loaded by
-                  `nova.utils.import_object`
+                  :func:`nova.utils.import_object`
 """
 
 import datetime
