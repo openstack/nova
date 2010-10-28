@@ -23,6 +23,8 @@ Database Programming Guide
     TODO(todd): should sqlalchemy.api be here?
                 pep-256 on db/api.py and models.py (periods)
                 document register_models (where should it be called from?)
+                document any relevant test cases
+                document flags
 
 The :mod:`api` Module
 ---------------------

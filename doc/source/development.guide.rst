@@ -18,7 +18,14 @@
 Nova Development Guide
 ======================
 
-Nova is written in python
+Nova is written in python.
+
+::
+
+    TODO(todd): * API
+                * Exceptions
+                * Nova libraries (utils, etc)
+                * Building packages
 
 
 Contents

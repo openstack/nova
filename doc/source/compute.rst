@@ -24,7 +24,10 @@ This page contains the Compute Package documentation.
 
 ::
 
-    TODO(todd): Document drivers
+    TODO(todd): * Document drivers
+                * get docstrings to come in for ComputeManager
+                * fix formatting of ascii art in disk module
+                * document instance_types and power_states
 
 
 Manager
