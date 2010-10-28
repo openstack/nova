@@ -99,6 +99,7 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.compute_manager = utils.import_object(FLAGS.compute_manager)
         self.setup()
 
     def __str__(self):
@@ -835,21 +836,21 @@ class CloudController(object):
         elevated = context.elevated()
 
         for num in range(num_instances):
-            instance_ref = db.instance_create(context, base_options)
+
+            instance_ref = self.compute_manager.create_instance(context,
+                                           security_groups,
+                                           mac_address=utils.generate_mac(),
+                                           launch_index=num,
+                                           **base_options)
             inst_id = instance_ref['id']
 
-            for security_group_id in security_groups:
-                db.instance_add_security_group(elevated,
-                                               inst_id,
-                                               security_group_id)
-
-            inst = {}
-            inst['mac_address'] = utils.generate_mac()
-            inst['launch_index'] = num
             internal_id = instance_ref['internal_id']
             ec2_id = internal_id_to_ec2_id(internal_id)
-            inst['hostname'] = ec2_id
-            db.instance_update(context, inst_id, inst)
+
+            self.compute_manager.update_instance(context,
+                                                 inst_id,
+                                                 hostname=ec2_id)
+
             # TODO(vish): This probably should be done in the scheduler
             #             or in compute as a call.  The network should be
             #             allocated after the host is assigned and setup
@@ -895,11 +896,12 @@ class CloudController(object):
                               id_str)
                 continue
             now = datetime.datetime.utcnow()
-            db.instance_update(context,
-                               instance_ref['id'],
-                               {'state_description': 'terminating',
-                                'state': 0,
-                                'terminated_at': now})
+            self.compute_manager.update_instance(context,
+                                         instance_ref['id'],
+                                         state_description='terminating',
+                                         state=0,
+                                         terminated_at=now)
+
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])

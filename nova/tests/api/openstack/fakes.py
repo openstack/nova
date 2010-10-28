@@ -30,6 +30,7 @@ from nova import exception as exc
 import nova.api.openstack.auth
 from nova.image import service
 from nova.image.services import glance
+from nova.tests import fake_flags
 from nova.wsgi import Router
 
 
