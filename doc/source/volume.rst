@@ -26,8 +26,28 @@ The :mod:`nova.volume.manager` Module
     :undoc-members:
     :show-inheritance:
 
-OLDHAT
-------
+The :mod:`nova.volume.driver` Module
+-------------------------------------
+
+.. automodule:: nova.volume.driver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Tests
+-----
+
+.. automodule:: nova.tests.volume_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Old Docs
+--------
+
+::
+
+    TODO(todd): change for iSCSI & AoE and move to top of document
 
 Nova uses ata-over-ethernet (AoE) to export storage volumes from multiple storage nodes. These AoE exports are attached (using libvirt) directly to running instances.
 
@@ -37,20 +57,4 @@ AoE exports are numbered according to a "shelf and blade" syntax. In order to av
 
 The underlying volumes are LVM logical volumes, created on demand within a single large volume group. 
 
-
-The :mod:`storage` Module
--------------------------
-
-.. automodule:: nova.volume.storage
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`storage_unittest` Module
-----------------------------------
-
-.. automodule:: nova.tests.storage_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
