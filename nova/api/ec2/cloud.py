@@ -896,9 +896,6 @@ class CloudController(object):
                               id_str)
                 continue
             now = datetime.datetime.utcnow()
-            updated_data = {'state_description': 'terminating',
-                            'state': 0,
-                            'terminated_at': now}
             self.compute_manager.update_instance(context,
                                          instance_ref['id'],
                                          state_description='terminating',
