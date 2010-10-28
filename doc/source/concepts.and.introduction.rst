@@ -138,16 +138,10 @@ The following diagram illustrates how the communication that occurs between the 
 
 ..
 
-Concept: Services
+Concept: Binaries
 -----------------
 
-* nova-api
-* nova-scheduler
-* nova-compute
-* nova-volume
-* nova-network
-* nova-instancemonitor
-
+Nova is implemented by a number of related binaries.  These binaries can run on the same machine or many machines.  A detailed description of each binary is given in the :ref:`binaries section <binaries>` of the developer guide.
 
 .. _manage_usage:
 
