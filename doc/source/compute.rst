@@ -22,20 +22,9 @@ Compute
 This page contains the Compute Package documentation.
 
 
-from etherpad todo
-------------------
-
 ::
 
-  * FIX RST IMPORT ERRORS
-  * Compute Manager
-    * public methods
-    * responsibilities
-  * Compute Driver
-    * public methods
-    * libvirt implementation (kvm/qemu vs uml)
-    * xen implementation
-    * hyperv implementation
+    TODO(todd): Document drivers
 
 
 Manager

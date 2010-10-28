@@ -18,6 +18,12 @@
 Database Programming Guide
 ==========================
 
+::
+
+    TODO(todd): should sqlalchemy.api be here?
+                pep-256 on db/api.py and models.py (periods)
+                document register_models (where should it be called from?)
+
 The :mod:`api` Module
 ---------------------
 
@@ -30,8 +36,8 @@ The :mod:`api` Module
 Drivers
 -------
 
-The :mod:sqlalchemy Driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`sqlalchemy` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.api
     :members:

@@ -18,6 +18,12 @@
 Volume Programming Guide
 =========================
 
+::
+
+    TODO(todd): document for iSCSI & AoE (see 'Old Docs')
+                pep-257
+
+
 The :mod:`nova.volume.manager` Module
 -------------------------------------
 
@@ -44,10 +50,6 @@ Tests
 
 Old Docs
 --------
-
-::
-
-    TODO(todd): change for iSCSI & AoE and move to top of document
 
 Nova uses ata-over-ethernet (AoE) to export storage volumes from multiple storage nodes. These AoE exports are attached (using libvirt) directly to running instances.
 
