@@ -24,8 +24,8 @@ handles RPC calls relating to creating instances.  It is responsible for
 building a disk image, launching it via the underlying virtualization driver,
 responding to calls to check it state, attaching persistent as well as termination.
 
-Related Flags
--------------
+**Related Flags**
+
 :instances_path:  Where instances are kept on disk
 :compute_driver:  Name of class that is used to handle virtualization, loaded
                   by `nova.utils.import_object`
