@@ -16,8 +16,16 @@
       under the License.
 
 
+Compute
+=======
+
+This page contains the Compute Package documentation.
+
+
 from etherpad todo
 ------------------
+
+::
 
   * FIX RST IMPORT ERRORS
   * Compute Manager
@@ -30,57 +38,105 @@ from etherpad todo
     * hyperv implementation
 
 
-Compute Documentation
-=====================
+Manager
+-------
 
-This page contains the Compute Package documentation.
+Documentation for the compute manager and related files.  For reading about
+a specific virtualization backend, read Drivers_.
 
 
 The :mod:`manager` Module
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.manager
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`disk` Module
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.disk
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`instance_types` Module
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.instance_types
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`power_state` Module
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.power_state
     :members:
     :undoc-members:
     :show-inheritance:
 
+
+Drivers
+-------
+
+
+Libvirt Implementations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Libvirt: KVM
+^^^^^^^^^^^^
+
+KVM Driver
+
+
+Libvirt: QEMU
+^^^^^^^^^^^^^
+
+QEMU Driver
+
+
+Libvirt: UML
+^^^^^^^^^^^^
+
+User Mode Linux Driver
+
+
+XEN
+~~~
+
+Xen Driver
+
+
+Hyper-V
+~~~~~~~
+
+Hyper-V Driver
+
+
+Monitoring
+----------
+
 The :mod:`monitor` Module
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.monitor
     :members:
     :undoc-members:
     :show-inheritance:
 
-RELATED TESTS
--------------
+
+Tests
+-----
+
 
 The :mod:`compute_unittest` Module
-----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.compute_unittest
     :members:

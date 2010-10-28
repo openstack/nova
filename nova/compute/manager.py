@@ -17,7 +17,20 @@
 #    under the License.
 
 """
-Handles all code relating to instances (guest vms)
+Handles all processes relating to instances (guest vms).
+
+The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
+handles RPC calls relating to creating instances.  It is responsible for
+building a disk image, launching it via the underlying virtualization driver,
+responding to calls to check it state, attaching persistent as well as termination.
+
+Related Flags
+-------------
+:instances_path:  Where instances are kept on disk
+:compute_driver:  Name of class that is used to handle virtualization, loaded
+                  by `nova.utils.import_object`
+:volume_manager:  Name of class that handles persistent storage, loaded by
+                  `nova.utils.import_object`
 """
 
 import datetime
@@ -40,12 +53,12 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
 
 
 class ComputeManager(manager.Manager):
-    """
-    Manages the running instances.
-    """
+    """Manages the running instances from creation to destruction."""
+
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
         # TODO(vish): sync driver creation logic with the rest of the system
+        #             and redocument the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
         self.driver = utils.import_object(compute_driver)
@@ -54,7 +67,7 @@ class ComputeManager(manager.Manager):
         super(ComputeManager, self).__init__(*args, **kwargs)
 
     def _update_state(self, context, instance_id):
-        """Update the state of an instance from the driver info"""
+        """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         try:
@@ -67,6 +80,7 @@ class ComputeManager(manager.Manager):
     @defer.inlineCallbacks
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
+        """This call passes stright through to the virtualization driver."""
         yield self.driver.refresh_security_group(security_group_id)
 
     @defer.inlineCallbacks

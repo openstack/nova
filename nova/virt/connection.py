@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Abstraction of the underlying virtualization API"""
+"""Abstraction of the underlying virtualization API."""
 
 import logging
 import sys
@@ -39,6 +39,15 @@ def get_connection(read_only=False):
 
     Any object returned here must conform to the interface documented by
     FakeConnection.
+
+    Related flags
+    -------------
+    :connection_type:  A string literal that falls through a if/elif structure
+                       to determine what virtualization mechanism to use.
+                       Values may be:
+                            * fake
+                            * libvirt
+                            * xenapi
     """
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
