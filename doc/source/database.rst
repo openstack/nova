@@ -15,10 +15,32 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Database Programming Guide
-===============================
+Database Programming Guide
+==========================
 
-::
+The :mod:`api` Module
+---------------------
 
-    * general interface
-    * sqlalchemy implementation
+.. automodule:: nova.db.api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Drivers
+-------
+
+The :mod:sqlalchemy Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.db.sqlalchemy.api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+.. automodule:: nova.db.sqlalchemy.models
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

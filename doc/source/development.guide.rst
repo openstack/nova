@@ -28,7 +28,7 @@ Contents
    :maxdepth: 1
 
    database
-   storage
+   volume
    compute
    network      
    auth  

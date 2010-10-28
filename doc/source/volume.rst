@@ -15,9 +15,20 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Volume Documentation
-====================
-                           
+Volume Programming Guide
+=========================
+
+The :mod:`nova.volume.manager` Module
+-------------------------------------
+
+.. automodule:: nova.volume.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+OLDHAT
+------
+
 Nova uses ata-over-ethernet (AoE) to export storage volumes from multiple storage nodes. These AoE exports are attached (using libvirt) directly to running instances.
 
 Nova volumes are exported over the primary system VLAN (usually VLAN 1), and not over individual VLANs.

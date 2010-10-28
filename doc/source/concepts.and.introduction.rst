@@ -61,10 +61,12 @@ Concept: Virtualization
 * qemu
 
 
-Concept: Volumes
+Concept: Storage
 ----------------
 
-Volumes
+* Ephemeral
+* Volumes
+* Swift
 
 
 Concept: Quotas
