@@ -91,13 +91,15 @@ Concept: API
 Concept: Networking
 -------------------
 
-* VLAN
-  * Cloudpipe
-    * Certificates (See also: CA)
-* Flat Networking
-* Flat with DHCP
-* How to generate addresses
-* Floating Addresses
+::
+
+    * VLAN
+      * Cloudpipe
+        * Certificates (See also: CA)
+    * Flat Networking
+    * Flat with DHCP
+    * How to generate addresses
+    * Floating Addresses
 
 
 Concept: Services
