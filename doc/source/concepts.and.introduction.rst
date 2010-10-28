@@ -142,7 +142,7 @@ Concept: nova-manage
 --------------------
 
 Introduction
-++++++++++++
+^^^^^^^^^^^^
 
 The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of nova, such as user creation,
@@ -157,7 +157,7 @@ For example, to obtain a list of all projects:
 ``nova-manage project list``
 
 User Maintenance
-++++++++++++++++
+^^^^^^^^^^^^^^^^
 
 * user admin: creates a new admin and prints exports
     * arguments: name [access] [secret]
@@ -174,7 +174,7 @@ User Maintenance
     *  leave any field blank to ignore it, admin should be 'T', 'F', or blank
 
 Project Maintenance
-+++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^
 
 * project add: Adds user to project
     * arguments: project user
@@ -196,7 +196,7 @@ Project Maintenance
     * arguments: project_id user_id [filename='nova.zip]
 
 User Role Management
-++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^
 
 * role add: adds role to user
     * if project is specified, adds project specific role
@@ -211,7 +211,7 @@ User Role Management
 
 
 Nova Shell
-++++++++++
+^^^^^^^^^^
 
 * shell bpython
     * start a new bpython shell
@@ -225,7 +225,7 @@ Nova Shell
     * arguments: path
 
 VPN Management
-++++++++++++++
+^^^^^^^^^^^^^^
 
 * vpn list: Print a listing of the VPNs for all projects.
     * arguments: none
@@ -236,7 +236,7 @@ VPN Management
 
 
 Floating IP Management
-++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^
 
 * floating create: Creates floating ips for host by range
     * arguments: host ip_range
@@ -246,7 +246,7 @@ Floating IP Management
     * arguments: none
 
 Network Management
-++++++++++++++++++
+^^^^^^^^^^^^^^^^^^
 
 * network create: Creates fixed ips for host by range
     * arguments: [fixed_range=FLAG], [num_networks=FLAG],
