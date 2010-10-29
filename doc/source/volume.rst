@@ -40,6 +40,7 @@ The :mod:`nova.volume.driver` Module
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: FakeAOEDriver
 
 Tests
 -----
