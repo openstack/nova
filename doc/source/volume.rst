@@ -20,9 +20,7 @@ Volume Programming Guide
 
 ::
 
-    TODO(todd): document for iSCSI & AoE (see 'Old Docs')
-                pep-257
-                document flags
+    TODO(todd): rework after iSCSI merge (see 'Old Docs')
 
 
 The :mod:`nova.volume.manager` Module
