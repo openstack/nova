@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-SQLAlchemy models for nova data
+SQLAlchemy models for nova data.
 """
 
 import datetime
@@ -488,7 +488,11 @@ class FloatingIp(BASE, NovaBase):
 
 
 def register_models():
-    """Register Models and create metadata."""
+    """Register Models and create metadata.
+
+    Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
+    it will never need to be called explicitly elsewhere.
+    """
     from sqlalchemy import create_engine
     models = (Service, Instance, Volume, ExportDevice, FixedIp,
               FloatingIp, Network, SecurityGroup,

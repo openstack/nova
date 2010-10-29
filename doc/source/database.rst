@@ -20,8 +20,7 @@ Database Programming Guide
 
 ::
 
-    TODO(todd): should sqlalchemy.api be here?
-                document register_models (where should it be called from?)
+    TODO(todd): document register_models (where should it be called from?)
                 document any relevant test cases
                 document flags
 
@@ -37,17 +36,26 @@ The :mod:`api` Module
 Drivers
 -------
 
-The :mod:`sqlalchemy` Driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Driver: Sqlalchemy
+~~~~~~~~~~~~~~~~~~
+
+The :mod:`sqlalchemy.api` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: nova.db.sqlalchemy.api
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
+The :mod:`sqlalchemy.models` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: nova.db.sqlalchemy.models
     :members:
     :undoc-members:
     :show-inheritance:
 
+The :mod:`sqlalchemy.session` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: nova.db.sqlalchemy.session
+    :members:
+    :undoc-members:
+    :show-inheritance:
