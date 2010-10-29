@@ -52,13 +52,7 @@ Older Contents
    fakes
    binaries
    modules
-   packages
 
-
-Removed
--------
-
-* endpoint
 
 Indices and tables
 ------------------
