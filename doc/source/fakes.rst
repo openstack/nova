@@ -15,8 +15,13 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Fakes
-==========
+Fakes Programming Guide
+=======================
+
+::
+
+    TODO(todd): * document general info about fakes
+
 
 The :mod:`virt.fake` Module
 ---------------------------
@@ -41,3 +46,28 @@ The :mod:`fakerabbit` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
+The :class:`FakeAOEDriver` Class
+--------------------------------
+
+.. autoclass:: nova.volume.driver.FakeAOEDriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :class:`service_unittest.FakeManager` Class
+-----------------------------------------------
+
+.. autoclass:: nova.tests.service_unittest.FakeManager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`api.openstack.fakes` Module
+------------------------------------------------
+
+.. automodule:: nova.tests.api.openstack.fakes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
