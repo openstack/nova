@@ -50,7 +50,6 @@ Older Contents
 
    architecture
    nova
-   fakes
    binaries
    modules
 
