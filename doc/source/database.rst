@@ -18,12 +18,6 @@
 Database Programming Guide
 ==========================
 
-::
-
-    TODO(todd): document register_models (where should it be called from?)
-                document any relevant test cases
-                document flags
-
 The :mod:`api` Module
 ---------------------
 
@@ -59,3 +53,9 @@ The :mod:`sqlalchemy.session` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
+Tests
+-----
+
+Tests are lacking for the db api layer and for the sqlalchemy driver.
+Failures in the drivers would be dectected in other test cases, though.

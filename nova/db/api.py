@@ -17,6 +17,16 @@
 #    under the License.
 """
 Defines interface for DB access.
+
+The underlying driver is loaded as a :class:`LazyPluggable`.
+
+**Related Flags**
+
+:db_backend:  string to lookup in the list of LazyPluggable backends.
+              `sqlalchemy` is the only supported backend right now.
+
+:sql_connection:  string specifying the sqlalchemy connection to use, like:
+                  `sqlite:///var/lib/nova/nova.sqlite`.
 """
 
 from nova import exception
