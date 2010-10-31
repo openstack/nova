@@ -69,7 +69,7 @@ class ComputeManager(manager.Manager):
     def refresh_security_group(self, context, security_group_id, **_kwargs):
         yield self.driver.refresh_security_group(security_group_id)
 
-    def create_instance(self, context, security_groups=[], **kwargs):
+    def create_instance(self, context, security_groups=None, **kwargs):
         """Creates the instance in the datastore and returns the
         new instance as a mapping
 
@@ -88,7 +88,8 @@ class ComputeManager(manager.Manager):
         inst_id = instance_ref['id']
 
         elevated = context.elevated()
-        security_groups = kwargs.get('security_groups', [])
+        if not security_groups:
+            security_groups = []
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 inst_id,
