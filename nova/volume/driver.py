@@ -212,6 +212,10 @@ class FakeAOEDriver(AOEDriver):
                                             sync_exec=self.fake_execute,
                                             *args, **kwargs)
 
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        pass
+
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command"""
@@ -318,6 +322,10 @@ class FakeISCSIDriver(ISCSIDriver):
         super(FakeISCSIDriver, self).__init__(execute=self.fake_execute,
                                               sync_exec=self.fake_execute,
                                               *args, **kwargs)
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        pass
 
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
