@@ -18,7 +18,27 @@
 #    under the License.
 
 """
-A connection to a hypervisor (e.g. KVM) through libvirt.
+A connection to a hypervisor through libvirt.
+
+Supports KVM, QEMU, UML, and XEN.
+
+**Related Flags**
+
+:libvirt_type:  Libvirt domain type.  Can be kvm, qemu, uml, xen
+                (default: kvm).
+:libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
+:libvirt_xml_template:  Libvirt XML Template (QEmu/KVM).
+:libvirt_xen_xml_template:  Libvirt XML Template (Xen).
+:libvirt_uml_xml_template:  Libvirt XML Template (User Mode Linux).
+:libvirt_rescue_xml_template:  XML template for rescue mode (KVM & QEMU).
+:libvirt_rescue_xen_xml_template:  XML templage for rescue mode (XEN).
+:libvirt_rescue_uml_xml_template:  XML template for rescue mode (UML).
+:rescue_image_id:  Rescue ami image (default: ami-rescue).
+:rescue_kernel_id:  Rescue aki image (default: aki-rescue).
+:rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
+:injected_network_template:  Template file for injected network
+:allow_project_net_traffic:  Whether to allow in project network traffic
+
 """
 
 import logging

@@ -33,6 +33,18 @@ long-running operations.
 
 FIXME: get_info currently doesn't conform to these rules, and will block the
 reactor thread if the VM.get_by_name_label or VM.get_record calls block.
+
+**Related Flags**
+
+:xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
+:xenapi_connection_username:  Username for connection to XenServer/Xen Cloud
+                              Platform (default: root).
+:xenapi_connection_password:  Password for connection to XenServer/Xen Cloud
+                              Platform.
+:xenapi_task_poll_interval:  The interval (seconds) used for polling of
+                             remote tasks (Async.VM.start, etc)
+                             (default: 0.5).
+
 """
 
 import logging

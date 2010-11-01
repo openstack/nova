@@ -32,19 +32,23 @@ FLAGS = flags.FLAGS
 
 
 def get_connection(read_only=False):
-    """Returns an object representing the connection to a virtualization
-    platform.  This could be nova.virt.fake.FakeConnection in test mode,
-    a connection to KVM or QEMU via libvirt, or a connection to XenServer
-    or Xen Cloud Platform via XenAPI.
+    """
+    Returns an object representing the connection to a virtualization
+    platform.
+
+    This could be :mod:`nova.virt.fake.FakeConnection` in test mode,
+    a connection to KVM, QEMU, or UML via :mod:`libvirt_conn`, or a connection
+    to XenServer or Xen Cloud Platform via :mod:`xenapi`.
 
     Any object returned here must conform to the interface documented by
-    FakeConnection.
+    :mod:`FakeConnection`.
 
-    Related flags
-    -------------
+    **Related flags**
+
     :connection_type:  A string literal that falls through a if/elif structure
                        to determine what virtualization mechanism to use.
-                       Values may be:
+                       Values may be
+
                             * fake
                             * libvirt
                             * xenapi

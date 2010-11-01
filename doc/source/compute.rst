@@ -24,10 +24,7 @@ This page contains the Compute Package documentation.
 
 ::
 
-    TODO(todd): * Document drivers
-                * get docstrings to come in for ComputeManager
-                * fix formatting of ascii art in disk module
-                * document instance_types and power_states
+    TODO(todd): * document instance_types and power_states
 
 
 Manager
@@ -45,6 +42,13 @@ The :mod:`manager` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`connection` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.virt.connection
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 The :mod:`disk` Module
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -76,40 +80,37 @@ The :mod:`power_state` Module
 Drivers
 -------
 
-
 Libvirt Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+The libvirt driver is capable of supporting KVM, QEMU, and UML.
 
-Libvirt: KVM
-^^^^^^^^^^^^
+The :mod:`libvirt_conn` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-KVM Driver
-
-
-Libvirt: QEMU
-^^^^^^^^^^^^^
-
-QEMU Driver
-
-
-Libvirt: UML
-^^^^^^^^^^^^
-
-User Mode Linux Driver
-
+.. automodule:: nova.virt.libvirt_conn
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 XEN
 ~~~
 
-Xen Driver
+The :mod:`xenapi` Module
+^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. automodule:: nova.virt.xenapi
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-Hyper-V
-~~~~~~~
+FAKE
+~~~~
 
-Hyper-V Driver
-
+.. automodule:: nova.virt.fake
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Monitoring
 ----------

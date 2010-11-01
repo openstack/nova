@@ -18,8 +18,11 @@
 #    under the License.
 
 """
-A fake (in-memory) hypervisor+api. Allows nova testing w/o a hypervisor.
-This module also documents the semantics of real hypervisor connections.
+A fake (in-memory) hypervisor+api.
+
+Allows nova testing w/o a hypervisor.  This module also documents the
+semantics of real hypervisor connections.
+
 """
 
 from twisted.internet import defer
