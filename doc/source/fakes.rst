@@ -30,6 +30,7 @@ The :mod:`virt.fake` Module
     :members:
     :undoc-members:
     :show-inheritance:
+    :noindex:
     
 The :mod:`fakeldap` Module
 --------------------------
