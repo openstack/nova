@@ -27,7 +27,13 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
 todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+# Changing the path so that the Hudson build output contains GA code and the source
+# docs do not contain the code so local, offline sphinx builds are "clean."
+templates_path = []
+if os.getenv('HUDSON_PUBLISH_DOCS'):
+  templates_path = ['_ga', '_templates']
+else:
+  templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'

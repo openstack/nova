@@ -81,6 +81,16 @@ class NovaBase(object):
         n = self._i.next().name
         return n, getattr(self, n)
 
+    def update(self, values):
+        """Make the model object behave like a dict"""
+        for k, v in values.iteritems():
+            setattr(self, k, v)
+
+    def iteritems(self):
+        """Make the model object behave like a dict"""
+        return iter(self)
+
+
 # TODO(vish): Store images in the database instead of file system
 #class Image(BASE, NovaBase):
 #    """Represents an image in the datastore"""
