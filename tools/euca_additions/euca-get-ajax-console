@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import getopt, sys, os
+from euca2ools import Euca2ool, InstanceValidationError, Util, ConnectionFailed
+
+usage_string = """
+Retrieves a url to an ajax console terminal
+
+euca-get-ajax-console [-h, --help] [--version] [--debug] instance_id
+
+REQUIRED PARAMETERS
+	
+instance_id			unique identifier for the instance show the console output for.
+
+OPTIONAL PARAMETERS
+
+"""
+
+from nova.boto_extensions import *
+
+def usage(status=1):
+    print usage_string
+    Util().usage()
+    sys.exit(status)
+
+def version():
+    print Util().version()
+    sys.exit()
+
+def display_console_output(console_output):
+    print console_output.instance_id
+    print console_output.timestamp
+    print console_output.output
+
+def display_ajax_console_output(console_output):
+    print console_output.url
+ 
+def main():
+    try:
+	euca = Euca2ool()
+    except Exception, e:
+	print e
+        usage()
+ 
+    instance_id = None
+
+    for name, value in euca.opts:
+        if name in ('-h', '--help'):
+            usage(0)
+	elif name == '--version':
+	    version()
+	elif name == '--debug':
+	    debug = True
+    
+    for arg in euca.args:
+	instance_id = arg
+	break
+
+
+    if instance_id:
+        try:
+	    euca.validate_instance_id(instance_id)
+        except InstanceValidationError:
+   	    print 'Invalid instance id'
+            sys.exit(1)
+
+        try:
+            euca_conn = euca.make_connection()
+        except ConnectionFailed, e:
+            print e.message
+            sys.exit(1)
+	try:
+	    console_output = euca_conn.get_ajax_console(instance_id)
+        except Exception, ex:
+            euca.display_error_and_exit('%s' % ex)
+
+	display_ajax_console_output(console_output)
+    else:
+    	print 'instance_id must be specified'
+	usage()
+if __name__ == "__main__":
+    main()
+ 

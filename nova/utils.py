@@ -100,7 +100,8 @@ def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 
 
-def novadir(s):
+def novadir():
+    import nova
     return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
 
 

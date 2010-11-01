@@ -1,0 +1,31 @@
+#!/usr/bin/python
+from twisted.internet import reactor
+from twisted.web import http
+from twisted.web.proxy import Proxy, ProxyRequest
+import urlparse, exceptions
+ 
+class AjaxProxyRequest(ProxyRequest):
+    def process(self):
+        if 'referer' in self.received_headers:
+            auth_uri = self.received_headers['referer']
+        else:
+            auth_uri = self.uri
+
+        try:
+            auth_params = urlparse.parse_qs(urlparse.urlparse(auth_uri).query)
+            parsed_uri = urlparse.urlparse(self.uri)
+            
+            self.uri = "http://%s:%s%s?%s"% (auth_params['host'][0], auth_params['port'][0], parsed_uri.path, parsed_uri.query)
+
+            ProxyRequest.process(self)
+        except (exceptions.KeyError):
+            pass
+ 
+class AjaxProxy(Proxy):
+    requestFactory = AjaxProxyRequest
+ 
+factory = http.HTTPFactory()
+factory.protocol = AjaxProxy
+ 
+reactor.listenTCP(8000, factory)
+reactor.run()

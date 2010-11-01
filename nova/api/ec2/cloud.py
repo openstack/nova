@@ -439,31 +439,6 @@ class CloudController(object):
         db.security_group_destroy(context, security_group.id)
         return True
 
-    def create_console(self, context, kind, instance_id, **_kwargs):
-        """Create a Console"""
-
-        instance_ref = db.instance_get(context, instance_id)
-
-        def get_port():
-            for i in xrange(0,100): # don't loop forever
-                port = random.randint(10000, 12000)
-                cmd = "netcat 0.0.0.0 %s -w 2 < /dev/null" % (port,)
-                # this Popen  will exit with 0 only if the port is in use,
-                # so a nonzero return value implies it is unused
-                port_is_unused = subprocess.Popen(cmd, shell=True).wait()
-                if port_is_unused:
-                    return port
-            raise 'Unable to find an open port'
-
-        port = get_port()
-        token = str(uuid.uuid4())
-
-        host = instance_ref['host']
-        cmd = "%s/tools/ajaxterm/ajaxterm.py --command 'ssh %s' -t %s -p %s" \
-            % (utils.novadir(), host, token, port)
-        port_is_unused = subprocess.Popen(cmd, shell=True) #TODO error check
-        return {'url': 'http://%s:%s/?token=%s' % (FLAGS.cc_dmz, port, token)}
-
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
@@ -479,6 +454,33 @@ class CloudController(object):
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
+    def get_ajax_console(self, context, instance_id, **kwargs):
+        """Create an AJAX Console"""
+
+        ec2_id = instance_id[0]
+        internal_id = ec2_id_to_internal_id(ec2_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+
+        def get_port():
+            for i in xrange(0,100): # don't loop forever
+                port = random.randint(10000, 12000)
+                cmd = "netcat 0.0.0.0 %s -w 2 < /dev/null" % (port,)
+                # this Popen  will exit with 0 only if the port is in use,
+                # so a nonzero return value implies it is unused
+                port_is_unused = (subprocess.Popen(cmd, shell=True).wait() != 0)
+                if port_is_unused:
+                    return port
+            raise 'Unable to find an open port'
+
+        port = get_port()
+        token = str(uuid.uuid4())
+
+        host = instance_ref['host']
+        cmd = "%s/tools/ajaxterm/ajaxterm.py --command 'virsh console instance-%d' -t %s -p %s" \
+            % (utils.novadir(), internal_id, token, port)
+        port_is_unused = subprocess.Popen(cmd, shell=True) #TODO error check
+        dmz = 'tonbuntu' #TODO put correct value for dmz
+        return {'url': 'http://%s:%s/?token=%s&host=%s&port=%s' % (dmz, 8000, token, host, port)}
 
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():
@@ -896,6 +898,8 @@ class CloudController(object):
                       (context.project.name, context.user.name, inst_id))
         return self._format_run_instances(context, reservation_id)
 
+    def run_instances2(self, context, **kwargs):
+        return self.run_instances(context, kwargs)
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
 
