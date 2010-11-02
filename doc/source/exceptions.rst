@@ -15,38 +15,13 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Exceptions Programming Guide
+============================
 
-Nova is written in python.
+The :mod:`nova.excepton` Module
+-------------------------------
 
-::
-
-    TODO(todd):
-                * Nova libraries (utils, etc)
-                * Building packages
-
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   database
-   volume
-   compute
-   network      
-   auth  
-   api
-   exceptions
-   fakes
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. automodule:: nova.exception
+    :members:
+    :undoc-members:
+    :show-inheritance:

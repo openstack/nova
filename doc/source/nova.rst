@@ -34,14 +34,6 @@ The :mod:`adminclient` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`datastore` Module
----------------------------
-
-.. automodule:: nova.datastore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`exception` Module
 ---------------------------
 
@@ -49,6 +41,7 @@ The :mod:`exception` Module
     :members:
     :undoc-members:
     :show-inheritance:
+    :noindex:
     
 The :mod:`flags` Module
 ---------------------------
