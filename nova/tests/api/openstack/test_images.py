@@ -203,7 +203,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
         fixture_index = [dict(id=f['id'], name=f['name']) for f
@@ -215,7 +215,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
         for image in res_dict['images']:
