@@ -135,7 +135,6 @@ The :mod:`monitor` Module
 Tests
 -----
 
-
 The :mod:`compute_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -144,3 +143,10 @@ The :mod:`compute_unittest` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`virt_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.virt_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -15,40 +15,13 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Glance Integration Programming Guide
+====================================
 
-Nova is written in python.
+The :mod:`image.service` Module
+-------------------------------
 
-::
-
-    TODO(todd): * Building packages
-
-
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   database
-   volume
-   compute
-   network      
-   auth  
-   api
-   scheduler
-   fakes
-   nova
-   cloudpipe
-   objectstore
-   glance
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. automodule:: nova.image.service
+    :members:
+    :undoc-members:
+    :show-inheritance:
