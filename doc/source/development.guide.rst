@@ -18,7 +18,11 @@
 Nova Development Guide
 ======================
 
-Nova is written in python
+Nova is written in python.
+
+::
+
+    TODO(todd): * Building packages
 
 
 Contents
@@ -32,26 +36,11 @@ Contents
    compute
    network      
    auth  
-
-
-Older Contents
---------------
-
-.. toctree::
-   :maxdepth: 1
-
-   architecture
-   nova
+   api
+   scheduler
    fakes
-   binaries
-   modules
-   packages
+   nova
 
-
-Removed
--------
-
-* endpoint
 
 Indices and tables
 ------------------

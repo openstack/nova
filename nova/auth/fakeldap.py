@@ -15,9 +15,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-"""
-Fake LDAP server for test harness, backs to ReDIS.
+"""Fake LDAP server for test harness, backs to ReDIS.
 
 This class does very little error checking, and knows nothing about ldap
 class definitions.  It implements the minimum emulation of the python ldap

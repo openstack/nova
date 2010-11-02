@@ -17,21 +17,76 @@
 
 .. _auth:
 
-Authentication and Authorization Development Guide
+Authentication and Authorization Programming Guide
 ==================================================
 
 ::
 
-    TOOD(todd);
-        * Authentication
-            * Manager
-            * Driver
-                * ldap
-                * fakeldap
-                * redisectomy
-        * Authorizztion
-            * RBAC
-            * Quotas
+    TOOD(todd): * Authorizztion
+                    * RBAC
+                    * Quotas
+
+
+Auth Manager
+------------
+
+The :mod:`manager` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Drivers
+-------
+
+The :mod:`ldapdriver` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.ldapdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`dbdriver` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.dbdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+API Integration
+---------------
+
+The :mod:`signer` Module
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.signer
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Related Tests
+-------------
+
+The :mod:`auth_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.auth_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`access_unittest` Module
+---------------------------------
+
+.. automodule:: nova.tests.access_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 
 legacy docs
@@ -193,60 +248,4 @@ Further Challenges
  *	Store AMIs in LDAP for added property control
 
 
-
-The :mod:`signer` Module
-------------------------
-
-.. automodule:: nova.auth.signer
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`manager` Module
--------------------------
-
-.. automodule:: nova.auth.manager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`ldapdriver` Module
-----------------------------
-
-.. automodule:: nova.auth.ldapdriver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`dbdriver` Module
-----------------------------
-
-.. automodule:: nova.auth.dbdriver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`auth_unittest` Module
---------------------------------
-
-.. automodule:: nova.tests.auth_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`access_unittest` Module
----------------------------------
-
-.. automodule:: nova.tests.access_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`ec2` Module
----------------------
-
-.. automodule:: nova.api.ec2
-    :members:
-    :undoc-members:
-    :show-inheritance:
 

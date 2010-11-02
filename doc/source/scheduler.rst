@@ -15,15 +15,37 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-nova Packages & Dependencies
-============================
+Scheduler Programming Guide
+===========================
 
-Nova is being built on Ubuntu Lucid.
+The :mod:`manager` Module
+-------------------------
 
-The following packages are required:
+.. automodule:: nova.scheduler.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-  apt-get install python-ipy, python-libvirt, python-boto, python-pycurl, python-twisted, python-daemon, python-redis, python-carrot, python-lockfile
+The :mod:`driver` Module
+------------------------
 
-In addition you need to install python:
+.. automodule:: nova.scheduler.driver
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
- * python-gflags - http://code.google.com/p/python-gflags/
+The :mod:`chance` Module
+------------------------
+
+.. automodule:: nova.scheduler.chance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`simple` Module
+------------------------
+
+.. automodule:: nova.scheduler.simple
+    :members:
+    :undoc-members:
+    :show-inheritance:

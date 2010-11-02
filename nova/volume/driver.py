@@ -15,9 +15,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Drivers for volumes
+Drivers for volumes.
+
 """
 
 import logging
@@ -39,7 +39,8 @@ flags.DEFINE_string('num_shell_tries', 3,
 
 
 class AOEDriver(object):
-    """Executes commands relating to AOE volumes"""
+    """Executes commands relating to AOE volumes."""
+
     def __init__(self, execute=process.simple_execute, *args, **kwargs):
         self._execute = execute
 
@@ -63,7 +64,7 @@ class AOEDriver(object):
 
     @defer.inlineCallbacks
     def create_volume(self, volume_name, size):
-        """Creates a logical volume"""
+        """Creates a logical volume."""
         # NOTE(vish): makes sure that the volume group exists
         yield self._execute("vgs %s" % FLAGS.volume_group)
         if int(size) == 0:
@@ -77,14 +78,14 @@ class AOEDriver(object):
 
     @defer.inlineCallbacks
     def delete_volume(self, volume_name):
-        """Deletes a logical volume"""
+        """Deletes a logical volume."""
         yield self._try_execute("sudo lvremove -f %s/%s" %
                                 (FLAGS.volume_group,
                                  volume_name))
 
     @defer.inlineCallbacks
     def create_export(self, volume_name, shelf_id, blade_id):
-        """Creates an export for a logical volume"""
+        """Creates an export for a logical volume."""
         yield self._try_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (shelf_id,
@@ -95,13 +96,13 @@ class AOEDriver(object):
 
     @defer.inlineCallbacks
     def discover_volume(self, _volume_name):
-        """Discover volume on a remote host"""
+        """Discover volume on a remote host."""
         yield self._execute("sudo aoe-discover")
         yield self._execute("sudo aoe-stat")
 
     @defer.inlineCallbacks
     def remove_export(self, _volume_name, shelf_id, blade_id):
-        """Removes an export for a logical volume"""
+        """Removes an export for a logical volume."""
         yield self._try_execute("sudo vblade-persist stop %s %s" %
                                 (shelf_id, blade_id))
         yield self._try_execute("sudo vblade-persist destroy %s %s" %
@@ -109,7 +110,7 @@ class AOEDriver(object):
 
     @defer.inlineCallbacks
     def ensure_exports(self):
-        """Runs all existing exports"""
+        """Runs all existing exports."""
         # NOTE(vish): The standard _try_execute does not work here
         #             because these methods throw errors if other
         #             volumes on this host are in the process of
@@ -125,11 +126,12 @@ class AOEDriver(object):
 
 
 class FakeAOEDriver(AOEDriver):
-    """Logs calls instead of executing"""
+    """Logs calls instead of executing."""
+
     def __init__(self, *args, **kwargs):
         super(FakeAOEDriver, self).__init__(self.fake_execute)
 
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
-        """Execute that simply logs the command"""
+        """Execute that simply logs the command."""
         logging.debug("FAKE AOE: %s", cmd)

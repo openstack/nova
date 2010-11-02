@@ -91,9 +91,7 @@ class ServersTest(unittest.TestCase):
             pass
 
         def instance_create(context, inst):
-            class Foo(object):
-                internal_id = 1
-            return Foo()
+            return {'id': 1, 'internal_id': 1}
 
         def fake_method(*args, **kwargs):
             pass

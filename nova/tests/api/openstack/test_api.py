@@ -24,22 +24,28 @@ from nova.api.openstack import API
 from nova.api.openstack import faults
 from webob import Request
 
+
 class APITest(unittest.TestCase):
 
     def test_exceptions_are_converted_to_faults(self):
+
         @webob.dec.wsgify
         def succeed(req):
             return 'Succeeded'
+
         @webob.dec.wsgify
         def raise_webob_exc(req):
             raise webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
+
         @webob.dec.wsgify
         def fail(req):
             raise Exception("Threw an exception")
+
         @webob.dec.wsgify
         def raise_api_fault(req):
             exc = webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
             return faults.Fault(exc)
+
         api = API()
 
         api.application = succeed

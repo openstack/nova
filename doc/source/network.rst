@@ -25,6 +25,7 @@ Networking Programming Guide
         * document backend (linux-net)
         * document hardware specific commands
         * pep 257
+        * document flags
 
 The :mod:`Manager` module
 -------------------------

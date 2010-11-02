@@ -18,12 +18,6 @@
 Database Programming Guide
 ==========================
 
-::
-
-    TODO(todd): should sqlalchemy.api be here?
-                pep-256 on db/api.py and models.py (periods)
-                document register_models (where should it be called from?)
-
 The :mod:`api` Module
 ---------------------
 
@@ -36,17 +30,32 @@ The :mod:`api` Module
 Drivers
 -------
 
-The :mod:`sqlalchemy` Driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Driver: Sqlalchemy
+~~~~~~~~~~~~~~~~~~
+
+The :mod:`sqlalchemy.api` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: nova.db.sqlalchemy.api
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
+The :mod:`sqlalchemy.models` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: nova.db.sqlalchemy.models
     :members:
     :undoc-members:
     :show-inheritance:
 
+The :mod:`sqlalchemy.session` Module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: nova.db.sqlalchemy.session
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Tests
+-----
+
+Tests are lacking for the db api layer and for the sqlalchemy driver.
+Failures in the drivers would be dectected in other test cases, though.

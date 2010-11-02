@@ -20,8 +20,7 @@ Volume Programming Guide
 
 ::
 
-    TODO(todd): document for iSCSI & AoE (see 'Old Docs')
-                pep-257
+    TODO(todd): rework after iSCSI merge (see 'Old Docs')
 
 
 The :mod:`nova.volume.manager` Module
@@ -39,6 +38,7 @@ The :mod:`nova.volume.driver` Module
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: FakeAOEDriver
 
 Tests
 -----
