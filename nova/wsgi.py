@@ -39,10 +39,27 @@ import webob.exc
 logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
 
 
-def run_server(application, port):
-    """Run a WSGI server with the given application."""
-    sock = eventlet.listen(('0.0.0.0', port))
-    eventlet.wsgi.server(sock, application)
+class Server(object):
+    """Server class to manage multiple WSGI sockets and applications."""
+
+    def __init__(self, threads=1000):
+        self.pool = eventlet.GreenPool(threads)
+
+    def start(self, application, port, host='0.0.0.0', backlog=128):
+        """Run a WSGI server with the given application."""
+        socket = eventlet.listen((host, port), backlog=backlog)
+        self.pool.spawn_n(self._run, application, socket)
+
+    def wait(self):
+        """Wait until all servers have completed running."""
+        try:
+            self.pool.waitall()
+        except KeyboardInterrupt:
+            pass
+
+    def _run(self, application, socket):
+        """Start a WSGI server in a new green thread."""
+        eventlet.wsgi.server(socket, application, custom_pool=self.pool)
 
 
 class Application(object):

@@ -37,13 +37,18 @@ from nova import utils
 from nova import server
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('api_port', 8773, 'API port')
+flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
+flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
 
 
 def main(_args):
     from nova import api
     from nova import wsgi
-    wsgi.run_server(api.API(), FLAGS.api_port)
+    server = wsgi.Server()
+    server.start(api.API('os'), FLAGS.osapi_port)
+    server.start(api.API('ec2'), FLAGS.ec2api_port)
+    server.wait()
+
 
 if __name__ == '__main__':
     utils.default_flagfile()
