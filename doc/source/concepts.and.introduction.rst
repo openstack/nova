@@ -129,7 +129,7 @@ This is similar to the flat mode, in that all instances are attached to the same
 VLAN DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code name cloudpipe) needs to be created.  Nova generates a certificate and key for the userto access the vpn and starts the vpn automatically.
+This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the userto access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
 
 The following diagram illustrates how the communication that occurs between the vlan (the dashed box) and the public internet (represented by the two clouds)
 
