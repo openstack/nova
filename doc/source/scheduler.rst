@@ -15,13 +15,37 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Exceptions Programming Guide
-============================
+Scheduler Programming Guide
+===========================
 
-The :mod:`nova.excepton` Module
--------------------------------
+The :mod:`manager` Module
+-------------------------
 
-.. automodule:: nova.exception
+.. automodule:: nova.scheduler.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`driver` Module
+------------------------
+
+.. automodule:: nova.scheduler.driver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`chance` Module
+------------------------
+
+.. automodule:: nova.scheduler.chance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`simple` Module
+------------------------
+
+.. automodule:: nova.scheduler.simple
     :members:
     :undoc-members:
     :show-inheritance:

@@ -22,9 +22,7 @@ Nova is written in python.
 
 ::
 
-    TODO(todd):
-                * Nova libraries (utils, etc)
-                * Building packages
+    TODO(todd): * Building packages
 
 
 Contents
@@ -39,8 +37,9 @@ Contents
    network      
    auth  
    api
-   exceptions
+   scheduler
    fakes
+   nova
 
 
 Indices and tables

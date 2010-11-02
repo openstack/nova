@@ -58,6 +58,14 @@ The :mod:`disk` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`images` Module
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.virt.images
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 The :mod:`instance_types` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

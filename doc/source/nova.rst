@@ -15,21 +15,29 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-NOVA Libraries
-===============
+Nova Libraries Programming Guide
+================================
+
+The :mod:`adminclient` Module
+-----------------------------
+
+.. automodule:: nova.adminclient
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`context` Module
+-------------------------
+
+.. automodule:: nova.context
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 The :mod:`crypto` Module
 ------------------------
 
 .. automodule:: nova.crypto
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    
-The :mod:`adminclient` Module
------------------------------
-
-.. automodule:: nova.adminclient
     :members:
     :undoc-members:
     :show-inheritance:
@@ -41,44 +49,99 @@ The :mod:`exception` Module
     :members:
     :undoc-members:
     :show-inheritance:
-    :noindex:
-    
+
 The :mod:`flags` Module
----------------------------
+-----------------------
 
 .. automodule:: nova.flags
     :members:
     :undoc-members:
     :show-inheritance:
 
+The :mod:`manager` Module
+-------------------------
+
+.. automodule:: nova.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`process` Module
+-------------------------
+
+.. automodule:: nova.process
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`quota` Module
+-----------------------
+
+.. automodule:: nova.quota
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 The :mod:`rpc` Module
----------------------------
+---------------------
 
 .. automodule:: nova.rpc
     :members:
     :undoc-members:
     :show-inheritance:
-    
+
 The :mod:`server` Module
----------------------------
+------------------------
 
 .. automodule:: nova.server
     :members:
     :undoc-members:
     :show-inheritance:
-    
+
+The :mod:`service` Module
+-------------------------
+
+.. automodule:: nova.service
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 The :mod:`test` Module
----------------------------
+----------------------
 
 .. automodule:: nova.test
     :members:
     :undoc-members:
     :show-inheritance:  
-      
+
+The :mod:`twistd` Module
+------------------------
+
+.. automodule:: nova.twistd
+    :members:
+    :undoc-members:
+    :show-inheritance:  
+
 The :mod:`utils` Module
----------------------------
+-----------------------
 
 .. automodule:: nova.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`validate` Module
+--------------------------
+
+.. automodule:: nova.validate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`wsgi` Module
+----------------------
+
+.. automodule:: nova.wsgi
     :members:
     :undoc-members:
     :show-inheritance:
