@@ -15,8 +15,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-API Endpoints
-=============
+API Endpoint Programming Guide
+==============================
 
 ::
 

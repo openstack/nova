@@ -17,7 +17,7 @@
 
 .. _auth:
 
-Authentication and Authorization Development Guide
+Authentication and Authorization Programming Guide
 ==================================================
 
 ::
