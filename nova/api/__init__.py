@@ -41,37 +41,31 @@ flags.DEFINE_string('osapi_subdomain', 'api',
                     'subdomain running the OpenStack API')
 flags.DEFINE_string('ec2api_subdomain', 'ec2',
                     'subdomain running the EC2 API')
-flags.DEFINE_string('FAKE_subdomain', None,
-                    'set to api or ec2 to fake the subdomain of the host '
-                    'for testing')
 FLAGS = flags.FLAGS
 
 
 class API(wsgi.Router):
     """Routes top-level requests to the appropriate controller."""
 
-    def __init__(self):
-        osapidomain = {'sub_domain': [FLAGS.osapi_subdomain]}
-        ec2domain = {'sub_domain': [FLAGS.ec2api_subdomain]}
-        # If someone wants to pretend they're hitting the OSAPI subdomain
-        # on their local box, they can set FAKE_subdomain to 'api', which
-        # removes subdomain restrictions from the OpenStack API routes below.
-        if FLAGS.FAKE_subdomain == 'api':
-            osapidomain = {}
-        elif FLAGS.FAKE_subdomain == 'ec2':
-            ec2domain = {}
+    def __init__(self, default_api):
+        osapi_subdomain = {'sub_domain': [FLAGS.osapi_subdomain]}
+        ec2api_subdomain = {'sub_domain': [FLAGS.ec2api_subdomain]}
+        if default_api == 'os':
+            osapi_subdomain = {}
+        elif default_api == 'ec2':
+            ec2api_subdomain = {}
         mapper = routes.Mapper()
         mapper.sub_domains = True
+
         mapper.connect("/", controller=self.osapi_versions,
-                            conditions=osapidomain)
+                       conditions=osapi_subdomain)
         mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
-                            conditions=osapidomain)
+                       conditions=osapi_subdomain)
 
         mapper.connect("/", controller=self.ec2api_versions,
-                            conditions=ec2domain)
+                       conditions=ec2api_subdomain)
         mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
-                            conditions=ec2domain)
-        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
+                       conditions=ec2api_subdomain)
         mrh = metadatarequesthandler.MetadataRequestHandler()
         for s in ['/latest',
                   '/2009-04-04',
@@ -84,7 +78,9 @@ class API(wsgi.Router):
                   '/2007-01-19',
                   '/1.0']:
             mapper.connect('%s/{path_info:.*}' % s, controller=mrh,
-                           conditions=ec2domain)
+                           conditions=ec2api_subdomain)
+
+        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
