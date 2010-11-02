@@ -39,19 +39,8 @@ Contents
    compute
    network      
    auth  
+   api
    fakes
-
-
-Older Contents
---------------
-
-.. toctree::
-   :maxdepth: 1
-
-   architecture
-   nova
-   binaries
-   modules
 
 
 Indices and tables
