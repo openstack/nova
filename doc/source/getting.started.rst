@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,7 +18,7 @@
 Getting Started with Nova
 =========================
 
-This code base is continually changing so dependencies also change. 
+This code base is continually changing so dependencies also change.
 
 Dependencies
 ------------
@@ -30,7 +30,7 @@ Related servers we rely on
 Optional servers
 
 * OpenLDAP: By default, the auth server uses the RDBMS-backed datastore by setting FLAGS.auth_driver to 'nova.auth.dbdriver.DbDriver'. But OpenLDAP (or LDAP) could be configured.
-* ReDIS: By default, this is not enabled as the auth driver. 
+* ReDIS: By default, this is not enabled as the auth driver.
 
 Python libraries we don't vendor
 
@@ -62,49 +62,17 @@ Configuration
 
 These instructions are incomplete, but we are actively updating the `OpenStack wiki <http://wiki.openstack.org>`_ with more configuration information.
 
-On the cloud controller
-
-* Add yourself to the libvirtd group, log out, and log back in
-* Fix hardcoded ec2 metadata/userdata uri ($IP is the IP of the cloud), and masqurade all traffic from launched instances
-
-::
-
-    iptables -t nat -A PREROUTING -s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $IP:8773
-    iptables --table nat --append POSTROUTING --out-interface $PUBLICIFACE -j MASQUERADE
-
-
-* Configure NginX proxy (/etc/nginx/sites-enabled/default)
-
-::
-
-  server {
-    listen 3333 default;
-    server-name localhost;
-    client_max_body_size 10m;
-
-    access_log /var/log/nginx/localhost.access.log;
-
-    location ~ /_images/.+ {
-      root NOVA_PATH/images;
-      rewrite ^/_images/(.*)$ /$1 break;
-    }
-
-    location / {
-      proxy_pass http://localhost:3334/;
-    }
-  }
-
 On the volume node
 
-* Create a filesystem (you can use an actual disk if you have one spare, default is /dev/sdb)
+* Create a volume group (you can use an actual disk for the volume group as well)
 
 ::
 
     # This creates a 1GB file to create volumes out of
     dd if=/dev/zero of=MY_FILE_PATH bs=100M count=10
     losetup --show -f MY_FILE_PATH
-    # replace loop0 below with whatever losetup returns
-    echo "--storage_dev=/dev/loop0" >> NOVA_PATH/bin/nova.conf
+    # replace /dev/loop0 below with whatever losetup returns
+    vgcreate nova-volumes /dev/loop0
 
 Running
 ---------

@@ -71,19 +71,13 @@ Concept: Storage
 
 Volumes
 ~~~~~~~
-A 'volume' is a detachable block storage device.  You can think of it as a usb hard drive.  It can only be attached to one instance at a time, and it behaves
 
-Ephemeral
-~~~~~~~~~
-::
+A 'volume' is a detachable block storage device.  You can think of it as a usb hard drive.  It can only be attached to one instance at a time, so it does not work like a SAN. If you wish to expose the same volume to multiple instances, you will have to use an NFS or SAMBA share from an existing instance.
 
-    TODO(vish): document
+Local Storage
+~~~~~~~~~~~~~
 
-Swift
-~~~~~
-::
-
-    TODO(vish): document
+Every instance larger than m1.tiny starts with some local storage (up to 160GB for m1.xlarge).  This storage is currently the second partition on the root drive.
 
 Concept: Quotas
 ---------------
@@ -308,9 +302,7 @@ Security groups
 Concept: Certificate Authority
 ------------------------------
 
-Per-project CA
-* Images
-* VPNs
+Nova does a small amount of certificate management.  These certificates are used for :ref:`project vpns <cloudpipe>` and decrypting bundled images.
 
 
 Concept: Images
