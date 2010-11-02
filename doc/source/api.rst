@@ -110,3 +110,54 @@ The :mod:`sharedipgroups` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
+EC2 API
+-------
+
+The :mod:`nova.api.ec2` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`admin` Module
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2.admin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`apirequest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2.apirequest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`cloud` Module
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2.cloud
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`images` Module
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2.images
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`metadatarequesthandler` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.ec2.metadatarequesthandler
+    :members:
+    :undoc-members:
+    :show-inheritance:
