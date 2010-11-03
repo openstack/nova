@@ -138,6 +138,8 @@ class FlagValues(gflags.FlagValues):
 
 
 FLAGS = FlagValues()
+gflags.FLAGS = FLAGS
+gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
 
 
 def _wrapper(func):
