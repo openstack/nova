@@ -438,6 +438,7 @@ def get_application():
     # Disabled because of lack of proper introspection in Twisted
     # or possibly different versions of twisted?
     # pylint: disable-msg=E1101
-    objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
+    objectStoreService = internet.TCPServer(FLAGS.s3_port, factory,
+                                            interface=FLAGS.s3_host)
     objectStoreService.setServiceParent(application)
     return application
