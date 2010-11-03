@@ -58,14 +58,6 @@ The :mod:`process` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`quota` Module
------------------------
-
-.. automodule:: nova.quota
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`rpc` Module
 ---------------------
 
@@ -153,14 +145,6 @@ The :mod:`process_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.process_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`quota_unittest` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.tests.quota_unittest
     :members:
     :undoc-members:
     :show-inheritance:
