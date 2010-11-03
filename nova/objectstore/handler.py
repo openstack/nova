@@ -61,6 +61,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('s3_listen_host', '', 'Host to listen on.')
 
 
 def render_xml(request, value):
@@ -439,6 +440,6 @@ def get_application():
     # or possibly different versions of twisted?
     # pylint: disable-msg=E1101
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory,
-                                            interface=FLAGS.s3_host)
+                                            interface=FLAGS.s3_listen_host)
     objectStoreService.setServiceParent(application)
     return application
