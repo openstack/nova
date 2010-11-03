@@ -43,6 +43,17 @@ The :mod:`LinuxNet` driver
     :undoc-members:
     :show-inheritance:
 
+Tests
+-----
+
+The :mod:`network_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.network_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 legacy docs
 -----------

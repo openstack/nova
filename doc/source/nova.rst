@@ -34,14 +34,6 @@ The :mod:`context` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`crypto` Module
-------------------------
-
-.. automodule:: nova.crypto
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`exception` Module
 ---------------------------
 
@@ -54,14 +46,6 @@ The :mod:`flags` Module
 -----------------------
 
 .. automodule:: nova.flags
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`manager` Module
--------------------------
-
-.. automodule:: nova.manager
     :members:
     :undoc-members:
     :show-inheritance:
@@ -94,14 +78,6 @@ The :mod:`server` Module
 ------------------------
 
 .. automodule:: nova.server
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`service` Module
--------------------------
-
-.. automodule:: nova.service
     :members:
     :undoc-members:
     :show-inheritance:
@@ -142,6 +118,89 @@ The :mod:`wsgi` Module
 ----------------------
 
 .. automodule:: nova.wsgi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Tests
+-----
+
+The :mod:`declare_flags` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.declare_flags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`fake_flags` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.fake_flags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`flags_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.flags_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`process_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.process_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`quota_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.quota_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`real_flags` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.real_flags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`rpc_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.rpc_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`runtime_flags` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.runtime_flags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`twistd_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.twistd_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`validator_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.validator_unittest
     :members:
     :undoc-members:
     :show-inheritance:

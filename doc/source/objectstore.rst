@@ -15,37 +15,37 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Scheduler Programming Guide
-===========================
+Objectstore Programming Guide
+=============================
 
-The :mod:`manager` Module
+The :mod:`handler` Module
 -------------------------
 
-.. automodule:: nova.scheduler.manager
+.. automodule:: nova.objectstore.handler
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`driver` Module
+The :mod:`bucket` Module
 ------------------------
 
-.. automodule:: nova.scheduler.driver
+.. automodule:: nova.objectstore.bucket
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`chance` Module
+The :mod:`stored` Module
 ------------------------
 
-.. automodule:: nova.scheduler.chance
+.. automodule:: nova.objectstore.stored
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`simple` Module
-------------------------
+The :mod:`image` Module
+-----------------------
 
-.. automodule:: nova.scheduler.simple
+.. automodule:: nova.objectstore.image
     :members:
     :undoc-members:
     :show-inheritance:
@@ -53,10 +53,10 @@ The :mod:`simple` Module
 Tests
 -----
 
-The :mod:`scheduler_unittest` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`objectstore_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: nova.tests.scheduler_unittest
+.. automodule:: nova.tests.objectstore_unittest
     :members:
     :undoc-members:
     :show-inheritance:

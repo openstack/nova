@@ -161,3 +161,111 @@ The :mod:`metadatarequesthandler` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
+Tests
+-----
+
+The :mod:`api_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`api_integration` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api_integration
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`cloud_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.cloud_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`api.fakes` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.fakes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`api.test_wsgi` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.test_wsgi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_api` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_api
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_auth` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_auth
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_faults` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_faults
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_flavors` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_flavors
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_images` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_images
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_ratelimiting` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_ratelimiting
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_servers` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_servers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`test_sharedipgroups` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.api.openstack.test_sharedipgroups
+    :members:
+    :undoc-members:
+    :show-inheritance:
+

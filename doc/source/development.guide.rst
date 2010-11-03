@@ -42,6 +42,9 @@ Contents
    scheduler
    fakes
    nova
+   cloudpipe
+   objectstore
+   glance
 
 
 Indices and tables

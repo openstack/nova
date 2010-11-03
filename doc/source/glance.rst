@@ -15,48 +15,13 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Scheduler Programming Guide
-===========================
+Glance Integration Programming Guide
+====================================
 
-The :mod:`manager` Module
--------------------------
+The :mod:`image.service` Module
+-------------------------------
 
-.. automodule:: nova.scheduler.manager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`driver` Module
-------------------------
-
-.. automodule:: nova.scheduler.driver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`chance` Module
-------------------------
-
-.. automodule:: nova.scheduler.chance
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`simple` Module
-------------------------
-
-.. automodule:: nova.scheduler.simple
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Tests
------
-
-The :mod:`scheduler_unittest` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.tests.scheduler_unittest
+.. automodule:: nova.image.service
     :members:
     :undoc-members:
     :show-inheritance:

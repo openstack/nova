@@ -34,10 +34,6 @@ from nova.api.ec2 import apirequest
 from nova.auth import manager
 
 
-FLAGS = flags.FLAGS
-FLAGS.FAKE_subdomain = 'ec2'
-
-
 class FakeHttplibSocket(object):
     """a fake socket implementation for httplib.HTTPResponse, trivial"""
     def __init__(self, response_string):
@@ -109,7 +105,7 @@ class ApiEc2TestCase(test.TrialTestCase):
 
         self.host = '127.0.0.1'
 
-        self.app = api.API()
+        self.app = api.API('ec2')
 
     def expect_http(self, host=None, is_secure=False):
         """Returns a new EC2 connection"""
