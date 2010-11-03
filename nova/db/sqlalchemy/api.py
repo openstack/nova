@@ -1032,6 +1032,30 @@ def export_device_create_safe(context, values):
 ###################
 
 
+@require_admin_context
+def iscsi_target_count_by_host(context, host):
+    session = get_session()
+    return session.query(models.IscsiTarget).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(host=host).\
+                   count()
+
+
+@require_admin_context
+def iscsi_target_create_safe(context, values):
+    iscsi_target_ref = models.IscsiTarget()
+    for (key, value) in values.iteritems():
+        iscsi_target_ref[key] = value
+    try:
+        iscsi_target_ref.save()
+        return iscsi_target_ref
+    except IntegrityError:
+        return None
+
+
+###################
+
+
 def auth_destroy_token(_context, token):
     session = get_session()
     session.delete(token)
@@ -1119,6 +1143,25 @@ def volume_allocate_shelf_and_blade(context, volume_id):
 
 
 @require_admin_context
+def volume_allocate_iscsi_target(context, volume_id, host):
+    session = get_session()
+    with session.begin():
+        iscsi_target_ref = session.query(models.IscsiTarget).\
+                                filter_by(volume=None).\
+                                filter_by(host=host).\
+                                filter_by(deleted=False).\
+                                with_lockmode('update').\
+                                first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not iscsi_target_ref:
+            raise db.NoMoreTargets()
+        iscsi_target_ref.volume_id = volume_id
+        session.add(iscsi_target_ref)
+    return iscsi_target_ref.target_num
+
+
+@require_admin_context
 def volume_attached(context, volume_id, instance_id, mountpoint):
     session = get_session()
     with session.begin():
@@ -1168,6 +1211,9 @@ def volume_destroy(context, volume_id):
         session.execute('update export_devices set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
+        session.execute('update iscsi_targets set volume_id=NULL '
+                        'where volume_id=:id',
+                        {'id': volume_id})
 
 
 @require_admin_context
@@ -1209,6 +1255,17 @@ def volume_get(context, volume_id, session=None):
 def volume_get_all(context):
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def volume_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -1219,6 +1276,7 @@ def volume_get_all_by_project(context, project_id):
 
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -1284,6 +1342,19 @@ def volume_get_shelf_and_blade(context, volume_id):
                                  volume_id)
 
     return (result.shelf_id, result.blade_id)
+
+
+@require_admin_context
+def volume_get_iscsi_target_num(context, volume_id):
+    session = get_session()
+    result = session.query(models.IscsiTarget).\
+                     filter_by(volume_id=volume_id).\
+                     first()
+    if not result:
+        raise exception.NotFound('No target id found for volume %s' %
+                                 volume_id)
+
+    return result.target_num
 
 
 @require_context

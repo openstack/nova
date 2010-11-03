@@ -58,6 +58,11 @@ class NoMoreNetworks(exception.Error):
     pass
 
 
+class NoMoreTargets(exception.Error):
+    """No more available blades"""
+    pass
+
+
 ###################
 
 
@@ -502,6 +507,23 @@ def export_device_create_safe(context, values):
 ###################
 
 
+def iscsi_target_count_by_host(context, host):
+    """Return count of export devices."""
+    return IMPL.iscsi_target_count_by_host(context, host)
+
+
+def iscsi_target_create_safe(context, values):
+    """Create an iscsi_target from the values dictionary.
+
+    The device is not returned. If the create violates the unique
+    constraints because the iscsi_target and host already exist,
+    no exception is raised."""
+    return IMPL.iscsi_target_create_safe(context, values)
+
+
+###############
+
+
 def auth_destroy_token(context, token):
     """Destroy an auth token."""
     return IMPL.auth_destroy_token(context, token)
@@ -548,6 +570,11 @@ def volume_allocate_shelf_and_blade(context, volume_id):
     return IMPL.volume_allocate_shelf_and_blade(context, volume_id)
 
 
+def volume_allocate_iscsi_target(context, volume_id, host):
+    """Atomically allocate a free iscsi_target from the pool."""
+    return IMPL.volume_allocate_iscsi_target(context, volume_id, host)
+
+
 def volume_attached(context, volume_id, instance_id, mountpoint):
     """Ensure that a volume is set as attached."""
     return IMPL.volume_attached(context, volume_id, instance_id, mountpoint)
@@ -583,9 +610,9 @@ def volume_get_all(context):
     return IMPL.volume_get_all(context)
 
 
-def volume_get_instance(context, volume_id):
-    """Get the instance that a volume is attached to."""
-    return IMPL.volume_get_instance(context, volume_id)
+def volume_get_all_by_host(context, host):
+    """Get all volumes belonging to a host."""
+    return IMPL.volume_get_all_by_host(context, host)
 
 
 def volume_get_all_by_project(context, project_id):
@@ -598,9 +625,19 @@ def volume_get_by_ec2_id(context, ec2_id):
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
+def volume_get_instance(context, volume_id):
+    """Get the instance that a volume is attached to."""
+    return IMPL.volume_get_instance(context, volume_id)
+
+
 def volume_get_shelf_and_blade(context, volume_id):
     """Get the shelf and blade allocated to the volume."""
     return IMPL.volume_get_shelf_and_blade(context, volume_id)
+
+
+def volume_get_iscsi_target_num(context, volume_id):
+    """Get the target num (tid) allocated to the volume."""
+    return IMPL.volume_get_iscsi_target_num(context, volume_id)
 
 
 def volume_update(context, volume_id, values):

@@ -83,7 +83,7 @@ class ComputeManager(manager.Manager):
         """This call passes stright through to the virtualization driver."""
         yield self.driver.refresh_security_group(security_group_id)
 
-    def create_instance(self, context, security_groups=[], **kwargs):
+    def create_instance(self, context, security_groups=None, **kwargs):
         """Creates the instance in the datastore and returns the
         new instance as a mapping
 
@@ -102,7 +102,8 @@ class ComputeManager(manager.Manager):
         inst_id = instance_ref['id']
 
         elevated = context.elevated()
-        security_groups = kwargs.get('security_groups', [])
+        if not security_groups:
+            security_groups = []
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 inst_id,
@@ -167,6 +168,9 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
+        volumes = instance_ref.get('volumes', []) or []
+        for volume in volumes:
+            self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
@@ -251,10 +255,23 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = yield self.volume_manager.setup_compute_volume(context,
                                                                   volume_id)
-        yield self.driver.attach_volume(instance_ref['ec2_id'],
-                                        dev_path,
-                                        mountpoint)
-        self.db.volume_attached(context, volume_id, instance_id, mountpoint)
+        try:
+            yield self.driver.attach_volume(instance_ref['name'],
+                                            dev_path,
+                                            mountpoint)
+            self.db.volume_attached(context,
+                                    volume_id,
+                                    instance_id,
+                                    mountpoint)
+        except Exception as exc:  # pylint: disable-msg=W0702
+            # NOTE(vish): The inline callback eats the exception info so we
+            #             log the traceback here and reraise the same
+            #             ecxception below.
+            logging.exception("instance %s: attach failed %s, removing",
+                              instance_id, mountpoint)
+            yield self.volume_manager.remove_compute_volume(context,
+                                                            volume_id)
+            raise exc
         defer.returnValue(True)
 
     @defer.inlineCallbacks
@@ -267,7 +284,12 @@ class ComputeManager(manager.Manager):
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        yield self.driver.detach_volume(instance_ref['ec2_id'],
-                                        volume_ref['mountpoint'])
+        if instance_ref['name'] not in self.driver.list_instances():
+            logging.warn("Detaching volume from unknown instance %s",
+                         instance_ref['name'])
+        else:
+            yield self.driver.detach_volume(instance_ref['name'],
+                                            volume_ref['mountpoint'])
+        yield self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)

@@ -81,7 +81,7 @@ class SimpleDriverTestCase(test.TrialTestCase):
                    max_cores=4,
                    max_gigabytes=4,
                    network_manager='nova.network.manager.FlatManager',
-                   volume_driver='nova.volume.driver.FakeAOEDriver',
+                   volume_driver='nova.volume.driver.FakeISCSIDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
         self.manager = auth_manager.AuthManager()

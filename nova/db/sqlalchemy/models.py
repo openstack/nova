@@ -73,6 +73,9 @@ class NovaBase(object):
     def __getitem__(self, key):
         return getattr(self, key)
 
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
     def __iter__(self):
         self._i = iter(object_mapper(self).columns)
         return self
@@ -254,6 +257,10 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    @property
+    def name(self):
+        return self.ec2_id
+
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project."""
@@ -283,6 +290,22 @@ class ExportDevice(BASE, NovaBase):
                           foreign_keys=volume_id,
                           primaryjoin='and_(ExportDevice.volume_id==Volume.id,'
                                            'ExportDevice.deleted==False)')
+
+
+class IscsiTarget(BASE, NovaBase):
+    """Represates an iscsi target for a given host"""
+    __tablename__ = 'iscsi_targets'
+    __table_args__ = (schema.UniqueConstraint("target_num", "host"),
+                      {'mysql_engine': 'InnoDB'})
+    id = Column(Integer, primary_key=True)
+    target_num = Column(Integer)
+    host = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume,
+                          backref=backref('iscsi_target', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
+                                           'IscsiTarget.deleted==False)')
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
@@ -504,7 +527,7 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, FixedIp,
+    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
               FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
               AuthToken, User, Project)  # , Image, Host
