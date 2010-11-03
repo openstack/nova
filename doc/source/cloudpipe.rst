@@ -18,8 +18,8 @@
 
 .. _cloudpipe:
 
-Cloudpipe
-=========
+Cloudpipe -- Per Project Vpns
+=============================
 
 Cloudpipe is a method for connecting end users to their project insnances in vlan mode.
 
