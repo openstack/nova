@@ -465,24 +465,31 @@ class CloudController(object):
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
+        instance_ec2_id = None
+        instance_data = None
+        if volume.get('instance', None):
+            internal_id = volume['instance']['internal_id']
+            instance_ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_data = '%s[%s]' % (instance_ec2_id,
+                                        volume['instance']['host'])
         v = {}
         v['volumeId'] = volume['ec2_id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
         v['createTime'] = volume['created_at']
-        if context.user.is_admin():
+        if context.is_admin:
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
                 volume['host'],
-                volume['instance_id'],
+                instance_data,
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': False,
                                    'device': volume['mountpoint'],
-                                   'instanceId': volume['instance_id'],
+                                   'instanceId': instance_ec2_id,
                                    'status': 'attached',
                                    'volume_id': volume['ec2_id']}]
         else:
@@ -517,7 +524,10 @@ class CloudController(object):
                   "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume_ref['id']}})
 
-        return {'volumeSet': [self._format_volume(context, volume_ref)]}
+        # TODO(vish): Instance should be None at db layer instead of
+        #             trying to lazy load, but for now we turn it into
+        #             a dict to avoid an error.
+        return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)

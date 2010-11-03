@@ -238,6 +238,7 @@ class Executor(wsgi.Application):
             return self._error(req, type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
+        logging.error("%s: %s", code, message)
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'

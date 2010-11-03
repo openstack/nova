@@ -83,9 +83,9 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_many_volumes(self):
-        """Ensure that NoMoreBlades is raised when we run out of volumes"""
+        """Ensure that NoMoreTargets is raised when we run out of volumes"""
         vols = []
-        total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
+        total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
             yield self.volume.create_volume(self.context, volume_id)
@@ -93,7 +93,7 @@ class VolumeTestCase(test.TrialTestCase):
         volume_id = self._create_volume()
         self.assertFailure(self.volume.create_volume(self.context,
                                                      volume_id),
-                           db.NoMoreBlades)
+                           db.NoMoreTargets)
         db.volume_destroy(context.get_admin_context(), volume_id)
         for volume_id in vols:
             yield self.volume.delete_volume(self.context, volume_id)
@@ -148,23 +148,22 @@ class VolumeTestCase(test.TrialTestCase):
         db.instance_destroy(self.context, instance_id)
 
     @defer.inlineCallbacks
-    def test_concurrent_volumes_get_different_blades(self):
-        """Ensure multiple concurrent volumes get different blades"""
+    def test_concurrent_volumes_get_different_targets(self):
+        """Ensure multiple concurrent volumes get different targets"""
         volume_ids = []
-        shelf_blades = []
+        targets = []
 
         def _check(volume_id):
-            """Make sure blades aren't duplicated"""
+            """Make sure targets aren't duplicated"""
             volume_ids.append(volume_id)
             admin_context = context.get_admin_context()
-            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(admin_context,
-                                                                 volume_id)
-            shelf_blade = '%s.%s' % (shelf_id, blade_id)
-            self.assert_(shelf_blade not in shelf_blades)
-            shelf_blades.append(shelf_blade)
-            logging.debug("Blade %s allocated", shelf_blade)
+            iscsi_target = db.volume_get_iscsi_target_num(admin_context,
+                                                          volume_id)
+            self.assert_(iscsi_target not in targets)
+            targets.append(iscsi_target)
+            logging.debug("Target %s allocated", iscsi_target)
         deferreds = []
-        total_slots = FLAGS.num_shelves * FLAGS.blades_per_shelf
+        total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
             d = self.volume.create_volume(self.context, volume_id)
