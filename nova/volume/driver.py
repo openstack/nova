@@ -114,7 +114,7 @@ class VolumeDriver(object):
                                                  escaped_name))
 
     def ensure_export(self, context, volume):
-        """Safely and synchronously recreates an export for a logical volume."""
+        """Synchronously recreates an export for a logical volume."""
         raise NotImplementedError()
 
     @defer.inlineCallbacks
@@ -228,7 +228,7 @@ class ISCSIDriver(VolumeDriver):
     """Executes commands relating to ISCSI volumes."""
 
     def ensure_export(self, context, volume):
-        """Safely and synchronously recreates an export for a logical volume."""
+        """Synchronously recreates an export for a logical volume."""
         iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])

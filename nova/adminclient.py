@@ -273,10 +273,10 @@ class NovaAdminClient(object):
 
     def get_user_roles(self, user, project=None):
         """Returns a list of roles for the given user.
-        
+
         Omitting project will return any global roles that the user has.
         Specifying project will return only project specific roles.
-        
+
         """
         params = {'User': user}
         if project:

@@ -22,7 +22,8 @@ Handles all processes relating to instances (guest vms).
 The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
 handles RPC calls relating to creating instances.  It is responsible for
 building a disk image, launching it via the underlying virtualization driver,
-responding to calls to check it state, attaching persistent as well as termination.
+responding to calls to check it state, attaching persistent as well as
+termination.
 
 **Related Flags**
 

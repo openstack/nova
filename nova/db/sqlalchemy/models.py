@@ -411,10 +411,10 @@ class Network(BASE, NovaBase):
 
 class AuthToken(BASE, NovaBase):
     """Represents an authorization token for all API transactions.
-    
+
     Fields are a string representing the actual token and a user id for
     mapping to the actual user
-    
+
     """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)

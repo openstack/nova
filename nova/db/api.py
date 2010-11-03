@@ -395,7 +395,7 @@ def network_create_safe(context, values):
 
     The network is only returned if the create succeeds. If the create violates
     constraints because the network already exists, no exception is raised.
-    
+
     """
     return IMPL.network_create_safe(context, values)
 
@@ -499,7 +499,7 @@ def export_device_create_safe(context, values):
     The device is not returned. If the create violates the unique
     constraints because the shelf_id and blade_id already exist,
     no exception is raised.
-    
+
     """
     return IMPL.export_device_create_safe(context, values)
 
