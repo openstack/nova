@@ -29,24 +29,37 @@ Related servers we rely on
 
 Optional servers
 
-* OpenLDAP: By default, the auth server uses the RDBMS-backed datastore by setting FLAGS.auth_driver to 'nova.auth.dbdriver.DbDriver'. But OpenLDAP (or LDAP) could be configured.
-* ReDIS: By default, this is not enabled as the auth driver.
+* OpenLDAP: By default, the auth server uses the RDBMS-backed datastore by setting FLAGS.auth_driver to 'nova.auth.dbdriver.DbDriver'. But OpenLDAP (or LDAP) could be configured by specifying 'nova.auth.ldapdriver.LdapDriver'.  There is a script in the sources(nova/auth/slap.sh) to install a very basic openldap server on ubuntu.
+* ReDIS: There is a fake ldap driver that backends to redis. This was created for testing ldap implementation on systems that don't have an easy means to install ldap.
 
-Python libraries we don't vendor
+Python libraries that we use (from pip-requires):
 
-* M2Crypto: python library interface for openssl
-* curl
+.. literalinclude:: ../../tools/pip-requires
+
+Other libraries:
+
 * XenAPI: Needed only for Xen Cloud Platform or XenServer support. Available from http://wiki.xensource.com/xenwiki/XCP_SDK or http://community.citrix.com/cdn/xs/sdks.
 
-Vendored python libaries (don't require any installation)
+External unix tools that are required:
 
-* Twisted: just for the twisted.internet.defer package
-* Tornado: scalable non blocking web server for api requests
-* boto: python api for aws api
-* IPy: library for managing ip addresses
+* iptables
+* ebtables
+* gawk
+* curl
+* kvm
+* libvirt
+* dnsmasq
+* vlan
+* open-iscsi and iscsitarget (if you use iscsi volumes)
+* aoetools and vblade-persist (if you use aoe-volumes)
+
+Nova uses cutting-edge versions of many packages. There are ubuntu packages in the nova-core ppa.  You can use add this ppa to your sources list on an ubuntu machine with the following commands::
+
+  sudo apt-get install -y python-software-properties
+  sudo add-apt-repository ppa:nova-core/ppa
 
 Recommended
------------------
+-----------
 
 * euca2ools: python implementation of aws ec2-tools and ami tools
 * build tornado to use C module for evented section
@@ -55,7 +68,7 @@ Recommended
 Installation
 --------------
 
-    Due to many changes it's best to rely on the `OpenStack wiki <http://wiki.openstack.org>`_ for installation instructions.
+Due to many changes it's best to rely on the `OpenStack wiki <http://wiki.openstack.org>`_ for installation instructions.
 
 Configuration
 ---------------
@@ -88,3 +101,4 @@ Launch nova components
 * nova-compute
 * nova-objectstore
 * nova-volume
+* nova-scheduler

@@ -15,36 +15,38 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-nova System Architecture
+Nova System Architecture
 ========================
 
 Nova is built on a shared-nothing, messaging-based architecture. All of the major nova components can be run on multiple servers. This means that most component to component communication must go via message queue. In order to avoid blocking each component while waiting for a response, we use deferred objects, with a callback that gets triggered when a response is received.
 
-In order to achieve shared-nothing with multiple copies of the same component (especially when the component is an API server that needs to reply with state information in a timely fashion), we need to keep all of our system state in a distributed data system. Updates to system state are written into this system, using atomic transactions when necessary. Requests for state are read out of this system. In limited cases, these read calls are memoized within controllers for short periods of time. (Such a limited case would be, for instance, the current list of system users.)
-
+Nova recently moved to using a sql-based central database that is shared by all components in the system.  The amount and depth of the data fits into a sql database quite well.  For small deployments this seems like an optimal solution.  For larger deployments, and especially if security is a concern, nova will be moving towards multiple data stores with some kind of aggregation system.
 
 Components
 ----------
 
-Below you will find a helpful explanation.
+Below you will find a helpful explanation of the different components.
 
 ::
 
-                    [ Auth  Manager ] ---- ( LDAP )
-                            |
-                            |
-                            |
-                            |                / [ Storage ] - ( ATAoE/iSCSI )
-  [ Web Dashboard ] -> [ nova-api ]  < AMQP > -
-                            |                \ [ Nodes ]   - ( libvirt/kvm )
-                         < HTTP >
-                            |
-                    [ nova-objectstore ]
+                                      /- ( LDAP )
+                  [ Auth Manager ] ---
+                          |           \- ( DB )
+                          |
+                          |       [ scheduler ] - [ volume ]  - ( ATAoE/iSCSI )
+                          |                /
+  [ Web Dashboard ] -> [ api ] -- < AMQP > ------ [ network ] - ( Flat/Vlan )
+                          |                \
+                       < HTTP >   [ scheduler ] - [ compute ] - ( libvirt/xen )
+                          |                           |
+                   [ objectstore ] < - retrieves images
 
-
-* API: receives http requests from boto, converts commands to/from API format, and sending requests to cloud controller
-* Cloud Controller: global state of system, talks to ldap, s3, and node/storage workers through a queue
-* Nodes: worker that spawns instances
-* S3: tornado based http/s3 server
-* User Manager: create/manage users, which are stored in ldap
-* Network Controller: allocate and deallocate IPs and VLANs
+* DB: sql database for data storage. Used by all components (LINKS NOT SHOWN)
+* Web Dashboard: potential external component that talks to the api
+* api: component that receives http requests, converts commands and communicates with other components via the queue or http (in the case of objectstore)
+* Auth Manager: component responsible for users/projects/and roles.  Can backend to DB or LDAP.  This is not a separate binary, but rather a python class that is used by most components in the system.
+* objectstore: twisted http server that replicates s3 api and allows storage and retrieval of images
+* scheduler: decides which host gets each vm and volume
+* volume: manages dynamically attachable block devices.
+* network: manages ip forwarding, bridges, and vlans
+* compute: manages communication with hypervisor and virtual machines.
