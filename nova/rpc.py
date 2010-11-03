@@ -206,6 +206,7 @@ class DirectConsumer(Consumer):
         self.routing_key = msg_id
         self.exchange = msg_id
         self.auto_delete = True
+        self.exclusive = True
         super(DirectConsumer, self).__init__(connection=connection)
 
 
