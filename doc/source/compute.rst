@@ -21,12 +21,6 @@ Virtualization Programming Guide
 
 This page contains the Compute Package documentation.
 
-
-::
-
-    TODO(todd): * document instance_types and power_states
-
-
 Manager
 -------
 

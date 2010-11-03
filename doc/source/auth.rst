@@ -20,12 +20,13 @@
 Authentication and Authorization Programming Guide
 ==================================================
 
-::
+The :mod:`quota` Module
+-----------------------
 
-    TOOD(todd): * Authorizztion
-                    * RBAC
-                    * Quotas
-
+.. automodule:: nova.quota
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Auth Manager
 ------------
@@ -68,7 +69,6 @@ The :mod:`signer` Module
     :undoc-members:
     :show-inheritance:
 
-
 Related Tests
 -------------
 
@@ -81,13 +81,20 @@ The :mod:`auth_unittest` Module
     :show-inheritance:
 
 The :mod:`access_unittest` Module
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.access_unittest
     :members:
     :undoc-members:
     :show-inheritance:
 
+The :mod:`quota_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.tests.quota_unittest
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 legacy docs
 -----------

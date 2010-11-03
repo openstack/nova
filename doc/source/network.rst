@@ -20,12 +20,8 @@ Networking Programming Guide
 
 ::
 
-    TODO(todd): 
-        * document how managers work
-        * document backend (linux-net)
-        * document hardware specific commands
-        * pep 257
-        * document flags
+    TODO(todd): * document hardware specific commands (maybe in admin guide?)
+                * document a map between flags and managers/backends
 
 The :mod:`Manager` module
 -------------------------

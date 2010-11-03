@@ -20,9 +20,14 @@ Nova Development Guide
 
 Nova is written in python.
 
-::
+Prerequisites
+-------------
+.. toctree::
+   :maxdepth: 1
 
-    TODO(todd): * Building packages
+   concepts.and.introduction
+   architecture
+   development.environment
 
 
 Contents
@@ -31,7 +36,6 @@ Contents
 .. toctree::
    :maxdepth: 1
 
-   architecture
    services
    database
    volume
