@@ -34,14 +34,6 @@ The :mod:`context` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`crypto` Module
-------------------------
-
-.. automodule:: nova.crypto
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`exception` Module
 ---------------------------
 
@@ -54,14 +46,6 @@ The :mod:`flags` Module
 -----------------------
 
 .. automodule:: nova.flags
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`manager` Module
--------------------------
-
-.. automodule:: nova.manager
     :members:
     :undoc-members:
     :show-inheritance:
@@ -94,14 +78,6 @@ The :mod:`server` Module
 ------------------------
 
 .. automodule:: nova.server
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`service` Module
--------------------------
-
-.. automodule:: nova.service
     :members:
     :undoc-members:
     :show-inheritance:
