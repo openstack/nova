@@ -43,8 +43,8 @@ Contents
    :maxdepth: 1
 
    concepts.and.introduction
-   administration.guide
-   development.guide
+   adminguide/index
+   devguide/index
    reaching.out
 
 

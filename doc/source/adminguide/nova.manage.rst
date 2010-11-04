@@ -190,7 +190,7 @@ Security groups
 Concept: Certificate Authority
 ------------------------------
 
-Nova does a small amount of certificate management.  These certificates are used for :ref:`project vpns <cloudpipe>` and decrypting bundled images.
+Nova does a small amount of certificate management.  These certificates are used for :ref:`project vpns <../cloudpipe>` and decrypting bundled images.
 
 
 Concept: Images

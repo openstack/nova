@@ -15,19 +15,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Administration Guide
+====================
 
-Nova is written in python.
-
-Prerequisites
--------------
-.. toctree::
-   :maxdepth: 1
-
-   concepts.and.introduction
-   architecture
-   development.environment
+How to deploy, monitor, and debug Nova.
 
 
 Contents
@@ -36,25 +27,10 @@ Contents
 .. toctree::
    :maxdepth: 1
 
-   services
-   database
-   volume
-   compute
-   network
-   auth
-   api
-   scheduler
-   fakes
-   nova
-   cloudpipe
-   objectstore
-   glance
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   quickstart
+   getting.started
+   binaries
+   multi.node.install
+   nova.manage
+   flags
+   monitoring

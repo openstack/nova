@@ -35,7 +35,7 @@ focues on describing how Nova's implementation of those concepts is achieved.
 
 This page outlines concepts that you will need to understand as a user or
 administrator of an OpenStack installation.  Each section links to more more
-detailed information in the :doc:`administration.guide`,
+detailed information in the :doc:`adminguide/index`,
 but you'll probably want to read this section straight-through before tackling
 the specifics presented in the administration guide.
 
