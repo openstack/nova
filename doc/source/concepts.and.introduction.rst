@@ -144,8 +144,7 @@ The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of nova, such as user creation,
 vpn management, and much more.
 
-See :doc:`nova.manage` in the Administration Guide for more
-details.
+See doc:`nova.manage` in the Administration Guide for more details.
 
 
 Concept: Flags

@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration.
+      Administrator of the National Aeronautics and Space Administration. 
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,21 +15,14 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Administration Guide
-====================
+Reaching Out
+============
 
-How to deploy, monitor, and debug Nova.
+The OpenStack community is a very friendly place.  Feel free to ask questions.
+This document points you to some of the places you may want to communicate
+with people at.
 
+::
 
-Contents
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   quickstart
-   getting.started
-   multi.node.install
-   nova.manage
-   flags
-   monitoring
+    TODO(todd): * Write This
+                * Don't end a sentence with a preposition

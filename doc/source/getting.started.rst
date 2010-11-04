@@ -18,19 +18,31 @@
 Getting Started with Nova
 =========================
 
-This code base is continually changing so dependencies also change.
+This code base is continually changing, so dependencies also change.  If you
+encounter any problems, see the :doc:`reaching.out` page.
+The `contrib/nova.sh` script should be kept up to date, and may be a good
+resource to review when debugging.
 
 Dependencies
 ------------
 
 Related servers we rely on
 
-* RabbitMQ: messaging queue, used for all communication between components
+* **RabbitMQ**: messaging queue, used for all communication between components
 
 Optional servers
 
-* OpenLDAP: By default, the auth server uses the RDBMS-backed datastore by setting FLAGS.auth_driver to 'nova.auth.dbdriver.DbDriver'. But OpenLDAP (or LDAP) could be configured by specifying 'nova.auth.ldapdriver.LdapDriver'.  There is a script in the sources(nova/auth/slap.sh) to install a very basic openldap server on ubuntu.
-* ReDIS: There is a fake ldap driver that backends to redis. This was created for testing ldap implementation on systems that don't have an easy means to install ldap.
+* **OpenLDAP**: By default, the auth server uses the RDBMS-backed datastore by
+  setting FLAGS.auth_driver to `nova.auth.dbdriver.DbDriver`. But OpenLDAP
+  (or LDAP) could be configured by specifying `nova.auth.ldapdriver.LdapDriver`.
+  There is a script in the sources (`nova/auth/slap.sh`) to install a very basic
+  openldap server on ubuntu.
+* **ReDIS**: There is a fake ldap auth driver
+  `nova.auth.ldapdriver.FakeLdapDriver` that backends to redis. This was
+  created for testing ldap implementation on systems that don't have an easy
+  means to install ldap.
+* **MySQL**: Either MySQL or another database supported by sqlalchemy needs to
+  be avilable.  Currently, only sqlite3 an mysql have been tested.
 
 Python libraries that we use (from pip-requires):
 
@@ -38,7 +50,9 @@ Python libraries that we use (from pip-requires):
 
 Other libraries:
 
-* XenAPI: Needed only for Xen Cloud Platform or XenServer support. Available from http://wiki.xensource.com/xenwiki/XCP_SDK or http://community.citrix.com/cdn/xs/sdks.
+* **XenAPI**: Needed only for Xen Cloud Platform or XenServer support. Available
+  from http://wiki.xensource.com/xenwiki/XCP_SDK or
+  http://community.citrix.com/cdn/xs/sdks.
 
 External unix tools that are required:
 
@@ -53,7 +67,9 @@ External unix tools that are required:
 * open-iscsi and iscsitarget (if you use iscsi volumes)
 * aoetools and vblade-persist (if you use aoe-volumes)
 
-Nova uses cutting-edge versions of many packages. There are ubuntu packages in the nova-core ppa.  You can use add this ppa to your sources list on an ubuntu machine with the following commands::
+Nova uses cutting-edge versions of many packages. There are ubuntu packages in
+the nova-core ppa.  You can use add this ppa to your sources list on an ubuntu
+machine with the following commands::
 
   sudo apt-get install -y python-software-properties
   sudo add-apt-repository ppa:nova-core/ppa
@@ -68,34 +84,73 @@ Recommended
 Installation
 --------------
 
-Due to many changes it's best to rely on the `OpenStack wiki <http://wiki.openstack.org>`_ for installation instructions.
+You can install from packages for your particular Linux distribution if they are
+available.  Otherwise you can install from source by checking out the source
+files from the `Nova Source Code Repository <http://code.launchpad.net/nova>`_
+and running::
+
+    python setup.py install
 
 Configuration
 ---------------
 
-These instructions are incomplete, but we are actively updating the `OpenStack wiki <http://wiki.openstack.org>`_ with more configuration information.
+Configuring the host system
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-On the volume node
+As you read through the Administration Guide you will notice configuration hints
+inline with documentation on the subsystem you are configuring.  Presented in
+this "Getting Started with Nova" document, we only provide what you need to
+get started as quickly as possible.  For a more detailed description of system
+configuration, start reading through :doc:`multi.node.install`.
 
-* Create a volume group (you can use an actual disk for the volume group as well)
-
-::
+* Create a volume group (you can use an actual disk for the volume group as
+  well)::
 
     # This creates a 1GB file to create volumes out of
     dd if=/dev/zero of=MY_FILE_PATH bs=100M count=10
     losetup --show -f MY_FILE_PATH
     # replace /dev/loop0 below with whatever losetup returns
+    # nova-volumes is the default for the --volume_group flag
     vgcreate nova-volumes /dev/loop0
+
+
+Configuring Nova
+~~~~~~~~~~~~~~~~
+
+Configuration of the entire system is performed through python-gflags.  The
+best way to track configuration is through the use of a flagfile.
+
+A flagfile is specified with the ``--flagfile=FILEPATH`` argument to the binary
+when you launch it.  Flagfiles for nova are typically stored in
+``/etc/nova/nova.conf``, and flags specific to a certain program are stored in
+``/etc/nova/nova-COMMAND.conf``.  Each configuration file can include another
+flagfile, so typically a file like ``nova-manage.conf`` would have as its first
+line ``--flagfile=/etc/nova/nova.conf`` to load the common flags before
+specifying overrides or additional options.
+
+A sample configuration to test the system follows::
+
+    --verbose
+    --nodaemon
+    --FAKE_subdomain=ec2
+    --auth_driver=nova.auth.dbdriver.DbDriver
 
 Running
 ---------
 
-Launch servers
+There are many parts to the nova system, each with a specific function.  They
+are built to be highly-available, so there are may configurations they can be
+run in (ie: on many machines, many listeners per machine, etc).  This part
+of the guide only gets you started quickly, to learn about HA options, see
+:doc:`multi.node.install`.
+
+Launch supporting services
 
 * rabbitmq
 * redis (optional)
+* mysql (optional)
 
-Launch nova components
+Launch nova components, each should have ``--flagfile=/etc/nova/nova.conf``
 
 * nova-api
 * nova-compute

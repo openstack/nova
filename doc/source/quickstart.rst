@@ -18,6 +18,14 @@
 Nova Quickstart
 ===============
 
+::
+
+    TODO(todd): * Document the assumptions about pluggable interfaces
+                  (sqlite3 instead of mysql, etc)
+                * Document env vars that can change things
+                  (USE_MYSQL, HOST_IP)
+
+
 The `contrib/novascript.sh` file in the source distribution is a script that
 will quickly set up nova to run on a single machine.  It is tested against
 Ubuntu only, but other distributions are forthcoming.
