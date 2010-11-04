@@ -18,8 +18,40 @@
 Multi-Node Nova
 ===============
 
-http://etherpad.openstack.org/NovaMultinodeInstall
+When you move beyond evaluating the technology and into building an actual
+production environemnt, you will need to know how to configure your datacenter
+and how to deploy components across your clusters.  This guide should help you
+through that process.
+
+Bare-metal Provisioning
+-----------------------
+
+To install the base operating system you can use PXE booting.
+
+Deployment Technologies
+-----------------------
+
+Once you have machines with a base operating system installation, you can deploy
+code and configuration with your favorite tools:
 
 * Puppet
 * Chef
-* PXE
+
+Types of Hosts
+--------------
+
+A single machine in your cluster can act as one or more of the following types
+of host:
+
+Nova Services
+
+* Network
+* Compute
+* Volume
+* API
+* Objectstore
+
+Other supporting services
+
+* Datastore
+* Message Queue
