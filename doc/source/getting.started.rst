@@ -23,6 +23,14 @@ encounter any problems, see the :doc:`reaching.out` page.
 The `contrib/nova.sh` script should be kept up to date, and may be a good
 resource to review when debugging.
 
+The purpose of this document is to get a system installed that you can use to
+test your setup assumptions.  Working from this base installtion you can
+tweak configurations and work with different flags to monitor interaction with
+your hardware, network, and other factors that will allow you to determine
+suitability for your deployment.  After following this setup method, you should
+be able to experiment with different managers, drivers, and flags to get the
+best performance.
+
 Dependencies
 ------------
 
