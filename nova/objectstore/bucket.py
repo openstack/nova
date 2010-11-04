@@ -33,7 +33,7 @@ from nova.objectstore import stored
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),
+flags.DEFINE_string('buckets_path', '$state_path/buckets',
                     'path to s3 buckets')
 
 

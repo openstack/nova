@@ -26,6 +26,8 @@ import os
 import socket
 import sys
 
+from string import Template
+
 import gflags
 
 
@@ -134,8 +136,21 @@ class FlagValues(gflags.FlagValues):
     def __getattr__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
-        return gflags.FlagValues.__getattr__(self, name)
+        val = gflags.FlagValues.__getattr__(self, name)
+        if type(val) is str:
+            tmpl = Template(val)
+            return tmpl.substitute(StrWrapper(self))
+        return val
 
+class StrWrapper(object):
+    def __init__(self, obj):
+        self.wrapped = obj
+
+    def __getitem__(self, name):
+        if hasattr(self.wrapped, name):
+            return str(getattr(self.wrapped, name))
+        else:
+            raise KeyError(name)
 
 FLAGS = FlagValues()
 gflags.FLAGS = FLAGS
@@ -218,8 +233,11 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
+DEFINE_string('state_path', os.path.abspath("./"),
+              "Top-level directory for maintaining nova's state")
+
 DEFINE_string('sql_connection',
-              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'sqlite:///$state_path/nova.sqlite',
               'connection string for sql database')
 
 DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',

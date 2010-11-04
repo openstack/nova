@@ -38,7 +38,7 @@ flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
-flags.DEFINE_string('networks_path', utils.abspath('../networks'),
+flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')

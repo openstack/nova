@@ -46,7 +46,7 @@ flags.DEFINE_integer('monitoring_instances_delay', 5,
                      'Sleep time between updates')
 flags.DEFINE_integer('monitoring_instances_step', 300,
                      'Interval of RRD updates')
-flags.DEFINE_string('monitoring_rrd_path', '/var/nova/monitor/instances',
+flags.DEFINE_string('monitoring_rrd_path', '$state_path/monitor/instances',
                     'Location of RRD files')
 
 
