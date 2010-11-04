@@ -36,7 +36,7 @@ be found on the `OpenStack wiki`_.
 
 
 Contents
---------
+========
 
 .. toctree::
    :maxdepth: 1
