@@ -18,16 +18,54 @@
 Nova Quickstart
 ===============
 
-.. todo::
-
-    * Document the assumptions about pluggable interfaces (sqlite3 instead of
-      mysql, etc) (todd)
-    * Document env vars that can change things (USE_MYSQL, HOST_IP) (todd)
-
-
-The `contrib/novascript.sh` file in the source distribution is a script that
+The `contrib/nova.sh` file in the source distribution is a script that
 will quickly set up nova to run on a single machine.  It is tested against
 Ubuntu only, but other distributions are forthcoming.
+
+Environment Variables
+---------------------
+
+By tweaking the environment that nova.sh run in, you can build slightly
+different configurations (though for more complex setups you should see
+:doc:`/adminguide/getting.started` and :doc:`/adminguide/multi.node.install`).
+
+HOST_IP
+~~~~~~~
+
+**Default**: address of first interface from the ifconfig command
+**Values**: 127.0.0.1, or any other valid address
+
+TEST
+~~~~
+
+**Default**: 0
+**Values**: 1, run tests after checkout and initial setup
+
+USE_MYSQL
+~~~~~~~~~
+
+**Default**: 0, use sqlite3
+**Values**: 1, use mysql instead of sqlite3
+
+MYSQL_PASS
+~~~~~~~~~~
+
+Only useful if $USE_MYSQL=1.
+
+**Default**: nova
+**Values**: value of root password for mysql
+
+USE_LDAP
+~~~~~~~~
+
+**Default**: 0, use :mod:`nova.auth.dbdriver`
+**Values**: 1, use :mod:`nova.auth.ldapdriver`
+
+LIBVIRT_TYPE
+~~~~~~~~~~~~
+
+**Default**: qemu
+**Values**: uml, kvm
 
 Usage
 -----
