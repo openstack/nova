@@ -22,7 +22,4 @@ The OpenStack community is a very friendly place.  Feel free to ask questions.
 This document points you to some of the places you may want to communicate
 with people at.
 
-::
-
-    TODO(todd): * Write This
-                * Don't end a sentence with a preposition
+.. todo:: Write reaching.out.rst (todd)

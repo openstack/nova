@@ -18,9 +18,7 @@
 Fakes Programming Guide
 =======================
 
-::
-
-    TODO(todd): * document general info about fakes
+.. todo:: document general info about fakes
 
 
 The :mod:`virt.fake` Module

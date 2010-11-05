@@ -18,9 +18,7 @@
 Volume Programming Guide
 =========================
 
-::
-
-    TODO(todd): rework after iSCSI merge (see 'Old Docs')
+.. todo:: rework after iSCSI merge (see 'Old Docs') (todd or vish)
 
 
 The :mod:`nova.volume.manager` Module

@@ -18,6 +18,4 @@
 Setting up a development environment
 ====================================
 
-::
-
-    TODO(anthony)
+.. todo:: write this

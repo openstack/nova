@@ -18,10 +18,10 @@
 Networking Programming Guide
 ============================
 
-::
+.. todo:: 
 
-    TODO(todd): * document hardware specific commands (maybe in admin guide?)
-                * document a map between flags and managers/backends
+    * document hardware specific commands (maybe in admin guide?) (todd)
+    * document a map between flags and managers/backends (todd)
 
 The :mod:`Manager` module
 -------------------------

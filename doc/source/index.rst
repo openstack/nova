@@ -48,6 +48,11 @@ Contents
    reaching.out
 
 
+Outstanding Documentation Tasks
+===============================
+
+.. todolist::
+
 Indices and tables
 ==================
 

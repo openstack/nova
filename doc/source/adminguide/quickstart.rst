@@ -18,12 +18,11 @@
 Nova Quickstart
 ===============
 
-::
+.. todo::
 
-    TODO(todd): * Document the assumptions about pluggable interfaces
-                  (sqlite3 instead of mysql, etc)
-                * Document env vars that can change things
-                  (USE_MYSQL, HOST_IP)
+    * Document the assumptions about pluggable interfaces (sqlite3 instead of
+      mysql, etc) (todd)
+    * Document env vars that can change things (USE_MYSQL, HOST_IP) (todd)
 
 
 The `contrib/novascript.sh` file in the source distribution is a script that
