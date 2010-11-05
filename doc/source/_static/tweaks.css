@@ -44,7 +44,9 @@ table.docutils {
 }
 
 .tweet_list li {
-    margin-bottom: 10px;
+    font-size: 0.9em;
+    border-bottom: 1px solid #eee;
+    padding: 5px 0;
 }
 
 .tweet_list li .tweet_avatar {
