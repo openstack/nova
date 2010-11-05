@@ -18,8 +18,6 @@
 API Endpoint Programming Guide
 ==============================
 
-.. todo:: get actual docstrings from ec2/osapi_verions instead of @wsgify
-
 Nova has a system for managing multiple APIs on different subdomains.
 Currently there is support for the OpenStack API, as well as the Amazon EC2
 API.
