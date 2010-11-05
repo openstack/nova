@@ -22,4 +22,43 @@ The OpenStack community is a very friendly place.  Feel free to ask questions.
 This document points you to some of the places you may want to communicate
 with people at.
 
-.. todo:: Write reaching.out.rst (todd)
+
+#openstack on Freenode IRC Network
+----------------------------------
+
+There is a very active chat channel at `<irc://freenode.net/#openstack>`_.  This
+is usually the best place to ask questions and find your way around.
+
+OpenStack Wiki
+--------------
+
+The wiki is a living source of knowledge.  It is edited by the community, and
+has collections of links and other sources of information.
+
+`OpenStack Wiki <http://wiki.openstack.org/>`_
+
+Nova on Launchpad
+-----------------
+
+Launchapd is a code hosting service that hosts the Nova source code.  From
+launchpad you can report bugs, ask questions, and register blueprints (feature
+requests).
+
+`Launchpad Nova Page <http://launchpad.net/nova>`_
+
+OpenStack Blog
+--------------
+
+The OpenStack blog includes a weekly newsletter that aggregates OpenStack news
+from around the internet, as well as providing inside information on upcoming
+events and posts from OpenStack contributors.
+
+`OpenStack Blog <http://openstack.org/blog>`_
+
+See also: `Planet OpenStack <http://planet.openstack.org/>`_, aggregating blogs
+about OpenStack from around the internet into a single feed.
+
+Twitter
+-------
+
+Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_.
