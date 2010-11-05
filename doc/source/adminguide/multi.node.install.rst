@@ -53,5 +53,6 @@ Nova Services
 
 Other supporting services
 
-* Datastore
 * Message Queue
+* Database (optional)
+* Authentication database (optional)

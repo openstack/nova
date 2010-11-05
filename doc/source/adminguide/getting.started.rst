@@ -157,6 +157,7 @@ Launch supporting services
 * rabbitmq
 * redis (optional)
 * mysql (optional)
+* openldap (optional)
 
 Launch nova components, each should have ``--flagfile=/etc/nova/nova.conf``
 
