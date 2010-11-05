@@ -28,15 +28,6 @@ Bare-metal Provisioning
 
 To install the base operating system you can use PXE booting.
 
-Deployment Technologies
------------------------
-
-Once you have machines with a base operating system installation, you can deploy
-code and configuration with your favorite tools:
-
-* Puppet
-* Chef
-
 Types of Hosts
 --------------
 
@@ -56,3 +47,19 @@ Other supporting services
 * Message Queue
 * Database (optional)
 * Authentication database (optional)
+
+Initial Setup
+-------------
+
+* Networking
+* Cloudadmin User Creation
+
+Deployment Technologies
+-----------------------
+
+Once you have machines with a base operating system installation, you can deploy
+code and configuration with your favorite tools to specify which machines in
+your cluster have which roles:
+
+* Puppet
+* Chef
