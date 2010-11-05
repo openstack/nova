@@ -42,3 +42,11 @@ em {
 table.docutils {
 	font-size: 11px;
 }
+
+.tweet_list li {
+    margin-bottom: 10px;
+}
+
+.tweet_list li .tweet_avatar {
+    float: left;
+}
