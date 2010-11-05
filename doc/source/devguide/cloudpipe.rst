@@ -67,6 +67,14 @@ The :mod:`cloudpipe` Module
     :undoc-members:
     :show-inheritance:
 
+The :mod:`api.cloudpipe` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.api.cloudpipe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 The :mod:`crypto` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

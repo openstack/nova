@@ -30,6 +30,7 @@ import routes
 import webob.dec
 
 from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api import cloudpipe
 from nova.api import ec2
@@ -83,6 +84,7 @@ class API(wsgi.Router):
         mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         super(API, self).__init__(mapper)
 
+    @utils.fix_wsgify_docstr
     @webob.dec.wsgify
     def osapi_versions(self, req):
         """Respond to a request for all OpenStack API versions."""
@@ -94,6 +96,7 @@ class API(wsgi.Router):
                 "attributes": dict(version=["status", "id"])}}
         return wsgi.Serializer(req.environ, metadata).to_content_type(response)
 
+    @utils.fix_wsgify_docstr
     @webob.dec.wsgify
     def ec2api_versions(self, req):
         """Respond to a request for all EC2 versions."""
