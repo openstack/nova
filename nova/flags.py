@@ -180,7 +180,8 @@ DEFINE_list('region_list',
             'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_string('s3_host', '127.0.0.1', 's3 host')
+DEFINE_string('s3_host', '127.0.0.1', 's3 host (for infrastructure)')
+DEFINE_string('s3_dmz', '127.0.0.1', 's3 dmz ip (for instances)')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
@@ -197,7 +198,8 @@ DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
-DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
+DEFINE_string('cc_host', '127.0.0.1', 'ip of api server (for infrastructure')
+DEFINE_string('cc_dmz', '127.0.0.1', 'ip of api server (for instances)')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
@@ -211,10 +213,10 @@ DEFINE_string('default_ramdisk', 'ari-11111',
 DEFINE_string('default_instance_type', 'm1.small',
               'default instance type to use, testing only')
 
-DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
+DEFINE_string('vpn_image_id', 'ami-cloudpipe', 'AMI for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
-              '-key',
-              'Suffix to add to project name for vpn key')
+              '-vpn',
+              'Suffix to add to project name for vpn key and secgroups')
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
