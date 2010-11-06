@@ -22,13 +22,15 @@ an instance with it.
 
 """
 
-import base64
 import logging
 import os
+import string
 import tempfile
 import zipfile
 
 from nova import context
+from nova import crypto
+from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
@@ -39,8 +41,17 @@ from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('boot_script_template',
-                    utils.abspath('cloudpipe/bootscript.sh'),
+                    utils.abspath('cloudpipe/bootscript.template'),
                     'Template for script to run on cloudpipe instance boot')
+flags.DEFINE_string('dmz_net',
+                    '10.0.0.0',
+                    'Network to push into openvpn config')
+flags.DEFINE_string('dmz_mask',
+                    '255.255.255.0',
+                    'Netmask to push into openvpn config')
+
+
+LOG = logging.getLogger('nova-cloudpipe')
 
 
 class CloudPipe(object):
@@ -48,64 +59,96 @@ class CloudPipe(object):
         self.controller = cloud.CloudController()
         self.manager = manager.AuthManager()
 
-    def launch_vpn_instance(self, project_id):
-        logging.debug("Launching VPN for %s" % (project_id))
-        project = self.manager.get_project(project_id)
+    def get_encoded_zip(self, project_id):
         # Make a payload.zip
         tmpfolder = tempfile.mkdtemp()
         filename = "payload.zip"
         zippath = os.path.join(tmpfolder, filename)
         z = zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED)
-
-        z.write(FLAGS.boot_script_template, 'autorun.sh')
+        shellfile = open(FLAGS.boot_script_template, "r")
+        s = string.Template(shellfile.read())
+        shellfile.close()
+        boot_script = s.substitute(cc_dmz=FLAGS.cc_dmz,
+                                   cc_port=FLAGS.cc_port,
+                                   dmz_net=FLAGS.dmz_net,
+                                   dmz_mask=FLAGS.dmz_mask,
+                                   num_vpn=FLAGS.cnt_vpn_clients)
+        # genvpn, sign csr
+        crypto.generate_vpn_files(project_id)
+        z.writestr('autorun.sh', boot_script)
+        crl = os.path.join(crypto.ca_folder(project_id), 'crl.pem')
+        z.write(crl, 'crl.pem')
+        server_key = os.path.join(crypto.ca_folder(project_id), 'server.key')
+        z.write(server_key, 'server.key')
+        ca_crt = os.path.join(crypto.ca_path(project_id))
+        z.write(ca_crt, 'ca.crt')
+        server_crt = os.path.join(crypto.ca_folder(project_id), 'server.crt')
+        z.write(server_crt, 'server.crt')
         z.close()
-
-        key_name = self.setup_key_pair(project.project_manager_id, project_id)
         zippy = open(zippath, "r")
-        context = context.RequestContext(user=project.project_manager,
-                                         project=project)
+        # NOTE(vish): run instances expects encoded userdata, it is decoded
+        # in the get_metadata_call. autorun.sh also decodes the zip file,
+        # hence the double encoding.
+        encoded = zippy.read().encode("base64").encode("base64")
+        zippy.close()
+        return encoded
 
-        reservation = self.controller.run_instances(context,
-            # Run instances expects encoded userdata, it is decoded in the
-            # get_metadata_call. autorun.sh also decodes the zip file, hence
-            # the double encoding.
-            user_data=zippy.read().encode("base64").encode("base64"),
+    def launch_vpn_instance(self, project_id):
+        LOG.debug("Launching VPN for %s" % (project_id))
+        project = self.manager.get_project(project_id)
+        ctxt = context.RequestContext(user=project.project_manager,
+                                      project=project)
+        key_name = self.setup_key_pair(ctxt)
+        group_name = self.setup_security_group(ctxt)
+
+        reservation = self.controller.run_instances(ctxt,
+            user_data=self.get_encoded_zip(project_id),
             max_count=1,
             min_count=1,
             instance_type='m1.tiny',
             image_id=FLAGS.vpn_image_id,
             key_name=key_name,
-            security_groups=["vpn-secgroup"])
-        zippy.close()
+            security_group=[group_name])
 
-    def setup_key_pair(self, user_id, project_id):
-        key_name = '%s%s' % (project_id, FLAGS.vpn_key_suffix)
+    def setup_security_group(self, context):
+        group_name = '%s%s' % (context.project.id, FLAGS.vpn_key_suffix)
+        if db.security_group_exists(context, context.project.id, group_name):
+            return group_name
+        group = {'user_id': context.user.id,
+                 'project_id': context.project.id,
+                 'name': group_name,
+                 'description': 'Group for vpn'}
+        group_ref = db.security_group_create(context, group)
+        rule = {'parent_group_id': group_ref['id'],
+                'cidr': '0.0.0.0/0',
+                'protocol': 'udp',
+                'from_port': 1194,
+                'to_port': 1194}
+        db.security_group_rule_create(context, rule)
+        rule = {'parent_group_id': group_ref['id'],
+                'cidr': '0.0.0.0/0',
+                'protocol': 'icmp',
+                'from_port': -1,
+                'to_port': -1}
+        db.security_group_rule_create(context, rule)
+        # NOTE(vish): No need to trigger the group since the instance
+        #             has not been run yet.
+        return group_name
+
+    def setup_key_pair(self, context):
+        key_name = '%s%s' % (context.project.id, FLAGS.vpn_key_suffix)
         try:
-            private_key, fingerprint = self.manager.generate_key_pair(user_id,
-                                                                      key_name)
+            result = cloud._gen_key(context, context.user.id, key_name)
+            private_key = result['private_key']
             try:
-                key_dir = os.path.join(FLAGS.keys_path, user_id)
+                key_dir = os.path.join(FLAGS.keys_path, context.user.id)
                 if not os.path.exists(key_dir):
                     os.makedirs(key_dir)
-                file_name = os.path.join(key_dir, '%s.pem' % key_name)
-                with open(file_name, 'w') as f:
+                key_path = os.path.join(key_dir, '%s.pem' % key_name)
+                with open(key_path, 'w') as f:
                     f.write(private_key)
             except:
                 pass
         except exception.Duplicate:
             pass
         return key_name
-
-    # def setup_secgroups(self, username):
-    #     conn = self.euca.connection_for(username)
-    #     try:
-    #         secgroup = conn.create_security_group("vpn-secgroup",
-    #                                               "vpn-secgroup")
-    #         secgroup.authorize(ip_protocol = "udp", from_port = "1194",
-    #                            to_port = "1194", cidr_ip = "0.0.0.0/0")
-    #         secgroup.authorize(ip_protocol = "tcp", from_port = "80",
-    #                            to_port = "80", cidr_ip = "0.0.0.0/0")
-    #         secgroup.authorize(ip_protocol = "tcp", from_port = "22",
-    #                            to_port = "22", cidr_ip = "0.0.0.0/0")
-    #     except:
-    #         pass

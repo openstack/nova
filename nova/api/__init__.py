@@ -25,7 +25,6 @@ import webob.dec
 
 from nova import flags
 from nova import wsgi
-from nova.api import cloudpipe
 from nova.api import ec2
 from nova.api import openstack
 from nova.api.ec2 import metadatarequesthandler
@@ -74,7 +73,6 @@ class API(wsgi.Router):
             mapper.connect('%s/{path_info:.*}' % s, controller=mrh,
                            conditions=ec2api_subdomain)
 
-        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify
