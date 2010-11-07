@@ -13,5 +13,8 @@ for x in `find ${NOVA_DIR} -name '*.py'`; do
 done
 
 for mod in ${modules} ; do
-        echo ${mod}
+  if [ ! -f "${DOCS_DIR}/${mod}.rst" ];
+  then
+    echo ${mod}
+  fi
 done
