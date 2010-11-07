@@ -29,6 +29,7 @@ The :mod:`nova.service` Module
 ------------------------------
 
 .. automodule:: nova.service
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -38,6 +39,7 @@ The :mod:`nova.manager` Module
 ------------------------------
 
 .. automodule:: nova.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
