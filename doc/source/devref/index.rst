@@ -15,8 +15,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Nova Development Reference
+==========================
 
 Nova is written in python.
 
@@ -34,7 +34,7 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
    services
    database
