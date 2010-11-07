@@ -15,13 +15,16 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Fakes Programming Guide
-=======================
+Fake Drivers
+============
 
 .. todo:: document general info about fakes
 
+When the real thing isn't available and you have some development to do these
+fake implementations of various drivers let you get on with your day.
 
-The :mod:`virt.fake` Module
+
+The :mod:`nova.virt.fake` Module
 ---------------------------
 
 .. automodule:: nova.virt.fake
@@ -29,8 +32,9 @@ The :mod:`virt.fake` Module
     :undoc-members:
     :show-inheritance:
     :noindex:
-    
-The :mod:`fakeldap` Module
+
+
+The :mod:`nova.auth.fakeldap` Module
 --------------------------
 
 .. automodule:: nova.auth.fakeldap
@@ -38,7 +42,8 @@ The :mod:`fakeldap` Module
     :undoc-members:
     :show-inheritance:
     
-The :mod:`fakerabbit` Module
+
+The :mod:`nova.fakerabbit` Module
 ----------------------------
 
 .. automodule:: nova.fakerabbit
@@ -46,7 +51,8 @@ The :mod:`fakerabbit` Module
     :undoc-members:
     :show-inheritance:
 
-The :class:`FakeAOEDriver` Class
+
+The :class:`nova.volume.driver.FakeAOEDriver` Class
 --------------------------------
 
 .. autoclass:: nova.volume.driver.FakeAOEDriver
@@ -54,7 +60,8 @@ The :class:`FakeAOEDriver` Class
     :undoc-members:
     :show-inheritance:
 
-The :class:`service_unittest.FakeManager` Class
+
+The :class:`nova.tests.service_unittest.FakeManager` Class
 -----------------------------------------------
 
 .. autoclass:: nova.tests.service_unittest.FakeManager
@@ -62,7 +69,8 @@ The :class:`service_unittest.FakeManager` Class
     :undoc-members:
     :show-inheritance:
 
-The :mod:`api.openstack.fakes` Module
+
+The :mod:`nova.tests.api.openstack.fakes` Module
 ------------------------------------------------
 
 .. automodule:: nova.tests.api.openstack.fakes

@@ -1,6 +1,6 @@
 ..
       Copyright 2010 United States Government as represented by the
-      Administrator of the National Aeronautics and Space Administration. 
+      Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,13 +15,47 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Glance Integration Programming Guide
-====================================
+Nova Development Reference
+==========================
 
-The :mod:`image.service` Module
--------------------------------
+Nova is written in Python.
 
-.. automodule:: nova.image.service
-    :members:
-    :undoc-members:
-    :show-inheritance:
+Prerequisites
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   ../concepts.and.introduction
+   architecture
+   development.environment
+
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 3
+
+   services
+   database
+   volume
+   compute
+   network
+   auth
+   api
+   scheduler
+   fakes
+   nova
+   cloudpipe
+   objectstore
+   glance
+
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+

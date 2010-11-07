@@ -16,19 +16,18 @@
       under the License.
 
 
-Virtualization Programming Guide
-================================
+Virtualization
+==============
 
-This page contains the Compute Package documentation.
 
-Manager
+Compute
 -------
 
 Documentation for the compute manager and related files.  For reading about
 a specific virtualization backend, read Drivers_.
 
 
-The :mod:`manager` Module
+The :mod:`nova.compute.manager` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.manager
@@ -36,7 +35,7 @@ The :mod:`manager` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`connection` Module
+The :mod:`nova.virt.connection` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.connection
@@ -44,7 +43,7 @@ The :mod:`connection` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`disk` Module
+The :mod:`nova.compute.disk` Module
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.disk
@@ -52,7 +51,7 @@ The :mod:`disk` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`images` Module
+The :mod:`nova.virt.images` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.images
@@ -61,7 +60,7 @@ The :mod:`images` Module
     :show-inheritance:
 
 
-The :mod:`instance_types` Module
+The :mod:`nova.compute.instance_types` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.instance_types
@@ -70,7 +69,7 @@ The :mod:`instance_types` Module
     :show-inheritance:
 
 
-The :mod:`power_state` Module
+The :mod:`nova.compute.power_state` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.power_state
@@ -82,42 +81,38 @@ The :mod:`power_state` Module
 Drivers
 -------
 
-Libvirt Implementations
-~~~~~~~~~~~~~~~~~~~~~~~
 
-The libvirt driver is capable of supporting KVM, QEMU, and UML.
-
-The :mod:`libvirt_conn` Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.virt.libvirt_conn` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.libvirt_conn
     :members:
     :undoc-members:
     :show-inheritance:
 
-XEN
-~~~
 
-The :mod:`xenapi` Module
-^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.virt.xenapi` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.xenapi
     :members:
     :undoc-members:
     :show-inheritance:
 
-FAKE
-~~~~
+
+The :mod:`nova.virt.fake` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.fake
     :members:
     :undoc-members:
     :show-inheritance:
 
+
 Monitoring
 ----------
 
-The :mod:`monitor` Module
+The :mod:`nova.compute.monitor` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.monitor

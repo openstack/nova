@@ -15,10 +15,14 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Libraries Programming Guide
-================================
+Common and Misc Libraries
+=========================
 
-The :mod:`adminclient` Module
+Libraries common throughout Nova or just ones that haven't been categorized
+very well yet.
+
+
+The :mod:`nova.adminclient` Module
 -----------------------------
 
 .. automodule:: nova.adminclient
@@ -26,7 +30,8 @@ The :mod:`adminclient` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`context` Module
+
+The :mod:`nova.context` Module
 -------------------------
 
 .. automodule:: nova.context
@@ -34,7 +39,8 @@ The :mod:`context` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`exception` Module
+
+The :mod:`nova.exception` Module
 ---------------------------
 
 .. automodule:: nova.exception
@@ -42,7 +48,8 @@ The :mod:`exception` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`flags` Module
+
+The :mod:`nova.flags` Module
 -----------------------
 
 .. automodule:: nova.flags
@@ -50,7 +57,8 @@ The :mod:`flags` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`process` Module
+
+The :mod:`nova.process` Module
 -------------------------
 
 .. automodule:: nova.process
@@ -58,7 +66,8 @@ The :mod:`process` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`rpc` Module
+
+The :mod:`nova.rpc` Module
 ---------------------
 
 .. automodule:: nova.rpc
@@ -66,7 +75,8 @@ The :mod:`rpc` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`server` Module
+
+The :mod:`nova.server` Module
 ------------------------
 
 .. automodule:: nova.server
@@ -74,7 +84,8 @@ The :mod:`server` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`test` Module
+
+The :mod:`nova.test` Module
 ----------------------
 
 .. automodule:: nova.test
@@ -82,7 +93,8 @@ The :mod:`test` Module
     :undoc-members:
     :show-inheritance:  
 
-The :mod:`twistd` Module
+
+The :mod:`nova.twistd` Module
 ------------------------
 
 .. automodule:: nova.twistd
@@ -90,7 +102,8 @@ The :mod:`twistd` Module
     :undoc-members:
     :show-inheritance:  
 
-The :mod:`utils` Module
+
+The :mod:`nova.utils` Module
 -----------------------
 
 .. automodule:: nova.utils
@@ -98,7 +111,8 @@ The :mod:`utils` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`validate` Module
+
+The :mod:`nova.validate` Module
 --------------------------
 
 .. automodule:: nova.validate
@@ -106,13 +120,15 @@ The :mod:`validate` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`wsgi` Module
+
+The :mod:`nova.wsgi` Module
 ----------------------
 
 .. automodule:: nova.wsgi
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Tests
 -----
@@ -125,6 +141,7 @@ The :mod:`declare_flags` Module
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`fake_flags` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -132,6 +149,7 @@ The :mod:`fake_flags` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 The :mod:`flags_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -141,6 +159,7 @@ The :mod:`flags_unittest` Module
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`process_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -148,6 +167,7 @@ The :mod:`process_unittest` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 The :mod:`real_flags` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,6 +177,7 @@ The :mod:`real_flags` Module
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`rpc_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -164,6 +185,7 @@ The :mod:`rpc_unittest` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 The :mod:`runtime_flags` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,6 +195,7 @@ The :mod:`runtime_flags` Module
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`twistd_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -180,6 +203,7 @@ The :mod:`twistd_unittest` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 The :mod:`validator_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

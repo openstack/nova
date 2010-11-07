@@ -8,13 +8,13 @@ for x in `find ${NOVA_DIR} -name '*.py'`; do
     if [ `basename ${x} .py` == "__init__" ] ; then
         continue
     fi
-    relative=nova.`echo ${x} | sed -e 's$^'${NOVA_DIR}'$$' -e 's/.py$//' -e 's$/$.$g'`
+    relative=nova`echo ${x} | sed -e 's$^'${NOVA_DIR}'$$' -e 's/.py$//' -e 's$/$.$g'`
     modules="${modules} ${relative}"
 done
 
 for mod in ${modules} ; do
-    op=`grep ${mod} ${DOCS_DIR}/*.rst`
-    if [ -z "${op}" ] ; then
-        echo ${mod}
-    fi
+  if [ ! -f "${DOCS_DIR}/${mod}.rst" ];
+  then
+    echo ${mod}
+  fi
 done

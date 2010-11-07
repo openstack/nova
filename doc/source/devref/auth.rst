@@ -17,10 +17,10 @@
 
 .. _auth:
 
-Authentication and Authorization Programming Guide
-==================================================
+Authentication and Authorization
+================================
 
-The :mod:`quota` Module
+The :mod:`nova.quota` Module
 -----------------------
 
 .. automodule:: nova.quota
@@ -28,40 +28,8 @@ The :mod:`quota` Module
     :undoc-members:
     :show-inheritance:
 
-Auth Manager
-------------
 
-The :mod:`manager` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.auth.manager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Drivers
--------
-
-The :mod:`ldapdriver` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.auth.ldapdriver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`dbdriver` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.auth.dbdriver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-API Integration
----------------
-
-The :mod:`signer` Module
+The :mod:`nova.auth.signer` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.auth.signer
@@ -69,8 +37,39 @@ The :mod:`signer` Module
     :undoc-members:
     :show-inheritance:
 
-Related Tests
--------------
+
+Auth Manager
+------------
+
+The :mod:`nova.auth.manager` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+The :mod:`nova.auth.ldapdriver` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.ldapdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The :mod:`nova.auth.dbdriver` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.auth.dbdriver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Tests
+-----
+
 
 The :mod:`auth_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,6 +79,7 @@ The :mod:`auth_unittest` Module
     :undoc-members:
     :show-inheritance:
 
+
 The :mod:`access_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -87,6 +87,7 @@ The :mod:`access_unittest` Module
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 The :mod:`quota_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -96,7 +97,8 @@ The :mod:`quota_unittest` Module
     :undoc-members:
     :show-inheritance:
 
-legacy docs
+
+Legacy Docs
 -----------
 
 Nova provides RBAC (Role-based access control) of the AWS-type APIs. We define the following roles:
@@ -104,11 +106,13 @@ Nova provides RBAC (Role-based access control) of the AWS-type APIs. We define t
 Roles-Based Access Control of AWS-style APIs using SAML Assertions
 “Achieving FIPS 199 Moderate certification of a hybrid cloud environment using CloudAudit and declarative C.I.A. classifications”
 
+
 Introduction
 ------------
 
 We will investigate one method for integrating an AWS-style API with US eAuthentication-compatible federated authentication systems, to achieve access controls and limits based on traditional operational roles.
 Additionally, we will look at how combining this approach, with an implementation of the CloudAudit APIs, will allow us to achieve a certification under FIPS 199 Moderate classification for a hybrid cloud environment.
+
 
 Relationship of US eAuth to RBAC
 --------------------------------
@@ -124,6 +128,7 @@ Typical implementations of US eAuth authentication systems are structured as fol
 In more ideal implementations, the remainder of the application-specific account information is stored either in extended schema on the LDAP server itself, via the use of a translucent LDAP proxy, or in an independent datastore keyed off of the UID provided via SAML assertion.
 
 .. _auth_roles:
+
 
 Roles
 -----
@@ -172,6 +177,7 @@ Cloud Administrator/IT-Security:
 
 *	All permissions
 
+
 Enhancements
 ------------
 
@@ -182,6 +188,7 @@ Enhancements
 Wrapping the SAML token into the API calls.
 Then store the UID (fetched via backchannel) into the instance metadata, providing end-to-end auditability of ownership and responsibility, without PII.
 
+
 CloudAudit APIs
 ---------------
 
@@ -191,6 +198,7 @@ CloudAudit APIs
 
 CloudAudit queries may spawn long-running processes (similar to launching instances, etc.) They need to return a ReservationId in the same fashion, which can be returned in further queries for updates.
 RBAC of CloudAudit API calls is critical, since detailed system information is a system vulnerability.
+
 
 Type declarations
 -----------------
@@ -203,16 +211,18 @@ Existing API calls to launch instances specific a single, combined “type” fl
 
 These additional parameters would also apply to creation of block storage volumes (along with the existing parameter of ‘size’), and creation of object storage ‘buckets’. (C.I.A. classifications on a bucket would be inherited by the keys within this bucket.)
 
+
 Request Brokering
 -----------------
 
- *	Cloud Interop
- *	IMF Registration / PubSub
- *	Digital C&A
+*	Cloud Interop
+*	IMF Registration / PubSub
+*	Digital C&A
 
 Establishing declarative semantics for individual API calls will allow the cloud environment to seamlessly proxy these API calls to external, third-party vendors – when the requested CIA levels match.
 
 See related work within the Infrastructure 2.0 working group for more information on how the IMF Metadata specification could be utilized to manage registration of these vendors and their C&A credentials.
+
 
 Dirty Cloud – Hybrid Data Centers
 ---------------------------------
@@ -226,12 +236,14 @@ This interconnect is typically a bridged VPN connection. Any machines that can b
 
 Network discovery protocols (ARP, CDP) can be applied in this case, and existing protocols (SNMP location data, DNS LOC records) overloaded to provide CloudAudit information.
 
+
 The Details
 -----------
 
- *	Preliminary Roles Definitions
- *	Categorization of available API calls
- *	SAML assertion vocabulary
+*	Preliminary Roles Definitions
+*	Categorization of available API calls
+*	SAML assertion vocabulary
+
 
 System limits
 -------------
@@ -249,10 +261,8 @@ The following limits need to be defined and enforced:
 
 Further Challenges
 ------------------
- *	Prioritization of users / jobs in shared computing environments
- *	Incident response planning
- *	Limit launch of instances to specific security groups based on AMI
- *	Store AMIs in LDAP for added property control
 
-
-
+*	Prioritization of users / jobs in shared computing environments
+*	Incident response planning
+*	Limit launch of instances to specific security groups based on AMI
+*	Store AMIs in LDAP for added property control

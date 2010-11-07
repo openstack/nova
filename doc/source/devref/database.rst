@@ -15,10 +15,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Database Programming Guide
-==========================
+The Database Layer
+==================
 
-The :mod:`api` Module
+The :mod:`nova.db.api` Module
 ---------------------
 
 .. automodule:: nova.db.api
@@ -27,32 +27,30 @@ The :mod:`api` Module
     :show-inheritance:
 
 
-Drivers
--------
+The Sqlalchemy Driver
+---------------------
 
-Driver: Sqlalchemy
-~~~~~~~~~~~~~~~~~~
-
-The :mod:`sqlalchemy.api` Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.db.sqlalchemy.api` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.api
 
-The :mod:`sqlalchemy.models` Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.db.sqlalchemy.models` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.models
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`sqlalchemy.session` Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.db.sqlalchemy.session` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.session
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Tests
 -----
