@@ -19,9 +19,10 @@ Glance Integration - The Future of File Storage
 ===============================================
 
 The :mod:`nova.image.service` Module
--------------------------------
+------------------------------------
 
 .. automodule:: nova.image.service
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

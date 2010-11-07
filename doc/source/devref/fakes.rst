@@ -25,46 +25,50 @@ fake implementations of various drivers let you get on with your day.
 
 
 The :mod:`nova.virt.fake` Module
----------------------------
+--------------------------------
 
 .. automodule:: nova.virt.fake
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
-    :noindex:
 
 
 The :mod:`nova.auth.fakeldap` Module
---------------------------
+------------------------------------
 
 .. automodule:: nova.auth.fakeldap
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
     
 
 The :mod:`nova.fakerabbit` Module
-----------------------------
+---------------------------------
 
 .. automodule:: nova.fakerabbit
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :class:`nova.volume.driver.FakeAOEDriver` Class
---------------------------------
+---------------------------------------------------
 
 .. autoclass:: nova.volume.driver.FakeAOEDriver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :class:`nova.tests.service_unittest.FakeManager` Class
------------------------------------------------
+----------------------------------------------------------
 
 .. autoclass:: nova.tests.service_unittest.FakeManager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -74,6 +78,7 @@ The :mod:`nova.tests.api.openstack.fakes` Module
 ------------------------------------------------
 
 .. automodule:: nova.tests.api.openstack.fakes
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

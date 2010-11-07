@@ -28,51 +28,57 @@ a specific virtualization backend, read Drivers_.
 
 
 The :mod:`nova.compute.manager` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`nova.virt.connection` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.connection
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`nova.compute.disk` Module
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.disk
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`nova.virt.images` Module
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.images
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.compute.instance_types` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.instance_types
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.compute.power_state` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.power_state
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -86,6 +92,7 @@ The :mod:`nova.virt.libvirt_conn` Driver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.libvirt_conn
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -95,6 +102,7 @@ The :mod:`nova.virt.xenapi` Driver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.xenapi
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -104,6 +112,7 @@ The :mod:`nova.virt.fake` Driver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.fake
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -113,9 +122,10 @@ Monitoring
 ----------
 
 The :mod:`nova.compute.monitor` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.monitor
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -128,6 +138,7 @@ The :mod:`compute_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.compute_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -136,6 +147,7 @@ The :mod:`virt_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.virt_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

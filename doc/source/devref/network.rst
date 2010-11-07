@@ -28,6 +28,7 @@ The :mod:`nova.network.manager` Module
 --------------------------------------
 
 .. automodule:: nova.network.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -36,6 +37,7 @@ The :mod:`nova.network.linux_net` Driver
 ----------------------------------------
 
 .. automodule:: nova.network.linux_net
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -47,6 +49,7 @@ The :mod:`network_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.network_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

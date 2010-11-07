@@ -19,36 +19,40 @@ Objectstore - File Storage Service
 ==================================
 
 The :mod:`nova.objectstore.handler` Module
--------------------------
+------------------------------------------
 
 .. automodule:: nova.objectstore.handler
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.objectstore.bucket` Module
-------------------------
+-----------------------------------------
 
 .. automodule:: nova.objectstore.bucket
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.objectstore.stored` Module
-------------------------
+-----------------------------------------
 
 .. automodule:: nova.objectstore.stored
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.objecstore.image` Module
------------------------
+----------------------------------------
 
 .. automodule:: nova.objectstore.image
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -61,6 +65,7 @@ The :mod:`objectstore_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.objectstore_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

@@ -21,18 +21,20 @@ Authentication and Authorization
 ================================
 
 The :mod:`nova.quota` Module
------------------------
+----------------------------
 
 .. automodule:: nova.quota
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.auth.signer` Module
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.auth.signer
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -42,26 +44,29 @@ Auth Manager
 ------------
 
 The :mod:`nova.auth.manager` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.auth.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.auth.ldapdriver` Driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.auth.ldapdriver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`nova.auth.dbdriver` Driver
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.auth.dbdriver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -75,6 +80,7 @@ The :mod:`auth_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.auth_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -84,6 +90,7 @@ The :mod:`access_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.access_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -93,6 +100,7 @@ The :mod:`quota_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.quota_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

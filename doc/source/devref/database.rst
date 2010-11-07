@@ -19,9 +19,10 @@ The Database Layer
 ==================
 
 The :mod:`nova.db.api` Module
----------------------
+-----------------------------
 
 .. automodule:: nova.db.api
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -34,11 +35,13 @@ The :mod:`nova.db.sqlalchemy.api` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.api
+    :noindex:
 
 The :mod:`nova.db.sqlalchemy.models` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.models
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -47,6 +50,7 @@ The :mod:`nova.db.sqlalchemy.session` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.db.sqlalchemy.session
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

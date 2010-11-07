@@ -25,6 +25,7 @@ The :mod:`nova.volume.manager` Module
 -------------------------------------
 
 .. automodule:: nova.volume.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -33,6 +34,7 @@ The :mod:`nova.volume.driver` Module
 -------------------------------------
 
 .. automodule:: nova.volume.driver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -45,6 +47,7 @@ The :mod:`volume_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.volume_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

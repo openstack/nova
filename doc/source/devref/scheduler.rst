@@ -19,36 +19,40 @@ Scheduler
 =========
 
 The :mod:`nova.scheduler.manager` Module
--------------------------
+----------------------------------------
 
 .. automodule:: nova.scheduler.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.scheduler.driver` Module
-------------------------
+---------------------------------------
 
 .. automodule:: nova.scheduler.driver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.scheduler.chance` Driver
-------------------------
+---------------------------------------
 
 .. automodule:: nova.scheduler.chance
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.scheduler.simple` Driver
-------------------------
+---------------------------------------
 
 .. automodule:: nova.scheduler.simple
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -61,6 +65,7 @@ The :mod:`scheduler_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.scheduler_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
