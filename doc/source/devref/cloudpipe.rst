@@ -65,27 +65,30 @@ If the use_project_ca flag is set (required to for cloudpipes to work securely),
 
 
 The :mod:`nova.cloudpipe.pipelib` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.cloudpipe.pipelib
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.api.cloudpipe` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.api.cloudpipe
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
 The :mod:`nova.crypto` Module
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.crypto
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

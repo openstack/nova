@@ -31,25 +31,22 @@ Prerequisites
    development.environment
 
 
-Contents
---------
+Guides
+------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    services
-   database
-   volume
-   compute
-   network
-   auth
-   api
-   scheduler
-   fakes
-   nova
    cloudpipe
-   objectstore
-   glance
+
+API Reference
+-------------
+
+.. toctree::
+    :glob:
+
+    /api/*
 
 
 Indices and tables
