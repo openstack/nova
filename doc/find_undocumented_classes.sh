@@ -13,8 +13,8 @@ for x in `find ${NOVA_DIR} -name '*.py'`; do
 done
 
 for mod in ${modules} ; do
-  if [ ! -f "${DOCS_DIR}/${mod}.rst" ];
-  then
-    echo ${mod}
-  fi
+    op=`grep ${mod} ${DOCS_DIR}/*.rst`
+    if [ -z "${op}" ] ; then
+        echo ${mod}
+    fi
 done

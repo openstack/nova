@@ -17,11 +17,7 @@
 #    under the License.
 
 """
-A service is a very thin wrapper around a Manager object.  It exposes the
-manager's public methods to other components of the system via rpc.  It will
-report state periodically to the database and is responsible for initiating any periodic tasts that need to be executed on a given host.
-
-This module contains Service, a generic baseclass for all workers.
+Generic Node baseclass for all workers that run on hosts
 """
 
 import inspect

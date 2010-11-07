@@ -45,7 +45,7 @@ Contents
 
    concepts.and.introduction
    adminguide/index
-   devref/index
+   devguide/index
    reaching.out
 
 Recommended System Configuration
