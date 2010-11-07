@@ -15,10 +15,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Glance Integration Programming Guide
-====================================
+Glance Integration - The Future of File Storage
+===============================================
 
-The :mod:`image.service` Module
+The :mod:`nova.image.service` Module
 -------------------------------
 
 .. automodule:: nova.image.service

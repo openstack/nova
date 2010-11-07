@@ -18,10 +18,11 @@
 Nova Development Reference
 ==========================
 
-Nova is written in python.
+Nova is written in Python.
 
 Prerequisites
 -------------
+
 .. toctree::
    :maxdepth: 1
 

@@ -15,8 +15,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-API Endpoint Programming Guide
-==============================
+API Endpoint
+============
 
 Nova has a system for managing multiple APIs on different subdomains.
 Currently there is support for the OpenStack API, as well as the Amazon EC2
@@ -33,7 +33,7 @@ The :mod:`nova.api` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`cloud` Module
+The :mod:`nova.api.cloud` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.api.cloud

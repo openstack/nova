@@ -15,10 +15,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Objectstore Programming Guide
-=============================
+Objectstore - File Storage Service
+==================================
 
-The :mod:`handler` Module
+The :mod:`nova.objectstore.handler` Module
 -------------------------
 
 .. automodule:: nova.objectstore.handler
@@ -26,7 +26,8 @@ The :mod:`handler` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`bucket` Module
+
+The :mod:`nova.objectstore.bucket` Module
 ------------------------
 
 .. automodule:: nova.objectstore.bucket
@@ -34,7 +35,8 @@ The :mod:`bucket` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`stored` Module
+
+The :mod:`nova.objectstore.stored` Module
 ------------------------
 
 .. automodule:: nova.objectstore.stored
@@ -42,13 +44,15 @@ The :mod:`stored` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`image` Module
+
+The :mod:`nova.objecstore.image` Module
 -----------------------
 
 .. automodule:: nova.objectstore.image
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Tests
 -----

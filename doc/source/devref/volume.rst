@@ -15,8 +15,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Volume Programming Guide
-=========================
+Storage Volumes, Disks
+======================
 
 .. todo:: rework after iSCSI merge (see 'Old Docs') (todd or vish)
 
@@ -40,6 +40,9 @@ The :mod:`nova.volume.driver` Module
 
 Tests
 -----
+
+The :mod:`volume_unittest` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.volume_unittest
     :members:
