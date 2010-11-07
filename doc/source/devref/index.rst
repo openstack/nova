@@ -15,13 +15,14 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Nova Development Guide
-======================
+Nova Development Reference
+==========================
 
-Nova is written in python.
+Nova is written in Python.
 
 Prerequisites
 -------------
+
 .. toctree::
    :maxdepth: 1
 
@@ -30,25 +31,22 @@ Prerequisites
    development.environment
 
 
-Contents
---------
+Guides
+------
 
 .. toctree::
    :maxdepth: 1
 
    services
-   database
-   volume
-   compute
-   network
-   auth
-   api
-   scheduler
-   fakes
-   nova
    cloudpipe
-   objectstore
-   glance
+
+API Reference
+-------------
+
+.. toctree::
+    :glob:
+
+    /api/*
 
 
 Indices and tables

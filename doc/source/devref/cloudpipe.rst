@@ -23,10 +23,12 @@ Cloudpipe -- Per Project Vpns
 
 Cloudpipe is a method for connecting end users to their project insnances in vlan mode.
 
+
 Overview
 --------
 
 The support code for cloudpipe implements admin commands (via nova-manage) to automatically create a vm for a project that allows users to vpn into the private network of their project. Access to this vpn is provided through a public port on the network host for the project.  This allows users to have free access to the virtual machines in their project without exposing those machines to the public internet.
+
 
 Cloudpipe Image
 ---------------
@@ -34,6 +36,7 @@ Cloudpipe Image
 The cloudpipe image is basically just a linux instance with openvpn installed.  It needs a simple script to grab user data from the metadata server, b64 decode it into a zip file, and run the autorun.sh script from inside the zip.  The autorun script will configure and run openvpn to run using the data from nova.
 
 It is also useful to have a cron script that will periodically redownload the metadata and copy the new crl.  This will keep revoked users from connecting and will disconnect any users that are connected with revoked certificates when their connection is renegotiated (every hour).
+
 
 Cloudpipe Launch
 ----------------
@@ -45,6 +48,7 @@ When you use nova-manage to launch a cloudpipe for a user, it goes through the f
 #. creates a cert and private key for the vpn instance and saves it in the CA/projects/<project_id>/ directory
 #. zips up the info and puts it b64 encoded as user data
 #. launches an m1.tiny instance with the above settings using the flag-specified vpn image
+
 
 Vpn Access
 ----------
@@ -59,26 +63,32 @@ Certificates and Revocation
 
 If the use_project_ca flag is set (required to for cloudpipes to work securely), then each project has its own ca.  This ca is used to sign the certificate for the vpn, and is also passed to the user for bundling images.  When a certificate is revoked using nova-manage, a new Certificate Revocation List (crl) is generated.  As long as cloudpipe has an updated crl, it will block revoked users from connecting to the vpn.
 
-The :mod:`cloudpipe` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :mod:`nova.cloudpipe.pipelib` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.cloudpipe.pipelib
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`api.cloudpipe` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :mod:`nova.api.cloudpipe` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.api.cloudpipe
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`crypto` Module
-~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :mod:`nova.crypto` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.crypto
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
