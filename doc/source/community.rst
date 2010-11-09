@@ -15,10 +15,12 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Reaching Out
-============
+Getting Involved
+================
 
-The OpenStack community is a very friendly place.  Feel free to ask questions.
+.. todo:: Talk about contributing code back to the project
+
+The Nova community is a very friendly place.  Feel free to ask questions.
 This document points you to some of the places you may want to communicate
 with people at.
 
@@ -62,3 +64,4 @@ Twitter
 -------
 
 Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_.
+

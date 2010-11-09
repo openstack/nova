@@ -15,41 +15,31 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Developer Guide
-===============
+Managing Instances
+==================
 
-In this section you will find information on Nova's lower level programming APIs.
+.. todo: cleanup
 
-Programming HowTos and Tutorials
---------------------------------
-
-.. todo:: Add some programming howtos and tuts
-
-Module Reference
-----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   services
-   database
-   volume
-   compute
-   network
-   auth
-   api
-   scheduler
-   fakes
-   nova
-   cloudpipe
-   objectstore
-   glance
+Instance management can be accomplished with euca commands:
 
 
-Indices and tables
-------------------
+To run an instance:
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+::
 
+    euca-run-instances
+
+
+To terminate an instance:
+
+::
+
+    euca-terminate-instances
+
+To reboot an instance:
+
+::
+
+    euca-reboot-instances
+
+See the euca2ools documentation for more information

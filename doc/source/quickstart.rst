@@ -24,6 +24,26 @@ Nova Quickstart
       mysql, etc) (todd)
     * Document env vars that can change things (USE_MYSQL, HOST_IP) (todd)
 
+Recommended System Configuration
+--------------------------------
+
+Although Nova can be run on a variety of system architectures, for most users the following will be simplest:
+
+* Ubuntu Lucid
+* 10GB Hard Disk Space
+* 512MB RAM
+
+For development, Nova can run from within a VM.
+
+
+Getting the Code
+----------------
+
+Nova is hosted on launchpad.  You can get the code with the following command
+
+::
+
+    bzr clone lp:nova
 
 The `contrib/novascript.sh` file in the source distribution is a script that
 will quickly set up nova to run on a single machine.  It is tested against

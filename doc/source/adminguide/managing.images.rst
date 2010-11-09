@@ -15,41 +15,7 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Developer Guide
+Managing Images
 ===============
 
-In this section you will find information on Nova's lower level programming APIs.
-
-Programming HowTos and Tutorials
---------------------------------
-
-.. todo:: Add some programming howtos and tuts
-
-Module Reference
-----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   services
-   database
-   volume
-   compute
-   network
-   auth
-   api
-   scheduler
-   fakes
-   nova
-   cloudpipe
-   objectstore
-   glance
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. todo:: Put info on managing images  here!

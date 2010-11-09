@@ -18,19 +18,48 @@
 Administration Guide
 ====================
 
-How to deploy, monitor, and debug Nova.
+This guide describes the basics of installing and managing Nova.  If you havn't yet, you should do the :doc:`../quickstart` before proceeding.
 
+Authentication
+--------------
 
-Contents
---------
+.. todo:: Explain authentication
+
+Administration Utilities
+------------------------
+
+There are two main tools that a system administrator will find useful to manage their Nova cloud:
 
 .. toctree::
    :maxdepth: 1
 
-   quickstart
-   getting.started
-   binaries
-   multi.node.install
+   euca2ools
    nova.manage
+
+
+User and Resource Management
+----------------------------
+
+nova-manage and euca2ools provide the basic interface to perform a broad range of administration functions.  In this section, you can read more about how to accomplish specific administration tasks.
+
+.. toctree::
+   :maxdepth: 1
+
+   managing.users
+   managing.projects
+   managing.instances
+   managing.images
+   managing.volumes
+   managing.networks
+
+Advanced Topics
+---------------
+
+.. toctree::
+   :maxdepth: 1
+
+   multi.node.install
+   binaries
    flags
    monitoring
+

@@ -19,7 +19,7 @@ Getting Started with Nova
 =========================
 
 This code base is continually changing, so dependencies also change.  If you
-encounter any problems, see the :doc:`../reaching.out` page.
+encounter any problems, see the :doc:`../community` page.
 The `contrib/nova.sh` script should be kept up to date, and may be a good
 resource to review when debugging.
 
