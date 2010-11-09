@@ -15,40 +15,48 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Scheduler Programming Guide
-===========================
+Scheduler
+=========
 
-The :mod:`manager` Module
--------------------------
+The :mod:`nova.scheduler.manager` Module
+----------------------------------------
 
 .. automodule:: nova.scheduler.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`driver` Module
-------------------------
+
+The :mod:`nova.scheduler.driver` Module
+---------------------------------------
 
 .. automodule:: nova.scheduler.driver
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`chance` Module
-------------------------
+
+The :mod:`nova.scheduler.chance` Driver
+---------------------------------------
 
 .. automodule:: nova.scheduler.chance
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`simple` Module
-------------------------
+
+The :mod:`nova.scheduler.simple` Driver
+---------------------------------------
 
 .. automodule:: nova.scheduler.simple
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Tests
 -----
@@ -57,6 +65,7 @@ The :mod:`scheduler_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.scheduler_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

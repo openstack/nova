@@ -55,9 +55,8 @@ Using Nova
 
    quickstart
    adminguide/index
-   devguide/index
+   devref/index
    community
-
 
 Outstanding Documentation Tasks
 ===============================

@@ -20,16 +20,23 @@ Developer Guide
 
 In this section you will find information on Nova's lower level programming APIs.
 
+
 Programming HowTos and Tutorials
 --------------------------------
 
 .. todo:: Add some programming howtos and tuts
 
+API Reference
+-------------
+.. toctree::
+   :maxdepth: 3
+
+   ../api/autoindex
+
 Module Reference
 ----------------
-
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
    services
    database

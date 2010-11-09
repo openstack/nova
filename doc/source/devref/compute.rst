@@ -16,64 +16,69 @@
       under the License.
 
 
-Virtualization Programming Guide
-================================
+Virtualization
+==============
 
-This page contains the Compute Package documentation.
 
-Manager
+Compute
 -------
 
 Documentation for the compute manager and related files.  For reading about
 a specific virtualization backend, read Drivers_.
 
 
-The :mod:`manager` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.compute.manager` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`connection` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.virt.connection` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.connection
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`disk` Module
-~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.compute.disk` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.disk
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`images` Module
-~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.virt.images` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.images
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
-The :mod:`instance_types` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.compute.instance_types` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.instance_types
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
-The :mod:`power_state` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.compute.power_state` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.power_state
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -82,45 +87,45 @@ The :mod:`power_state` Module
 Drivers
 -------
 
-Libvirt Implementations
-~~~~~~~~~~~~~~~~~~~~~~~
 
-The libvirt driver is capable of supporting KVM, QEMU, and UML.
-
-The :mod:`libvirt_conn` Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.virt.libvirt_conn` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.libvirt_conn
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-XEN
-~~~
 
-The :mod:`xenapi` Module
-^^^^^^^^^^^^^^^^^^^^^^^^
+The :mod:`nova.virt.xenapi` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.xenapi
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-FAKE
-~~~~
+
+The :mod:`nova.virt.fake` Driver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.virt.fake
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Monitoring
 ----------
 
-The :mod:`monitor` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~
+The :mod:`nova.compute.monitor` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.compute.monitor
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -133,6 +138,7 @@ The :mod:`compute_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.compute_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -141,6 +147,7 @@ The :mod:`virt_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.virt_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

@@ -17,8 +17,8 @@
 
 .. _binaries:
 
-Nova Binaries
-===============
+Nova Daemons
+=============
 
 The configuration of these binaries relies on "flagfiles" using the google
 gflags package::
@@ -26,11 +26,6 @@ gflags package::
    $ nova-xxxxx --flagfile flagfile
 
 The binaries can all run on the same machine or be spread out amongst multiple boxes in a large deployment.
-
-nova-manage
------------
-
-Nova manage is a command line utility to administer the system.  It will autmatically try to load a flagfile from /etc/nova/nova-manage.conf to save you having to type it. Info on the commands can be found :ref:`here <manage_usage>`.
 
 nova-api
 --------

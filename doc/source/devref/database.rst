@@ -15,48 +15,49 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Objectstore Programming Guide
-=============================
+The Database Layer
+==================
 
-The :mod:`handler` Module
--------------------------
+The :mod:`nova.db.api` Module
+-----------------------------
 
-.. automodule:: nova.objectstore.handler
+.. automodule:: nova.db.api
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`bucket` Module
-------------------------
 
-.. automodule:: nova.objectstore.bucket
+The Sqlalchemy Driver
+---------------------
+
+The :mod:`nova.db.sqlalchemy.api` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.db.sqlalchemy.api
+    :noindex:
+
+The :mod:`nova.db.sqlalchemy.models` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: nova.db.sqlalchemy.models
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`stored` Module
-------------------------
+The :mod:`nova.db.sqlalchemy.session` Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: nova.objectstore.stored
+.. automodule:: nova.db.sqlalchemy.session
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`image` Module
------------------------
-
-.. automodule:: nova.objectstore.image
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Tests
 -----
 
-The :mod:`objectstore_unittest` Module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: nova.tests.objectstore_unittest
-    :members:
-    :undoc-members:
-    :show-inheritance:
+Tests are lacking for the db api layer and for the sqlalchemy driver.
+Failures in the drivers would be dectected in other test cases, though.

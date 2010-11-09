@@ -15,26 +15,29 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Networking Programming Guide
-============================
+Networking
+==========
 
 .. todo:: 
 
     * document hardware specific commands (maybe in admin guide?) (todd)
     * document a map between flags and managers/backends (todd)
 
-The :mod:`Manager` module
--------------------------
+
+The :mod:`nova.network.manager` Module
+--------------------------------------
 
 .. automodule:: nova.network.manager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`LinuxNet` driver
---------------------------
+The :mod:`nova.network.linux_net` Driver
+----------------------------------------
 
 .. automodule:: nova.network.linux_net
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -46,12 +49,13 @@ The :mod:`network_unittest` Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: nova.tests.network_unittest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
 
-legacy docs
+Legacy docs
 -----------
 
 The nova networking components manage private networks, public IP addressing, VPN connectivity, and firewall rules.

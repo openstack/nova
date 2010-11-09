@@ -18,12 +18,14 @@
 Administration Guide
 ====================
 
-This guide describes the basics of installing and managing Nova.  If you havn't yet, you should do the :doc:`../quickstart` before proceeding.
+This guide describes the basics of running and managing Nova.  
 
-Authentication
---------------
+Running the Cloud
+-----------------
 
-.. todo:: Explain authentication
+The fastest way to get a test cloud running is by following the directions in the :doc:`../quickstart`.  
+
+Nova's cloud works via the interaction of a series of daemon processes that reside persistently on the host machine(s).  Fortunately, the :doc:`../quickstart` process launches sample versions of all these daemons for you.  Once you are familiar with basic Nova usage, you can learn more about daemons by reading :doc:`../service.architecture` and :doc:`binaries`.
 
 Administration Utilities
 ------------------------
@@ -33,14 +35,17 @@ There are two main tools that a system administrator will find useful to manage 
 .. toctree::
    :maxdepth: 1
 
-   euca2ools
    nova.manage
+   euca2ools
 
+nova-manage may only be run by users with admin priviledges.  euca2ools can be used by all users, though specific commands may be restricted by Role Based Access Control.  You can read more about creating and managing users in :doc:`managing.users`
 
 User and Resource Management
 ----------------------------
 
-nova-manage and euca2ools provide the basic interface to perform a broad range of administration functions.  In this section, you can read more about how to accomplish specific administration tasks.
+nova-manage and euca2ools provide the basic interface to perform a broad range of administration functions.  In this section, you can read more about how to accomplish specific administration tasks.  
+
+For background on the core objects refenced in this section, see :doc:`../object.model`
 
 .. toctree::
    :maxdepth: 1
@@ -59,7 +64,6 @@ Advanced Topics
    :maxdepth: 1
 
    multi.node.install
-   binaries
    flags
    monitoring
 

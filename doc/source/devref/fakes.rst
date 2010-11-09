@@ -15,57 +15,70 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Fakes Programming Guide
-=======================
+Fake Drivers
+============
 
 .. todo:: document general info about fakes
 
+When the real thing isn't available and you have some development to do these
+fake implementations of various drivers let you get on with your day.
 
-The :mod:`virt.fake` Module
----------------------------
 
-.. automodule:: nova.virt.fake
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :noindex:
-    
-The :mod:`fakeldap` Module
---------------------------
-
-.. automodule:: nova.auth.fakeldap
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    
-The :mod:`fakerabbit` Module
-----------------------------
-
-.. automodule:: nova.fakerabbit
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :class:`FakeAOEDriver` Class
+The :mod:`nova.virt.fake` Module
 --------------------------------
 
-.. autoclass:: nova.volume.driver.FakeAOEDriver
+.. automodule:: nova.virt.fake
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :class:`service_unittest.FakeManager` Class
------------------------------------------------
+
+The :mod:`nova.auth.fakeldap` Module
+------------------------------------
+
+.. automodule:: nova.auth.fakeldap
+    :noindex:
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
+
+The :mod:`nova.fakerabbit` Module
+---------------------------------
+
+.. automodule:: nova.fakerabbit
+    :noindex:
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+The :class:`nova.volume.driver.FakeAOEDriver` Class
+---------------------------------------------------
+
+.. autoclass:: nova.volume.driver.FakeAOEDriver
+    :noindex:
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+The :class:`nova.tests.service_unittest.FakeManager` Class
+----------------------------------------------------------
 
 .. autoclass:: nova.tests.service_unittest.FakeManager
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
 
-The :mod:`api.openstack.fakes` Module
+
+The :mod:`nova.tests.api.openstack.fakes` Module
 ------------------------------------------------
 
 .. automodule:: nova.tests.api.openstack.fakes
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

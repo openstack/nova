@@ -20,8 +20,19 @@ Managing Projects
 
 Projects are isolated resource containers forming the principal organizational structure within Nova.  They consist of a separate vlan, volumes, instances, images, keys, and users.
 
-Basic Commands
---------------
+Although the original ec2 api only supports users, nova adds the concept of projects. A user can specify which project he or she wishes to use by appending `:project_id` to his or her access key.  If no project is specified in the api request, nova will attempt to use a project with the same id as the user.
+
+The api will return NotAuthorized if a normal user attempts to make requests for a project that he or she is not a member of.  Note that admins or users with special admin roles skip this check and can make requests for any project.
+
+To create a project, use the `project create` command of nova-manage. The syntax is nova-manage project create projectname manager_id [description] You must specify a projectname and a manager_id. For example::
+  nova-manage project create john_project john "This is a sample project"
+
+You can add and remove users from projects with `project add` and `project remove`::
+  nova-manage project add john_project john
+  nova-manage project remove john_project john
+
+Project Commands
+----------------
 
 Admins and Project Managers can use the 'nova-manage project' command to manage project resources:
 
