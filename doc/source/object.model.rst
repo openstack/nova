@@ -22,8 +22,15 @@ Object Model
    }
 
 
+Users
+-----
+
 Projects
 --------
+
+
+Images
+------
 
 
 Instances
@@ -33,13 +40,6 @@ Instances
 Volumes
 -------
 
-
-Users
------
-
-
-Images
-------
 
 Security Groups
 ---------------

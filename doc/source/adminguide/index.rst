@@ -57,13 +57,32 @@ For background on the core objects refenced in this section, see :doc:`../object
    managing.volumes
    managing.networks
 
+Deployment
+----------
+
+.. todo:: talk about deployment scenarios
+
+.. toctree::
+   :maxdepth: 1
+
+   multi.node.install
+
+
+Networking
+^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+
+   multi.node.install
+
+
 Advanced Topics
 ---------------
 
 .. toctree::
    :maxdepth: 1
 
-   multi.node.install
    flags
    monitoring
 

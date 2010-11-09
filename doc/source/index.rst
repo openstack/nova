@@ -44,6 +44,7 @@ Key Concepts
    :maxdepth: 1
 
    cloud101
+   nova.concepts
    service.architecture
    object.model
 
