@@ -27,12 +27,12 @@ ul.todo_list li {
 }
 
 div.admonition {
-    border: 1px solid #E2ECEF;
+    border: 1px solid #8F1000;
 }
 
 div.admonition p.admonition-title {
-    background-color: #E2ECEF;
-    border-bottom: 1px solid #E2ECEF;
+    background-color: #8F1000;
+    border-bottom: 1px solid #8E8E8E;
 }
 
 a {
