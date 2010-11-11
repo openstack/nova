@@ -48,16 +48,23 @@ Step 1 Use apt-get to get the latest code
 -----------------------------------------
 
 1. Setup Nova PPA with https://launchpad.net/~nova-core/+archive/ppa.
+
+::
+    
+    sudo apt-get install python-software-properties
+	sudo add-apt-repository ppa:nova-core/ppa
+	
 2. Run update.
 
 ::
     
-    update
+    sudo apt-get update
 
 3. Install nova-pkgs (dependencies should be automatically installed).
 
 ::
 
+    sudo apt-get install python-greenlet
     sudo apt-get install nova-common nova-doc python-nova nova-api nova-network nova-objectstore nova-scheduler
 
 It is highly likely that there will be errors when the nova services come up since they are not yet configured. Don't worry, you're only at step 1!
@@ -103,18 +110,42 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
 
    --FAKE_subdomain=ec2             # workaround for ec2/euca api
 
+5. Create a nova group
 
-5. nova-objectstore specific flags < no specific config needed >
+::
+    sudo addgroup nova
+
+6. nova-objectstore specific flags < no specific config needed >
 
 Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
+
+::
+    cd /etc/nova
+    chown -R root:nova .
 
 Step 3 Setup the sql db
 -----------------------
 
-1. First you 'preseed' (using vishy's directions here). Run this as root.
+1. First you 'preseed' (using vishy's :doc:`../quickstart`). Run this as root.
+
+::
+    sudo apt-get install bzr git-core
+    sudo bash
+    export MYSQL_PASS=nova
+
+       cat <<MYSQL_PRESEED | debconf-set-selections
+    mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
+    mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
+    mysql-server-5.1 mysql-server/start_on_boot boolean true
+    MYSQL_PRESEED
+
 2. Install mysql
-3. Configure mysql so that external users can access it, and setup nova db.
+
+::
+    sudo apt-get install -y mysql-server
+
 4. Edit /etc/mysql/my.cnf and set this line: bind-address=0.0.0.0 and then sighup or restart mysql
+
 5. create nova's db   
 
 ::
@@ -130,6 +161,19 @@ Step 3 Setup the sql db
    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
    SET PASSWORD FOR 'root'@'%' = PASSWORD('nova');
 
+7. branch and install Nova
+
+::
+
+    sudo -i
+    cd ~
+    export USE_MYSQL=1
+    export MYSQL_PASS=nova
+    git clone https://github.com/vishvananda/novascript.git
+    cd novascript
+    ./nova.sh branch
+    ./nova.sh install
+    ./nova.sh run
 
 Step 4 Setup Nova environment
 -----------------------------
