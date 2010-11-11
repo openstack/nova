@@ -171,20 +171,22 @@ Step 3 Setup the sql db
 7. branch and install Nova
 
 ::
-    sudo -i
-    cd ~
-    export USE_MYSQL=1
-    export MYSQL_PASS=nova
-    git clone https://github.com/vishvananda/novascript.git
-    cd novascript
-    ./nova.sh branch
-    ./nova.sh install
-    ./nova.sh run
+
+   sudo -i
+   cd ~
+   export USE_MYSQL=1
+   export MYSQL_PASS=nova
+   git clone https://github.com/vishvananda/novascript.git
+   cd novascript
+   ./nova.sh branch
+   ./nova.sh install
+   ./nova.sh run
 
 Step 4 Setup Nova environment
 -----------------------------
 
 ::
+
    /usr/bin/python /usr/bin/nova-manage user admin <user_name>
    /usr/bin/python /usr/bin/nova-manage project create <project_name> <user_name>
    /usr/bin/python /usr/bin/nova-manage project create network
