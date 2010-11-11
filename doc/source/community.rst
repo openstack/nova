@@ -44,7 +44,7 @@ There is a very active chat channel at `<irc://freenode.net/#openstack>`_.  This
 is usually the best place to ask questions and find your way around. IRC stands for Internet Relay
 Chat and it is a way to chat online in real time. You can also ask a question and come back to the 
 log files to read the answer later. Logs for the #openstack IRC channel are stored at 
-<http://eavesdrop.openstack.org/irclogs/>`_.
+`<http://eavesdrop.openstack.org/irclogs/>`_.
 
 OpenStack Wiki
 --------------
