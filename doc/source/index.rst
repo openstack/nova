@@ -64,9 +64,8 @@ Administrator's Documentation
 
 .. todo:: add swiftadmin
 
-
-Using Nova
-==========
+Developer Docs
+==============
 
 .. toctree::
    :maxdepth: 1
@@ -74,7 +73,6 @@ Using Nova
    quickstart
    devref/index
    community
-
 
 Outstanding Documentation Tasks
 ===============================
