@@ -23,6 +23,7 @@ VLAN Network Mode is the default mode for Nova.  It provides a private network
 segment for each project's instances that can be accessed via a dedicated
 VPN connection from the Internet.
 
+
 Goals
 -----
 
@@ -40,11 +41,13 @@ Goals
   * metadata
   * dashboard
 
+
 Limitations
 -----------
 
 * Projects / cluster limited to available VLANs in switching infrastructure
 * Requires VPN for access to project segment
+
 
 Implementation
 --------------
@@ -64,7 +67,8 @@ network node maps a dedicated public IP/port to the CloudPipe instance.
 Compute nodes have per-VLAN interfaces and bridges created as required.
 These do NOT have IP addresses in the host to protect host access.
 Compute nodes have iptables/ebtables entries created per project and
-instance to protect against IP/MAC spoofing.
+instance to protect against IP/MAC address spoofing and ARP poisoning.
+
 
 External Infrastructure
 -----------------------
@@ -75,6 +79,7 @@ Nova assumes the following is available:
 * NTP
 * Internet connectivity
 
+
 Example
 -------
 
@@ -84,6 +89,7 @@ management network and uses dedicated network nodes to handle all
 routing and gateway functions.
 
 It uses a 10GB network for instance traffic and a 1GB network for management.
+
 
 Hardware
 ~~~~~~~~
@@ -97,6 +103,7 @@ Hardware
 * network nodes should have an additional NIC dedicated to public Internet traffic
 * switch needs to support enough simultaneous VLANs for number of projects
 * production network configured as 802.1q trunk on switch
+
 
 Operation
 ~~~~~~~~~
@@ -120,6 +127,7 @@ When starting an instance the compute node:
 
 * sets up a VLAN interface and bridge on each host as required when an
   instance is started on that host
+
 
 Setup
 ~~~~~
