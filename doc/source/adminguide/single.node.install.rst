@@ -8,3 +8,5 @@ Nova can be run on a single machine, and it is recommended that new users practi
 The fastest way to get a test cloud running is through our :doc:`../quickstart`.
 
 
+Install Dependencies
+--------------------

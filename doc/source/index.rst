@@ -38,6 +38,7 @@ other ways to interact with the community.
 
 .. _`OpenStack wiki`: http://wiki.openstack.org
 
+
 Key Concepts
 ============
 .. toctree::
@@ -45,8 +46,24 @@ Key Concepts
 
    cloud101
    nova.concepts
+   swift.concepts
    service.architecture
-   object.model
+   nova.object.model
+   swift.object.model
+
+Administrator's Documentation
+=============================
+
+.. toctree::
+   :maxdepth: 1
+
+   livecd
+   adminguide/index
+   adminguide/single.node.install
+   adminguide/multi.node.install
+
+.. todo:: add swiftadmin
+
 
 Using Nova
 ==========
@@ -55,9 +72,9 @@ Using Nova
    :maxdepth: 1
 
    quickstart
-   adminguide/index
    devref/index
    community
+
 
 Outstanding Documentation Tasks
 ===============================
