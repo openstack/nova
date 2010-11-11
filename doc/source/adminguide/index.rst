@@ -75,6 +75,7 @@ Networking
    :maxdepth: 1
 
    multi.node.install
+   network.vlan.rst
 
 
 Advanced Topics
