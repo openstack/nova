@@ -18,33 +18,48 @@
 Getting Involved
 ================
 
-.. todo:: Talk about contributing code back to the project
+The Nova community is a very friendly group and there are places online to join in with the 
+community. Feel free to ask questions. This document points you to some of the places where you can
+communicate with people.
 
-The Nova community is a very friendly place.  Feel free to ask questions.
-This document points you to some of the places you may want to communicate
-with people at.
+How to Join the OpenStack Community
+-----------------------------------
 
+Our community welcomes all people interested in open source cloud computing, and there are no formal
+membership requirements. The best way to join the community is to talk with others online or at a meetup
+and offer contributions through Launchpad, the wiki, or blogs. We welcome all types of contributions, 
+from blueprint designs to documentation to testing to deployment scripts. 
+
+Contributing Code
+-----------------
+
+To contribute code, sign up for a Launchpad account and sign a contributor license agreement,
+available on the `OpenStack Wiki <http://wiki.openstack.org/CLA>`_. Once the CLA is signed you 
+can contribute code through the Bazaar version control system which is related to your Launchpad account.
 
 #openstack on Freenode IRC Network
 ----------------------------------
 
 There is a very active chat channel at `<irc://freenode.net/#openstack>`_.  This
-is usually the best place to ask questions and find your way around.
+is usually the best place to ask questions and find your way around. IRC stands for Internet Relay
+Chat and it is a way to chat online in real time. You can also ask a question and come back to the 
+log files to read the answer later. Logs for the #openstack IRC channel are stored at 
+<http://eavesdrop.openstack.org/irclogs/>`_.
 
 OpenStack Wiki
 --------------
 
 The wiki is a living source of knowledge.  It is edited by the community, and
-has collections of links and other sources of information.
+has collections of links and other sources of information. Typically the pages are a good place
+to write drafts for specs or documentation, describe a blueprint, or collaborate with others.
 
 `OpenStack Wiki <http://wiki.openstack.org/>`_
 
 Nova on Launchpad
 -----------------
 
-Launchapd is a code hosting service that hosts the Nova source code.  From
-launchpad you can report bugs, ask questions, and register blueprints (feature
-requests).
+Launchpad is a code hosting service that hosts the Nova source code. From
+Launchpad you can report bugs, ask questions, and register blueprints (feature requests). 
 
 `Launchpad Nova Page <http://launchpad.net/nova>`_
 
@@ -58,10 +73,11 @@ events and posts from OpenStack contributors.
 `OpenStack Blog <http://openstack.org/blog>`_
 
 See also: `Planet OpenStack <http://planet.openstack.org/>`_, aggregating blogs
-about OpenStack from around the internet into a single feed.
+about OpenStack from around the internet into a single feed. If you'd like to contribute to this blog
+aggregation with your blog posts, there are instructions for `adding your blog <http://wiki.openstack.org/AddingYourBlog>`_.
 
 Twitter
 -------
 
-Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_.
-
+Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_. Also follow the 
+`#openstack <http://search.twitter.com/search?q=%23openstack>`_ tag for relevant tweets.
