@@ -19,3 +19,28 @@ Cloud Computing 101
 ===================
 
 .. todo:: add in a brief tour of cloud computing concepts
+
+
+Overview of Cloud Computing
+===========================
+
+
+Why Cloud?
+==========
+
+
+Attributes of a Cloud
+=====================
+
+Types of Cloud Services
+
+
+Work in the Clouds
+==================
+What people have done/sample projects
+
+
+Types of Clouds 
+===============
+public/private/hybrid/etc
+Use definitions from http://csrc.nist.gov/groups/SNS/cloud-computing/
