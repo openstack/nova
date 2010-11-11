@@ -35,4 +35,4 @@ If you're running on Ubuntu 10.04, you'll need to install Twisted and python-gfl
     sudo apt-get update && sudo apt-get install python-gflags
 
 
-Once you've done this, continue here: :doc:`../single.node.install`
+Once you've done this, continue at Step 3 here: :doc:`../single.node.install`
