@@ -76,6 +76,7 @@ Networking
 
    multi.node.install
    network.vlan.rst
+   network.flat.rst
 
 
 Advanced Topics
