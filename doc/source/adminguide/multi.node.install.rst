@@ -113,15 +113,17 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
 5. Create a nova group
 
 ::
-    sudo addgroup nova
+
+   sudo addgroup nova
 
 6. nova-objectstore specific flags < no specific config needed >
 
 Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
 
 ::
-    cd /etc/nova
-    chown -R root:nova .
+
+   cd /etc/nova
+   chown -R root:nova .
 
 Step 3 Setup the sql db
 -----------------------
@@ -129,20 +131,25 @@ Step 3 Setup the sql db
 1. First you 'preseed' (using vishy's :doc:`../quickstart`). Run this as root.
 
 ::
-    sudo apt-get install bzr git-core
-    sudo bash
-    export MYSQL_PASS=nova
 
-       cat <<MYSQL_PRESEED | debconf-set-selections
-    mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
-    mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
-    mysql-server-5.1 mysql-server/start_on_boot boolean true
-    MYSQL_PRESEED
+   sudo apt-get install bzr git-core
+   sudo bash
+   export MYSQL_PASS=nova
+
+
+::
+
+   cat <<MYSQL_PRESEED | debconf-set-selections
+   mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
+   mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
+   mysql-server-5.1 mysql-server/start_on_boot boolean true
+   MYSQL_PRESEED
 
 2. Install mysql
 
 ::
-    sudo apt-get install -y mysql-server
+
+   sudo apt-get install -y mysql-server
 
 4. Edit /etc/mysql/my.cnf and set this line: bind-address=0.0.0.0 and then sighup or restart mysql
 
@@ -164,7 +171,6 @@ Step 3 Setup the sql db
 7. branch and install Nova
 
 ::
-
     sudo -i
     cd ~
     export USE_MYSQL=1
@@ -179,7 +185,6 @@ Step 4 Setup Nova environment
 -----------------------------
 
 ::
-
    /usr/bin/python /usr/bin/nova-manage user admin <user_name>
    /usr/bin/python /usr/bin/nova-manage project create <project_name> <user_name>
    /usr/bin/python /usr/bin/nova-manage project create network
