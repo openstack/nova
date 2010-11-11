@@ -56,11 +56,9 @@ By tweaking the environment that nova.sh run in, you can build slightly
 different configurations (though for more complex setups you should see
 :doc:`/adminguide/getting.started` and :doc:`/adminguide/multi.node.install`).
 
-HOST_IP
-~~~~~~~
-
-**Default**: address of first interface from the ifconfig command
-**Values**: 127.0.0.1, or any other valid address
+* HOST_IP
+    * Default: address of first interface from the ifconfig command
+    * Values: 127.0.0.1, or any other valid address
 
 TEST
 ~~~~
