@@ -52,7 +52,7 @@ Step 1 Use apt-get to get the latest code
 ::
     
     sudo apt-get install python-software-properties
-	sudo add-apt-repository ppa:nova-core/ppa
+    sudo add-apt-repository ppa:nova-core/ppa
 	
 2. Run update.
 
