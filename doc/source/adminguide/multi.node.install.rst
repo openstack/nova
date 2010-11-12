@@ -15,8 +15,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Installing Nova Development Snapshot on Multiple Servers
-========================================================
+Installing Nova on Multiple Servers
+===================================
 
 When you move beyond evaluating the technology and into building an actual
 production environemnt, you will need to know how to configure your datacenter
