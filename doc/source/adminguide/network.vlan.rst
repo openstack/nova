@@ -39,6 +39,12 @@ In addition, the network administrator can specify a pool of public IP addresses
 
 .. todo:: Describe how a public IP address could be associated with a project (a VLAN)
 
+This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
+
+The following diagram illustrates how the communication that occurs between the vlan (the dashed box) and the public internet (represented by the two clouds)
+
+.. image:: /images/cloudpipe.png
+   :width: 100%
 
 Goals
 -----
