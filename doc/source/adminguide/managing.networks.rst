@@ -21,6 +21,7 @@ Networking Overview
 In Nova, users organize their cloud resources in projects. A Nova project consists of a number of VM instances created by a user. For each VM instance, Nova assigns to it a private IP address. (Currently, Nova only supports Linux bridge networking that allows the virtual interfaces to connect to the outside network through the physical interface. Other virtual network technologies, such as Open vSwitch, could be supported in the future.) The Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network.
 
 ..
+    (perhaps some of this should be moved elsewhere)
     Introduction
     ------------
 
@@ -51,7 +52,7 @@ Read more about Nova network strategies here:
 Network Management Commands
 ---------------------------
 
-Admins and Network Administrators can use the 'nova-manage' command to manage project resources:
+Admins and Network Administrators can use the 'nova-manage' command to manage network resources:
 
 VPN Management
 ~~~~~~~~~~~~~~
