@@ -18,8 +18,8 @@
 Nova Quickstart
 ===============
 
-.. todo::
-
+.. todo:: 
+    P1 (this is one example of how to use priority syntax)
     * Document the assumptions about pluggable interfaces (sqlite3 instead of
       mysql, etc) (todd)
     * Document env vars that can change things (USE_MYSQL, HOST_IP) (todd)

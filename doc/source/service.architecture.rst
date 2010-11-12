@@ -57,4 +57,4 @@ Volume Workers interact with iSCSI storage to manage LVM-based [#f89]_ instance 
 Volumes may easily be transferred between instances, but may be attached to only a single instance at a time.
 
 
-.. todo:: image store description
+.. todo:: P2: image store description
