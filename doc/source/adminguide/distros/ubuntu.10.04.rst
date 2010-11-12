@@ -6,6 +6,7 @@ Step 1: Install dependencies
 Grab the latest code from launchpad:
 
 ::
+
     bzr clone lp:nova
 
 Here's a script you can use to install (and then run) Nova on Ubuntu or Debian (when using Debian, edit nova.sh to have USE_PPA=0):
