@@ -6,8 +6,8 @@ Nova can be run on a single machine, and it is recommended that new users practi
 The fastest way to get a test cloud running is through our :doc:`../quickstart`.  But for more detail on installing the system read this doc.
 
 
-Step 1 and 2: Get the latest code and Configure your system
------------------------------------------------------------
+Step 1 and 2: Get the latest Nova code system software
+------------------------------------------------------
 
 Depending on your system, the mehod for accomplishing this varies
 
