@@ -31,7 +31,7 @@ run on your host operating system, and exposes functionality over a web API.
 
 This document does not attempt to explain fundamental concepts of cloud
 computing, IaaS, virtualization, or other related technologies.  Instead, it
-focues on describing how Nova's implementation of those concepts is achieved.
+focuses on describing how Nova's implementation of those concepts is achieved.
 
 This page outlines concepts that you will need to understand as a user or
 administrator of an OpenStack installation.  Each section links to more more
@@ -121,7 +121,7 @@ This is similar to the flat mode, in that all instances are attached to the same
 VLAN DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the userto access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
+This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
 
 The following diagram illustrates how the communication that occurs between the vlan (the dashed box) and the public internet (represented by the two clouds)
 
@@ -168,8 +168,7 @@ Concept: Plugins
 Concept: IPC/RPC
 ----------------
 
-Rabbit!
-
+Nova utilizes the RabbitMQ implementation of the AMQP messaging standard for performing communication between the various nova services.  This message queuing service is used for both local and remote communication because Nova is designed so that there is no requirement that any of the services exist on the same physical machine.  RabbitMQ in particular is very robust and provides the efficiency and reliability that Nova needs.  More information about RabbitMQ can be found at http://www.rabbitmq.com/. 
 
 Concept: Fakes
 --------------

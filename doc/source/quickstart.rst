@@ -164,3 +164,15 @@ Then you can destroy the screen:
 If things get particularly messed up, you might need to do some more intense
 cleanup.  Be careful, the following command will manually destroy all runnning
 virsh instances and attempt to delete all vlans and bridges.
+
+:: 
+
+	./nova.sh scrub
+
+You can edit files in the install directory or do a bzr pull to pick up new versions. You only need to do
+
+::
+
+	./nova.sh run
+
+to run nova after the first install. The database should be cleaned up on each run.
