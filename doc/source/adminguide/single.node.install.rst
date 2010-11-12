@@ -1,5 +1,5 @@
-Installing Nova from a Development Snapshot
-===========================================
+Installing Nova from a Single Host
+==================================
 
 Nova can be run on a single machine, and it is recommended that new users practice managing this type of installation before graduating to multi node systems.
 
