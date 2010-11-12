@@ -29,7 +29,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'ext.nova_todo', '
 
 # autodoc generation is a bit aggressive and a nuisance when doing heavy text edit cycles.
 # execute "export SPHINX_DEBUG=1" in your terminal to disable
-if 'SPHINX_DEBUG' not in os.environ.keys():
+if not os.getenv('SPHINX_DEBUG'):
     extensions += ['ext.nova_autodoc']
 
 todo_include_todos = True
