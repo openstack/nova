@@ -1,3 +1,5 @@
+Installing on Ubuntu 10.04 (Lucid)
+==================================
 
 Step 1: Install dependencies
 ----------------------------

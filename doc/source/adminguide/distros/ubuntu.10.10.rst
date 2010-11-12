@@ -1,5 +1,5 @@
-Installing on Ubuntu Maverick 10.10
-====================================
+Installing on Ubuntu 10.10 (Maverick)
+=====================================
 Single Machine Installation (Ubuntu 10.10)
 
 While we wouldn't expect you to put OpenStack Compute into production on a non-LTS version of Ubuntu, these instructions are up-to-date with the latest version of Ubuntu.

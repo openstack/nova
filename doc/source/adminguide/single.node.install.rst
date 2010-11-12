@@ -3,7 +3,7 @@ Installing Nova from a Development Snapshot
 
 Nova can be run on a single machine, and it is recommended that new users practice managing this type of installation before graduating to multi node systems.
 
-The fastest way to get a test cloud running is through our :doc:`../quickstart`.
+The fastest way to get a test cloud running is through our :doc:`../quickstart`.  But for more detail on installing the system read this doc.
 
 
 Step 1 and 2: Get the latest code and Configure your system
@@ -14,9 +14,9 @@ Depending on your system, the mehod for accomplishing this varies
 .. toctree::
    :maxdepth: 1
 
-   adminguide/distros/ubuntu.10.04
-   adminguide/distros/ubuntu.10.10
-   adminguide/distros/others
+   distros/ubuntu.10.04
+   distros/ubuntu.10.10
+   distros/others
 
 
 Step 3: Build and install Nova services

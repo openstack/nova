@@ -1,5 +1,5 @@
-Installation (Other distros like Debian, Fedora or CentOS )
-===========================================================
+Installation on other distros (like Debian, Fedora or CentOS )
+==============================================================
 
 Feel free to add additional notes for additional distributions.
 
