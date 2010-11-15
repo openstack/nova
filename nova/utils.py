@@ -234,6 +234,7 @@ def utf8(value):
     assert isinstance(value, str)
     return value
 
+
 def fix_wsgify_docstr(wsgified_func):
     """A decorator to re-assign docstrings that webob.dec.wsgify clobbers."""
     @functools.wraps(wsgified_func.func)
