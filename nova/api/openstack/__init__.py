@@ -51,6 +51,7 @@ flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
 
+
 class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
 

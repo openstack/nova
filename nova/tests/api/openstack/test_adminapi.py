@@ -26,7 +26,8 @@ from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
-class RestrictedAPITest(unittest.TestCase):
+
+class AdminAPITest(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
@@ -42,7 +43,7 @@ class RestrictedAPITest(unittest.TestCase):
 
     def test_admin_enabled(self):
         FLAGS.allow_admin_api = True
-        # We should still be able to access public operations. 
+        # We should still be able to access public operations.
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status_int, 200)
@@ -50,7 +51,7 @@ class RestrictedAPITest(unittest.TestCase):
 
     def test_admin_disabled(self):
         FLAGS.allow_admin_api = False
-        # We should still be able to access public operations. 
+        # We should still be able to access public operations.
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status_int, 200)
