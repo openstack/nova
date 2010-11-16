@@ -47,9 +47,9 @@ flags.DEFINE_string('nova_api_auth',
     'nova.api.openstack.auth.BasicApiAuthManager',
     'The auth mechanism to use for the OpenStack API implemenation')
 
-flags.DEFINE_list('nova_api_permitted_operations',
-    [],
-    'A comma-separated list of permitted api operations. Empty for all.')
+flags.DEFINE_bool('allow_admin_api',
+    False,
+    'When True, this API service will accept admin operations.')
 
 class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
@@ -168,37 +168,25 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
-        commands = {
-            "server" : dict(plural='servers',
-                           controller=servers.Controller(),
-                           collection={'detail': 'GET'},
-                           member={'action': 'POST'}),
-            "backup_schedule" : dict(plural='backup_schedules',
-                                    controller=backup_schedules.Controller(),
-                                    parent_resource=dict(member_name='server',
-                                        collection_name='servers')),
-            "image" : dict(plural='images',
-                          controller=images.Controller(),
-                          collection={'detail': 'GET'}),
-            "flavor" : dict(plural='flavors', 
-                           controller=flavors.Controller(),
-                           collection={'detail': 'GET'}),
-            "sharedipgroup" : dict(plural="sharedipgroups",
-                                  controller=sharedipgroups.Controller()),
-        }
+        mapper.resource("server", "servers", controller=servers.Controller(),
+                        collection={'detail': 'GET'},
+                        member={'action': 'POST'})
 
-        permitted = commands.keys()
-        if len(FLAGS.nova_api_permitted_operations) > 0:
-            permitted = FLAGS.nova_api_permitted_operations
-        logging.debug("Permitted operation set: %s" % (permitted,))
-        for command in permitted:
-            options = commands.get(command, None)
-            if not options:
-                logging.warning("Unknown option in nova_api_permitted_operations: '%s' (skipping)" % (command,))
-                continue
-            collection = options['plural']
-            del options['plural']
-            mapper.resource(command, collection, **options)
+        mapper.resource("backup_schedule", "backup_schedules",
+                        controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("image", "images", controller=images.Controller(),
+                        collection={'detail': 'GET'})
+        mapper.resource("flavor", "flavors", controller=flavors.Controller(),
+                        collection={'detail': 'GET'})
+        mapper.resource("sharedipgroup", "sharedipgroups",
+                        controller=sharedipgroups.Controller())
+
+        if FLAGS.allow_admin_api:
+            logging.debug("Including admin operations in API.")
+            # TODO: Place routes for admin operations here.
 
         super(APIRouter, self).__init__(mapper)
 

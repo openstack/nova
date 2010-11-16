@@ -22,7 +22,6 @@ import webob
 
 import nova.api
 from nova import flags
-from nova.api.openstack import flavors
 from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
@@ -35,36 +34,27 @@ class RestrictedAPITest(unittest.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
-        self.original_permissions = FLAGS.nova_api_permitted_operations
+        self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        FLAGS.nova_api_permitted_operations = self.original_permissions
+        FLAGS.allow_admin_api = self.allow_admin
 
-    def test_permitted(self):
+    def test_admin_enabled(self):
+        FLAGS.allow_admin_api = True
+        # We should still be able to access public operations. 
         req = webob.Request.blank('/v1.0/flavors')
-        FLAGS.nova_api_permitted_operations = ["server", "backup_schedule", "image", "flavor", "sharedipgroup"]
         res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status_int, 200)
+        # TODO: Confirm admin operations are available.
 
-    def test_bad_list(self):
+    def test_admin_disabled(self):
+        FLAGS.allow_admin_api = False
+        # We should still be able to access public operations. 
         req = webob.Request.blank('/v1.0/flavors')
-        FLAGS.nova_api_permitted_operations = ["foo", "bar", "zoo"]
-        res = req.get_response(nova.api.API('os'))
-        self.assertEqual(res.status_int, 404)
-
-    def test_default_all_permitted(self):
-        req = webob.Request.blank('/v1.0/flavors')
-        # empty means all operations available.
-        FLAGS.nova_api_permitted_operations = []
         res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status_int, 200)
-
-    def test_disallowed(self):
-        req = webob.Request.blank('/v1.0/flavors')
-        FLAGS.nova_api_permitted_operations = ["server", "backup_schedule", "image", "sharedipgroup"]
-        res = req.get_response(nova.api.API('os'))
-        self.assertEqual(res.status_int, 404)
+        # TODO: Confirm admin operations are unavailable.
 
 if __name__ == '__main__':
     unittest.main()
