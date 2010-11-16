@@ -166,7 +166,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
-    
+
     key is an ssh key string.
     fs is the path to the base of the filesystem into which to inject the key.
     """
