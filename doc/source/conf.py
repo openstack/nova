@@ -16,14 +16,22 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.append([os.path.abspath('../nova'), os.path.abspath('..'), os.path.abspath('../bin')])
-
+sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('./'))
 
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig']
+
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'ext.nova_todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig','sphinx.ext.graphviz']
+
+# autodoc generation is a bit aggressive and a nuisance when doing heavy text edit cycles.
+# execute "export SPHINX_DEBUG=1" in your terminal to disable
+if not os.getenv('SPHINX_DEBUG'):
+    extensions += ['ext.nova_autodoc']
+
 todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -99,7 +107,8 @@ modindex_common_prefix = ['nova.']
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-html_theme = 'default'
+html_theme_path = ["."]
+html_theme = '_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

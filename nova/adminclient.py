@@ -33,14 +33,15 @@ DEFAULT_SECRET_KEY = 'admin'
 
 class UserInfo(object):
     """
-    Information about a Nova user, as parsed through SAX
-    fields include:
-        username
-        accesskey
-        secretkey
+    Information about a Nova user, as parsed through SAX.
 
-    and an optional field containing a zip with X509 cert & rc
-        file
+    **Fields Include**
+
+    * username
+    * accesskey
+    * secretkey
+    * file (optional) containing zip of X509 cert & rc file
+
     """
 
     def __init__(self, connection=None, username=None, endpoint=None):
@@ -68,9 +69,13 @@ class UserInfo(object):
 class UserRole(object):
     """
     Information about a Nova user's role, as parsed through SAX.
-    Fields include:
-        role
+
+    **Fields include**
+
+    * role
+
     """
+
     def __init__(self, connection=None):
         self.connection = connection
         self.role = None
@@ -90,12 +95,15 @@ class UserRole(object):
 
 class ProjectInfo(object):
     """
-    Information about a Nova project, as parsed through SAX
-    Fields include:
-        projectname
-        description
-        projectManagerId
-        memberIds
+    Information about a Nova project, as parsed through SAX.
+
+    **Fields include**
+
+    * projectname
+    * description
+    * projectManagerId
+    * memberIds
+
     """
 
     def __init__(self, connection=None):
@@ -127,8 +135,11 @@ class ProjectInfo(object):
 class ProjectMember(object):
     """
     Information about a Nova project member, as parsed through SAX.
-    Fields include:
-        memberId
+
+    **Fields include**
+
+    * memberId
+
     """
 
     def __init__(self, connection=None):
@@ -150,14 +161,18 @@ class ProjectMember(object):
 
 class HostInfo(object):
     """
-    Information about a Nova Host, as parsed through SAX:
-        Disk stats
-        Running Instances
-        Memory stats
-        CPU stats
-        Network address info
-        Firewall info
-        Bridge and devices
+    Information about a Nova Host, as parsed through SAX.
+
+    **Fields Include**
+
+    * Disk stats
+    * Running Instances
+    * Memory stats
+    * CPU stats
+    * Network address info
+    * Firewall info
+    * Bridge and devices
+
     """
 
     def __init__(self, connection=None):
@@ -257,9 +272,12 @@ class NovaAdminClient(object):
                                      [('item', UserRole)])
 
     def get_user_roles(self, user, project=None):
-        """Returns a list of roles for the given user. Omitting project will
-        return any global roles that the user has. Specifying project will
-        return only project specific roles."""
+        """Returns a list of roles for the given user.
+
+        Omitting project will return any global roles that the user has.
+        Specifying project will return only project specific roles.
+
+        """
         params = {'User': user}
         if project:
             params['Project'] = project

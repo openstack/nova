@@ -21,6 +21,7 @@ System-level utilities and helper functions.
 """
 
 import datetime
+import functools
 import inspect
 import logging
 import os

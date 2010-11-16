@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Implementation of SQLAlchemy backend
+Implementation of SQLAlchemy backend.
 """
 
 import random

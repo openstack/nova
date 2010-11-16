@@ -84,12 +84,11 @@ class AuthBase(object):
 
     @classmethod
     def safe_id(cls, obj):
-        """Safe get object id
+        """Safely get object id.
 
         This method will return the id of the object if the object
         is of this class, otherwise it will return the original object.
         This allows methods to accept objects or ids as paramaters.
-
         """
         if isinstance(obj, cls):
             return obj.id
