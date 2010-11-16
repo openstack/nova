@@ -165,6 +165,11 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
 
 @defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
+    """Add the given public ssh key to root's authorized_keys.
+
+    key is an ssh key string.
+    fs is the path to the base of the filesystem into which to inject the key.
+    """
     sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
     yield execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
@@ -175,6 +180,13 @@ def _inject_key_into_fs(key, fs, execute=None):
 
 @defer.inlineCallbacks
 def _inject_net_into_fs(net, fs, execute=None):
-    netfile = os.path.join(os.path.join(os.path.join(
-            fs, 'etc'), 'network'), 'interfaces')
+    """Inject /etc/network/interfaces into the filesystem rooted at fs.
+
+    net is the contents of /etc/network/interfaces.
+    """
+    netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
+    yield execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
+    yield execute('sudo chown root:root %s' % netdir)
+    yield execute('sudo chmod 755 %s' % netdir)
+    netfile = os.path.join(netdir, 'interfaces')
     yield execute('sudo tee %s' % netfile, net)
