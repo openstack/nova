@@ -176,7 +176,7 @@ def _inject_key_into_fs(key, fs, execute=None):
 @defer.inlineCallbacks
 def _inject_net_into_fs(net, fs, execute=None):
     netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    yield execute('sudo mkdir -p %s' % netdir) # existing dir doesn't matter
+    yield execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
     yield execute('sudo chown root:root %s' % netdir)
     yield execute('sudo chmod 755 %s' % netdir)
     netfile = os.path.join(netdir, 'interfaces')
