@@ -237,7 +237,6 @@ def utf8(value):
 
 def fix_wsgify_docstr(wsgified_func):
     """A decorator to re-assign docstrings that webob.dec.wsgify clobbers."""
-    @functools.wraps(wsgified_func.func)
-    def _f(*args, **kwargs):
-        wsgified_func(*args, **kwargs)
-    return _f
+    wsgified_func.__doc__ = wsgified_func.func.__doc__
+    wsgified_func.func_name = wsgified_func.func.func_name
+    return wsgified_func
