@@ -15,10 +15,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
 Utility methods to resize, repartition, and modify disk images.
+
 Includes injection of SSH PGP keys into authorized_keys file.
+
 """
 
 import logging
@@ -41,20 +42,23 @@ flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
 @defer.inlineCallbacks
 def partition(infile, outfile, local_bytes=0, resize=True,
               local_type='ext2', execute=None):
-    """Takes a single partition represented by infile and writes a bootable
-    drive image into outfile.
+    """
+    Turns a partition (infile) into a bootable drive image (outfile).
 
     The first 63 sectors (0-62) of the resulting image is a master boot record.
     Infile becomes the first primary partition.
     If local bytes is specified, a second primary partition is created and
     formatted as ext2.
 
-    In the diagram below, dashes represent drive sectors.
-    +-----+------. . .-------+------. . .------+
-    | 0  a| b               c|d               e|
-    +-----+------. . .-------+------. . .------+
-    | mbr | primary partiton | local partition |
-    +-----+------. . .-------+------. . .------+
+    ::
+
+        In the diagram below, dashes represent drive sectors.
+        +-----+------. . .-------+------. . .------+
+        | 0  a| b               c|d               e|
+        +-----+------. . .-------+------. . .------+
+        | mbr | primary partiton | local partition |
+        +-----+------. . .-------+------. . .------+
+
     """
     sector_size = 512
     file_size = os.path.getsize(infile)

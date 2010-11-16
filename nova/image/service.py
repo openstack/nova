@@ -45,13 +45,9 @@ class BaseImageService(object):
         Returns a sequence of mappings of id and name information about
         images.
 
-        :retval a sequence of mappings with the following signature:
-
-            [
-            {'id': opaque id of image,
-             'name': name of image
-             }, ...
-            ]
+        :rtype: array
+        :retval: a sequence of mappings with the following signature
+                    {'id': opaque id of image, 'name': name of image}
 
         """
         raise NotImplementedError
@@ -60,19 +56,17 @@ class BaseImageService(object):
         """
         Returns a sequence of mappings of detailed information about images.
 
-        :retval a sequence of mappings with the following signature:
-
-            [
-            {'id': opaque id of image,
-             'name': name of image,
-             'created_at': creation timestamp,
-             'updated_at': modification timestamp,
-             'deleted_at': deletion timestamp or None,
-             'deleted': boolean indicating if image has been deleted,
-             'status': string description of image status,
-             'is_public': boolean indicating if image is public
-             }, ...
-            ]
+        :rtype: array
+        :retval: a sequence of mappings with the following signature
+                    {'id': opaque id of image,
+                     'name': name of image,
+                     'created_at': creation timestamp,
+                     'updated_at': modification timestamp,
+                     'deleted_at': deletion timestamp or None,
+                     'deleted': boolean indicating if image has been deleted,
+                     'status': string description of image status,
+                     'is_public': boolean indicating if image is public
+                     }
 
         If the service does not implement a method that provides a detailed
         set of information about images, then the method should raise

@@ -99,6 +99,7 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.compute_manager = utils.import_object(FLAGS.compute_manager)
         self.setup()
 
     def __str__(self):
@@ -464,24 +465,31 @@ class CloudController(object):
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
+        instance_ec2_id = None
+        instance_data = None
+        if volume.get('instance', None):
+            internal_id = volume['instance']['internal_id']
+            instance_ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_data = '%s[%s]' % (instance_ec2_id,
+                                        volume['instance']['host'])
         v = {}
         v['volumeId'] = volume['ec2_id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
         v['createTime'] = volume['created_at']
-        if context.user.is_admin():
+        if context.is_admin:
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
                 volume['user_id'],
                 volume['host'],
-                volume['instance_id'],
+                instance_data,
                 volume['mountpoint'])
         if volume['attach_status'] == 'attached':
             v['attachmentSet'] = [{'attachTime': volume['attach_time'],
                                    'deleteOnTermination': False,
                                    'device': volume['mountpoint'],
-                                   'instanceId': volume['instance_id'],
+                                   'instanceId': instance_ec2_id,
                                    'status': 'attached',
                                    'volume_id': volume['ec2_id']}]
         else:
@@ -516,7 +524,10 @@ class CloudController(object):
                   "args": {"topic": FLAGS.volume_topic,
                            "volume_id": volume_ref['id']}})
 
-        return {'volumeSet': [self._format_volume(context, volume_ref)]}
+        # TODO(vish): Instance should be None at db layer instead of
+        #             trying to lazy load, but for now we turn it into
+        #             a dict to avoid an error.
+        return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
@@ -835,21 +846,21 @@ class CloudController(object):
         elevated = context.elevated()
 
         for num in range(num_instances):
-            instance_ref = db.instance_create(context, base_options)
+
+            instance_ref = self.compute_manager.create_instance(context,
+                                           security_groups,
+                                           mac_address=utils.generate_mac(),
+                                           launch_index=num,
+                                           **base_options)
             inst_id = instance_ref['id']
 
-            for security_group_id in security_groups:
-                db.instance_add_security_group(elevated,
-                                               inst_id,
-                                               security_group_id)
-
-            inst = {}
-            inst['mac_address'] = utils.generate_mac()
-            inst['launch_index'] = num
             internal_id = instance_ref['internal_id']
             ec2_id = internal_id_to_ec2_id(internal_id)
-            inst['hostname'] = ec2_id
-            db.instance_update(context, inst_id, inst)
+
+            self.compute_manager.update_instance(context,
+                                                 inst_id,
+                                                 hostname=ec2_id)
+
             # TODO(vish): This probably should be done in the scheduler
             #             or in compute as a call.  The network should be
             #             allocated after the host is assigned and setup
@@ -895,11 +906,12 @@ class CloudController(object):
                               id_str)
                 continue
             now = datetime.datetime.utcnow()
-            db.instance_update(context,
-                               instance_ref['id'],
-                               {'state_description': 'terminating',
-                                'state': 0,
-                                'terminated_at': now})
+            self.compute_manager.update_instance(context,
+                                         instance_ref['id'],
+                                         state_description='terminating',
+                                         state=0,
+                                         terminated_at=now)
+
             # FIXME(ja): where should network deallocate occur?
             address = db.instance_get_floating_address(context,
                                                        instance_ref['id'])
@@ -936,8 +948,21 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
-        for id_str in instance_id:
-            cloud.reboot(id_str, context=context)
+        for ec2_id in instance_id:
+            internal_id = ec2_id_to_internal_id(ec2_id)
+            cloud.reboot(internal_id, context=context)
+        return True
+
+    def rescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.rescue(internal_id, context=context)
+        return True
+
+    def unrescue_instance(self, context, instance_id, **kwargs):
+        """This is an extension to the normal ec2_api"""
+        internal_id = ec2_id_to_internal_id(instance_id)
+        cloud.unrescue(internal_id, context=context)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):

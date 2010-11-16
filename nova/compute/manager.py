@@ -17,13 +17,25 @@
 #    under the License.
 
 """
-Handles all code relating to instances (guest vms)
+Handles all processes relating to instances (guest vms).
+
+The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
+handles RPC calls relating to creating instances.  It is responsible for
+building a disk image, launching it via the underlying virtualization driver,
+responding to calls to check it state, attaching persistent as well as
+termination.
+
+**Related Flags**
+
+:instances_path:  Where instances are kept on disk
+:compute_driver:  Name of class that is used to handle virtualization, loaded
+                  by :func:`nova.utils.import_object`
+:volume_manager:  Name of class that handles persistent storage, loaded by
+                  :func:`nova.utils.import_object`
 """
 
-import base64
 import datetime
 import logging
-import os
 
 from twisted.internet import defer
 
@@ -42,12 +54,12 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
 
 
 class ComputeManager(manager.Manager):
-    """
-    Manages the running instances.
-    """
+    """Manages the running instances from creation to destruction."""
+
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
         # TODO(vish): sync driver creation logic with the rest of the system
+        #             and redocument the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
         self.driver = utils.import_object(compute_driver)
@@ -56,16 +68,62 @@ class ComputeManager(manager.Manager):
         super(ComputeManager, self).__init__(*args, **kwargs)
 
     def _update_state(self, context, instance_id):
-        """Update the state of an instance from the driver info"""
+        """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
-        state = self.driver.get_info(instance_ref.name)['state']
+        try:
+            info = self.driver.get_info(instance_ref['name'])
+            state = info['state']
+        except exception.NotFound:
+            state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
+        """This call passes stright through to the virtualization driver."""
         yield self.driver.refresh_security_group(security_group_id)
+
+    def create_instance(self, context, security_groups=None, **kwargs):
+        """Creates the instance in the datastore and returns the
+        new instance as a mapping
+
+        :param context: The security context
+        :param security_groups: list of security group ids to
+                                attach to the instance
+        :param kwargs: All additional keyword args are treated
+                       as data fields of the instance to be
+                       created
+
+        :retval Returns a mapping of the instance information
+                that has just been created
+
+        """
+        instance_ref = self.db.instance_create(context, kwargs)
+        inst_id = instance_ref['id']
+
+        elevated = context.elevated()
+        if not security_groups:
+            security_groups = []
+        for security_group_id in security_groups:
+            self.db.instance_add_security_group(elevated,
+                                                inst_id,
+                                                security_group_id)
+        return instance_ref
+
+    def update_instance(self, context, instance_id, **kwargs):
+        """Updates the instance in the datastore.
+
+        :param context: The security context
+        :param instance_id: ID of the instance to update
+        :param kwargs: All additional keyword args are treated
+                       as data fields of the instance to be
+                       updated
+
+        :retval None
+
+        """
+        self.db.instance_update(context, instance_id, kwargs)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -111,6 +169,9 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
+        volumes = instance_ref.get('volumes', []) or []
+        for volume in volumes:
+            self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
@@ -126,16 +187,15 @@ class ComputeManager(manager.Manager):
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
-        self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
+        self._update_state(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
-            raise exception.Error(
-                    'trying to reboot a non-running'
-                    'instance: %s (state: %s excepted: %s)' %
-                    (instance_ref['internal_id'],
-                     instance_ref['state'],
-                     power_state.RUNNING))
+            logging.warn('trying to reboot a non-running '
+                         'instance: %s (state: %s excepted: %s)',
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
 
         logging.debug('instance %s: rebooting', instance_ref['name'])
         self.db.instance_set_state(context,
@@ -143,6 +203,38 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'rebooting')
         yield self.driver.reboot(instance_ref)
+        self._update_state(context, instance_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def rescue_instance(self, context, instance_id):
+        """Rescue an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: rescuing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'rescuing')
+        yield self.driver.rescue(instance_ref)
+        self._update_state(context, instance_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def unrescue_instance(self, context, instance_id):
+        """Rescue an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: unrescuing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'unrescuing')
+        yield self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -164,10 +256,23 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = yield self.volume_manager.setup_compute_volume(context,
                                                                   volume_id)
-        yield self.driver.attach_volume(instance_ref['ec2_id'],
-                                        dev_path,
-                                        mountpoint)
-        self.db.volume_attached(context, volume_id, instance_id, mountpoint)
+        try:
+            yield self.driver.attach_volume(instance_ref['name'],
+                                            dev_path,
+                                            mountpoint)
+            self.db.volume_attached(context,
+                                    volume_id,
+                                    instance_id,
+                                    mountpoint)
+        except Exception as exc:  # pylint: disable-msg=W0702
+            # NOTE(vish): The inline callback eats the exception info so we
+            #             log the traceback here and reraise the same
+            #             ecxception below.
+            logging.exception("instance %s: attach failed %s, removing",
+                              instance_id, mountpoint)
+            yield self.volume_manager.remove_compute_volume(context,
+                                                            volume_id)
+            raise exc
         defer.returnValue(True)
 
     @defer.inlineCallbacks
@@ -180,7 +285,12 @@ class ComputeManager(manager.Manager):
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        yield self.driver.detach_volume(instance_ref['ec2_id'],
-                                        volume_ref['mountpoint'])
+        if instance_ref['name'] not in self.driver.list_instances():
+            logging.warn("Detaching volume from unknown instance %s",
+                         instance_ref['name'])
+        else:
+            yield self.driver.detach_volume(instance_ref['name'],
+                                            volume_ref['mountpoint'])
+        yield self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)

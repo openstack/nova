@@ -36,3 +36,23 @@ def reboot(instance_id, context=None):
              db.queue_get_for(context, FLAGS.compute_topic, host),
              {"method": "reboot_instance",
               "args": {"instance_id": instance_ref['id']}})
+
+
+def rescue(instance_id, context):
+    """Rescue the given instance."""
+    instance_ref = db.instance_get_by_internal_id(context, instance_id)
+    host = instance_ref['host']
+    rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, host),
+             {"method": "rescue_instance",
+              "args": {"instance_id": instance_ref['id']}})
+
+
+def unrescue(instance_id, context):
+    """Unrescue the given instance."""
+    instance_ref = db.instance_get_by_internal_id(context, instance_id)
+    host = instance_ref['host']
+    rpc.cast(context,
+             db.queue_get_for(context, FLAGS.compute_topic, host),
+             {"method": "unrescue_instance",
+              "args": {"instance_id": instance_ref['id']}})
