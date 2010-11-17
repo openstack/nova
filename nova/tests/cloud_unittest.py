@@ -94,18 +94,19 @@ class CloudTestCase(test.TrialTestCase):
     def test_describe_addresses(self):
         """Makes sure describe addresses runs without raising an exception"""
         address = "10.10.10.10"
-        db.floating_ip_create(context.get_admin_context(),
+        db.floating_ip_create(self.context,
                               {'address': address,
                                'host': FLAGS.host})
         self.cloud.allocate_address(self.context)
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
                                   public_ip=address)
+        db.floating_ip_destroy(self.context, address)
 
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
-        db.floating_ip_create(context.get_admin_context(),
+        db.floating_ip_create(self.context,
                               {'address': address,
                                'host': FLAGS.host})
         self.cloud.allocate_address(self.context)
@@ -119,6 +120,7 @@ class CloudTestCase(test.TrialTestCase):
         self.cloud.release_address(self.context,
                                   public_ip=address)
         db.instance_destroy(self.context, inst['id'])
+        db.floating_ip_destroy(self.context, address)
 
     def test_console_output(self):
         image_id = FLAGS.default_image
