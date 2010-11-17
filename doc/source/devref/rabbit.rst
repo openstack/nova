@@ -25,7 +25,7 @@ RabbitMQ is the messaging component chosen by the OpenStack cloud.  RabbitMQ sit
 Nova (Austin release) uses both direct and topic-based exchanges. The architecture looks like the one depicted in the figure below:
 
 .. image:: /images/rabbit/arch.png
-   :width: 100%
+   :width: 60%
 
 ..
 
@@ -47,7 +47,7 @@ Figure 2 shows the following internal elements:
     * Queue Element: A Queue is a message bucket. Messages are kept in the queue until a Consumer (either Topic or Direct Consumer) connects to the queue and fetch it. Queues can be shared or can be exclusive. Queues whose routing key is 'topic' are shared amongst Workers of the same personality.
 
 .. image:: /images/rabbit/rabt.png
-   :width: 100%
+   :width: 60%
 
 ..
 
@@ -62,7 +62,7 @@ The diagram below shows the message flow during an rp.call operation:
     4. once the message is dispatched by the exchange, it is fetched by the Direct Consumer dictated by the routing key (such as 'msg_id') and passed to the Invoker.
 
 .. image:: /images/rabbit/flow1.png
-   :width: 100%
+   :width: 60%
 
 ..
 
@@ -75,7 +75,7 @@ The diagram below the message flow during an rp.cast operation:
     2. once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic') and passed to the Worker in charge of the task.
 
 .. image:: /images/rabbit/flow2.png
-   :width: 100%
+   :width: 60%
 
 ..
 
@@ -102,7 +102,7 @@ The figure below shows the status of the RabbitMQ node after Nova components' bo
        8. scheduler
     
 .. image:: /images/rabbit/state.png
-   :width: 100%
+   :width: 60%
 
 ..
 
@@ -130,9 +130,9 @@ More precisely Consumers need the following parameters:
     * Exchange: name of the exchange the queue binds to.
     * Routing_key: the interpretation of the routing key depends on the value of the exchange_type attribute.
     
-      ** Direct exchange: if the routing key property of the message and the routing_key attribute of the queue are identical, then the message is forwarded to the queue.
-      ** Fanout exchange: messages are forwarded to the queues bound the exchange, even if the binding does not have a key.
-      ** Topic exchange: if the routing key property of the message matches the routing key of the key according to a primitive pattern matching scheme, then the message is forwarded to the queue. The message routing key then consists of words separated by dots (".", like domain names), and two special characters are available; star ("") and hash ("#"). The star matches any word, and the hash matches zero or more words. For example ".stock.#" matches the routing keys "usd.stock" and "eur.stock.db" but not "stock.nasdaq".
+      * Direct exchange: if the routing key property of the message and the routing_key attribute of the queue are identical, then the message is forwarded to the queue.
+      * Fanout exchange: messages are forwarded to the queues bound the exchange, even if the binding does not have a key.
+      * Topic exchange: if the routing key property of the message matches the routing key of the key according to a primitive pattern matching scheme, then the message is forwarded to the queue. The message routing key then consists of words separated by dots (".", like domain names), and two special characters are available; star ("") and hash ("#"). The star matches any word, and the hash matches zero or more words. For example ".stock.#" matches the routing keys "usd.stock" and "eur.stock.db" but not "stock.nasdaq".
       
     * Durable: this flag determines the durability of both exchanges and queues; durable exchanges and queues remain active when a RabbitMQ server restarts. Non-durable exchanges/queues (transient exchanges/queues) are purged when a server restarts. It is worth noting that AMQP specifies that durable queues cannot bind to transient exchanges. Default is True.
     * Auto_delete: if set, the exchange is deleted when all queues have finished using it. Default is False.
@@ -143,7 +143,8 @@ More precisely Consumers need the following parameters:
     * Auto_declare: if this is True and the exchange name is set, the exchange will be automatically declared at instantiation. Auto declare is on by default.
       Publishers specify most the parameters of Consumers (such as they do not specify a queue name), but they can also specify the following:
     * Delivery_mode: the default delivery mode used for messages. The value is an integer. The following delivery modes are supported by RabbitMQ:
-          ** 1 or "transient": the message is transient. Which means it is stored in memory only, and is lost if the server dies or restarts.
-          ** 2 or "persistent": the message is persistent. Which means the message is stored both in-memory, and on disk, and therefore preserved if the server dies or restarts.
+    
+          * 1 or "transient": the message is transient. Which means it is stored in memory only, and is lost if the server dies or restarts.
+          * 2 or "persistent": the message is persistent. Which means the message is stored both in-memory, and on disk, and therefore preserved if the server dies or restarts.
 
 The default value is 2 (persistent). During a send operation, Publishers can override the delivery mode of messages so that, for example, transient messages can be sent over a durable queue.
