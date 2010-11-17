@@ -101,6 +101,7 @@ class CloudTestCase(test.TrialTestCase):
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
                                   public_ip=address)
+        greenthread.sleep(0.3)
         db.floating_ip_destroy(self.context, address)
 
     def test_associate_disassociate_address(self):
@@ -111,6 +112,7 @@ class CloudTestCase(test.TrialTestCase):
                                'host': FLAGS.host})
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {})
+        fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
         ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
@@ -119,6 +121,8 @@ class CloudTestCase(test.TrialTestCase):
                                         public_ip=address)
         self.cloud.release_address(self.context,
                                   public_ip=address)
+        greenthread.sleep(0.3)
+        self.network.deallocate_fixed_ip(self.context, fixed)
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
 
