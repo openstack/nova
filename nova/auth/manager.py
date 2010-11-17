@@ -662,7 +662,7 @@ class AuthManager(object):
                                   port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
-            LOG.warn("No vpn data for project %s", pid)
+            logging.warn("No vpn data for project %s", pid)
 
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(pid))
         zippy.close()

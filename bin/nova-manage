@@ -167,7 +167,6 @@ class VpnCommands(object):
                            'vpn_public_port': int(port)})
 
 
-
 class ShellCommands(object):
     def bpython(self):
         """Runs a bpython shell.
