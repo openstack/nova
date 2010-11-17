@@ -55,4 +55,5 @@ setup(name='nova',
                'bin/nova-network',
                'bin/nova-objectstore',
                'bin/nova-scheduler',
-               'bin/nova-volume'])
+               'bin/nova-volume',
+               'tools/nova-debug'])
