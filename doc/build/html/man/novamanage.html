@@ -60,6 +60,7 @@
 <li><a class="reference internal" href="#synopsis">SYNOPSIS</a></li>
 <li><a class="reference internal" href="#description">DESCRIPTION</a></li>
 <li><a class="reference internal" href="#options">OPTIONS</a><ul>
+<li><a class="reference internal" href="#nova-user">Nova User</a></li>
 <li><a class="reference internal" href="#nova-project">Nova Project</a></li>
 <li><a class="reference internal" href="#nova-role">Nova Role</a></li>
 <li><a class="reference internal" href="#nova-shell">Nova Shell</a></li>
@@ -145,6 +146,8 @@ nova-manage &lt;category&gt; &lt;action&gt; [&lt;args&gt;]</blockquote>
 <p>You can also run with a category argument such as user to see a list of all commands in that category:
 <tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span></tt></p>
 <p>These sections describe the available categories and arguments for nova-manage.</p>
+<div class="section" id="nova-user">
+<h4>Nova User<a class="headerlink" href="#nova-user" title="Permalink to this headline">¶</a></h4>
 <p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">admin</span> <span class="pre">&lt;username&gt;</span></tt></p>
 <blockquote>
 Create an admin user with the name &lt;username&gt;.</blockquote>
@@ -163,6 +166,7 @@ Outputs a list of all the user names to the screen.</blockquote>
 <p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">modify</span> <span class="pre">&lt;accesskey&gt;</span> <span class="pre">&lt;secretkey&gt;</span> <span class="pre">&lt;admin?T/F&gt;</span></tt></p>
 <blockquote>
 Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.</blockquote>
+</div>
 <div class="section" id="nova-project">
 <h4>Nova Project<a class="headerlink" href="#nova-project" title="Permalink to this headline">¶</a></h4>
 <p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">add</span> <span class="pre">&lt;projectname&gt;</span></tt></p>

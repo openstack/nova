@@ -118,13 +118,10 @@
 segment for each project&#8217;s instances that can be accessed via a dedicated
 VPN connection from the Internet.</p>
 <p>In this mode, each project gets its own VLAN, Linux networking bridge, and subnet. The subnets are specified by the network administrator, and are assigned dynamically to a project when required. A DHCP Server is started for each VLAN to pass out IP addresses to VM instances from the subnet assigned to the project. All instances belonging to one project are bridged into the same VLAN for that project. The Linux networking bridges and VLANs are created by Nova when required, described in more detail in Nova VLAN Network Management Implementation.</p>
-<div class="admonition-todo admonition " id="index-0">
-<p class="first admonition-title">Todo</p>
-<p class="last">Insert Figure 2 from &#8220;An OpenStack Network Overview&#8221; contributed by Citrix</p>
-</div>
+<img alt="../_images/Novadiagram.png" src="../_images/Novadiagram.png" style="width: 790px;" />
 <p>While network traffic between VM instances belonging to the same VLAN is always open, Nova can enforce isolation of network traffic between different projects by enforcing one VLAN per project.</p>
 <p>In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon&#8217;s &#8216;elastic IPs&#8217;. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project.</p>
-<div class="admonition-todo admonition " id="index-1">
+<div class="admonition-todo admonition " id="index-0">
 <p class="first admonition-title">Todo</p>
 <p class="last">Describe how a public IP address could be associated with a project (a VLAN)</p>
 </div>
@@ -174,7 +171,7 @@ Compute nodes have iptables/ebtables entries created per project and
 instance to protect against IP/MAC address spoofing and ARP poisoning.</p>
 <p>The network assignment to a project, and IP address assignment to a VM instance, are triggered when a user starts to run a VM instance. When running a VM instance, a user needs to specify a project for the instances, and the security groups (described in Security Groups) when the instance wants to join. If this is the first instance to be created for the project, then Nova (the cloud controller) needs to find a network controller to be the network host for the project; it then sets up a private network by finding an unused VLAN id, an unused subnet, and then the controller assigns them to the project, it also assigns a name to the project&#8217;s Linux bridge, and allocating a private IP within the project&#8217;s subnet for the new instance.</p>
 <p>If the instance the user wants to start is not the project&#8217;s first, a subnet and a VLAN must have already been assigned to the project; therefore the system needs only to find an available IP address within the subnet and assign it to the new starting instance. If there is no private IP available within the subnet, an exception will be raised to the cloud controller, and the VM creation cannot proceed.</p>
-<div class="admonition-todo admonition " id="index-2">
+<div class="admonition-todo admonition " id="index-1">
 <p class="first admonition-title">Todo</p>
 <p class="last">insert the name of the Linux bridge, is it always named bridge?</p>
 </div>
@@ -254,7 +251,7 @@ instance is started on that host</li>
 </ul>
 </li>
 </ul>
-<div class="admonition-todo admonition " id="index-3">
+<div class="admonition-todo admonition " id="index-2">
 <p class="first admonition-title">Todo</p>
 <p class="last">need specific Nova configuration added</p>
 </div>

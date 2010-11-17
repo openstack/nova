@@ -31,8 +31,9 @@ In this mode, each project gets its own VLAN, Linux networking bridge, and subne
 
     In the VLAN network mode, all the VM instances of a project are connected together in a VLAN with the specified private subnet. Each running VM instance is assigned an IP address within the given private subnet. 
 
-.. todo:: Insert Figure 2 from "An OpenStack Network Overview" contributed by Citrix
-
+.. image:: /images/Novadiagram.png
+   :width: 790
+   
 While network traffic between VM instances belonging to the same VLAN is always open, Nova can enforce isolation of network traffic between different projects by enforcing one VLAN per project. 
 
 In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon's 'elastic IPs'. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project. 

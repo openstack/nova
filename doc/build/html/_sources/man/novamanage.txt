@@ -42,6 +42,9 @@ You can also run with a category argument such as user to see a list of all comm
 
 These sections describe the available categories and arguments for nova-manage.
 
+Nova User
+~~~~~~~~~
+
 ``nova-manage user admin <username>``
 
     Create an admin user with the name <username>.

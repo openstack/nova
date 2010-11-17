@@ -162,7 +162,10 @@ Nova Floating IPs
 ``nova-manage floating create <host> <ip_range>``
 
     Creates floating IP addresses for the named host by the given range.
-	floating delete <ip_range>	Deletes floating IP addresses in the range given.	
+
+``nova-manage floating delete <ip_range>``
+
+    Deletes floating IP addresses in the range given.	
 	
 ``nova-manage floating list``
 
