@@ -679,7 +679,7 @@ class CloudController(object):
                                                          context.project_id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['address']
-            instance_id = None
+            ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
                 internal_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
@@ -717,8 +717,8 @@ class CloudController(object):
                   "args": {"floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
-    def associate_address(self, context, ec2_id, public_ip, **kwargs):
-        internal_id = ec2_id_to_internal_id(ec2_id)
+    def associate_address(self, context, instance_id, public_ip, **kwargs):
+        internal_id = ec2_id_to_internal_id(instance_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
