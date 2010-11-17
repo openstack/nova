@@ -44,7 +44,6 @@ def is_admin_context(context):
         warnings.warn('Use of empty request context is deprecated',
                       DeprecationWarning)
         raise Exception('die')
-        return True
     return context.is_admin
 
 
@@ -502,14 +501,14 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 @require_context
 def fixed_ip_get_instance(context, address):
-        fixed_ip_ref = fixed_ip_get_by_address(context, address)
-        return fixed_ip_ref.instance
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
 
 
 @require_admin_context
 def fixed_ip_get_network(context, address):
-        fixed_ip_ref = fixed_ip_get_by_address(context, address)
-        return fixed_ip_ref.network
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.network
 
 
 @require_context

@@ -78,8 +78,8 @@ class Bucket(object):
         path = os.path.abspath(os.path.join(
             FLAGS.buckets_path, bucket_name))
         if not path.startswith(os.path.abspath(FLAGS.buckets_path)) or \
-            os.path.exists(path):
-                raise exception.NotAuthorized()
+        os.path.exists(path):
+            raise exception.NotAuthorized()
 
         os.makedirs(path)
 
