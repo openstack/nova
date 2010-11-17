@@ -390,7 +390,7 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound('No fixed ip for address %s' % address)
+        raise exception.NotFound('No floating ip for address %s' % address)
 
     return result
 
