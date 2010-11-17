@@ -3,9 +3,11 @@
 
 from sphinx.ext.todo import *
 from docutils.parsers.rst import directives
+import re
 
 def _(s):
     return s
+
 
 def process_todo_nodes(app, doctree, fromdocname):
     if not app.config['todo_include_todos']:
@@ -19,19 +21,19 @@ def process_todo_nodes(app, doctree, fromdocname):
     if not hasattr(env, 'todo_all_todos'):
         env.todo_all_todos = []
 
-    my_todo_list = nodes.bullet_list("", nodes.Text('',''));
 
     # remove the item that was added in the constructor, since I'm tired of 
     # reading through docutils for the proper way to construct an empty list
-    my_todo_list.remove(my_todo_list[0]) 
+    lists = []
+    for i in xrange(5):
+        lists.append(nodes.bullet_list("", nodes.Text('','')));
+        lists[i].remove(lists[i][0]) 
+        lists[i].set_class('todo_list')
 
-    my_todo_list.set_class('todo_list')
     for node in doctree.traverse(todolist):
         if not app.config['todo_include_todos']:
             node.replace_self([])
             continue
-
-        content = []
 
         for todo_info in env.todo_all_todos:
             para = nodes.paragraph()
@@ -54,20 +56,33 @@ def process_todo_nodes(app, doctree, fromdocname):
 
             newnode.append(innernode)
             para += newnode
-            para.set_class("link")
+            para.set_class('todo_link')
 
             todo_entry = todo_info['todo']
                 
             env.resolve_references(todo_entry, todo_info['docname'], app.builder)
 
-            item = nodes.list_item("", para)
-            todo_entry[1].set_class("details")
-            item.append(todo_entry[1])
+            item = nodes.list_item('', para)
+            todo_entry[1].set_class('details')
 
-            my_todo_list.insert(0, item)
+            comment = todo_entry[1]
+        
+            m = re.match(r"^P(\d)", comment.astext())
+            priority = 5
+            if m:
+                priority = int(m.group(1))
+                if (priority < 0): priority = 1
+                if (priority > 5): priority = 5
+
+            item.set_class('todo_p' + str(priority))
+            todo_entry.set_class('todo_p' + str(priority))
+
+            item.append(comment)
+
+            lists[priority-1].insert(0, item)
 
 
-        node.replace_self(my_todo_list)
+        node.replace_self(lists)
 
 def setup(app):
     app.add_config_value('todo_include_todos', False, False)

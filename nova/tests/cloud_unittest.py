@@ -91,6 +91,37 @@ class CloudTestCase(test.TrialTestCase):
         # NOTE(vish): create depends on pool, so just call helper directly
         return cloud._gen_key(self.context, self.context.user.id, name)
 
+    def test_describe_addresses(self):
+        """Makes sure describe addresses runs without raising an exception"""
+        address = "10.10.10.10"
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': FLAGS.host})
+        self.cloud.allocate_address(self.context)
+        self.cloud.describe_addresses(self.context)
+        self.cloud.release_address(self.context,
+                                  public_ip=address)
+        db.floating_ip_destroy(self.context, address)
+
+    def test_associate_disassociate_address(self):
+        """Verifies associate runs cleanly without raising an exception"""
+        address = "10.10.10.10"
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': FLAGS.host})
+        self.cloud.allocate_address(self.context)
+        inst = db.instance_create(self.context, {})
+        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        self.cloud.associate_address(self.context,
+                                     instance_id=ec2_id,
+                                     public_ip=address)
+        self.cloud.disassociate_address(self.context,
+                                        public_ip=address)
+        self.cloud.release_address(self.context,
+                                  public_ip=address)
+        db.instance_destroy(self.context, inst['id'])
+        db.floating_ip_destroy(self.context, address)
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type

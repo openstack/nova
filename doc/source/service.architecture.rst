@@ -17,7 +17,7 @@ Nova’s Cloud Fabric is composed of the following major components:
 
 API Server 
 --------------------------------------------------
-At the heart of the cloud framework is an API Server.  This API Server makes command and control [#f80]_ of the hypervisor, storage, and networking programmatically available to users in realization of the definition of cloud computing.
+At the heart of the cloud framework is an API Server.  This API Server makes command and control of the hypervisor, storage, and networking programmatically available to users in realization of the definition of cloud computing.
 
 The API endpoints are basic http web services which handle authentication, authorization, and basic command and control functions using various API interfaces under the Amazon, Rackspace, and related models.  This enables API compatibility with multiple existing tool sets created for interaction with offerings from other vendors.  This broad compatibility prevents vendor lock-in.
 
@@ -48,7 +48,7 @@ The Network Controller manages the networking resources on host machines.  The A
 
 Volume Workers
 --------------------------------------------------
-Volume Workers interact with iSCSI storage to manage LVM-based [#f89]_ instance volumes.  Specific functions include:
+Volume Workers interact with iSCSI storage to manage LVM-based instance volumes.  Specific functions include:
 
 * Create Volumes
 * Delete Volumes
@@ -57,4 +57,4 @@ Volume Workers interact with iSCSI storage to manage LVM-based [#f89]_ instance 
 Volumes may easily be transferred between instances, but may be attached to only a single instance at a time.
 
 
-.. todo:: image store description
+.. todo:: P2: image store description

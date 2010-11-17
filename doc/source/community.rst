@@ -61,7 +61,8 @@ Nova on Launchpad
 Launchpad is a code hosting service that hosts the Nova source code. From
 Launchpad you can report bugs, ask questions, and register blueprints (feature requests). 
 
-`Launchpad Nova Page <http://launchpad.net/nova>`_
+* `Learn about how to use bzr with launchpad <http://wiki.openstack.org/LifeWithBzrAndLaunchpad>`_
+* `Launchpad Nova Page <http://launchpad.net/nova>`_
 
 OpenStack Blog
 --------------
