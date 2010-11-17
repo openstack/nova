@@ -49,6 +49,9 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="cloudpipe.html" title="Cloudpipe – Per Project Vpns"
              accesskey="N">next</a> |</li>
         <li class="right" >
@@ -65,7 +68,7 @@
 <li><a class="reference internal" href="#">Common and Misc Libraries</a><ul>
 <li><a class="reference internal" href="#the-nova-adminclient-module">The <tt class="docutils literal"><span class="pre">nova.adminclient</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-context-module">The <tt class="docutils literal"><span class="pre">nova.context</span></tt> Module</a></li>
-<li><a class="reference internal" href="#the-nova-exception-module">The <tt class="docutils literal"><span class="pre">nova.exception</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-nova.exception">The <tt class="docutils literal"><span class="pre">nova.exception</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-flags-module">The <tt class="docutils literal"><span class="pre">nova.flags</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-process-module">The <tt class="docutils literal"><span class="pre">nova.process</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-rpc-module">The <tt class="docutils literal"><span class="pre">nova.rpc</span></tt> Module</a></li>
@@ -73,7 +76,7 @@
 <li><a class="reference internal" href="#the-nova-test-module">The <tt class="docutils literal"><span class="pre">nova.test</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-twistd-module">The <tt class="docutils literal"><span class="pre">nova.twistd</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-utils-module">The <tt class="docutils literal"><span class="pre">nova.utils</span></tt> Module</a></li>
-<li><a class="reference internal" href="#the-nova-validate-module">The <tt class="docutils literal"><span class="pre">nova.validate</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-nova.validate">The <tt class="docutils literal"><span class="pre">nova.validate</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-wsgi-module">The <tt class="docutils literal"><span class="pre">nova.wsgi</span></tt> Module</a></li>
 <li><a class="reference internal" href="#tests">Tests</a><ul>
 <li><a class="reference internal" href="#the-declare-flags-module">The <tt class="docutils literal"><span class="pre">declare_flags</span></tt> Module</a></li>
@@ -133,8 +136,69 @@ very well yet.</p>
 <div class="section" id="the-nova-context-module">
 <h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.context</span></tt> Module<a class="headerlink" href="#the-nova-context-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="the-nova-exception-module">
-<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.exception</span></tt> Module<a class="headerlink" href="#the-nova-exception-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-nova.exception">
+<span id="the-nova-exception-module"></span><h2>The <a class="reference internal" href="#module-nova.exception" title="nova.exception"><tt class="xref py py-mod docutils literal"><span class="pre">nova.exception</span></tt></a> Module<a class="headerlink" href="#module-nova.exception" title="Permalink to this headline">¶</a></h2>
+<p>Nova base exception handling, including decorator for re-raising
+Nova-type exceptions. SHOULD include dedicated exception logging.</p>
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">ApiError</tt><big>(</big><em>message='Unknown'</em>, <em>code='Unknown'</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">Duplicate</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">Error</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">Invalid</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">InvalidInputException</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">NotAuthorized</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">NotEmpty</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">NotFound</tt><big>(</big><em>message=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">nova.exception.Error</span></tt></p>
+</dd></dl>
+
+<dl class="exception">
+<dt>
+<em class="property">exception </em><tt class="descclassname">nova.exception.</tt><tt class="descname">ProcessExecutionError</tt><big>(</big><em>stdout=None</em>, <em>stderr=None</em>, <em>exit_code=None</em>, <em>cmd=None</em>, <em>description=None</em><big>)</big></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.IOError</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<tt class="descclassname">nova.exception.</tt><tt class="descname">wrap_exception</tt><big>(</big><em>f</em><big>)</big></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="the-nova-flags-module">
 <h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.flags</span></tt> Module<a class="headerlink" href="#the-nova-flags-module" title="Permalink to this headline">¶</a></h2>
@@ -157,8 +221,21 @@ very well yet.</p>
 <div class="section" id="the-nova-utils-module">
 <h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.utils</span></tt> Module<a class="headerlink" href="#the-nova-utils-module" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="the-nova-validate-module">
-<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.validate</span></tt> Module<a class="headerlink" href="#the-nova-validate-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-nova.validate">
+<span id="the-nova-validate-module"></span><h2>The <a class="reference internal" href="#module-nova.validate" title="nova.validate"><tt class="xref py py-mod docutils literal"><span class="pre">nova.validate</span></tt></a> Module<a class="headerlink" href="#module-nova.validate" title="Permalink to this headline">¶</a></h2>
+<p>Decorators for argument validation, courtesy of
+<a class="reference external" href="http://rmi.net/~lutz/rangetest.html">http://rmi.net/~lutz/rangetest.html</a></p>
+<dl class="function">
+<dt>
+<tt class="descclassname">nova.validate.</tt><tt class="descname">rangetest</tt><big>(</big><em>**argchecks</em><big>)</big></dt>
+<dd><p>Validate ranges for both + defaults</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<tt class="descclassname">nova.validate.</tt><tt class="descname">typetest</tt><big>(</big><em>**argchecks</em><big>)</big></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="the-nova-wsgi-module">
 <h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.wsgi</span></tt> Module<a class="headerlink" href="#the-nova-wsgi-module" title="Permalink to this headline">¶</a></h2>
@@ -207,6 +284,9 @@ very well yet.</p>
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="cloudpipe.html" title="Cloudpipe – Per Project Vpns"
              >next</a> |</li>

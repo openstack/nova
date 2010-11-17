@@ -49,6 +49,9 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="network.html" title="Networking"
              accesskey="N">next</a> |</li>
         <li class="right" >
@@ -68,14 +71,14 @@
 <li><a class="reference internal" href="#the-nova-virt-connection-module">The <tt class="docutils literal"><span class="pre">nova.virt.connection</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-compute-disk-module">The <tt class="docutils literal"><span class="pre">nova.compute.disk</span></tt> Module</a></li>
 <li><a class="reference internal" href="#the-nova-virt-images-module">The <tt class="docutils literal"><span class="pre">nova.virt.images</span></tt> Module</a></li>
-<li><a class="reference internal" href="#the-nova-compute-instance-types-module">The <tt class="docutils literal"><span class="pre">nova.compute.instance_types</span></tt> Module</a></li>
-<li><a class="reference internal" href="#the-nova-compute-power-state-module">The <tt class="docutils literal"><span class="pre">nova.compute.power_state</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-nova.compute.instance_types">The <tt class="docutils literal"><span class="pre">nova.compute.instance_types</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-nova.compute.power_state">The <tt class="docutils literal"><span class="pre">nova.compute.power_state</span></tt> Module</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#drivers">Drivers</a><ul>
 <li><a class="reference internal" href="#the-nova-virt-libvirt-conn-driver">The <tt class="docutils literal"><span class="pre">nova.virt.libvirt_conn</span></tt> Driver</a></li>
 <li><a class="reference internal" href="#the-nova-virt-xenapi-driver">The <tt class="docutils literal"><span class="pre">nova.virt.xenapi</span></tt> Driver</a></li>
-<li><a class="reference internal" href="#the-nova-virt-fake-driver">The <tt class="docutils literal"><span class="pre">nova.virt.fake</span></tt> Driver</a></li>
+<li><a class="reference internal" href="#module-nova.virt.fake">The <tt class="docutils literal"><span class="pre">nova.virt.fake</span></tt> Driver</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#monitoring">Monitoring</a><ul>
@@ -141,11 +144,18 @@ a specific virtualization backend, read <a class="reference internal" href="#dri
 <div class="section" id="the-nova-virt-images-module">
 <h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.virt.images</span></tt> Module<a class="headerlink" href="#the-nova-virt-images-module" title="Permalink to this headline">¶</a></h3>
 </div>
-<div class="section" id="the-nova-compute-instance-types-module">
-<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.compute.instance_types</span></tt> Module<a class="headerlink" href="#the-nova-compute-instance-types-module" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="module-nova.compute.instance_types">
+<span id="the-nova-compute-instance-types-module"></span><h3>The <a class="reference internal" href="#module-nova.compute.instance_types" title="nova.compute.instance_types"><tt class="xref py py-mod docutils literal"><span class="pre">nova.compute.instance_types</span></tt></a> Module<a class="headerlink" href="#module-nova.compute.instance_types" title="Permalink to this headline">¶</a></h3>
+<p>The built-in instance properties.</p>
 </div>
-<div class="section" id="the-nova-compute-power-state-module">
-<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.compute.power_state</span></tt> Module<a class="headerlink" href="#the-nova-compute-power-state-module" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="module-nova.compute.power_state">
+<span id="the-nova-compute-power-state-module"></span><h3>The <a class="reference internal" href="#module-nova.compute.power_state" title="nova.compute.power_state"><tt class="xref py py-mod docutils literal"><span class="pre">nova.compute.power_state</span></tt></a> Module<a class="headerlink" href="#module-nova.compute.power_state" title="Permalink to this headline">¶</a></h3>
+<p>The various power states that a VM can be in.</p>
+<dl class="function">
+<dt>
+<tt class="descclassname">nova.compute.power_state.</tt><tt class="descname">name</tt><big>(</big><em>code</em><big>)</big></dt>
+<dd></dd></dl>
+
 </div>
 </div>
 <div class="section" id="drivers">
@@ -156,8 +166,201 @@ a specific virtualization backend, read <a class="reference internal" href="#dri
 <div class="section" id="the-nova-virt-xenapi-driver">
 <h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.virt.xenapi</span></tt> Driver<a class="headerlink" href="#the-nova-virt-xenapi-driver" title="Permalink to this headline">¶</a></h3>
 </div>
-<div class="section" id="the-nova-virt-fake-driver">
-<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.virt.fake</span></tt> Driver<a class="headerlink" href="#the-nova-virt-fake-driver" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="module-nova.virt.fake">
+<span id="the-nova-virt-fake-driver"></span><h3>The <a class="reference internal" href="fakes.html#module-nova.virt.fake" title="nova.virt.fake"><tt class="xref py py-mod docutils literal"><span class="pre">nova.virt.fake</span></tt></a> Driver<a class="headerlink" href="#module-nova.virt.fake" title="Permalink to this headline">¶</a></h3>
+<p>A fake (in-memory) hypervisor+api.</p>
+<p>Allows nova testing w/o a hypervisor.  This module also documents the
+semantics of real hypervisor connections.</p>
+<dl class="class">
+<dt>
+<em class="property">class </em><tt class="descclassname">nova.virt.fake.</tt><tt class="descname">FakeConnection</tt></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>The interface to this class talks in terms of &#8216;instances&#8217; (Amazon EC2 and
+internal Nova terminology), by which we mean &#8216;running virtual machine&#8217;
+(XenAPI terminology) or domain (Xen or libvirt terminology).</p>
+<p>An instance has an ID, which is the identifier chosen by Nova to represent
+the instance further up the stack.  This is unfortunately also called a
+&#8216;name&#8217; elsewhere.  As far as this layer is concerned, &#8216;instance ID&#8217; and
+&#8216;instance name&#8217; are synonyms.</p>
+<p>Note that the instance ID or name is not human-readable or
+customer-controlled &#8211; it&#8217;s an internal ID chosen by Nova.  At the
+nova.virt layer, instances do not have human-readable names at all &#8211; such
+things are only known higher up the stack.</p>
+<p>Most virtualization platforms will also have their own identity schemes,
+to uniquely identify a VM or domain.  These IDs must stay internal to the
+platform-specific layer, and never escape the connection interface.  The
+platform-specific layer is responsible for keeping track of which instance
+ID maps to which platform-specific ID, and vice versa.</p>
+<p>In contrast, the list_disks and list_interfaces calls may return
+platform-specific IDs.  These identify a specific virtual disk or specific
+virtual network interface, and these IDs are opaque to the rest of Nova.</p>
+<p>Some methods here take an instance of nova.compute.service.Instance.  This
+is the datastructure used by nova.compute to store details regarding an
+instance, and pass them into this layer.  This layer is responsible for
+translating that generic datastructure into terms that are specific to the
+virtualization platform.</p>
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">attach_volume</tt><big>(</big><em>instance_name</em>, <em>device_path</em>, <em>mountpoint</em><big>)</big></dt>
+<dd><p>Attach the disk at device_path to the instance at mountpoint</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">block_stats</tt><big>(</big><em>instance_name</em>, <em>disk_id</em><big>)</big></dt>
+<dd><p>Return performance counters associated with the given disk_id on the
+given instance_name.  These are returned as [rd_req, rd_bytes, wr_req,
+wr_bytes, errs], where rd indicates read, wr indicates write, req is
+the total number of I/O requests made, bytes is the total number of
+bytes transferred, and errs is the number of requests held up due to a
+full pipeline.</p>
+<p>All counters are long integers.</p>
+<p>This method is optional.  On some platforms (e.g. XenAPI) performance
+statistics can be retrieved directly in aggregate form, without Nova
+having to do the aggregation.  On those platforms, this method is
+unused.</p>
+<p>Note that this function takes an instance ID, not a
+compute.service.Instance, so that it can be called by compute.monitor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">destroy</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd><p>Destroy (shutdown and delete) the specified instance.</p>
+<p>The given parameter is an instance of nova.compute.service.Instance,
+and so the instance is being specified as instance.name.</p>
+<p>The work will be done asynchronously.  This function returns a
+Deferred that allows the caller to detect when it is complete.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">detach_volume</tt><big>(</big><em>instance_name</em>, <em>mountpoint</em><big>)</big></dt>
+<dd><p>Detach the disk attached to the instance at mountpoint</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">get_console_output</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">get_info</tt><big>(</big><em>instance_name</em><big>)</big></dt>
+<dd><p>Get a block of information about the given instance.  This is returned
+as a dictionary containing &#8216;state&#8217;: The power_state of the instance,
+&#8216;max_mem&#8217;: The maximum memory for the instance, in KiB, &#8216;mem&#8217;: The
+current memory the instance has, in KiB, &#8216;num_cpu&#8217;: The current number
+of virtual CPUs the instance has, &#8216;cpu_time&#8217;: The total CPU time used
+by the instance, in nanoseconds.</p>
+<p>This method should raise exception.NotFound if the hypervisor has no
+knowledge of the instance</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt>
+<em class="property">classmethod </em><tt class="descclassname">FakeConnection.</tt><tt class="descname">instance</tt><big>(</big><big>)</big></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">interface_stats</tt><big>(</big><em>instance_name</em>, <em>iface_id</em><big>)</big></dt>
+<dd><p>Return performance counters associated with the given iface_id on the
+given instance_id.  These are returned as [rx_bytes, rx_packets,
+rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop], where rx
+indicates receive, tx indicates transmit, bytes and packets indicate
+the total number of bytes or packets transferred, and errs and dropped
+is the total number of packets failed / dropped.</p>
+<p>All counters are long integers.</p>
+<p>This method is optional.  On some platforms (e.g. XenAPI) performance
+statistics can be retrieved directly in aggregate form, without Nova
+having to do the aggregation.  On those platforms, this method is
+unused.</p>
+<p>Note that this function takes an instance ID, not a
+compute.service.Instance, so that it can be called by compute.monitor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">list_disks</tt><big>(</big><em>instance_name</em><big>)</big></dt>
+<dd><p>Return the IDs of all the virtual disks attached to the specified
+instance, as a list.  These IDs are opaque to the caller (they are
+only useful for giving back to this layer as a parameter to
+disk_stats).  These IDs only need to be unique for a given instance.</p>
+<p>Note that this function takes an instance ID, not a
+compute.service.Instance, so that it can be called by compute.monitor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">list_instances</tt><big>(</big><big>)</big></dt>
+<dd><p>Return the names of all the instances known to the virtualization
+layer, as a list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">list_interfaces</tt><big>(</big><em>instance_name</em><big>)</big></dt>
+<dd><p>Return the IDs of all the virtual network interfaces attached to the
+specified instance, as a list.  These IDs are opaque to the caller
+(they are only useful for giving back to this layer as a parameter to
+interface_stats).  These IDs only need to be unique for a given
+instance.</p>
+<p>Note that this function takes an instance ID, not a
+compute.service.Instance, so that it can be called by compute.monitor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">reboot</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd><p>Reboot the specified instance.</p>
+<p>The given parameter is an instance of nova.compute.service.Instance,
+and so the instance is being specified as instance.name.</p>
+<p>The work will be done asynchronously.  This function returns a
+Deferred that allows the caller to detect when it is complete.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">rescue</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd><p>Rescue the specified instance.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">spawn</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd><p>Create a new instance/VM/domain on the virtualization platform.</p>
+<p>The given parameter is an instance of nova.compute.service.Instance.
+This function should use the data there to guide the creation of
+the new instance.</p>
+<p>The work will be done asynchronously.  This function returns a
+Deferred that allows the caller to detect when it is complete.</p>
+<p>Once this successfully completes, the instance should be
+running (power_state.RUNNING).</p>
+<p>If this fails, any partial instance should be completely
+cleaned up, and the virtualization platform should be in the state
+that it was before this call began.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<tt class="descclassname">FakeConnection.</tt><tt class="descname">unrescue</tt><big>(</big><em>instance</em><big>)</big></dt>
+<dd><p>Unrescue the specified instance.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt>
+<em class="property">class </em><tt class="descclassname">nova.virt.fake.</tt><tt class="descname">FakeInstance</tt></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<tt class="descclassname">nova.virt.fake.</tt><tt class="descname">get_connection</tt><big>(</big><em>_</em><big>)</big></dt>
+<dd></dd></dl>
+
 </div>
 </div>
 <div class="section" id="monitoring">
@@ -189,6 +392,9 @@ a specific virtualization backend, read <a class="reference internal" href="#dri
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="network.html" title="Networking"
              >next</a> |</li>

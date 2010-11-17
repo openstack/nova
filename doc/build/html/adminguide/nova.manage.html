@@ -49,6 +49,9 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="euca2ools.html" title="Euca2ools"
              accesskey="N">next</a> |</li>
         <li class="right" >
@@ -64,7 +67,11 @@
             <ul>
 <li><a class="reference internal" href="#">The nova-manage command</a><ul>
 <li><a class="reference internal" href="#introduction">Introduction</a></li>
-<li><a class="reference internal" href="#nova-shell">Nova Shell</a><ul>
+<li><a class="reference internal" href="#nova-project">Nova Project</a></li>
+<li><a class="reference internal" href="#nova-role">Nova Role</a></li>
+<li><a class="reference internal" href="#nova-shell">Nova Shell</a></li>
+<li><a class="reference internal" href="#nova-vpn">Nova VPN</a></li>
+<li><a class="reference internal" href="#nova-floating-ips">Nova Floating IPs</a><ul>
 <li><a class="reference internal" href="#concept-flags">Concept: Flags</a></li>
 <li><a class="reference internal" href="#concept-plugins">Concept: Plugins</a></li>
 <li><a class="reference internal" href="#concept-ipc-rpc">Concept: IPC/RPC</a></li>
@@ -118,60 +125,117 @@
 <p>The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of nova, such as user creation,
 vpn management, and much more.</p>
-<p>The standard pattern for executing a nova-manage command is:</p>
-<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">&lt;category&gt;</span> <span class="pre">&lt;command&gt;</span> <span class="pre">[&lt;args&gt;]</span></tt></p>
-<p>For example, to obtain a list of all projects:</p>
+<p>The standard pattern for executing a nova-manage command is:
+<tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">&lt;category&gt;</span> <span class="pre">&lt;command&gt;</span> <span class="pre">[&lt;args&gt;]</span></tt></p>
+<p>For example, to obtain a list of all projects:
+<tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">list</span></tt></p>
+<p>Run without arguments to see a list of available command categories:
+<tt class="docutils literal"><span class="pre">nova-manage</span></tt></p>
+<p>Categories are user, project, role, shell, vpn, and floating. Detailed descriptions are below.</p>
+<p>You can also run with a category argument such as user to see a list of all commands in that category:
+<tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span></tt></p>
+<p>These sections describe the available categories and arguments for nova-manage.</p>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">admin</span> <span class="pre">&lt;username&gt;</span></tt></p>
+<blockquote>
+Create an admin user with the name &lt;username&gt;.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">create</span> <span class="pre">&lt;username&gt;</span></tt></p>
+<blockquote>
+Create a normal user with the name &lt;username&gt;.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">delete</span> <span class="pre">&lt;username&gt;</span></tt></p>
+<blockquote>
+Delete the user with the name &lt;username&gt;.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">exports</span> <span class="pre">&lt;username&gt;</span></tt></p>
+<blockquote>
+Outputs a list of access key and secret keys for user to the screen</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">list</span></tt></p>
+<blockquote>
+Outputs a list of all the user names to the screen.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span> <span class="pre">modify</span> <span class="pre">&lt;accesskey&gt;</span> <span class="pre">&lt;secretkey&gt;</span> <span class="pre">&lt;admin?T/F&gt;</span></tt></p>
+<blockquote>
+Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.</blockquote>
+</div>
+<div class="section" id="nova-project">
+<h2>Nova Project<a class="headerlink" href="#nova-project" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">add</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Add a nova project with the name &lt;projectname&gt; to the database.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">create</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Create a new nova project with the name &lt;projectname&gt; (you still need to do nova-manage project add &lt;projectname&gt; to add it to the database).</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">delete</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Delete a nova project with the name &lt;projectname&gt;.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">environment</span> <span class="pre">&lt;projectname&gt;</span> <span class="pre">&lt;username&gt;</span></tt></p>
+<blockquote>
+Exports environment variables for the named project to a file named novarc.</blockquote>
 <p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">list</span></tt></p>
-<p>You can run without arguments to see a list of available command categories:</p>
-<p><tt class="docutils literal"><span class="pre">nova-manage</span></tt></p>
-<p>You can run with a category argument to see a list of all commands in that
-category:</p>
-<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span></tt></p>
+<blockquote>
+Outputs a list of all the projects to the screen.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">quota</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Outputs the size and specs of the project&#8217;s instances including gigabytes, instances, floating IPs, volumes, and cores.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">remove</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Deletes the project with the name &lt;projectname&gt;.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">zipfile</span></tt></p>
+<blockquote>
+Compresses all related files for a created project into a zip file nova.zip.</blockquote>
+</div>
+<div class="section" id="nova-role">
+<h2>Nova Role<a class="headerlink" href="#nova-role" title="Permalink to this headline">¶</a></h2>
+<p>nova-manage role &lt;action&gt; [&lt;argument&gt;]
+<tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">role</span> <span class="pre">add</span> <span class="pre">&lt;username&gt;</span> <span class="pre">&lt;rolename&gt;</span> <span class="pre">&lt;(optional)</span> <span class="pre">projectname&gt;</span></tt></p>
+<blockquote>
+Add a user to either a global or project-based role with the indicated &lt;rolename&gt; assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects.</blockquote>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">role</span> <span class="pre">has</span> <span class="pre">&lt;username&gt;</span> <span class="pre">&lt;projectname&gt;</span></tt></dt>
+<dd>Checks the user or project and responds with True if the user has a global role with a particular project.</dd>
+<dt><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">role</span> <span class="pre">remove</span> <span class="pre">&lt;username&gt;</span> <span class="pre">&lt;rolename&gt;</span></tt></dt>
+<dd>Remove the indicated role from the user.</dd>
+</dl>
 </div>
 <div class="section" id="nova-shell">
 <h2>Nova Shell<a class="headerlink" href="#nova-shell" title="Permalink to this headline">¶</a></h2>
-<ul>
-<li><dl class="first docutils">
-<dt>shell bpython</dt>
-<dd><ul class="first last simple">
-<li>start a new bpython shell</li>
-</ul>
-</dd>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">shell</span> <span class="pre">bpython</span></tt></p>
+<blockquote>
+Starts a new bpython shell.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">shell</span> <span class="pre">ipython</span></tt></p>
+<blockquote>
+Starts a new ipython shell.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">shell</span> <span class="pre">python</span></tt></p>
+<blockquote>
+Starts a new python shell.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">shell</span> <span class="pre">run</span></tt></p>
+<blockquote>
+Starts a new shell using python.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">shell</span> <span class="pre">script</span> <span class="pre">&lt;path/scriptname&gt;</span></tt></p>
+<blockquote>
+Runs the named script from the specified path with flags set.</blockquote>
+</div>
+<div class="section" id="nova-vpn">
+<h2>Nova VPN<a class="headerlink" href="#nova-vpn" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">vpn</span> <span class="pre">list</span></tt></p>
+<blockquote>
+Displays a list of projects, their IP prot numbers, and what state they&#8217;re in.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">vpn</span> <span class="pre">run</span> <span class="pre">&lt;projectname&gt;</span></tt></p>
+<blockquote>
+Starts the VPN for the named project.</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">vpn</span> <span class="pre">spawn</span></tt></p>
+<blockquote>
+Runs all VPNs.</blockquote>
+</div>
+<div class="section" id="nova-floating-ips">
+<h2>Nova Floating IPs<a class="headerlink" href="#nova-floating-ips" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">floating</span> <span class="pre">create</span> <span class="pre">&lt;host&gt;</span> <span class="pre">&lt;ip_range&gt;</span></tt></p>
+<blockquote>
+<dl class="docutils">
+<dt>Creates floating IP addresses for the named host by the given range.</dt>
+<dd>floating delete &lt;ip_range&gt;      Deletes floating IP addresses in the range given.</dd>
 </dl>
-</li>
-<li><dl class="first docutils">
-<dt>shell ipython</dt>
-<dd><ul class="first last simple">
-<li>start a new ipython shell</li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>shell python</dt>
-<dd><ul class="first last simple">
-<li>start a new python shell</li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>shell run</dt>
-<dd><ul class="first last simple">
-<li>???</li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt>shell script: Runs the script from the specifed path with flags set properly.</dt>
-<dd><ul class="first last simple">
-<li>arguments: path</li>
-</ul>
-</dd>
-</dl>
-</li>
-</ul>
+</blockquote>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">floating</span> <span class="pre">list</span></tt></p>
+<blockquote>
+Displays a list of all floating IP addresses.</blockquote>
 <div class="section" id="concept-flags">
 <h3>Concept: Flags<a class="headerlink" href="#concept-flags" title="Permalink to this headline">¶</a></h3>
 <p>python-gflags</p>
@@ -236,6 +300,9 @@ category:</p>
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="euca2ools.html" title="Euca2ools"
              >next</a> |</li>

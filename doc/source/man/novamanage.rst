@@ -26,57 +26,148 @@ nova-manage controls cloud computing instances by managing nova users, nova proj
 OPTIONS
 =======
 
-Run without arguments to see a list of available command categories. Categories are user, project, role, shell, vpn, and floating. Detailed descriptions are below.
-::
-nova-manage
+The standard pattern for executing a nova-manage command is:
+``nova-manage <category> <command> [<args>]``
 
-You can also run with a category argument such as user to see a list of all commands in that category. 
-::
-nova-manage user
+For example, to obtain a list of all projects:
+``nova-manage project list``
 
-Here are the available categories and arguments for nova-manage: 
+Run without arguments to see a list of available command categories:
+``nova-manage``
 
-nova-manage user <action> [<argument>] 
-	user admin <username>		Create an admin user with the name <username>.
-	user create <username>		Create a normal user with the name <username>.
-	user delete <username>		Delete the user with the name <username>.
-	user exports <username>		Outputs a list of access key and secret keys for user to the screen
-	user list 					Outputs a list of all the user names to the screen.
-	user modify <accesskey> <secretkey> <admin?T/F>		Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.
+Categories are user, project, role, shell, vpn, and floating. Detailed descriptions are below.
+
+You can also run with a category argument such as user to see a list of all commands in that category:
+``nova-manage user``
+
+These sections describe the available categories and arguments for nova-manage.
+
+Nova User
+~~~~~~~~~
+
+``nova-manage user admin <username>``
+
+    Create an admin user with the name <username>.
+
+``nova-manage user create <username>``
+
+    Create a normal user with the name <username>.
+
+``nova-manage user delete <username>``
+
+    Delete the user with the name <username>.
+
+``nova-manage user exports <username>``
+
+    Outputs a list of access key and secret keys for user to the screen
+
+``nova-manage user list``
+
+    Outputs a list of all the user names to the screen.
+
+``nova-manage user modify <accesskey> <secretkey> <admin?T/F>``
+
+    Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.
 	
-nova-manage project <action> [<argument>] 
-	project	add <projectname>	Add a nova project with the name <projectname> to the database.
-	project create <projectname>	Create a new nova project with the name <projectname> (you still need to do nova-manage project add <projectname> to add it to the database).
-	project delete 				Delete a nova project with the name <projectname>.
-	project environment <projectname> <username>		Exports environment variables for the named project to a file named novarc.
-	project list 				Outputs a list of all the projects to the screen.
-	project quota <projectname>		Outputs the size and specs of the project's instances including gigabytes, instances, floating IPs, volumes, and cores.
-	project remove <projectname>	Deletes the project with the name <projectname>.
-	project zipfile					Compresses all related files for a created project into a zip file nova.zip.
+Nova Project
+~~~~~~~~~~~~
+
+``nova-manage project add <projectname>``
+
+    Add a nova project with the name <projectname> to the database.
+
+``nova-manage project create <projectname>``
+
+    Create a new nova project with the name <projectname> (you still need to do nova-manage project add <projectname> to add it to the database).
 	
+``nova-manage project delete <projectname>``
+
+    Delete a nova project with the name <projectname>.
+
+``nova-manage project environment <projectname> <username>``
+
+    Exports environment variables for the named project to a file named novarc.
+    
+``nova-manage project list``
+
+    Outputs a list of all the projects to the screen.
+
+``nova-manage project quota <projectname>``
+
+    Outputs the size and specs of the project's instances including gigabytes, instances, floating IPs, volumes, and cores.
+
+``nova-manage project remove <projectname>``
+
+    Deletes the project with the name <projectname>.
+
+``nova-manage project zipfile``
+
+    Compresses all related files for a created project into a zip file nova.zip.
+	
+Nova Role
+~~~~~~~~~
+
 nova-manage role <action> [<argument>] 
-	role add <username> <rolename> <(optional) projectname>			Add a user to either a global or project-based role with the indicated <rolename> assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects. 
-	role has <username> <projectname>		Checks the user or project and responds with True if the user has a global role with a particular project.
-	role remove <username> <rolename>			Remove the indicated role from the user. 
+``nova-manage role add <username> <rolename> <(optional) projectname>``
+
+    Add a user to either a global or project-based role with the indicated <rolename> assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects. 
+
+``nova-manage role has <username> <projectname>``
+    Checks the user or project and responds with True if the user has a global role with a particular project.
+
+``nova-manage role remove <username> <rolename>``
+    Remove the indicated role from the user. 
+
+Nova Shell
+~~~~~~~~~~
+
+``nova-manage shell bpython``
+
+    Starts a new bpython shell. 
+
+``nova-manage shell ipython``
+
+    Starts a new ipython shell.
+
+``nova-manage shell python``
+
+    Starts a new python shell.
+
+``nova-manage shell run``
+
+    Starts a new shell using python.
+
+``nova-manage shell script <path/scriptname>``
+
+    Runs the named script from the specified path with flags set.
+
+Nova VPN
+~~~~~~~~
+
+``nova-manage vpn list``
+
+    Displays a list of projects, their IP prot numbers, and what state they're in.
+
+``nova-manage vpn run <projectname>``
+
+    Starts the VPN for the named project.		
+
+``nova-manage vpn spawn``
+
+    Runs all VPNs.
 	
-nova-manage shell <action> [<argument>] 
-	shell bpython		Starts a new bpython shell. 
-	shell ipython		Starts a new ipython shell.
-	shell python		Starts a new python shell.
-	shell run			Starts a new shell using python.
-	shell script <path/scriptname>	Runs the named script from the specified path with flags set.
+Nova Floating IPs
+~~~~~~~~~~~~~~~~~
+
+``nova-manage floating create <host> <ip_range>``
+
+    Creates floating IP addresses for the named host by the given range.
+	floating delete <ip_range>	Deletes floating IP addresses in the range given.	
 	
-nova-manage vpn <action> [<argument>]  
-	vpn list		Displays a list of projects, their IP prot numbers, and what state they're in.
-	vpn run	<projectname> 	Starts the VPN for the named project.		
-	vpn spawn				Runs all VPNs.
-	
-nova-manage floating <action> [<argument>] 
-	floating create <host> <ip_range>	Creates floating IP addresses for the named host by the given range.
-	floating delete <ip_range>	Deletes floating IP addresses in the range given.
-	floating list 			Displays a list of all floating IP addresses.
-	
---help, -h              Show this help message and exit.
+``nova-manage floating list``
+
+    Displays a list of all floating IP addresses.
+
 
 FILES
 ========
