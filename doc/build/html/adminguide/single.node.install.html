@@ -1,0 +1,410 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installing Nova on a Single Host &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="next" title="Installing on Ubuntu 10.04 (Lucid)" href="distros/ubuntu.10.04.html" />
+    <link rel="prev" title="Monitoring" href="monitoring.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="distros/ubuntu.10.04.html" title="Installing on Ubuntu 10.04 (Lucid)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="monitoring.html" title="Monitoring"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Installing Nova on a Single Host</a><ul>
+<li><a class="reference internal" href="#step-1-and-2-get-the-latest-nova-code-system-software">Step 1 and 2: Get the latest Nova code system software</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#step-3-build-and-install-nova-services">Step 3: Build and install Nova services</a></li>
+<li><a class="reference internal" href="#step-4-create-a-nova-administrator">Step 4: Create a Nova administrator</a></li>
+<li><a class="reference internal" href="#step-5-create-a-project-with-the-user-you-created">Step 5: Create a project with the user you created</a></li>
+<li><a class="reference internal" href="#step-6-unzip-the-nova-zip">Step 6: Unzip the nova.zip</a></li>
+<li><a class="reference internal" href="#step-7-source-the-rc-file">Step 7: Source the rc file</a></li>
+<li><a class="reference internal" href="#step-8-pat-yourself-on-the-back">Step 8: Pat yourself on the back :)</a></li>
+<li><a class="reference internal" href="#step-9-get-an-image">Step 9: Get an image</a></li>
+<li><a class="reference internal" href="#step-10-decompress-the-image-file">Step 10: Decompress the image file</a></li>
+<li><a class="reference internal" href="#step-11-send-commands-to-upload-sample-image-to-the-cloud">Step 11: Send commands to upload sample image to the cloud</a></li>
+<li><a class="reference internal" href="#troubleshooting-installation">Troubleshooting Installation</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="monitoring.html"
+                                  title="previous chapter">Monitoring</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="distros/ubuntu.10.04.html"
+                                  title="next chapter">Installing on Ubuntu 10.04 (Lucid)</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/adminguide/single.node.install.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installing-nova-on-a-single-host">
+<h1>Installing Nova on a Single Host<a class="headerlink" href="#installing-nova-on-a-single-host" title="Permalink to this headline">¶</a></h1>
+<p>Nova can be run on a single machine, and it is recommended that new users practice managing this type of installation before graduating to multi node systems.</p>
+<p>The fastest way to get a test cloud running is through our <a class="reference internal" href="../quickstart.html"><em>Nova Quickstart</em></a>.  But for more detail on installing the system read this doc.</p>
+<div class="section" id="step-1-and-2-get-the-latest-nova-code-system-software">
+<h2>Step 1 and 2: Get the latest Nova code system software<a class="headerlink" href="#step-1-and-2-get-the-latest-nova-code-system-software" title="Permalink to this headline">¶</a></h2>
+<p>Depending on your system, the mehod for accomplishing this varies</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="distros/ubuntu.10.04.html">Installing on Ubuntu 10.04 (Lucid)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distros/ubuntu.10.10.html">Installing on Ubuntu 10.10 (Maverick)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distros/others.html">Installation on other distros (like Debian, Fedora or CentOS )</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="step-3-build-and-install-nova-services">
+<h2>Step 3: Build and install Nova services<a class="headerlink" href="#step-3-build-and-install-nova-services" title="Permalink to this headline">¶</a></h2>
+<p>Switch to the base nova source directory.</p>
+<p>Then type or copy/paste in the following line to compile the Python code for OpenStack Compute.</p>
+<div class="highlight-python"><pre>sudo python setup.py build
+sudo python setup.py install</pre>
+</div>
+<p>When the installation is complete, you&#8217;ll see the following lines:</p>
+<div class="highlight-python"><pre>Installing nova-network script to /usr/local/bin
+Installing nova-volume script to /usr/local/bin
+Installing nova-objectstore script to /usr/local/bin
+Installing nova-manage script to /usr/local/bin
+Installing nova-scheduler script to /usr/local/bin
+Installing nova-dhcpbridge script to /usr/local/bin
+Installing nova-compute script to /usr/local/bin
+Installing nova-instancemonitor script to /usr/local/bin
+Installing nova-api script to /usr/local/bin
+Installing nova-import-canonical-imagestore script to /usr/local/bin
+
+Installed /usr/local/lib/python2.6/dist-packages/nova-2010.1-py2.6.egg
+Processing dependencies for nova==2010.1
+Finished processing dependencies for nova==2010.1</pre>
+</div>
+</div>
+<div class="section" id="step-4-create-a-nova-administrator">
+<h2>Step 4: Create a Nova administrator<a class="headerlink" href="#step-4-create-a-nova-administrator" title="Permalink to this headline">¶</a></h2>
+<p>Type or copy/paste in the following line to create a user named &#8220;anne.&#8221;:</p>
+<div class="highlight-python"><pre>sudo nova-manage user admin anne</pre>
+</div>
+<p>You see an access key and a secret key export, such as these made-up ones::</p>
+<div class="highlight-python"><pre>export EC2_ACCESS_KEY=4e6498a2-blah-blah-blah-17d1333t97fd
+export EC2_SECRET_KEY=0a520304-blah-blah-blah-340sp34k05bbe9a7</pre>
+</div>
+</div>
+<div class="section" id="step-5-create-a-project-with-the-user-you-created">
+<h2>Step 5: Create a project with the user you created<a class="headerlink" href="#step-5-create-a-project-with-the-user-you-created" title="Permalink to this headline">¶</a></h2>
+<p>Type or copy/paste in the following line to create a project named IRT (for Ice Road Truckers, of course) with the newly-created user named anne.</p>
+<div class="highlight-python"><pre>sudo nova-manage project create IRT anne</pre>
+</div>
+<div class="highlight-python"><pre>Generating RSA private key, 1024 bit long modulus
+.....++++++
+..++++++
+e is 65537 (0x10001)
+Using configuration from ./openssl.cnf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+countryName           :PRINTABLE:'US'
+stateOrProvinceName   :PRINTABLE:'California'
+localityName          :PRINTABLE:'MountainView'
+organizationName      :PRINTABLE:'AnsoLabs'
+organizationalUnitName:PRINTABLE:'NovaDev'
+commonName            :PRINTABLE:'anne-2010-10-12T21:12:35Z'
+Certificate is to be certified until Oct 12 21:12:35 2011 GMT (365 days)
+
+Write out database with 1 new entries
+Data Base Updated</pre>
+</div>
+</div>
+<div class="section" id="step-6-unzip-the-nova-zip">
+<h2>Step 6: Unzip the nova.zip<a class="headerlink" href="#step-6-unzip-the-nova-zip" title="Permalink to this headline">¶</a></h2>
+<p>You should have a nova.zip file in your current working directory. Unzip it with this command:</p>
+<div class="highlight-python"><pre>unzip nova.zip</pre>
+</div>
+<p>You&#8217;ll see these files extract.</p>
+<div class="highlight-python"><pre>Archive:  nova.zip
+ extracting: novarc
+ extracting: pk.pem
+ extracting: cert.pem
+ extracting: nova-vpn.conf
+ extracting: cacert.pem</pre>
+</div>
+</div>
+<div class="section" id="step-7-source-the-rc-file">
+<h2>Step 7: Source the rc file<a class="headerlink" href="#step-7-source-the-rc-file" title="Permalink to this headline">¶</a></h2>
+<p>Type or copy/paste the following to source the novarc file in your current working directory.</p>
+<div class="highlight-python"><pre>. novarc</pre>
+</div>
+</div>
+<div class="section" id="step-8-pat-yourself-on-the-back">
+<h2>Step 8: Pat yourself on the back :)<a class="headerlink" href="#step-8-pat-yourself-on-the-back" title="Permalink to this headline">¶</a></h2>
+<p>Congratulations, your cloud is up and running, you’ve created an admin user, retrieved the user&#8217;s credentials and put them in your environment.</p>
+<p>Now you need an image.</p>
+</div>
+<div class="section" id="step-9-get-an-image">
+<h2>Step 9: Get an image<a class="headerlink" href="#step-9-get-an-image" title="Permalink to this headline">¶</a></h2>
+<p>To make things easier, we&#8217;ve provided a small image on the Rackspace CDN. Use this command to get it on your server.</p>
+<div class="highlight-python"><pre>wget http://c2477062.cdn.cloudfiles.rackspacecloud.com/images.tgz</pre>
+</div>
+<div class="highlight-python"><pre>--2010-10-12 21:40:55--  http://c2477062.cdn.cloudfiles.rackspacecloud.com/images.tgz
+Resolving cblah2.cdn.cloudfiles.rackspacecloud.com... 208.111.196.6, 208.111.196.7
+Connecting to cblah2.cdn.cloudfiles.rackspacecloud.com|208.111.196.6|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 58520278 (56M) [appication/x-gzip]
+Saving to: `images.tgz'
+
+100%[======================================&gt;] 58,520,278  14.1M/s   in 3.9s
+
+2010-10-12 21:40:59 (14.1 MB/s) - `images.tgz' saved [58520278/58520278]</pre>
+</div>
+</div>
+<div class="section" id="step-10-decompress-the-image-file">
+<h2>Step 10: Decompress the image file<a class="headerlink" href="#step-10-decompress-the-image-file" title="Permalink to this headline">¶</a></h2>
+<p>Use this command to extract the image files::</p>
+<div class="highlight-python"><pre>tar xvzf images.tgz</pre>
+</div>
+<p>You get a directory listing like so::</p>
+<div class="highlight-python"><pre>images
+|-- aki-lucid
+|   |-- image
+|   `-- info.json
+|-- ami-tiny
+|   |-- image
+|   `-- info.json
+`-- ari-lucid
+    |-- image
+    `-- info.json</pre>
+</div>
+</div>
+<div class="section" id="step-11-send-commands-to-upload-sample-image-to-the-cloud">
+<h2>Step 11: Send commands to upload sample image to the cloud<a class="headerlink" href="#step-11-send-commands-to-upload-sample-image-to-the-cloud" title="Permalink to this headline">¶</a></h2>
+<p>Type or copy/paste the following commands to create a manifest for the kernel.:</p>
+<div class="highlight-python"><pre>euca-bundle-image -i images/aki-lucid/image -p kernel --kernel true</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking image
+Tarring image
+Encrypting image
+Splitting image...
+Part: kernel.part.0
+Generating manifest /tmp/kernel.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to create a manifest for the ramdisk.:</p>
+<div class="highlight-python"><pre>euca-bundle-image -i images/ari-lucid/image -p ramdisk --ramdisk true</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking image
+Tarring image
+Encrypting image
+Splitting image...
+Part: ramdisk.part.0
+Generating manifest /tmp/ramdisk.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to upload the kernel bundle.:</p>
+<div class="highlight-python"><pre>euca-upload-bundle -m /tmp/kernel.manifest.xml -b mybucket</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking bucket: mybucket
+Creating bucket: mybucket
+Uploading manifest file
+Uploading part: kernel.part.0
+Uploaded image as mybucket/kernel.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to upload the ramdisk bundle.:</p>
+<div class="highlight-python"><pre>euca-upload-bundle -m /tmp/ramdisk.manifest.xml -b mybucket</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking bucket: mybucket
+Uploading manifest file
+Uploading part: ramdisk.part.0
+Uploaded image as mybucket/ramdisk.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to register the kernel and get its ID.:</p>
+<div class="highlight-python"><pre>euca-register mybucket/kernel.manifest.xml</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>IMAGE   ami-fcbj2non</pre>
+</div>
+<p>Type or copy/paste the following commands to register the ramdisk and get its ID.:</p>
+<div class="highlight-python"><pre>euca-register mybucket/ramdisk.manifest.xml</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>IMAGE   ami-orukptrc</pre>
+</div>
+<p>Type or copy/paste the following commands to create a manifest for the machine image associated with the ramdisk and kernel IDs that you got from the previous commands.:</p>
+<div class="highlight-python"><pre>euca-bundle-image -i images/ami-tiny/image -p machine  --kernel ami-fcbj2non --ramdisk ami-orukptrc</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking image
+Tarring image
+Encrypting image
+Splitting image...
+Part: machine.part.0
+Part: machine.part.1
+Part: machine.part.2
+Part: machine.part.3
+Part: machine.part.4
+Generating manifest /tmp/machine.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to upload the machine image bundle.:</p>
+<div class="highlight-python"><pre>euca-upload-bundle -m /tmp/machine.manifest.xml -b mybucket</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Checking bucket: mybucket
+Uploading manifest file
+Uploading part: machine.part.0
+Uploading part: machine.part.1
+Uploading part: machine.part.2
+Uploading part: machine.part.3
+Uploading part: machine.part.4
+Uploaded image as mybucket/machine.manifest.xml</pre>
+</div>
+<p>Type or copy/paste the following commands to register the machine image and get its ID.:</p>
+<div class="highlight-python"><pre>euca-register mybucket/machine.manifest.xml</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>IMAGE   ami-g06qbntt</pre>
+</div>
+<p>Type or copy/paste the following commands to register a SSH keypair for use in starting and accessing the instances.:</p>
+<div class="highlight-python"><pre>euca-add-keypair mykey &gt; mykey.priv
+chmod 600 mykey.priv</pre>
+</div>
+<p>Type or copy/paste the following commands to run an instance using the keypair and IDs that we previously created.:</p>
+<div class="highlight-python"><pre>euca-run-instances ami-g06qbntt --kernel  ami-fcbj2non --ramdisk ami-orukptrc -k mykey</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>RESERVATION     r-0at28z12      IRT
+INSTANCE        i-1b0bh8n       ami-g06qbntt    10.0.0.3        10.0.0.3        scheduling      mykey (IRT, None)      m1.small 2010-10-18 19:02:10.443599</pre>
+</div>
+<p>Type or copy/paste the following commands to watch as the scheduler launches, and completes booting your instance.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">euca</span><span class="o">-</span><span class="n">describe</span><span class="o">-</span><span class="n">instances</span>
+</pre></div>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>RESERVATION     r-0at28z12      IRT
+INSTANCE        i-1b0bh8n       ami-g06qbntt    10.0.0.3        10.0.0.3        launching       mykey (IRT, cloud02)   m1.small 2010-10-18 19:02:10.443599</pre>
+</div>
+<p>Type or copy/paste the following commands to see when loading is completed and the instance is running.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">euca</span><span class="o">-</span><span class="n">describe</span><span class="o">-</span><span class="n">instances</span>
+</pre></div>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>RESERVATION     r-0at28z12      IRT
+INSTANCE        i-1b0bh8n       ami-g06qbntt    10.0.0.3        10.0.0.3        running mykey (IRT, cloud02)    0      m1.small 2010-10-18 19:02:10.443599</pre>
+</div>
+<p>Type or copy/paste the following commands to check that the virtual machine is running.:</p>
+<div class="highlight-python"><pre>virsh list</pre>
+</div>
+<p>You should see this in response::</p>
+<div class="highlight-python"><pre>Id Name                 State
+----------------------------------
+1 2842445831           running</pre>
+</div>
+<p>Type or copy/paste the following commands to ssh to the instance using your private key.:</p>
+<div class="highlight-python"><pre>ssh -i mykey.priv root@10.0.0.3</pre>
+</div>
+</div>
+<div class="section" id="troubleshooting-installation">
+<h2>Troubleshooting Installation<a class="headerlink" href="#troubleshooting-installation" title="Permalink to this headline">¶</a></h2>
+<p>If you see an &#8220;error loading the config file &#8216;./openssl.cnf&#8217;&#8221; it means you can copy the openssl.cnf file to the location where Nova expects it and reboot, then try the command again.</p>
+<div class="highlight-python"><pre>cp /etc/ssl/openssl.cnf ~
+sudo reboot</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="distros/ubuntu.10.04.html" title="Installing on Ubuntu 10.04 (Lucid)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="monitoring.html" title="Monitoring"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

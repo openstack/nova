@@ -1,0 +1,384 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installing Nova on Multiple Servers &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="next" title="Nova Quickstart" href="../quickstart.html" />
+    <link rel="prev" title="Installation on other distros (like Debian, Fedora or CentOS )" href="distros/others.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../quickstart.html" title="Nova Quickstart"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="distros/others.html" title="Installation on other distros (like Debian, Fedora or CentOS )"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Installing Nova on Multiple Servers</a><ul>
+<li><a class="reference internal" href="#requirements-for-a-multi-node-installation">Requirements for a multi-node installation</a><ul>
+<li><a class="reference internal" href="#assumptions">Assumptions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#step-1-use-apt-get-to-get-the-latest-code">Step 1 Use apt-get to get the latest code</a></li>
+<li><a class="reference internal" href="#step-2-setup-configuration-files-installed-in-etc-nova">Step 2 Setup configuration files (installed in /etc/nova)</a></li>
+<li><a class="reference internal" href="#step-3-setup-the-sql-db">Step 3 Setup the sql db</a></li>
+<li><a class="reference internal" href="#step-4-setup-nova-environment">Step 4 Setup Nova environment</a><ul>
+<li><a class="reference internal" href="#more-networking-details-to-create-a-network-bridge-for-flat-network">More networking details to create a network bridge for flat network</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#step-5-create-nova-certs">Step 5: Create nova certs.</a></li>
+<li><a class="reference internal" href="#step-6-restart-all-relevant-services">Step 6 Restart all relevant services</a></li>
+<li><a class="reference internal" href="#bare-metal-provisioning">Bare-metal Provisioning</a></li>
+<li><a class="reference internal" href="#types-of-hosts">Types of Hosts</a></li>
+<li><a class="reference internal" href="#initial-setup">Initial Setup</a></li>
+<li><a class="reference internal" href="#deployment-technologies">Deployment Technologies</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="distros/others.html"
+                                  title="previous chapter">Installation on other distros (like Debian, Fedora or CentOS )</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="../quickstart.html"
+                                  title="next chapter">Nova Quickstart</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/adminguide/multi.node.install.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installing-nova-on-multiple-servers">
+<h1>Installing Nova on Multiple Servers<a class="headerlink" href="#installing-nova-on-multiple-servers" title="Permalink to this headline">¶</a></h1>
+<p>When you move beyond evaluating the technology and into building an actual
+production environemnt, you will need to know how to configure your datacenter
+and how to deploy components across your clusters.  This guide should help you
+through that process.</p>
+<p>You can install multiple nodes to increase performance and availability of the OpenStack Compute installation.</p>
+<p>This setup is based on an Ubuntu Lucid 10.04 installation with the latest updates. Most of this works around issues that need to be resolved in the installation and configuration scripts as of October 18th 2010. It also needs to eventually be generalized, but the intent here is to get the multi-node configuration bootstrapped so folks can move forward.</p>
+<div class="section" id="requirements-for-a-multi-node-installation">
+<h2>Requirements for a multi-node installation<a class="headerlink" href="#requirements-for-a-multi-node-installation" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>You need a real database, compatible with SQLAlchemy (mysql, postgresql) There&#8217;s not a specific reason to choose one over another, it basically depends what you know. MySQL is easier to do High Availability (HA) with, but people may already know Postgres. We should document both configurations, though.</li>
+<li>For a recommended HA setup, consider a MySQL master/slave replication, with as many slaves as you like, and probably a heartbeat to kick one of the slaves into being a master if it dies.</li>
+<li>For performance optimization, split reads and writes to the database. MySQL proxy is the easiest way to make this work if running MySQL.</li>
+</ul>
+<div class="section" id="assumptions">
+<h3>Assumptions<a class="headerlink" href="#assumptions" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Networking is configured between/through the physical machines on a single subnet.</li>
+<li>Installation and execution are both performed by root user.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="step-1-use-apt-get-to-get-the-latest-code">
+<h2>Step 1 Use apt-get to get the latest code<a class="headerlink" href="#step-1-use-apt-get-to-get-the-latest-code" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Setup Nova PPA with <a class="reference external" href="https://launchpad.net/~nova-core/+archive/ppa">https://launchpad.net/~nova-core/+archive/ppa</a>.</li>
+</ol>
+<div class="highlight-python"><pre>sudo apt-get install python-software-properties
+sudo add-apt-repository ppa:nova-core/ppa</pre>
+</div>
+<ol class="arabic simple" start="2">
+<li>Run update.</li>
+</ol>
+<div class="highlight-python"><pre>sudo apt-get update</pre>
+</div>
+<ol class="arabic simple" start="3">
+<li>Install nova-pkgs (dependencies should be automatically installed).</li>
+</ol>
+<div class="highlight-python"><pre>sudo apt-get install python-greenlet
+sudo apt-get install nova-common nova-doc python-nova nova-api nova-network nova-objectstore nova-scheduler</pre>
+</div>
+<p>It is highly likely that there will be errors when the nova services come up since they are not yet configured. Don&#8217;t worry, you&#8217;re only at step 1!</p>
+</div>
+<div class="section" id="step-2-setup-configuration-files-installed-in-etc-nova">
+<h2>Step 2 Setup configuration files (installed in /etc/nova)<a class="headerlink" href="#step-2-setup-configuration-files-installed-in-etc-nova" title="Permalink to this headline">¶</a></h2>
+<p>Note: CC_ADDR=&lt;the external IP address of your cloud controller&gt;</p>
+<ol class="arabic simple">
+<li>These need to be defined in EACH configuration file</li>
+</ol>
+<div class="highlight-python"><pre>--sql_connection=mysql://root:nova@$CC_ADDR/nova # location of nova sql db
+--s3_host=$CC_ADDR  # This is where nova is hosting the objectstore service, which
+                    # will contain the VM images and buckets
+--rabbit_host=$CC_ADDR # This is where the rabbit AMQP messaging service is hosted
+--cc_host=$CC_ADDR     # This is where the the nova-api service lives
+--verbose              # Optional but very helpful during initial setup
+--ec2_url=http://$CC_ADDR:8773/services/Cloud
+--network_manager=nova.network.manager.FlatManager # simple, no-vlan networking type</pre>
+</div>
+<ol class="arabic simple" start="2">
+<li>nova-manage specific flags</li>
+</ol>
+<div class="highlight-python"><pre>--FAKE_subdomain=ec2             # workaround for ec2/euca api
+--fixed_range=&lt;network/prefix&gt;   # ip network to use for VM guests, ex 192.168.2.64/26
+--network_size=&lt;# of addrs&gt;      # number of ip addrs to use for VM guests, ex 64</pre>
+</div>
+<ol class="arabic simple" start="3">
+<li>nova-network specific flags</li>
+</ol>
+<div class="highlight-python"><pre>--fixed_range=&lt;network/prefix&gt;   # ip network to use for VM guests, ex 192.168.2.64/26
+--network_size=&lt;# of addrs&gt;      # number of ip addrs to use for VM guests, ex 64</pre>
+</div>
+<ol class="arabic simple" start="4">
+<li>nova-api specific flags</li>
+</ol>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">--</span><span class="n">FAKE_subdomain</span><span class="o">=</span><span class="n">ec2</span>             <span class="c"># workaround for ec2/euca api</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="5">
+<li>Create a nova group</li>
+</ol>
+<div class="highlight-python"><pre>sudo addgroup nova</pre>
+</div>
+<ol class="arabic simple" start="6">
+<li>nova-objectstore specific flags &lt; no specific config needed &gt;</li>
+</ol>
+<p>Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server&#8217;s root password.</p>
+<div class="highlight-python"><pre>cd /etc/nova
+chown -R root:nova .</pre>
+</div>
+</div>
+<div class="section" id="step-3-setup-the-sql-db">
+<h2>Step 3 Setup the sql db<a class="headerlink" href="#step-3-setup-the-sql-db" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>First you &#8216;preseed&#8217; (using vishy&#8217;s <a class="reference internal" href="../quickstart.html"><em>Nova Quickstart</em></a>). Run this as root.</li>
+</ol>
+<div class="highlight-python"><pre>sudo apt-get install bzr git-core
+sudo bash
+export MYSQL_PASS=nova</pre>
+</div>
+<div class="highlight-python"><pre>cat &lt;&lt;MYSQL_PRESEED | debconf-set-selections
+mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
+mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
+mysql-server-5.1 mysql-server/start_on_boot boolean true
+MYSQL_PRESEED</pre>
+</div>
+<ol class="arabic simple" start="2">
+<li>Install mysql</li>
+</ol>
+<div class="highlight-python"><pre>sudo apt-get install -y mysql-server</pre>
+</div>
+<ol class="arabic simple" start="4">
+<li>Edit /etc/mysql/my.cnf and set this line: bind-address=0.0.0.0 and then sighup or restart mysql</li>
+<li>create nova&#8217;s db</li>
+</ol>
+<div class="highlight-python"><pre>mysql -uroot -pnova -e 'CREATE DATABASE nova;'</pre>
+</div>
+<ol class="arabic simple" start="6">
+<li>Update the db to include user &#8216;root&#8217;&#64;&#8217;%&#8217;</li>
+</ol>
+<div class="highlight-python"><pre>mysql -u root -p nova
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+SET PASSWORD FOR 'root'@'%' = PASSWORD('nova');</pre>
+</div>
+<ol class="arabic simple" start="7">
+<li>branch and install Nova</li>
+</ol>
+<div class="highlight-python"><pre>sudo -i
+cd ~
+export USE_MYSQL=1
+export MYSQL_PASS=nova
+git clone https://github.com/vishvananda/novascript.git
+cd novascript
+./nova.sh branch
+./nova.sh install
+./nova.sh run</pre>
+</div>
+</div>
+<div class="section" id="step-4-setup-nova-environment">
+<h2>Step 4 Setup Nova environment<a class="headerlink" href="#step-4-setup-nova-environment" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><pre>/usr/bin/python /usr/bin/nova-manage user admin &lt;user_name&gt;
+/usr/bin/python /usr/bin/nova-manage project create &lt;project_name&gt; &lt;user_name&gt;
+/usr/bin/python /usr/bin/nova-manage project create network</pre>
+</div>
+<p>Note: The nova-manage service assumes that the first IP address is your network (like 192.168.0.0), that the 2nd IP is your gateway (192.168.0.1), and that the broadcast is the very last IP in the range you defined (192.168.0.255). If this is not the case you will need to manually edit the sql db &#8216;networks&#8217; table.o.</p>
+<p>On running this command, entries are made in the &#8216;networks&#8217; and &#8216;fixed_ips&#8217; table. However, one of the networks listed in the &#8216;networks&#8217; table needs to be marked as bridge in order for the code to know that a bridge exists. We ended up doing this manually, (update query fired directly in the DB). Is there a better way to mark a network as bridged?</p>
+<p>Update: This has been resolved w.e.f 27/10. network is marked as bridged automatically based on the type of n/w manager selected.</p>
+<div class="section" id="more-networking-details-to-create-a-network-bridge-for-flat-network">
+<h3>More networking details to create a network bridge for flat network<a class="headerlink" href="#more-networking-details-to-create-a-network-bridge-for-flat-network" title="Permalink to this headline">¶</a></h3>
+<p>Nova defaults to a bridge device named &#8216;br100&#8217;. This needs to be created and somehow integrated into YOUR network. In my case, I wanted to keep things as simple as possible and have all the vm guests on the same network as the vm hosts (the compute nodes). Thus, I set the compute node&#8217;s external IP address to be on the bridge and added eth0 to that bridge. To do this, edit your network interfaces config to look like the following:</p>
+<div class="highlight-python"><pre>&lt; begin /etc/network/interfaces &gt;
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# Networking for NOVA
+auto br100
+
+iface br100 inet dhcp
+       bridge_ports    eth0
+       bridge_stp      off
+       bridge_maxwait  0
+       bridge_fd       0
+&lt; end /etc/network/interfaces &gt;</pre>
+</div>
+<p>Next, restart networking to apply the changes:</p>
+<div class="highlight-python"><pre>sudo /etc/init.d/networking restart</pre>
+</div>
+</div>
+</div>
+<div class="section" id="step-5-create-nova-certs">
+<h2>Step 5: Create nova certs.<a class="headerlink" href="#step-5-create-nova-certs" title="Permalink to this headline">¶</a></h2>
+<p>Generate the certs as a zip file:</p>
+<div class="highlight-python"><pre>mkdir creds
+sudo /usr/bin/python /usr/bin/nova-manage project zip admin admin creds/nova.zip</pre>
+</div>
+<p>you can get the rc file more easily with:</p>
+<div class="highlight-python"><pre>sudo /usr/bin/python /usr/bin/nova-manage project env admin admin creds/novarc</pre>
+</div>
+<p>unzip them in your home directory, and add them to your environment:</p>
+<div class="highlight-python"><pre>unzip creds/nova.zip
+echo ". creds/novarc" &gt;&gt; ~/.bashrc
+~/.bashrc</pre>
+</div>
+</div>
+<div class="section" id="step-6-restart-all-relevant-services">
+<h2>Step 6 Restart all relevant services<a class="headerlink" href="#step-6-restart-all-relevant-services" title="Permalink to this headline">¶</a></h2>
+<p>Restart Libvirt:</p>
+<div class="highlight-python"><pre>sudo /etc/init.d/libvirt-bin restart</pre>
+</div>
+<p>Restart relevant nova services:</p>
+<div class="highlight-python"><pre>sudo /etc/init.d/nova-compute restart
+sudo /etc/init.d/nova-volume restart</pre>
+</div>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">do we still need the content below?</p>
+</div>
+</div>
+<div class="section" id="bare-metal-provisioning">
+<h2>Bare-metal Provisioning<a class="headerlink" href="#bare-metal-provisioning" title="Permalink to this headline">¶</a></h2>
+<p>To install the base operating system you can use PXE booting.</p>
+</div>
+<div class="section" id="types-of-hosts">
+<h2>Types of Hosts<a class="headerlink" href="#types-of-hosts" title="Permalink to this headline">¶</a></h2>
+<p>A single machine in your cluster can act as one or more of the following types
+of host:</p>
+<p>Nova Services</p>
+<ul class="simple">
+<li>Network</li>
+<li>Compute</li>
+<li>Volume</li>
+<li>API</li>
+<li>Objectstore</li>
+</ul>
+<p>Other supporting services</p>
+<ul class="simple">
+<li>Message Queue</li>
+<li>Database (optional)</li>
+<li>Authentication database (optional)</li>
+</ul>
+</div>
+<div class="section" id="initial-setup">
+<h2>Initial Setup<a class="headerlink" href="#initial-setup" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Networking</li>
+<li>Cloudadmin User Creation</li>
+</ul>
+</div>
+<div class="section" id="deployment-technologies">
+<h2>Deployment Technologies<a class="headerlink" href="#deployment-technologies" title="Permalink to this headline">¶</a></h2>
+<p>Once you have machines with a base operating system installation, you can deploy
+code and configuration with your favorite tools to specify which machines in
+your cluster have which roles:</p>
+<ul class="simple">
+<li>Puppet</li>
+<li>Chef</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../quickstart.html" title="Nova Quickstart"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="distros/others.html" title="Installation on other distros (like Debian, Fedora or CentOS )"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,163 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Fake Drivers &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="next" title="Common and Misc Libraries" href="nova.html" />
+    <link rel="prev" title="Scheduler" href="scheduler.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="nova.html" title="Common and Misc Libraries"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="scheduler.html" title="Scheduler"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Fake Drivers</a><ul>
+<li><a class="reference internal" href="#the-nova-virt-fake-module">The <tt class="docutils literal"><span class="pre">nova.virt.fake</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-auth-fakeldap-module">The <tt class="docutils literal"><span class="pre">nova.auth.fakeldap</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-fakerabbit-module">The <tt class="docutils literal"><span class="pre">nova.fakerabbit</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-volume-driver-fakeaoedriver-class">The <tt class="docutils literal"><span class="pre">nova.volume.driver.FakeAOEDriver</span></tt> Class</a></li>
+<li><a class="reference internal" href="#the-nova-tests-service-unittest-fakemanager-class">The <tt class="docutils literal"><span class="pre">nova.tests.service_unittest.FakeManager</span></tt> Class</a></li>
+<li><a class="reference internal" href="#the-nova-tests-api-openstack-fakes-module">The <tt class="docutils literal"><span class="pre">nova.tests.api.openstack.fakes</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="scheduler.html"
+                                  title="previous chapter">Scheduler</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="nova.html"
+                                  title="next chapter">Common and Misc Libraries</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/devref/fakes.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="fake-drivers">
+<h1>Fake Drivers<a class="headerlink" href="#fake-drivers" title="Permalink to this headline">¶</a></h1>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">document general info about fakes</p>
+</div>
+<p>When the real thing isn&#8217;t available and you have some development to do these
+fake implementations of various drivers let you get on with your day.</p>
+<div class="section" id="the-nova-virt-fake-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.virt.fake</span></tt> Module<a class="headerlink" href="#the-nova-virt-fake-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-auth-fakeldap-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.auth.fakeldap</span></tt> Module<a class="headerlink" href="#the-nova-auth-fakeldap-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-fakerabbit-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.fakerabbit</span></tt> Module<a class="headerlink" href="#the-nova-fakerabbit-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-volume-driver-fakeaoedriver-class">
+<h2>The <tt class="xref py py-class docutils literal"><span class="pre">nova.volume.driver.FakeAOEDriver</span></tt> Class<a class="headerlink" href="#the-nova-volume-driver-fakeaoedriver-class" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-tests-service-unittest-fakemanager-class">
+<h2>The <tt class="xref py py-class docutils literal"><span class="pre">nova.tests.service_unittest.FakeManager</span></tt> Class<a class="headerlink" href="#the-nova-tests-service-unittest-fakemanager-class" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-tests-api-openstack-fakes-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.tests.api.openstack.fakes</span></tt> Module<a class="headerlink" href="#the-nova-tests-api-openstack-fakes-module" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="nova.html" title="Common and Misc Libraries"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="scheduler.html" title="Scheduler"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

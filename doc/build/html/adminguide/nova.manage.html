@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The nova-manage command &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Administration Guide" href="index.html" />
+    <link rel="next" title="Euca2ools" href="euca2ools.html" />
+    <link rel="prev" title="Administration Guide" href="index.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="euca2ools.html" title="Euca2ools"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Administration Guide"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Administration Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">The nova-manage command</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#nova-shell">Nova Shell</a><ul>
+<li><a class="reference internal" href="#concept-flags">Concept: Flags</a></li>
+<li><a class="reference internal" href="#concept-plugins">Concept: Plugins</a></li>
+<li><a class="reference internal" href="#concept-ipc-rpc">Concept: IPC/RPC</a></li>
+<li><a class="reference internal" href="#concept-fakes">Concept: Fakes</a></li>
+<li><a class="reference internal" href="#concept-scheduler">Concept: Scheduler</a></li>
+<li><a class="reference internal" href="#concept-security-groups">Concept: Security Groups</a></li>
+<li><a class="reference internal" href="#concept-certificate-authority">Concept: Certificate Authority</a></li>
+<li><a class="reference internal" href="#concept-images">Concept: Images</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="index.html"
+                                  title="previous chapter">Administration Guide</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="euca2ools.html"
+                                  title="next chapter">Euca2ools</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/adminguide/nova.manage.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="the-nova-manage-command">
+<h1>The nova-manage command<a class="headerlink" href="#the-nova-manage-command" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>The nova-manage command is used to perform many essential functions for
+administration and ongoing maintenance of nova, such as user creation,
+vpn management, and much more.</p>
+<p>The standard pattern for executing a nova-manage command is:</p>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">&lt;category&gt;</span> <span class="pre">&lt;command&gt;</span> <span class="pre">[&lt;args&gt;]</span></tt></p>
+<p>For example, to obtain a list of all projects:</p>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">project</span> <span class="pre">list</span></tt></p>
+<p>You can run without arguments to see a list of available command categories:</p>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span></tt></p>
+<p>You can run with a category argument to see a list of all commands in that
+category:</p>
+<p><tt class="docutils literal"><span class="pre">nova-manage</span> <span class="pre">user</span></tt></p>
+</div>
+<div class="section" id="nova-shell">
+<h2>Nova Shell<a class="headerlink" href="#nova-shell" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt>shell bpython</dt>
+<dd><ul class="first last simple">
+<li>start a new bpython shell</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>shell ipython</dt>
+<dd><ul class="first last simple">
+<li>start a new ipython shell</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>shell python</dt>
+<dd><ul class="first last simple">
+<li>start a new python shell</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>shell run</dt>
+<dd><ul class="first last simple">
+<li>???</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>shell script: Runs the script from the specifed path with flags set properly.</dt>
+<dd><ul class="first last simple">
+<li>arguments: path</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="concept-flags">
+<h3>Concept: Flags<a class="headerlink" href="#concept-flags" title="Permalink to this headline">¶</a></h3>
+<p>python-gflags</p>
+</div>
+<div class="section" id="concept-plugins">
+<h3>Concept: Plugins<a class="headerlink" href="#concept-plugins" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Managers/Drivers: utils.import_object from string flag</li>
+<li>virt/connections: conditional loading from string flag</li>
+<li>db: LazyPluggable via string flag</li>
+<li>auth_manager: utils.import_class based on string flag</li>
+<li>Volumes: moving to pluggable driver instead of manager</li>
+<li>Network: pluggable managers</li>
+<li>Compute: same driver used, but pluggable at connection</li>
+</ul>
+</div>
+<div class="section" id="concept-ipc-rpc">
+<h3>Concept: IPC/RPC<a class="headerlink" href="#concept-ipc-rpc" title="Permalink to this headline">¶</a></h3>
+<p>Rabbit!</p>
+</div>
+<div class="section" id="concept-fakes">
+<h3>Concept: Fakes<a class="headerlink" href="#concept-fakes" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>auth</li>
+<li>ldap</li>
+</ul>
+</div>
+<div class="section" id="concept-scheduler">
+<h3>Concept: Scheduler<a class="headerlink" href="#concept-scheduler" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>simple</li>
+<li>random</li>
+</ul>
+</div>
+<div class="section" id="concept-security-groups">
+<h3>Concept: Security Groups<a class="headerlink" href="#concept-security-groups" title="Permalink to this headline">¶</a></h3>
+<p>Security groups</p>
+</div>
+<div class="section" id="concept-certificate-authority">
+<h3>Concept: Certificate Authority<a class="headerlink" href="#concept-certificate-authority" title="Permalink to this headline">¶</a></h3>
+<p>Nova does a small amount of certificate management.  These certificates are used for <em class="xref std std-ref">project vpns</em> and decrypting bundled images.</p>
+</div>
+<div class="section" id="concept-images">
+<h3>Concept: Images<a class="headerlink" href="#concept-images" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>launching</li>
+<li>bundling</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="euca2ools.html" title="Euca2ools"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Administration Guide"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Administration Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

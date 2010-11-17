@@ -1,0 +1,162 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installing on Ubuntu 10.04 (Lucid) &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../../index.html" />
+    <link rel="up" title="Installing Nova on a Single Host" href="../single.node.install.html" />
+    <link rel="next" title="Installing on Ubuntu 10.10 (Maverick)" href="ubuntu.10.10.html" />
+    <link rel="prev" title="Installing Nova on a Single Host" href="../single.node.install.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="ubuntu.10.10.html" title="Installing on Ubuntu 10.10 (Maverick)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../single.node.install.html" title="Installing Nova on a Single Host"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="../single.node.install.html" accesskey="U">Installing Nova on a Single Host</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Installing on Ubuntu 10.04 (Lucid)</a><ul>
+<li><a class="reference internal" href="#step-1-install-dependencies">Step 1: Install dependencies</a></li>
+<li><a class="reference internal" href="#step-2-install-dependencies">Step 2: Install dependencies</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="../single.node.install.html"
+                                  title="previous chapter">Installing Nova on a Single Host</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="ubuntu.10.10.html"
+                                  title="next chapter">Installing on Ubuntu 10.10 (Maverick)</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../../_sources/adminguide/distros/ubuntu.10.04.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="installing-on-ubuntu-10-04-lucid">
+<h1>Installing on Ubuntu 10.04 (Lucid)<a class="headerlink" href="#installing-on-ubuntu-10-04-lucid" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="step-1-install-dependencies">
+<h2>Step 1: Install dependencies<a class="headerlink" href="#step-1-install-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Grab the latest code from launchpad:</p>
+<div class="highlight-python"><pre>bzr clone lp:nova</pre>
+</div>
+<p>Here&#8217;s a script you can use to install (and then run) Nova on Ubuntu or Debian (when using Debian, edit nova.sh to have USE_PPA=0):</p>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">give a link to a stable releases page</p>
+</div>
+</div>
+<div class="section" id="step-2-install-dependencies">
+<h2>Step 2: Install dependencies<a class="headerlink" href="#step-2-install-dependencies" title="Permalink to this headline">¶</a></h2>
+<p>Nova requires rabbitmq for messaging and optionally you can use redis for storing state, so install these first.</p>
+<p><em>Note:</em> You must have sudo installed to run these commands as shown here.</p>
+<div class="highlight-python"><pre>sudo apt-get install rabbitmq-server redis-server</pre>
+</div>
+<p>You&#8217;ll see messages starting with &#8220;Reading package lists... Done&#8221; and you must confirm by typing Y that you want to continue.</p>
+<p>If you&#8217;re running on Ubuntu 10.04, you&#8217;ll need to install Twisted and python-gflags which is included in the OpenStack PPA.</p>
+<div class="highlight-python"><pre>sudo apt-get install python-twisted
+
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 95C71FE2
+sudo sh -c 'echo "deb http://ppa.launchpad.net/openstack/openstack-ppa/ubuntu lucid main" &gt; /etc/apt/sources.list.d/openstackppa.list'
+sudo apt-get update &amp;&amp; sudo apt-get install python-gflags</pre>
+</div>
+<p>Once you&#8217;ve done this, continue at Step 3 here: <a class="reference internal" href="../single.node.install.html"><em>Installing Nova on a Single Host</em></a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="ubuntu.10.10.html" title="Installing on Ubuntu 10.10 (Maverick)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../single.node.install.html" title="Installing Nova on a Single Host"
+             >previous</a> |</li>
+        <li><a href="../../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="../single.node.install.html" >Installing Nova on a Single Host</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

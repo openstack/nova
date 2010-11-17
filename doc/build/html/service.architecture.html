@@ -1,0 +1,191 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Service Architecture &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="index.html" />
+    <link rel="next" title="Installing the Live CD" href="livecd.html" />
+    <link rel="prev" title="Nova Concepts and Introduction" href="nova.concepts.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="livecd.html" title="Installing the Live CD"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="nova.concepts.html" title="Nova Concepts and Introduction"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Service Architecture</a><ul>
+<li><a class="reference internal" href="#api-server">API Server</a></li>
+<li><a class="reference internal" href="#message-queue">Message Queue</a></li>
+<li><a class="reference internal" href="#compute-worker">Compute Worker</a></li>
+<li><a class="reference internal" href="#network-controller">Network Controller</a></li>
+<li><a class="reference internal" href="#volume-workers">Volume Workers</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="nova.concepts.html"
+                                  title="previous chapter">Nova Concepts and Introduction</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="livecd.html"
+                                  title="next chapter">Installing the Live CD</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/service.architecture.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="service-architecture">
+<h1>Service Architecture<a class="headerlink" href="#service-architecture" title="Permalink to this headline">¶</a></h1>
+<p>Nova’s Cloud Fabric is composed of the following major components:</p>
+<ul class="simple">
+<li>API Server</li>
+<li>Message Queue</li>
+<li>Compute Worker</li>
+<li>Network Controller</li>
+<li>Volume Worker</li>
+<li>Scheduler</li>
+<li>Image Store</li>
+</ul>
+<img alt="_images/fabric.png" src="_images/fabric.png" style="width: 790px;" />
+<div class="section" id="api-server">
+<h2>API Server<a class="headerlink" href="#api-server" title="Permalink to this headline">¶</a></h2>
+<p>At the heart of the cloud framework is an API Server.  This API Server makes command and control of the hypervisor, storage, and networking programmatically available to users in realization of the definition of cloud computing.</p>
+<p>The API endpoints are basic http web services which handle authentication, authorization, and basic command and control functions using various API interfaces under the Amazon, Rackspace, and related models.  This enables API compatibility with multiple existing tool sets created for interaction with offerings from other vendors.  This broad compatibility prevents vendor lock-in.</p>
+</div>
+<div class="section" id="message-queue">
+<h2>Message Queue<a class="headerlink" href="#message-queue" title="Permalink to this headline">¶</a></h2>
+<p>A messaging queue brokers the interaction between compute nodes (processing), volumes (block storage), the networking controllers (software which controls network infrastructure), API endpoints, the scheduler (determines which physical hardware to allocate to a virtual resource), and similar components.  Communication to and from the cloud controller is by HTTP requests through multiple API endpoints.</p>
+<p>A typical message passing event begins with the API server receiving a request from a user.  The API server authenticates the user and ensures that the user is permitted to issue the subject command.  Availability of objects implicated in the request is evaluated and, if available, the request is routed to the queuing engine for the relevant workers.  Workers continually listen to the queue based on their role, and occasionally their type hostname.  When such listening produces a work request, the worker takes assignment of the task and begins its execution.  Upon completion, a response is dispatched to the queue which is received by the API server and relayed to the originating user.  Database entries are queried, added, or removed as necessary throughout the process.</p>
+</div>
+<div class="section" id="compute-worker">
+<h2>Compute Worker<a class="headerlink" href="#compute-worker" title="Permalink to this headline">¶</a></h2>
+<p>Compute workers manage computing instances on host machines.  Through the API, commands are dispatched to compute workers to:</p>
+<ul class="simple">
+<li>Run instances</li>
+<li>Terminate instances</li>
+<li>Reboot instances</li>
+<li>Attach volumes</li>
+<li>Detach volumes</li>
+<li>Get console output</li>
+</ul>
+</div>
+<div class="section" id="network-controller">
+<h2>Network Controller<a class="headerlink" href="#network-controller" title="Permalink to this headline">¶</a></h2>
+<p>The Network Controller manages the networking resources on host machines.  The API server dispatches commands through the message queue, which are subsequently processed by Network Controllers.  Specific operations include:</p>
+<ul class="simple">
+<li>Allocate Fixed IP Addresses</li>
+<li>Configuring VLANs for projects</li>
+<li>Configuring networks for compute nodes</li>
+</ul>
+</div>
+<div class="section" id="volume-workers">
+<h2>Volume Workers<a class="headerlink" href="#volume-workers" title="Permalink to this headline">¶</a></h2>
+<p>Volume Workers interact with iSCSI storage to manage LVM-based instance volumes.  Specific functions include:</p>
+<ul class="simple">
+<li>Create Volumes</li>
+<li>Delete Volumes</li>
+<li>Establish Compute volumes</li>
+</ul>
+<p>Volumes may easily be transferred between instances, but may be attached to only a single instance at a time.</p>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">P2: image store description</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="livecd.html" title="Installing the Live CD"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="nova.concepts.html" title="Nova Concepts and Introduction"
+             >previous</a> |</li>
+        <li><a href="index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

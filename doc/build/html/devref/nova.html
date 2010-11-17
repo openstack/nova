@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Common and Misc Libraries &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="next" title="Cloudpipe – Per Project Vpns" href="cloudpipe.html" />
+    <link rel="prev" title="Fake Drivers" href="fakes.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="cloudpipe.html" title="Cloudpipe – Per Project Vpns"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="fakes.html" title="Fake Drivers"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Common and Misc Libraries</a><ul>
+<li><a class="reference internal" href="#the-nova-adminclient-module">The <tt class="docutils literal"><span class="pre">nova.adminclient</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-context-module">The <tt class="docutils literal"><span class="pre">nova.context</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-exception-module">The <tt class="docutils literal"><span class="pre">nova.exception</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-flags-module">The <tt class="docutils literal"><span class="pre">nova.flags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-process-module">The <tt class="docutils literal"><span class="pre">nova.process</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-rpc-module">The <tt class="docutils literal"><span class="pre">nova.rpc</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-server-module">The <tt class="docutils literal"><span class="pre">nova.server</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-test-module">The <tt class="docutils literal"><span class="pre">nova.test</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-twistd-module">The <tt class="docutils literal"><span class="pre">nova.twistd</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-utils-module">The <tt class="docutils literal"><span class="pre">nova.utils</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-validate-module">The <tt class="docutils literal"><span class="pre">nova.validate</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-wsgi-module">The <tt class="docutils literal"><span class="pre">nova.wsgi</span></tt> Module</a></li>
+<li><a class="reference internal" href="#tests">Tests</a><ul>
+<li><a class="reference internal" href="#the-declare-flags-module">The <tt class="docutils literal"><span class="pre">declare_flags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-fake-flags-module">The <tt class="docutils literal"><span class="pre">fake_flags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-flags-unittest-module">The <tt class="docutils literal"><span class="pre">flags_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-process-unittest-module">The <tt class="docutils literal"><span class="pre">process_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-real-flags-module">The <tt class="docutils literal"><span class="pre">real_flags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-rpc-unittest-module">The <tt class="docutils literal"><span class="pre">rpc_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-runtime-flags-module">The <tt class="docutils literal"><span class="pre">runtime_flags</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-twistd-unittest-module">The <tt class="docutils literal"><span class="pre">twistd_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-validator-unittest-module">The <tt class="docutils literal"><span class="pre">validator_unittest</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="fakes.html"
+                                  title="previous chapter">Fake Drivers</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="cloudpipe.html"
+                                  title="next chapter">Cloudpipe &#8211; Per Project Vpns</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/devref/nova.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="common-and-misc-libraries">
+<h1>Common and Misc Libraries<a class="headerlink" href="#common-and-misc-libraries" title="Permalink to this headline">¶</a></h1>
+<p>Libraries common throughout Nova or just ones that haven&#8217;t been categorized
+very well yet.</p>
+<div class="section" id="the-nova-adminclient-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.adminclient</span></tt> Module<a class="headerlink" href="#the-nova-adminclient-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-context-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.context</span></tt> Module<a class="headerlink" href="#the-nova-context-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-exception-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.exception</span></tt> Module<a class="headerlink" href="#the-nova-exception-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-flags-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.flags</span></tt> Module<a class="headerlink" href="#the-nova-flags-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-process-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.process</span></tt> Module<a class="headerlink" href="#the-nova-process-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-rpc-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.rpc</span></tt> Module<a class="headerlink" href="#the-nova-rpc-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-server-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.server</span></tt> Module<a class="headerlink" href="#the-nova-server-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-test-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.test</span></tt> Module<a class="headerlink" href="#the-nova-test-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-twistd-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.twistd</span></tt> Module<a class="headerlink" href="#the-nova-twistd-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-utils-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.utils</span></tt> Module<a class="headerlink" href="#the-nova-utils-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-validate-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.validate</span></tt> Module<a class="headerlink" href="#the-nova-validate-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-wsgi-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.wsgi</span></tt> Module<a class="headerlink" href="#the-nova-wsgi-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-declare-flags-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">declare_flags</span></tt> Module<a class="headerlink" href="#the-declare-flags-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-fake-flags-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">fake_flags</span></tt> Module<a class="headerlink" href="#the-fake-flags-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-flags-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">flags_unittest</span></tt> Module<a class="headerlink" href="#the-flags-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-process-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">process_unittest</span></tt> Module<a class="headerlink" href="#the-process-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-real-flags-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">real_flags</span></tt> Module<a class="headerlink" href="#the-real-flags-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-rpc-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">rpc_unittest</span></tt> Module<a class="headerlink" href="#the-rpc-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-runtime-flags-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">runtime_flags</span></tt> Module<a class="headerlink" href="#the-runtime-flags-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-twistd-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">twistd_unittest</span></tt> Module<a class="headerlink" href="#the-twistd-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-validator-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">validator_unittest</span></tt> Module<a class="headerlink" href="#the-validator-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="cloudpipe.html" title="Cloudpipe – Per Project Vpns"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="fakes.html" title="Fake Drivers"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

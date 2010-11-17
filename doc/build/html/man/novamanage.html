@@ -1,0 +1,221 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>nova-manage &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">nova-manage</a><ul>
+<li><a class="reference internal" href="#control-and-manage-cloud-computer-instances-and-images">control and manage cloud computer instances and images</a><ul>
+<li><a class="reference internal" href="#synopsis">SYNOPSIS</a></li>
+<li><a class="reference internal" href="#description">DESCRIPTION</a></li>
+<li><a class="reference internal" href="#options">OPTIONS</a></li>
+<li><a class="reference internal" href="#files">FILES</a></li>
+<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
+<li><a class="reference internal" href="#bugs">BUGS</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/man/novamanage.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="nova-manage">
+<h1>nova-manage<a class="headerlink" href="#nova-manage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="control-and-manage-cloud-computer-instances-and-images">
+<h2>control and manage cloud computer instances and images<a class="headerlink" href="#control-and-manage-cloud-computer-instances-and-images" title="Permalink to this headline">¶</a></h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Author:</th><td class="field-body"><a class="reference external" href="mailto:nova&#37;&#52;&#48;lists&#46;launchpad&#46;net">nova<span>&#64;</span>lists<span>&#46;</span>launchpad<span>&#46;</span>net</a></td>
+</tr>
+<tr class="field"><th class="field-name">Date:</th><td class="field-body">2010-11-16</td>
+</tr>
+<tr class="field"><th class="field-name">Copyright:</th><td class="field-body">OpenStack LLC</td>
+</tr>
+<tr class="field"><th class="field-name">Version:</th><td class="field-body">0.1</td>
+</tr>
+<tr class="field"><th class="field-name">Manual section:</th><td class="field-body">1</td>
+</tr>
+<tr class="field"><th class="field-name">Manual group:</th><td class="field-body">cloud computing</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="synopsis">
+<h3>SYNOPSIS<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+nova-manage &lt;category&gt; &lt;action&gt; [&lt;args&gt;]</blockquote>
+</div>
+<div class="section" id="description">
+<h3>DESCRIPTION<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h3>
+<p>nova-manage controls cloud computing instances by managing nova users, nova projects, nova roles, shell selection, vpn connections, and floating IP address configuration. More information about OpenStack Nova is at <a class="reference external" href="http://nova.openstack.org">http://nova.openstack.org</a>.</p>
+</div>
+<div class="section" id="options">
+<h3>OPTIONS<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h3>
+<p>Run without arguments to see a list of available command categories. Categories are user, project, role, shell, vpn, and floating. Detailed descriptions are below.
+::
+nova-manage</p>
+<p>You can also run with a category argument such as user to see a list of all commands in that category.
+::
+nova-manage user</p>
+<p>Here are the available categories and arguments for nova-manage:</p>
+<dl class="docutils">
+<dt>nova-manage user &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>user admin &lt;username&gt;           Create an admin user with the name &lt;username&gt;.
+user create &lt;username&gt;          Create a normal user with the name &lt;username&gt;.
+user delete &lt;username&gt;          Delete the user with the name &lt;username&gt;.
+user exports &lt;username&gt;         Outputs a list of access key and secret keys for user to the screen
+user list                                       Outputs a list of all the user names to the screen.
+user modify &lt;accesskey&gt; &lt;secretkey&gt; &lt;admin?T/F&gt;         Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.</dd>
+<dt>nova-manage project &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>project add &lt;projectname&gt;       Add a nova project with the name &lt;projectname&gt; to the database.
+project create &lt;projectname&gt;    Create a new nova project with the name &lt;projectname&gt; (you still need to do nova-manage project add &lt;projectname&gt; to add it to the database).
+project delete                          Delete a nova project with the name &lt;projectname&gt;.
+project environment &lt;projectname&gt; &lt;username&gt;            Exports environment variables for the named project to a file named novarc.
+project list                            Outputs a list of all the projects to the screen.
+project quota &lt;projectname&gt;             Outputs the size and specs of the project&#8217;s instances including gigabytes, instances, floating IPs, volumes, and cores.
+project remove &lt;projectname&gt;    Deletes the project with the name &lt;projectname&gt;.
+project zipfile                                 Compresses all related files for a created project into a zip file nova.zip.</dd>
+<dt>nova-manage role &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>role add &lt;username&gt; &lt;rolename&gt; &lt;(optional) projectname&gt;                 Add a user to either a global or project-based role with the indicated &lt;rolename&gt; assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects.
+role has &lt;username&gt; &lt;projectname&gt;               Checks the user or project and responds with True if the user has a global role with a particular project.
+role remove &lt;username&gt; &lt;rolename&gt;                       Remove the indicated role from the user.</dd>
+<dt>nova-manage shell &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>shell bpython           Starts a new bpython shell.
+shell ipython           Starts a new ipython shell.
+shell python            Starts a new python shell.
+shell run                       Starts a new shell using python.
+shell script &lt;path/scriptname&gt;  Runs the named script from the specified path with flags set.</dd>
+<dt>nova-manage vpn &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>vpn list                Displays a list of projects, their IP prot numbers, and what state they&#8217;re in.
+vpn run &lt;projectname&gt;   Starts the VPN for the named project.
+vpn spawn                               Runs all VPNs.</dd>
+<dt>nova-manage floating &lt;action&gt; [&lt;argument&gt;]</dt>
+<dd>floating create &lt;host&gt; &lt;ip_range&gt;       Creates floating IP addresses for the named host by the given range.
+floating delete &lt;ip_range&gt;      Deletes floating IP addresses in the range given.
+floating list                   Displays a list of all floating IP addresses.</dd>
+</dl>
+<table class="docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">--help</span>, <span class="option">-h</span></kbd></td>
+<td>Show this help message and exit.</td></tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="files">
+<h3>FILES<a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h3>
+<p>The nova-manage.conf file contains configuration information in the form of python-gflags.</p>
+</div>
+<div class="section" id="see-also">
+<h3>SEE ALSO<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><a class="reference external" href="http://nova.openstack.org">OpenStack Nova</a></li>
+<li><a class="reference external" href="http://swift.openstack.org">OpenStack Swift</a></li>
+</ul>
+</div>
+<div class="section" id="bugs">
+<h3>BUGS<a class="headerlink" href="#bugs" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Nova is sourced in Launchpad so you can view current bugs at <a class="reference external" href="http://nova.openstack.org">OpenStack Nova</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

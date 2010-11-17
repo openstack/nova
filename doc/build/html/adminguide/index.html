@@ -1,0 +1,208 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Administration Guide &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="next" title="The nova-manage command" href="nova.manage.html" />
+    <link rel="prev" title="Installing the Live CD" href="../livecd.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="nova.manage.html" title="The nova-manage command"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../livecd.html" title="Installing the Live CD"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Administration Guide</a><ul>
+<li><a class="reference internal" href="#running-the-cloud">Running the Cloud</a></li>
+<li><a class="reference internal" href="#administration-utilities">Administration Utilities</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#user-and-resource-management">User and Resource Management</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#deployment">Deployment</a><ul>
+<li><a class="reference internal" href="#networking">Networking</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#advanced-topics">Advanced Topics</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="../livecd.html"
+                                  title="previous chapter">Installing the Live CD</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="nova.manage.html"
+                                  title="next chapter">The nova-manage command</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/adminguide/index.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="administration-guide">
+<h1>Administration Guide<a class="headerlink" href="#administration-guide" title="Permalink to this headline">¶</a></h1>
+<p>This guide describes the basics of running and managing Nova.</p>
+<div class="section" id="running-the-cloud">
+<h2>Running the Cloud<a class="headerlink" href="#running-the-cloud" title="Permalink to this headline">¶</a></h2>
+<p>The fastest way to get a test cloud running is by following the directions in the <a class="reference internal" href="../quickstart.html"><em>Nova Quickstart</em></a>.</p>
+<p>Nova&#8217;s cloud works via the interaction of a series of daemon processes that reside persistently on the host machine(s).  Fortunately, the <a class="reference internal" href="../quickstart.html"><em>Nova Quickstart</em></a> process launches sample versions of all these daemons for you.  Once you are familiar with basic Nova usage, you can learn more about daemons by reading <a class="reference internal" href="../service.architecture.html"><em>Service Architecture</em></a> and <a class="reference internal" href="binaries.html"><em>Nova Daemons</em></a>.</p>
+</div>
+<div class="section" id="administration-utilities">
+<h2>Administration Utilities<a class="headerlink" href="#administration-utilities" title="Permalink to this headline">¶</a></h2>
+<p>There are two main tools that a system administrator will find useful to manage their Nova cloud:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nova.manage.html">The nova-manage command</a></li>
+<li class="toctree-l1"><a class="reference internal" href="euca2ools.html">Euca2ools</a></li>
+</ul>
+</div>
+<p>nova-manage may only be run by users with admin priviledges.  euca2ools can be used by all users, though specific commands may be restricted by Role Based Access Control.  You can read more about creating and managing users in <a class="reference internal" href="managing.users.html"><em>Managing Users</em></a></p>
+</div>
+<div class="section" id="user-and-resource-management">
+<h2>User and Resource Management<a class="headerlink" href="#user-and-resource-management" title="Permalink to this headline">¶</a></h2>
+<p>nova-manage and euca2ools provide the basic interface to perform a broad range of administration functions.  In this section, you can read more about how to accomplish specific administration tasks.</p>
+<p>For background on the core objects refenced in this section, see <a class="reference internal" href="../object.model.html"><em>Object Model</em></a></p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="managing.users.html">Managing Users</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing.projects.html">Managing Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing.instances.html">Managing Instances</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing.images.html">Managing Images</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing.networks.html">Networking Overview</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="deployment">
+<h2>Deployment<a class="headerlink" href="#deployment" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">talk about deployment scenarios</p>
+</div>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="multi.node.install.html">Installing Nova on Multiple Servers</a></li>
+</ul>
+</div>
+<div class="section" id="networking">
+<h3>Networking<a class="headerlink" href="#networking" title="Permalink to this headline">¶</a></h3>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="multi.node.install.html">Installing Nova on Multiple Servers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network.vlan.html">VLAN Network Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network.flat.html">Flat Network Mode (Original and Flat)</a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="advanced-topics">
+<h2>Advanced Topics<a class="headerlink" href="#advanced-topics" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="flags.html">Flags and Flagfiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring.html">Monitoring</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="nova.manage.html" title="The nova-manage command"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../livecd.html" title="Installing the Live CD"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

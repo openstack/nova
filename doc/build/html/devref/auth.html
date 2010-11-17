@@ -1,0 +1,341 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Authentication and Authorization &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="next" title="API Endpoint" href="api.html" />
+    <link rel="prev" title="Networking" href="network.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="api.html" title="API Endpoint"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="network.html" title="Networking"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Authentication and Authorization</a><ul>
+<li><a class="reference internal" href="#the-nova-quota-module">The <tt class="docutils literal"><span class="pre">nova.quota</span></tt> Module</a><ul>
+<li><a class="reference internal" href="#the-nova-auth-signer-module">The <tt class="docutils literal"><span class="pre">nova.auth.signer</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#auth-manager">Auth Manager</a><ul>
+<li><a class="reference internal" href="#the-nova-auth-manager-module">The <tt class="docutils literal"><span class="pre">nova.auth.manager</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-auth-ldapdriver-driver">The <tt class="docutils literal"><span class="pre">nova.auth.ldapdriver</span></tt> Driver</a></li>
+<li><a class="reference internal" href="#the-nova-auth-dbdriver-driver">The <tt class="docutils literal"><span class="pre">nova.auth.dbdriver</span></tt> Driver</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tests">Tests</a><ul>
+<li><a class="reference internal" href="#the-auth-unittest-module">The <tt class="docutils literal"><span class="pre">auth_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-access-unittest-module">The <tt class="docutils literal"><span class="pre">access_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-quota-unittest-module">The <tt class="docutils literal"><span class="pre">quota_unittest</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#legacy-docs">Legacy Docs</a></li>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#relationship-of-us-eauth-to-rbac">Relationship of US eAuth to RBAC</a></li>
+<li><a class="reference internal" href="#roles">Roles</a></li>
+<li><a class="reference internal" href="#enhancements">Enhancements</a></li>
+<li><a class="reference internal" href="#cloudaudit-apis">CloudAudit APIs</a></li>
+<li><a class="reference internal" href="#type-declarations">Type declarations</a></li>
+<li><a class="reference internal" href="#request-brokering">Request Brokering</a></li>
+<li><a class="reference internal" href="#dirty-cloud-hybrid-data-centers">Dirty Cloud – Hybrid Data Centers</a></li>
+<li><a class="reference internal" href="#the-details">The Details</a></li>
+<li><a class="reference internal" href="#system-limits">System limits</a></li>
+<li><a class="reference internal" href="#further-challenges">Further Challenges</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="network.html"
+                                  title="previous chapter">Networking</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="api.html"
+                                  title="next chapter">API Endpoint</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/devref/auth.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="authentication-and-authorization">
+<span id="auth"></span><h1>Authentication and Authorization<a class="headerlink" href="#authentication-and-authorization" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-nova-quota-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.quota</span></tt> Module<a class="headerlink" href="#the-nova-quota-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-nova-auth-signer-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.auth.signer</span></tt> Module<a class="headerlink" href="#the-nova-auth-signer-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="auth-manager">
+<h2>Auth Manager<a class="headerlink" href="#auth-manager" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-nova-auth-manager-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.auth.manager</span></tt> Module<a class="headerlink" href="#the-nova-auth-manager-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-nova-auth-ldapdriver-driver">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.auth.ldapdriver</span></tt> Driver<a class="headerlink" href="#the-nova-auth-ldapdriver-driver" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-nova-auth-dbdriver-driver">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.auth.dbdriver</span></tt> Driver<a class="headerlink" href="#the-nova-auth-dbdriver-driver" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-auth-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">auth_unittest</span></tt> Module<a class="headerlink" href="#the-auth-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-access-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">access_unittest</span></tt> Module<a class="headerlink" href="#the-access-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-quota-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">quota_unittest</span></tt> Module<a class="headerlink" href="#the-quota-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="legacy-docs">
+<h2>Legacy Docs<a class="headerlink" href="#legacy-docs" title="Permalink to this headline">¶</a></h2>
+<p>Nova provides RBAC (Role-based access control) of the AWS-type APIs. We define the following roles:</p>
+<p>Roles-Based Access Control of AWS-style APIs using SAML Assertions
+“Achieving FIPS 199 Moderate certification of a hybrid cloud environment using CloudAudit and declarative C.I.A. classifications”</p>
+</div>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>We will investigate one method for integrating an AWS-style API with US eAuthentication-compatible federated authentication systems, to achieve access controls and limits based on traditional operational roles.
+Additionally, we will look at how combining this approach, with an implementation of the CloudAudit APIs, will allow us to achieve a certification under FIPS 199 Moderate classification for a hybrid cloud environment.</p>
+</div>
+<div class="section" id="relationship-of-us-eauth-to-rbac">
+<h2>Relationship of US eAuth to RBAC<a class="headerlink" href="#relationship-of-us-eauth-to-rbac" title="Permalink to this headline">¶</a></h2>
+<p>Typical implementations of US eAuth authentication systems are structured as follows:</p>
+<div class="highlight-python"><pre>[ MS Active Directory or other federated LDAP user store ]
+      --&gt; backends to…
+[ SUN Identity Manager or other SAML Policy Controller ]
+      --&gt; maps URLs to groups…
+[ Apache Policy Agent in front of eAuth-secured Web Application ]</pre>
+</div>
+<p>In more ideal implementations, the remainder of the application-specific account information is stored either in extended schema on the LDAP server itself, via the use of a translucent LDAP proxy, or in an independent datastore keyed off of the UID provided via SAML assertion.</p>
+</div>
+<div class="section" id="roles">
+<span id="auth-roles"></span><h2>Roles<a class="headerlink" href="#roles" title="Permalink to this headline">¶</a></h2>
+<p>AWS API calls are traditionally secured via Access and Secret Keys, which are used to sign API calls, along with traditional timestamps to prevent replay attacks. The APIs can be logically grouped into sets that align with five typical roles:</p>
+<ul class="simple">
+<li>Base User</li>
+<li>System Administrator/Developer (currently have the same permissions)</li>
+<li>Network Administrator</li>
+<li>Project Manager</li>
+<li>Cloud Administrator/IT-Security (currently have the same permissions)</li>
+</ul>
+<p>There is an additional, conceptual end-user that may or may not have API access:</p>
+<ul class="simple">
+<li>(EXTERNAL) End-user / Third-party User</li>
+</ul>
+<p>Basic operations are available to any :</p>
+<ul class="simple">
+<li>Describe Instances</li>
+<li>Describe Images</li>
+<li>Describe Volumes</li>
+<li>Describe Keypairs</li>
+<li>Create Keypair</li>
+<li>Delete Keypair</li>
+<li>Create, Upload, Delete: Buckets and Keys (Object Store)</li>
+</ul>
+<p>System Administrators/Developers/Project Manager:</p>
+<ul class="simple">
+<li>Create, Attach, Delete Volume (Block Store)</li>
+<li>Launch, Reboot, Terminate Instance</li>
+<li>Register/Unregister Machine Image (project-wide)</li>
+<li>Request / Review CloudAudit Scans</li>
+</ul>
+<p>Project Manager:</p>
+<ul class="simple">
+<li>Add and remove other users (currently no api)</li>
+<li>Set roles (currently no api)</li>
+</ul>
+<p>Network Administrator:</p>
+<ul class="simple">
+<li>Change Machine Image properties (public / private)</li>
+<li>Change Firewall Rules, define Security Groups</li>
+<li>Allocate, Associate, Deassociate Public IP addresses</li>
+</ul>
+<p>Cloud Administrator/IT-Security:</p>
+<ul class="simple">
+<li>All permissions</li>
+</ul>
+</div>
+<div class="section" id="enhancements">
+<h2>Enhancements<a class="headerlink" href="#enhancements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>SAML Token passing</li>
+<li>REST interfaces</li>
+<li>SOAP interfaces</li>
+</ul>
+<p>Wrapping the SAML token into the API calls.
+Then store the UID (fetched via backchannel) into the instance metadata, providing end-to-end auditability of ownership and responsibility, without PII.</p>
+</div>
+<div class="section" id="cloudaudit-apis">
+<h2>CloudAudit APIs<a class="headerlink" href="#cloudaudit-apis" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Request formats</li>
+<li>Response formats</li>
+<li>Stateless asynchronous queries</li>
+</ul>
+<p>CloudAudit queries may spawn long-running processes (similar to launching instances, etc.) They need to return a ReservationId in the same fashion, which can be returned in further queries for updates.
+RBAC of CloudAudit API calls is critical, since detailed system information is a system vulnerability.</p>
+</div>
+<div class="section" id="type-declarations">
+<h2>Type declarations<a class="headerlink" href="#type-declarations" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Data declarations – Volumes and Objects</li>
+<li>System declarations – Instances</li>
+</ul>
+<p>Existing API calls to launch instances specific a single, combined “type” flag. We propose to extend this with three additional type declarations, mapping to the “Confidentiality, Integrity, Availability” classifications of FIPS 199. An example API call would look like:</p>
+<div class="highlight-python"><pre>RunInstances type=m1.large number=1 secgroup=default key=mykey confidentiality=low integrity=low availability=low</pre>
+</div>
+<p>These additional parameters would also apply to creation of block storage volumes (along with the existing parameter of ‘size’), and creation of object storage ‘buckets’. (C.I.A. classifications on a bucket would be inherited by the keys within this bucket.)</p>
+</div>
+<div class="section" id="request-brokering">
+<h2>Request Brokering<a class="headerlink" href="#request-brokering" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Cloud Interop</li>
+<li>IMF Registration / PubSub</li>
+<li>Digital C&amp;A</li>
+</ul>
+<p>Establishing declarative semantics for individual API calls will allow the cloud environment to seamlessly proxy these API calls to external, third-party vendors – when the requested CIA levels match.</p>
+<p>See related work within the Infrastructure 2.0 working group for more information on how the IMF Metadata specification could be utilized to manage registration of these vendors and their C&amp;A credentials.</p>
+</div>
+<div class="section" id="dirty-cloud-hybrid-data-centers">
+<h2>Dirty Cloud – Hybrid Data Centers<a class="headerlink" href="#dirty-cloud-hybrid-data-centers" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>CloudAudit bridge interfaces</li>
+<li>Anything in the ARP table</li>
+</ul>
+<p>A hybrid cloud environment provides dedicated, potentially co-located physical hardware with a network interconnect to the project or users’ cloud virtual network.</p>
+<p>This interconnect is typically a bridged VPN connection. Any machines that can be bridged into a hybrid environment in this fashion (at Layer 2) must implement a minimum version of the CloudAudit spec, such that they can be queried to provide a complete picture of the IT-sec runtime environment.</p>
+<p>Network discovery protocols (ARP, CDP) can be applied in this case, and existing protocols (SNMP location data, DNS LOC records) overloaded to provide CloudAudit information.</p>
+</div>
+<div class="section" id="the-details">
+<h2>The Details<a class="headerlink" href="#the-details" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Preliminary Roles Definitions</li>
+<li>Categorization of available API calls</li>
+<li>SAML assertion vocabulary</li>
+</ul>
+</div>
+<div class="section" id="system-limits">
+<h2>System limits<a class="headerlink" href="#system-limits" title="Permalink to this headline">¶</a></h2>
+<p>The following limits need to be defined and enforced:</p>
+<ul class="simple">
+<li>Total number of instances allowed (user / project)</li>
+<li>Total number of instances, per instance type (user / project)</li>
+<li>Total number of volumes (user / project)</li>
+<li>Maximum size of volume</li>
+<li>Cumulative size of all volumes</li>
+<li>Total use of object storage (GB)</li>
+<li>Total number of Public IPs</li>
+</ul>
+</div>
+<div class="section" id="further-challenges">
+<h2>Further Challenges<a class="headerlink" href="#further-challenges" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Prioritization of users / jobs in shared computing environments</li>
+<li>Incident response planning</li>
+<li>Limit launch of instances to specific security groups based on AMI</li>
+<li>Store AMIs in LDAP for added property control</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="api.html" title="API Endpoint"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="network.html" title="Networking"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

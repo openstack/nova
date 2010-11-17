@@ -1,0 +1,235 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Networking Overview &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Administration Guide" href="index.html" />
+    <link rel="next" title="Flat Network Mode (Original and Flat)" href="network.flat.html" />
+    <link rel="prev" title="Managing Images" href="managing.images.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="network.flat.html" title="Flat Network Mode (Original and Flat)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="managing.images.html" title="Managing Images"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Administration Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Networking Overview</a><ul>
+<li><a class="reference internal" href="#nova-network-strategies">Nova Network Strategies</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#network-management-commands">Network Management Commands</a><ul>
+<li><a class="reference internal" href="#vpn-management">VPN Management</a></li>
+<li><a class="reference internal" href="#floating-ip-management">Floating IP Management</a></li>
+<li><a class="reference internal" href="#network-management">Network Management</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="managing.images.html"
+                                  title="previous chapter">Managing Images</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="network.flat.html"
+                                  title="next chapter">Flat Network Mode (Original and Flat)</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/adminguide/managing.networks.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="networking-overview">
+<h1>Networking Overview<a class="headerlink" href="#networking-overview" title="Permalink to this headline">¶</a></h1>
+<p>In Nova, users organize their cloud resources in projects. A Nova project consists of a number of VM instances created by a user. For each VM instance, Nova assigns to it a private IP address. (Currently, Nova only supports Linux bridge networking that allows the virtual interfaces to connect to the outside network through the physical interface. Other virtual network technologies, such as Open vSwitch, could be supported in the future.) The Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network.</p>
+<div class="section" id="nova-network-strategies">
+<h2>Nova Network Strategies<a class="headerlink" href="#nova-network-strategies" title="Permalink to this headline">¶</a></h2>
+<p>Currently, Nova supports three kinds of networks, implemented in three &#8220;Network Manager&#8221; types respectively: Flat Network Manager, Flat DHCP Network Manager, and VLAN Network Manager. The three kinds of networks can c-exist in a cloud system. However, the scheduler for selecting the type of network for a given project is not yet implemented. Here is a brief description of each of the different network strategies, with a focus on the VLAN Manager in a separate section.</p>
+<p>Read more about Nova network strategies here:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network.flat.html">Flat Network Mode (Original and Flat)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network.vlan.html">VLAN Network Mode</a></li>
+</ul>
+</div>
+</div>
+<div class="section" id="network-management-commands">
+<h2>Network Management Commands<a class="headerlink" href="#network-management-commands" title="Permalink to this headline">¶</a></h2>
+<p>Admins and Network Administrators can use the &#8216;nova-manage&#8217; command to manage network resources:</p>
+<div class="section" id="vpn-management">
+<h3>VPN Management<a class="headerlink" href="#vpn-management" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><dl class="first docutils">
+<dt>vpn list: Print a listing of the VPNs for all projects.</dt>
+<dd><ul class="first last simple">
+<li>arguments: none</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>vpn run: Start the VPN for a given project.</dt>
+<dd><ul class="first last simple">
+<li>arguments: project</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>vpn spawn: Run all VPNs.</dt>
+<dd><ul class="first last simple">
+<li>arguments: none</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="floating-ip-management">
+<h3>Floating IP Management<a class="headerlink" href="#floating-ip-management" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><dl class="first docutils">
+<dt>floating create: Creates floating ips for host by range</dt>
+<dd><ul class="first last simple">
+<li>arguments: host ip_range</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>floating delete: Deletes floating ips by range</dt>
+<dd><ul class="first last simple">
+<li>arguments: range</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>floating list: Prints a listing of all floating ips</dt>
+<dd><ul class="first last simple">
+<li>arguments: none</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="network-management">
+<h3>Network Management<a class="headerlink" href="#network-management" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><dl class="first docutils">
+<dt>network create: Creates fixed ips for host by range</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>arguments: [fixed_range=FLAG], [num_networks=FLAG],</dt>
+<dd><p class="first last">[network_size=FLAG], [vlan_start=FLAG],
+[vpn_start=FLAG]</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="network.flat.html" title="Flat Network Mode (Original and Flat)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="managing.images.html" title="Managing Images"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Administration Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

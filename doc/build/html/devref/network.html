@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Networking &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="next" title="Authentication and Authorization" href="auth.html" />
+    <link rel="prev" title="Virtualization" href="compute.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Authentication and Authorization"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="compute.html" title="Virtualization"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">Networking</a><ul>
+<li><a class="reference internal" href="#the-nova-network-manager-module">The <tt class="docutils literal"><span class="pre">nova.network.manager</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-network-linux-net-driver">The <tt class="docutils literal"><span class="pre">nova.network.linux_net</span></tt> Driver</a></li>
+<li><a class="reference internal" href="#tests">Tests</a><ul>
+<li><a class="reference internal" href="#the-network-unittest-module">The <tt class="docutils literal"><span class="pre">network_unittest</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#legacy-docs">Legacy docs</a></li>
+<li><a class="reference internal" href="#components">Components</a></li>
+<li><a class="reference internal" href="#component-diagram">Component Diagram</a></li>
+<li><a class="reference internal" href="#state-model">State Model</a></li>
+<li><a class="reference internal" href="#the-public-traffic-path">The Public Traffic Path</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="compute.html"
+                                  title="previous chapter">Virtualization</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="auth.html"
+                                  title="next chapter">Authentication and Authorization</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/devref/network.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="networking">
+<h1>Networking<a class="headerlink" href="#networking" title="Permalink to this headline">¶</a></h1>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<ul class="last simple">
+<li>document hardware specific commands (maybe in admin guide?) (todd)</li>
+<li>document a map between flags and managers/backends (todd)</li>
+</ul>
+</div>
+<div class="section" id="the-nova-network-manager-module">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.network.manager</span></tt> Module<a class="headerlink" href="#the-nova-network-manager-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-nova-network-linux-net-driver">
+<h2>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.network.linux_net</span></tt> Driver<a class="headerlink" href="#the-nova-network-linux-net-driver" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-network-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">network_unittest</span></tt> Module<a class="headerlink" href="#the-network-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="legacy-docs">
+<h2>Legacy docs<a class="headerlink" href="#legacy-docs" title="Permalink to this headline">¶</a></h2>
+<p>The nova networking components manage private networks, public IP addressing, VPN connectivity, and firewall rules.</p>
+</div>
+<div class="section" id="components">
+<h2>Components<a class="headerlink" href="#components" title="Permalink to this headline">¶</a></h2>
+<p>There are several key components:</p>
+<ul class="simple">
+<li>NetworkController (Manages address and vlan allocation)</li>
+<li>RoutingNode (NATs public IPs to private IPs, and enforces firewall rules)</li>
+<li>AddressingNode (runs DHCP services for private networks)</li>
+<li>BridgingNode (a subclass of the basic nova ComputeNode)</li>
+<li>TunnelingNode (provides VPN connectivity)</li>
+</ul>
+</div>
+<div class="section" id="component-diagram">
+<h2>Component Diagram<a class="headerlink" href="#component-diagram" title="Permalink to this headline">¶</a></h2>
+<p>Overview:</p>
+<div class="highlight-python"><pre>                               (PUBLIC INTERNET)
+                                |              \
+                               / \             / \
+                 [RoutingNode] ... [RN]    [TunnelingNode] ... [TN]
+                       |             \    /       |              |
+                       |            &lt; AMQP &gt;      |              |
+[AddressingNode]--  (VLAN) ...         |        (VLAN)...    (VLAN)      --- [AddressingNode]
+                       \               |           \           /
+                      / \             / \         / \         / \
+                       [BridgingNode] ...          [BridgingNode]
+
+
+                 [NetworkController]   ...    [NetworkController]
+                                   \          /
+                                     &lt; AMQP &gt;
+                                        |
+                                       / \
+                      [CloudController]...[CloudController]</pre>
+</div>
+<p>While this diagram may not make this entirely clear, nodes and controllers communicate exclusively across the message bus (AMQP, currently).</p>
+</div>
+<div class="section" id="state-model">
+<h2>State Model<a class="headerlink" href="#state-model" title="Permalink to this headline">¶</a></h2>
+<p>Network State consists of the following facts:</p>
+<ul class="simple">
+<li>VLAN assignment (to a project)</li>
+<li>Private Subnet assignment (to a security group) in a VLAN</li>
+<li>Private IP assignments (to running instances)</li>
+<li>Public IP allocations (to a project)</li>
+<li>Public IP associations (to a private IP / running instance)</li>
+</ul>
+<p>While copies of this state exist in many places (expressed in IPTables rule chains, DHCP hosts files, etc), the controllers rely only on the distributed &#8220;fact engine&#8221; for state, queried over RPC (currently AMQP).  The NetworkController inserts most records into this datastore (allocating addresses, etc) - however, individual nodes update state e.g. when running instances crash.</p>
+</div>
+<div class="section" id="the-public-traffic-path">
+<h2>The Public Traffic Path<a class="headerlink" href="#the-public-traffic-path" title="Permalink to this headline">¶</a></h2>
+<p>Public Traffic:</p>
+<div class="highlight-python"><pre>               (PUBLIC INTERNET)
+                      |
+                    &lt;NAT&gt;  &lt;-- [RoutingNode]
+                      |
+[AddressingNode] --&gt;  |
+                   ( VLAN )
+                      |    &lt;-- [BridgingNode]
+                      |
+               &lt;RUNNING INSTANCE&gt;</pre>
+</div>
+<p>The RoutingNode is currently implemented using IPTables rules, which implement both NATing of public IP addresses, and the appropriate firewall chains. We are also looking at using Netomata / Clusto to manage NATting within a switch or router, and/or to manage firewall rules within a hardware firewall appliance.</p>
+<p>Similarly, the AddressingNode currently manages running DNSMasq instances for DHCP services. However, we could run an internal DHCP server (using Scapy ala Clusto), or even switch to static addressing by inserting the private address into the disk image the same way we insert the SSH keys. (See compute for more details).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Authentication and Authorization"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="compute.html" title="Virtualization"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>

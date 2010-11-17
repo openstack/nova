@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API Endpoint &mdash; nova v2010.1 documentation</title>
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/tweaks.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2010.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/jquery.tweet.js"></script>
+    <link rel="top" title="nova v2010.1 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="next" title="Scheduler" href="scheduler.html" />
+    <link rel="prev" title="Authentication and Authorization" href="auth.html" />
+    <script type='text/javascript'>
+        $(document).ready(function(){
+            $("#twitter_feed").tweet({
+                username: "openstack",
+                query: "from:openstack",
+                avatar_size: 32,
+                count: 10,
+                loading_text: "loading tweets..."
+            });
+        });
+    </script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="scheduler.html" title="Scheduler"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="auth.html" title="Authentication and Authorization"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="../index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference internal" href="#">API Endpoint</a><ul>
+<li><a class="reference internal" href="#common-components">Common Components</a><ul>
+<li><a class="reference internal" href="#the-nova-api-module">The <tt class="docutils literal"><span class="pre">nova.api</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-nova-api-cloud-module">The <tt class="docutils literal"><span class="pre">nova.api.cloud</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#openstack-api">OpenStack API</a><ul>
+<li><a class="reference internal" href="#the-openstack-module">The <tt class="docutils literal"><span class="pre">openstack</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-auth-module">The <tt class="docutils literal"><span class="pre">auth</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-backup-schedules-module">The <tt class="docutils literal"><span class="pre">backup_schedules</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-faults-module">The <tt class="docutils literal"><span class="pre">faults</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-flavors-module">The <tt class="docutils literal"><span class="pre">flavors</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-images-module">The <tt class="docutils literal"><span class="pre">images</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-ratelimiting-module">The <tt class="docutils literal"><span class="pre">ratelimiting</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-servers-module">The <tt class="docutils literal"><span class="pre">servers</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-sharedipgroups-module">The <tt class="docutils literal"><span class="pre">sharedipgroups</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ec2-api">EC2 API</a><ul>
+<li><a class="reference internal" href="#the-nova-api-ec2-module">The <tt class="docutils literal"><span class="pre">nova.api.ec2</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-admin-module">The <tt class="docutils literal"><span class="pre">admin</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-apirequest-module">The <tt class="docutils literal"><span class="pre">apirequest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-cloud-module">The <tt class="docutils literal"><span class="pre">cloud</span></tt> Module</a></li>
+<li><a class="reference internal" href="#id1">The <tt class="docutils literal"><span class="pre">images</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-metadatarequesthandler-module">The <tt class="docutils literal"><span class="pre">metadatarequesthandler</span></tt> Module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tests">Tests</a><ul>
+<li><a class="reference internal" href="#the-api-unittest-module">The <tt class="docutils literal"><span class="pre">api_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-api-integration-module">The <tt class="docutils literal"><span class="pre">api_integration</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-cloud-unittest-module">The <tt class="docutils literal"><span class="pre">cloud_unittest</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-api-fakes-module">The <tt class="docutils literal"><span class="pre">api.fakes</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-api-test-wsgi-module">The <tt class="docutils literal"><span class="pre">api.test_wsgi</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-api-module">The <tt class="docutils literal"><span class="pre">test_api</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-auth-module">The <tt class="docutils literal"><span class="pre">test_auth</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-faults-module">The <tt class="docutils literal"><span class="pre">test_faults</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-flavors-module">The <tt class="docutils literal"><span class="pre">test_flavors</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-images-module">The <tt class="docutils literal"><span class="pre">test_images</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-ratelimiting-module">The <tt class="docutils literal"><span class="pre">test_ratelimiting</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-servers-module">The <tt class="docutils literal"><span class="pre">test_servers</span></tt> Module</a></li>
+<li><a class="reference internal" href="#the-test-sharedipgroups-module">The <tt class="docutils literal"><span class="pre">test_sharedipgroups</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="auth.html"
+                                  title="previous chapter">Authentication and Authorization</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="scheduler.html"
+                                  title="next chapter">Scheduler</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="../_sources/devref/api.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="api-endpoint">
+<h1>API Endpoint<a class="headerlink" href="#api-endpoint" title="Permalink to this headline">¶</a></h1>
+<p>Nova has a system for managing multiple APIs on different subdomains.
+Currently there is support for the OpenStack API, as well as the Amazon EC2
+API.</p>
+<div class="section" id="common-components">
+<h2>Common Components<a class="headerlink" href="#common-components" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-nova-api-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.api</span></tt> Module<a class="headerlink" href="#the-nova-api-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-nova-api-cloud-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.api.cloud</span></tt> Module<a class="headerlink" href="#the-nova-api-cloud-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="openstack-api">
+<h2>OpenStack API<a class="headerlink" href="#openstack-api" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-openstack-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">openstack</span></tt> Module<a class="headerlink" href="#the-openstack-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-auth-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">auth</span></tt> Module<a class="headerlink" href="#the-auth-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-backup-schedules-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">backup_schedules</span></tt> Module<a class="headerlink" href="#the-backup-schedules-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-faults-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">faults</span></tt> Module<a class="headerlink" href="#the-faults-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-flavors-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">flavors</span></tt> Module<a class="headerlink" href="#the-flavors-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-images-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">images</span></tt> Module<a class="headerlink" href="#the-images-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-ratelimiting-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">ratelimiting</span></tt> Module<a class="headerlink" href="#the-ratelimiting-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-servers-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">servers</span></tt> Module<a class="headerlink" href="#the-servers-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-sharedipgroups-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">sharedipgroups</span></tt> Module<a class="headerlink" href="#the-sharedipgroups-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="ec2-api">
+<h2>EC2 API<a class="headerlink" href="#ec2-api" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-nova-api-ec2-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">nova.api.ec2</span></tt> Module<a class="headerlink" href="#the-nova-api-ec2-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-admin-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">admin</span></tt> Module<a class="headerlink" href="#the-admin-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-apirequest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">apirequest</span></tt> Module<a class="headerlink" href="#the-apirequest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-cloud-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">cloud</span></tt> Module<a class="headerlink" href="#the-cloud-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="id1">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">images</span></tt> Module<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-metadatarequesthandler-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">metadatarequesthandler</span></tt> Module<a class="headerlink" href="#the-metadatarequesthandler-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="tests">
+<h2>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-api-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">api_unittest</span></tt> Module<a class="headerlink" href="#the-api-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-api-integration-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">api_integration</span></tt> Module<a class="headerlink" href="#the-api-integration-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-cloud-unittest-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">cloud_unittest</span></tt> Module<a class="headerlink" href="#the-cloud-unittest-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-api-fakes-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">api.fakes</span></tt> Module<a class="headerlink" href="#the-api-fakes-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-api-test-wsgi-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">api.test_wsgi</span></tt> Module<a class="headerlink" href="#the-api-test-wsgi-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-api-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_api</span></tt> Module<a class="headerlink" href="#the-test-api-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-auth-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_auth</span></tt> Module<a class="headerlink" href="#the-test-auth-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-faults-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_faults</span></tt> Module<a class="headerlink" href="#the-test-faults-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-flavors-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_flavors</span></tt> Module<a class="headerlink" href="#the-test-flavors-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-images-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_images</span></tt> Module<a class="headerlink" href="#the-test-images-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-ratelimiting-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_ratelimiting</span></tt> Module<a class="headerlink" href="#the-test-ratelimiting-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-servers-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_servers</span></tt> Module<a class="headerlink" href="#the-test-servers-module" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="the-test-sharedipgroups-module">
+<h3>The <tt class="xref py py-mod docutils literal"><span class="pre">test_sharedipgroups</span></tt> Module<a class="headerlink" href="#the-test-sharedipgroups-module" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="scheduler.html" title="Scheduler"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="auth.html" title="Authentication and Authorization"
+             >previous</a> |</li>
+        <li><a href="../index.html">nova v2010.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, United States Government as represented by the Administrator of the National Aeronautics and Space Administration..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.4.
+    </div>
+  </body>
+</html>
