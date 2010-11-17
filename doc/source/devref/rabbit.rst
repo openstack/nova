@@ -87,7 +87,7 @@ At any given time the load of a RabbitMQ node is function of the following param
     * Throughput of API calls: the number of API calls (more precisely rpc.call ops) being served by the OpenStack cloud dictates the number of direct-based exchanges, related queues and direct consumers connected to them.
     * Number of Workers: there is one queue shared amongst workers with the same personality; however there are as many exclusive queues as the number of workers; the number of workers dictates also the number of routing keys within the topic-based exchange, which is shared amongst all workers.
 
-The figure below shows the status of the RabbitMQ node after Nova components' bootstrap in a test environment. Queues being created by Nova components are: 
+The figure below shows the status of the RabbitMQ node after Nova components' bootstrap in a test environment. Exchanges and queues being created by Nova components are: 
 
     * Exchanges
        1. nova (topic exchange)
