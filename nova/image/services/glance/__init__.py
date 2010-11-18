@@ -19,6 +19,7 @@
 
 import httplib
 import json
+import logging
 import urlparse
 
 import webob.exc

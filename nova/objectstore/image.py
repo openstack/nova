@@ -48,8 +48,8 @@ class Image(object):
         self.image_id = image_id
         self.path = os.path.abspath(os.path.join(FLAGS.images_path, image_id))
         if not self.path.startswith(os.path.abspath(FLAGS.images_path)) or \
-            not os.path.isdir(self.path):
-                raise exception.NotFound
+        not os.path.isdir(self.path):
+            raise exception.NotFound
 
     @property
     def image_path(self):
