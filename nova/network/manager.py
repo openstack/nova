@@ -63,7 +63,7 @@ flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
-flags.DEFINE_string('flat_network_dhcp_start', '192.168.0.2',
+flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
 flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
@@ -285,6 +285,7 @@ class FlatManager(NetworkManager):
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
             net = {}
+            net['bridge'] = FLAGS.flat_network_bridge
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())
             net['gateway'] = str(project_net[1])
@@ -307,17 +308,23 @@ class FlatManager(NetworkManager):
         """Called when this host becomes the host for a network."""
         net = {}
         net['injected'] = True
-        net['bridge'] = FLAGS.flat_network_bridge
         net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_id, net)
 
 
-class FlatDHCPManager(NetworkManager):
+class FlatDHCPManager(FlatManager):
     """Flat networking with dhcp."""
+
+    def setup_compute_network(self, context, instance_id):
+        """Sets up matching network for compute hosts."""
+        network_ref = db.network_get_by_instance(context, instance_id)
+        self.driver.ensure_bridge(network_ref['bridge'],
+                                  FLAGS.bridge_dev,
+                                  network_ref)
 
     def setup_fixed_ip(self, context, address):
         """Setup dhcp for this network."""
-        network_ref = db.fixed_ip_get_by_address(context, address)
+        network_ref = db.fixed_ip_get_network(context, address)
         self.driver.update_dhcp(context, network_ref['id'])
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
@@ -326,11 +333,10 @@ class FlatDHCPManager(NetworkManager):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a project."""
-        super(FlatDHCPManager, self)._on_set_network_host(context, network_id)
-        network_ref = self.db.network_get(context, network_id)
-        self.db.network_update(context,
-                               network_id,
-                               {'dhcp_start': FLAGS.flat_network_dhcp_start})
+        net = {}
+        net['dhcp_start'] = FLAGS.flat_network_dhcp_start
+        self.db.network_update(context, network_id, net)
+        network_ref = db.network_get(context, network_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.bridge_dev,
                                   network_ref)

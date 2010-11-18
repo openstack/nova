@@ -42,7 +42,7 @@ flags.DEFINE_string('networks_path', utils.abspath('../networks'),
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
-flags.DEFINE_string('bridge_dev', 'eth0',
+flags.DEFINE_string('bridge_dev', None,
                         'network device for bridges')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
@@ -142,12 +142,13 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge inteface for %s", interface)
+        logging.debug("Starting Bridge interface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo brctl addif %s %s" % (bridge, interface))
+        if interface:
+            _execute("sudo brctl addif %s %s" % (bridge, interface))
     if net_attrs:
         _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                 (bridge,
