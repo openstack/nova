@@ -31,6 +31,17 @@ import nova.image.service
 FLAGS = flags.FLAGS
 
 
+flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
+                    'IP address or URL where Glance\'s Teller service resides')
+flags.DEFINE_string('glance_teller_port', '9191',
+                    'Port for Glance\'s Teller service')
+flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
+                    'IP address or URL where Glance\'s Parallax service '
+                    'resides')
+flags.DEFINE_string('glance_parallax_port', '9292',
+                    'Port for Glance\'s Parallax service')
+
+
 class TellerClient(object):
 
     def __init__(self):
@@ -160,21 +171,21 @@ class GlanceImageService(nova.image.service.BaseImageService):
         self.teller = TellerClient()
         self.parallax = ParallaxClient()
 
-    def index(self):
+    def index(self, context):
         """
         Calls out to Parallax for a list of images available
         """
         images = self.parallax.get_image_index()
         return images
 
-    def detail(self):
+    def detail(self, context):
         """
         Calls out to Parallax for a list of detailed image information
         """
         images = self.parallax.get_image_details()
         return images
 
-    def show(self, id):
+    def show(self, context, id):
         """
         Returns a dict containing image data for the given opaque image id.
         """
@@ -183,7 +194,7 @@ class GlanceImageService(nova.image.service.BaseImageService):
             return image
         raise exception.NotFound
 
-    def create(self, data):
+    def create(self, context, data):
         """
         Store the image data and return the new image id.
 
@@ -192,7 +203,7 @@ class GlanceImageService(nova.image.service.BaseImageService):
         """
         return self.parallax.add_image_metadata(data)
 
-    def update(self, image_id, data):
+    def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.
 
         :raises NotFound if the image does not exist.
@@ -200,7 +211,7 @@ class GlanceImageService(nova.image.service.BaseImageService):
         """
         self.parallax.update_image_metadata(image_id, data)
 
-    def delete(self, image_id):
+    def delete(self, context, image_id):
         """
         Delete the given image.
 
