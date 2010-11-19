@@ -100,12 +100,12 @@ class Consumer(messaging.Consumer):
         """Wraps the parent fetch with some logic for failed connections"""
         try:
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
-        except:
+        except: # Catching all because carrot sucks
             try:
                 self.connection = Connection.recreate()
                 self.backend = self.connection.create_backend()
                 self.declare()
-            except:
+            except: # Catching all because carrot sucks
                 logging.warning("AMQP server on %s:%d is unreachable. " \
                                 "Trying again in 30 seconds." % (
                     FLAGS.rabbit_host,
