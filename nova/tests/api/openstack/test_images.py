@@ -58,7 +58,8 @@ class BaseImageServiceTests(object):
         id = self.service.create(self.context, fixture)
 
         self.assertNotEquals(None, id)
-        self.assertEquals(num_images + 1, len(self.service.index(self.context)))
+        self.assertEquals(num_images + 1,
+                          len(self.service.index(self.context)))
 
     def test_create_and_show_non_existing_image(self):
 

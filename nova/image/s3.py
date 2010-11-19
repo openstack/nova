@@ -42,7 +42,8 @@ class S3ImageService(service.BaseImageService):
         self._conn(context).make_request(
             method='POST',
             bucket='_images',
-            query_args=self._qs({'image_id': image_id, 'operation': operation}))
+            query_args=self._qs({'image_id': image_id,
+                                 'operation': operation}))
         return True
 
     def update(self, context, image_id, attributes):
