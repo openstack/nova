@@ -18,10 +18,18 @@
 
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
+from sphinx.setup_command import BuildDoc
 
 import os
 import subprocess
 
+
+class local_BuildDoc(BuildDoc):
+    def run(self):
+        for builder in ['html', 'man']:
+            self.builder = builder
+            self.finalize_options()
+            BuildDoc.run(self)
 
 class local_sdist(sdist):
     """Customized sdist hook - builds the ChangeLog file from VC first"""
@@ -44,7 +52,8 @@ setup(name='nova',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass={'sdist': local_sdist},
+      cmdclass={ 'sdist': local_sdist,
+                 'build_sphinx' : local_BuildDoc },
       packages=find_packages(exclude=['bin', 'smoketests']),
       scripts=['bin/nova-api',
                'bin/nova-compute',
