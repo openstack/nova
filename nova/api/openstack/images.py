@@ -17,6 +17,7 @@
 
 from webob import exc
 
+from nova import context
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -46,19 +47,23 @@ class Controller(wsgi.Controller):
 
     def detail(self, req):
         """Return all public images in detail."""
+        user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
         try:
-            images = self._service.detail()
+            images = self._service.detail(ctxt)
             images = nova.api.openstack.limited(images, req)
         except NotImplementedError:
             # Emulate detail() using repeated calls to show()
-            images = self._service.index()
+            images = self._service.index(ctxt)
             images = nova.api.openstack.limited(images, req)
-            images = [self._service.show(i['id']) for i in images]
+            images = [self._service.show(ctxt, i['id']) for i in images]
         return dict(images=images)
 
     def show(self, req, id):
         """Return data about the given image id."""
-        return dict(image=self._service.show(id))
+        user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
+        return dict(image=self._service.show(ctxt, id))
 
     def delete(self, req, id):
         # Only public images are supported for now.
