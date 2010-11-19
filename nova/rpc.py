@@ -83,35 +83,43 @@ class Consumer(messaging.Consumer):
     Contains methods for connecting the fetch method to async loops
     """
     def __init__(self, *args, **kwargs):
+        self.failed_connection = False
+
         while True:
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 break
-            except: # Catching all because carrot sucks
+            except:  # Catching all because carrot sucks
                 logging.warning("AMQP server on %s:%d is unreachable. " \
                                 "Trying again in 30 seconds." % (
-                    FLAGS.rabbit_host,
-                    FLAGS.rabbit_port
-                ))
+                                FLAGS.rabbit_host,
+                                FLAGS.rabbit_port))
                 time.sleep(30)
                 continue
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
+        # TODO(vish): the logic for failed connections and logging should be
+        #             refactored into some sort of connection manager object
         try:
-            super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
-        except: # Catching all because carrot sucks
-            try:
+            if self.failed_connection:
+                # NOTE(vish): conn is defined in the parent class, we can
+                #             recreate it as long as we create the backend too
+                # pylint: disable-msg=W0201
                 self.connection = Connection.recreate()
                 self.backend = self.connection.create_backend()
                 self.declare()
-            except: # Catching all because carrot sucks
-                logging.warning("AMQP server on %s:%d is unreachable. " \
-                                "Trying again in 30 seconds." % (
-                    FLAGS.rabbit_host,
-                    FLAGS.rabbit_port
-                ))
-                time.sleep(30)
+            super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
+            if self.failed_connection:
+                logging.error("Reconnected to queue")
+                self.failed_connection = False
+        # NOTE(vish): This is catching all errors because we really don't
+        #             exceptions to be logged 10 times a second if some
+        #             persistent failure occurs.
+        except Exception:  # pylint: disable-msg=W0703
+            if not self.failed_connection:
+                logging.exception("Failed to fetch message from queue")
+                self.failed_connection = True
 
     def attach_to_eventlet(self):
         """Only needed for unit tests!"""
