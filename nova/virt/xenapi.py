@@ -286,11 +286,21 @@ class XenAPIConnection(object):
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
             defer.returnValue(None)
+        # Get the VDIs related to the VM
+        vdis = yield self._lookup_vm_vdis(vm)
         try:
             task = yield self._call_xenapi('Async.VM.hard_shutdown', vm)
             yield self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
+        # Disk clean-up
+        if vdis:
+            for vdi in vdis:
+                try:
+                    task = yield self._call_xenapi('Async.VDI.destroy', vdi)
+                    yield self._wait_for_task(task)
+                except Exception, exc:
+                    logging.warn(exc)
         try:
             task = yield self._call_xenapi('Async.VM.destroy', vm)
             yield self._wait_for_task(task)
@@ -325,6 +335,24 @@ class XenAPIConnection(object):
         else:
             return vms[0]
 
+    @utils.deferredToThread
+    def _lookup_vm_vdis(self, vm):
+        return self._lookup_vm_vdis_blocking(vm)
+    
+    def _lookup_vm_vdis_blocking(self, vm):
+        # Firstly we get the VBDs, then the VDIs.
+        # TODO: do we leave the read-only devices?
+        vbds = self._conn.xenapi.VM.get_VBDs(vm)
+        vdis = []
+        if vbds:
+           for vbd in vbds:
+               vdis.append(self._conn.xenapi.VBD.get_VDI(vbd))
+        if len(vdis) > 0:
+            return vdis
+        else:
+            return None
+       
+    
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
