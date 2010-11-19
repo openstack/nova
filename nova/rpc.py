@@ -87,7 +87,7 @@ class Consumer(messaging.Consumer):
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 break
-            except:
+            except: # Catching all because carrot sucks
                 logging.warning("AMQP server on %s:%d is unreachable. " \
                                 "Trying again in 30 seconds." % (
                     FLAGS.rabbit_host,
