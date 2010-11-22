@@ -338,28 +338,27 @@ class XenAPIConnection(object):
     @utils.deferredToThread
     def _lookup_vm_vdis(self, vm):
         return self._lookup_vm_vdis_blocking(vm)
-    
+
     def _lookup_vm_vdis_blocking(self, vm):
         # Firstly we get the VBDs, then the VDIs.
         # TODO: do we leave the read-only devices?
         vbds = self._conn.xenapi.VM.get_VBDs(vm)
         vdis = []
         if vbds:
-           for vbd in vbds:
-               try:
-                   vdi = self._conn.xenapi.VBD.get_VDI(vbd)
-                   # Test valid VDI
-                   record = self._conn.xenapi.VDI.get_record(vdi)
-               except Exception, exc:
-                   logging.warn(exc)
-               else:
-                   vdis.append(vdi)                   
-        if len(vdis) > 0:
-            return vdis
-        else:
-            return None
-       
-    
+            for vbd in vbds:
+                try:
+                    vdi = self._conn.xenapi.VBD.get_VDI(vbd)
+                    # Test valid VDI
+                    record = self._conn.xenapi.VDI.get_record(vdi)
+                except Exception, exc:
+                    logging.warn(exc)
+                else:
+                    vdis.append(vdi)
+            if len(vdis) > 0:
+                return vdis
+            else:
+                return None
+
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
