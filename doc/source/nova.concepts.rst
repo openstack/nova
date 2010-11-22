@@ -117,9 +117,9 @@ Concept: API
 Concept: Networking
 -------------------
 
-Nova has a concept of Fixed Ips and Floating ips.  Fixed ips are assigned to an instance on creation and stay the same until the instance is explicitly terminated.  Floating ips are ip addresses that can be dynamically associated with an instance.  This address can be disassociated and associated with another instance at any time.
+Nova has a concept of Fixed IPs and Floating IPs.  Fixed IPs are assigned to an instance on creation and stay the same until the instance is explicitly terminated.  Floating ips are ip addresses that can be dynamically associated with an instance.  This address can be disassociated and associated with another instance at any time.
 
-There are multiple strategies available for implementing fixed ips:
+There are multiple strategies available for implementing fixed IPs:
 
 Flat Mode
 ~~~~~~~~~
@@ -129,7 +129,7 @@ The simplest networking mode.  Each instance receives a fixed ip from the pool. 
 Flat DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed ips by doing a dhcpdiscover.
+This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed IPs by doing a dhcpdiscover.
 
 VLAN DHCP Mode
 ~~~~~~~~~~~~~~
@@ -200,8 +200,17 @@ Concept: Scheduler
 Concept: Security Groups
 ------------------------
 
-Security groups
+In Nova, a security group is a named collection of network access rules, like firewall policies. These access rules specify which incoming network traffic should be delivered to all VM instances in the group, all other incoming traffic being discarded. Users can modify rules for a group at any time. The new rules are automatically enforced for all running instances and instances launched from then on.
 
+When launching VM instances, the project manager specifies which security groups it wants to join. It will become a member of these specified security groups when it is launched. If no groups are specified, the instances is assigned to the default group, which by default allows all network traffic from other members of this group and discards traffic from other IP addresses and groups. If this does not meet a user's needs, the user can modify the rule settings of the default group.
+
+A security group can be thought of as a security profile or a security role - it promotes the good practice of managing firewalls by role, not by machine. For example, a user could stipulate that servers with the "webapp" role must be able to connect to servers with the "mysql" role on port 3306. Going further with the security profile analogy, an instance can be launched with membership of multiple security groups - similar to a server with multiple roles. Because all rules in security groups are ACCEPT rules, it's trivial to combine them.
+
+Each rule in a security group must specify the source of packets to be allowed, which can either be a subnet anywhere on the Internet (in CIDR notation, with 0.0.0./0 representing the entire Internet) or another security group. In the latter case, the source security group can be any user's group. This makes it easy to grant selective access to one user's instances from instances run by the user's friends, partners, and vendors. 
+
+The creation of rules with other security groups specified as sources helps users deal with dynamic IP addressing. Without this feature, the user would have had to adjust the security groups each time a new instance is launched. This practice would become cumbersome if an application running in Nova is very dynamic and elastic, for example scales up or down frequently.
+
+Security groups for a VM are passed at launch time by the cloud controller to the compute node, and applied at the compute node when a VM is started.
 
 Concept: Certificate Authority
 ------------------------------
