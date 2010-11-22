@@ -23,13 +23,13 @@ Nova Concepts and Introduction
 Introduction
 ------------
 
-Nova is the software that controls your Infrastructure as as Service (IaaS)
+Nova, also known as OpenStack Compute, is the software that controls your Infrastructure as as Service (IaaS)
 cloud computing platform.  It is similar in scope to Amazon EC2 and Rackspace
-CloudServers.  Nova does not include any virtualization software, rather it
+Cloud Servers.  Nova does not include any virtualization software, rather it
 defines drivers that interact with underlying virtualization mechanisms that
 run on your host operating system, and exposes functionality over a web API.
 
-This document does not attempt to explain fundamental concepts of cloud
+This site does not attempt to explain fundamental concepts of cloud
 computing, IaaS, virtualization, or other related technologies.  Instead, it
 focuses on describing how Nova's implementation of those concepts is achieved.
 
@@ -63,6 +63,19 @@ Concept: Instances
 ------------------
 
 An 'instance' is a word for a virtual machine that runs inside the cloud.
+
+Concept: System Architecture
+----------------------------
+
+Nova consists of seven main components, with the Cloud Controller component representing the global state and interacting with all other components. API Server acts as the Web services front end for the cloud controller. Compute Controller provides compute server resources, and the Object Store component provides storage services. Auth Manager provides authentication and authorization services. Volume Controller provides fast and permanent block-level storage for the comput servers. Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network. Scheduler selects the most suitable compute controller to host an instance.
+
+    .. image:: images/Novadiagram.png 
+
+Nova is built on a shared-nothing, messaging-based architecture. All of the major components, that is Compute Controller, Volume Controller, Network Controller, and Object Store can be run on multiple servers. Cloud Controller communicates with Object Store via HTTP (Hyper Text Transfer Protocol), but it communicates with Scheduler, Network Controller, and Volume Controller via AMQP (Advanced Message Queue Protocol). To avoid blocking each component while waiting for a response, Nova uses asynchronous calls, with a call-back that gets triggered when a response is received.
+
+To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
+
+    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>_`. 
 
 Concept: Storage
 ----------------
@@ -150,7 +163,7 @@ See doc:`nova.manage` in the Administration Guide for more details.
 Concept: Flags
 --------------
 
-python-gflags
+Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within flag files. When you install Nova packages, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. 
 
 
 Concept: Plugins

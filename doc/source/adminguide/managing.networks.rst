@@ -20,21 +20,6 @@ Networking Overview
 ===================
 In Nova, users organize their cloud resources in projects. A Nova project consists of a number of VM instances created by a user. For each VM instance, Nova assigns to it a private IP address. (Currently, Nova only supports Linux bridge networking that allows the virtual interfaces to connect to the outside network through the physical interface. Other virtual network technologies, such as Open vSwitch, could be supported in the future.) The Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network.
 
-..
-    (perhaps some of this should be moved elsewhere)
-    Introduction
-    ------------
-
-    Nova consists of seven main components, with the Cloud Controller component representing the global state and interacting with all other components. API Server acts as the Web services front end for the cloud controller. Compute Controller provides compute server resources, and the Object Store component provides storage services. Auth Manager provides authentication and authorization services. Volume Controller provides fast and permanent block-level storage for the comput servers. Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network. Scheduler selects the most suitable compute controller to host an instance.
-
-    .. todo:: Insert Figure 1 image from "An OpenStack Network Overview" contributed by Citrix
-
-    Nova is built on a shared-nothing, messaging-based architecture. All of the major components, that is Compute Controller, Volume Controller, Network Controller, and Object Store can be run on multiple servers. Cloud Controller communicates with Object Store via HTTP (Hyper Text Transfer Protocol), but it communicates with Scheduler, Network Controller, and Volume Controller via AMQP (Advanced Message Queue Protocol). To avoid blocking each component while waiting for a response, Nova uses asynchronous calls, with a call-back that gets triggered when a response is received.
-
-    To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
-
-    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>_`. 
-
 Nova Network Strategies
 -----------------------
 
