@@ -21,8 +21,16 @@ import subprocess
 
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
+from sphinx.setup_command import BuildDoc
 
 from nova.util import parse_mailmap, str_dict_replace
+
+class local_BuildDoc(BuildDoc):
+    def run(self):
+        for builder in ['html', 'man']:
+            self.builder = builder
+            self.finalize_options()
+            BuildDoc.run(self)
 
 class local_sdist(sdist):
     """Customized sdist hook - builds the ChangeLog file from VC first"""
@@ -41,12 +49,13 @@ class local_sdist(sdist):
         sdist.run(self)
 
 setup(name='nova',
-      version='2010.1',
+      version='2011.1',
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass={'sdist': local_sdist},
+      cmdclass={ 'sdist': local_sdist,
+                 'build_sphinx' : local_BuildDoc },
       packages=find_packages(exclude=['bin', 'smoketests']),
       scripts=['bin/nova-api',
                'bin/nova-compute',
@@ -57,4 +66,5 @@ setup(name='nova',
                'bin/nova-network',
                'bin/nova-objectstore',
                'bin/nova-scheduler',
-               'bin/nova-volume'])
+               'bin/nova-volume',
+               'tools/nova-debug'])

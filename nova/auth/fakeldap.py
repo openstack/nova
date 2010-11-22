@@ -15,12 +15,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Fake LDAP server for test harnesses.
+"""Fake LDAP server for test harness, backs to ReDIS.
 
 This class does very little error checking, and knows nothing about ldap
-class definitions. It implements the minimum emulation of the python ldap
+class definitions.  It implements the minimum emulation of the python ldap
 library to work with nova.
+
 """
 
 import json
@@ -77,9 +77,8 @@ def initialize(_uri):
 def _match_query(query, attrs):
     """Match an ldap query to an attribute dictionary.
 
-    &, |, and ! are supported in the query. No syntax checking is performed,
-    so malformed querys will not work correctly.
-
+    The characters &, |, and ! are supported in the query. No syntax checking
+    is performed, so malformed querys will not work correctly.
     """
     # cut off the parentheses
     inner = query[1:-1]

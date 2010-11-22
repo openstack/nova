@@ -41,7 +41,7 @@ from nova import rpc
 from nova import utils
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.api import cloud
-from nova.api.ec2 import images
+from nova.image.s3 import S3ImageService
 
 
 FLAGS = flags.FLAGS
@@ -100,6 +100,7 @@ class CloudController(object):
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.compute_manager = utils.import_object(FLAGS.compute_manager)
+        self.image_service = S3ImageService()
         self.setup()
 
     def __str__(self):
@@ -679,7 +680,7 @@ class CloudController(object):
                                                          context.project_id)
         for floating_ip_ref in iterator:
             address = floating_ip_ref['address']
-            instance_id = None
+            ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
                 internal_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
@@ -717,8 +718,8 @@ class CloudController(object):
                   "args": {"floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
 
-    def associate_address(self, context, ec2_id, public_ip, **kwargs):
-        internal_id = ec2_id_to_internal_id(ec2_id)
+    def associate_address(self, context, instance_id, public_ip, **kwargs):
+        internal_id = ec2_id_to_internal_id(instance_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
@@ -785,7 +786,7 @@ class CloudController(object):
         vpn = kwargs['image_id'] == FLAGS.vpn_image_id
 
         if not vpn:
-            image = images.get(context, kwargs['image_id'])
+            image = self.image_service.show(context, kwargs['image_id'])
 
         # FIXME(ja): if image is vpn, this breaks
         # get defaults from imagestore
@@ -798,8 +799,8 @@ class CloudController(object):
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
 
         # make sure we have access to kernel and ramdisk
-        images.get(context, kernel_id)
-        images.get(context, ramdisk_id)
+        self.image_service.show(context, kernel_id)
+        self.image_service.show(context, ramdisk_id)
 
         logging.debug("Going to run %s instances...", num_instances)
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -993,20 +994,17 @@ class CloudController(object):
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):
-        # The objectstore does its own authorization for describe
-        imageSet = images.list(context, image_id)
+        imageSet = self.image_service.index(context, image_id)
         return {'imagesSet': imageSet}
 
     def deregister_image(self, context, image_id, **kwargs):
-        # FIXME: should the objectstore be doing these authorization checks?
-        images.deregister(context, image_id)
+        self.image_service.deregister(context, image_id)
         return {'imageId': image_id}
 
     def register_image(self, context, image_location=None, **kwargs):
-        # FIXME: should the objectstore be doing these authorization checks?
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
-        image_id = images.register(context, image_location)
+        image_id = self.image_service.register(context, image_location)
         logging.debug("Registered %s as %s" % (image_location, image_id))
         return {'imageId': image_id}
 
@@ -1014,7 +1012,7 @@ class CloudController(object):
         if attribute != 'launchPermission':
             raise exception.ApiError('attribute not supported: %s' % attribute)
         try:
-            image = images.list(context, image_id)[0]
+            image = self.image_service.show(context, image_id)
         except IndexError:
             raise exception.ApiError('invalid id: %s' % image_id)
         result = {'image_id': image_id, 'launchPermission': []}
@@ -1033,8 +1031,8 @@ class CloudController(object):
             raise exception.ApiError('only group "all" is supported')
         if not operation_type in ['add', 'remove']:
             raise exception.ApiError('operation_type must be add or remove')
-        return images.modify(context, image_id, operation_type)
+        return self.image_service.modify(context, image_id, operation_type)
 
     def update_image(self, context, image_id, **kwargs):
-        result = images.update(context, image_id, dict(kwargs))
+        result = self.image_service.update(context, image_id, dict(kwargs))
         return result

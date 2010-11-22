@@ -16,7 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests for Volume Code
+Tests for Volume Code.
+
 """
 import logging
 
@@ -33,7 +34,8 @@ FLAGS = flags.FLAGS
 
 
 class VolumeTestCase(test.TrialTestCase):
-    """Test Case for volumes"""
+    """Test Case for volumes."""
+
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
@@ -44,7 +46,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @staticmethod
     def _create_volume(size='0'):
-        """Create a volume object"""
+        """Create a volume object."""
         vol = {}
         vol['size'] = size
         vol['user_id'] = 'fake'
@@ -56,7 +58,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_create_delete_volume(self):
-        """Test volume can be created and deleted"""
+        """Test volume can be created and deleted."""
         volume_id = self._create_volume()
         yield self.volume.create_volume(self.context, volume_id)
         self.assertEqual(volume_id, db.volume_get(context.get_admin_context(),
@@ -70,7 +72,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_big_volume(self):
-        """Ensure failure if a too large of a volume is requested"""
+        """Ensure failure if a too large of a volume is requested."""
         # FIXME(vish): validation needs to move into the data layer in
         #              volume_create
         defer.returnValue(True)
@@ -83,7 +85,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_too_many_volumes(self):
-        """Ensure that NoMoreTargets is raised when we run out of volumes"""
+        """Ensure that NoMoreTargets is raised when we run out of volumes."""
         vols = []
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
@@ -100,7 +102,7 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
-        """Make sure volume can be attached and detached from instance"""
+        """Make sure volume can be attached and detached from instance."""
         inst = {}
         inst['image_id'] = 'ami-test'
         inst['reservation_id'] = 'r-fakeres'
@@ -149,12 +151,12 @@ class VolumeTestCase(test.TrialTestCase):
 
     @defer.inlineCallbacks
     def test_concurrent_volumes_get_different_targets(self):
-        """Ensure multiple concurrent volumes get different targets"""
+        """Ensure multiple concurrent volumes get different targets."""
         volume_ids = []
         targets = []
 
         def _check(volume_id):
-            """Make sure targets aren't duplicated"""
+            """Make sure targets aren't duplicated."""
             volume_ids.append(volume_id)
             admin_context = context.get_admin_context()
             iscsi_target = db.volume_get_iscsi_target_num(admin_context,
