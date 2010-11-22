@@ -100,7 +100,6 @@ class Consumer(messaging.Consumer):
                     FLAGS.rabbit_port,
                     AMQP_RETRY_INT))
                 self.failed_connection = True
-                continue
         if self.failed_connection:
             logging.exception("Unable to connect to AMQP server" \
                 " after %d tries. Shutting down." % AMQP_MAX_RETRIES)
