@@ -296,6 +296,14 @@ class XenAPIConnection(object):
             yield self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
+            
+    @defer.inlineCallbacks
+    def attach_volume(self, instance_name, device_path, mountpoint):
+        return True
+
+    @defer.inlineCallbacks
+    def detach_volume(self, instance_name, mountpoint):
+        return True
 
     def get_info(self, instance_id):
         vm = self._lookup_blocking(instance_id)
