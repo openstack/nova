@@ -244,8 +244,8 @@ class Executor(wsgi.Application):
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
-        resp.body = ('<?xml version="1.0"?>\n'
+        resp.body = str('<?xml version="1.0"?>\n'
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>') % (code, message)
+                     '<RequestID>?</RequestID></Response>' % (code, message))
         return resp

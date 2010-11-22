@@ -346,7 +346,14 @@ class XenAPIConnection(object):
         vdis = []
         if vbds:
            for vbd in vbds:
-               vdis.append(self._conn.xenapi.VBD.get_VDI(vbd))
+               try:
+                   vdi = self._conn.xenapi.VBD.get_VDI(vbd)
+                   # Test valid VDI
+                   record = self._conn.xenapi.VDI.get_record(vdi)
+               except Exception, exc:
+                   logging.warn(exc)
+               else:
+                   vdis.append(vdi)                   
         if len(vdis) > 0:
             return vdis
         else:

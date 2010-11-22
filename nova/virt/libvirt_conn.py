@@ -420,7 +420,7 @@ class LibvirtConnection(object):
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
-        basepath = lambda fname='', prefix=prefix: os.path.join(
+        basepath = lambda fname = '', prefix = prefix: os.path.join(
                                                  FLAGS.instances_path,
                                                  inst['name'],
                                                  prefix + fname)
@@ -457,7 +457,7 @@ class LibvirtConnection(object):
             yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
                                project)
 
-        execute = lambda cmd, process_input=None, check_exit_code=True: \
+        execute = lambda cmd, process_input = None, check_exit_code = True: \
                   process.simple_execute(cmd=cmd,
                                          process_input=process_input,
                                          check_exit_code=check_exit_code)
