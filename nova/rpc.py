@@ -38,8 +38,11 @@ from nova import fakerabbit
 from nova import flags
 from nova import context
 
+
 FLAGS = flags.FLAGS
 
+AMQP_RETRY_INT = 10
+AMQP_MAX_RETRIES = 12
 
 LOG = logging.getLogger('amqplib')
 LOG.setLevel(logging.DEBUG)
@@ -85,17 +88,23 @@ class Consumer(messaging.Consumer):
     def __init__(self, *args, **kwargs):
         self.failed_connection = False
 
-        while True:
+        for i in range(AMQP_MAX_RETRIES):
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 break
             except:  # Catching all because carrot sucks
-                logging.exception("AMQP server on %s:%d is unreachable. " \
-                                "Trying again in 30 seconds." % (
-                                FLAGS.rabbit_host,
-                                FLAGS.rabbit_port))
-                time.sleep(30)
-                continue
+                if i + 1 == AMQP_MAX_RETRIES:
+                    logging.exception("Unable to connect to AMQP server" \
+                        " after %d tries. Shutting down." % AMQP_MAX_RETRIES)
+                    sys.exit(1)
+                else:
+                    logging.exception("AMQP server on %s:%d is unreachable." \
+                        " Trying again in %d seconds." % (
+                        FLAGS.rabbit_host,
+                        FLAGS.rabbit_port,
+                        AMQP_RETRY_INT))
+                    time.sleep(AMQP_RETRY_INT)
+                    continue
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
@@ -103,7 +112,7 @@ class Consumer(messaging.Consumer):
         #             refactored into some sort of connection manager object
         try:
             if self.failed_connection:
-                # NOTE(vish): conn is defined in the parent class, we can
+                # NOTE(vish): connection is defined in the parent class, we can
                 #             recreate it as long as we create the backend too
                 # pylint: disable-msg=W0201
                 self.connection = Connection.recreate()
