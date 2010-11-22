@@ -41,9 +41,6 @@ from nova import context
 
 FLAGS = flags.FLAGS
 
-AMQP_RETRY_INT = 10
-AMQP_MAX_RETRIES = 12
-
 LOG = logging.getLogger('amqplib')
 LOG.setLevel(logging.DEBUG)
 
@@ -86,9 +83,9 @@ class Consumer(messaging.Consumer):
     Contains methods for connecting the fetch method to async loops
     """
     def __init__(self, *args, **kwargs):
-        for i in xrange(AMQP_MAX_RETRIES):
+        for i in xrange(FLAGS.rabbit_max_retries):
             if i > 0:
-                time.sleep(AMQP_RETRY_INT)
+                time.sleep(FLAGS.rabbit_retry_interval)
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
                 self.failed_connection = False
@@ -98,11 +95,11 @@ class Consumer(messaging.Consumer):
                     " Trying again in %d seconds." % (
                     FLAGS.rabbit_host,
                     FLAGS.rabbit_port,
-                    AMQP_RETRY_INT))
+                    FLAGS.rabbit_retry_interval))
                 self.failed_connection = True
         if self.failed_connection:
             logging.exception("Unable to connect to AMQP server" \
-                " after %d tries. Shutting down." % AMQP_MAX_RETRIES)
+                " after %d tries. Shutting down." % FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
