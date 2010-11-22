@@ -86,25 +86,25 @@ class Consumer(messaging.Consumer):
     Contains methods for connecting the fetch method to async loops
     """
     def __init__(self, *args, **kwargs):
-        self.failed_connection = False
-
-        for i in range(AMQP_MAX_RETRIES):
+        for i in xrange(AMQP_MAX_RETRIES):
+            if i > 0:
+                time.sleep(AMQP_RETRY_INT)
             try:
                 super(Consumer, self).__init__(*args, **kwargs)
+                self.failed_connection = False
                 break
             except:  # Catching all because carrot sucks
-                if i + 1 == AMQP_MAX_RETRIES:
-                    logging.exception("Unable to connect to AMQP server" \
-                        " after %d tries. Shutting down." % AMQP_MAX_RETRIES)
-                    sys.exit(1)
-                else:
-                    logging.exception("AMQP server on %s:%d is unreachable." \
-                        " Trying again in %d seconds." % (
-                        FLAGS.rabbit_host,
-                        FLAGS.rabbit_port,
-                        AMQP_RETRY_INT))
-                    time.sleep(AMQP_RETRY_INT)
-                    continue
+                logging.exception("AMQP server on %s:%d is unreachable." \
+                    " Trying again in %d seconds." % (
+                    FLAGS.rabbit_host,
+                    FLAGS.rabbit_port,
+                    AMQP_RETRY_INT))
+                self.failed_connection = True
+                continue
+        if self.failed_connection:
+            logging.exception("Unable to connect to AMQP server" \
+                " after %d tries. Shutting down." % AMQP_MAX_RETRIES)
+            sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
