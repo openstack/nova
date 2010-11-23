@@ -40,7 +40,6 @@ cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
 --verbose
 --nodaemon
 --dhcpbridge_flagfile=/etc/nova/nova-manage.conf
---FAKE_subdomain=ec2
 --cc_host=$HOST_IP
 --routing_source_ip=$HOST_IP
 --sql_connection=$SQL_CONN

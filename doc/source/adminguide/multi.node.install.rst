@@ -92,7 +92,6 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
 
 ::
 
-   --FAKE_subdomain=ec2             # workaround for ec2/euca api
    --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
    --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
@@ -104,19 +103,13 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
    --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
    --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
-4. nova-api specific flags
-
-::
-
-   --FAKE_subdomain=ec2             # workaround for ec2/euca api
-
-5. Create a nova group
+4. Create a nova group
 
 ::
 
    sudo addgroup nova
 
-6. nova-objectstore specific flags < no specific config needed >
+5. nova-objectstore specific flags < no specific config needed >
 
 Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
 

@@ -140,7 +140,6 @@ A sample configuration to test the system follows::
 
     --verbose
     --nodaemon
-    --FAKE_subdomain=ec2
     --auth_driver=nova.auth.dbdriver.DbDriver
 
 Running
