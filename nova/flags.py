@@ -179,6 +179,8 @@ DEFINE_list('region_list',
             [],
             'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
+DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
+DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
