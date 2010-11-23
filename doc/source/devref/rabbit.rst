@@ -32,7 +32,7 @@ Nova (Austin release) uses both direct and topic-based exchanges. The architectu
 Nova implements RPC (both request+response, and one-way, respectively nicknamed 'rpc.call' and 'rpc.cast') over AMQP by providing an adapter class which take cares of marshalling and unmarshalling of messages into function calls. Each Nova service (for example Compute, Volume, etc.) create two queues at the initialization time, one which accepts messages with routing keys 'NODE-TYPE.NODE-ID' (for example compute.hostname) and another, which accepts messages with routing keys as generic 'NODE-TYPE' (for example compute). The former is used specifically when Nova-API needs to redirect commands to a specific node like 'euca-terminate instance'. In this case, only the  compute node whose host's hypervisor is running the virtual machine can kill the instance. The API acts as a consumer when RPC calls are request/response, otherwise is acts as publisher only. 
 
 Nova RPC Mappings
-=================
+-----------------
 
 The figure below shows the internals of a RabbitMQ node when a single instance is deployed and shared in an OpenStack cloud. Every Nova component connects to the RabbitMQ instance and, depending on its personality (for example a compute node or a network node), may use the queue either as an Invoker (such as API or Scheduler) or a Worker (such as Compute, Volume or Network). Invokers and Workers do not actually exist in the Nova object model, but we are going to use them as an abstraction for sake of clarity. An Invoker is a component that sends messages in the queuing system via two operations: 1) rpc.call and ii) rpc.cast; a Worker is a component that receives messages from the queuing system and reply accordingly to rcp.call operations. 
 
@@ -52,7 +52,7 @@ Figure 2 shows the following internal elements:
 ..
 
 RPC Calls
-=========
+---------
 
 The diagram below shows the message flow during an rp.call operation: 
 
@@ -67,7 +67,7 @@ The diagram below shows the message flow during an rp.call operation:
 ..
 
 RPC Casts
-=========
+---------
 
 The diagram below the message flow during an rp.cast operation: 
 
@@ -80,7 +80,7 @@ The diagram below the message flow during an rp.cast operation:
 ..
 
 RabbitMQ Load
-=============
+-------------
 
 At any given time the load of a RabbitMQ node is function of the following parameters:
 
@@ -107,7 +107,7 @@ The figure below shows the status of the RabbitMQ node after Nova components' bo
 ..
 
 RabbitMQ Gotchas
-================
+----------------
 
 Nova uses Carrot to connect to the RabbitMQ environment. Carrot is a Python library that in turn uses AMQPLib, a library that implements the standard AMQP 0.8 at the time of writing. When using Carrot, Invokers and Workers need the following parameters in order to instantiate a Connection object that connects to the RabbitMQ server (please note that most of the following material can be also found in the Carrot documentation; it has been summarized and revised here for sake of clarity):
 

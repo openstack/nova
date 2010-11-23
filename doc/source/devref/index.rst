@@ -23,8 +23,12 @@ In this section you will find information on Nova's lower level programming APIs
 
 Programming HowTos and Tutorials
 --------------------------------
+.. toctree::
+    :maxdepth: 3
+    
+    development.environment
+    addmethod.openstackapi
 
-.. todo:: Add some programming howtos and tuts
 
 Programming Concepts
 --------------------
