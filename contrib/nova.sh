@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 DIR=`pwd`
 CMD=$1
-SOURCE_BRANCH=lp:nova
+SOURCE_BRANCH=lp:~anso/nova/deploy
 if [ -n "$2" ]; then
     SOURCE_BRANCH=$2
 fi
-DIRNAME=nova
+DIRNAME=deploy
 NOVA_DIR=$DIR/$DIRNAME
 if [ -n "$3" ]; then
     NOVA_DIR=$DIR/$3
@@ -17,11 +17,10 @@ if [ ! -n "$HOST_IP" ]; then
     #             you should explicitly set HOST_IP in your environment
     HOST_IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
-
 USE_MYSQL=${USE_MYSQL:-0}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
-USE_LDAP=${USE_LDAP:-0}
+USE_LDAP=${USE_LDAP:-1}
 LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
 NET_MAN=${NET_MAN:-VlanManager}
 # NOTE(vish): If you are using FlatDHCP make sure that this is not your
@@ -48,14 +47,15 @@ cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
 --FAKE_subdomain=ec2
 --network_manager=nova.network.manager.$NET_MAN
 --cc_host=$HOST_IP
+--cc_dmz=$HOST_IP
 --routing_source_ip=$HOST_IP
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
 --libvirt_type=$LIBVIRT_TYPE
 NOVA_CONF_EOF
 
-if [ -n "$BRIDGE_DEV" ]; then
-    echo "--bridge_dev=$BRIDGE_DEV" >>/etc/nova/nova-manage.conf
+if [ -n "$FLAT_INTERFACE" ]; then
+    echo "--flat_interface=$FLAT_INTERFACE" >>/etc/nova/nova-manage.conf
 fi
 
 if [ "$CMD" == "branch" ]; then
@@ -72,9 +72,10 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-software-properties
     sudo add-apt-repository ppa:nova-core/ppa
     sudo apt-get update
-    sudo apt-get install -y dnsmasq open-iscsi kpartx kvm gawk iptables ebtables
+    sudo apt-get install -y dnsmasq kpartx kvm gawk iptables ebtables
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
-    sudo apt-get install -y screen iscsitarget euca2ools vlan curl rabbitmq-server
+    sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
+    sudo apt-get install -y lvm2 iscsitarget open-iscsi
     echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
@@ -119,6 +120,9 @@ if [ "$CMD" == "run" ]; then
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
     $NOVA_DIR/tools/clean-vlans
+    sleep 3
+    ifdown eth0
+    ifup eth0
     if [ ! -d "$NOVA_DIR/images" ]; then
         ln -s $DIR/images $NOVA_DIR/images
     fi
@@ -147,6 +151,11 @@ if [ "$CMD" == "run" ]; then
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler --flagfile=/etc/nova/nova-manage.conf"
     screen_it volume "$NOVA_DIR/bin/nova-volume --flagfile=/etc/nova/nova-manage.conf"
     screen_it test ". $NOVA_DIR/novarc"
+
+    sleep 3
+
+    $NOVA_DIR/bin/nova-manage service enable `hostname` nova-compute
+    $NOVA_DIR/bin/nova-manage service enable `hostname` nova-volume
     screen -S nova -x
 fi
 
@@ -154,12 +163,13 @@ if [ "$CMD" == "run" ] || [ "$CMD" == "terminate" ]; then
     # shutdown instances
     . $NOVA_DIR/novarc; euca-describe-instances | grep i- | cut -f2 | xargs euca-terminate-instances
     sleep 2
+    # delete volumes
+    . $NOVA_DIR/novarc; euca-describe-volumes | grep vol- | cut -f2 | xargs -n1 euca-delete-volume
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "clean" ]; then
     screen -S nova -X quit
     rm *.pid*
-    $NOVA_DIR/tools/setup_iptables.sh clear
 fi
 
 if [ "$CMD" == "scrub" ]; then
@@ -169,5 +179,4 @@ if [ "$CMD" == "scrub" ]; then
     else
         virsh list | grep i- | awk '{print \$1}' | xargs -n1 virsh destroy
     fi
-    vblade-persist ls | grep vol- | awk '{print \$1\" \"\$2}' | xargs -n2 vblade-persist destroy
 fi
