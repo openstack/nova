@@ -196,10 +196,7 @@ def generate_x509_cert(user_id, project_id, bits=1024):
     csr = open(csrfile).read()
     shutil.rmtree(tmpdir)
     (serial, signed_csr) = sign_csr(csr, project_id)
-    strserial = "%X" % serial
-    if(len(strserial) % 2):
-        strserial = "0%s" % strserial
-    fname = os.path.join(ca_folder(project_id), "newcerts/%s.pem" % strserial)
+    fname = os.path.join(ca_folder(project_id), "newcerts/%s.pem" % serial)
     cert = {'user_id': user_id,
             'project_id': project_id,
             'file_name': fname}
@@ -261,7 +258,7 @@ def _sign_csr(csr_text, ca_folder):
     utils.execute("openssl ca -batch -out %s -config "
                   "./openssl.cnf -infiles %s" % (outbound, inbound))
     out, _err = utils.execute("openssl x509 -in %s -serial -noout" % outbound)
-    serial = int(out.rpartition("=")[2])
+    serial = out.rpartition("=")[2]
     os.chdir(start)
     with open(outbound, "r") as crtfile:
         return (serial, crtfile.read())
