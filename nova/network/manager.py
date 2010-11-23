@@ -261,7 +261,7 @@ class FlatManager(NetworkManager):
     on all compute hosts.
 
     The idea is to create a single network for the host with a command like:
-    nova-manage network create 192.168.0.0/24 256 1. Creating multiple
+    nova-manage network create 192.168.0.0/24 1 256. Creating multiple
     networks for for one manager is currently not supported, but could be
     added by modifying allocate_fixed_ip and get_network to get the a network
     with new logic instead of network_get_by_bridge. Arbitrary lists of
@@ -391,7 +391,7 @@ class VlanManager(NetworkManager):
     VlanManager is the most complicated.  It will create a host-managed
     vlan for each project.  Each project gets its own subnet.  The networks
     and associated subnets are created with nova-manage using a command like:
-    nova-manage network create 10.0.0.0/8 16 3.  This will create 3 networks
+    nova-manage network create 10.0.0.0/8 3 16.  This will create 3 networks
     of 16 addresses from the beginning of the 10.0.0.0 range.
 
     A dhcp server is run for each subnet, so each project will have its own.
