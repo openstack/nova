@@ -61,6 +61,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
+flags.DEFINE_string('flat_interface', None,
+                    'flat_dhcp will bridge into this interface if set')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
@@ -319,7 +321,7 @@ class FlatDHCPManager(FlatManager):
         """Sets up matching network for compute hosts."""
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.bridge_dev,
+                                  FLAGS.flat_interface,
                                   network_ref)
 
     def setup_fixed_ip(self, context, address):
@@ -338,7 +340,7 @@ class FlatDHCPManager(FlatManager):
         self.db.network_update(context, network_id, net)
         network_ref = db.network_get(context, network_id)
         self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.bridge_dev,
+                                  FLAGS.flat_interface,
                                   network_ref)
 
 
