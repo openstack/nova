@@ -23,7 +23,7 @@ This page describes how to setup a working Python development environment that c
 Linux Systems
 -------------
 
- '' At present, this section is tested for Nova on Ubuntu 10.10-64. Feel free to add notes and change according to your experiences or operating system.''
+Note: This section is tested for Nova on Ubuntu 10.10-64. Feel free to add notes and change according to your experiences or operating system.
 
 Bring down the Nova source with bzr, then:
 ::
@@ -34,67 +34,64 @@ Bring down the Nova source with bzr, then:
   python tools/install_venv.py
 
 If all goes well, you should get a message something like this:
+::
+  Nova development environment setup is complete.
 
- ::
- Nova development environment setup is complete.
-
-Nova development uses virtualenv to track and manage Python dependencies while in development and testing.
+Nova development uses virtualenv to track and manage Python dependencies while in development and testing. Virtual env gives you an independent Python environment.
 
 To activate the Nova virtualenv for the extent of your current shell session
- you can run:
-
- ::
- $ source .nova-venv/bin/activate 
+ you can run::
+ 
+     $ source .nova-venv/bin/activate 
 
  Or, if you prefer, you can run commands in the virtualenv on a case by case
- basis by running:
- ::
- $ tools/with_venv.sh <your command>
+ basis by running::
+
+     $ tools/with_venv.sh <your command>
 
  Also, make test will automatically use the virtualenv.
 
 If you don't want to create a virtualenv every time you branch (which takes a while as long as we have the large Twisted project as a dependency) you can reuse a single virtualenv for all branches.
 
-   1. If you don't have a nova/ directory containing trunk/ and other branches, do so now.
-   2. Go into nova/trunk and install a virtualenv.
-   3. Move it up a level: mv nova/trunk/.nova-venv nova/.nova-venv
-   4. Symlink the ../nova/.nova-venv directory from your branch 
-  :: 
-  ~/openstack/nova/my_branch$ ln -s ../.nova-venv .nova-venv
+ #. If you don't have a nova/ directory containing trunk/ and other branches, do so now.
+ #. Go into nova/trunk and install a virtualenv.
+ #. Move it up a level: mv nova/trunk/.nova-venv nova/.nova-venv.
+ #. Symlink the ../nova/.nova-venv directory from your branch:: 
+ 
+    ~/openstack/nova/my_branch$ ln -s ../.nova-venv .nova-venv
 
 This works with run_tests.sh and nosetests -w nova/tests/api
 
 MacOSX Systems
 --------------
 
-First, install Virtual Env, which creates an isolated "standalone" Python environment.
+First, install Virtual Env, which creates an isolated "standalone" Python environment.::
 
-  ::
-  sudo easy_install virtualenv
+    sudo easy_install virtualenv
 
 
-Initial Code Setup:
-  ::
-  bzr branch lp:nova
-  cd nova
-  python tools/install_venv.py
-  source .nova_venv/bin/activate
-  pip install pep8 # submitting patch so that Nova has pep8 and pylint in PIP requirements file
-  pip install pylint
+Here's how to setup the code initially::
+
+    bzr branch lp:nova
+    cd nova
+    python tools/install_venv.py
+    source .nova_venv/bin/activate
+    pip install pep8 # submitting patch so that Nova has pep8 and pylint in PIP requirements file
+    pip install pylint
 
 If you have installed OpenSSL 1.0.0a on MacOS, which can happen when installing a MacPorts package for OpenSSL, you will see an error when running nova.tests.auth_unittest.AuthTestCase.test_209_can_generate_x509. The version that functions correctly is OpenSSL 0.9.8l 5, installed with MacOS 10.6 as a base element. 
 
-  :: 
+Here's how to get the latest code::
+
   cd nova
   bzr pull # get the latest stuff...
   source .nova_venv/bin/activate
   ./run_tests.sh
 
-#... do cleaning work or hack hack hack with a branched named cleaning
+And then you can do cleaning work or hack hack hack with a branched named cleaning::
 
-bzr push lp:~launchpaduserid/nova/cleaning
+    bzr push lp:~launchpaduserid/nova/cleaning
 
-
-To submit the merge/patch:
- * navigate to https://code.launchpad.net/~launchpaduserid/nova/cleaning
- * click on the link "Propose for merging"
+To submit the merge/patch that you hacked upon:
+ * Navigate to https://code.launchpad.net/~launchpaduserid/nova/cleaning.
+ * Click on the link "Propose for merging".
