@@ -467,7 +467,7 @@ def methods_of(obj):
 
 def main():
     """Parse options and call the appropriate class/method."""
-    utils.default_flagfile('/etc/nova/nova-manage.conf')
+    utils.default_flagfile()
     argv = FLAGS(sys.argv)
 
     if FLAGS.verbose:
