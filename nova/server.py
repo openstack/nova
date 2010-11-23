@@ -42,7 +42,8 @@ flags.DEFINE_bool('daemonize', False, 'daemonize this process')
 #              clutter.
 flags.DEFINE_bool('use_syslog', True, 'output to syslog when daemonizing')
 flags.DEFINE_string('logfile', None, 'log file to output to')
-flags.DEFINE_string('logdir',  None, 'directory to keep log files in (will be prepended to $logfile)')
+flags.DEFINE_string('logdir',  None, 'directory to keep log files in '
+                                     '(will be prepended to $logfile)')
 flags.DEFINE_string('pidfile', None, 'pid file to output to')
 flags.DEFINE_string('working_directory', './', 'working directory...')
 flags.DEFINE_integer('uid', os.getuid(), 'uid under which to run')

@@ -43,7 +43,9 @@ else:
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('logdir',  None, 'directory to keep log files in (will be prepended to $logfile)')
+flags.DEFINE_string('logdir',  None, 'directory to keep log files in '
+                                     '(will be prepended to $logfile)')
+
 
 class TwistdServerOptions(ServerOptions):
     def parseArgs(self, *args):
