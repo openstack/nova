@@ -43,7 +43,7 @@ else:
 
 
 FLAGS = flags.FLAGS
-
+flags.DEFINE_string('logdir',  None, 'directory to keep log files in (will be prepended to $logfile)')
 
 class TwistdServerOptions(ServerOptions):
     def parseArgs(self, *args):
@@ -246,6 +246,8 @@ def serve(filename):
         FLAGS.logfile = '%s.log' % name
     elif FLAGS.logfile.endswith('twistd.log'):
         FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
+    if FLAGS.logdir:
+        FLAGS.logfile = os.path.join(FLAGS.logdir, FLAGS.logfile)
     if not FLAGS.prefix:
         FLAGS.prefix = name
     elif FLAGS.prefix.endswith('twisted'):
