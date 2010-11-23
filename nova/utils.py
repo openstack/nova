@@ -174,6 +174,7 @@ def isotime(at=None):
 def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
+
 def parse_mailmap(mailmap='.mailmap'):
     mapping = {}
     if os.path.exists(mailmap):
@@ -184,6 +185,7 @@ def parse_mailmap(mailmap='.mailmap'):
                 canonical_email, alias = l.split(' ')
                 mapping[alias] = canonical_email
     return mapping
+
 
 def str_dict_replace(s, mapping):
     for s1, s2 in mapping.iteritems():
