@@ -245,7 +245,7 @@ def _confirm_rule(chain, cmd):
 def _remove_rule(chain, cmd):
     """Remove iptables rule"""
     if FLAGS.use_nova_chains:
-        chain = "%S" % chain.lower()
+        chain = "%s" % chain.lower()
     _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 DIR=`pwd`
 CMD=$1
-SOURCE_BRANCH=lp:~anso/nova/deploy
+SOURCE_BRANCH=lp:nova
 if [ -n "$2" ]; then
     SOURCE_BRANCH=$2
 fi
-DIRNAME=deploy
+DIRNAME=nova
 NOVA_DIR=$DIR/$DIRNAME
 if [ -n "$3" ]; then
     NOVA_DIR=$DIR/$3
@@ -17,15 +17,17 @@ if [ ! -n "$HOST_IP" ]; then
     #             you should explicitly set HOST_IP in your environment
     HOST_IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
+
 USE_MYSQL=${USE_MYSQL:-0}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
-USE_LDAP=${USE_LDAP:-1}
+USE_LDAP=${USE_LDAP:-0}
 LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
-NET_MAN=${NET_MAN:-VlanManager}
-# NOTE(vish): If you are using FlatDHCP make sure that this is not your
-#             public interface. You can comment it out for local usage
-BRIDGE_DEV=eth0
+NET_MAN=${NET_MAN:-FlatDHCPManager}
+# NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
+#             below but make sure that the interface doesn't already have an
+#             ip or you risk breaking things.
+# FLAT_INTERFACE=eth0
 
 if [ "$USE_MYSQL" == 1 ]; then
     SQL_CONN=mysql://root:$MYSQL_PASS@localhost/nova
@@ -47,7 +49,6 @@ cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
 --FAKE_subdomain=ec2
 --network_manager=nova.network.manager.$NET_MAN
 --cc_host=$HOST_IP
---cc_dmz=$HOST_IP
 --routing_source_ip=$HOST_IP
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
@@ -120,9 +121,6 @@ if [ "$CMD" == "run" ]; then
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
     $NOVA_DIR/tools/clean-vlans
-    sleep 3
-    ifdown eth0
-    ifup eth0
     if [ ! -d "$NOVA_DIR/images" ]; then
         ln -s $DIR/images $NOVA_DIR/images
     fi
@@ -151,11 +149,6 @@ if [ "$CMD" == "run" ]; then
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler --flagfile=/etc/nova/nova-manage.conf"
     screen_it volume "$NOVA_DIR/bin/nova-volume --flagfile=/etc/nova/nova-manage.conf"
     screen_it test ". $NOVA_DIR/novarc"
-
-    sleep 3
-
-    $NOVA_DIR/bin/nova-manage service enable `hostname` nova-compute
-    $NOVA_DIR/bin/nova-manage service enable `hostname` nova-volume
     screen -S nova -x
 fi
 
@@ -179,4 +172,5 @@ if [ "$CMD" == "scrub" ]; then
     else
         virsh list | grep i- | awk '{print \$1}' | xargs -n1 virsh destroy
     fi
+    vblade-persist ls | grep vol- | awk '{print \$1\" \"\$2}' | xargs -n2 vblade-persist destroy
 fi
