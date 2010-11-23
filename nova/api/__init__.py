@@ -22,7 +22,6 @@ Root WSGI middleware for all API controllers.
 
 :osapi_subdomain:  subdomain running the OpenStack API (default: api)
 :ec2api_subdomain:  subdomain running the EC2 API (default: ec2)
-:FAKE_subdomain:  set to 'api' or 'ec2', requests default to that endpoint
 
 """
 

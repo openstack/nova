@@ -26,6 +26,13 @@ Programming HowTos and Tutorials
 
 .. todo:: Add some programming howtos and tuts
 
+Programming Concepts
+--------------------
+.. toctree::
+   :maxdepth: 3
+
+   rabbit
+
 API Reference
 -------------
 .. toctree::
