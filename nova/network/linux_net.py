@@ -42,8 +42,8 @@ flags.DEFINE_string('networks_path', utils.abspath('../networks'),
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
-flags.DEFINE_string('bridge_dev', None,
-                        'network device for bridges')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '127.0.0.1',
@@ -134,7 +134,7 @@ def ensure_vlan(vlan_num):
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, vlan_num))
+        _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
     return interface
 
