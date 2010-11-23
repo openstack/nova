@@ -27,6 +27,7 @@ topologies.  All of the network commands are issued to a subclass of
 
 :network_driver:  Driver to use for network creation
 :flat_network_bridge:  Bridge device for simple network instances
+:flat_interface:  FlatDhcp will bridge into this interface if set
 :flat_network_dns:  Dns for simple network
 :flat_network_dhcp_start:  Dhcp start for FlatDhcp
 :vlan_start:  First VLAN for private networks
@@ -61,10 +62,12 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
-flags.DEFINE_string('flat_interface', None,
-                    'flat_dhcp will bridge into this interface if set')
 flags.DEFINE_string('flat_network_dns', '8.8.4.4',
                     'Dns for simple network')
+flags.DEFINE_bool('flat_injected', True,
+                  'Whether to attempt to inject network setup into guest')
+flags.DEFINE_string('flat_interface', None,
+                    'FlatDhcp will bridge into this interface if set')
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
@@ -177,9 +180,11 @@ class NetworkManager(manager.Manager):
         if instance_ref['mac_address'] != mac:
             raise exception.Error("IP %s leased to bad mac %s vs %s" %
                                   (address, instance_ref['mac_address'], mac))
+        now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
-                                {'leased': True})
+                                {'leased': True,
+                                 'updated_at': now})
         if not fixed_ip_ref['allocated']:
             logging.warn("IP %s leased that was already deallocated", address)
 
@@ -248,7 +253,31 @@ class NetworkManager(manager.Manager):
 
 
 class FlatManager(NetworkManager):
-    """Basic network where no vlans are used."""
+    """Basic network where no vlans are used.
+
+    FlatManager does not do any bridge or vlan creation.  The user is
+    responsible for setting up whatever bridge is specified in
+    flat_network_bridge (br100 by default).  This bridge needs to be created
+    on all compute hosts.
+
+    The idea is to create a single network for the host with a command like:
+    nova-manage network create 192.168.0.0/24 256 1. Creating multiple
+    networks for for one manager is currently not supported, but could be
+    added by modifying allocate_fixed_ip and get_network to get the a network
+    with new logic instead of network_get_by_bridge. Arbitrary lists of
+    addresses in a single network can be accomplished with manual db editing.
+
+    If flat_injected is True, the compute host will attempt to inject network
+    config into the guest.  It attempts to modify /etc/network/interfaces and
+    currently only works on debian based systems. To support a wider range of
+    OSes, some other method may need to be devised to let the guest know which
+    ip it should be using so that it can configure itself. Perhaps an attached
+    disk or serial device with configuration info.
+
+    Metadata forwarding must be handled by the gateway, and since nova does
+    not do any setup in this mode, it must be done manually.  Requests to
+    169.254.169.254 port 80 will need to be forwarded to the api server.
+    """
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -309,13 +338,25 @@ class FlatManager(NetworkManager):
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
         net = {}
-        net['injected'] = True
+        net['injected'] = FLAGS.flat_injected
         net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_id, net)
 
 
 class FlatDHCPManager(FlatManager):
-    """Flat networking with dhcp."""
+    """Flat networking with dhcp.
+
+    FlatDHCPManager will start up one dhcp server to give out addresses.
+    It never injects network settings into the guest. Otherwise it behaves
+    like FlatDHCPManager.
+    """
+
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+        standalone service.
+        """
+        super(FlatDHCPManager, self).init_host()
+        self.driver.metadata_forward()
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
@@ -345,7 +386,18 @@ class FlatDHCPManager(FlatManager):
 
 
 class VlanManager(NetworkManager):
-    """Vlan network with dhcp."""
+    """Vlan network with dhcp.
+
+    VlanManager is the most complicated.  It will create a host-managed
+    vlan for each project.  Each project gets its own subnet.  The networks
+    and associated subnets are created with nova-manage using a command like:
+    nova-manage network create 10.0.0.0/8 16 3.  This will create 3 networks
+    of 16 addresses from the beginning of the 10.0.0.0 range.
+
+    A dhcp server is run for each subnet, so each project will have its own.
+    For this mode to be useful, each project will need a vpn to access the
+    instances in its subnet.
+    """
 
     @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
@@ -365,6 +417,7 @@ class VlanManager(NetworkManager):
         standalone service.
         """
         super(VlanManager, self).init_host()
+        self.driver.metadata_forward()
         self.driver.init_host()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):

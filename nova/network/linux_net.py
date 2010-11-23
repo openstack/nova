@@ -53,15 +53,15 @@ flags.DEFINE_bool('use_nova_chains', False,
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
-
-def init_host():
-    """Basic networking setup goes here"""
-    # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
-    # forwarding entries and a default DNAT entry.
+def metadata_forward():
+    """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
              "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
 
+
+def init_host():
+    """Basic networking setup goes here"""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
     _confirm_rule("POSTROUTING", "-t nat -s %s "
