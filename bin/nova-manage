@@ -106,38 +106,29 @@ class VpnCommands(object):
             projects = [self.manager.get_project(project)]
         else:
             projects = self.manager.get_projects()
+            # NOTE(vish): This hits the database a lot.  We could optimize
+            #             by getting all networks in one query and all vpns
+            #             in aother query, then doing lookups by project
         for project in projects:
             print "%-12s\t" % project.name,
             ipport = "%s:%s" % (project.vpn_ip, project.vpn_port)
             print "%-20s\t" % ipport,
-            vpn = self._vpn_for(project.id)
+            ctxt = context.get_admin_context()
+            vpn = db.instance_get_project_vpn(ctxt, project.id)
             if vpn:
-                net = 'down'
                 address = None
+                state = 'down'
                 if vpn.get('fixed_ip', None):
                     address = vpn['fixed_ip']['address']
-                    command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                    out, _err = utils.execute(command % address,
-                                              check_exit_code=False)
-                    if out.strip() == '0':
-                        net = 'up'
+                if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+                    state = 'up'
                 print address,
                 print vpn['host'],
                 print vpn['ec2_id'],
                 print vpn['state_description'],
-                print net
-
+                print state
             else:
                 print None
-
-    def _vpn_for(self, project_id):
-        """Get the VPN instance for a project ID."""
-        ctxt = context.get_admin_context()
-        for instance in db.instance_get_all_by_project(ctxt, project_id):
-            if (instance['image_id'] == FLAGS.vpn_image_id
-                and not instance['state_description'] in
-                    ['shutting_down', 'shutdown']):
-                return instance
 
     def spawn(self):
         """Run all VPNs."""

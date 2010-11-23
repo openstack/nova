@@ -27,6 +27,7 @@ import os
 import random
 import subprocess
 import socket
+import struct
 import sys
 from xml.sax import saxutils
 
@@ -59,6 +60,51 @@ def import_object(import_str):
     except ImportError:
         cls = import_class(import_str)
         return cls()
+
+
+def vpn_ping(address, port, timeout=0.05, session_id=None):
+    """Sends a vpn negotiation packet and returns the server session.
+
+    Returns False on a failure. Basic packet structure is below.
+
+    Client packet (14 bytes)::
+     0 1      8 9  13
+    +-+--------+-----+
+    |x| cli_id |?????|
+    +-+--------+-----+
+    x = packet identifier 0x38
+    cli_id = 64 bit identifier
+    ? = unknown, probably flags/padding
+
+    Server packet (26 bytes)::
+     0 1      8 9  13 14    21 2225
+    +-+--------+-----+--------+----+
+    |x| srv_id |?????| cli_id |????|
+    +-+--------+-----+--------+----+
+    x = packet identifier 0x40
+    cli_id = 64 bit identifier
+    ? = unknown, probably flags/padding
+    bit 9 was 1 and the rest were 0 in testing
+    """
+    if session_id is None:
+        session_id = random.randint(0, 0xffffffffffffffff)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    data = struct.pack("!BQxxxxxx", 0x38, session_id)
+    sock.sendto(data, (address, port))
+    sock.settimeout(timeout)
+    try:
+        received = sock.recv(2048)
+    except socket.timeout:
+        return False
+    finally:
+        sock.close()
+    fmt = "!BQxxxxxQxxxx"
+    if len(received) != struct.calcsize(fmt):
+        print struct.calcsize(fmt)
+        return False
+    (identifier, server_sess, client_sess) = struct.unpack(fmt, received)
+    if identifier == 0x40 and client_sess == session_id:
+        return server_sess
 
 
 def fetchfile(url, target):

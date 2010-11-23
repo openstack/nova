@@ -326,6 +326,11 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
+def instance_get_project_vpn(context, project_id):
+    """Get a vpn instance by project or return None."""
+    return IMPL.instance_get_project_vpn(context, project_id)
+
+
 def instance_get_by_internal_id(context, internal_id):
     """Get an instance by ec2 id."""
     return IMPL.instance_get_by_internal_id(context, internal_id)

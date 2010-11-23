@@ -724,6 +724,18 @@ def instance_get_all_by_reservation(context, reservation_id):
                        all()
 
 
+@require_admin_context
+def instance_get_project_vpn(context, project_id):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(image_id=FLAGS.vpn_image_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   first()
+
+
 @require_context
 def instance_get_by_internal_id(context, internal_id):
     session = get_session()
