@@ -39,7 +39,7 @@ from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.compute.instance_types import INSTANCE_TYPES
+from nova.compute import instance_types
 from nova.api import cloud
 from nova.image.s3 import S3ImageService
 
@@ -48,11 +48,6 @@ FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 InvalidInputException = exception.InvalidInputException
-
-
-class QuotaError(exception.ApiError):
-    """Quota Exceeeded"""
-    pass
 
 
 def _gen_key(context, user_id, key_name):
@@ -127,7 +122,7 @@ class CloudController(object):
         for instance in db.instance_get_all_by_project(context, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
-                    INSTANCE_TYPES[instance['instance_type']]['vcpus'])
+                                        instance['vcpus'])
                 key = str(instance['key_name'])
                 if key in result:
                     result[key].append(line)
@@ -260,7 +255,7 @@ class CloudController(object):
         return True
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
-        self._ensure_default_security_group(context)
+        self.compute_manager.ensure_default_security_group(context)
         if context.user.is_admin():
             groups = db.security_group_get_all(context)
         else:
@@ -358,7 +353,7 @@ class CloudController(object):
         return False
 
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
-        self._ensure_default_security_group(context)
+        self.compute_manager.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
                                                        group_name)
@@ -383,7 +378,7 @@ class CloudController(object):
     #              for these operations, so support for newer API versions
     #              is sketchy.
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
-        self._ensure_default_security_group(context)
+        self.compute_manager.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
                                                        group_name)
@@ -419,7 +414,7 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
-        self._ensure_default_security_group(context)
+        self.compute_manager.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
@@ -505,9 +500,8 @@ class CloudController(object):
         if quota.allowed_volumes(context, 1, size) < 1:
             logging.warn("Quota exceeeded for %s, tried to create %sG volume",
                          context.project_id, size)
-            raise QuotaError("Volume quota exceeded. You cannot "
-                             "create a volume of size %s" %
-                             size)
+            raise quota.QuotaError("Volume quota exceeded. You cannot "
+                                   "create a volume of size %s" % size)
         vol = {}
         vol['size'] = size
         vol['user_id'] = context.user.id
@@ -699,8 +693,8 @@ class CloudController(object):
         if quota.allowed_floating_ips(context, 1) < 1:
             logging.warn("Quota exceeeded for %s, tried to allocate address",
                          context.project_id)
-            raise QuotaError("Address quota exceeded. You cannot "
-                             "allocate any more addresses")
+            raise quota.QuotaError("Address quota exceeded. You cannot "
+                                   "allocate any more addresses")
         network_topic = self._get_network_topic(context)
         public_ip = rpc.call(context,
                              network_topic,
@@ -752,137 +746,25 @@ class CloudController(object):
                              "args": {"network_id": network_ref['id']}})
         return db.queue_get_for(context, FLAGS.network_topic, host)
 
-    def _ensure_default_security_group(self, context):
-        try:
-            db.security_group_get_by_name(context,
-                                          context.project_id,
-                                          'default')
-        except exception.NotFound:
-            values = {'name': 'default',
-                      'description': 'default',
-                      'user_id': context.user.id,
-                      'project_id': context.project_id}
-            group = db.security_group_create(context, values)
-
     def run_instances(self, context, **kwargs):
-        instance_type = kwargs.get('instance_type', 'm1.small')
-        if instance_type not in INSTANCE_TYPES:
-            raise exception.ApiError("Unknown instance type: %s",
-                                     instance_type)
-        # check quota
-        max_instances = int(kwargs.get('max_count', 1))
-        min_instances = int(kwargs.get('min_count', max_instances))
-        num_instances = quota.allowed_instances(context,
-                                                max_instances,
-                                                instance_type)
-        if num_instances < min_instances:
-            logging.warn("Quota exceeeded for %s, tried to run %s instances",
-                         context.project_id, min_instances)
-            raise QuotaError("Instance quota exceeded. You can only "
-                             "run %s more instances of this type." %
-                             num_instances, "InstanceLimitExceeded")
-        # make sure user can access the image
-        # vpn image is private so it doesn't show up on lists
-        vpn = kwargs['image_id'] == FLAGS.vpn_image_id
-
-        if not vpn:
-            image = self.image_service.show(context, kwargs['image_id'])
-
-        # FIXME(ja): if image is vpn, this breaks
-        # get defaults from imagestore
-        image_id = image['imageId']
-        kernel_id = image.get('kernelId', FLAGS.default_kernel)
-        ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
-
-        # API parameters overrides of defaults
-        kernel_id = kwargs.get('kernel_id', kernel_id)
-        ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
-
-        # make sure we have access to kernel and ramdisk
-        self.image_service.show(context, kernel_id)
-        self.image_service.show(context, ramdisk_id)
-
-        logging.debug("Going to run %s instances...", num_instances)
-        launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        key_data = None
-        if 'key_name' in kwargs:
-            key_pair_ref = db.key_pair_get(context,
-                                      context.user.id,
-                                      kwargs['key_name'])
-            key_data = key_pair_ref['public_key']
-
-        security_group_arg = kwargs.get('security_group', ["default"])
-        if not type(security_group_arg) is list:
-            security_group_arg = [security_group_arg]
-
-        security_groups = []
-        self._ensure_default_security_group(context)
-        for security_group_name in security_group_arg:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
-            security_groups.append(group['id'])
-
-        reservation_id = utils.generate_uid('r')
-        base_options = {}
-        base_options['state_description'] = 'scheduling'
-        base_options['image_id'] = image_id
-        base_options['kernel_id'] = kernel_id
-        base_options['ramdisk_id'] = ramdisk_id
-        base_options['reservation_id'] = reservation_id
-        base_options['key_data'] = key_data
-        base_options['key_name'] = kwargs.get('key_name', None)
-        base_options['user_id'] = context.user.id
-        base_options['project_id'] = context.project_id
-        base_options['user_data'] = kwargs.get('user_data', '')
-
-        base_options['display_name'] = kwargs.get('display_name')
-        base_options['display_description'] = kwargs.get('display_description')
-
-        type_data = INSTANCE_TYPES[instance_type]
-        base_options['instance_type'] = instance_type
-        base_options['memory_mb'] = type_data['memory_mb']
-        base_options['vcpus'] = type_data['vcpus']
-        base_options['local_gb'] = type_data['local_gb']
-        elevated = context.elevated()
-
-        for num in range(num_instances):
-
-            instance_ref = self.compute_manager.create_instance(context,
-                                           security_groups,
-                                           mac_address=utils.generate_mac(),
-                                           launch_index=num,
-                                           **base_options)
-            inst_id = instance_ref['id']
-
-            internal_id = instance_ref['internal_id']
-            ec2_id = internal_id_to_ec2_id(internal_id)
-
-            self.compute_manager.update_instance(context,
-                                                 inst_id,
-                                                 hostname=ec2_id)
-
-            # TODO(vish): This probably should be done in the scheduler
-            #             or in compute as a call.  The network should be
-            #             allocated after the host is assigned and setup
-            #             can happen at the same time.
-            address = self.network_manager.allocate_fixed_ip(context,
-                                                             inst_id,
-                                                             vpn)
-            network_topic = self._get_network_topic(context)
-            rpc.cast(elevated,
-                     network_topic,
-                     {"method": "setup_fixed_ip",
-                      "args": {"address": address}})
-
-            rpc.cast(context,
-                     FLAGS.scheduler_topic,
-                     {"method": "run_instance",
-                      "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": inst_id}})
-            logging.debug("Casting to scheduler for %s/%s's instance %s" %
-                      (context.project.name, context.user.name, inst_id))
-        return self._format_run_instances(context, reservation_id)
+        max_count = int(kwargs.get('max_count', 1))
+        instances = self.compute_manager.create_instances(context,
+            instance_types.get_by_type(kwargs.get('instance_type', None)),
+            self.image_service,
+            kwargs['image_id'],
+            self._get_network_topic(context),
+            min_count=int(kwargs.get('min_count', max_count)),
+            max_count=max_count,
+            kernel_id=kwargs.get('kernel_id'),
+            ramdisk_id=kwargs.get('ramdisk_id'),
+            name=kwargs.get('display_name'),
+            description=kwargs.get('display_description'),
+            user_data=kwargs.get('user_data', ''),
+            key_name=kwargs.get('key_name'),
+            security_group=kwargs.get('security_group'),
+            generate_hostname=internal_id_to_ec2_id)
+        return self._format_run_instances(context,
+                                          instances[0]['reservation_id'])
 
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
