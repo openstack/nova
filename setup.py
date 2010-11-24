@@ -16,13 +16,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+import subprocess
+
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
 from sphinx.setup_command import BuildDoc
 
-import os
-import subprocess
-
+from nova.util import parse_mailmap, str_dict_replace
 
 class local_BuildDoc(BuildDoc):
     def run(self):
@@ -42,8 +43,9 @@ class local_sdist(sdist):
             log_cmd = subprocess.Popen(["bzr", "log", "--novalog"],
                                        stdout=subprocess.PIPE, env=env)
             changelog = log_cmd.communicate()[0]
+            mailmap = parse_mailmap()
             with open("ChangeLog", "w") as changelog_file:
-                changelog_file.write(changelog)
+                changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
 
 setup(name='nova',

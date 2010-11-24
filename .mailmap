@@ -1,0 +1,29 @@
+# Format is:
+# <preferred e-mail> <other e-mail>
+<code@term.ie> <github@anarkystic.com>
+<code@term.ie> <termie@preciousroy.local>
+<Armando.Migliaccio@eu.citrix.com> <armando.migliaccio@citrix.com>
+<matt.dietz@rackspace.com> <matthewdietz@Matthew-Dietzs-MacBook-Pro.local>
+<matt.dietz@rackspace.com> <mdietz@openstack>
+<cbehrens@codestud.com> <chris.behrens@rackspace.com>
+<devin.carlen@gmail.com> <devcamcar@illian.local>
+<ewan.mellor@citrix.com> <emellor@silver>
+<jaypipes@gmail.com> <jpipes@serialcoder>
+<anotherjesse@gmail.com> <jesse@dancelamb>
+<anotherjesse@gmail.com> <jesse@gigantor.local>
+<anotherjesse@gmail.com> <jesse@ubuntu>
+<jmckenty@gmail.com> <jmckenty@yyj-dhcp171.corp.flock.com>
+<jmckenty@gmail.com> <jmckenty@joshua-mckentys-macbook-pro.local>
+<jmckenty@gmail.com> <joshua.mckenty@nasa.gov>
+<justin@fathomdb.com> <justinsb@justinsb-desktop>
+<mordred@inaugust.com> <mordred@hudson>
+<paul@openstack.org> <pvoccio@castor.local>
+<paul@openstack.org> <paul.voccio@rackspace.com>
+<todd@ansolabs.com> <todd@lapex>
+<todd@ansolabs.com> <todd@rubidine.com>
+<vishvananda@gmail.com> <vishvananda@yahoo.com>
+<vishvananda@gmail.com> <root@mirror.nasanebula.net>
+# These are from people who failed to set a proper committer
+. <root@tonbuntu>
+. <laner@controller>
+. <root@ubuntu>
