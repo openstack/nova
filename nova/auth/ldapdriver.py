@@ -507,7 +507,7 @@ class LdapDriver(object):
 	if (attr.has_key('accessKey') and attr.has_key('secretKey') and attr.has_key('isAdmin')):
             return {
                 'id': attr['uid'][0],
-                'name': attr['uid'][0],
+                'name': attr['cn'][0],
                 'access': attr['accessKey'][0],
                 'secret': attr['secretKey'][0],
                 'admin': (attr['isAdmin'][0] == 'TRUE')}
