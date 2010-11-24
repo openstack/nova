@@ -53,6 +53,7 @@ flags.DEFINE_bool('use_nova_chains', False,
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
+
 def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
