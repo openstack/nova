@@ -23,7 +23,7 @@ from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
 from sphinx.setup_command import BuildDoc
 
-from nova.util import parse_mailmap, str_dict_replace
+from nova.utils import parse_mailmap, str_dict_replace
 
 class local_BuildDoc(BuildDoc):
     def run(self):
