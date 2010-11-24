@@ -120,7 +120,8 @@ class VpnCommands(object):
                 state = 'down'
                 if vpn.get('fixed_ip', None):
                     address = vpn['fixed_ip']['address']
-                if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+                if project.vpn_ip and utils.vpn_ping(project.vpn_ip,
+                                                     project.vpn_port):
                     state = 'up'
                 print address,
                 print vpn['host'],
