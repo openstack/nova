@@ -66,6 +66,27 @@ class ComputeTestCase(test.TrialTestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']
 
+    def test_create_instance_associates_security_groups(self):
+        """Make sure create_instance associates security groups"""
+        inst = {}
+        inst['user_id'] = self.user.id
+        inst['project_id'] = self.project.id
+        values = {'name': 'default',
+                  'description': 'default',
+                  'user_id': self.user.id,
+                  'project_id': self.project.id}
+        group = db.security_group_create(self.context, values)
+        ref = self.compute.create_instance(self.context,
+                                           security_groups=[group['id']],
+                                           **inst)
+        # reload to get groups
+        instance_ref = db.instance_get(self.context, ref['id'])
+        try:
+            self.assertEqual(len(instance_ref['security_groups']), 1)
+        finally:
+            db.security_group_destroy(self.context, group['id'])
+            db.instance_destroy(self.context, instance_ref['id'])
+
     @defer.inlineCallbacks
     def test_run_terminate(self):
         """Make sure it is possible to  run and terminate instance"""

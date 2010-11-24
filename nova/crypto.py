@@ -15,10 +15,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Wrappers around standard crypto, including root and intermediate CAs,
-SSH key_pairs and x509 certificates.
+Wrappers around standard crypto data elements.
+
+Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
+
 """
 
 import base64
@@ -227,12 +228,12 @@ def mkcacert(subject='nova', years=1):
 
 def compute_md5(fp):
     """
-    @type fp: file
-    @param fp: File pointer to the file to MD5 hash.  The file pointer will be
+    :type fp: file
+    :param fp: File pointer to the file to MD5 hash.  The file pointer will be
                reset to the beginning of the file before the method returns.
 
-    @rtype: tuple
-    @return: the hex digest version of the MD5 hash
+    :rtype: tuple
+    :return: the hex digest version of the MD5 hash
     """
     m = hashlib.md5()
     fp.seek(0)

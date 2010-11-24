@@ -21,6 +21,7 @@ System-level utilities and helper functions.
 """
 
 import datetime
+import functools
 import inspect
 import logging
 import os
@@ -132,13 +133,9 @@ def runthis(prompt, cmd, check_exit_code=True):
 
 
 def generate_uid(topic, size=8):
-    if topic == "i":
-        # Instances have integer internal ids.
-        return random.randint(0, 2 ** 32 - 1)
-    else:
-        characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-        choices = [random.choice(characters) for x in xrange(size)]
-        return '%s-%s' % (topic, ''.join(choices))
+    characters = '01234567890abcdefghijklmnopqrstuvwxyz'
+    choices = [random.choice(characters) for x in xrange(size)]
+    return '%s-%s' % (topic, ''.join(choices))
 
 
 def generate_mac():
@@ -158,8 +155,8 @@ def get_my_ip():
     if getattr(FLAGS, 'fake_tests', None):
         return '127.0.0.1'
     try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        csock.connect(('www.google.com', 80))
+        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        csock.connect(('8.8.8.8', 80))
         (addr, port) = csock.getsockname()
         csock.close()
         return addr
@@ -176,6 +173,24 @@ def isotime(at=None):
 
 def parse_isotime(timestr):
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
+
+
+def parse_mailmap(mailmap='.mailmap'):
+    mapping = {}
+    if os.path.exists(mailmap):
+        fp = open(mailmap, 'r')
+        for l in fp:
+            l = l.strip()
+            if not l.startswith('#') and ' ' in l:
+                canonical_email, alias = l.split(' ')
+                mapping[alias] = canonical_email
+    return mapping
+
+
+def str_dict_replace(s, mapping):
+    for s1, s2 in mapping.iteritems():
+        s = s.replace(s1, s2)
+    return s
 
 
 class LazyPluggable(object):
@@ -217,10 +232,10 @@ def deferredToThread(f):
 
 def xhtml_escape(value):
     """Escapes a string so it is valid within XML or XHTML.
-    
+
     Code is directly from the utf8 function in
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
-    
+
     """
     return saxutils.escape(value, {'"': "&quot;"})
 
@@ -236,4 +251,3 @@ def utf8(value):
         return value.encode("utf-8")
     assert isinstance(value, str)
     return value
-    

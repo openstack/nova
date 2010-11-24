@@ -69,14 +69,14 @@ class ServersTest(unittest.TestCase):
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
         i = 0
@@ -91,9 +91,7 @@ class ServersTest(unittest.TestCase):
             pass
 
         def instance_create(context, inst):
-            class Foo(object):
-                internal_id = 1
-            return Foo()
+            return {'id': 1, 'internal_id': 1}
 
         def fake_method(*args, **kwargs):
             pass
@@ -121,14 +119,14 @@ class ServersTest(unittest.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
 
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
 
         self.assertEqual(res.status_int, 200)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status_int, 422)
 
     def test_update_bad_params(self):
@@ -147,7 +145,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         req.body = self.body
-        req.get_response(nova.api.API())
+        req.get_response(nova.api.API('os'))
 
     def test_update_server(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
@@ -163,28 +161,28 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         req.body = self.body
-        req.get_response(nova.api.API())
+        req.get_response(nova.api.API('os'))
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
         req.method = 'POST'
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status, '404 Not Found')
 
     def test_delete_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
         req.method = 'DELETE'
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status, '404 Not Found')
 
     def test_get_server_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status, '404 Not Found')
 
     def test_get_all_server_details(self):
         req = webob.Request.blank('/v1.0/servers/detail')
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
         i = 0
@@ -202,7 +200,7 @@ class ServersTest(unittest.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
 
     def test_server_rebuild(self):
         body = dict(server=dict(
@@ -212,7 +210,7 @@ class ServersTest(unittest.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
 
     def test_server_resize(self):
         body = dict(server=dict(
@@ -222,7 +220,7 @@ class ServersTest(unittest.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
 
     def test_delete_server_instance(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -236,7 +234,7 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'instance_destroy',
             instance_destroy_mock)
 
-        res = req.get_response(nova.api.API())
+        res = req.get_response(nova.api.API('os'))
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
