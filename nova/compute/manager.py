@@ -117,8 +117,6 @@ class ComputeManager(manager.Manager):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = image_service.show(context, image_id)
-            if not image:
-                raise Exception("Image not found")
             if kernel_id is None:
                 kernel_id = image.get('kernelId', FLAGS.default_kernel)
             if ramdisk_id is None:
