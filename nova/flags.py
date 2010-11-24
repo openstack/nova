@@ -138,6 +138,8 @@ class FlagValues(gflags.FlagValues):
 
 
 FLAGS = FlagValues()
+gflags.FLAGS = FLAGS
+gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
 
 
 def _wrapper(func):
@@ -177,6 +179,8 @@ DEFINE_list('region_list',
             [],
             'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
+DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
+DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
@@ -194,6 +198,8 @@ DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
+DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
+DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
@@ -224,13 +230,13 @@ DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
-DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.service.LocalImageService',
+DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),

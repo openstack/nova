@@ -91,7 +91,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
 
-            uri, template = conn.get_uri_and_template()
+            uri, _template, _rescue = conn.get_uri_and_templates()
             self.assertEquals(uri, expected_uri)
 
             xml = conn.to_xml(instance_ref)
@@ -114,7 +114,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
-            uri, template = conn.get_uri_and_template()
+            uri, _template, _rescue = conn.get_uri_and_templates()
             self.assertEquals(uri, testuri)
 
     def tearDown(self):

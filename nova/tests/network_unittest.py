@@ -41,7 +41,6 @@ class NetworkTestCase(test.TrialTestCase):
         #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
                    fake_network=True,
-                   auth_driver='nova.auth.ldapdriver.FakeLdapDriver',
                    network_size=16,
                    num_networks=5)
         logging.getLogger().setLevel(logging.DEBUG)
@@ -127,6 +126,7 @@ class NetworkTestCase(test.TrialTestCase):
         self.network.deallocate_floating_ip(self.context, float_addr)
         self.network.deallocate_fixed_ip(self.context, fix_addr)
         release_ip(fix_addr)
+        db.floating_ip_destroy(context.get_admin_context(), float_addr)
 
     def test_allocate_deallocate_fixed_ip(self):
         """Makes sure that we can allocate and deallocate a fixed ip"""
