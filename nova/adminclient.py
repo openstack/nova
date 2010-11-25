@@ -22,13 +22,15 @@ Nova User API client library.
 import base64
 import boto
 import httplib
+
+from nova import flags
 from boto.ec2.regioninfo import RegionInfo
 
 
+FLAGS = flags.FLAGS
+
 DEFAULT_CLC_URL = 'http://127.0.0.1:8773'
 DEFAULT_REGION = 'nova'
-DEFAULT_ACCESS_KEY = 'admin'
-DEFAULT_SECRET_KEY = 'admin'
 
 
 class UserInfo(object):
@@ -192,9 +194,13 @@ class HostInfo(object):
 
 
 class NovaAdminClient(object):
-    def __init__(self, clc_url=DEFAULT_CLC_URL, region=DEFAULT_REGION,
-                 access_key=DEFAULT_ACCESS_KEY, secret_key=DEFAULT_SECRET_KEY,
-                 **kwargs):
+    def __init__(
+            self,
+            clc_url=DEFAULT_CLC_URL,
+            region=DEFAULT_REGION,
+            access_key=FLAGS.aws_access_key_id,
+            secret_key=FLAGS.aws_secret_access_key,
+            **kwargs):
         parts = self.split_clc_url(clc_url)
 
         self.clc_url = clc_url
