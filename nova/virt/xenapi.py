@@ -593,7 +593,7 @@ def _parse_volume_info(device_path, mountpoint):
     volume_info['volumeId'] = 'vol-qurmrzn9'
     # Because XCP/XS want an x beforehand
     volume_info['xenMountpoint'] = '/dev/xvdc'
-    volume_info['targetHost'] = '10.70.177.40'
+    volume_info['targetHost'] = ''
     volume_info['targetPort'] = '3260'  # default 3260
     volume_info['iqn'] = 'iqn.2010-10.org.openstack:vol-qurmrzn9'
     return volume_info
