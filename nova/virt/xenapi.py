@@ -63,6 +63,9 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
+from xml.dom.minidom import parseString
+
+
 XenAPI = None
 
 
@@ -90,7 +93,7 @@ XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
     'Running': power_state.RUNNING,
     'Paused': power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN,  # FIXME
+    'Suspended': power_state.SHUTDOWN, # FIXME
     'Crashed': power_state.CRASHED}
 
 
@@ -126,7 +129,7 @@ class XenAPIConnection(object):
     def spawn(self, instance):
         vm = yield self._lookup(instance.name)
         if vm is not None:
-            raise Exception('Attempted to create non-unique name %s' %
+            raise Exception('Attempted to create non-unique name %s' % 
                             instance.name)
 
         network = db.project_get_network(None, instance.project_id)
@@ -296,14 +299,34 @@ class XenAPIConnection(object):
             yield self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
-            
+
     @defer.inlineCallbacks
     def attach_volume(self, instance_name, device_path, mountpoint):
-        return True
+        # NOTE: No Resource Pool concept so far
+        logging.debug("Attach_volume: %s, %s, %s",
+                      instance_name, device_path, mountpoint)
+        volume_info = _parse_volume_info(device_path, mountpoint)
+        # Create the iSCSI SR, and the PDB through which hosts access SRs.
+        # But first, retrieve target info, like Host, IQN, LUN and SCSIID
+        target = yield self._get_target(volume_info)
+        label = 'SR-%s' % volume_info['volumeId']
+        sr_ref = yield self._create_sr(target, label)
+        # Create VDI  and attach VBD to VM
+        vm = None
+        try:
+            task = yield self._call_xenapi('', vm)
+            yield self._wait_for_task(task)
+        except Exception, exc:
+            logging.warn(exc)
+        yield True
 
     @defer.inlineCallbacks
     def detach_volume(self, instance_name, mountpoint):
-        return True
+        logging.debug("Detach_volume: %s, %s, %s", instance_name, mountpoint)
+        # Detach VBD from VM
+        # Forget SR/PDB info associated with host
+        # TODO: can we avoid destroying the SR every time we detach?
+        yield True
 
     def get_info(self, instance_id):
         vm = self._lookup_blocking(instance_id)
@@ -332,6 +355,52 @@ class XenAPIConnection(object):
             raise Exception('duplicate name found: %s' % i)
         else:
             return vms[0]
+
+    @utils.deferredToThread
+    def _get_target(self, volume_info):
+        return self._get_target_blocking(volume_info)
+
+    def _get_target_blocking(self, volume_info):
+        target = {}
+        target['target'] = volume_info['targetHost']
+        target['port'] = volume_info['targetPort']
+        target['targetIQN'] = volume_info['iqn']
+        # We expect SR_BACKEND_FAILURE_107 to retrieve params to create the SR
+        try:
+            self._conn.xenapi.SR.create(self._get_xenapi_host(),
+                                        target, '-1', '', '',
+                                        'lvmoiscsi', '', False, {})
+        except XenAPI.Failure, exc:
+            if exc.details[0] == 'SR_BACKEND_FAILURE_107':
+                xml_response = parseString(exc.details[3])
+                isciTargets = xml_response.getElementsByTagName('iscsi-target')
+                # Make sure that only the correct Lun is visible
+                if len(isciTargets) > 1:
+                    raise Exception('More than one ISCSI Target available')
+                isciLuns = isciTargets.item(0).getElementsByTagName('LUN')
+                if len(isciLuns) > 1:
+                    raise Exception('More than one ISCSI Lun available')
+                # Parse params from the xml response into the dictionary
+                for n in isciLuns.item(0).childNodes:
+                    if n.nodeType == 1:
+                        target[n.nodeName] = str(n.firstChild.data).strip()
+        return target
+
+    @utils.deferredToThread
+    def _create_sr(self, target, label):
+        return self._create_sr_blocking(target, label)
+
+    def _create_sr_blocking(self, target, label):
+        # TODO: we might want to put all these string literals into constants
+        sr = self._conn.xenapi.SR.create(self._get_xenapi_host(),
+                                         target,
+                                         target['size'],
+                                         label,
+                                         '',
+                                         'lvmoiscsi',
+                                         '',
+                                         True, {})
+        return sr
 
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
@@ -412,7 +481,18 @@ def _parse_xmlrpc_value(val):
     if not val:
         return val
     x = xmlrpclib.loads(
-        '<?xml version="1.0"?><methodResponse><params><param>' +
-        val +
+        '<?xml version="1.0"?><methodResponse><params><param>' + 
+        val + 
         '</param></params></methodResponse>')
     return x[0][0]
+
+
+def _parse_volume_info(device_path, mountpoint):
+    volume_info = {}
+    volume_info['volumeId'] = 'vol-qurmrzn9'
+    # XCP and XenServer add an x to the device name
+    volume_info['xenMountpoint'] = '/dev/xvdb'
+    volume_info['targetHost'] = '10.70.177.40'
+    volume_info['targetPort'] = '3260'  # default 3260
+    volume_info['iqn'] = 'iqn.2010-10.org.openstack:vol-qurmrzn9'
+    return volume_info
