@@ -17,11 +17,17 @@ if [ ! -n "$HOST_IP" ]; then
     #             you should explicitly set HOST_IP in your environment
     HOST_IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
-TEST=0
-USE_MYSQL=0
-MYSQL_PASS=nova
-USE_LDAP=0
-LIBVIRT_TYPE=qemu
+
+USE_MYSQL=${USE_MYSQL:-0}
+MYSQL_PASS=${MYSQL_PASS:-nova}
+TEST=${TEST:-0}
+USE_LDAP=${USE_LDAP:-0}
+LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
+NET_MAN=${NET_MAN:-FlatDHCPManager}
+# NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
+#             below but make sure that the interface doesn't already have an
+#             ip or you risk breaking things.
+# FLAT_INTERFACE=eth0
 
 if [ "$USE_MYSQL" == 1 ]; then
     SQL_CONN=mysql://root:$MYSQL_PASS@localhost/nova
@@ -40,12 +46,18 @@ cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
 --verbose
 --nodaemon
 --dhcpbridge_flagfile=/etc/nova/nova-manage.conf
+--FAKE_subdomain=ec2
+--network_manager=nova.network.manager.$NET_MAN
 --cc_host=$HOST_IP
 --routing_source_ip=$HOST_IP
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
 --libvirt_type=$LIBVIRT_TYPE
 NOVA_CONF_EOF
+
+if [ -n "$FLAT_INTERFACE" ]; then
+    echo "--flat_interface=$FLAT_INTERFACE" >>/etc/nova/nova-manage.conf
+fi
 
 if [ "$CMD" == "branch" ]; then
     sudo apt-get install -y bzr
@@ -61,9 +73,12 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-software-properties
     sudo add-apt-repository ppa:nova-core/ppa
     sudo apt-get update
-    sudo apt-get install -y dnsmasq open-iscsi kpartx kvm gawk iptables ebtables
+    sudo apt-get install -y dnsmasq kpartx kvm gawk iptables ebtables
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
-    sudo apt-get install -y screen iscsitarget euca2ools vlan curl rabbitmq-server
+    sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
+    sudo apt-get install -y lvm2 iscsitarget open-iscsi
+    echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
+    sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
@@ -122,8 +137,8 @@ if [ "$CMD" == "run" ]; then
     $NOVA_DIR/bin/nova-manage project create admin admin
     # export environment variables for project 'admin' and user 'admin'
     $NOVA_DIR/bin/nova-manage project environment admin admin $NOVA_DIR/novarc
-    # create 3 small networks
-    $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 3 16
+    # create a small network
+    $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 1 32
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
@@ -134,19 +149,20 @@ if [ "$CMD" == "run" ]; then
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler --flagfile=/etc/nova/nova-manage.conf"
     screen_it volume "$NOVA_DIR/bin/nova-volume --flagfile=/etc/nova/nova-manage.conf"
     screen_it test ". $NOVA_DIR/novarc"
-    screen -x
+    screen -S nova -x
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "terminate" ]; then
     # shutdown instances
     . $NOVA_DIR/novarc; euca-describe-instances | grep i- | cut -f2 | xargs euca-terminate-instances
     sleep 2
+    # delete volumes
+    . $NOVA_DIR/novarc; euca-describe-volumes | grep vol- | cut -f2 | xargs -n1 euca-delete-volume
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "clean" ]; then
     screen -S nova -X quit
     rm *.pid*
-    $NOVA_DIR/tools/setup_iptables.sh clear
 fi
 
 if [ "$CMD" == "scrub" ]; then
