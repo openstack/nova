@@ -55,8 +55,8 @@ from twisted.internet import reactor
 from twisted.internet import task
 
 from xenapi import power_state
-from xenapi import vmops
-from xenapi import volumeops
+from xenapi import VMOps
+from xenapi import VolumeOps
 
 XenAPI = None
 
@@ -102,30 +102,32 @@ def get_connection(_):
 
 class XenAPIConnection(object):
     def __init__(self, url, user, pw):
-        self._session = XenAPISession(url, user, pw)
-        self._vmops = VMOps(sef._session)
-        self._volumeops = volumeOps(self._session)
-        
+        session = XenAPISession(url, user, pw)
+        self._vmops = VMOps(session)
+        self._volumeops = VolumeOps(session)
+
     def list_instances(self):
         return self._vmops.list_instances()
-    
+
     def spawn(self, instance):
         self._vmops.spawn(instance)
-    
+
     def reboot(self, instance):
-        self._vmops.reboot(instance)   
+        self._vmops.reboot(instance)
 
     def destroy(self, instance):
         self._vmops.destroy(instance)
-    
+
     def get_info(self, instance_id):
         return self._vmops.get_info(instance_id)
-        
+
     def get_console_output(self, instance):
-        return self._vmops.get_console_output(instance)   
-        
+        return self._vmops.get_console_output(instance)
+
     def attach_volume(self, instance_name, device_path, mountpoint):
-        return self._volumeops.attach_volume(instance_name, device_path, mountpoint)
+        return self._volumeops.attach_volume(instance_name,
+                                               device_path,
+                                               mountpoint)
 
     def detach_volume(self, instance_name, mountpoint):
         return self._volumeops.detach_volume(instance_name, mountpoint)
@@ -135,6 +137,9 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self._session = XenAPI.Session(url)
         self._session.login_with_password(user, pw)
+
+    def get_session(self):
+        return self._session
 
     @utils.deferredToThread
     def call_xenapi(self, method, *args):
@@ -162,7 +167,7 @@ class XenAPISession(object):
         d = defer.Deferred()
         reactor.callLater(0, self._poll_task, task, d)
         return d
-        
+
     @utils.deferredToThread
     def _poll_task(self, task, deferred):
         """Poll the given XenAPI task, and fire the given Deferred if we
