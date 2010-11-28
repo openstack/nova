@@ -54,7 +54,6 @@ from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
 
-from xenapi import power_state
 from xenapi import VMOps
 from xenapi import VolumeOps
 
@@ -138,8 +137,11 @@ class XenAPISession(object):
         self._session = XenAPI.Session(url)
         self._session.login_with_password(user, pw)
 
-    def get_session(self):
-        return self._session
+    def get_xenapi(self):
+        return self._session.xenapi
+
+    def get_xenapi_host(self):
+        return self._session.xenapi.session.get_this_host(self._session.handle)
 
     @utils.deferredToThread
     def call_xenapi(self, method, *args):
@@ -149,17 +151,14 @@ class XenAPISession(object):
         for m in method.split('.'):
             f = f.__getattr__(m)
         return f(*args)
-
+        
     @utils.deferredToThread
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
         Deferred with the task reference."""
         return _unwrap_plugin_exceptions(
             self._session.xenapi.Async.host.call_plugin,
-            self._get_xenapi_host(), plugin, fn, args)
-
-    def get_xenapi_host(self):
-        return self._session.xenapi.session.get_this_host(self._session.handle)
+            self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
