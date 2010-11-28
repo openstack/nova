@@ -14,12 +14,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Management class for Storage-related functions (attach, detach, etc).
+"""
+
+from twisted.internet import defer
+
+from nova import exception
 from nova.compute import power_state
 
 
-XENAPI_POWER_STATE = {
-    'Halted': power_state.SHUTDOWN,
-    'Running': power_state.RUNNING,
-    'Paused': power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN,  # FIXME
-    'Crashed': power_state.CRASHED}
+class VMOps(object):
+    def __init__(self, session):
+        self._session = session
+
+    def attach_volume(self, instance_name, device_path, mountpoint):
+        return True
+
+    def detach_volume(self, instance_name, mountpoint):
+        return True

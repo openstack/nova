@@ -25,18 +25,14 @@ from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
 
-from nova import db
-from nova import flags
-from nova import process
-from nova import utils
-from nova.auth.manager import AuthManager  # wrap this one
-from nova.compute import instance_types  # wrap this one
-from nova.virt import images   # wrap this one
 
-import power_state
 import VMHelper
 import NetworkHelper
 
+from novadeps import XENAPI_POWER_STATE
+from novadeps import Auth
+from novadeps import Instance
+from novadeps import Network
 
 class VMOps(object):
     def __init__(self, session):
@@ -48,44 +44,45 @@ class VMOps(object):
 
     @defer.inlineCallbacks
     def spawn(self, instance):
-        vm = yield VMHelper.lookup(self._session, instance.name)
+        vm = yield VMHelper.lookup(self._session, Instance.get_name(instance))
         if vm is not None:
             raise Exception('Attempted to create non-unique name %s' %
-                            instance.name)
+                            Instance.get_name(instance))
 
-        network = db.project_get_network(None, instance.project_id)
+        network = Instance.get_network(instance)
         network_ref = \
-            yield NetworkHelper.find_network_with_bridge(self._session, network.bridge)
+            yield NetworkHelper.find_network_with_bridge(self._session, Network.get_bridge(network))
 
-        user = AuthManager().get_user(instance.user_id)
-        project = AuthManager().get_project(instance.project_id)
+        user = Instance.get_user(instance)
+        project = Instance.get_project(instance)
         vdi_uuid = yield VMHelper.fetch_image(self._session,
-            instance.image_id, user, project, True)
+            Instance.get_image_id(instance), user, project, True)
         kernel = yield VMHelper.fetch_image(self._session,
-            instance.kernel_id, user, project, False)
+            Instance.get_kernel_id(instance), user, project, False)
         ramdisk = yield VMHelper.fetch_image(self._session,
-            instance.ramdisk_id, user, project, False)
+            Instance.get_ramdisk_id(instance), user, project, False)
         vdi_ref = yield self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
         vm_ref = yield VMHelper.create_vm(self._session, instance, kernel, ramdisk)
         yield VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
         if network_ref:
-            yield VMHelper.create_vif(self._session, vm_ref, network_ref, instance.mac_address)
+            yield VMHelper.create_vif(self._session, vm_ref, network_ref, Instance.get_mac(instance))
         logging.debug('Starting VM %s...', vm_ref)
         yield self._session.call_xenapi('VM.start', vm_ref, False, False)
-        logging.info('Spawning VM %s created %s.', instance.name, vm_ref)
+        logging.info('Spawning VM %s created %s.', Instance.get_name(instance), vm_ref)
 
     @defer.inlineCallbacks
     def reboot(self, instance):
-        vm = yield VMHelper.lookup(self._session, instance.name)
+        instance_name = Instance.get_name(instance)
+        vm = yield VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception('instance not present %s' % instance.name)
+            raise Exception('instance not present %s' % instance_name)
         task = yield self._session.call_xenapi('Async.VM.clean_reboot', vm)
         yield self._session.wait_for_task(task)
 
     @defer.inlineCallbacks
     def destroy(self, instance):
-        vm = yield VMHelper.lookup(self._session, instance.name)
+        vm = yield VMHelper.lookup(self._session, Instance.get_name(instance))
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.

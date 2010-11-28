@@ -30,11 +30,10 @@ from nova import db
 from nova import flags
 from nova import process
 from nova import utils
-from nova.auth.manager import AuthManager  # wrap this one
-from nova.compute import instance_types  # wrap this one
-from nova.virt import images   # wrap this one
 
-import power_state
+from novadeps import Instance
+from novadeps import Image
+from novadeps import User
           
                 
 class VMHelper():
@@ -44,7 +43,7 @@ class VMHelper():
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
 
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = Instance.get_type(instance) 
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -76,9 +75,9 @@ class VMHelper():
             'user_version': '0',
             'other_config': {},
             }
-        logging.debug('Created VM %s...', instance.name)
+        logging.debug('Created VM %s...', Instance.get_name(instance))
         vm_ref = yield session.call_xenapi('VM.create', rec)
-        logging.debug('Created VM %s as %s.', instance.name, vm_ref)
+        logging.debug('Created VM %s as %s.', Instance.get_name(instance), vm_ref)
         defer.returnValue(vm_ref)
         
     @classmethod    
@@ -130,33 +129,20 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def find_network_with_bridge(self, session, bridge):
-        expr = 'field "bridge" = "%s"' % bridge
-        networks = yield session.call_xenapi('network.get_all_records_where',
-                                           expr)
-        if len(networks) == 1:
-            defer.returnValue(networks.keys()[0])
-        elif len(networks) > 1:
-            raise Exception('Found non-unique network for bridge %s' % bridge)
-        else:
-            raise Exception('Found no network for bridge %s' % bridge)
-
-    @classmethod
-    @defer.inlineCallbacks
     def fetch_image(self, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
         its kernel and ramdisk (if external kernels are being used).
         Returns a Deferred that gives the new VDI UUID."""
 
-        url = images.image_url(image)
-        access = AuthManager().get_access_key(user, project)
+        url = Image.get_url(image)
+        access = User.get_access(user, project)
         logging.debug("Asking xapi to fetch %s as %s" % (url, access))
         fn = use_sr and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
-        args['password'] = user.secret
+        args['password'] = User.get_secret(user)
         if use_sr:
             args['add_partition'] = 'true'
         task = yield session.async_call_plugin('objectstore', fn, args)
