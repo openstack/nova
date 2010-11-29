@@ -24,9 +24,8 @@ where they're used.
 import getopt
 import os
 import socket
+import string
 import sys
-
-from string import Template
 
 import gflags
 
@@ -139,7 +138,7 @@ class FlagValues(gflags.FlagValues):
             self.ParseNewFlags()
         val = gflags.FlagValues.__getattr__(self, name)
         if type(val) is str:
-            tmpl = Template(val)
+            tmpl = string.Template(val)
             context = [self, self.__dict__['__extra_context']]
             return tmpl.substitute(StrWrapper(context))
         return val
