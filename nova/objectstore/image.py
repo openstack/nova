@@ -39,8 +39,8 @@ from nova.objectstore import bucket
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('images_path', utils.abspath('../images'),
-                        'path to decrypted images')
+flags.DEFINE_string('images_path', '$state_path/images',
+                    'path to decrypted images')
 
 
 class Image(object):
