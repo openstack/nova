@@ -52,13 +52,12 @@ import xmlrpclib
 
 from twisted.internet import defer
 from twisted.internet import reactor
-#from twisted.internet import task
 
 from nova import flags
 from nova import utils
 
-from xapi.vmops import VMOps
-from xapi.volumeops import VolumeOps
+from xenapi.vmops import VMOps
+from xenapi.volumeops import VolumeOps
 
 XenAPI = None
 

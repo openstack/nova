@@ -18,6 +18,7 @@ from nova import db
 from nova import flags
 from nova import process
 from nova import utils
+from nova import context
 
 from nova.compute import power_state
 from nova.auth.manager import AuthManager
@@ -64,7 +65,9 @@ class Instance(object):
 
     @classmethod
     def get_network(self, instance):
-        return db.project_get_network(None, instance.project_id)
+        # TODO: is ge_admin_context the right context to retrieve?
+        return db.project_get_network(context.get_admin_context(),
+                                      instance.project_id)
 
     @classmethod
     def get_mac(self, instance):

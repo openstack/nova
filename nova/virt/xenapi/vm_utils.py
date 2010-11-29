@@ -33,7 +33,7 @@ from novadeps import User
 class VMHelper():
     def __init__(self, session):
         return
-    
+
     @classmethod
     @defer.inlineCallbacks
     def create_vm(self, session, instance, kernel, ramdisk):
