@@ -244,7 +244,7 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
-DEFINE_string('state_path', os.path.abspath("./"),
+DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
               "Top-level directory for maintaining nova's state")
 
 DEFINE_string('sql_connection',
