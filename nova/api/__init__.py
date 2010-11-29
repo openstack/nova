@@ -15,15 +15,21 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
 Root WSGI middleware for all API controllers.
+
+**Related Flags**
+
+:osapi_subdomain:  subdomain running the OpenStack API (default: api)
+:ec2api_subdomain:  subdomain running the EC2 API (default: ec2)
+
 """
 
 import routes
 import webob.dec
 
 from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api import cloudpipe
 from nova.api import ec2

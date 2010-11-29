@@ -29,7 +29,7 @@ from nova import flags
 from nova import exception as exc
 import nova.api.openstack.auth
 from nova.image import service
-from nova.image.services import glance
+from nova.image import glance
 from nova.tests import fake_flags
 from nova.wsgi import Router
 
@@ -76,7 +76,7 @@ def stub_out_image_service(stubs):
     def fake_image_show(meh, id):
         return dict(kernelId=1, ramdiskId=1)
 
-    stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
+    stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)
 
 
 def stub_out_auth(stubs):
@@ -151,21 +151,19 @@ def stub_out_glance(stubs, initial_fixtures=[]):
             self.fixtures = []
 
     fake_parallax_client = FakeParallaxClient(initial_fixtures)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_index',
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_index',
               fake_parallax_client.fake_get_image_index)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_details',
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_details',
               fake_parallax_client.fake_get_image_details)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'get_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_metadata',
               fake_parallax_client.fake_get_image_metadata)
-    stubs.Set(nova.image.services.glance.ParallaxClient, 'add_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'add_image_metadata',
               fake_parallax_client.fake_add_image_metadata)
-    stubs.Set(nova.image.services.glance.ParallaxClient,
-              'update_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'update_image_metadata',
               fake_parallax_client.fake_update_image_metadata)
-    stubs.Set(nova.image.services.glance.ParallaxClient,
-              'delete_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'delete_image_metadata',
               fake_parallax_client.fake_delete_image_metadata)
-    stubs.Set(nova.image.services.glance.GlanceImageService, 'delete_all',
+    stubs.Set(nova.image.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
 
 

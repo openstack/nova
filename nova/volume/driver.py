@@ -15,9 +15,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Drivers for volumes
+Drivers for volumes.
+
 """
 
 import logging
@@ -54,7 +54,7 @@ flags.DEFINE_string('iscsi_ip_prefix', '127.0',
 
 
 class VolumeDriver(object):
-    """Executes commands relating to Volumes"""
+    """Executes commands relating to Volumes."""
     def __init__(self, execute=process.simple_execute,
                  sync_exec=utils.execute, *args, **kwargs):
         # NOTE(vish): db is set by Manager
@@ -88,7 +88,7 @@ class VolumeDriver(object):
 
     @defer.inlineCallbacks
     def create_volume(self, volume):
-        """Creates a logical volume"""
+        """Creates a logical volume."""
         if int(volume['size']) == 0:
             sizestr = '100M'
         else:
@@ -100,7 +100,7 @@ class VolumeDriver(object):
 
     @defer.inlineCallbacks
     def delete_volume(self, volume):
-        """Deletes a logical volume"""
+        """Deletes a logical volume."""
         yield self._try_execute("sudo lvremove -f %s/%s" %
                                 (FLAGS.volume_group,
                                  volume['name']))
@@ -114,39 +114,39 @@ class VolumeDriver(object):
                                                  escaped_name))
 
     def ensure_export(self, context, volume):
-        """Safely and synchronously recreates an export for a logical volume"""
+        """Synchronously recreates an export for a logical volume."""
         raise NotImplementedError()
 
     @defer.inlineCallbacks
     def create_export(self, context, volume):
-        """Exports the volume"""
+        """Exports the volume."""
         raise NotImplementedError()
 
     @defer.inlineCallbacks
     def remove_export(self, context, volume):
-        """Removes an export for a logical volume"""
+        """Removes an export for a logical volume."""
         raise NotImplementedError()
 
     @defer.inlineCallbacks
     def discover_volume(self, volume):
-        """Discover volume on a remote host"""
+        """Discover volume on a remote host."""
         raise NotImplementedError()
 
     @defer.inlineCallbacks
     def undiscover_volume(self, volume):
-        """Undiscover volume on a remote host"""
+        """Undiscover volume on a remote host."""
         raise NotImplementedError()
 
 
 class AOEDriver(VolumeDriver):
-    """Implements AOE specific volume commands"""
+    """Implements AOE specific volume commands."""
 
     def ensure_export(self, context, volume):
         # NOTE(vish): we depend on vblade-persist for recreating exports
         pass
 
     def _ensure_blades(self, context):
-        """Ensure that blades have been created in datastore"""
+        """Ensure that blades have been created in datastore."""
         total_blades = FLAGS.num_shelves * FLAGS.blades_per_shelf
         if self.db.export_device_count(context) >= total_blades:
             return
@@ -157,7 +157,7 @@ class AOEDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def create_export(self, context, volume):
-        """Creates an export for a logical volume"""
+        """Creates an export for a logical volume."""
         self._ensure_blades(context)
         (shelf_id,
          blade_id) = self.db.volume_allocate_shelf_and_blade(context,
@@ -184,7 +184,7 @@ class AOEDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def remove_export(self, context, volume):
-        """Removes an export for a logical volume"""
+        """Removes an export for a logical volume."""
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume['id'])
@@ -195,39 +195,40 @@ class AOEDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def discover_volume(self, _volume):
-        """Discover volume on a remote host"""
+        """Discover volume on a remote host."""
         yield self._execute("sudo aoe-discover")
         yield self._execute("sudo aoe-stat", check_exit_code=False)
 
     @defer.inlineCallbacks
     def undiscover_volume(self, _volume):
-        """Undiscover volume on a remote host"""
+        """Undiscover volume on a remote host."""
         yield
 
 
 class FakeAOEDriver(AOEDriver):
-    """Logs calls instead of executing"""
+    """Logs calls instead of executing."""
+
     def __init__(self, *args, **kwargs):
         super(FakeAOEDriver, self).__init__(execute=self.fake_execute,
                                             sync_exec=self.fake_execute,
                                             *args, **kwargs)
 
     def check_for_setup_error(self):
-        """Returns an error if prerequisites aren't met"""
+        """No setup necessary in fake mode."""
         pass
 
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
-        """Execute that simply logs the command"""
+        """Execute that simply logs the command."""
         logging.debug("FAKE AOE: %s", cmd)
         return (None, None)
 
 
 class ISCSIDriver(VolumeDriver):
-    """Executes commands relating to ISCSI volumes"""
+    """Executes commands relating to ISCSI volumes."""
 
     def ensure_export(self, context, volume):
-        """Safely and synchronously recreates an export for a logical volume"""
+        """Synchronously recreates an export for a logical volume."""
         iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
@@ -242,7 +243,7 @@ class ISCSIDriver(VolumeDriver):
                         check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
-        """Ensure that target ids have been created in datastore"""
+        """Ensure that target ids have been created in datastore."""
         host_iscsi_targets = self.db.iscsi_target_count_by_host(context, host)
         if host_iscsi_targets >= FLAGS.iscsi_num_targets:
             return
@@ -253,7 +254,7 @@ class ISCSIDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def create_export(self, context, volume):
-        """Creates an export for a logical volume"""
+        """Creates an export for a logical volume."""
         self._ensure_iscsi_targets(context, volume['host'])
         iscsi_target = self.db.volume_allocate_iscsi_target(context,
                                                       volume['id'],
@@ -269,7 +270,7 @@ class ISCSIDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def remove_export(self, context, volume):
-        """Removes an export for a logical volume"""
+        """Removes an export for a logical volume."""
         iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
         yield self._execute("sudo ietadm --op delete --tid=%s "
@@ -279,6 +280,7 @@ class ISCSIDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def _get_name_and_portal(self, volume_name, host):
+        """Gets iscsi name and portal from volume name and host."""
         (out, _err) = yield self._execute("sudo iscsiadm -m discovery -t "
                                          "sendtargets -p %s" % host)
         for target in out.splitlines():
@@ -290,7 +292,7 @@ class ISCSIDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def discover_volume(self, volume):
-        """Discover volume on a remote host"""
+        """Discover volume on a remote host."""
         (iscsi_name,
          iscsi_portal) = yield self._get_name_and_portal(volume['name'],
                                                          volume['host'])
@@ -303,7 +305,7 @@ class ISCSIDriver(VolumeDriver):
 
     @defer.inlineCallbacks
     def undiscover_volume(self, volume):
-        """Undiscover volume on a remote host"""
+        """Undiscover volume on a remote host."""
         (iscsi_name,
          iscsi_portal) = yield self._get_name_and_portal(volume['name'],
                                                          volume['host'])
@@ -317,18 +319,18 @@ class ISCSIDriver(VolumeDriver):
 
 
 class FakeISCSIDriver(ISCSIDriver):
-    """Logs calls instead of executing"""
+    """Logs calls instead of executing."""
     def __init__(self, *args, **kwargs):
         super(FakeISCSIDriver, self).__init__(execute=self.fake_execute,
                                               sync_exec=self.fake_execute,
                                               *args, **kwargs)
 
     def check_for_setup_error(self):
-        """Returns an error if prerequisites aren't met"""
+        """No setup necessary in fake mode."""
         pass
 
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
-        """Execute that simply logs the command"""
+        """Execute that simply logs the command."""
         logging.debug("FAKE ISCSI: %s", cmd)
         return (None, None)

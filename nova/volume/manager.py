@@ -15,10 +15,31 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Volume manager manages creating, attaching, detaching, and
-destroying persistent storage volumes, ala EBS.
+Volume manager manages creating, attaching, detaching, and persistent storage.
+
+Persistant storage volumes keep their state independent of instances.  You can
+attach to an instance, terminate the instance, spawn a new instance (even
+one from a different image) and re-attach the volume with the same data
+intact.
+
+**Related Flags**
+
+:volume_topic:  What :mod:`rpc` topic to listen to (default: `volume`).
+:volume_manager:  The module name of a class derived from
+                  :class:`manager.Manager` (default:
+                  :class:`nova.volume.manager.AOEManager`).
+:storage_availability_zone:  Defaults to `nova`.
+:volume_driver:  Used by :class:`AOEManager`.  Defaults to
+                 :class:`nova.volume.driver.AOEDriver`.
+:num_shelves:  Number of shelves for AoE (default: 100).
+:num_blades:  Number of vblades per shelf to allocate AoE storage from
+              (default: 16).
+:volume_group:  Name of the group that will contain exported volumes (default:
+                `nova-volumes`)
+:aoe_eth_dev:  Device name the volumes will be exported on (default: `eth0`).
+:num_shell_tries:  Number of times to attempt to run AoE commands (default: 3)
+
 """
 
 import logging
@@ -44,8 +65,9 @@ flags.DEFINE_boolean('use_local_volumes', True,
 
 
 class VolumeManager(manager.Manager):
-    """Manages attachable block storage devices"""
+    """Manages attachable block storage devices."""
     def __init__(self, volume_driver=None, *args, **kwargs):
+        """Load the driver from the one specified in args, or from flags."""
         if not volume_driver:
             volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
@@ -56,8 +78,7 @@ class VolumeManager(manager.Manager):
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
-           standalone service.
-        """
+           standalone service."""
         self.driver.check_for_setup_error()
         ctxt = context.get_admin_context()
         volumes = self.db.volume_get_all_by_host(ctxt, self.host)
@@ -67,7 +88,7 @@ class VolumeManager(manager.Manager):
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
-        """Creates and exports the volume"""
+        """Creates and exports the volume."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         logging.info("volume %s: creating", volume_ref['name'])
@@ -95,7 +116,7 @@ class VolumeManager(manager.Manager):
 
     @defer.inlineCallbacks
     def delete_volume(self, context, volume_id):
-        """Deletes and unexports volume"""
+        """Deletes and unexports volume."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
@@ -112,10 +133,9 @@ class VolumeManager(manager.Manager):
 
     @defer.inlineCallbacks
     def setup_compute_volume(self, context, volume_id):
-        """Setup remote volume on compute host
+        """Setup remote volume on compute host.
 
-        Returns path to device.
-        """
+        Returns path to device."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
@@ -126,7 +146,7 @@ class VolumeManager(manager.Manager):
 
     @defer.inlineCallbacks
     def remove_compute_volume(self, context, volume_id):
-        """Remove remote volume on compute host """
+        """Remove remote volume on compute host."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['host'] == self.host and FLAGS.use_local_volumes:

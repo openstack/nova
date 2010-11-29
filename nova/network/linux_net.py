@@ -42,8 +42,8 @@ flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
-flags.DEFINE_string('bridge_dev', 'eth0',
-                        'network device for bridges')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '127.0.0.1',
@@ -54,14 +54,15 @@ flags.DEFINE_bool('use_nova_chains', False,
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
 
-def init_host():
-    """Basic networking setup goes here"""
-    # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
-    # forwarding entries and a default DNAT entry.
+def metadata_forward():
+    """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
              "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
 
+
+def init_host():
+    """Basic networking setup goes here"""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
     _confirm_rule("POSTROUTING", "-t nat -s %s "
@@ -134,7 +135,7 @@ def ensure_vlan(vlan_num):
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, vlan_num))
+        _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
     return interface
 
@@ -142,12 +143,13 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge inteface for %s", interface)
+        logging.debug("Starting Bridge interface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo brctl addif %s %s" % (bridge, interface))
+        if interface:
+            _execute("sudo brctl addif %s %s" % (bridge, interface))
     if net_attrs:
         _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                 (bridge,
@@ -244,7 +246,7 @@ def _confirm_rule(chain, cmd):
 def _remove_rule(chain, cmd):
     """Remove iptables rule"""
     if FLAGS.use_nova_chains:
-        chain = "%S" % chain.lower()
+        chain = "%s" % chain.lower()
     _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 
