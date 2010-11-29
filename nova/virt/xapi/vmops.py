@@ -19,24 +19,21 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import logging
-import xmlrpclib
 
 from twisted.internet import defer
-from twisted.internet import reactor
-from twisted.internet import task
-
-import VMHelper
-import NetworkHelper
 
 from novadeps import XENAPI_POWER_STATE
-from novadeps import Auth
 from novadeps import Instance
 from novadeps import Network
+
+from vm_utils import VMHelper
+from network_utils import NetworkHelper
+
 
 class VMOps(object):
     def __init__(self, session):
         self._session = session
-    
+
     def list_instances(self):
         return [self._session.get_xenapi().VM.get_name_label(vm) \
                 for vm in self._session.get_xenapi().VM.get_all()]
@@ -48,9 +45,9 @@ class VMOps(object):
             raise Exception('Attempted to create non-unique name %s' %
                             Instance.get_name(instance))
 
-        network = Instance.get_network(instance)
+        bridge = Network.get_bridge(Instance.get_network(instance))
         network_ref = \
-            yield NetworkHelper.find_network_with_bridge(self._session, Network.get_bridge(network))
+            yield NetworkHelper.find_network_with_bridge(self._session, bridge)
 
         user = Instance.get_user(instance)
         project = Instance.get_project(instance)
@@ -61,14 +58,16 @@ class VMOps(object):
         ramdisk = yield VMHelper.fetch_image(self._session,
             Instance.get_ramdisk_id(instance), user, project, False)
         vdi_ref = yield self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-
-        vm_ref = yield VMHelper.create_vm(self._session, instance, kernel, ramdisk)
+        vm_ref = yield VMHelper.create_vm(self._session,
+                                          instance, kernel, ramdisk)
         yield VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
         if network_ref:
-            yield VMHelper.create_vif(self._session, vm_ref, network_ref, Instance.get_mac(instance))
+            yield VMHelper.create_vif(self._session, vm_ref,
+                                      network_ref, Instance.get_mac(instance))
         logging.debug('Starting VM %s...', vm_ref)
         yield self._session.call_xenapi('VM.start', vm_ref, False, False)
-        logging.info('Spawning VM %s created %s.', Instance.get_name(instance), vm_ref)
+        logging.info('Spawning VM %s created %s.', Instance.get_name(instance),
+                     vm_ref)
 
     @defer.inlineCallbacks
     def reboot(self, instance):
@@ -89,7 +88,8 @@ class VMOps(object):
         # Get the VDIs related to the VM
         vdis = yield VMHelper.lookup_vm_vdis(self._session, vm)
         try:
-            task = yield self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+            task = yield self._session.call_xenapi('Async.VM.hard_shutdown',
+                                                   vm)
             yield self._session.wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
@@ -97,7 +97,8 @@ class VMOps(object):
         if vdis:
             for vdi in vdis:
                 try:
-                    task = yield self._session.call_xenapi('Async.VDI.destroy', vdi)
+                    task = yield self._session.call_xenapi('Async.VDI.destroy',
+                                                           vdi)
                     yield self._session.wait_for_task(task)
                 except Exception, exc:
                     logging.warn(exc)

@@ -19,7 +19,7 @@ Management class for Storage-related functions (attach, detach, etc).
 """
 
 
-class VMOps(object):
+class VolumeOps(object):
     def __init__(self, session):
         self._session = session
 

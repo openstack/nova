@@ -15,35 +15,32 @@
 #    under the License.
 
 """
-Helper methods for operations related to the management of VM records and 
+Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
-import xmlrpclib
 
 from twisted.internet import defer
-from twisted.internet import reactor
-from twisted.internet import task
 
-from nova import db
-from nova import flags
-from nova import process
 from nova import utils
 
 from novadeps import Instance
 from novadeps import Image
 from novadeps import User
-          
-                
+
+
 class VMHelper():
+    def __init__(self, session):
+        return
+    
     @classmethod
     @defer.inlineCallbacks
     def create_vm(self, session, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
 
-        instance_type = Instance.get_type(instance) 
+        instance_type = Instance.get_type(instance)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -77,10 +74,11 @@ class VMHelper():
             }
         logging.debug('Created VM %s...', Instance.get_name(instance))
         vm_ref = yield session.call_xenapi('VM.create', rec)
-        logging.debug('Created VM %s as %s.', Instance.get_name(instance), vm_ref)
+        logging.debug('Created VM %s as %s.',
+                      Instance.get_name(instance), vm_ref)
         defer.returnValue(vm_ref)
-        
-    @classmethod    
+
+    @classmethod
     @defer.inlineCallbacks
     def create_vbd(self, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
@@ -105,7 +103,7 @@ class VMHelper():
                       vdi_ref)
         defer.returnValue(vbd_ref)
 
-    @classmethod    
+    @classmethod
     @defer.inlineCallbacks
     def create_vif(self, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
@@ -147,9 +145,9 @@ class VMHelper():
             args['add_partition'] = 'true'
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
-        defer.returnValue(uuid)    
-    
-    @classmethod    
+        defer.returnValue(uuid)
+
+    @classmethod
     @utils.deferredToThread
     def lookup(self, session, i):
         return VMHelper.lookup_blocking(session, i)
@@ -165,7 +163,7 @@ class VMHelper():
         else:
             return vms[0]
 
-    @classmethod    
+    @classmethod
     @utils.deferredToThread
     def lookup_vm_vdis(self, session, vm):
         return VMHelper.lookup_vm_vdis_blocking(session, vm)

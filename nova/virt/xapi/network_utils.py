@@ -15,19 +15,17 @@
 #    under the License.
 
 """
-Helper methods for operations related to the management of network records and 
+Helper methods for operations related to the management of network records and
 their attributes like bridges, PIFs, QoS, as well as their lookup functions.
 """
 
-import logging
-import xmlrpclib
-
 from twisted.internet import defer
-from twisted.internet import reactor
-from twisted.internet import task
-          
-                
+
+
 class NetworkHelper():
+    def __init__(self, session):
+        return
+
     @classmethod
     @defer.inlineCallbacks
     def find_network_with_bridge(self, session, bridge):

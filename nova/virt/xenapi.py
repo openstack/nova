@@ -52,10 +52,13 @@ import xmlrpclib
 
 from twisted.internet import defer
 from twisted.internet import reactor
-from twisted.internet import task
+#from twisted.internet import task
 
-from xenapi import VMOps
-from xenapi import VolumeOps
+from nova import flags
+from nova import utils
+
+from xapi.vmops import VMOps
+from xapi.volumeops import VolumeOps
 
 XenAPI = None
 
@@ -151,7 +154,7 @@ class XenAPISession(object):
         for m in method.split('.'):
             f = f.__getattr__(m)
         return f(*args)
-        
+
     @utils.deferredToThread
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
