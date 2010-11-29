@@ -40,11 +40,12 @@ class FlagValues(gflags.FlagValues):
 
     """
 
-    def __init__(self):
+    def __init__(self, extra_context=None):
         gflags.FlagValues.__init__(self)
         self.__dict__['__dirty'] = []
         self.__dict__['__was_already_parsed'] = False
         self.__dict__['__stored_argv'] = []
+        self.__dict__['__extra_context'] = extra_context
 
     def __call__(self, argv):
         # We're doing some hacky stuff here so that we don't have to copy
@@ -114,7 +115,7 @@ class FlagValues(gflags.FlagValues):
     def ParseNewFlags(self):
         if '__stored_argv' not in self.__dict__:
             return
-        new_flags = FlagValues()
+        new_flags = FlagValues(self)
         for k in self.__dict__['__dirty']:
             new_flags[k] = gflags.FlagValues.__getitem__(self, k)
 
@@ -139,18 +140,25 @@ class FlagValues(gflags.FlagValues):
         val = gflags.FlagValues.__getattr__(self, name)
         if type(val) is str:
             tmpl = Template(val)
-            return tmpl.substitute(StrWrapper(self))
+            context = [self, self.__dict__['__extra_context']]
+            return tmpl.substitute(StrWrapper(context))
         return val
 
+
 class StrWrapper(object):
-    def __init__(self, obj):
-        self.wrapped = obj
+    """Wrapper around FlagValues objects
+
+    Wraps FlagValues objects for string.Template so that we're
+    sure to return strings."""
+    def __init__(self, context_objs):
+        self.context_objs = context_objs
 
     def __getitem__(self, name):
-        if hasattr(self.wrapped, name):
-            return str(getattr(self.wrapped, name))
-        else:
-            raise KeyError(name)
+        for context in self.context_objs:
+            val = getattr(context, name, False)
+            if val:
+                return str(val)
+        raise KeyError(name)
 
 FLAGS = FlagValues()
 gflags.FLAGS = FLAGS
