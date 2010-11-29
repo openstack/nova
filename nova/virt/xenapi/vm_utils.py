@@ -152,7 +152,7 @@ class VMHelper():
     @classmethod    
     @utils.deferredToThread
     def lookup(self, session, i):
-        return VMHelper.lookup_blocking(i)
+        return VMHelper.lookup_blocking(session, i)
 
     @classmethod
     def lookup_blocking(self, session, i):

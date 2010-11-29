@@ -25,7 +25,6 @@ from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.internet import task
 
-
 import VMHelper
 import NetworkHelper
 

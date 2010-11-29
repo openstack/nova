@@ -18,11 +18,6 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from twisted.internet import defer
-
-from nova import exception
-from nova.compute import power_state
-
 
 class VMOps(object):
     def __init__(self, session):
