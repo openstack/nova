@@ -198,6 +198,9 @@ class XenAPIConnection(object):
 
     @defer.inlineCallbacks
     def _create_vdi(self, sr_ref, size, type, label, description, read_only, sharable):
+        """Create a VDI record.  Returns a Deferred that gives the new
+        VDI reference."""
+        
         vdi_rec = {}
         vdi_rec['read_only'] = read_only
         vdi_rec['SR'] = sr_ref
@@ -337,7 +340,8 @@ class XenAPIConnection(object):
         description = 'Attached-to:%s' % instance_name
         # Create SR and check the physical space available for the VDI allocation 
         sr_ref = yield self._create_sr(target, label, description)
-        disk_size = yield self._get_sr_available_space(sr_ref)
+        disk_size = int(target['size'])
+        #disk_size = yield self._get_sr_available_space(sr_ref)
         # Create VDI  and attach VBD to VM
         vm_ref = yield self._lookup(instance_name)
         logging.debug("Mounting disk of: %s GB", (disk_size / (1024*1024*1024.0)))
@@ -347,20 +351,30 @@ class XenAPIConnection(object):
                                              False, False)
         except Exception, exc:
             logging.warn(exc)
-            if sr_ref:
-                yield self._destroy_sr(sr_ref)
-            raise Exception('Unable to create VDI on SR %s' % sr_ref)
+            yield self._destroy_sr(sr_ref)
+            raise Exception('Unable to create VDI on SR %s for instance %s'
+                            % (sr_ref,
+                            instance_name))
         else:
-            try: 
+            try:
                 userdevice = 2  # FIXME: this depends on the numbers of attached disks 
                 vbd_ref = yield self._create_vbd(vm_ref, vdi_ref, userdevice, False, True, False)
-                task = yield self._call_xenapi('Async.VBD.plug', vbd_ref)
-                yield self._wait_for_task(task)
             except Exception, exc:
                 logging.warn(exc)
-                if sr_ref:
+                yield self._destroy_sr(sr_ref)
+                raise Exception('Unable to create VBD on SR %s for instance %s'
+                            % (sr_ref,
+                            instance_name))
+            else:
+                try:
+                    raise Exception('') 
+                    task = yield self._call_xenapi('Async.VBD.plug', vbd_ref)
+                    yield self._wait_for_task(task)
+                except Exception, exc:
+                    logging.warn(exc)
                     yield self._destroy_sr(sr_ref)
-                raise Exception('Unable to create VBD on SR %s' % sr_ref)
+                    raise Exception('Unable to attach volume to instance %s' % instance_name)
+                
         yield True
 
     @defer.inlineCallbacks
@@ -412,7 +426,7 @@ class XenAPIConnection(object):
         try:
             self._conn.xenapi.SR.create(self._get_xenapi_host(),
                                         target, '-1', '', '',
-                                        'lvmoiscsi', '', False, {})
+                                        'iscsi', '', False, {})
         except XenAPI.Failure, exc:
             if exc.details[0] == 'SR_BACKEND_FAILURE_107':
                 xml_response = parseString(exc.details[3])
@@ -427,6 +441,9 @@ class XenAPIConnection(object):
                 for n in isciLuns.item(0).childNodes:
                     if n.nodeType == 1:
                         target[n.nodeName] = str(n.firstChild.data).strip()
+            else:
+                logging.warn(exc)
+                raise Exception('Unable to access SR')
         return target
         
     @utils.deferredToThread
@@ -444,24 +461,45 @@ class XenAPIConnection(object):
 
     def _create_sr_blocking(self, target, label, description):
         # TODO: we might want to put all these string literals into constants
-        sr_ref = self._conn.xenapi.SR.create(self._get_xenapi_host(),
+        sr_ref = self._conn.xenapi.SR.get_by_name_label(label)
+        if sr_ref is None:
+            sr_ref = self._conn.xenapi.SR.create(self._get_xenapi_host(),
                                          target,
                                          target['size'],
                                          label,
                                          description,
-                                         'lvmoiscsi',
+                                         'iscsi',
                                          '',
                                          True, {})
-        # TODO: there might be some timing issues here
-        self._conn.xenapi.SR.scan(sr_ref)
-        return sr_ref
+        if sr_ref:
+            #self._conn.xenapi.SR.scan(sr_ref)
+            return sr_ref
+        else:
+            raise Exception('Unable to create SR')
 
     @defer.inlineCallbacks
     def _destroy_sr(self, sr_ref):
         # Some clean-up depending on the state of the SR
-        #yield self._destroy_vdbs(sr_ref)
-        #yield self._destroy_vdis(sr_ref)
-        # Destroy PDBs
+        # Remove VBDs
+        #vbds = yield self._conn.xenapi.SR.get_VBDs(sr_ref)
+        #for vbd_ref in vbds:
+        #    try:
+        #        task = yield self._call_xenapi('Async.VBD.destroy', vbd_ref)
+        #        yield self._wait_for_task(task)
+        #    except Exception, exc:
+        #        logging.warn(exc)
+        # Remove VDIs
+        #=======================================================================
+        # vdis = yield self._conn.xenapi.SR.get_VDIs(sr_ref)
+        # for vdi_ref in vdis:
+        #    try:
+        #        task = yield self._call_xenapi('Async.VDI.destroy', vdi_ref)
+        #        yield self._wait_for_task(task)
+        #    except Exception, exc:
+        #        logging.warn(exc)
+        #=======================================================================
+        sr_rec = self._conn.xenapi.SR.get_record(sr_ref)
+        # Detach from host
         pbds = yield self._conn.xenapi.SR.get_PBDs(sr_ref)
         for pbd_ref in pbds:
             try:
@@ -469,16 +507,21 @@ class XenAPIConnection(object):
                 yield self._wait_for_task(task)
             except Exception, exc:
                 logging.warn(exc)
-            else:
-                task = yield self._call_xenapi('Async.PBD.destroy', pbd_ref)
-                yield self._wait_for_task(task)
-        # Forget SR
+        # Destroy SR
         try:
-            task = yield self._call_xenapi('Async.SR.forget', sr_ref)
+            task = yield self._call_xenapi('Async.SR.destroy', sr_ref)
             yield self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
             
+    def _sr_dispose_action(self, action, records):
+        for rec_ref in records:
+            try:
+                task = yield self._call_xenapi(action, rec_ref)
+                yield self._wait_for_task(task)
+            except Exception, exc:
+                logging.warn(exc)
+          
     @utils.deferredToThread
     def _lookup_vm_vdis(self, vm):
         return self._lookup_vm_vdis_blocking(vm)
@@ -592,8 +635,8 @@ def _parse_volume_info(device_path, mountpoint):
     volume_info = {}
     volume_info['volumeId'] = 'vol-qurmrzn9'
     # Because XCP/XS want an x beforehand
-    volume_info['xenMountpoint'] = '/dev/xvdc'
-    volume_info['targetHost'] = ''
+    volume_info['mountpoint'] = '/dev/xvdc'  # translate
+    volume_info['targetHost'] = '10.70.177.40'
     volume_info['targetPort'] = '3260'  # default 3260
     volume_info['iqn'] = 'iqn.2010-10.org.openstack:vol-qurmrzn9'
     return volume_info
