@@ -28,7 +28,7 @@ from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
-eventlet.patcher.monkey_patch(all=False, socket=True)
+eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
 import routes
 import routes.middleware
 import webob

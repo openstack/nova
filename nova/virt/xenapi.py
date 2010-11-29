@@ -33,6 +33,18 @@ long-running operations.
 
 FIXME: get_info currently doesn't conform to these rules, and will block the
 reactor thread if the VM.get_by_name_label or VM.get_record calls block.
+
+**Related Flags**
+
+:xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
+:xenapi_connection_username:  Username for connection to XenServer/Xen Cloud
+                              Platform (default: root).
+:xenapi_connection_password:  Password for connection to XenServer/Xen Cloud
+                              Platform.
+:xenapi_task_poll_interval:  The interval (seconds) used for polling of
+                             remote tasks (Async.VM.start, etc)
+                             (default: 0.5).
+
 """
 
 import logging
@@ -274,11 +286,21 @@ class XenAPIConnection(object):
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
             defer.returnValue(None)
+        # Get the VDIs related to the VM
+        vdis = yield self._lookup_vm_vdis(vm)
         try:
             task = yield self._call_xenapi('Async.VM.hard_shutdown', vm)
             yield self._wait_for_task(task)
         except Exception, exc:
             logging.warn(exc)
+        # Disk clean-up
+        if vdis:
+            for vdi in vdis:
+                try:
+                    task = yield self._call_xenapi('Async.VDI.destroy', vdi)
+                    yield self._wait_for_task(task)
+                except Exception, exc:
+                    logging.warn(exc)
         try:
             task = yield self._call_xenapi('Async.VM.destroy', vm)
             yield self._wait_for_task(task)
@@ -312,6 +334,30 @@ class XenAPIConnection(object):
             raise Exception('duplicate name found: %s' % i)
         else:
             return vms[0]
+
+    @utils.deferredToThread
+    def _lookup_vm_vdis(self, vm):
+        return self._lookup_vm_vdis_blocking(vm)
+
+    def _lookup_vm_vdis_blocking(self, vm):
+        # Firstly we get the VBDs, then the VDIs.
+        # TODO: do we leave the read-only devices?
+        vbds = self._conn.xenapi.VM.get_VBDs(vm)
+        vdis = []
+        if vbds:
+            for vbd in vbds:
+                try:
+                    vdi = self._conn.xenapi.VBD.get_VDI(vbd)
+                    # Test valid VDI
+                    record = self._conn.xenapi.VDI.get_record(vdi)
+                except Exception, exc:
+                    logging.warn(exc)
+                else:
+                    vdis.append(vdi)
+            if len(vdis) > 0:
+                return vdis
+            else:
+                return None
 
     def _wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.

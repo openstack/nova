@@ -138,11 +138,8 @@ class QuotaTestCase(test.TrialTestCase):
 
     def test_too_many_addresses(self):
         address = '192.168.0.100'
-        try:
-            db.floating_ip_get_by_address(context.get_admin_context(), address)
-        except exception.NotFound:
-            db.floating_ip_create(context.get_admin_context(),
-                                  {'address': address, 'host': FLAGS.host})
+        db.floating_ip_create(context.get_admin_context(),
+                              {'address': address, 'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
         # NOTE(vish): This assert never fails. When cloud attempts to
@@ -151,3 +148,4 @@ class QuotaTestCase(test.TrialTestCase):
         #             that is breaking.
         self.assertRaises(cloud.QuotaError, self.cloud.allocate_address,
                           self.context)
+        db.floating_ip_destroy(context.get_admin_context(), address)

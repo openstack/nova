@@ -33,7 +33,7 @@ from nova.objectstore import stored
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('buckets_path', utils.abspath('../buckets'),
+flags.DEFINE_string('buckets_path', '$state_path/buckets',
                     'path to s3 buckets')
 
 
@@ -78,8 +78,8 @@ class Bucket(object):
         path = os.path.abspath(os.path.join(
             FLAGS.buckets_path, bucket_name))
         if not path.startswith(os.path.abspath(FLAGS.buckets_path)) or \
-            os.path.exists(path):
-                raise exception.NotAuthorized()
+        os.path.exists(path):
+            raise exception.NotAuthorized()
 
         os.makedirs(path)
 
