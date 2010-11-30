@@ -1,0 +1,84 @@
+#
+# Person object for Nova
+# inetorgperson with extra attributes
+# Author: Vishvananda Ishaya <vishvananda@yahoo.com>
+#
+#
+
+# using internet experimental oid arc as per BP64 3.1
+objectidentifier novaSchema 1.3.6.1.3.1.666.666
+objectidentifier novaAttrs novaSchema:3
+objectidentifier novaOCs novaSchema:4
+
+attributetype (
+    novaAttrs:1
+    NAME 'accessKey'
+    DESC 'Key for accessing data'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
+    )
+
+attributetype (
+    novaAttrs:2
+    NAME 'secretKey'
+    DESC 'Secret key'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
+    )
+
+attributetype (
+    novaAttrs:3
+    NAME 'keyFingerprint'
+    DESC 'Fingerprint of private key'
+    EQUALITY caseIgnoreMatch
+    SUBSTR caseIgnoreSubstringsMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE
+    )
+
+attributetype (
+    novaAttrs:4
+    NAME 'isAdmin'
+    DESC 'Is user an administrator?'
+    EQUALITY booleanMatch
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+    SINGLE-VALUE
+    )
+
+attributetype (
+    novaAttrs:5
+    NAME 'projectManager'
+    DESC 'Project Managers of a project'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
+    )
+
+objectClass (
+    novaOCs:1
+    NAME 'novaUser'
+    DESC 'access and secret keys'
+    AUXILIARY
+    MUST ( uid )
+    MAY  ( accessKey $ secretKey $ isAdmin )
+    )
+
+objectClass (
+    novaOCs:2
+    NAME 'novaKeyPair'
+    DESC 'Key pair for User'
+    SUP top
+    STRUCTURAL
+    MUST ( cn $ sshPublicKey $ keyFingerprint )
+    )
+
+objectClass (
+    novaOCs:3
+    NAME 'novaProject'
+    DESC 'Container for project'
+    SUP groupOfNames
+    STRUCTURAL
+    MUST ( cn $ projectManager )
+    )
