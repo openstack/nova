@@ -467,13 +467,13 @@ class LibvirtConnection(object):
                                          process_input=process_input,
                                          check_exit_code=check_exit_code)
 
-        # For now, we assume that if we're not using a kernel, we're using a 
-        # partitioned disk image where the target partition is the first 
+        # For now, we assume that if we're not using a kernel, we're using a
+        # partitioned disk image where the target partition is the first
         # partition
         target_partition = None
         if not using_kernel:
             target_partition = "1"
-        
+
         key = str(inst['key_data'])
         net = None
         network_ref = db.network_get_by_instance(context.get_admin_context(),
@@ -493,11 +493,10 @@ class LibvirtConnection(object):
                     inst['name'], inst.image_id)
             if net:
                 logging.info('instance %s: injecting net into image %s',
-                    inst['name'], inst.image_id)
-                                   execute=execute)
+                             inst['name'], inst.image_id)
             try:
                 yield disk.inject_data(basepath('disk-raw'), key, net,
-                                       partition=target_partition, 
+                                       partition=target_partition,
                                        execute=execute)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
@@ -557,7 +556,7 @@ class LibvirtConnection(object):
             if xml_info['ramdisk_id'] or xml_info['kernel_id']:
                 xml_info['disk'] = xml_info['basepath'] + "/disk"
 
-        xml = str(Template(self.libvirt_xml, searchList=[ xml_info ] ))
+        xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         logging.debug('instance %s: finished toXML method', instance['name'])
 
         return xml

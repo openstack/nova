@@ -801,7 +801,7 @@ class CloudController(object):
         if kernel_id == str(FLAGS.null_kernel):
             kernel_id = None
             ramdisk_id = None
-            
+
         # make sure we have access to kernel and ramdisk
         if kernel_id:
             self.image_service.show(context, kernel_id)
