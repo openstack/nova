@@ -104,6 +104,44 @@ class VMHelper():
         defer.returnValue(vbd_ref)
 
     @classmethod
+    @utils.deferredToThread
+    def find_vbd_by_number(self, session, vm_ref, number):
+        return VMHelper.find_vbd_by_number_blocking(session, vm_ref, number)
+
+    @classmethod
+    def find_vbd_by_number_blocking(self, session, vm_ref, number):
+        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbds:
+            for vbd in vbds:
+                try:
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    if vbd_rec['userdevice'] == str(number):
+                        return vbd
+                except Exception, exc:
+                    logging.warn(exc)
+            raise Exception('VBD not found in instance %s' % vm_ref)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def unplug_vbd(self, session, vbd_ref):
+        try:
+            vbd_ref = yield session.call_xenapi('VBD.unplug', vbd_ref)
+        except Exception, exc:
+            logging.warn(exc)
+            if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
+                raise Exception('Unable to unplug VBD %s' % vbd_ref)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def destroy_vbd(self, session, vbd_ref):
+        try:
+            task = yield session.call_xenapi('Async.VBD.destroy', vbd_ref)
+            yield session.wait_for_task(task)
+        except Exception, exc:
+            logging.warn(exc)
+            raise Exception('Unable to destroy VBD %s' % vbd_ref)
+
+    @classmethod
     @defer.inlineCallbacks
     def create_vif(self, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
