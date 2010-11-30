@@ -995,10 +995,10 @@ class CloudController(object):
 
     def describe_images(self, context, image_id=None, **kwargs):
         # Note: image_id is a list!
-        imageSet = self.image_service.index(context)
+        images = self.image_service.index(context)
         if image_id:
-            imageSet = filter(lambda x: x['imageId'] in image_id, imageSet)
-        return {'imagesSet': imageSet}
+            images = filter(lambda x: x['imageId'] in image_id, images)
+        return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
         self.image_service.deregister(context, image_id)
