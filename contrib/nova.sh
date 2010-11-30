@@ -23,7 +23,7 @@ MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
 LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
-NET_MAN=${NET_MAN:-FlatDHCPManager}
+NET_MAN=${NET_MAN:-VlanManager}
 # NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
 #             below but make sure that the interface doesn't already have an
 #             ip or you risk breaking things.
@@ -42,10 +42,10 @@ else
 fi
 
 mkdir -p /etc/nova
-cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
+cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
 --verbose
 --nodaemon
---dhcpbridge_flagfile=/etc/nova/nova-manage.conf
+--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
 --FAKE_subdomain=ec2
 --network_manager=nova.network.manager.$NET_MAN
 --cc_host=$HOST_IP
@@ -56,7 +56,7 @@ cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
 NOVA_CONF_EOF
 
 if [ -n "$FLAT_INTERFACE" ]; then
-    echo "--flat_interface=$FLAT_INTERFACE" >>/etc/nova/nova-manage.conf
+    echo "--flat_interface=$FLAT_INTERFACE" >>$NOVA_DIR/bin/nova.conf
 fi
 
 if [ "$CMD" == "branch" ]; then
@@ -142,12 +142,12 @@ if [ "$CMD" == "run" ]; then
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
-    screen_it api "$NOVA_DIR/bin/nova-api --flagfile=/etc/nova/nova-manage.conf"
-    screen_it objectstore "$NOVA_DIR/bin/nova-objectstore --flagfile=/etc/nova/nova-manage.conf"
-    screen_it compute "$NOVA_DIR/bin/nova-compute --flagfile=/etc/nova/nova-manage.conf"
-    screen_it network "$NOVA_DIR/bin/nova-network --flagfile=/etc/nova/nova-manage.conf"
-    screen_it scheduler "$NOVA_DIR/bin/nova-scheduler --flagfile=/etc/nova/nova-manage.conf"
-    screen_it volume "$NOVA_DIR/bin/nova-volume --flagfile=/etc/nova/nova-manage.conf"
+    screen_it api "$NOVA_DIR/bin/nova-api"
+    screen_it objectstore "$NOVA_DIR/bin/nova-objectstore"
+    screen_it compute "$NOVA_DIR/bin/nova-compute"
+    screen_it network "$NOVA_DIR/bin/nova-network"
+    screen_it scheduler "$NOVA_DIR/bin/nova-scheduler"
+    screen_it volume "$NOVA_DIR/bin/nova-volume"
     screen_it test ". $NOVA_DIR/novarc"
     screen -S nova -x
 fi

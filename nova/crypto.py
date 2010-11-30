@@ -40,9 +40,9 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ca_file', 'cacert.pem', 'Filename of root CA')
-flags.DEFINE_string('keys_path', utils.abspath('../keys'),
+flags.DEFINE_string('keys_path', '$state_path/keys',
                     'Where we keep our keys')
-flags.DEFINE_string('ca_path', utils.abspath('../CA'),
+flags.DEFINE_string('ca_path', '$state_path/CA',
                     'Where we keep our root CA')
 flags.DEFINE_boolean('use_intermediate_ca', False,
                      'Should we use intermediate CAs for each project?')
