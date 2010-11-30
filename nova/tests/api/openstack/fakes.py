@@ -54,7 +54,6 @@ def fake_auth_init(self):
     self.db = FakeAuthDatabase()
     self.context = Context()
     self.auth = FakeAuthManager()
-    self.host = 'foo'
 
 
 @webob.dec.wsgify
