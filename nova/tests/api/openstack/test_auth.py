@@ -69,7 +69,7 @@ class Test(unittest.TestCase):
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "https://foo/v1.0/")
+            "http://foo/v1.0/")
         self.assertEqual(result.headers['X-CDN-Management-Url'],
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
