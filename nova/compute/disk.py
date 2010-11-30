@@ -119,7 +119,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
     If partition is not specified it mounts the image as a single partition.
 
     """
-    out, err = yield execute('sudo losetup -f --show %s' % image)
+    out, err = yield execute('sudo losetup --find --show %s' % image)
     if err:
         raise exception.Error('Could not attach image to loopback: %s' % err)
     device = out.strip()
@@ -133,6 +133,15 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                                                    partition)
         else:
             mapped_device = device
+
+        # We can only loopback mount raw images.  If the device isn't there,
+        #  it's normally because it's a .vmdk or a .vdi etc
+        if not os.path.exists(mapped_device):
+            raise exception.Error(
+                'Mapped device was not found (we can only inject raw disk images): %s'
+                % mapped_device)
+
+        # Configure ext2fs so that it doesn't auto-check every N boots
         out, err = yield execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
 
         tmpdir = tempfile.mkdtemp()
@@ -160,7 +169,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                 yield execute('sudo kpartx -d %s' % device)
     finally:
         # remove loopback
-        yield execute('sudo losetup -d %s' % device)
+        yield execute('sudo losetup --detach %s' % device)
 
 
 @defer.inlineCallbacks
@@ -170,7 +179,7 @@ def _inject_key_into_fs(key, fs, execute=None):
     key is an ssh key string.
     fs is the path to the base of the filesystem into which to inject the key.
     """
-    sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
+    sshdir = os.path.join(fs, 'root', '.ssh')
     yield execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
     yield execute('sudo chown root %s' % sshdir)
     yield execute('sudo chmod 700 %s' % sshdir)

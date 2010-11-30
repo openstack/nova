@@ -798,9 +798,15 @@ class CloudController(object):
         kernel_id = kwargs.get('kernel_id', kernel_id)
         ramdisk_id = kwargs.get('ramdisk_id', ramdisk_id)
 
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+            
         # make sure we have access to kernel and ramdisk
-        self.image_service.show(context, kernel_id)
-        self.image_service.show(context, ramdisk_id)
+        if kernel_id:
+            self.image_service.show(context, kernel_id)
+        if ramdisk_id:
+            self.image_service.show(context, ramdisk_id)
 
         logging.debug("Going to run %s instances...", num_instances)
         launch_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -827,8 +833,8 @@ class CloudController(object):
         base_options = {}
         base_options['state_description'] = 'scheduling'
         base_options['image_id'] = image_id
-        base_options['kernel_id'] = kernel_id
-        base_options['ramdisk_id'] = ramdisk_id
+        base_options['kernel_id'] = kernel_id or ''
+        base_options['ramdisk_id'] = ramdisk_id or ''
         base_options['reservation_id'] = reservation_id
         base_options['key_data'] = key_data
         base_options['key_name'] = kwargs.get('key_name', None)

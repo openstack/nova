@@ -63,6 +63,8 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
+from Cheetah.Template import Template
+
 libvirt = None
 libxml2 = None
 
@@ -450,18 +452,28 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('disk')):
             yield images.fetch(inst.image_id, basepath('disk-raw'), user,
                                project)
-        if not os.path.exists(basepath('kernel')):
-            yield images.fetch(inst.kernel_id, basepath('kernel'), user,
-                               project)
-        if not os.path.exists(basepath('ramdisk')):
-            yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
-                               project)
+
+        using_kernel = inst.kernel_id
+        if using_kernel:
+            if not os.path.exists(basepath('kernel')):
+                yield images.fetch(inst.kernel_id, basepath('kernel'), user,
+                                   project)
+            if not os.path.exists(basepath('ramdisk')):
+                yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
+                                   project)
 
         execute = lambda cmd, process_input = None, check_exit_code = True: \
                   process.simple_execute(cmd=cmd,
                                          process_input=process_input,
                                          check_exit_code=check_exit_code)
 
+        # For now, we assume that if we're not using a kernel, we're using a 
+        # partitioned disk image where the target partition is the first 
+        # partition
+        target_partition = None
+        if not using_kernel:
+            target_partition = "1"
+        
         key = str(inst['key_data'])
         net = None
         network_ref = db.network_get_by_instance(context.get_admin_context(),
@@ -482,11 +494,20 @@ class LibvirtConnection(object):
             if net:
                 logging.info('instance %s: injecting net into image %s',
                     inst['name'], inst.image_id)
-            yield disk.inject_data(basepath('disk-raw'), key, net,
                                    execute=execute)
+            try:
+                yield disk.inject_data(basepath('disk-raw'), key, net,
+                                       partition=target_partition, 
+                                       execute=execute)
+            except Exception as e:
+                # This could be a windows image, or a vmdk format disk
+                logging.warn('instance %s: ignoring error injecting data'
+                             ' into image %s (%s)',
+                             inst['name'], inst.image_id, e)
 
-        if os.path.exists(basepath('disk')):
-            yield process.simple_execute('rm -f %s' % basepath('disk'))
+        if using_kernel:
+            if os.path.exists(basepath('disk')):
+                yield process.simple_execute('rm -f %s' % basepath('disk'))
 
         local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
                                                     ['local_gb']
@@ -525,12 +546,21 @@ class LibvirtConnection(object):
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server}
         if rescue:
-            libvirt_xml = self.rescue_xml % xml_info
+            xml = self.rescue_xml % xml_info
         else:
-            libvirt_xml = self.libvirt_xml % xml_info
+            if xml_info['kernel_id']:
+                xml_info['kernel'] = xml_info['basepath'] + "/kernel"
+
+            if xml_info['ramdisk_id']:
+                xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
+
+            if xml_info['ramdisk_id'] or xml_info['kernel_id']:
+                xml_info['disk'] = xml_info['basepath'] + "/disk"
+
+        xml = str(Template(self.libvirt_xml, searchList=[ xml_info ] ))
         logging.debug('instance %s: finished toXML method', instance['name'])
 
-        return libvirt_xml
+        return xml
 
     def get_info(self, instance_name):
         try:
