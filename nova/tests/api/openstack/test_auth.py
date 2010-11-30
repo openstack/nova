@@ -62,7 +62,7 @@ class Test(unittest.TestCase):
         f = fakes.FakeAuthManager()
         f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
         result = req.get_response(nova.api.API('os'))

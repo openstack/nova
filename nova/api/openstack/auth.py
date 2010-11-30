@@ -23,10 +23,7 @@ class Context(object):
 class BasicApiAuthManager(object):
     """ Implements a somewhat rudimentary version of OpenStack Auth"""
 
-    def __init__(self, host=None, db_driver=None):
-        if not host:
-            host = FLAGS.host
-        self.host = host
+    def __init__(self, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
