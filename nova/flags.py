@@ -237,7 +237,7 @@ DEFINE_string('default_ramdisk', 'ari-11111',
 DEFINE_string('default_instance_type', 'm1.small',
               'default instance type to use, testing only')
 DEFINE_string('null_kernel', 'aki-00000000',
-              'kernel image that indicates not to use a kernel, '
+              'kernel image that indicates not to use a kernel,'
               ' but to use a raw disk image instead')
 
 DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')

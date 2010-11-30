@@ -134,8 +134,8 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
         else:
             mapped_device = device
 
-        # We can only loopback mount raw images.  If the device isn't there,
-        #  it's normally because it's a .vmdk or a .vdi etc
+        # We can only loopback mount raw images. If the device isn't there,
+        # it's normally because it's a .vmdk or a .vdi etc
         if not os.path.exists(mapped_device):
             raise exception.Error('Mapped device was not found (we can'
                                   ' only inject raw disk images): %s' %
