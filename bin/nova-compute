@@ -43,4 +43,3 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     application = service.Service.create()  # pylint: disable=C0103
-
