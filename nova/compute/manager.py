@@ -106,7 +106,7 @@ class ComputeManager(manager.Manager):
             display_name = "Server %s" % instance_ref['internal_id']
             instance_ref['display_name'] = display_name
             self.db.instance_update(context, inst_id,
-                                    { 'display_name': display_name })
+                                    {'display_name': display_name})
 
         elevated = context.elevated()
         if not security_groups:
