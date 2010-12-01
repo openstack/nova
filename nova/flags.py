@@ -236,7 +236,7 @@ DEFINE_string('default_ramdisk', 'ari-11111',
               'default ramdisk to use, testing only')
 DEFINE_string('default_instance_type', 'm1.small',
               'default instance type to use, testing only')
-DEFINE_string('null_kernel', 'aki-00000000',
+DEFINE_string('null_kernel', 'nokernel',
               'kernel image that indicates not to use a kernel,'
               ' but to use a raw disk image instead')
 
