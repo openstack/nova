@@ -530,6 +530,12 @@ def fixed_ip_update(context, address, values):
 #functions between the two of them as well.
 @require_context
 def instance_create(context, values):
+    """Create a new Instance record in the database.
+
+    context - request context object
+    values - dict containing column values.
+             'internal_id' is auto-generated and should not be specified.
+    """
     instance_ref = models.Instance()
     instance_ref.update(values)
 

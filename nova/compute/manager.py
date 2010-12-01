@@ -101,6 +101,12 @@ class ComputeManager(manager.Manager):
         """
         instance_ref = self.db.instance_create(context, kwargs)
         inst_id = instance_ref['id']
+        # Set sane defaults if not specified
+        if 'display_name' not in kwargs:
+            display_name = "Server %s" % instance_ref['internal_id']
+            instance_ref['display_name'] = display_name
+            self.db.instance_update(context, inst_id,
+                                    {'display_name': display_name})
 
         elevated = context.elevated()
         if not security_groups:
