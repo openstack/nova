@@ -27,6 +27,7 @@ from nova import wsgi
 from nova import context
 from nova.api import cloud
 from nova.api.openstack import faults
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
@@ -95,7 +96,7 @@ class Controller(wsgi.Controller):
             db_driver = FLAGS.db_driver
         self.db_driver = utils.import_object(db_driver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_manager = utils.import_object(FLAGS.compute_manager)
+        self.compute_api = compute_api.ComputeAPI()
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -147,7 +148,7 @@ class Controller(wsgi.Controller):
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
         key_pair = self.db_driver.key_pair_get_all_by_user(None, user_id)[0]
-        instances = self.compute_manager.create_instances(ctxt,
+        instances = self.compute_api.create_instances(ctxt,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             utils.import_object(FLAGS.image_service),
             env['server']['imageId'],

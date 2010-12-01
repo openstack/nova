@@ -39,6 +39,7 @@ from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.api import cloud
 from nova.image.s3 import S3ImageService
@@ -94,7 +95,7 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_manager = utils.import_object(FLAGS.compute_manager)
+        self.compute_api = compute_api.ComputeAPI()
         self.image_service = S3ImageService()
         self.setup()
 
@@ -255,7 +256,7 @@ class CloudController(object):
         return True
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
-        self.compute_manager.ensure_default_security_group(context)
+        self.compute_api.ensure_default_security_group(context)
         if context.user.is_admin():
             groups = db.security_group_get_all(context)
         else:
@@ -353,7 +354,7 @@ class CloudController(object):
         return False
 
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
-        self.compute_manager.ensure_default_security_group(context)
+        self.compute_api.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
                                                        group_name)
@@ -378,7 +379,7 @@ class CloudController(object):
     #              for these operations, so support for newer API versions
     #              is sketchy.
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
-        self.compute_manager.ensure_default_security_group(context)
+        self.compute_api.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
                                                        group_name)
@@ -414,7 +415,7 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
-        self.compute_manager.ensure_default_security_group(context)
+        self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError('group %s already exists' % group_name)
 
@@ -748,7 +749,7 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
-        instances = self.compute_manager.create_instances(context,
+        instances = self.compute_api.create_instances(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
             self.image_service,
             kwargs['image_id'],
@@ -789,7 +790,7 @@ class CloudController(object):
                               id_str)
                 continue
             now = datetime.datetime.utcnow()
-            self.compute_manager.update_instance(context,
+            self.compute_api.update_instance(context,
                                          instance_ref['id'],
                                          state_description='terminating',
                                          state=0,
