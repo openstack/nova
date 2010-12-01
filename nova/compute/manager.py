@@ -99,6 +99,8 @@ class ComputeManager(manager.Manager):
                 that has just been created
 
         """
+        # Set sane defaults if not specified
+        kwargs.setdefault('display_name', "Server %s" % kwargs['internal_id'])
         instance_ref = self.db.instance_create(context, kwargs)
         inst_id = instance_ref['id']
 
