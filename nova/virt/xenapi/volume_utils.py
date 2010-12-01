@@ -20,20 +20,10 @@ and storage repositories
 """
 
 import logging
-import re
-import string
 
 from twisted.internet import defer
 
 from nova import utils
-from nova import flags
-
-FLAGS = flags.FLAGS
-
-#FIXME: replace with proper target discovery
-flags.DEFINE_string('target_host', None, 'iSCSI Target Host')
-flags.DEFINE_string('target_port', '3260', 'iSCSI Target Port, 3260 Default')
-flags.DEFINE_string('iqn_prefix', 'iqn.2010-10.org.openstack', 'IQN Prefix')
 
 
 class VolumeHelper():
@@ -141,70 +131,3 @@ class VolumeHelper():
                 vdi_rec['location'],
                 vdi_rec['xenstore_data'],
                 vdi_rec['sm_config'])
-
-    @classmethod
-    def parse_volume_info(self, device_path, mountpoint):
-        # Because XCP/XS want a device number instead of a mountpoint
-        device_number = VolumeHelper.mountpoint_to_number(mountpoint)
-        volume_id = _get_volume_id(device_path)
-        target_host = _get_target_host(device_path)
-        target_port = _get_target_port(device_path)
-        target_iqn = _get_iqn(device_path)
-
-        if (device_number < 0) or \
-            (volume_id is None) or \
-            (target_host is None) or \
-            (target_iqn is None):
-            raise Exception('Unable to obtain target information %s, %s' %
-                            (device_path, mountpoint))
-
-        volume_info = {}
-        volume_info['deviceNumber'] = device_number
-        volume_info['volumeId'] = volume_id
-        volume_info['targetHost'] = target_host
-        volume_info['targetPort'] = target_port
-        volume_info['targeIQN'] = target_iqn
-        return volume_info
-
-    @classmethod
-    def mountpoint_to_number(self, mountpoint):
-        if mountpoint.startswith('/dev/'):
-            mountpoint = mountpoint[5:]
-        if re.match('^[hs]d[a-p]$', mountpoint):
-            return (ord(mountpoint[2:3]) - ord('a'))
-        elif re.match('^vd[a-p]$', mountpoint):
-            return (ord(mountpoint[2:3]) - ord('a'))
-        elif re.match('^[0-9]+$', mountpoint):
-            return string.atoi(mountpoint, 10)
-        else:
-            logging.warn('Mountpoint cannot be translated: %s', mountpoint)
-            return -1
-
-
-def _get_volume_id(n):
-    # FIXME: n must contain at least the volume_id
-    # /vol- is for remote volumes
-    # -vol- is for local volumes
-    # see compute/manager->setup_compute_volume
-    volume_id = n[n.find('/vol-') + 1:]
-    if volume_id == n:
-        volume_id = n[n.find('-vol-') + 1:].replace('--', '-')
-    return volume_id
-
-
-def _get_target_host(n):
-    # FIXME: if n is none fall back on flags
-    if n is None or FLAGS.target_host:
-        return FLAGS.target_host
-
-
-def _get_target_port(n):
-    # FIXME: if n is none fall back on flags
-    return FLAGS.target_port
-
-
-def _get_iqn(n):
-    # FIXME: n must contain at least the volume_id
-    volume_id = _get_volume_id(n)
-    if n is None or FLAGS.iqn_prefix:
-        return '%s:%s' % (FLAGS.iqn_prefix, volume_id)

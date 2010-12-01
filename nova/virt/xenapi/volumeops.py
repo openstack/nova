@@ -24,6 +24,8 @@ from twisted.internet import defer
 from volume_utils import VolumeHelper
 from vm_utils import VMHelper
 
+from novadeps import Volume
+
 
 class VolumeOps(object):
     def __init__(self, session):
@@ -38,9 +40,9 @@ class VolumeOps(object):
         # NOTE: No Resource Pool concept so far
         logging.debug("Attach_volume: %s, %s, %s",
                       instance_name, device_path, mountpoint)
-        vol_rec = VolumeHelper.parse_volume_info(device_path, mountpoint)
         # Create the iSCSI SR, and the PDB through which hosts access SRs.
         # But first, retrieve target info, like Host, IQN, LUN and SCSIID
+        vol_rec = Volume.parse_volume_info(device_path, mountpoint)
         label = 'SR-%s' % vol_rec['volumeId']
         description = 'Disk-for:%s' % instance_name
         # Create SR
@@ -95,7 +97,7 @@ class VolumeOps(object):
             raise Exception('Instance %s does not exist' % instance_name)
         # Detach VBD from VM
         logging.debug("Detach_volume: %s, %s", instance_name, mountpoint)
-        device_number = VolumeHelper.mountpoint_to_number(mountpoint)
+        device_number = Volume.mountpoint_to_number(mountpoint)
         try:
             vbd_ref = yield VMHelper.find_vbd_by_number(self._session,
                                                         vm_ref, device_number)

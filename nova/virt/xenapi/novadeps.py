@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+import string
+
 from nova import db
 from nova import flags
 from nova import process
@@ -31,6 +34,15 @@ XENAPI_POWER_STATE = {
     'Paused': power_state.PAUSED,
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
+
+from nova import flags
+
+FLAGS = flags.FLAGS
+
+#FIXME: replace with proper target discovery
+flags.DEFINE_string('target_host', None, 'iSCSI Target Host')
+flags.DEFINE_string('target_port', '3260', 'iSCSI Target Port, 3260 Default')
+flags.DEFINE_string('iqn_prefix', 'iqn.2010-10.org.openstack', 'IQN Prefix')
 
 
 class Instance(object):
@@ -101,3 +113,73 @@ class User(object):
     @classmethod
     def get_secret(self, user):
         return user.secret
+
+
+class Volume(object):
+
+    @classmethod
+    def parse_volume_info(self, device_path, mountpoint):
+        # Because XCP/XS want a device number instead of a mountpoint
+        device_number = Volume.mountpoint_to_number(mountpoint)
+        volume_id = Volume.get_volume_id(device_path)
+        target_host = Volume.get_target_host(device_path)
+        target_port = Volume.get_target_port(device_path)
+        target_iqn = Volume.get_iqn(device_path)
+
+        if (device_number < 0) or \
+            (volume_id is None) or \
+            (target_host is None) or \
+            (target_iqn is None):
+            raise Exception('Unable to obtain target information %s, %s' %
+                            (device_path, mountpoint))
+
+        volume_info = {}
+        volume_info['deviceNumber'] = device_number
+        volume_info['volumeId'] = volume_id
+        volume_info['targetHost'] = target_host
+        volume_info['targetPort'] = target_port
+        volume_info['targeIQN'] = target_iqn
+        return volume_info
+
+    @classmethod
+    def mountpoint_to_number(self, mountpoint):
+        if mountpoint.startswith('/dev/'):
+            mountpoint = mountpoint[5:]
+        if re.match('^[hs]d[a-p]$', mountpoint):
+            return (ord(mountpoint[2:3]) - ord('a'))
+        elif re.match('^vd[a-p]$', mountpoint):
+            return (ord(mountpoint[2:3]) - ord('a'))
+        elif re.match('^[0-9]+$', mountpoint):
+            return string.atoi(mountpoint, 10)
+        else:
+            logging.warn('Mountpoint cannot be translated: %s', mountpoint)
+            return -1
+
+    @classmethod
+    def get_volume_id(self, n):
+        # FIXME: n must contain at least the volume_id
+        # /vol- is for remote volumes
+        # -vol- is for local volumes
+        # see compute/manager->setup_compute_volume
+        volume_id = n[n.find('/vol-') + 1:]
+        if volume_id == n:
+            volume_id = n[n.find('-vol-') + 1:].replace('--', '-')
+        return volume_id
+
+    @classmethod
+    def get_target_host(self, n):
+        # FIXME: if n is none fall back on flags
+        if n is None or FLAGS.target_host:
+            return FLAGS.target_host
+
+    @classmethod
+    def get_target_port(self, n):
+        # FIXME: if n is none fall back on flags
+        return FLAGS.target_port
+
+    @classmethod
+    def get_iqn(self, n):
+        # FIXME: n must contain at least the volume_id
+        volume_id = Volume.get_volume_id(n)
+        if n is None or FLAGS.iqn_prefix:
+            return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
