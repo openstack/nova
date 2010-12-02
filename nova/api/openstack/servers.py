@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 import webob
 from webob import exc
 
@@ -64,7 +62,7 @@ def _entity_detail(inst):
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
+        flavorId='instance_type', name='display_name', id='internal_id')
 
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
@@ -79,7 +77,7 @@ def _entity_detail(inst):
 
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
+    return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
@@ -89,7 +87,7 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "progress"]}}}
+                           "status", "progress"]}}}
 
     def __init__(self, db_driver=None):
         if not db_driver:
@@ -176,7 +174,7 @@ class Controller(wsgi.Controller):
         self.db_driver.instance_update(ctxt,
                                        int(id),
                                        _filter_params(inst_dict['server']))
-        return faults.Fault(exc.HTTPNoContent())
+        return exc.HTTPNoContent()
 
     def action(self, req, id):
         """ multi-purpose method used to reboot, rebuild, and
@@ -191,6 +189,8 @@ class Controller(wsgi.Controller):
         inst_ref = self.db.instance_get_by_internal_id(ctxt, int(id))
         if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
+        #TODO(gundlach): pass reboot_type, support soft reboot in
+        #virt driver
         cloud.reboot(id)
 
     def _get_network_topic(self, context):
