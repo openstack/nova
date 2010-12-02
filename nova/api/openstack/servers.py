@@ -20,11 +20,12 @@ import time
 import webob
 from webob import exc
 
+from nova import context
+from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
 from nova import wsgi
-from nova import context
 from nova.api.openstack import faults
 from nova.compute import api as compute_api
 from nova.compute import instance_types
@@ -94,7 +95,6 @@ class Controller(wsgi.Controller):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db_driver = utils.import_object(db_driver)
-        self.network_manager = utils.import_object(FLAGS.network_manager)
         self.compute_api = compute_api.ComputeAPI()
         super(Controller, self).__init__()
 
@@ -132,11 +132,11 @@ class Controller(wsgi.Controller):
         """ Destroys a server """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-        instance = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
-        if instance and instance['user_id'] == user_id:
-            self.db_driver.instance_destroy(ctxt, id)
-            return faults.Fault(exc.HTTPAccepted())
-        return faults.Fault(exc.HTTPNotFound())
+        try:
+            self.compute_api.delete_instance(ctxt, int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return faults.Fault(exc.HTTPAccepted())
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -151,7 +151,6 @@ class Controller(wsgi.Controller):
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             utils.import_object(FLAGS.image_service),
             env['server']['imageId'],
-            self._get_network_topic(ctxt),
             name=env['server']['name'],
             description=env['server']['name'],
             key_name=key_pair['name'],
@@ -191,14 +190,3 @@ class Controller(wsgi.Controller):
         if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         self.compute_api.reboot(ctxt, id)
-
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return self.db_driver.queue_get_for(context, FLAGS.network_topic, host)
