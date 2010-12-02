@@ -158,7 +158,7 @@ class XenAPISession(object):
             #logging.debug('Polling task %s...', task)
             status = self._session.xenapi.task.get_status(task)
             if status == 'pending':
-                reactor.callLater(Config.xenapi_task_poll_interval(),
+                reactor.callLater(Config.xenapi_task_poll_interval,
                                   self._poll_task, task, deferred)
             elif status == 'success':
                 result = self._session.xenapi.task.get_result(task)
