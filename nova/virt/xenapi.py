@@ -52,11 +52,9 @@ import xmlrpclib
 
 from twisted.internet import defer
 from twisted.internet import reactor
-from twisted.internet import task
 
 from nova import db
 from nova import flags
-from nova import process
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
