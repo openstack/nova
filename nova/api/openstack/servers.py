@@ -167,7 +167,7 @@ class Controller(wsgi.Controller):
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
 
-        self.db_driver.instance_update(ctxt, instance['id'], update_dict)
+        self.compute_api.update_instance(ctxt, instance['id'], update_dict)
         return exc.HTTPNoContent()
 
     def action(self, req, id):
