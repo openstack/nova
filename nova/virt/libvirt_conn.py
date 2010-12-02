@@ -104,6 +104,8 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_bool('firewall_driver', None,
+                  'Firewall driver (defaults to nwfilter)')
 
 
 def get_connection(read_only):
@@ -128,6 +130,12 @@ class LibvirtConnection(object):
         self.rescue_xml = open(rescue_file).read()
         self._wrapped_conn = None
         self.read_only = read_only
+        if not FLAGS.firewall_driver:
+            # This is weird looking, but NWFilter is libvirt specific
+            # and requires more cooperation between the two.
+            self.firewall_driver = NWFilterFirewall(self._conn)
+        else:
+            self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
     @property
     def _conn(self):
@@ -344,11 +352,12 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        yield NWFilterFirewall(self._conn).\
-              setup_nwfilters_for_instance(instance)
+
+        yield self.firewall_driver.prepare_instance_filter(instance)
         yield self._create_image(instance, xml)
         yield self._conn.createXML(xml, 0)
         logging.debug("instance %s: is running", instance['name'])
+        yield self.firewall_driver.apply_instance_filter(instance)
 
         local_d = defer.Deferred()
         timer = task.LoopingCall(f=None)
@@ -645,11 +654,35 @@ class LibvirtConnection(object):
         return domain.interfaceStats(interface)
 
     def refresh_security_group(self, security_group_id):
-        fw = NWFilterFirewall(self._conn)
-        fw.ensure_security_group_filter(security_group_id)
+        self.firewall_driver.refresh_security_group(security_group_id)
 
 
-class NWFilterFirewall(object):
+class FirewallDriver(object):
+    def prepare_instance_filter(self, instance):
+        """Prepare filters for the instance.
+
+        At this point, the instance isn't running yet."""
+        raise NotImplementedError()
+
+    def apply_instance_filter(self, instance):
+        """Apply instance filter.
+
+        Once this method returns, the instance should be firewalled
+        appropriately. This method should as far as possible be a
+        no-op. It's vastly preferred to get everything set up in
+        prepare_instance_filter.
+        """
+        raise NotImplementedError()
+
+    def refresh_security_group(security_group_id):
+        """Refresh security group from data store
+
+        Gets called when changes have been made to the security
+        group."""
+        raise NotImplementedError()
+
+
+class NWFilterFirewall(FirewallDriver):
     """
     This class implements a network filtering mechanism versatile
     enough for EC2 style Security Group filtering by leveraging
@@ -767,7 +800,7 @@ class NWFilterFirewall(object):
         return str(net.net()), str(net.netmask())
 
     @defer.inlineCallbacks
-    def setup_nwfilters_for_instance(self, instance):
+    def prepare_instance_filter(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
         it makes sure the filters for the security groups as well as
@@ -795,7 +828,7 @@ class NWFilterFirewall(object):
                             instance['project_id']
 
         for security_group in instance.security_groups:
-            yield self.ensure_security_group_filter(security_group['id'])
+            yield self.refresh_security_group(security_group['id'])
 
             nwfilter_xml += "  <filterref filter='nova-secgroup-%d' />\n" % \
                             security_group['id']
