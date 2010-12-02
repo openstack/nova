@@ -25,7 +25,6 @@ from nova import rpc
 from nova import utils
 from nova import wsgi
 from nova import context
-from nova.api import cloud
 from nova.api.openstack import faults
 from nova.compute import api as compute_api
 from nova.compute import instance_types
@@ -191,7 +190,7 @@ class Controller(wsgi.Controller):
         inst_ref = self.db.instance_get_by_internal_id(ctxt, int(id))
         if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        cloud.reboot(id)
+        self.compute_api.reboot(ctxt, id)
 
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""

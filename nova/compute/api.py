@@ -210,3 +210,30 @@ class ComputeAPI(base.Base):
 
         """
         self.db.instance_update(context, instance_id, kwargs)
+
+    def reboot(self, context, instance_id):
+        """Reboot the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "reboot_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def rescue(self, context, instance_id):
+        """Rescue the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "rescue_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unrescue(self, context, instance_id):
+        """Unrescue the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unrescue_instance",
+                  "args": {"instance_id": instance['id']}})
