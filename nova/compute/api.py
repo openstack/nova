@@ -99,7 +99,6 @@ class ComputeAPI(base.Base):
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'server_name': name,
             'image_id': image_id,
             'kernel_id': kernel_id,
             'ramdisk_id': ramdisk_id,
@@ -182,6 +181,12 @@ class ComputeAPI(base.Base):
         """
         instance_ref = self.db.instance_create(context, kwargs)
         inst_id = instance_ref['id']
+        # Set sane defaults if not specified
+        if 'display_name' not in kwargs:
+            display_name = "Server %s" % instance_ref['internal_id']
+            instance_ref['display_name'] = display_name
+            self.db.instance_update(context, inst_id,
+                                    {'display_name': display_name})
 
         elevated = context.elevated()
         if not security_groups:

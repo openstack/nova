@@ -47,7 +47,7 @@ from nova import utils
 from nova.compute import power_state
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('instances_path', utils.abspath('../instances'),
+flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for volume creation')
