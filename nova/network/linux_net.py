@@ -38,7 +38,7 @@ flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
-flags.DEFINE_string('networks_path', utils.abspath('../networks'),
+flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
@@ -46,6 +46,8 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
+flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
+flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 flags.DEFINE_string('routing_source_ip', '127.0.0.1',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,

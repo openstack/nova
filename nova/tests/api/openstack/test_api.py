@@ -50,12 +50,12 @@ class APITest(unittest.TestCase):
 
         api.application = succeed
         resp = Request.blank('/').get_response(api)
-        self.assertFalse('cloudServersFault' in resp.body, resp.body)
+        self.assertFalse('computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 200, resp.body)
 
         api.application = raise_webob_exc
         resp = Request.blank('/').get_response(api)
-        self.assertFalse('cloudServersFault' in resp.body, resp.body)
+        self.assertFalse('computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
         api.application = raise_api_fault
@@ -65,10 +65,10 @@ class APITest(unittest.TestCase):
 
         api.application = fail
         resp = Request.blank('/').get_response(api)
-        self.assertTrue('{"cloudServersFault' in resp.body, resp.body)
+        self.assertTrue('{"computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
         api.application = fail
         resp = Request.blank('/.xml').get_response(api)
-        self.assertTrue('<cloudServersFault' in resp.body, resp.body)
+        self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
