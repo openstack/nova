@@ -44,7 +44,10 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 :xenapi_task_poll_interval:  The interval (seconds) used for polling of
                              remote tasks (Async.VM.start, etc)
                              (default: 0.5).
-
+:target_host:                the iSCSI Target Host IP address, i.e. the IP
+                             address for the nova-volume host
+:target_port:                iSCSI Target Port, 3260 Default
+:iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
 """
 
 import logging

@@ -36,8 +36,6 @@ XENAPI_POWER_STATE = {
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
 
-FLAGS = flags.FLAGS
-
 flags.DEFINE_string('xenapi_connection_url',
                     None,
                     'URL for connection to XenServer/Xen Cloud Platform.'
@@ -80,6 +78,21 @@ class Configuration(object):
     @property
     def xenapi_task_poll_interval(self):
         return self._flags.xenapi_task_poll_interval
+
+    @property
+    def target_host(self):
+        return self._flags.target_host
+
+    @property
+    def target_port(self):
+        return self._flags.target_port
+
+    @property
+    def iqn_prefix(self):
+        return self._flags.iqn_prefix
+
+
+config = Configuration()
 
 
 class Instance(object):
@@ -206,18 +219,17 @@ class Volume(object):
     @classmethod
     def get_target_host(self, n):
         # FIXME: if n is none fall back on flags
-        if n is None or FLAGS.target_host:
-            return FLAGS.target_host
+        if n is None or config.target_host:
+            return config.target_host
 
     @classmethod
     def get_target_port(self, n):
         # FIXME: if n is none fall back on flags
-        return FLAGS.target_port
+        return config.target_port
 
     @classmethod
     def get_iqn(self, n):
         # FIXME: n must contain at least the volume_id
         volume_id = Volume.get_volume_id(n)
-        if n is None or FLAGS.iqn_prefix:
-            return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
-
+        if n is None or config.iqn_prefix:
+            return '%s:%s' % (config.iqn_prefix, volume_id)
