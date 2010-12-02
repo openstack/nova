@@ -27,6 +27,7 @@ from nova import wsgi
 from nova import context
 from nova.api import cloud
 from nova.api.openstack import faults
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
@@ -95,7 +96,7 @@ class Controller(wsgi.Controller):
             db_driver = FLAGS.db_driver
         self.db_driver = utils.import_object(db_driver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_manager = utils.import_object(FLAGS.compute_manager)
+        self.compute_api = compute_api.ComputeAPI()
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -140,22 +141,23 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-
         env = self._deserialize(req.body, req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        #try:
-        inst = self._build_server_instance(req, env)
-        #except Exception, e:
-        #    return faults.Fault(exc.HTTPUnprocessableEntity())
-
         user_id = req.environ['nova.context']['user']['id']
-        rpc.cast(context.RequestContext(user_id, user_id),
-                 FLAGS.compute_topic,
-                 {"method": "run_instance",
-                  "args": {"instance_id": inst['id']}})
-        return _entity_inst(inst)
+        ctxt = context.RequestContext(user_id, user_id)
+        key_pair = self.db_driver.key_pair_get_all_by_user(None, user_id)[0]
+        instances = self.compute_api.create_instances(ctxt,
+            instance_types.get_by_flavor_id(env['server']['flavorId']),
+            utils.import_object(FLAGS.image_service),
+            env['server']['imageId'],
+            self._get_network_topic(ctxt),
+            name=env['server']['name'],
+            description=env['server']['name'],
+            key_name=key_pair['name'],
+            key_data=key_pair['public_key'])
+        return _entity_inst(instances[0])
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -190,78 +192,6 @@ class Controller(wsgi.Controller):
         if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         cloud.reboot(id)
-
-    def _build_server_instance(self, req, env):
-        """Build instance data structure and save it to the data store."""
-        ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        inst = {}
-
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
-
-        flavor_id = env['server']['flavorId']
-
-        instance_type, flavor = [(k, v) for k, v in
-            instance_types.INSTANCE_TYPES.iteritems()
-            if v['flavorid'] == flavor_id][0]
-
-        image_id = env['server']['imageId']
-        img_service = utils.import_object(FLAGS.image_service)
-
-        image = img_service.show(image_id)
-
-        if not image:
-            raise Exception("Image not found")
-
-        inst['image_id'] = image_id
-        inst['user_id'] = user_id
-        inst['launch_time'] = ltime
-        inst['mac_address'] = utils.generate_mac()
-        inst['project_id'] = user_id
-
-        inst['state_description'] = 'scheduling'
-        inst['kernel_id'] = image.get('kernelId', FLAGS.default_kernel)
-        inst['ramdisk_id'] = image.get('ramdiskId', FLAGS.default_ramdisk)
-        inst['reservation_id'] = utils.generate_uid('r')
-
-        inst['display_name'] = env['server']['name']
-        inst['display_description'] = env['server']['name']
-
-        #TODO(dietz) this may be ill advised
-        key_pair_ref = self.db_driver.key_pair_get_all_by_user(
-            None, user_id)[0]
-
-        inst['key_data'] = key_pair_ref['public_key']
-        inst['key_name'] = key_pair_ref['name']
-
-        #TODO(dietz) stolen from ec2 api, see TODO there
-        inst['security_group'] = 'default'
-
-        # Flavor related attributes
-        inst['instance_type'] = instance_type
-        inst['memory_mb'] = flavor['memory_mb']
-        inst['vcpus'] = flavor['vcpus']
-        inst['local_gb'] = flavor['local_gb']
-        inst['mac_address'] = utils.generate_mac()
-        inst['launch_index'] = 0
-
-        ref = self.compute_manager.create_instance(ctxt, **inst)
-        inst['id'] = ref['internal_id']
-
-        inst['hostname'] = str(ref['internal_id'])
-        self.compute_manager.update_instance(ctxt, inst['id'], **inst)
-
-        address = self.network_manager.allocate_fixed_ip(ctxt,
-                                                         inst['id'])
-
-        # TODO(vish): This probably should be done in the scheduler
-        #             network is setup when host is assigned
-        network_topic = self._get_network_topic(ctxt)
-        rpc.call(ctxt,
-                 network_topic,
-                 {"method": "setup_fixed_ip",
-                  "args": {"address": address}})
-        return inst
 
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""

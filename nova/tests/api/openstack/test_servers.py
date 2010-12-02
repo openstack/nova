@@ -43,6 +43,10 @@ def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
 
+def return_security_group(context, instance_id, security_group_id):
+    pass
+
+
 def stub_instance(id, user_id=1):
     return Instance(id=id, state=0, image_id=10, display_name='server%s' % id,
                     user_id=user_id)
@@ -63,6 +67,8 @@ class ServersTest(unittest.TestCase):
                        return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
+        self.stubs.Set(nova.db.api, 'instance_add_security_group',
+                       return_security_group)
 
     def tearDown(self):
         self.stubs.UnsetAll()

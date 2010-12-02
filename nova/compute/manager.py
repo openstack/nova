@@ -39,12 +39,12 @@ import logging
 
 from twisted.internet import defer
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import manager
 from nova import utils
 from nova.compute import power_state
-
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -83,53 +83,6 @@ class ComputeManager(manager.Manager):
     def refresh_security_group(self, context, security_group_id, **_kwargs):
         """This call passes stright through to the virtualization driver."""
         yield self.driver.refresh_security_group(security_group_id)
-
-    def create_instance(self, context, security_groups=None, **kwargs):
-        """Creates the instance in the datastore and returns the
-        new instance as a mapping
-
-        :param context: The security context
-        :param security_groups: list of security group ids to
-                                attach to the instance
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       created
-
-        :retval Returns a mapping of the instance information
-                that has just been created
-
-        """
-        instance_ref = self.db.instance_create(context, kwargs)
-        inst_id = instance_ref['id']
-        # Set sane defaults if not specified
-        if kwargs.get('display_name') is None:
-            display_name = "Server %s" % instance_ref['internal_id']
-            instance_ref['display_name'] = display_name
-            self.db.instance_update(context, inst_id,
-                                    {'display_name': display_name})
-
-        elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
-        for security_group_id in security_groups:
-            self.db.instance_add_security_group(elevated,
-                                                inst_id,
-                                                security_group_id)
-        return instance_ref
-
-    def update_instance(self, context, instance_id, **kwargs):
-        """Updates the instance in the datastore.
-
-        :param context: The security context
-        :param instance_id: ID of the instance to update
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       updated
-
-        :retval None
-
-        """
-        self.db.instance_update(context, instance_id, kwargs)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
