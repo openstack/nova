@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import re
 import string
 
@@ -35,14 +36,50 @@ XENAPI_POWER_STATE = {
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
 
-from nova import flags
-
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('xenapi_connection_url',
+                    None,
+                    'URL for connection to XenServer/Xen Cloud Platform.'
+                    ' Required if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_username',
+                    'root',
+                    'Username for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_password',
+                    None,
+                    'Password for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
+flags.DEFINE_float('xenapi_task_poll_interval',
+                   0.5,
+                   'The interval used for polling of remote tasks '
+                   '(Async.VM.start, etc).  Used only if '
+                   'connection_type=xenapi.')
 #FIXME: replace with proper target discovery
 flags.DEFINE_string('target_host', None, 'iSCSI Target Host')
 flags.DEFINE_string('target_port', '3260', 'iSCSI Target Port, 3260 Default')
 flags.DEFINE_string('iqn_prefix', 'iqn.2010-10.org.openstack', 'IQN Prefix')
+
+
+class Configuration(object):
+    def __init__(self):
+        self._flags = flags.FLAGS
+
+    @property
+    def xenapi_connection_url(self):
+        return self._flags.xenapi_connection_url
+
+    @property
+    def xenapi_connection_username(self):
+        return self._flags.xenapi_connection_username
+
+    @property
+    def xenapi_connection_password(self):
+        return self._flags.xenapi_connection_password
+
+    @property
+    def xenapi_task_poll_interval(self):
+        return self._flags.xenapi_task_poll_interval
 
 
 class Instance(object):
@@ -183,3 +220,4 @@ class Volume(object):
         volume_id = Volume.get_volume_id(n)
         if n is None or FLAGS.iqn_prefix:
             return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
+

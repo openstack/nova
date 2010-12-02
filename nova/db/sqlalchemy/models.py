@@ -178,8 +178,6 @@ class Instance(BASE, NovaBase):
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
 
-    server_name = Column(String(255))
-
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -212,6 +210,7 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
 

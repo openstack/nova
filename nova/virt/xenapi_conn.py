@@ -53,33 +53,14 @@ import xmlrpclib
 from twisted.internet import defer
 from twisted.internet import reactor
 
-from nova import flags
 from nova import utils
 
 from xenapi.vmops import VMOps
 from xenapi.volumeops import VolumeOps
+from xenapi.novadeps import Configuration
 
 XenAPI = None
-
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string('xenapi_connection_url',
-                    None,
-                    'URL for connection to XenServer/Xen Cloud Platform.'
-                    ' Required if connection_type=xenapi.')
-flags.DEFINE_string('xenapi_connection_username',
-                    'root',
-                    'Username for connection to XenServer/Xen Cloud Platform.'
-                    ' Used only if connection_type=xenapi.')
-flags.DEFINE_string('xenapi_connection_password',
-                    None,
-                    'Password for connection to XenServer/Xen Cloud Platform.'
-                    ' Used only if connection_type=xenapi.')
-flags.DEFINE_float('xenapi_task_poll_interval',
-                   0.5,
-                   'The interval used for polling of remote tasks '
-                   '(Async.VM.start, etc).  Used only if '
-                   'connection_type=xenapi.')
+Config = Configuration()
 
 
 def get_connection(_):
@@ -90,9 +71,9 @@ def get_connection(_):
     global XenAPI
     if XenAPI is None:
         XenAPI = __import__('XenAPI')
-    url = FLAGS.xenapi_connection_url
-    username = FLAGS.xenapi_connection_username
-    password = FLAGS.xenapi_connection_password
+    url = Config.xenapi_connection_url
+    username = Config.xenapi_connection_username
+    password = Config.xenapi_connection_password
     if not url or password is None:
         raise Exception('Must specify xenapi_connection_url, '
                         'xenapi_connection_username (optionally), and '
@@ -177,7 +158,7 @@ class XenAPISession(object):
             #logging.debug('Polling task %s...', task)
             status = self._session.xenapi.task.get_status(task)
             if status == 'pending':
-                reactor.callLater(FLAGS.xenapi_task_poll_interval,
+                reactor.callLater(Config.xenapi_task_poll_interval,
                                   self._poll_task, task, deferred)
             elif status == 'success':
                 result = self._session.xenapi.task.get_result(task)
