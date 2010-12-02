@@ -130,20 +130,22 @@ class LibvirtConnection(object):
         self.rescue_xml = open(rescue_file).read()
         self._wrapped_conn = None
         self.read_only = read_only
+
+        self.nwfilter = NWFilterFirewall(self._get_connection)
+
         if not FLAGS.firewall_driver:
-            # This is weird looking, but NWFilter is libvirt specific
-            # and requires more cooperation between the two.
-            self.firewall_driver = NWFilterFirewall(self._conn)
+            self.firewall_driver = self.nwfilter
+            self.nwfilter.handle_security_groups = True
         else:
             self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
-    @property
-    def _conn(self):
+    def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
             logging.debug('Connecting to libvirt: %s' % self.libvirt_uri)
             self._wrapped_conn = self._connect(self.libvirt_uri,
                                                self.read_only)
         return self._wrapped_conn
+    _conn = property(_get_connection)
 
     def _test_connection(self):
         try:
@@ -353,6 +355,7 @@ class LibvirtConnection(object):
                               power_state.NOSTATE,
                               'launching')
 
+        yield self.nwfilter.setup_basic_filtering(instance)
         yield self.firewall_driver.prepare_instance_filter(instance)
         yield self._create_image(instance, xml)
         yield self._conn.createXML(xml, 0)
@@ -689,6 +692,9 @@ class NWFilterFirewall(FirewallDriver):
     libvirt's nwfilter.
 
     First, all instances get a filter ("nova-base-filter") applied.
+    This filter provides some basic security such as protection against
+    MAC spoofing, IP spoofing, and ARP spoofing.
+
     This filter drops all incoming ipv4 and ipv6 connections.
     Outgoing connections are never blocked.
 
@@ -722,44 +728,80 @@ class NWFilterFirewall(FirewallDriver):
 
     (*) This sentence brought to you by the redundancy department of
         redundancy.
+
     """
 
     def __init__(self, get_connection):
-        self._conn = get_connection
+        self._libvirt_get_connection = get_connection
+        self.static_filters_configured = False
 
-    nova_base_filter = '''<filter name='nova-base' chain='root'>
-                            <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
-                            <filterref filter='no-mac-spoofing'/>
-                            <filterref filter='no-ip-spoofing'/>
-                            <filterref filter='no-arp-spoofing'/>
-                            <filterref filter='allow-dhcp-server'/>
-                            <filterref filter='nova-allow-dhcp-server'/>
-                            <filterref filter='nova-base-ipv4'/>
-                            <filterref filter='nova-base-ipv6'/>
-                          </filter>'''
+    def _get_connection(self):
+        return self._libvirt_get_connection()
+    _conn = property(_get_connection)
 
-    nova_dhcp_filter = '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
-                            <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
-                              <rule action='accept' direction='out'
-                                    priority='100'>
-                                <udp srcipaddr='0.0.0.0'
-                                     dstipaddr='255.255.255.255'
-                                     srcportstart='68'
-                                     dstportstart='67'/>
-                              </rule>
-                              <rule action='accept' direction='in'
-                                    priority='100'>
-                                <udp srcipaddr='$DHCPSERVER'
-                                     srcportstart='67'
-                                     dstportstart='68'/>
-                              </rule>
-                            </filter>'''
+    def nova_dhcp_filter(self):
+        """The standard allow-dhcp-server filter is an <ip> one, so it uses
+           ebtables to allow traffic through. Without a corresponding rule in
+           iptables, it'll get blocked anyway."""
+
+        return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
+                    <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                    <rule action='accept' direction='out'
+                          priority='100'>
+                      <udp srcipaddr='0.0.0.0'
+                           dstipaddr='255.255.255.255'
+                           srcportstart='68'
+                           dstportstart='67'/>
+                    </rule>
+                    <rule action='accept' direction='in'
+                          priority='100'>
+                      <udp srcipaddr='$DHCPSERVER'
+                           srcportstart='67'
+                           dstportstart='68'/>
+                    </rule>
+                  </filter>'''
+
+    def setup_basic_filtering(self, instance):
+        """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
+
+        if self.handle_security_groups:
+            # No point in setting up a filter set that we'll be overriding
+            # anyway.
+            return
+
+        self._ensure_static_filters()
+
+        instance_filter_name = self._instance_filter_name(instance)
+        self._define_filter(self._filter_container(instance_filter_name,
+                                                   ['nova-base']))
+
+    @defer.inlineCallbacks
+    def _ensure_static_filters(self):
+        if self.static_filters_configured:
+            return
+
+        yield self._define_filter(self._filter_container('nova-base',
+                                                   ['no-mac-spoofing',
+                                                    'no-ip-spoofing',
+                                                    'no-arp-spoofing',
+                                                    'allow-dhcp-server']))
+        yield self._define_filter(self.nova_base_ipv4_filter)
+        yield self._define_filter(self.nova_base_ipv6_filter)
+        yield self._define_filter(self.nova_dhcp_filter)
+
+        self.static_filters_configured = True
+
+    def _filter_container(self, name, filters):
+        xml = '''<filter name='%s' chain='root'>%s</filter>''' % (
+                 name,
+                 ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
+        return xml
 
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             for direction, action, priority in [('out', 'accept', 399),
-                                                ('inout', 'drop', 400)]:
+                                                ('in', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s />
                              </rule>""" % (action, direction,
@@ -771,7 +813,7 @@ class NWFilterFirewall(FirewallDriver):
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             for direction, action, priority in [('out', 'accept', 399),
-                                                ('inout', 'drop', 400)]:
+                                                ('in', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s-ipv6 />
                              </rule>""" % (action, direction,
@@ -799,6 +841,11 @@ class NWFilterFirewall(FirewallDriver):
         net = IPy.IP(cidr)
         return str(net.net()), str(net.netmask())
 
+    def setup_security_groups_filtering(self, instance):
+        """Set up basic filtering (MAC, IP, and ARP spoofing protection)
+        as well as security groups filtering."""
+
+
     @defer.inlineCallbacks
     def prepare_instance_filter(self, instance):
         """
@@ -807,37 +854,43 @@ class NWFilterFirewall(FirewallDriver):
         the base filter are all in place.
         """
 
-        yield self._define_filter(self.nova_base_ipv4_filter)
-        yield self._define_filter(self.nova_base_ipv6_filter)
-        yield self._define_filter(self.nova_dhcp_filter)
-        yield self._define_filter(self.nova_base_filter)
+        yield self._ensure_static_filters()
 
-        nwfilter_xml = "<filter name='nova-instance-%s' chain='root'>\n" \
-                       "  <filterref filter='nova-base' />\n" % \
-                       instance['name']
+        instance_filter_name = self._instance_filter_name(instance)
+        instance_secgroup_filter_name = '%s-secgroup' % (instance_filter_name,)
+        instance_filter_children = ['nova-base', instance_secgroup_filter_name]
+        instance_secgroup_filter_children = ['nova-base-ipv4', 'nova-base-ipv6',
+                                            'nova-allow-dhcp-server']
 
         if FLAGS.allow_project_net_traffic:
             network_ref = db.project_get_network(context.get_admin_context(),
                                                  instance['project_id'])
             net, mask = self._get_net_and_mask(network_ref['cidr'])
+
             project_filter = self.nova_project_filter(instance['project_id'],
                                                       net, mask)
             yield self._define_filter(project_filter)
 
-            nwfilter_xml += "  <filterref filter='nova-project-%s' />\n" % \
-                            instance['project_id']
+            instance_secgroup_filter_children += [('nova-project-%s' %
+                                                        instance['project_id'])]
 
         for security_group in instance.security_groups:
             yield self.refresh_security_group(security_group['id'])
 
-            nwfilter_xml += "  <filterref filter='nova-secgroup-%d' />\n" % \
-                            security_group['id']
-        nwfilter_xml += "</filter>"
+            instance_secgroup_filter_children += [('nova-secgroup-%s' %
+                                                          security_group['id'])]
 
-        yield self._define_filter(nwfilter_xml)
+        yield self._define_filter(
+                    self._filter_container(instance_secgroup_filter_name,
+                                           instance_secgroup_filter_children))
+
+        yield self._define_filter(
+                    self._filter_container(instance_filter_name,
+                                           instance_filter_children))
+
         return
 
-    def ensure_security_group_filter(self, security_group_id):
+    def refresh_security_group(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -868,3 +921,7 @@ class NWFilterFirewall(FirewallDriver):
         xml = "<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>" % \
               (security_group_id, rule_xml,)
         return xml
+
+    def _instance_filter_name(self, instance):
+        return 'nova-instance-%s' % instance['name']
+

@@ -89,7 +89,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
-            conn = libvirt_conn.LibvirtConnection(True)
+            conn = libvirt_conn.get_connection(True)
 
             uri, _template, _rescue = conn.get_uri_and_templates()
             self.assertEquals(uri, expected_uri)
@@ -130,6 +130,8 @@ class NWFilterTestCase(test.TrialTestCase):
 
         class Mock(object):
             pass
+            #def __call__(self, *args, **kwargs):
+            #    return 
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
@@ -139,7 +141,7 @@ class NWFilterTestCase(test.TrialTestCase):
 
         self.fake_libvirt_connection = Mock()
 
-        self.fw = libvirt_conn.NWFilterFirewall(self.fake_libvirt_connection)
+        self.fw = libvirt_conn.NWFilterFirewall(lambda:self.fake_libvirt_connection)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
@@ -252,7 +254,7 @@ class NWFilterTestCase(test.TrialTestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
-        d = self.fw.setup_nwfilters_for_instance(instance)
+        d = self.fw.prepare_instance_filter(instance)
         d.addCallback(_ensure_all_called)
         d.addCallback(lambda _: self.teardown_security_group())
 
