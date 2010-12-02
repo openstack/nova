@@ -68,6 +68,17 @@ class ComputeTestCase(test.TrialTestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']
 
+    def test_create_instance_defaults_display_name(self):
+        """Verify that an instance cannot be created without a display_name."""
+        cases = [dict(), dict(display_name=None)]
+        for instance in cases:
+            ref = self.compute_api.create_instance(self.context, None,
+                                                   **instance)
+            try:
+                self.assertNotEqual(ref.display_name, None)
+            finally:
+                db.instance_destroy(self.context, ref['id'])
+
     def test_create_instance_associates_security_groups(self):
         """Make sure create_instance associates security groups"""
         inst = {}
