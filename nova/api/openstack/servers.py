@@ -34,16 +34,6 @@ import nova.image.service
 FLAGS = flags.FLAGS
 
 
-def _filter_params(inst_dict):
-    """ Extracts all updatable parameters for a server update request """
-    keys = dict(name='name', admin_pass='adminPass')
-    new_attrs = {}
-    for k, v in keys.items():
-        if v in inst_dict:
-            new_attrs[k] = inst_dict[v]
-    return new_attrs
-
-
 def _entity_list(entities):
     """ Coerces a list of servers into proper dictionary format """
     return dict(servers=entities)
@@ -171,9 +161,13 @@ class Controller(wsgi.Controller):
         if not instance or instance.user_id != user_id:
             return faults.Fault(exc.HTTPNotFound())
 
-        self.db_driver.instance_update(ctxt,
-                                       int(id),
-                                       _filter_params(inst_dict['server']))
+        update_dict = {}
+        if 'adminPass' in inst_dict['server']:
+            update_dict['admin_pass'] = inst_dict['server']['adminPass']
+        if 'name' in inst_dict['server']:
+            update_dict['display_name'] = inst_dict['server']['name']
+
+        self.db_driver.instance_update(ctxt, instance['id'], update_dict)
         return exc.HTTPNoContent()
 
     def action(self, req, id):
