@@ -41,7 +41,6 @@ from nova import rpc
 from nova import utils
 from nova.compute import api as compute_api
 from nova.compute import instance_types
-from nova.image.s3 import S3ImageService
 
 
 FLAGS = flags.FLAGS
@@ -94,8 +93,9 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_api = compute_api.ComputeAPI(self.network_manager)
-        self.image_service = S3ImageService()
+        self.image_service = utils.import_object(FLAGS.image_service)
+        self.compute_api = compute_api.ComputeAPI(self.network_manager,
+                                                  self.image_service)
         self.setup()
 
     def __str__(self):
@@ -119,7 +119,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in db.instance_get_all_by_project(context, project_id):
+        for instance in self.compute_api.get_instances(context, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -438,7 +438,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -535,7 +535,7 @@ class CloudController(object):
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -613,11 +613,7 @@ class CloudController(object):
             instances = db.instance_get_all_by_reservation(context,
                                                            reservation_id)
         else:
-            if context.user.is_admin():
-                instances = db.instance_get_all(context)
-            else:
-                instances = db.instance_get_all_by_project(context,
-                                                           context.project_id)
+            instances = self.compute_api.get_instances(context)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -714,7 +710,7 @@ class CloudController(object):
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
@@ -750,13 +746,12 @@ class CloudController(object):
         max_count = int(kwargs.get('max_count', 1))
         instances = self.compute_api.create_instances(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
-            self.image_service,
             kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
             ramdisk_id=kwargs.get('ramdisk_id'),
-            name=kwargs.get('display_name'),
+            display_name=kwargs.get('display_name'),
             description=kwargs.get('display_description'),
             user_data=kwargs.get('user_data', ''),
             key_name=kwargs.get('key_name'),
@@ -801,7 +796,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = db.instance_get_by_internal_id(context, internal_id)
+            inst = self.compute_api.get_instance(context, internal_id)
             db.instance_update(context, inst['id'], kwargs)
         return True
 
