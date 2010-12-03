@@ -63,8 +63,20 @@ You see an access key and a secret key export, such as these made-up ones:::
     export EC2_ACCESS_KEY=4e6498a2-blah-blah-blah-17d1333t97fd
     export EC2_SECRET_KEY=0a520304-blah-blah-blah-340sp34k05bbe9a7
 
+Step 5: Create the network 
+--------------------------
 
-Step 5: Create a project with the user you created
+Type or copy/paste in the following line to create a network prior to creating a project. 
+
+::
+
+    sudo nova-manage network create 10.0.0.0/8 1 64
+
+For this command, the IP address is the cidr notation for your netmask, such as 192.168.1.0/24. The value 1 is the total number of networks you want made, and the 64 value is the total number of ips in all networks.
+
+After running this command, entries are made in the 'networks' and 'fixed_ips' table in the database.
+
+Step 6: Create a project with the user you created
 --------------------------------------------------
 Type or copy/paste in the following line to create a project named IRT (for Ice Road Truckers, of course) with the newly-created user named anne.
 
@@ -94,7 +106,7 @@ Type or copy/paste in the following line to create a project named IRT (for Ice 
     Data Base Updated
 
 
-Step 6: Unzip the nova.zip
+Step 7: Unzip the nova.zip
 --------------------------
 
 You should have a nova.zip file in your current working directory. Unzip it with this command:
@@ -116,7 +128,7 @@ You'll see these files extract.
      extracting: cacert.pem
 
 
-Step 7: Source the rc file
+Step 8: Source the rc file
 --------------------------
 Type or copy/paste the following to source the novarc file in your current working directory.
 
@@ -125,7 +137,7 @@ Type or copy/paste the following to source the novarc file in your current worki
     . novarc
 
 
-Step 8: Pat yourself on the back :)
+Step 9: Pat yourself on the back :)
 -----------------------------------
 Congratulations, your cloud is up and running, you’ve created an admin user, retrieved the user's credentials and put them in your environment.
 

@@ -22,8 +22,8 @@ Handles all processes relating to instances (guest vms).
 The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
 handles RPC calls relating to creating instances.  It is responsible for
 building a disk image, launching it via the underlying virtualization driver,
-responding to calls to check it state, attaching persistent as well as
-termination.
+responding to calls to check its state, attaching persistent storage, and
+terminating it.
 
 **Related Flags**
 
@@ -39,7 +39,6 @@ import logging
 
 from twisted.internet import defer
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import manager
@@ -50,10 +49,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
-                    'Driver to use for volume creation')
+                    'Driver to use for controlling virtualization')
 
 
 class ComputeManager(manager.Manager):
+
     """Manages the running instances from creation to destruction."""
 
     def __init__(self, compute_driver=None, *args, **kwargs):
@@ -93,7 +93,6 @@ class ComputeManager(manager.Manager):
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
-        project_id = instance_ref['project_id']
         self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
@@ -135,7 +134,6 @@ class ComputeManager(manager.Manager):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
-
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
