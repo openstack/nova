@@ -27,6 +27,7 @@ from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.databases import mysql
 
 from nova.db.sqlalchemy.session import get_session
 
@@ -155,7 +156,7 @@ class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
     id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    internal_id = Column(mysql.MSInteger(unsigned=True), unique=True)
 
     admin_pass = Column(String(255))
 
