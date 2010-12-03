@@ -48,8 +48,8 @@ def return_security_group(context, instance_id, security_group_id):
 
 
 def stub_instance(id, user_id=1):
-    return Instance(id=id, state=0, image_id=10, display_name='server%s' % id,
-                    user_id=user_id)
+    return Instance(id=id + 123456, state=0, image_id=10, user_id=user_id,
+                    display_name='server%s' % id, internal_id=id)
 
 
 class ServersTest(unittest.TestCase):
