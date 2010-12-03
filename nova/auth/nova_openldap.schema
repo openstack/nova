@@ -31,19 +31,9 @@ attributetype (
     )
 
 attributetype (
-    novaAttrs:3
-    NAME 'keyFingerprint'
-    DESC 'Fingerprint of private key'
-    EQUALITY caseIgnoreMatch
-    SUBSTR caseIgnoreSubstringsMatch
-    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
-    SINGLE-VALUE
-    )
-
-attributetype (
     novaAttrs:4
-    NAME 'isAdmin'
-    DESC 'Is user an administrator?'
+    NAME 'isNovaAdmin'
+    DESC 'Is user an nova administrator?'
     EQUALITY booleanMatch
     SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
     SINGLE-VALUE
@@ -61,17 +51,7 @@ objectClass (
     NAME 'novaUser'
     DESC 'access and secret keys'
     AUXILIARY
-    MUST ( uid )
-    MAY  ( accessKey $ secretKey $ isAdmin )
-    )
-
-objectClass (
-    novaOCs:2
-    NAME 'novaKeyPair'
-    DESC 'Key pair for User'
-    SUP top
-    STRUCTURAL
-    MUST ( cn $ sshPublicKey $ keyFingerprint )
+    MAY  ( accessKey $ secretKey $ isNovaAdmin )
     )
 
 objectClass (

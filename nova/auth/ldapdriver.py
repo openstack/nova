@@ -37,6 +37,8 @@ flags.DEFINE_string('ldap_url', 'ldap://localhost',
 flags.DEFINE_string('ldap_password', 'changeme', 'LDAP password')
 flags.DEFINE_string('ldap_user_dn', 'cn=Manager,dc=example,dc=com',
                     'DN of admin user')
+flags.DEFINE_string('ldap_user_id_attribute', 'uid', 'Attribute to use as id')
+flags.DEFINE_string('ldap_user_name_attribute', 'cn', 'Attribute to use as name')
 flags.DEFINE_string('ldap_user_unit', 'Users', 'OID for Users')
 flags.DEFINE_string('ldap_user_subtree', 'ou=Users,dc=example,dc=com',
                     'OU for Users')
@@ -131,12 +133,12 @@ class LdapDriver(object):
                              'inetOrgPerson',
                              'novaUser']),
             ('ou', [FLAGS.ldap_user_unit]),
-            ('uid', [name]),
+            (FLAGS.ldap_user_id_attribute, [name]),
             ('sn', [name]),
-            ('cn', [name]),
+            (FLAGS.ldap_user_name_attribute, [name]),
             ('secretKey', [secret_key]),
             ('accessKey', [access_key]),
-            ('isAdmin', [str(is_admin).upper()]),
+            ('isNovaAdmin', [str(is_admin).upper()]),
         ]
         self.conn.add_s(self.__uid_to_dn(name), attr)
         return self.__to_user(dict(attr))
@@ -274,7 +276,7 @@ class LdapDriver(object):
         if secret_key:
             attr.append((self.ldap.MOD_REPLACE, 'secretKey', secret_key))
         if admin is not None:
-            attr.append((self.ldap.MOD_REPLACE, 'isAdmin', str(admin).upper()))
+            attr.append((self.ldap.MOD_REPLACE, 'isNovaAdmin', str(admin).upper()))
         self.conn.modify_s(self.__uid_to_dn(uid), attr)
 
     def __user_exists(self, uid):
@@ -450,11 +452,11 @@ class LdapDriver(object):
         if attr == None:
             return None
         return {
-            'id': attr['uid'][0],
-            'name': attr['cn'][0],
+            'id': attr[FLAGS.ldap_user_id_attribute][0],
+            'name': attr[FLAGS.ldap_user_name_attribute][0],
             'access': attr['accessKey'][0],
             'secret': attr['secretKey'][0],
-            'admin': (attr['isAdmin'][0] == 'TRUE')}
+            'admin': (attr['isNovaAdmin'][0] == 'TRUE')}
 
     def __to_project(self, attr):
         """Convert ldap attributes to Project object"""
@@ -474,9 +476,10 @@ class LdapDriver(object):
         return dn.split(',')[0].split('=')[1]
 
     @staticmethod
-    def __uid_to_dn(dn):
+    def __uid_to_dn(uid):
         """Convert uid to dn"""
-        return 'uid=%s,%s' % (dn, FLAGS.ldap_user_subtree)
+        return FLAGS.ldap_user_id_attribute + '=%s,%s' \
+            % (uid, FLAGS.ldap_user_subtree)
 
 
 class FakeLdapDriver(LdapDriver):
