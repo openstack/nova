@@ -543,7 +543,7 @@ def instance_create(context, values):
     with session.begin():
         while instance_ref.internal_id == None:
             # Instances have integer internal ids.
-            internal_id = random.randint(0, 2 ** 32 - 1)
+            internal_id = random.randint(0, 2 ** 31 - 1)
             if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
