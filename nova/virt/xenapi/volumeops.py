@@ -24,7 +24,9 @@ class VolumeOps(object):
         self._session = session
 
     def attach_volume(self, instance_name, device_path, mountpoint):
+        # FIXME: that's going to be sorted when iscsi-xenapi lands in branch
         return True
 
     def detach_volume(self, instance_name, mountpoint):
+        # FIXME: that's going to be sorted when iscsi-xenapi lands in branch
         return True

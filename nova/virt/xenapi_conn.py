@@ -83,47 +83,59 @@ def get_connection(_):
 
 
 class XenAPIConnection(object):
+    """ A connection to XenServer or Xen Cloud Platform """
     def __init__(self, url, user, pw):
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
 
     def list_instances(self):
+        """ List VM instances """
         return self._vmops.list_instances()
 
     def spawn(self, instance):
+        """ Create VM instance """
         self._vmops.spawn(instance)
 
     def reboot(self, instance):
+        """ Reboot VM instance """
         self._vmops.reboot(instance)
 
     def destroy(self, instance):
+        """ Destroy VM instance """
         self._vmops.destroy(instance)
 
     def get_info(self, instance_id):
+        """ Return data about VM instance """
         return self._vmops.get_info(instance_id)
 
     def get_console_output(self, instance):
+        """ Return snapshot of console """
         return self._vmops.get_console_output(instance)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
+        """ Attach volume storage to VM instance """
         return self._volumeops.attach_volume(instance_name,
                                                device_path,
                                                mountpoint)
 
     def detach_volume(self, instance_name, mountpoint):
+        """ Detach volume storage to VM instance """
         return self._volumeops.detach_volume(instance_name, mountpoint)
 
 
 class XenAPISession(object):
+    """ The session to invoke XenAPI SDK calls """
     def __init__(self, url, user, pw):
         self._session = XenAPI.Session(url)
         self._session.login_with_password(user, pw)
 
     def get_xenapi(self):
+        """ Return the xenapi object """
         return self._session.xenapi
 
     def get_xenapi_host(self):
+        """ Return the xenapi host """
         return self._session.xenapi.session.get_this_host(self._session.handle)
 
     @utils.deferredToThread
@@ -170,12 +182,13 @@ class XenAPISession(object):
                              error_info)
                 deferred.errback(XenAPI.Failure(error_info))
             #logging.debug('Polling task %s done.', task)
-        except Exception, exc:
+        except XenAPI.Failure, exc:
             logging.warn(exc)
             deferred.errback(exc)
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):
+    """ Parse exception details """
     try:
         return func(*args, **kwargs)
     except XenAPI.Failure, exc:

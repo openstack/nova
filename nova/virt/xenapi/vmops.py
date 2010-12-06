@@ -31,15 +31,20 @@ from network_utils import NetworkHelper
 
 
 class VMOps(object):
+    """
+    Management class for VM-related tasks
+    """
     def __init__(self, session):
         self._session = session
 
     def list_instances(self):
+        """ List VM instances """
         return [self._session.get_xenapi().VM.get_name_label(vm) \
                 for vm in self._session.get_xenapi().VM.get_all()]
 
     @defer.inlineCallbacks
     def spawn(self, instance):
+        """ Create VM instance """
         vm = yield VMHelper.lookup(self._session, Instance.get_name(instance))
         if vm is not None:
             raise Exception('Attempted to create non-unique name %s' %
@@ -71,6 +76,7 @@ class VMOps(object):
 
     @defer.inlineCallbacks
     def reboot(self, instance):
+        """ Reboot VM instance """
         instance_name = Instance.get_name(instance)
         vm = yield VMHelper.lookup(self._session, instance_name)
         if vm is None:
@@ -80,6 +86,7 @@ class VMOps(object):
 
     @defer.inlineCallbacks
     def destroy(self, instance):
+        """ Destroy VM instance """
         vm = yield VMHelper.lookup(self._session, Instance.get_name(instance))
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
@@ -91,7 +98,7 @@ class VMOps(object):
             task = yield self._session.call_xenapi('Async.VM.hard_shutdown',
                                                    vm)
             yield self._session.wait_for_task(task)
-        except Exception, exc:
+        except XenAPI.Failure, exc:
             logging.warn(exc)
         # Disk clean-up
         if vdis:
@@ -100,15 +107,16 @@ class VMOps(object):
                     task = yield self._session.call_xenapi('Async.VDI.destroy',
                                                            vdi)
                     yield self._session.wait_for_task(task)
-                except Exception, exc:
+                except XenAPI.Failure, exc:
                     logging.warn(exc)
         try:
             task = yield self._session.call_xenapi('Async.VM.destroy', vm)
             yield self._session.wait_for_task(task)
-        except Exception, exc:
+        except XenAPI.Failure, exc:
             logging.warn(exc)
 
     def get_info(self, instance_id):
+        """ Return data about VM instance """
         vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
             raise Exception('instance not present %s' % instance_id)
@@ -120,4 +128,6 @@ class VMOps(object):
                 'cpu_time': 0}
 
     def get_console_output(self, instance):
-        return 'FAKE CONSOLE OUTPUT'
+        """ Return snapshot of console """
+        # TODO: implement this to fix pylint!
+        return 'FAKE CONSOLE OUTPUT of instance'

@@ -31,12 +31,15 @@ from novadeps import User
 
 
 class VMHelper():
-    def __init__(self, session):
+    """
+    The class that wraps the helper methods together.
+    """
+    def __init__(self):
         return
 
     @classmethod
     @defer.inlineCallbacks
-    def create_vm(self, session, instance, kernel, ramdisk):
+    def create_vm(cls, session, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
 
@@ -80,7 +83,7 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def create_vbd(self, session, vm_ref, vdi_ref, userdevice, bootable):
+    def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
 
@@ -105,7 +108,7 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def create_vif(self, session, vm_ref, network_ref, mac_address):
+    def create_vif(cls, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
 
@@ -127,7 +130,7 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def fetch_image(self, session, image, user, project, use_sr):
+    def fetch_image(cls, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
         its kernel and ramdisk (if external kernels are being used).
@@ -135,7 +138,7 @@ class VMHelper():
 
         url = Image.get_url(image)
         access = User.get_access(user, project)
-        logging.debug("Asking xapi to fetch %s as %s" % (url, access))
+        logging.debug("Asking xapi to fetch %s as %s", url, access)
         fn = use_sr and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
@@ -149,11 +152,13 @@ class VMHelper():
 
     @classmethod
     @utils.deferredToThread
-    def lookup(self, session, i):
+    def lookup(cls, session, i):
+        """ Look the instance i up, and returns it if available """
         return VMHelper.lookup_blocking(session, i)
 
     @classmethod
-    def lookup_blocking(self, session, i):
+    def lookup_blocking(cls, session, i):
+        """ Synchronous lookup """
         vms = session.get_xenapi().VM.get_by_name_label(i)
         n = len(vms)
         if n == 0:
@@ -165,11 +170,13 @@ class VMHelper():
 
     @classmethod
     @utils.deferredToThread
-    def lookup_vm_vdis(self, session, vm):
+    def lookup_vm_vdis(cls, session, vm):
+        """ Look for the VDIs that are attached to the VM """
         return VMHelper.lookup_vm_vdis_blocking(session, vm)
 
     @classmethod
-    def lookup_vm_vdis_blocking(self, session, vm):
+    def lookup_vm_vdis_blocking(cls, session, vm):
+        """ Synchronous lookup_vm_vdis """
         # Firstly we get the VBDs, then the VDIs.
         # TODO: do we leave the read-only devices?
         vbds = session.get_xenapi().VM.get_VBDs(vm)
@@ -180,7 +187,8 @@ class VMHelper():
                     vdi = session.get_xenapi().VBD.get_VDI(vbd)
                     # Test valid VDI
                     record = session.get_xenapi().VDI.get_record(vdi)
-                except Exception, exc:
+                    logging.debug('VDI %s is still available', record['uuid'])
+                except XenAPI.Failure, exc:
                     logging.warn(exc)
                 else:
                     vdis.append(vdi)
