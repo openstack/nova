@@ -19,8 +19,5 @@ This is loaded late so that there's no need to install this library
 when not using XenAPI
 """
 
-XenAPI = None
+XenAPI = __import__('XenAPI')
 global XenAPI
-
-if XenAPI is None:
-    XenAPI = __import__('XenAPI')
