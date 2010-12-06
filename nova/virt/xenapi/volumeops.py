@@ -47,7 +47,7 @@ class VolumeOps(object):
                       instance_name, device_path, mountpoint)
         # Create the iSCSI SR, and the PDB through which hosts access SRs.
         # But first, retrieve target info, like Host, IQN, LUN and SCSIID
-        vol_rec = Volume.parse_volume_info(device_path, mountpoint)
+        vol_rec = yield Volume.parse_volume_info(device_path, mountpoint)
         label = 'SR-%s' % vol_rec['volumeId']
         description = 'Disk-for:%s' % instance_name
         # Create SR

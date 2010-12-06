@@ -27,6 +27,9 @@ import string
 from nova import db
 from nova import flags
 from nova import context
+from nova import process
+
+from twisted.internet import defer
 
 from nova.compute import power_state
 from nova.auth.manager import AuthManager
@@ -193,15 +196,28 @@ class User(object):
 
 
 class Volume(object):
+    """ Wraps up volume specifics """
 
     @classmethod
-    def parse_volume_info(self, device_path, mountpoint):
-        # Because XCP/XS want a device number instead of a mountpoint
+    @defer.inlineCallbacks
+    def parse_volume_info(cls, device_path, mountpoint):
+        """
+        Parse device_path and mountpoint as they can be used by XenAPI.
+        In particular, the mountpoint (e.g. /dev/sdc) must be translated
+        into a numeric literal.
+        FIXME: As for device_path, currently cannot be used as it is,
+        because it does not contain target information. As for interim
+        solution, target details are passed either via Flags or obtained
+        by iscsiadm. Long-term solution is to add a few more fields to the
+        db in the iscsi_target table with the necessary info and modify
+        the iscsi driver to set them.
+        """
         device_number = Volume.mountpoint_to_number(mountpoint)
         volume_id = Volume.get_volume_id(device_path)
-        target_host = Volume.get_target_host(device_path)
-        target_port = Volume.get_target_port(device_path)
-        target_iqn = Volume.get_iqn(device_path)
+        (iscsi_name, iscsi_portal) = yield Volume.get_target(volume_id)
+        target_host = Volume.get_target_host(iscsi_portal)
+        target_port = Volume.get_target_port(iscsi_portal)
+        target_iqn = Volume.get_iqn(iscsi_name, volume_id)
 
         if (device_number < 0) or \
             (volume_id is None) or \
@@ -216,10 +232,11 @@ class Volume(object):
         volume_info['targetHost'] = target_host
         volume_info['targetPort'] = target_port
         volume_info['targeIQN'] = target_iqn
-        return volume_info
+        defer.returnValue(volume_info)
 
     @classmethod
-    def mountpoint_to_number(self, mountpoint):
+    def mountpoint_to_number(cls, mountpoint):
+        """ Translate a mountpoint like /dev/sdc into a numberic """
         if mountpoint.startswith('/dev/'):
             mountpoint = mountpoint[5:]
         if re.match('^[hs]d[a-p]$', mountpoint):
@@ -233,8 +250,9 @@ class Volume(object):
             return -1
 
     @classmethod
-    def get_volume_id(self, n):
-        # FIXME: n must contain at least the volume_id
+    def get_volume_id(cls, n):
+        """ Retrieve the volume id from device_path """
+        # n must contain at least the volume_id
         # /vol- is for remote volumes
         # -vol- is for local volumes
         # see compute/manager->setup_compute_volume
@@ -244,19 +262,52 @@ class Volume(object):
         return volume_id
 
     @classmethod
-    def get_target_host(self, n):
-        # FIXME: if n is none fall back on flags
-        if n is None or config.target_host:
+    def get_target_host(cls, n):
+        """ Retrieve target host """
+        if n:
+            return n[0:n.find(':')]
+        elif n is None or config.target_host:
             return config.target_host
 
     @classmethod
-    def get_target_port(self, n):
-        # FIXME: if n is none fall back on flags
-        return config.target_port
+    def get_target_port(cls, n):
+        """ Retrieve target port """
+        if n:
+            return n[n.find(':') + 1:]
+        elif  n is None or config.target_port:
+            return config.target_port
 
     @classmethod
-    def get_iqn(self, n):
-        # FIXME: n must contain at least the volume_id
-        volume_id = Volume.get_volume_id(n)
-        if n is None or config.iqn_prefix:
+    def get_iqn(cls, n, id):
+        """ Retrieve target IQN """
+        if n:
+            return n
+        elif n is None or config.iqn_prefix:
+            volume_id = Volume.get_volume_id(id)
             return '%s:%s' % (config.iqn_prefix, volume_id)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def get_target(self, volume_id):
+        """
+        Gets iscsi name and portal from volume name and host.
+        For this method to work the following are needed:
+        1) volume_ref['host'] to resolve the public IP address
+        2) ietd to listen only to the public network interface
+        If any of the two are missing, fall back on Flags
+        """
+        volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
+                                             volume_id)
+
+        (r, _e) = yield process.simple_execute("sudo iscsiadm -m discovery -t "
+                                         "sendtargets -p %s" %
+                                         volume_ref['host'])
+        if len(_e) == 0:
+            for target in r.splitlines():
+                if volume_id in target:
+                    (location, _sep, iscsi_name) = target.partition(" ")
+                    break
+            iscsi_portal = location.split(",")[0]
+            defer.returnValue((iscsi_name, iscsi_portal))
+        else:
+            defer.returnValue((None, None))
