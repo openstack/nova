@@ -124,7 +124,7 @@ class Controller(wsgi.Controller):
             self.compute_api.delete_instance(ctxt, int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return faults.Fault(exc.HTTPAccepted())
+        return exc.HTTPAccepted()
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -165,7 +165,7 @@ class Controller(wsgi.Controller):
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
 
-        self.compute_api.update_instance(ctxt, instance['id'], update_dict)
+        self.compute_api.update_instance(ctxt, instance['id'], **update_dict)
         return exc.HTTPNoContent()
 
     def action(self, req, id):
@@ -184,3 +184,4 @@ class Controller(wsgi.Controller):
         # TODO(gundlach): pass reboot_type, support soft reboot in
         # virt driver
         self.compute_api.reboot(ctxt, id)
+        return exc.HTTPAccepted()
