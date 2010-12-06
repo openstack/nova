@@ -20,6 +20,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import XenAPI
 
 from twisted.internet import defer
 

@@ -58,19 +58,14 @@ from nova import utils
 from xenapi.vmops import VMOps
 from xenapi.volumeops import VolumeOps
 from xenapi.novadeps import Configuration
+from xenapi import XenAPI
 
-XenAPI = None
 Config = Configuration()
 
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
-    # This is loaded late so that there's no need to install this
-    # library when not using XenAPI.
-    global XenAPI
-    if XenAPI is None:
-        XenAPI = __import__('XenAPI')
     url = Config.xenapi_connection_url
     username = Config.xenapi_connection_username
     password = Config.xenapi_connection_password

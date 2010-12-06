@@ -19,6 +19,7 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import logging
+import XenAPI
 
 from twisted.internet import defer
 
