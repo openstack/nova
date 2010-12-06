@@ -60,10 +60,15 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc).  Used only if '
                    'connection_type=xenapi.')
-#FIXME: replace with proper target discovery
-flags.DEFINE_string('target_host', None, 'iSCSI Target Host')
-flags.DEFINE_string('target_port', '3260', 'iSCSI Target Port, 3260 Default')
-flags.DEFINE_string('iqn_prefix', 'iqn.2010-10.org.openstack', 'IQN Prefix')
+flags.DEFINE_string('target_host',
+                    None,
+                    'iSCSI Target Host')
+flags.DEFINE_string('target_port',
+                    '3260',
+                    'iSCSI Target Port, 3260 Default')
+flags.DEFINE_string('iqn_prefix',
+                    'iqn.2010-10.org.openstack',
+                    'IQN Prefix')
 
 
 class Configuration(object):
@@ -292,9 +297,9 @@ class Volume(object):
         """
         Gets iscsi name and portal from volume name and host.
         For this method to work the following are needed:
-        1) volume_ref['host'] to resolve the public IP address
-        2) ietd to listen only to the public network interface
-        If any of the two are missing, fall back on Flags
+        1) volume_ref['host'] must resolve to something rather than loopback
+        2) ietd must bind only to the address as resolved above
+        If any of the two conditions are not met, fall back on Flags.
         """
         volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
                                              volume_id)
