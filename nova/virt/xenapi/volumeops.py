@@ -18,6 +18,7 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 import logging
+import XenAPI
 
 from twisted.internet import defer
 
@@ -28,11 +29,15 @@ from novadeps import Volume
 
 
 class VolumeOps(object):
+    """
+    Management class for Volume-related tasks
+    """
     def __init__(self, session):
         self._session = session
 
     @defer.inlineCallbacks
     def attach_volume(self, instance_name, device_path, mountpoint):
+        """ Attach volume storage to VM instance """
         # Before we start, check that the VM exists
         vm_ref = yield VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
@@ -91,6 +96,7 @@ class VolumeOps(object):
 
     @defer.inlineCallbacks
     def detach_volume(self, instance_name, mountpoint):
+        """ Detach volume storage to VM instance """
         # Before we start, check that the VM exists
         vm_ref = yield VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:

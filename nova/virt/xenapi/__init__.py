@@ -13,3 +13,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+"""
+This is loaded late so that there's no need to install this library
+when not using XenAPI
+"""
+
+XenAPI = None
+global XenAPI
+
+if XenAPI is None:
+    XenAPI = __import__('XenAPI')

@@ -94,3 +94,8 @@ def allowed_floating_ips(context, num_floating_ips):
     quota = get_quota(context, project_id)
     allowed_floating_ips = quota['floating_ips'] - used_floating_ips
     return min(num_floating_ips, allowed_floating_ips)
+
+
+class QuotaError(exception.ApiError):
+    """Quota Exceeeded"""
+    pass

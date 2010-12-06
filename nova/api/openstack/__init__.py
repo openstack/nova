@@ -25,6 +25,7 @@ import time
 
 import logging
 import routes
+import traceback
 import webob.dec
 import webob.exc
 import webob
@@ -61,6 +62,7 @@ class API(wsgi.Middleware):
             return req.get_response(self.application)
         except Exception as ex:
             logging.warn("Caught error: %s" % str(ex))
+            logging.debug(traceback.format_exc())
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
 

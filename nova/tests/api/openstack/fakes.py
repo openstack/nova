@@ -72,7 +72,7 @@ def stub_out_key_pair_funcs(stubs):
 
 
 def stub_out_image_service(stubs):
-    def fake_image_show(meh, id):
+    def fake_image_show(meh, context, id):
         return dict(kernelId=1, ramdiskId=1)
 
     stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)

@@ -15,20 +15,25 @@
 #    under the License.
 
 """
-Helper methods for operations related to the management of network records and
-their attributes like bridges, PIFs, QoS, as well as their lookup functions.
+Helper methods for operations related to the management of network
+records and their attributes like bridges, PIFs, QoS, as well as
+their lookup functions.
 """
 
 from twisted.internet import defer
 
 
 class NetworkHelper():
-    def __init__(self, session):
+    """
+    The class that wraps the helper methods together.
+    """
+    def __init__(self):
         return
 
     @classmethod
     @defer.inlineCallbacks
-    def find_network_with_bridge(self, session, bridge):
+    def find_network_with_bridge(cls, session, bridge):
+        """ Return the network on which the bridge is attached, if found """
         expr = 'field "bridge" = "%s"' % bridge
         networks = yield session.call_xenapi('network.get_all_records_where',
                                            expr)
