@@ -115,7 +115,7 @@ class Controller(wsgi.Controller):
             self.compute_api.delete_instance(ctxt, int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-        return faults.Fault(exc.HTTPAccepted())
+        return exc.HTTPAccepted()
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -150,7 +150,8 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            self.compute_api.update_instance(ctxt, instance['id'], update_dict)
+            self.compute_api.update_instance(ctxt, instance['id'],
+                                             **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
@@ -171,4 +172,4 @@ class Controller(wsgi.Controller):
             self.compute_api.reboot(ctxt, id)
         except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return exc.HTTPNoContent()
+        return exc.HTTPAccepted()
