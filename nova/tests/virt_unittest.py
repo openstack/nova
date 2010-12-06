@@ -200,28 +200,13 @@ class IptablesFirewallTestCase(test.TrialTestCase):
         self.fw.add_instance(instance_ref)
 
         out_rules = self.fw.modify_rules(self.in_rules)
-        
+
         in_rules = filter(lambda l: not l.startswith('#'), self.in_rules)
         for rule in in_rules:
             if not 'nova' in rule:
                 self.assertTrue(rule in out_rules, 'Rule went missing: %s' % rule)
 
         print '\n'.join(out_rules)
-
-    def est_stuff(self):
-        self.fw.execute = self._p
-        cloud_controller = cloud.CloudController()
-        cloud_controller.create_security_group(self.context,
-                                               'testgroup',
-                                               'test group description')
-        cloud_controller.authorize_security_group_ingress(self.context,
-                                                          'testgroup',
-                                                          from_port='80',
-                                                          to_port='81',
-                                                          ip_protocol='tcp',
-                                                          cidr_ip='0.0.0.0/0')
-
-        self.fw._apply_ruleset()
 
 
 class NWFilterTestCase(test.TrialTestCase):
