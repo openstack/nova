@@ -160,6 +160,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute("sudo ifconfig %s up" % bridge)
     _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
     _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
+    _execute("sudo iptables -N nova-local", check_exit_code=False)
+    _confirm_rule("FORWARD", "-j nova-local")
 
 
 def get_dhcp_hosts(context, network_id):

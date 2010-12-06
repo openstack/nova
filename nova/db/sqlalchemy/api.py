@@ -574,12 +574,14 @@ def instance_get(context, instance_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
+                         options(joinedload_all('security_groups.rules')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
+                         options(joinedload_all('security_groups.rules')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -1502,6 +1504,24 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
     if not result:
         raise exception.NotFound("No secuity group rule with id %s" %
                                  security_group_rule_id)
+    return result
+
+
+@require_context
+def security_group_rule_get_by_security_group(context, security_group_id, session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         filter_by(parent_group_id=security_group_id).\
+                         all()
+    else:
+        # TODO(vish): Join to group and check for project_id
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=False).\
+                         filter_by(parent_group_id=security_group_id).\
+                         all()
     return result
 
 

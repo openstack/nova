@@ -104,7 +104,7 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
-flags.DEFINE_bool('firewall_driver', None,
+flags.DEFINE_string('firewall_driver', 'nova.virt.libvirt_conn.IptablesFirewallDriver',
                   'Firewall driver (defaults to nwfilter)')
 
 
@@ -677,7 +677,7 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group(security_group_id):
+    def refresh_security_group(self, security_group_id):
         """Refresh security group from data store
 
         Gets called when changes have been made to the security
@@ -734,6 +734,7 @@ class NWFilterFirewall(FirewallDriver):
     def __init__(self, get_connection):
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
+        self.handle_security_groups = False
 
     def _get_connection(self):
         return self._libvirt_get_connection()
@@ -763,12 +764,14 @@ class NWFilterFirewall(FirewallDriver):
 
     def setup_basic_filtering(self, instance):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
+        logging.info('called setup_basic_filtering in nwfilter')
 
         if self.handle_security_groups:
             # No point in setting up a filter set that we'll be overriding
             # anyway.
             return
 
+        logging.info('ensuring static filters')
         self._ensure_static_filters()
 
         instance_filter_name = self._instance_filter_name(instance)
@@ -841,10 +844,6 @@ class NWFilterFirewall(FirewallDriver):
         net = IPy.IP(cidr)
         return str(net.net()), str(net.netmask())
 
-    def setup_security_groups_filtering(self, instance):
-        """Set up basic filtering (MAC, IP, and ARP spoofing protection)
-        as well as security groups filtering."""
-
 
     @defer.inlineCallbacks
     def prepare_instance_filter(self, instance):
@@ -874,7 +873,7 @@ class NWFilterFirewall(FirewallDriver):
             instance_secgroup_filter_children += [('nova-project-%s' %
                                                         instance['project_id'])]
 
-        for security_group in instance.security_groups:
+        for security_group in db.security_group_get_by_instance(instance['id']):
             yield self.refresh_security_group(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
@@ -925,3 +924,155 @@ class NWFilterFirewall(FirewallDriver):
     def _instance_filter_name(self, instance):
         return 'nova-instance-%s' % instance['name']
 
+
+class IptablesFirewallDriver(FirewallDriver):
+    def __init__(self, execute=None):
+        self.execute = execute or utils.execute
+        self.instances = set()
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
+
+    def remove_instance(self, instance):
+        self.instances.remove(instance)
+
+    def add_instance(self, instance):
+        self.instances.add(instance)
+
+    def prepare_instance_filter(self, instance):
+        self.add_instance(instance)
+        self.apply_ruleset()
+
+    def apply_ruleset(self):
+        current_filter, _ = self.execute('sudo iptables-save -t filter')
+        current_lines = current_filter.split('\n')
+        new_filter = self.modify_rules(current_lines)
+        self.execute('sudo iptables-restore',
+                     process_input='\n'.join(new_filter))
+
+    def modify_rules(self, current_lines):
+        ctxt = context.get_admin_context()
+        # Remove any trace of nova rules.
+        new_filter = filter(lambda l: 'nova-' not in l, current_lines)
+
+        seen_chains = False
+        for rules_index in range(len(new_filter)):
+            if not seen_chains:
+                if new_filter[rules_index].startswith(':'):
+                    seen_chains = True
+            elif seen_chains == 1:
+                if not new_filter[rules_index].startswith(':'):
+                    break
+
+
+        our_chains = [':nova-ipv4-fallback - [0:0]']
+        our_rules  = ['-A nova-ipv4-fallback -j DROP']
+
+        our_chains += [':nova-local - [0:0]']
+        our_rules  += ['-A FORWARD -j nova-local']
+
+        security_groups = set()
+        # Add our chains
+        # First, we add instance chains and rules
+        for instance in self.instances:
+            chain_name = self._instance_chain_name(instance)
+            ip_address = self._ip_for_instance(instance)
+
+            our_chains += [':%s - [0:0]' % chain_name]
+
+            # Jump to the per-instance chain
+            our_rules += ['-A nova-local -d %s -j %s' % (ip_address,
+                                                         chain_name)]
+
+            # Always drop invalid packets
+            our_rules += ['-A %s -m state --state '
+                          'INVALID -j DROP' % (chain_name,)]
+
+            # Allow established connections
+            our_rules += ['-A %s -m state --state '
+                          'ESTABLISHED,RELATED -j ACCEPT' % (chain_name,)]
+
+            # Jump to each security group chain in turn
+            for security_group in \
+                            db.security_group_get_by_instance(ctxt,
+                                                              instance['id']):
+                security_groups.add(security_group)
+
+                sg_chain_name = self._security_group_chain_name(security_group)
+
+                our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
+
+            # Allow DHCP responses
+            dhcp_server = self._dhcp_server_for_instance(instance)
+            our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' % (chain_name, dhcp_server)]
+
+            # If nothing matches, jump to the fallback chain
+            our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
+
+
+        # then, security group chains and rules
+        for security_group in security_groups:
+            chain_name = self._security_group_chain_name(security_group)
+            our_chains += [':%s - [0:0]' % chain_name]
+
+            rules = \
+              db.security_group_rule_get_by_security_group(ctxt,
+                                                           security_group['id'])
+
+            for rule in rules:
+                logging.info('%r', rule)
+                args = ['-A', chain_name, '-p', rule.protocol]
+
+                if rule.cidr:
+                    args += ['-s', rule.cidr]
+                else:
+                    # Something about ipsets
+                    pass
+
+                if rule.protocol in ['udp', 'tcp']:
+                    if rule.from_port == rule.to_port:
+                        args += ['--dport', '%s' % (rule.from_port,)]
+                    else:
+                        args += ['-m', 'multiport',
+                                 '--dports', '%s:%s' % (rule.from_port,
+                                                        rule.to_port)]
+                elif rule.protocol == 'icmp':
+                    icmp_type = rule.from_port
+                    icmp_code = rule.to_port
+
+                    if icmp_type == '-1':
+                        icmp_type_arg = None
+                    else:
+                        icmp_type_arg = '%s' % icmp_type
+                        if not icmp_code == '-1':
+                            icmp_type_arg += '/%s' % icmp_code
+
+                    if icmp_type_arg:
+                        args += ['-m', 'icmp', '--icmp_type', icmp_type_arg]
+
+                args += ['-j ACCEPT']
+                our_rules += [' '.join(args)]
+
+        new_filter[rules_index:rules_index] = our_rules
+        new_filter[rules_index:rules_index] = our_chains
+        logging.info('new_filter: %s', '\n'.join(new_filter))
+        return new_filter
+
+    def refresh_security_group(self, security_group):
+        self.apply_ruleset()
+
+    def _security_group_chain_name(self, security_group):
+        return 'nova-sg-%s' % (security_group['id'],)
+
+    def _instance_chain_name(self, instance):
+        return 'nova-inst-%s' % (instance['id'],)
+
+    def _ip_for_instance(self, instance):
+        return db.instance_get_fixed_address(context.get_admin_context(),
+                                             instance['id'])
+
+    def _dhcp_server_for_instance(self, instance):
+        network = db.project_get_network(context.get_admin_context(),
+                                         instance['project_id'])
+        return network['gateway']
