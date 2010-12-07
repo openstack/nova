@@ -246,6 +246,9 @@ class ComputeAPI(base.Base):
             self.db.instance_destroy(context, instance['id'])
 
     def get_instances(self, context, project_id=None):
+        """Get all instances, possibly filtered by project ID or
+        user ID. If there is no filter and the context is an admin,
+        it will retreive all instances in the system."""
         if project_id or not context.is_admin:
             if not context.project:
                 return self.db.instance_get_all_by_user(context,
