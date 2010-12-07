@@ -44,7 +44,7 @@ class VMHelper():
     """
     The class that wraps the helper methods together.
     """
-    def __init__(self, session):
+    def __init__(self):
         return
 
     @classmethod

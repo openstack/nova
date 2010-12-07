@@ -1,5 +1,4 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-from orca.scripts import self_voicing
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 #
@@ -46,7 +45,7 @@ class VolumeHelper():
     """
     The class that wraps the helper methods together.
     """
-    def __init__(self, session):
+    def __init__(self):
         return
 
     @classmethod
