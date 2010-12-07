@@ -132,7 +132,7 @@ class VMHelper():
                         return vbd
                 except XenAPI.Failure, exc:
                     logging.warn(exc)
-            raise Exception('VBD not found in instance %s' % vm_ref)
+            raise StorageError('VBD not found in instance %s' % vm_ref)
 
     @classmethod
     @defer.inlineCallbacks
