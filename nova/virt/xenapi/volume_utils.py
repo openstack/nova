@@ -1,4 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+from orca.scripts import self_voicing
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 #
@@ -22,7 +23,6 @@ and storage repositories
 import re
 import string
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
@@ -33,6 +33,7 @@ from nova import process
 from nova import utils
 
 FLAGS = flags.FLAGS
+XenAPI = None
 
 
 class StorageError(Exception):
@@ -47,6 +48,15 @@ class VolumeHelper():
     """
     def __init__(self, session):
         return
+
+    @classmethod
+    def late_import(cls):
+        """
+        Load XenAPI module in for helper class
+        """
+        global XenAPI
+        if XenAPI is None:
+            XenAPI = __import__('XenAPI')
 
     @classmethod
     @utils.deferredToThread
@@ -98,10 +108,10 @@ class VolumeHelper():
         try:
             vdi_ref = yield session.get_xenapi().VBD.get_VDI(vbd_ref)
             sr_ref = yield session.get_xenapi().VDI.get_SR(vdi_ref)
-            defer.returnValue(sr_ref)
         except XenAPI.Failure, exc:
             logging.warn(exc)
             raise StorageError('Unable to find SR from VBD %s' % vbd_ref)
+        defer.returnValue(sr_ref)
 
     @classmethod
     @utils.deferredToThread
@@ -273,8 +283,9 @@ def _get_target(volume_id):
     (r, _e) = yield process.simple_execute("sudo iscsiadm -m discovery -t "
                                      "sendtargets -p %s" %
                                      volume_ref['host'])
-    if len(_e) == 0:
-        for target in r.splitlines():
+    targets = r.splitlines()
+    if len(_e) == 0 and len(targets) == 1:
+        for target in targets:
             if volume_id in target:
                 (location, _sep, iscsi_name) = target.partition(" ")
                 break

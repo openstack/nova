@@ -19,7 +19,6 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
@@ -29,13 +28,20 @@ from nova.auth.manager import AuthManager
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 
+XenAPI = None
+
 
 class VMOps(object):
     """
     Management class for VM-related tasks
     """
     def __init__(self, session):
+        global XenAPI
+        if XenAPI is None:
+            XenAPI = __import__('XenAPI')
         self._session = session
+        # Load XenAPI module in the helper class
+        VMHelper.late_import()
 
     def list_instances(self):
         """ List VM instances """

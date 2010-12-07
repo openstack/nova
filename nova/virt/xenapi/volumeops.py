@@ -18,7 +18,6 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
@@ -26,13 +25,21 @@ from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.volume_utils import VolumeHelper
 from nova.virt.xenapi.volume_utils import StorageError
 
+XenAPI = None
+
 
 class VolumeOps(object):
     """
     Management class for Volume-related tasks
     """
     def __init__(self, session):
+        global XenAPI
+        if XenAPI is None:
+            XenAPI = __import__('XenAPI')
         self._session = session
+        # Load XenAPI module in the helper classes respectively
+        VolumeHelper.late_import()
+        VMHelper.late_import()
 
     @defer.inlineCallbacks
     def attach_volume(self, instance_name, device_path, mountpoint):

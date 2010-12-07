@@ -52,7 +52,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 
 import logging
 import xmlrpclib
-import XenAPI
 
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -90,10 +89,17 @@ flags.DEFINE_string('iqn_prefix',
                     'iqn.2010-10.org.openstack',
                     'IQN Prefix')
 
+XenAPI = None
+
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
+    # This is loaded late so that there's no need to install this
+    # library when not using XenAPI.
+    global XenAPI
+    if XenAPI is None:
+        XenAPI = __import__('XenAPI')
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
