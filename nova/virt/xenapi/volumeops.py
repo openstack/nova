@@ -18,14 +18,12 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
-from volume_utils import VolumeHelper
-from vm_utils import VMHelper
-
-from novadeps import Volume
+from nova.virt.xenapi.vm_utils import VMHelper
+from nova.virt.xenapi.volume_utils import VolumeHelper
+from nova.virt.xenapi.volume_utils import StorageError
 
 
 class VolumeOps(object):
@@ -47,22 +45,18 @@ class VolumeOps(object):
                       instance_name, device_path, mountpoint)
         # Create the iSCSI SR, and the PDB through which hosts access SRs.
         # But first, retrieve target info, like Host, IQN, LUN and SCSIID
-        vol_rec = yield Volume.parse_volume_info(device_path, mountpoint)
+        vol_rec = yield VolumeHelper.parse_volume_info(device_path, mountpoint)
         label = 'SR-%s' % vol_rec['volumeId']
         description = 'Disk-for:%s' % instance_name
         # Create SR
         sr_ref = yield VolumeHelper.create_iscsi_storage(self._session,
-                                                         vol_rec['targetHost'],
-                                                         vol_rec['targetPort'],
-                                                         vol_rec['targeIQN'],
-                                                         '',  # no CHAP auth
-                                                         '',
+                                                         vol_rec,
                                                          label,
                                                          description)
         # Introduce VDI  and attach VBD to VM
         try:
             vdi_ref = yield VolumeHelper.introduce_vdi(self._session, sr_ref)
-        except Exception, exc:
+        except StorageError, exc:
             logging.warn(exc)
             yield VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
             raise Exception('Unable to create VDI on SR %s for instance %s'
@@ -74,25 +68,26 @@ class VolumeOps(object):
                                                     vm_ref, vdi_ref,
                                                     vol_rec['deviceNumber'],
                                                     False)
-            except Exception, exc:
+            except StorageError, exc:
                 logging.warn(exc)
                 yield VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-                raise Exception('Unable to create VBD on SR %s for instance %s'
+                raise StorageError('Unable to use SR %s for instance %s'
                             % (sr_ref,
                             instance_name))
             else:
                 try:
-                    #raise Exception('')
                     task = yield self._session.call_xenapi('Async.VBD.plug',
                                                            vbd_ref)
                     yield self._session.wait_for_task(task)
-                except Exception, exc:
+                except StorageError, exc:
                     logging.warn(exc)
                     yield VolumeHelper.destroy_iscsi_storage(self._session,
                                                              sr_ref)
                     raise Exception('Unable to attach volume to instance %s' %
                                     instance_name)
-        yield True
+        logging.info('Mountpoint %s attached to instance %s',
+                     mountpoint, instance_name)
+        yield
 
     @defer.inlineCallbacks
     def detach_volume(self, instance_name, mountpoint):
@@ -103,11 +98,11 @@ class VolumeOps(object):
             raise Exception('Instance %s does not exist' % instance_name)
         # Detach VBD from VM
         logging.debug("Detach_volume: %s, %s", instance_name, mountpoint)
-        device_number = Volume.mountpoint_to_number(mountpoint)
+        device_number = VolumeHelper.mountpoint_to_number(mountpoint)
         try:
             vbd_ref = yield VMHelper.find_vbd_by_number(self._session,
                                                         vm_ref, device_number)
-        except Exception, exc:
+        except StorageError, exc:
             logging.warn(exc)
             raise Exception('Unable to locate volume %s' % mountpoint)
         else:
@@ -115,13 +110,15 @@ class VolumeOps(object):
                 sr_ref = yield VolumeHelper.find_sr_from_vbd(self._session,
                                                              vbd_ref)
                 yield VMHelper.unplug_vbd(self._session, vbd_ref)
-            except Exception, exc:
+            except StorageError, exc:
                 logging.warn(exc)
                 raise Exception('Unable to detach volume %s' % mountpoint)
             try:
                 yield VMHelper.destroy_vbd(self._session, vbd_ref)
-            except Exception, exc:
-                    logging.warn(exc)
+            except StorageError, exc:
+                logging.warn(exc)
         # Forget SR
         yield VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-        yield True
+        logging.info('Mountpoint %s detached from instance %s',
+                     mountpoint, instance_name)
+        yield
