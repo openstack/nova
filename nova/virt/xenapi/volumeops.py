@@ -18,6 +18,7 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 import logging
+import XenAPI
 
 from twisted.internet import defer
 
@@ -68,10 +69,10 @@ class VolumeOps(object):
                                                     vm_ref, vdi_ref,
                                                     vol_rec['deviceNumber'],
                                                     False)
-            except StorageError, exc:
+            except XenAPI.Failure, exc:
                 logging.warn(exc)
                 yield VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-                raise StorageError('Unable to use SR %s for instance %s'
+                raise Exception('Unable to use SR %s for instance %s'
                             % (sr_ref,
                             instance_name))
             else:
@@ -79,7 +80,7 @@ class VolumeOps(object):
                     task = yield self._session.call_xenapi('Async.VBD.plug',
                                                            vbd_ref)
                     yield self._session.wait_for_task(task)
-                except StorageError, exc:
+                except XenAPI.Failure, exc:
                     logging.warn(exc)
                     yield VolumeHelper.destroy_iscsi_storage(self._session,
                                                              sr_ref)

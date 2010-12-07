@@ -95,9 +95,13 @@ class VolumeHelper():
     @defer.inlineCallbacks
     def find_sr_from_vbd(cls, session, vbd_ref):
         """ Find the SR reference from the VBD reference """
-        vdi_ref = yield session.get_xenapi().VBD.get_VDI(vbd_ref)
-        sr_ref = yield session.get_xenapi().VDI.get_SR(vdi_ref)
-        defer.returnValue(sr_ref)
+        try:
+            vdi_ref = yield session.get_xenapi().VBD.get_VDI(vbd_ref)
+            sr_ref = yield session.get_xenapi().VDI.get_SR(vdi_ref)
+            defer.returnValue(sr_ref)
+        except XenAPI.Failure, exc:
+            logging.warn(exc)
+            raise StorageError('Unable to find SR from VBD %s' % vbd_ref)
 
     @classmethod
     @utils.deferredToThread
