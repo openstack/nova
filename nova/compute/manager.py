@@ -36,6 +36,13 @@ terminating it.
 
 import datetime
 import logging
+# added by masumotok
+import sys
+# added by masumotok
+import traceback
+# added by masumotok
+import os
+
 
 from twisted.internet import defer
 
@@ -44,12 +51,19 @@ from nova import flags
 from nova import manager
 from nova import utils
 from nova.compute import power_state
+# added by masumotok
+from nova import rpc
+# added by masumotok
+from nova import db
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
+# created by masumotok
+flags.DEFINE_string('live_migration_timeout', 30,
+                    'Timeout value for pre_live_migration is completed.')
 
 
 class ComputeManager(manager.Manager):
@@ -251,3 +265,127 @@ class ComputeManager(manager.Manager):
         yield self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)
+
+    # created by masumotok
+    def get_cpu_number(self):
+        """Get the number of physical computer cpu core ."""
+        return open('/proc/cpuinfo').read().count('processor')
+
+    # created by masumotok
+    def get_mem_size(self):
+        """Get the memory size of physical computer ."""
+        meminfo = open('/proc/meminfo').read().split()
+        idx = meminfo.index('MemTotal:')
+        # transforming kb to mb.
+        return int(meminfo[idx + 1]) / 1024
+
+    # created by masumotok
+    def get_hdd_size(self):
+        """Get the hdd size of physical computer ."""
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
+    # created by masumotok
+    def pre_live_migration(self, context, instance_id, dest):
+        """Any preparation for live migration at dst host."""
+
+        # 1. getting volume info ( shlf/slot number )
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+
+        volumes = []
+        try:
+            volumes = db.volume_get_by_ec2_id(context, ec2_id)
+        except exception.NotFound:
+            logging.debug('%s has no volume.', ec2_id)
+
+        shelf_slots = {}
+        for vol in volumes:
+            shelf, slot = db.volume_get_shelf_and_blade(context, vol['id'])
+            shelf_slots[vol.id] = (shelf, slot)
+
+        # 2. getting fixed ips
+        fixed_ip = db.instance_get_fixed_address(context, instance_id)
+        if None == fixed_ip:
+            logging.error('Not found fixedip for %s\n%s',
+                          ec2_id,
+                          ''.join(traceback.format_tb(sys.exc_info()[2])))
+            return
+
+        # 3. getting network refs
+        network_ref = db.fixed_ip_get_network(context, fixed_ip)
+
+        # 4. security rules (filtering rules)
+        secgrp_refs = db.security_group_get_by_instance(context, instance_id)
+
+        # 5. if any volume is mounted, prepare here.
+        if 0 != len(shelf_slots):
+            pass
+
+        # 6. create nova-instance-instance-xxx in hypervisor through libvirt
+        #     (This rule can be seen by executing virsh nwfilter-list)
+        self.driver.setup_nwfilters_for_instance(instance_ref)
+
+        # 7. insert filtering rule
+        for secgrp_ref in secgrp_refs:
+            self.driver.refresh_security_group(secgrp_ref.id)
+
+        # 8. vlan settings
+        self.network_manager.driver.ensure_vlan_bridge(network_ref['vlan'],
+                                                       network_ref['bridge'])
+
+    # created by masumotok
+    def nwfilter_for_instance_exists(self, context, instance_id):
+        """Check nova-instance-instance-xxx filter exists """
+        instance_ref = db.instance_get(context, instance_id)
+        return self.driver.nwfilter_for_instance_exists(instance_ref)
+
+    # created by masumotok
+    def live_migration(self, context, instance_id, dest):
+        """executes live migration."""
+
+        import time
+        # 1. ask dest host to preparing live migration.
+        compute_topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
+        ret = rpc.call(context,
+                        compute_topic,
+                        {"method": "pre_live_migration",
+                         "args": {'instance_id': instance_id,
+                                    'dest': dest}})
+
+        if rpc.RemoteError == type(ret):
+            logging.error('Live migration failed(err at %s)', dest)
+            db.instance_set_state(context,
+                                  instance_id,
+                                  power_state.RUNNING,
+                                  'running')
+            return
+
+        # waiting for setting up nwfilter(nova-instance-instance-xxx)
+        # otherwise, live migration fail.
+        timeout_count = range(FLAGS.live_migration_timeout)
+        while 0 != len(timeout_count):
+            ret = rpc.call(context,
+                        compute_topic,
+                        {"method": "nwfilter_for_instance_exists",
+                         "args": {'instance_id': instance_id}})
+            if ret:
+                break
+
+            timeout_count.pop()
+            time.sleep(1)
+
+        if not ret:
+            logging.error('Timeout for pre_live_migration at %s', dest)
+            return
+
+        # 2. executing live migration
+        # live_migration might raises ProcessExecution error, but
+        # nothing must be recovered in this version.
+        instance_ref = db.instance_get(context, instance_id)
+        ret = self.driver.live_migration(instance_ref, dest)
+        if not ret:
+            logging.debug('Fail to live migration')
+            return
+
+

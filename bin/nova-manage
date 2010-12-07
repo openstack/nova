@@ -76,6 +76,13 @@ from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+#added by masumotok
+from nova import rpc
+# added by masumotok
+from nova.api.ec2 import cloud
+# added by masumotok
+from nova.compute import power_state
+
 
 
 FLAGS = flags.FLAGS
@@ -424,6 +431,116 @@ class NetworkCommands(object):
                                     int(network_size), int(vlan_start),
                                     int(vpn_start))
 
+# this class is added by masumotok
+class InstanceCommands(object):
+    """Class for mangaging VM instances."""
+
+    def live_migration(self, ec2_id, dest):
+        """live_migration"""
+
+        logging.basicConfig()
+        ctxt = context.get_admin_context()
+
+        if 'nova.network.manager.VlanManager' != FLAGS.network_manager :
+            msg = 'Only nova.network.manager.VlanManager is supported now. Sorry!'
+            raise Exception(msg)
+
+        # 1. whether destination host exists
+        host_ref = db.host_get_by_name(ctxt, dest)
+
+        # 2. whether instance exists and running
+        #    try-catch clause is necessary because only internal_id is shown
+        #    when NotFound exception occurs. it isnot understandable to admins.
+        try :
+            internal_id = cloud.ec2_id_to_internal_id(ec2_id)
+            instance_ref = db.instance_get_by_internal_id(ctxt, internal_id)
+        except exception.NotFound :
+            print 'Not found instance_id(%s (internal_id:%s))' % ( ec2_id, internal_id)
+            raise
+
+        if power_state.RUNNING != instance_ref['state'] or \
+           'running' != instance_ref['state_description']:
+            print 'Instance(%s) is not running' % ec2_id
+            sys.exit(1)
+
+        # 3. the host where instance is running and dst host is not same
+        if dest == instance_ref['host'] :
+            print '%s is where %s is running now. choose different host.' \
+                % (dest, ec2_id)
+            sys.exit(2)
+
+        # 4. live migration
+        rpc.cast(ctxt,
+                  FLAGS.scheduler_topic,
+                  { "method": "live_migration",
+                    "args": {"ec2_id": ec2_id,
+                             "dest":dest}})
+
+        print 'Finished all procedure. check instance are migrated successfully'
+        print 'chech status by using euca-describe-instances.'
+
+
+# this class is created by masumotok
+class HostCommands(object):
+    """Class for mangaging host(physical nodes)."""
+
+
+    def list(self):
+        """describe host list."""
+
+        # to supress msg: No handlers could be found for logger "amqplib"
+        logging.basicConfig()
+
+        host_refs = db.host_get_all(context.get_admin_context())
+        for host_ref in host_refs:
+            print host_ref['name']
+
+    def show(self, host):
+        """describe cpu/memory/hdd info for host."""
+
+        # to supress msg: No handlers could be found for logger "amqplib"
+        logging.basicConfig()
+
+        result = rpc.call(context.get_admin_context(),
+                         FLAGS.scheduler_topic,
+                         {"method": "show_host_resource",
+                          "args": {"host": host}})
+
+        # checing result msg format is necessary, that will have done
+        # when this feture is included in API.
+        if dict != type(result):
+            print 'Unexpected error occurs'
+        elif not result['ret'] :
+            print '%s' % result['msg']
+        else :
+            cpu = result['phy_resource']['cpu']
+            mem = result['phy_resource']['memory_mb']
+            hdd = result['phy_resource']['hdd_gb']
+
+            print 'HOST\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
+            print '%s\t\t\t%s\t%s\t%s' % ( host,cpu, mem, hdd)
+            for p_id, val in result['usage'].items() :
+                print '%s\t%s\t\t%s\t%s\t%s' % ( host,
+                                             p_id,
+                                             val['cpu'],
+                                             val['memory_mb'],
+                                             val['hdd_gb'])
+
+    def has_keys(self, dic, keys):
+        not_found = [ key for key in keys if not dict.has_key(key) ]
+        return ( (0 == len(not_found)), not_found )
+
+
+
+# modified by masumotok
+#CATEGORIES = [
+#    ('user', UserCommands),
+#    ('project', ProjectCommands),
+#    ('role', RoleCommands),
+#    ('shell', ShellCommands),
+#    ('vpn', VpnCommands),
+#    ('floating', FloatingIpCommands),
+#    ('network', NetworkCommands)]
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -431,8 +548,9 @@ CATEGORIES = [
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
     ('floating', FloatingIpCommands),
-    ('network', NetworkCommands)]
-
+    ('network', NetworkCommands),
+    ('instance', InstanceCommands),
+    ('host',HostCommands)]
 
 def lazy_match(name, key_value_tuples):
     """Finds all objects that have a key that case insensitively contains

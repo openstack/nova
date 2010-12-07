@@ -29,6 +29,10 @@ from nova import flags
 from nova import manager
 from nova import rpc
 from nova import utils
+# 3 modules are added by masumotok
+from nova import exception
+from nova.api.ec2 import cloud
+from nova.compute import power_state
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
@@ -66,3 +70,106 @@ class SchedulerManager(manager.Manager):
                  {"method": method,
                   "args": kwargs})
         logging.debug("Casting to %s %s for %s", topic, host, method)
+
+    #  created by masumotok
+    def live_migration(self, context, ec2_id, dest):
+        """ live migration method"""
+
+        # 1. get instance id
+        internal_id = cloud.ec2_id_to_internal_id(ec2_id)
+        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_id = instance_ref['id']
+
+        # 2. check dst host still has enough capacities
+        if not self.has_enough_resource(context, instance_id, dest):
+            return False
+
+        # 3. change instance_state
+        db.instance_set_state(context,
+                              instance_id,
+                              power_state.PAUSED,
+                              'migrating')
+
+        # 4. request live migration
+        host = instance_ref['host']
+        rpc.cast(context,
+                 db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": 'live_migration',
+                  "args": {'instance_id': instance_id,
+                             'dest': dest}})
+        return True
+
+    # this method is created by masumotok
+    def has_enough_resource(self, context, instance_id, dest):
+
+        # get instance information
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+        vcpus = instance_ref['vcpus']
+        mem = instance_ref['memory_mb']
+        hdd = instance_ref['local_gb']
+
+        # get host information
+        host_ref = db.host_get_by_name(context, dest)
+        total_cpu = int(host_ref['cpu'])
+        total_mem = int(host_ref['memory_mb'])
+        total_hdd = int(host_ref['hdd_gb'])
+
+        instances_ref = db.instance_get_all_by_host(context, dest)
+        for i_ref in instances_ref:
+            total_cpu -= int(i_ref['vcpus'])
+            total_mem -= int(i_ref['memory_mb'])
+            total_hdd -= int(i_ref['local_gb'])
+
+        # check host has enough information
+        logging.debug('host(%s) remains vcpu:%s mem:%s hdd:%s,' %
+                      (dest, total_cpu, total_mem, total_hdd))
+        logging.debug('instance(%s) has vcpu:%s mem:%s hdd:%s,' %
+                      (ec2_id, total_cpu, total_mem, total_hdd))
+
+        if total_cpu <= vcpus or total_mem <= mem or total_hdd <= hdd:
+            logging.debug('%s doesnt have enough resource for %s' %
+                          (dest, ec2_id))
+            return False
+
+        logging.debug('%s has enough resource for %s' % (dest, ec2_id))
+        return True
+
+    # this method is created by masumotok
+    def show_host_resource(self, context, host, *args):
+        """ show the physical/usage resource given by hosts."""
+
+        try:
+            host_ref = db.host_get_by_name(context, host)
+        except exception.NotFound:
+            return {'ret': False, 'msg': 'No such Host'}
+        except:
+            raise
+
+        # get physical resource information
+        h_resource = {'cpu': host_ref['cpu'],
+                     'memory_mb': host_ref['memory_mb'],
+                     'hdd_gb': host_ref['hdd_gb']}
+
+        # get usage resource information
+        u_resource = {}
+        instances_ref = db.instance_get_all_by_host(context, host_ref['name'])
+
+        if 0 == len(instances_ref):
+            return {'ret': True, 'phy_resource': h_resource, 'usage': {}}
+
+        project_ids = [i['project_id'] for i in instances_ref]
+        project_ids = list(set(project_ids))
+        for p_id in project_ids:
+            cpu = db.instance_get_vcpu_sum_by_host_and_project(context,
+                                                               host,
+                                                               p_id)
+            mem = db.instance_get_memory_sum_by_host_and_project(context,
+                                                                host,
+                                                                p_id)
+            hdd = db.instance_get_disk_sum_by_host_and_project(context,
+                                                               host,
+                                                               p_id)
+            u_resource[p_id] = {'cpu': cpu, 'memory_mb': mem, 'hdd_gb': hdd}
+
+        return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}

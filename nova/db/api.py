@@ -195,6 +195,11 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
+# this method is created by masumotok
+def floating_ip_update(context, address, values):
+    """update floating ip information."""
+    return IMPL.floating_ip_update(context, address, values)
+
 ####################
 
 
@@ -332,6 +337,36 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
+
+
+# created by masumotok
+def instance_get_all_by_host(context, hostname):
+    """Get instances by host"""
+    return IMPL.instance_get_all_by_host(context, hostname)
+
+
+# created by masumotok
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    """Get instances.vcpus by host and project"""
+    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
+
+
+# created by masumotok
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    """Get amount of memory by host and project """
+    return IMPL.instance_get_memory_sum_by_host_and_project(context,
+                                                            hostname,
+                                                            proj_id)
+
+
+# created by masumotok
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    """Get total amount of disk by host and project """
+    return IMPL.instance_get_disk_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
 
 
 ###################
@@ -833,3 +868,37 @@ def host_get_networks(context, host):
 
     """
     return IMPL.host_get_networks(context, host)
+
+
+# below all methods related to host table are created by masumotok
+###################
+
+
+def host_create(context, value):
+    """Create a host from the values dictionary."""
+    return IMPL.host_create(context, value)
+
+
+def host_get(context, host_id):
+    """Get an host or raise if it does not exist."""
+    return IMPL.host_get(context, host_id)
+
+
+def host_get_all(context, session=None):
+    """Get all hosts or raise if it does not exist."""
+    return IMPL.host_get_all(context)
+
+
+def host_get_by_name(context, host):
+    """Get an host or raise if it does not exist."""
+    return IMPL.host_get_by_name(context, host)
+
+
+def host_update(context, host, values):
+    """Set the given properties on an host and update it."""
+    return IMPL.host_update(context, host, values)
+
+
+def host_deactivated(context, host):
+    """set deleted flag to a given host"""
+    return IMPL.host_deactivated(context, host)

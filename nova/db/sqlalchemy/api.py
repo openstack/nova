@@ -394,6 +394,17 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
+# created by masumotok
+@require_context
+def floating_ip_update(context, address, values):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context, address, session)
+        for (key, value) in values.iteritems():
+            floating_ip_ref[key] = value
+        floating_ip_ref.save(session=session)
+
+
 ###################
 
 
@@ -745,6 +756,52 @@ def instance_add_security_group(context, instance_id, security_group_id):
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
 
+
+# created by masumotok
+def instance_get_all_by_host(context, hostname):
+    session = get_session()
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Instance
+                       ).filter_by(host=hostname
+                       ).filter_by(deleted=can_read_deleted(context)
+                       ).all()
+    if None == result:
+        return []
+    return result
+
+
+# created by masumotok
+def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
+    session = get_session()
+
+    result = session.query(models.Instance
+                       ).filter_by(host=hostname
+                       ).filter_by(project_id=proj_id
+                       ).filter_by(deleted=can_read_deleted(context)
+                       ).value(column)
+    if None == result:
+        return 0
+    return result
+
+
+# created by masumotok
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    return _instance_get_sum_by_host_and_project(context, 'vcpus', hostname,
+                                                 proj_id)
+
+
+# created by masumotok
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    return _instance_get_sum_by_host_and_project(context, 'memory_mb',
+                                                 hostname, proj_id)
+
+
+# created by masumotok
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    return _instance_get_sum_by_host_and_project(context, 'local_gb',
+                                                 hostname, proj_id)
 
 ###################
 
@@ -1746,3 +1803,77 @@ def host_get_networks(context, host):
                        filter_by(deleted=False).\
                        filter_by(host=host).\
                        all()
+
+
+#below all methods related to host table are created by masumotok
+###################
+
+@require_admin_context
+def host_create(context, values):
+    host_ref = models.Host()
+    for (key, value) in values.iteritems():
+        host_ref[key] = value
+    host_ref.save()
+    return host_ref
+
+
+@require_admin_context
+def host_get(context, host_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Host
+                     ).filter_by(deleted=False
+                     ).filter_by(id=host_id
+                     ).first()
+
+    if not result:
+        raise exception.NotFound('No host for id %s' % host_id)
+
+    return result
+
+
+@require_admin_context
+def host_get_all(context, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Host
+                     ).filter_by(deleted=False
+                     ).all()
+
+    if not result:
+        raise exception.NotFound('No host record found .')
+
+    return result
+
+
+@require_admin_context
+def host_get_by_name(context, host, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Host
+                     ).filter_by(deleted=False
+                     ).filter_by(name=host
+                     ).first()
+
+    if not result:
+        raise exception.NotFound('No host for name %s' % host)
+
+    return result
+
+
+@require_admin_context
+def host_update(context, host_id, values):
+    session = get_session()
+    with session.begin():
+        host_ref = host_get(context, host_id, session=session)
+        for (key, value) in values.iteritems():
+            host_ref[key] = value
+        host_ref.save(session=session)
+
+
+@require_admin_context
+def host_deactivated(context, host):
+    host_update(context, host, {'deleted': True})

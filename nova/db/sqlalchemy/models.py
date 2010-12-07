@@ -138,6 +138,24 @@ class NovaBase(object):
 #    __tablename__ = 'hosts'
 #    id = Column(String(255), primary_key=True)
 
+# this class is created by masumotok
+class Host(BASE, NovaBase):
+    """Represents a host where services are running"""
+    __tablename__ = 'hosts'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    cpu = Column(Integer, nullable=False, default=-1)
+    memory_mb = Column(Integer, nullable=False, default=-1)
+    hdd_gb = Column(Integer, nullable=False, default=-1)
+    #cpuid = Column(Integer, nullable=False)
+    deleted = Column(Boolean, default=False)
+    # C: when calling service_create()
+    # D: never deleted. instead of deleting cloumn "deleted" is true
+    #    when host is down
+    #    b/c Host.id is foreign key of service, and records
+    #    of the "service" table are not deleted.
+    # R: Column "deleted" is true when calling hosts_up() and host is down.
+
 
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""
@@ -526,10 +544,14 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
+    #models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
+    #          FloatingIp, Network, SecurityGroup,
+    #          SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
+    #          AuthToken, User, Project)  # , Image, Host
     models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
               FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project)  # , Image, Host
+              AuthToken, User, Project, Host)  # , Image
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

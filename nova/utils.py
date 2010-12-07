@@ -133,9 +133,16 @@ def runthis(prompt, cmd, check_exit_code=True):
 
 
 def generate_uid(topic, size=8):
-    characters = '01234567890abcdefghijklmnopqrstuvwxyz'
-    choices = [random.choice(characters) for x in xrange(size)]
-    return '%s-%s' % (topic, ''.join(choices))
+    #modified by masumotok
+    #characters = '01234567890abcdefghijklmnopqrstuvwxyz'
+    #choices = [random.choice(characters) for x in xrange(size)]
+    #return '%s-%s' % (topic, ''.join(choices))
+    if topic == "i":
+        return random.randint(0, 2 ** 28 - 1)
+    else:
+        characters = '01234567890abcdefghijklmnopqrstuvwxyz'
+        choices = [random.choice(characters) for x in xrange(size)]
+        return '%s-%s' % (topic, ''.join(choices))
 
 
 def generate_mac():

@@ -72,6 +72,14 @@ class Service(object, service.Service):
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
+
+        # this try-except operations are added by masumotok
+        try:
+            host_ref = db.host_get_by_name(ctxt, self.host)
+        except exception.NotFound:
+            host_ref = db.host_create(ctxt, {'name': self.host})
+        host_ref = self._update_host_ref(ctxt, host_ref)
+
         try:
             service_ref = db.service_get_by_args(ctxt,
                                                  self.host,
@@ -108,6 +116,20 @@ class Service(object, service.Service):
                                          'topic': self.topic,
                                          'report_count': 0})
         self.service_id = service_ref['id']
+
+    # created by masumotok
+    def _update_host_ref(self, context, host_ref):
+
+        if 0 <= self.manager_class_name.find('ComputeManager'):
+            cpu = self.manager.get_cpu_number()
+            memory_mb = self.manager.get_mem_size()
+            hdd_gb = self.manager.get_hdd_size()
+            db.host_update(context,
+                           host_ref['id'],
+                           {'cpu': cpu,
+                           'memory_mb': memory_mb,
+                           'hdd_gb': hdd_gb})
+        return host_ref
 
     def __getattr__(self, key):
         manager = self.__dict__.get('manager', None)

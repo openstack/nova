@@ -25,6 +25,7 @@ from sphinx.setup_command import BuildDoc
 
 from nova.utils import parse_mailmap, str_dict_replace
 
+
 class local_BuildDoc(BuildDoc):
     def run(self):
         for builder in ['html', 'man']:
@@ -54,8 +55,8 @@ setup(name='nova',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass={ 'sdist': local_sdist,
-                 'build_sphinx' : local_BuildDoc },
+      cmdclass={'sdist': local_sdist,
+                 'build_sphinx': local_BuildDoc},
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       scripts=['bin/nova-api',

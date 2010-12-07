@@ -112,10 +112,14 @@ class NetworkManager(manager.Manager):
         # the designated network host.
         ctxt = context.get_admin_context()
         for network in self.db.host_get_networks(ctxt, self.host):
+            print '<<<<<< nova.network.manager.init_host <<<<'
+            print '<<<<<< nova.network.manager.init_host (%s)<<<<' % network['id']
             self._on_set_network_host(ctxt, network['id'])
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
+        print '<<<<<< nova.network.manager.set_network_host <<<<'
+        print '<<<<<< nova.network.manager.set_network_host (%s)<<<<' % network_id
         logging.debug("setting network host")
         host = self.db.network_set_host(context,
                                         network_id,
@@ -452,6 +456,9 @@ class VlanManager(NetworkManager):
             self.driver.ensure_vlan_forward(network_ref['vpn_public_address'],
                                             network_ref['vpn_public_port'],
                                             network_ref['vpn_private_address'])
+        print '--------------------'
+        print 'UUUUUUPdate dhcp!'
+        print '--------------------'
         self.driver.update_dhcp(context, network_ref['id'])
 
     def setup_compute_network(self, context, instance_id):

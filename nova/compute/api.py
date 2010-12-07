@@ -84,6 +84,7 @@ class ComputeAPI(base.Base):
         if not type(security_group) is list:
             security_group = [security_group]
 
+        print '<<<<<<<<<<<<<<<<<<<<<<<<<<1'
         security_groups = []
         self.ensure_default_security_group(context)
         for security_group_name in security_group:
@@ -92,6 +93,7 @@ class ComputeAPI(base.Base):
                                                   security_group_name)
             security_groups.append(group['id'])
 
+        print '<<<<<<<<<<<<<<<<<<<<<<<<<<2'
         if key_data is None and key_name:
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
@@ -115,6 +117,7 @@ class ComputeAPI(base.Base):
             'key_name': key_name,
             'key_data': key_data}
 
+        print '<<<<<<<<<<<<<<<<<<<<<<<<<<3'
         elevated = context.elevated()
         instances = []
         logging.debug("Going to run %s instances...", num_instances)

@@ -44,6 +44,8 @@ Supports KVM, QEMU, UML, and XEN.
 import logging
 import os
 import shutil
+# appended by masumotok
+#import libvirt
 
 import IPy
 from twisted.internet import defer
@@ -101,6 +103,10 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+# added by masumotok
+flags.DEFINE_string('live_migration_uri',
+                  "qemu+tcp://%s/system",
+                  'Define protocol used by live_migration feature')
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
@@ -647,6 +653,101 @@ class LibvirtConnection(object):
     def refresh_security_group(self, security_group_id):
         fw = NWFilterFirewall(self._conn)
         fw.ensure_security_group_filter(security_group_id)
+
+    # created by masumotok
+    def setup_nwfilters_for_instance(self, instance):
+        nwfilter = NWFilterFirewall(self._conn)
+        return nwfilter.setup_nwfilters_for_instance(instance)
+
+    # created by masumotok
+    def nwfilter_for_instance_exists(self, instance_ref):
+        try:
+            filter = 'nova-instance-%s' % instance_ref.name
+            self._conn.nwfilterLookupByName(filter)
+            return True
+        except libvirt.libvirtError:
+            return False
+
+    # created by masumotok
+    def live_migration(self, instance_ref, dest):
+        uri = FLAGS.live_migration_uri % dest
+        out, err = utils.execute("sudo virsh migrate --live %s %s"
+                                % (instance_ref.name, uri))
+
+        # wait for completion of live_migration
+        d = defer.Deferred()
+        d.addCallback(lambda _: self._post_live_migration(instance_ref, dest))
+        timer = task.LoopingCall(f=None)
+
+        def _wait_for_live_migration():
+            try:
+                state = self.get_info(instance_ref.name)['state']
+            #except libvirt.libvirtError, e:
+            except exception.NotFound:
+                timer.stop()
+                d.callback(None)
+        timer.f = _wait_for_live_migration
+        timer.start(interval=0.5, now=True)
+        return d
+
+        # created by masumotok
+    def _post_live_migration(self, instance_ref, dest):
+
+        # 1. detaching volumes
+        # (not necessary in current version )
+        #try :
+        #    ec2_id = instance_ref['ec2_id']
+        #    volumes = db.volume_get_by_ec2_id(context, ec2_id)
+        #    for volume in volumes :
+        #        self.detach_volume(context, instance_id, volume.id)
+        #except exception.NotFound:
+        #    logging.debug('%s doesnt mount any volumes.. ' % ec2_id)
+
+        # 2. releasing vlan
+        #   (not necessary in current implementation?)
+
+        # 3. releasing security group ingress rule
+        #   (not necessary in current implementation?)
+
+        # 4. database updating
+        ec2_id = instance_ref['hostname']
+        ctxt = context.get_admin_context()
+
+        instance_id = instance_ref['id']
+        fixed_ip = db.instance_get_fixed_address(ctxt, instance_id)
+        # not return if fixed_ip is not found, otherwise,
+        # instance never be accessible..
+        if None == fixed_ip:
+            logging.error('fixed_ip is not found for %s ' % ec2_id)
+        db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
+        network_ref = db.fixed_ip_get_network(ctxt, fixed_ip)
+        db.network_update(ctxt, network_ref['id'], {'host': dest})
+
+        try:
+            floating_ip = db.instance_get_floating_address(ctxt, instance_id)
+            # not return if floating_ip is not found, otherwise,
+            # instance never be accessible..
+            if None == floating_ip:
+                logging.error('floating_ip is not found for %s ' % ec2_id)
+            floating_ip_ref = db.floating_ip_get_by_address(ctxt, floating_ip)
+            db.floating_ip_update(ctxt,
+                                  floating_ip_ref['address'],
+                                  {'host': dest})
+        except exception.NotFound:
+            logging.debug('%s doesnt have floating_ip.. ' % ec2_id)
+        except:
+            msg = 'Live migration: Unexpected error:'
+            msg += '%s cannot inherit floating ip.. ' % ec2_id
+            logging.error(msg)
+
+        db.instance_update(ctxt,
+                           instance_id,
+                           {'state_description': 'running',
+                            'state': power_state.RUNNING,
+                            'host': dest})
+
+        logging.info('Live migrating %s to %s finishes successfully'
+                     % (ec2_id, dest))
 
 
 class NWFilterFirewall(object):
