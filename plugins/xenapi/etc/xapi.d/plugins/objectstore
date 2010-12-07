@@ -77,6 +77,7 @@ def get_vdi(session, args):
 def get_vdi_(proto, netloc, url_path, username, password, add_partition,
              virtual_size, dest):
 
+    #Salvatore: vdi should not be partitioned for raw images
     if add_partition:
         write_partition(virtual_size, dest)
 
