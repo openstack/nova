@@ -20,15 +20,14 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
-from nova.virt import images
 from nova.compute import power_state
+from nova.virt import images
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -37,13 +36,17 @@ XENAPI_POWER_STATE = {
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
 
+XenAPI = None
+
 
 class VMHelper():
     """
     The class that wraps the helper methods together.
     """
     def __init__(self):
-        return
+        global XenAPI
+        if XenAPI is None:
+            XenAPI = __import__('XenAPI')
 
     @classmethod
     @defer.inlineCallbacks
