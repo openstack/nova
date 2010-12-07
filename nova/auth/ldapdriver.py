@@ -135,34 +135,29 @@ class LdapDriver(object):
             if self.__ldap_user_exists(name):
                 # Retrieve user by name
                 user = self.__get_ldap_user(name)
-                if user.has_key('accessKey') and user.has_key('secretKey') \
-                   and user.has_key('isAdmin'):
-                    raise exception.Duplicate("LDAP user %s already exists" \
-                    % name)
+                # Entry could be malformed, test for missing attrs.
+                # Malformed entries are useless, replace attributes found.
+                attr = []
+                if user.has_key('secretKey'):
+                    attr.append((self.ldap.MOD_REPLACE, 'secretKey', \
+                    [secret_key]))
                 else:
-                    # Entry could be malformed, test for missing attrs.
-                    # Malformed entries are useless, replace attributes found.
-                    attr = []
-                    if user.has_key('secretKey'):
-                        attr.append((self.ldap.MOD_REPLACE, 'secretKey', \
-                        [secret_key]))
-                    else:
-                        attr.append((self.ldap.MOD_ADD, 'secretKey', \
-                        [secret_key]))
-                    if user.has_key('accessKey'):
-                        attr.append((self.ldap.MOD_REPLACE, 'accessKey', \
-                        [access_key]))
-                    else:
-                        attr.append((self.ldap.MOD_ADD, 'accessKey', \
-                        [access_key]))
-                    if user.has_key('isAdmin'):
-                        attr.append((self.ldap.MOD_REPLACE, 'isAdmin', \
-                        [str(is_admin).upper()]))
-                    else:
-                        attr.append((self.ldap.MOD_ADD, 'isAdmin', \
-                        [str(is_admin).upper()]))
-                    self.conn.modify_s(self.__uid_to_dn(name), attr)
-                    return self.get_user(name)
+                    attr.append((self.ldap.MOD_ADD, 'secretKey', \
+                    [secret_key]))
+                if user.has_key('accessKey'):
+                    attr.append((self.ldap.MOD_REPLACE, 'accessKey', \
+                    [access_key]))
+                else:
+                    attr.append((self.ldap.MOD_ADD, 'accessKey', \
+                    [access_key]))
+                if user.has_key('isAdmin'):
+                    attr.append((self.ldap.MOD_REPLACE, 'isAdmin', \
+                    [str(is_admin).upper()]))
+                else:
+                    attr.append((self.ldap.MOD_ADD, 'isAdmin', \
+                    [str(is_admin).upper()]))
+                self.conn.modify_s(self.__uid_to_dn(name), attr)
+                return self.get_user(name)
         else:
             attr = [
                 ('objectclass', ['person',
