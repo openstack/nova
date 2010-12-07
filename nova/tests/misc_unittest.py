@@ -15,7 +15,6 @@
 #    under the License.
 
 import os
-import subprocess
 
 from nova import test
 from nova.utils import parse_mailmap, str_dict_replace
@@ -24,18 +23,23 @@ from nova.utils import parse_mailmap, str_dict_replace
 class ProjectTestCase(test.TrialTestCase):
     def test_authors_up_to_date(self):
         if os.path.exists('../.bzr'):
-            log_cmd = subprocess.Popen(["bzr", "log", "-n0"],
-                                       stdout=subprocess.PIPE)
-            changelog = log_cmd.communicate()[0]
+            contributors = set()
+
             mailmap = parse_mailmap('../.mailmap')
 
-            contributors = set()
-            for l in changelog.split('\n'):
-                l = l.strip()
-                if (l.startswith('author:') or l.startswith('committer:')
-                         and not l == 'committer: Tarmac'):
-                    email = l.split(' ')[-1]
-                    contributors.add(str_dict_replace(email, mailmap))
+            import bzrlib.workingtree
+            tree = bzrlib.workingtree.WorkingTree.open('..')
+            tree.lock_read()
+            parents = tree.get_parent_ids()
+            g = tree.branch.repository.get_graph()
+            for p in parents[1:]:
+                rev_ids = [r for r, _ in g.iter_ancestry(parents)
+                           if r != "null:"]
+                revs = tree.branch.repository.get_revisions(rev_ids)
+                for r in revs:
+                    for author in r.get_apparent_authors():
+                        email = author.split(' ')[-1]
+                        contributors.add(str_dict_replace(email, mailmap))
 
             authors_file = open('../Authors', 'r').read()
 
