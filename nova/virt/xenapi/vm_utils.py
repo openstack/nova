@@ -29,6 +29,7 @@ from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.virt import images
 from nova.compute import power_state
+from nova.virt.xenapi.volume_utils import StorageError
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -115,11 +116,13 @@ class VMHelper():
 
     @classmethod
     @utils.deferredToThread
-    def find_vbd_by_number(self, session, vm_ref, number):
+    def find_vbd_by_number(cls, session, vm_ref, number):
+        """ Get the VBD reference from the device number """
         return VMHelper.find_vbd_by_number_blocking(session, vm_ref, number)
 
     @classmethod
-    def find_vbd_by_number_blocking(self, session, vm_ref, number):
+    def find_vbd_by_number_blocking(cls, session, vm_ref, number):
+        """ Synchronous find_vbd_by_number """
         vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
         if vbds:
             for vbd in vbds:
@@ -127,29 +130,31 @@ class VMHelper():
                     vbd_rec = session.get_xenapi().VBD.get_record(vbd)
                     if vbd_rec['userdevice'] == str(number):
                         return vbd
-                except Exception, exc:
+                except XenAPI.Failure, exc:
                     logging.warn(exc)
             raise Exception('VBD not found in instance %s' % vm_ref)
 
     @classmethod
     @defer.inlineCallbacks
-    def unplug_vbd(self, session, vbd_ref):
+    def unplug_vbd(cls, session, vbd_ref):
+        """ Unplug VBD from VM """
         try:
             vbd_ref = yield session.call_xenapi('VBD.unplug', vbd_ref)
-        except Exception, exc:
+        except XenAPI.Failure, exc:
             logging.warn(exc)
             if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
-                raise Exception('Unable to unplug VBD %s' % vbd_ref)
+                raise StorageError('Unable to unplug VBD %s' % vbd_ref)
 
     @classmethod
     @defer.inlineCallbacks
-    def destroy_vbd(self, session, vbd_ref):
+    def destroy_vbd(cls, session, vbd_ref):
+        """ Destroy VBD from host database """
         try:
             task = yield session.call_xenapi('Async.VBD.destroy', vbd_ref)
             yield session.wait_for_task(task)
-        except Exception, exc:
+        except XenAPI.Failure, exc:
             logging.warn(exc)
-            raise Exception('Unable to destroy VBD %s' % vbd_ref)
+            raise StorageError('Unable to destroy VBD %s' % vbd_ref)
 
     @classmethod
     @defer.inlineCallbacks
@@ -244,6 +249,7 @@ class VMHelper():
 
     @classmethod
     def compile_info(cls, record):
+        """ Fill record with VM status information """
         return {'state': XENAPI_POWER_STATE[record['power_state']],
                 'max_mem': long(record['memory_static_max']) >> 10,
                 'mem': long(record['memory_dynamic_max']) >> 10,
