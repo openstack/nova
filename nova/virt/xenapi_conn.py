@@ -49,26 +49,42 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 
 import logging
 import xmlrpclib
+import XenAPI
 
 from twisted.internet import defer
 from twisted.internet import reactor
 
 from nova import utils
+from nova import flags
+from nova.virt.xenapi.vmops import VMOps
+from nova.virt.xenapi.volumeops import VolumeOps
 
-from xenapi.vmops import VMOps
-from xenapi.volumeops import VolumeOps
-from xenapi.novadeps import Configuration
-from xenapi import XenAPI
-
-Config = Configuration()
+FLAGS = flags.FLAGS
+flags.DEFINE_string('xenapi_connection_url',
+                    None,
+                    'URL for connection to XenServer/Xen Cloud Platform.'
+                    ' Required if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_username',
+                    'root',
+                    'Username for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_connection_password',
+                    None,
+                    'Password for connection to XenServer/Xen Cloud Platform.'
+                    ' Used only if connection_type=xenapi.')
+flags.DEFINE_float('xenapi_task_poll_interval',
+                   0.5,
+                   'The interval used for polling of remote tasks '
+                   '(Async.VM.start, etc).  Used only if '
+                   'connection_type=xenapi.')
 
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
-    url = Config.xenapi_connection_url
-    username = Config.xenapi_connection_username
-    password = Config.xenapi_connection_password
+    url = FLAGS.xenapi_connection_url
+    username = FLAGS.xenapi_connection_username
+    password = FLAGS.xenapi_connection_password
     if not url or password is None:
         raise Exception('Must specify xenapi_connection_url, '
                         'xenapi_connection_username (optionally), and '
@@ -165,7 +181,7 @@ class XenAPISession(object):
             #logging.debug('Polling task %s...', task)
             status = self._session.xenapi.task.get_status(task)
             if status == 'pending':
-                reactor.callLater(Config.xenapi_task_poll_interval,
+                reactor.callLater(FLAGS.xenapi_task_poll_interval,
                                   self._poll_task, task, deferred)
             elif status == 'success':
                 result = self._session.xenapi.task.get_result(task)

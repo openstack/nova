@@ -25,10 +25,17 @@ import XenAPI
 from twisted.internet import defer
 
 from nova import utils
+from nova.auth.manager import AuthManager
+from nova.compute import instance_types
+from nova.virt import images
+from nova.compute import power_state
 
-from novadeps import Instance
-from novadeps import Image
-from novadeps import User
+XENAPI_POWER_STATE = {
+    'Halted': power_state.SHUTDOWN,
+    'Running': power_state.RUNNING,
+    'Paused': power_state.PAUSED,
+    'Suspended': power_state.SHUTDOWN,  # FIXME
+    'Crashed': power_state.CRASHED}
 
 
 class VMHelper():
@@ -44,7 +51,7 @@ class VMHelper():
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
 
-        instance_type = Instance.get_type(instance)
+        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -76,10 +83,9 @@ class VMHelper():
             'user_version': '0',
             'other_config': {},
             }
-        logging.debug('Created VM %s...', Instance.get_name(instance))
+        logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
-        logging.debug('Created VM %s as %s.',
-                      Instance.get_name(instance), vm_ref)
+        logging.debug('Created VM %s as %s.', instance.name, vm_ref)
         defer.returnValue(vm_ref)
 
     @classmethod
@@ -137,14 +143,14 @@ class VMHelper():
         its kernel and ramdisk (if external kernels are being used).
         Returns a Deferred that gives the new VDI UUID."""
 
-        url = Image.get_url(image)
-        access = User.get_access(user, project)
+        url = images.image_url(image)
+        access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
         fn = use_sr and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
-        args['password'] = User.get_secret(user)
+        args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
         task = yield session.async_call_plugin('objectstore', fn, args)
@@ -179,7 +185,7 @@ class VMHelper():
     def lookup_vm_vdis_blocking(cls, session, vm):
         """ Synchronous lookup_vm_vdis """
         # Firstly we get the VBDs, then the VDIs.
-        # TODO: do we leave the read-only devices?
+        # TODO(Armando): do we leave the read-only devices?
         vbds = session.get_xenapi().VM.get_VBDs(vm)
         vdis = []
         if vbds:
@@ -197,3 +203,11 @@ class VMHelper():
                 return vdis
             else:
                 return None
+
+    @classmethod
+    def compile_info(cls, record):
+        return {'state': XENAPI_POWER_STATE[record['power_state']],
+                'max_mem': long(record['memory_static_max']) >> 10,
+                'mem': long(record['memory_dynamic_max']) >> 10,
+                'num_cpu': record['VCPUs_max'],
+                'cpu_time': 0}
