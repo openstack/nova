@@ -20,14 +20,19 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import urllib
 
 from twisted.internet import defer
 
+from nova import flags
 from nova import utils
+
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+
+FLAGS = flags.FLAGS
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -214,3 +219,13 @@ class VMHelper():
                 'mem': long(record['memory_dynamic_max']) >> 10,
                 'num_cpu': record['VCPUs_max'],
                 'cpu_time': 0}
+
+
+def get_rrd(host, uuid):
+    """Return the VM RRD XML as a string"""
+    xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
+        FLAGS.xenapi_connection_username,
+        FLAGS.xenapi_connection_password,
+        host,
+        uuid))
+    return xml.read()
