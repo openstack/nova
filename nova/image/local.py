@@ -59,7 +59,7 @@ class LocalImageService(service.BaseImageService):
         """
         Store the image data and return the new image id.
         """
-        id = random.randint(0, 2 ** 32 - 1)
+        id = random.randint(0, 2 ** 31 - 1)
         data['id'] = id
         self.update(context, id, data)
         return id
