@@ -62,8 +62,6 @@ Administrator's Documentation
    adminguide/single.node.install
    adminguide/multi.node.install
 
-.. todo:: add swiftadmin
-
 Developer Docs
 ==============
 
