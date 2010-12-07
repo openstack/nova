@@ -52,7 +52,7 @@ class ComputeAPI(base.Base):
     def create_instances(self, context, instance_type, image_service, image_id,
                          network_topic, min_count=1, max_count=1,
                          kernel_id=None, ramdisk_id=None, name='',
-                         description='', user_data='', key_name=None,
+                         description='', key_name=None,
                          key_data=None, security_group='default',
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
@@ -143,8 +143,8 @@ class ComputeAPI(base.Base):
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
 
-            logging.debug("Casting to scheduler for %s/%s's instance %s" %
-                          (context.project_id, context.user_id, instance_id))
+            logging.debug("Casting to scheduler for %s/%s's instance %s",
+                          context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
@@ -154,6 +154,12 @@ class ComputeAPI(base.Base):
         return instances
 
     def ensure_default_security_group(self, context):
+        """ Create security group for the security context if it
+        does not already exist
+
+        :param context: the security context
+
+        """
         try:
             db.security_group_get_by_name(context, context.project_id,
                                           'default')
@@ -162,7 +168,7 @@ class ComputeAPI(base.Base):
                       'description': 'default',
                       'user_id': context.user_id,
                       'project_id': context.project_id}
-            group = db.security_group_create(context, values)
+            db.security_group_create(context, values)
 
     def create_instance(self, context, security_groups=None, **kwargs):
         """Creates the instance in the datastore and returns the

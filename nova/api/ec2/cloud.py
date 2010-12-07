@@ -760,7 +760,6 @@ class CloudController(object):
             ramdisk_id=kwargs.get('ramdisk_id'),
             name=kwargs.get('display_name'),
             description=kwargs.get('display_description'),
-            user_data=kwargs.get('user_data', ''),
             key_name=kwargs.get('key_name'),
             security_group=kwargs.get('security_group'),
             generate_hostname=internal_id_to_ec2_id)
