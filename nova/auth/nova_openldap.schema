@@ -1,7 +1,9 @@
 #
 # Person object for Nova
 # inetorgperson with extra attributes
-# Author: Vishvananda Ishaya <vishvananda@yahoo.com>
+# Schema version: 2
+# Authors: Vishvananda Ishaya <vishvananda@yahoo.com>
+#          Ryan Lane <rlane@wikimedia.org>
 #
 #
 
