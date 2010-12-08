@@ -20,6 +20,7 @@
 Handles all API requests relating to instances (guest vms).
 """
 
+import datetime
 import logging
 import time
 
@@ -43,17 +44,17 @@ def generate_default_hostname(internal_id):
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, **kwargs):
-        self.network_manager = utils.import_object(FLAGS.network_manager)
+    def __init__(self, network_manager=None, **kwargs):
+        if not network_manager:
+            network_manager = utils.import_object(FLAGS.network_manager)
+        self.network_manager = network_manager
         super(ComputeAPI, self).__init__(**kwargs)
 
-    # TODO(eday): network_topic arg should go away once we push network
-    # allocation into the scheduler or compute worker.
     def create_instances(self, context, instance_type, image_service, image_id,
-                         network_topic, min_count=1, max_count=1,
-                         kernel_id=None, ramdisk_id=None, name='',
-                         description='', user_data='', key_name=None,
-                         key_data=None, security_group='default',
+                         min_count=1, max_count=1, kernel_id=None,
+                         ramdisk_id=None, name='', description='',
+                         user_data='', key_name=None, key_data=None,
+                         security_group='default',
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
@@ -139,7 +140,7 @@ class ComputeAPI(base.Base):
                                                              instance_id,
                                                              is_vpn)
             rpc.cast(elevated,
-                     network_topic,
+                     self._get_network_topic(context),
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
 
@@ -211,6 +212,58 @@ class ComputeAPI(base.Base):
         """
         self.db.instance_update(context, instance_id, kwargs)
 
+    def delete_instance(self, context, instance_id):
+        logging.debug("Going to try and terminate %d" % instance_id)
+        try:
+            instance = self.db.instance_get_by_internal_id(context,
+                                                           instance_id)
+        except exception.NotFound as e:
+            logging.warning("Instance %d was not found during terminate",
+                            instance_id)
+            raise e
+
+        if (instance['state_description'] == 'terminating'):
+            logging.warning("Instance %d is already being terminated",
+                            instance_id)
+            return
+
+        self.update_instance(context,
+                             instance['id'],
+                             state_description='terminating',
+                             state=0,
+                             terminated_at=datetime.datetime.utcnow())
+
+        # FIXME(ja): where should network deallocate occur?
+        address = self.db.instance_get_floating_address(context,
+                                                        instance['id'])
+        if address:
+            logging.debug("Disassociating address %s" % address)
+            # NOTE(vish): Right now we don't really care if the ip is
+            #             disassociated.  We may need to worry about
+            #             checking this later.  Perhaps in the scheduler?
+            rpc.cast(context,
+                     self._get_network_topic(context),
+                     {"method": "disassociate_floating_ip",
+                      "args": {"floating_address": address}})
+
+        address = self.db.instance_get_fixed_address(context, instance['id'])
+        if address:
+            logging.debug("Deallocating address %s" % address)
+            # NOTE(vish): Currently, nothing needs to be done on the
+            #             network node until release. If this changes,
+            #             we will need to cast here.
+            self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                     address)
+
+        host = instance['host']
+        if host:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "terminate_instance",
+                      "args": {"instance_id": instance['id']}})
+        else:
+            self.db.instance_destroy(context, instance['id'])
+
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -237,3 +290,14 @@ class ComputeAPI(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
+
+    def _get_network_topic(self, context):
+        """Retrieves the network host for a project"""
+        network_ref = self.network_manager.get_network(context)
+        host = network_ref['host']
+        if not host:
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+        return self.db.queue_get_for(context, FLAGS.network_topic, host)

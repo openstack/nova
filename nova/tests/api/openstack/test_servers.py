@@ -47,6 +47,14 @@ def return_security_group(context, instance_id, security_group_id):
     pass
 
 
+def instance_update(context, instance_id, kwargs):
+    pass
+
+
+def instance_address(context, instance_id):
+    return None
+
+
 def stub_instance(id, user_id=1):
     return Instance(id=id + 123456, state=0, image_id=10, user_id=user_id,
                     display_name='server%s' % id, internal_id=id)
@@ -69,6 +77,11 @@ class ServersTest(unittest.TestCase):
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
                        return_security_group)
+        self.stubs.Set(nova.db.api, 'instance_update', instance_update)
+        self.stubs.Set(nova.db.api, 'instance_get_fixed_address',
+                       instance_address)
+        self.stubs.Set(nova.db.api, 'instance_get_floating_address',
+                       instance_address)
 
     def tearDown(self):
         self.stubs.UnsetAll()
