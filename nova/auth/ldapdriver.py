@@ -159,7 +159,7 @@ class LdapDriver(object):
                 self.conn.modify_s(self.__uid_to_dn(name), attr)
                 return self.get_user(name)
             else:
-                raise exception.NotFound("User %s doesn't exist" % name)
+                raise exception.NotFound("LDAP object for %s doesn't exist" % name)
         else:
             attr = [
                 ('objectclass', ['person',
