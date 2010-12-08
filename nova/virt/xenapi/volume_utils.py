@@ -78,14 +78,14 @@ class VolumeHelper():
             if 'chapuser' in info and 'chappassword' in info:
                 record = {'target': info['targetHost'],
                           'port': info['targetPort'],
-                          'targetIQN': info['targeIQN'],
+                          'targetIQN': info['targetIQN'],
                           'chapuser': info['chapuser'],
                           'chappassword': info['chappassword']
                           }
             else:
                 record = {'target': info['targetHost'],
                           'port': info['targetPort'],
-                          'targetIQN': info['targeIQN']
+                          'targetIQN': info['targetIQN']
                           }
             try:
                 sr_ref = session.get_xenapi().SR.create(
@@ -211,7 +211,7 @@ class VolumeHelper():
         volume_info['volumeId'] = volume_id
         volume_info['targetHost'] = target_host
         volume_info['targetPort'] = target_port
-        volume_info['targeIQN'] = target_iqn
+        volume_info['targetIQN'] = target_iqn
         defer.returnValue(volume_info)
 
     @classmethod
