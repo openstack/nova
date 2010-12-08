@@ -72,33 +72,27 @@ class ComputeTestCase(test.TrialTestCase):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
-            ref = self.compute_api.create_instance(self.context, None,
-                                                   **instance)
+            ref = self.compute_api.create_instances(self.context,
+                FLAGS.default_instance_type, None, **instance)
             try:
-                self.assertNotEqual(ref.display_name, None)
+                self.assertNotEqual(ref[0].display_name, None)
             finally:
-                db.instance_destroy(self.context, ref['id'])
+                db.instance_destroy(self.context, ref[0]['id'])
 
     def test_create_instance_associates_security_groups(self):
-        """Make sure create_instance associates security groups"""
-        inst = {}
-        inst['user_id'] = self.user.id
-        inst['project_id'] = self.project.id
+        """Make sure create_instances associates security groups"""
         values = {'name': 'default',
                   'description': 'default',
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute_api.create_instance(self.context,
-                                               security_groups=[group['id']],
-                                               **inst)
-        # reload to get groups
-        instance_ref = db.instance_get(self.context, ref['id'])
+        ref = self.compute_api.create_instances(self.context,
+            FLAGS.default_instance_type, None, security_group=['default'])
         try:
-            self.assertEqual(len(instance_ref['security_groups']), 1)
+            self.assertEqual(len(ref[0]['security_groups']), 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
-            db.instance_destroy(self.context, instance_ref['id'])
+            db.instance_destroy(self.context, ref[0]['id'])
 
     @defer.inlineCallbacks
     def test_run_terminate(self):

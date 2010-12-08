@@ -67,8 +67,7 @@ def fake_wsgi(self, req):
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
-        key_pair)
+    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
 
 
 def stub_out_image_service(stubs):

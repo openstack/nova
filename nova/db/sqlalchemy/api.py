@@ -732,6 +732,7 @@ def instance_update(context, instance_id, values):
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
         instance_ref.save(session=session)
+        return instance_ref
 
 
 def instance_add_security_group(context, instance_id, security_group_id):
