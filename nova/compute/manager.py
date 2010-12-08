@@ -22,8 +22,8 @@ Handles all processes relating to instances (guest vms).
 The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
 handles RPC calls relating to creating instances.  It is responsible for
 building a disk image, launching it via the underlying virtualization driver,
-responding to calls to check it state, attaching persistent as well as
-termination.
+responding to calls to check its state, attaching persistent storage, and
+terminating it.
 
 **Related Flags**
 
@@ -45,15 +45,15 @@ from nova import manager
 from nova import utils
 from nova.compute import power_state
 
-
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
-                    'Driver to use for volume creation')
+                    'Driver to use for controlling virtualization')
 
 
 class ComputeManager(manager.Manager):
+
     """Manages the running instances from creation to destruction."""
 
     def __init__(self, compute_driver=None, *args, **kwargs):
@@ -84,47 +84,6 @@ class ComputeManager(manager.Manager):
         """This call passes stright through to the virtualization driver."""
         yield self.driver.refresh_security_group(security_group_id)
 
-    def create_instance(self, context, security_groups=None, **kwargs):
-        """Creates the instance in the datastore and returns the
-        new instance as a mapping
-
-        :param context: The security context
-        :param security_groups: list of security group ids to
-                                attach to the instance
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       created
-
-        :retval Returns a mapping of the instance information
-                that has just been created
-
-        """
-        instance_ref = self.db.instance_create(context, kwargs)
-        inst_id = instance_ref['id']
-
-        elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
-        for security_group_id in security_groups:
-            self.db.instance_add_security_group(elevated,
-                                                inst_id,
-                                                security_group_id)
-        return instance_ref
-
-    def update_instance(self, context, instance_id, **kwargs):
-        """Updates the instance in the datastore.
-
-        :param context: The security context
-        :param instance_id: ID of the instance to update
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       updated
-
-        :retval None
-
-        """
-        self.db.instance_update(context, instance_id, kwargs)
-
     @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
@@ -134,7 +93,6 @@ class ComputeManager(manager.Manager):
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error("Instance has already been created")
         logging.debug("instance %s: starting...", instance_id)
-        project_id = instance_ref['project_id']
         self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
@@ -176,7 +134,6 @@ class ComputeManager(manager.Manager):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error('trying to destroy already destroyed'
                                   ' instance: %s' % instance_id)
-
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
