@@ -15,22 +15,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
 from webob import exc
 
-from nova import flags
-from nova import rpc
-from nova import utils
-from nova import wsgi
 from nova import context
+from nova import exception
+from nova import wsgi
 from nova.api.openstack import faults
+from nova.auth import manager as auth_manager
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
-import nova.image.service
-
-FLAGS = flags.FLAGS
 
 
 def _entity_list(entities):
@@ -78,11 +73,7 @@ class Controller(wsgi.Controller):
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
                            "status", "progress"]}}}
 
-    def __init__(self, db_driver=None):
-        if not db_driver:
-            db_driver = FLAGS.db_driver
-        self.db_driver = utils.import_object(db_driver)
-        self.network_manager = utils.import_object(FLAGS.network_manager)
+    def __init__(self):
         self.compute_api = compute_api.ComputeAPI()
         super(Controller, self).__init__()
 
@@ -101,7 +92,7 @@ class Controller(wsgi.Controller):
         """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-        instance_list = self.db_driver.instance_get_all_by_user(ctxt, user_id)
+        instance_list = self.compute_api.get_instances(ctxt)
         limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
@@ -110,7 +101,7 @@ class Controller(wsgi.Controller):
         """ Returns server details by server id """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-        inst = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
+        inst = self.compute_api.get_instance(ctxt, int(id))
         if inst:
             if inst.user_id == user_id:
                 return _entity_detail(inst)
@@ -120,11 +111,11 @@ class Controller(wsgi.Controller):
         """ Destroys a server """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-        instance = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
-        if instance and instance['user_id'] == user_id:
-            self.db_driver.instance_destroy(ctxt, id)
-            return faults.Fault(exc.HTTPAccepted())
-        return faults.Fault(exc.HTTPNotFound())
+        try:
+            self.compute_api.delete_instance(ctxt, int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -134,13 +125,11 @@ class Controller(wsgi.Controller):
 
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-        key_pair = self.db_driver.key_pair_get_all_by_user(None, user_id)[0]
+        key_pair = auth_manager.AuthManager.get_key_pairs(ctxt)[0]
         instances = self.compute_api.create_instances(ctxt,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
-            utils.import_object(FLAGS.image_service),
             env['server']['imageId'],
-            self._get_network_topic(ctxt),
-            name=env['server']['name'],
+            display_name=env['server']['name'],
             description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
@@ -150,15 +139,9 @@ class Controller(wsgi.Controller):
         """ Updates the server name or password """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
-
         inst_dict = self._deserialize(req.body, req)
-
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-
-        instance = self.db_driver.instance_get_by_internal_id(ctxt, int(id))
-        if not instance or instance.user_id != user_id:
-            return faults.Fault(exc.HTTPNotFound())
 
         update_dict = {}
         if 'adminPass' in inst_dict['server']:
@@ -166,11 +149,15 @@ class Controller(wsgi.Controller):
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
 
-        self.compute_api.update_instance(ctxt, instance['id'], update_dict)
+        try:
+            self.compute_api.update_instance(ctxt, instance['id'],
+                                             **update_dict)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ multi-purpose method used to reboot, rebuild, and
+        """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
         user_id = req.environ['nova.context']['user']['id']
         ctxt = context.RequestContext(user_id, user_id)
@@ -178,21 +165,11 @@ class Controller(wsgi.Controller):
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
-            raise faults.Fault(webob.exc.HTTPNotImplemented())
-        inst_ref = self.db.instance_get_by_internal_id(ctxt, int(id))
-        if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+            raise faults.Fault(exc.HTTPNotImplemented())
+        try:
+            # TODO(gundlach): pass reboot_type, support soft reboot in
+            # virt driver
+            self.compute_api.reboot(ctxt, id)
+        except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        # TODO(gundlach): pass reboot_type, support soft reboot in
-        # virt driver
-        self.compute_api.reboot(ctxt, id)
-
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return self.db_driver.queue_get_for(context, FLAGS.network_topic, host)
+        return exc.HTTPAccepted()
