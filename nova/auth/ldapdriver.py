@@ -32,7 +32,7 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('ldap_schema_version', 1,
+flags.DEFINE_integer('ldap_schema_version', 2,
                      'Current version of the LDAP schema')
 flags.DEFINE_string('ldap_url', 'ldap://localhost',
                     'Point this at your ldap server')
