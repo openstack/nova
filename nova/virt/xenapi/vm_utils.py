@@ -223,6 +223,7 @@ class VMHelper():
 
     @classmethod
     def compile_diagnostics(cls, session, record):
+        """Compile VM diagnostics data"""
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
