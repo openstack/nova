@@ -40,7 +40,8 @@ flags.DEFINE_string('ldap_password', 'changeme', 'LDAP password')
 flags.DEFINE_string('ldap_user_dn', 'cn=Manager,dc=example,dc=com',
                     'DN of admin user')
 flags.DEFINE_string('ldap_user_id_attribute', 'uid', 'Attribute to use as id')
-flags.DEFINE_string('ldap_user_name_attribute', 'cn', 'Attribute to use as name')
+flags.DEFINE_string('ldap_user_name_attribute', 'cn',
+                    'Attribute to use as name')
 flags.DEFINE_string('ldap_user_unit', 'Users', 'OID for Users')
 flags.DEFINE_string('ldap_user_subtree', 'ou=Users,dc=example,dc=com',
                     'OU for Users')
@@ -153,23 +154,23 @@ class LdapDriver(object):
                 # Malformed entries are useless, replace attributes found.
                 attr = []
                 if 'secretKey' in user.keys():
-                    attr.append((self.ldap.MOD_REPLACE, 'secretKey', \
+                    attr.append((self.ldap.MOD_REPLACE, 'secretKey',
                     [secret_key]))
                 else:
-                    attr.append((self.ldap.MOD_ADD, 'secretKey', \
+                    attr.append((self.ldap.MOD_ADD, 'secretKey',
                     [secret_key]))
                 if 'accessKey' in user.keys():
-                    attr.append((self.ldap.MOD_REPLACE, 'accessKey', \
+                    attr.append((self.ldap.MOD_REPLACE, 'accessKey',
                     [access_key]))
                 else:
-                    attr.append((self.ldap.MOD_ADD, 'accessKey', \
+                    attr.append((self.ldap.MOD_ADD, 'accessKey',
                     [access_key]))
                 if LdapDriver.isadmin_attribute in user.keys():
-                    attr.append((self.ldap.MOD_REPLACE, LdapDriver.isadmin_attribute, \
-                    [str(is_admin).upper()]))
+                    attr.append((self.ldap.MOD_REPLACE,
+                    LdapDriver.isadmin_attribute, [str(is_admin).upper()]))
                 else:
-                    attr.append((self.ldap.MOD_ADD, LdapDriver.isadmin_attribute, \
-                    [str(is_admin).upper()]))
+                    attr.append((self.ldap.MOD_ADD,
+                    LdapDriver.isadmin_attribute, [str(is_admin).upper()]))
                 self.conn.modify_s(self.__uid_to_dn(name), attr)
                 return self.get_user(name)
             else:
@@ -236,7 +237,8 @@ class LdapDriver(object):
                                          "manager %s doesn't exist" %
                                          manager_uid)
             manager_dn = self.__uid_to_dn(manager_uid)
-            attr.append((self.ldap.MOD_REPLACE, LdapDriver.project_attribute, manager_dn))
+            attr.append((self.ldap.MOD_REPLACE, LdapDriver.project_attribute,
+                         manager_dn))
         if description:
             attr.append((self.ldap.MOD_REPLACE, 'description', description))
         self.conn.modify_s('cn=%s,%s' % (project_id,
@@ -312,14 +314,15 @@ class LdapDriver(object):
             # Retrieve user by name
             user = self.__get_ldap_user(uid)
             if 'secretKey' in user.keys():
-                attr.append((self.ldap.MOD_DELETE, 'secretKey', \
-                user['secretKey']))
+                attr.append((self.ldap.MOD_DELETE, 'secretKey',
+                             user['secretKey']))
             if 'accessKey' in user.keys():
-                attr.append((self.ldap.MOD_DELETE, 'accessKey', \
-                user['accessKey']))
+                attr.append((self.ldap.MOD_DELETE, 'accessKey',
+                             user['accessKey']))
             if LdapDriver.isadmin_attribute in user.keys():
-                attr.append((self.ldap.MOD_DELETE, LdapDriver.isadmin_attribute, \
-                user[LdapDriver.isadmin_attribute]))
+                attr.append((self.ldap.MOD_DELETE,
+                             LdapDriver.isadmin_attribute,
+                             user[LdapDriver.isadmin_attribute]))
             self.conn.modify_s(self.__uid_to_dn(uid), attr)
         else:
             # Delete entry
@@ -341,7 +344,8 @@ class LdapDriver(object):
         if secret_key:
             attr.append((self.ldap.MOD_REPLACE, 'secretKey', secret_key))
         if admin is not None:
-            attr.append((self.ldap.MOD_REPLACE, LdapDriver.isadmin_attribute, str(admin).upper()))
+            attr.append((self.ldap.MOD_REPLACE, LdapDriver.isadmin_attribute,
+                         str(admin).upper()))
         self.conn.modify_s(self.__uid_to_dn(uid), attr)
 
     def __user_exists(self, uid):
@@ -395,7 +399,8 @@ class LdapDriver(object):
 
     def __find_role_dns(self, tree):
         """Find dns of role objects in given tree"""
-        query = '(&(objectclass=groupOfNames)(!%s))' % LdapDriver.project_pattern
+        query = ('(&(objectclass=groupOfNames)(!%s))' %
+                 LdapDriver.project_pattern)
         return self.__find_dns(tree, query)
 
     def __find_group_dns_with_member(self, tree, uid):
