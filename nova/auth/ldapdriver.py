@@ -106,7 +106,7 @@ class LdapDriver(object):
         """Retrieve project by id"""
         dn = 'cn=%s,%s' % (pid,
                            FLAGS.ldap_project_subtree)
-        attr = self.__find_object(dn, '(objectclass=novaProject)')
+        attr = self.__find_object(dn, '(owner=*)')
         return self.__to_project(attr)
 
     def get_users(self):
@@ -122,7 +122,7 @@ class LdapDriver(object):
 
     def get_projects(self, uid=None):
         """Retrieve list of projects"""
-        pattern = '(objectclass=novaProject)'
+        pattern = '(owner=*)'
         if uid:
             pattern = "(&%s(member=%s))" % (pattern, self.__uid_to_dn(uid))
         attrs = self.__find_objects(FLAGS.ldap_project_subtree,
@@ -205,10 +205,10 @@ class LdapDriver(object):
         if not manager_dn in members:
             members.append(manager_dn)
         attr = [
-            ('objectclass', ['novaProject']),
+            ('objectclass', ['groupOfNames']),
             ('cn', [name]),
             ('description', [description]),
-            ('projectManager', [manager_dn]),
+            ('owner', [manager_dn]),
             ('member', members)]
         self.conn.add_s('cn=%s,%s' % (name, FLAGS.ldap_project_subtree), attr)
         return self.__to_project(dict(attr))
@@ -224,7 +224,7 @@ class LdapDriver(object):
                                          "manager %s doesn't exist" %
                                          manager_uid)
             manager_dn = self.__uid_to_dn(manager_uid)
-            attr.append((self.ldap.MOD_REPLACE, 'projectManager', manager_dn))
+            attr.append((self.ldap.MOD_REPLACE, 'owner', manager_dn))
         if description:
             attr.append((self.ldap.MOD_REPLACE, 'description', description))
         self.conn.modify_s('cn=%s,%s' % (project_id,
@@ -286,7 +286,7 @@ class LdapDriver(object):
             project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
             roles = self.__find_objects(project_dn,
                                         '(&(&(objectclass=groupOfNames)'
-                                        '(!(objectclass=novaProject)))'
+                                        '(!(owner=*)))'
                                         '(member=%s))' % self.__uid_to_dn(uid))
             return [role['cn'][0] for role in roles]
 
@@ -385,7 +385,7 @@ class LdapDriver(object):
     def __find_role_dns(self, tree):
         """Find dns of role objects in given tree"""
         return self.__find_dns(tree,
-                '(&(objectclass=groupOfNames)(!(objectclass=novaProject)))')
+                '(&(objectclass=groupOfNames)(!(owner=*)))')
 
     def __find_group_dns_with_member(self, tree, uid):
         """Find dns of group objects in a given tree that contain member"""
@@ -534,7 +534,7 @@ class LdapDriver(object):
         return {
             'id': attr['cn'][0],
             'name': attr['cn'][0],
-            'project_manager_id': self.__dn_to_uid(attr['projectManager'][0]),
+            'project_manager_id': self.__dn_to_uid(attr['owner'][0]),
             'description': attr.get('description', [None])[0],
             'member_ids': [self.__dn_to_uid(x) for x in member_dns]}
 

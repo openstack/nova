@@ -39,26 +39,10 @@ attributetype (
     SINGLE-VALUE
     )
 
-attributetype (
-    novaAttrs:5
-    NAME 'projectManager'
-    DESC 'Project Managers of a project'
-    SYNTAX 1.3.6.1.4.1.1466.115.121.1.12
-    )
-
 objectClass (
     novaOCs:1
     NAME 'novaUser'
     DESC 'access and secret keys'
     AUXILIARY
     MAY  ( accessKey $ secretKey $ isNovaAdmin )
-    )
-
-objectClass (
-    novaOCs:3
-    NAME 'novaProject'
-    DESC 'Container for project'
-    SUP groupOfNames
-    STRUCTURAL
-    MUST ( cn $ projectManager )
     )
