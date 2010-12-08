@@ -195,7 +195,6 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-# this method is created by masumotok
 def floating_ip_update(context, address, values):
     """update floating ip information."""
     return IMPL.floating_ip_update(context, address, values)
@@ -339,13 +338,11 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
-# created by masumotok
 def instance_get_all_by_host(context, hostname):
     """Get instances by host"""
     return IMPL.instance_get_all_by_host(context, hostname)
 
 
-# created by masumotok
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     """Get instances.vcpus by host and project"""
     return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
@@ -353,7 +350,6 @@ def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
                                                           proj_id)
 
 
-# created by masumotok
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
     """Get amount of memory by host and project """
     return IMPL.instance_get_memory_sum_by_host_and_project(context,
@@ -361,7 +357,6 @@ def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
                                                             proj_id)
 
 
-# created by masumotok
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     """Get total amount of disk by host and project """
     return IMPL.instance_get_disk_sum_by_host_and_project(context,
@@ -870,7 +865,6 @@ def host_get_networks(context, host):
     return IMPL.host_get_networks(context, host)
 
 
-# below all methods related to host table are created by masumotok
 ###################
 
 

@@ -33,12 +33,13 @@
    Then restart nfs server.
 
    > /etc/init.d/nfs-kernel-server restart
+   > /etc/init.d/idmapd restart
 
    Also, at any compute nodes, add below line to /etc/fstab:
   
    >172.19.0.131:/  DIR    nfs4    defaults        0       0 
 
-   where "DIR" must be same as 'instance_path'( see nova.compute.manager for the default value)
+   where "DIR" must be same as 'instances_path'( see nova.compute.manager for the default value)
 
    Then try to mount,
 
@@ -47,6 +48,22 @@
    Check exported directory is successfully mounted. if fail, try this at any hosts,
   
    > iptables -F
+
+   Also, check file/daemon permissions. 
+   we expect any nova daemons are running as root.
+   > root@openstack2-api:/opt/nova-2010.4# ps -ef | grep nova
+   > root      5948  5904  9 11:29 pts/4    00:00:00 python /opt/nova-2010.4//bin/nova-api
+   > root      5952  5908  6 11:29 pts/5    00:00:00 python /opt/nova-2010.4//bin/nova-objectstore
+   > ... (snip)
+
+   "instances/" directory can be seen from server side:
+   > root@openstack:~# ls -ld nova-install-dir/instances/
+   > drwxr-xr-x 2 root root 4096 2010-12-07 14:34 nova-install-dir/instances/
+
+   also, client side: 
+   > root@openstack-client:~# ls -ld nova-install-dir/instances/
+   > drwxr-xr-x 2 root root 4096 2010-12-07 14:34 nova-install-dir/instances/ 
+   
 
 
    (b) libvirt settings
@@ -58,8 +75,8 @@
       before : #listen_tls = 0
       after  : listen_tls = 0
 
-      before : #listen_tcp = 0
-      after  : listen_tcp = 0
+      before : #listen_tcp = 1
+      after  : listen_tcp = 1
 
       append : auth_tcp = "none"
 
@@ -105,7 +122,7 @@
        a destination of live migration.
 
    For live migration, 
-       nova-manage instances ec2-id(i-xxxx) destination-host-name.
+       nova-manage instances live_migration ec2-id(i-xxxx) destination-host-name.
 
        once this command is executed, admins will check the status through 
        euca-describe-instances. The status is changed from 'running' to 'migrating',

@@ -36,11 +36,8 @@ terminating it.
 
 import datetime
 import logging
-# added by masumotok
 import sys
-# added by masumotok
 import traceback
-# added by masumotok
 import os
 
 
@@ -51,9 +48,7 @@ from nova import flags
 from nova import manager
 from nova import utils
 from nova.compute import power_state
-# added by masumotok
 from nova import rpc
-# added by masumotok
 from nova import db
 
 FLAGS = flags.FLAGS
@@ -61,7 +56,6 @@ flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
-# created by masumotok
 flags.DEFINE_string('live_migration_timeout', 30,
                     'Timeout value for pre_live_migration is completed.')
 
@@ -266,12 +260,10 @@ class ComputeManager(manager.Manager):
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)
 
-    # created by masumotok
     def get_cpu_number(self):
         """Get the number of physical computer cpu core ."""
         return open('/proc/cpuinfo').read().count('processor')
 
-    # created by masumotok
     def get_mem_size(self):
         """Get the memory size of physical computer ."""
         meminfo = open('/proc/meminfo').read().split()
@@ -279,13 +271,11 @@ class ComputeManager(manager.Manager):
         # transforming kb to mb.
         return int(meminfo[idx + 1]) / 1024
 
-    # created by masumotok
     def get_hdd_size(self):
         """Get the hdd size of physical computer ."""
         hddinfo = os.statvfs(FLAGS.instances_path)
         return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
 
-    # created by masumotok
     def pre_live_migration(self, context, instance_id, dest):
         """Any preparation for live migration at dst host."""
 
@@ -334,13 +324,11 @@ class ComputeManager(manager.Manager):
         self.network_manager.driver.ensure_vlan_bridge(network_ref['vlan'],
                                                        network_ref['bridge'])
 
-    # created by masumotok
     def nwfilter_for_instance_exists(self, context, instance_id):
         """Check nova-instance-instance-xxx filter exists """
         instance_ref = db.instance_get(context, instance_id)
         return self.driver.nwfilter_for_instance_exists(instance_ref)
 
-    # created by masumotok
     def live_migration(self, context, instance_id, dest):
         """executes live migration."""
 

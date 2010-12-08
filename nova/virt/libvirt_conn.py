@@ -44,8 +44,6 @@ Supports KVM, QEMU, UML, and XEN.
 import logging
 import os
 import shutil
-# appended by masumotok
-#import libvirt
 
 import IPy
 from twisted.internet import defer
@@ -103,7 +101,6 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-# added by masumotok
 flags.DEFINE_string('live_migration_uri',
                   "qemu+tcp://%s/system",
                   'Define protocol used by live_migration feature')
@@ -654,12 +651,10 @@ class LibvirtConnection(object):
         fw = NWFilterFirewall(self._conn)
         fw.ensure_security_group_filter(security_group_id)
 
-    # created by masumotok
     def setup_nwfilters_for_instance(self, instance):
         nwfilter = NWFilterFirewall(self._conn)
         return nwfilter.setup_nwfilters_for_instance(instance)
 
-    # created by masumotok
     def nwfilter_for_instance_exists(self, instance_ref):
         try:
             filter = 'nova-instance-%s' % instance_ref.name
@@ -668,7 +663,6 @@ class LibvirtConnection(object):
         except libvirt.libvirtError:
             return False
 
-    # created by masumotok
     def live_migration(self, instance_ref, dest):
         uri = FLAGS.live_migration_uri % dest
         out, err = utils.execute("sudo virsh migrate --live %s %s"
@@ -690,7 +684,6 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
         return d
 
-        # created by masumotok
     def _post_live_migration(self, instance_ref, dest):
 
         # 1. detaching volumes

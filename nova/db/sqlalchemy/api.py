@@ -394,7 +394,6 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
-# created by masumotok
 @require_context
 def floating_ip_update(context, address, values):
     session = get_session()
@@ -757,7 +756,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
         instance_ref.save(session=session)
 
 
-# created by masumotok
 def instance_get_all_by_host(context, hostname):
     session = get_session()
     if not session:
@@ -772,7 +770,6 @@ def instance_get_all_by_host(context, hostname):
     return result
 
 
-# created by masumotok
 def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
     session = get_session()
 
@@ -786,19 +783,16 @@ def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
     return result
 
 
-# created by masumotok
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'vcpus', hostname,
                                                  proj_id)
 
 
-# created by masumotok
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'memory_mb',
                                                  hostname, proj_id)
 
 
-# created by masumotok
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'local_gb',
                                                  hostname, proj_id)
@@ -1805,7 +1799,6 @@ def host_get_networks(context, host):
                        all()
 
 
-#below all methods related to host table are created by masumotok
 ###################
 
 @require_admin_context

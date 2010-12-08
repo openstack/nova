@@ -29,7 +29,6 @@ from nova import flags
 from nova import manager
 from nova import rpc
 from nova import utils
-# 3 modules are added by masumotok
 from nova import exception
 from nova.api.ec2 import cloud
 from nova.compute import power_state
@@ -71,7 +70,6 @@ class SchedulerManager(manager.Manager):
                   "args": kwargs})
         logging.debug("Casting to %s %s for %s", topic, host, method)
 
-    #  created by masumotok
     def live_migration(self, context, ec2_id, dest):
         """ live migration method"""
 
@@ -99,8 +97,8 @@ class SchedulerManager(manager.Manager):
                              'dest': dest}})
         return True
 
-    # this method is created by masumotok
     def has_enough_resource(self, context, instance_id, dest):
+        """ check if destination host has enough resource for live migration"""
 
         # get instance information
         instance_ref = db.instance_get(context, instance_id)
@@ -135,7 +133,6 @@ class SchedulerManager(manager.Manager):
         logging.debug('%s has enough resource for %s' % (dest, ec2_id))
         return True
 
-    # this method is created by masumotok
     def show_host_resource(self, context, host, *args):
         """ show the physical/usage resource given by hosts."""
 

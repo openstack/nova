@@ -73,7 +73,6 @@ class Service(object, service.Service):
         self.model_disconnected = False
         ctxt = context.get_admin_context()
 
-        # this try-except operations are added by masumotok
         try:
             host_ref = db.host_get_by_name(ctxt, self.host)
         except exception.NotFound:
@@ -117,7 +116,6 @@ class Service(object, service.Service):
                                          'report_count': 0})
         self.service_id = service_ref['id']
 
-    # created by masumotok
     def _update_host_ref(self, context, host_ref):
 
         if 0 <= self.manager_class_name.find('ComputeManager'):
