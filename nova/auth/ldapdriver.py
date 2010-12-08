@@ -138,19 +138,19 @@ class LdapDriver(object):
                 # Entry could be malformed, test for missing attrs.
                 # Malformed entries are useless, replace attributes found.
                 attr = []
-                if user.has_key('secretKey'):
+                if 'secretKey' in user.keys():
                     attr.append((self.ldap.MOD_REPLACE, 'secretKey', \
                     [secret_key]))
                 else:
                     attr.append((self.ldap.MOD_ADD, 'secretKey', \
                     [secret_key]))
-                if user.has_key('accessKey'):
+                if 'accessKey' in user.keys():
                     attr.append((self.ldap.MOD_REPLACE, 'accessKey', \
                     [access_key]))
                 else:
                     attr.append((self.ldap.MOD_ADD, 'accessKey', \
                     [access_key]))
-                if user.has_key('isAdmin'):
+                if 'isAdmin' in user.keys():
                     attr.append((self.ldap.MOD_REPLACE, 'isAdmin', \
                     [str(is_admin).upper()]))
                 else:
@@ -298,13 +298,13 @@ class LdapDriver(object):
             attr = []
             # Retrieve user by name
             user = self.__get_ldap_user(uid)
-            if user.has_key('secretKey'):
+            if 'secretKey' in user.keys():
                 attr.append((self.ldap.MOD_DELETE, 'secretKey', \
                 user['secretKey']))
-            if user.has_key('accessKey'):
+            if 'accessKey' in user.keys():
                 attr.append((self.ldap.MOD_DELETE, 'accessKey', \
                 user['accessKey']))
-            if user.has_key('isAdmin'):
+            if 'isAdmin' in user.keys():
                 attr.append((self.ldap.MOD_DELETE, 'isAdmin', \
                 user['isAdmin']))
             self.conn.modify_s(self.__uid_to_dn(uid), attr)
@@ -513,8 +513,8 @@ class LdapDriver(object):
         """Convert ldap attributes to User object"""
         if attr is None:
             return None
-        if (attr.has_key('accessKey') and attr.has_key('secretKey') \
-            and attr.has_key('isAdmin')):
+        if ('accessKey' in attr.keys() and 'secretKey' in attr.keys() \
+            and 'isAdmin' in attr.keys()):
             return {
                 'id': attr['uid'][0],
                 'name': attr['cn'][0],
