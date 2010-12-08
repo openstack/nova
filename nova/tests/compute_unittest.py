@@ -31,6 +31,7 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import api as compute_api
 
 FLAGS = flags.FLAGS
 
@@ -43,6 +44,7 @@ class ComputeTestCase(test.TrialTestCase):
         self.flags(connection_type='fake',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
+        self.compute_api = compute_api.ComputeAPI()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
@@ -66,6 +68,17 @@ class ComputeTestCase(test.TrialTestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']
 
+    def test_create_instance_defaults_display_name(self):
+        """Verify that an instance cannot be created without a display_name."""
+        cases = [dict(), dict(display_name=None)]
+        for instance in cases:
+            ref = self.compute_api.create_instance(self.context, None,
+                                                   **instance)
+            try:
+                self.assertNotEqual(ref.display_name, None)
+            finally:
+                db.instance_destroy(self.context, ref['id'])
+
     def test_create_instance_associates_security_groups(self):
         """Make sure create_instance associates security groups"""
         inst = {}
@@ -76,9 +89,9 @@ class ComputeTestCase(test.TrialTestCase):
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute.create_instance(self.context,
-                                           security_groups=[group['id']],
-                                           **inst)
+        ref = self.compute_api.create_instance(self.context,
+                                               security_groups=[group['id']],
+                                               **inst)
         # reload to get groups
         instance_ref = db.instance_get(self.context, ref['id'])
         try:

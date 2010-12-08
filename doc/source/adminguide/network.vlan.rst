@@ -50,7 +50,7 @@ The following diagram illustrates how the communication that occurs between the 
 Goals
 -----
 
-* each project is in a protected network segment
+For our implementation of Nova, our goal is that each project is in a protected network segment. Here are the specifications we keep in mind for meeting this goal.
 
   * RFC-1918 IP space
   * public IP via NAT
@@ -59,18 +59,18 @@ Goals
   * limited (project-admin controllable) access to other project segments
   * all connectivity to instance and cloud API is via VPN into the project segment
 
-* common DMZ segment for support services (only visible from project segment)
+We also keep as a goal a common DMZ segment for support services, meaning these items are only visible from project segment:
 
   * metadata
   * dashboard
 
-
 Limitations
 -----------
 
+We kept in mind some of these limitations: 
+
 * Projects / cluster limited to available VLANs in switching infrastructure
 * Requires VPN for access to project segment
-
 
 Implementation
 --------------

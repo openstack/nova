@@ -19,7 +19,7 @@ Installing Nova on Multiple Servers
 ===================================
 
 When you move beyond evaluating the technology and into building an actual
-production environemnt, you will need to know how to configure your datacenter
+production environment, you will need to know how to configure your datacenter
 and how to deploy components across your clusters.  This guide should help you
 through that process.
 
@@ -161,7 +161,7 @@ Step 3 Setup the sql db
    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
    SET PASSWORD FOR 'root'@'%' = PASSWORD('nova');
 
-7. branch and install Nova
+7. Branch and install Nova
 
 ::
 
@@ -186,9 +186,7 @@ Step 4 Setup Nova environment
 
 Note: The nova-manage service assumes that the first IP address is your network (like 192.168.0.0), that the 2nd IP is your gateway (192.168.0.1), and that the broadcast is the very last IP in the range you defined (192.168.0.255). If this is not the case you will need to manually edit the sql db 'networks' table.o.
 
-On running this command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. We ended up doing this manually, (update query fired directly in the DB). Is there a better way to mark a network as bridged?
-
-Update: This has been resolved w.e.f 27/10. network is marked as bridged automatically based on the type of n/w manager selected.
+On running this command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. The Network is marked as bridged automatically based on the type of network manager selected.
 
 More networking details to create a network bridge for flat network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -233,7 +231,6 @@ unzip them in your home directory, and add them to your environment::
    echo ". creds/novarc" >> ~/.bashrc
    ~/.bashrc
 
-
 Step 6 Restart all relevant services
 ------------------------------------
 
@@ -249,8 +246,8 @@ Restart relevant nova services::
 
 .. todo:: do we still need the content below?
 
-Bare-metal Provisioning
------------------------
+Bare-metal Provisioning Notes
+-----------------------------
 
 To install the base operating system you can use PXE booting.
 
