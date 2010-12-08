@@ -41,8 +41,6 @@ from nova import rpc
 from nova import utils
 from nova.compute import api as compute_api
 from nova.compute import instance_types
-from nova.api import cloud
-from nova.image.s3 import S3ImageService
 
 
 FLAGS = flags.FLAGS
@@ -95,8 +93,9 @@ class CloudController(object):
 """
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
-        self.compute_api = compute_api.ComputeAPI()
-        self.image_service = S3ImageService()
+        self.image_service = utils.import_object(FLAGS.image_service)
+        self.compute_api = compute_api.ComputeAPI(self.network_manager,
+                                                  self.image_service)
         self.setup()
 
     def __str__(self):
@@ -120,7 +119,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in db.instance_get_all_by_project(context, project_id):
+        for instance in self.compute_api.get_instances(context, project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -439,7 +438,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -536,7 +535,7 @@ class CloudController(object):
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -614,11 +613,7 @@ class CloudController(object):
             instances = db.instance_get_all_by_reservation(context,
                                                            reservation_id)
         else:
-            if context.user.is_admin():
-                instances = db.instance_get_all(context)
-            else:
-                instances = db.instance_get_all_by_project(context,
-                                                           context.project_id)
+            instances = self.compute_api.get_instances(context)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -715,7 +710,7 @@ class CloudController(object):
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = db.instance_get_by_internal_id(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context, internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
@@ -751,14 +746,12 @@ class CloudController(object):
         max_count = int(kwargs.get('max_count', 1))
         instances = self.compute_api.create_instances(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
-            self.image_service,
             kwargs['image_id'],
-            self._get_network_topic(context),
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
             ramdisk_id=kwargs.get('ramdisk_id'),
-            name=kwargs.get('display_name'),
+            display_name=kwargs.get('display_name'),
             description=kwargs.get('display_description'),
             key_name=kwargs.get('key_name'),
             security_group=kwargs.get('security_group'),
@@ -768,84 +761,30 @@ class CloudController(object):
 
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
-
-        instance_id is a kwarg so its name cannot be modified.
-        """
-        ec2_id_list = instance_id
+        instance_id is a kwarg so its name cannot be modified."""
         logging.debug("Going to start terminating instances")
-        for id_str in ec2_id_list:
-            internal_id = ec2_id_to_internal_id(id_str)
-            logging.debug("Going to try and terminate %s" % id_str)
-            try:
-                instance_ref = db.instance_get_by_internal_id(context,
-                                                              internal_id)
-            except exception.NotFound:
-                logging.warning("Instance %s was not found during terminate",
-                                id_str)
-                continue
-
-            if (instance_ref['state_description'] == 'terminating'):
-                logging.warning("Instance %s is already being terminated",
-                              id_str)
-                continue
-            now = datetime.datetime.utcnow()
-            self.compute_api.update_instance(context,
-                                         instance_ref['id'],
-                                         state_description='terminating',
-                                         state=0,
-                                         terminated_at=now)
-
-            # FIXME(ja): where should network deallocate occur?
-            address = db.instance_get_floating_address(context,
-                                                       instance_ref['id'])
-            if address:
-                logging.debug("Disassociating address %s" % address)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             disassociated.  We may need to worry about
-                #             checking this later.  Perhaps in the scheduler?
-                network_topic = self._get_network_topic(context)
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
-
-            address = db.instance_get_fixed_address(context,
-                                                    instance_ref['id'])
-            if address:
-                logging.debug("Deallocating address %s" % address)
-                # NOTE(vish): Currently, nothing needs to be done on the
-                #             network node until release. If this changes,
-                #             we will need to cast here.
-                self.network_manager.deallocate_fixed_ip(context.elevated(),
-                                                         address)
-
-            host = instance_ref['host']
-            if host:
-                rpc.cast(context,
-                         db.queue_get_for(context, FLAGS.compute_topic, host),
-                         {"method": "terminate_instance",
-                          "args": {"instance_id": instance_ref['id']}})
-            else:
-                db.instance_destroy(context, instance_ref['id'])
+        for ec2_id in instance_id:
+            internal_id = ec2_id_to_internal_id(ec2_id)
+            self.compute_api.delete_instance(context, internal_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for ec2_id in instance_id:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            cloud.reboot(internal_id, context=context)
+            self.compute_api.reboot(context, internal_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        cloud.rescue(internal_id, context=context)
+        self.compute_api.rescue(context, internal_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        cloud.unrescue(internal_id, context=context)
+        self.compute_api.unrescue(context, internal_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
@@ -856,7 +795,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = db.instance_get_by_internal_id(context, internal_id)
+            inst = self.compute_api.get_instance(context, internal_id)
             db.instance_update(context, inst['id'], kwargs)
         return True
 
