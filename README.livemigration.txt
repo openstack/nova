@@ -8,6 +8,7 @@
 #      initial version
 #
 
+
 0. pre-requisit settings
    OS: Ubuntu lucid 10.04 for both instances and host.
    NFS: nova-install-dir/instances has to be mounted by shared storage.
