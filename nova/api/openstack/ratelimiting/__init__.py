@@ -68,9 +68,9 @@ class Limiter(object):
         self._levels[key] = (now, new_level)
         return None
 
-
 # If one instance of this WSGIApps is unable to handle your load, put a
 # sharding app in front that shards by username to one of many backends.
+
 
 class WSGIApp(object):
 

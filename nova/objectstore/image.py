@@ -39,8 +39,8 @@ from nova.objectstore import bucket
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('images_path', utils.abspath('../images'),
-                        'path to decrypted images')
+flags.DEFINE_string('images_path', '$state_path/images',
+                    'path to decrypted images')
 
 
 class Image(object):
@@ -48,8 +48,8 @@ class Image(object):
         self.image_id = image_id
         self.path = os.path.abspath(os.path.join(FLAGS.images_path, image_id))
         if not self.path.startswith(os.path.abspath(FLAGS.images_path)) or \
-            not os.path.isdir(self.path):
-                raise exception.NotFound
+        not os.path.isdir(self.path):
+            raise exception.NotFound
 
     @property
     def image_path(self):

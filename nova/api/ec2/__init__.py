@@ -15,8 +15,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""
+Starting point for routing EC2 requests.
 
-"""Starting point for routing EC2 requests"""
+"""
 
 import logging
 import routes
@@ -238,11 +240,12 @@ class Executor(wsgi.Application):
             return self._error(req, type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
+        logging.error("%s: %s", code, message)
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
-        resp.body = ('<?xml version="1.0"?>\n'
+        resp.body = str('<?xml version="1.0"?>\n'
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>') % (code, message)
+                     '<RequestID>?</RequestID></Response>' % (code, message))
         return resp

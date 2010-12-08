@@ -18,12 +18,14 @@
 #    under the License.
 
 """
-A fake (in-memory) hypervisor+api. Allows nova testing w/o a hypervisor.
-This module also documents the semantics of real hypervisor connections.
+A fake (in-memory) hypervisor+api.
+
+Allows nova testing w/o a hypervisor.  This module also documents the
+semantics of real hypervisor connections.
+
 """
 
-import logging
-
+from nova import exception
 from nova.compute import power_state
 
 
@@ -116,6 +118,18 @@ class FakeConnection(object):
         """
         pass
 
+    def rescue(self, instance):
+        """
+        Rescue the specified instance.
+        """
+        return
+
+    def unrescue(self, instance):
+        """
+        Unrescue the specified instance.
+        """
+        return
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.
@@ -144,7 +158,12 @@ class FakeConnection(object):
         current memory the instance has, in KiB, 'num_cpu': The current number
         of virtual CPUs the instance has, 'cpu_time': The total CPU time used
         by the instance, in nanoseconds.
+
+        This method should raise exception.NotFound if the hypervisor has no
+        knowledge of the instance
         """
+        if instance_name not in self.instances:
+            raise exception.NotFound("Instance %s Not Found" % instance_name)
         i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,

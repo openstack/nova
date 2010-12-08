@@ -84,12 +84,11 @@ class AuthBase(object):
 
     @classmethod
     def safe_id(cls, obj):
-        """Safe get object id
+        """Safely get object id.
 
         This method will return the id of the object if the object
         is of this class, otherwise it will return the original object.
         This allows methods to accept objects or ids as paramaters.
-
         """
         if isinstance(obj, cls):
             return obj.id
@@ -624,6 +623,10 @@ class AuthManager(object):
         uid = User.safe_id(user)
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
+
+    @staticmethod
+    def get_key_pairs(context):
+        return db.key_pair_get_all_by_user(context.elevated(), context.user_id)
 
     def get_credentials(self, user, project=None):
         """Get credential zip for user in project"""

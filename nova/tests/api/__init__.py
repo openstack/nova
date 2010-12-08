@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
         environ_keys = {'HTTP_HOST': '%s.example.com' % subdomain}
         environ_keys.update(kwargs)
         req = webob.Request.blank(url, environ_keys)
-        return req.get_response(api.API())
+        return req.get_response(api.API('ec2'))
 
     def test_openstack(self):
         self.stubs.Set(api.openstack, 'API', APIStub)
