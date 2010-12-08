@@ -21,7 +21,6 @@ Management class for VM-related functions (spawn, reboot, etc).
 import logging
 
 from twisted.internet import defer
-from xml.dom.minidom import parseString
 
 from nova import db
 from nova import context
@@ -131,35 +130,12 @@ class VMOps(object):
         return VMHelper.compile_info(rec)
 
     def get_diagnostics(self, instance_id):
-        """Return data about the VM diagnostics"""
+        """Return data about VM diagnostics"""
         vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
             raise Exception("instance not present %s" % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
-        try:
-            metrics = self._session.get_xenapi().VM_guest_metrics.get_record(
-                rec["guest_metrics"])
-            diags = {
-                "Power State": rec["power_state"],
-                "Dom ID": rec["domid"],
-                "UUID": rec["uuid"],
-                "Kernel": metrics["os_version"]["uname"],
-                "Distro": metrics["os_version"]["name"]}
-
-            xml = get_rrd(self._session.get_xenapi_host()["address"],
-                rec["uuid"])
-            rrd = parseString(xml)
-            for i, node in enumerate(rrd.firstChild.childNodes):
-                # We don't want all of the extra garbage
-                if i >= 3 and i <= 11:
-                    ref = node.childNodes
-                    # Name and Value
-                    diags[ref[0].firstChild.data] = ref[6].firstChild.data
-
-            return {rec["name_label"]: diags}
-        except XenAPI.Failure as e:
-            return {
-                rec["name_label"]: "Unable to retrieve diagnostics: %s" % e}
+        return VMHelper.compile_diagnostics(self._session, rec)
 
     def get_console_output(self, instance):
         """ Return snapshot of console """

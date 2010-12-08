@@ -23,6 +23,7 @@ import logging
 import urllib
 
 from twisted.internet import defer
+from xml.dom.minidom import parseString
 
 from nova import flags
 from nova import utils
@@ -219,6 +220,28 @@ class VMHelper():
                 'mem': long(record['memory_dynamic_max']) >> 10,
                 'num_cpu': record['VCPUs_max'],
                 'cpu_time': 0}
+
+    @classmethod
+    def compile_diagnostics(cls, session, record):
+        try:
+            host = session.get_xenapi_host()
+            host_ip = session.get_xenapi().host.get_record(host)["address"]
+            metrics = session.get_xenapi().VM_guest_metrics.get_record(
+                record["guest_metrics"])
+            diags = {
+                "Kernel": metrics["os_version"]["uname"],
+                "Distro": metrics["os_version"]["name"]}
+            xml = get_rrd(host_ip, record["uuid"])
+            rrd = parseString(xml)
+            for i, node in enumerate(rrd.firstChild.childNodes):
+                # We don't want all of the extra garbage
+                if i >= 3 and i <= 11:
+                    ref = node.childNodes
+                    # Name and Value
+                    diags[ref[0].firstChild.data] = ref[6].firstChild.data
+            return diags
+        except XenAPI.Failure as e:
+            return {"Unable to retrieve diagnostics": e}
 
 
 def get_rrd(host, uuid):
