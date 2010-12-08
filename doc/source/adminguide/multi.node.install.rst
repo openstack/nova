@@ -89,9 +89,6 @@ Nova development has consolidated all .conf files to nova.conf as of November 20
    --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
    --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
-   --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
-   --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
-
 #. Create a nova group::
 
    sudo addgroup nova
