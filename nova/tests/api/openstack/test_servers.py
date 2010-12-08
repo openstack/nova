@@ -48,7 +48,7 @@ def return_security_group(context, instance_id, security_group_id):
 
 
 def instance_update(context, instance_id, kwargs):
-    pass
+    return stub_instance(instance_id)
 
 
 def instance_address(context, instance_id):
@@ -106,11 +106,11 @@ class ServersTest(unittest.TestCase):
             i += 1
 
     def test_create_instance(self):
-        def server_update(context, id, params):
-            pass
-
         def instance_create(context, inst):
-            return {'id': 1, 'internal_id': 1}
+            return {'id': 1, 'internal_id': 1, 'display_name': ''}
+
+        def server_update(context, id, params):
+            return instance_create(context, id)
 
         def fake_method(*args, **kwargs):
             pass
