@@ -41,7 +41,6 @@ from nova import rpc
 from nova import utils
 from nova.compute import api as compute_api
 from nova.compute import instance_types
-from nova.api import cloud
 from nova.image.s3 import S3ImageService
 
 
@@ -834,19 +833,19 @@ class CloudController(object):
         """instance_id is a list of instance ids"""
         for ec2_id in instance_id:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            cloud.reboot(internal_id, context=context)
+            self.compute_api.reboot(context, internal_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        cloud.rescue(internal_id, context=context)
+        self.compute_api.rescue(context, internal_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        cloud.unrescue(internal_id, context=context)
+        self.compute_api.unrescue(context, internal_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
