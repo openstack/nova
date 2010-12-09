@@ -48,6 +48,7 @@ def get_vdi(session, args):
     src_url = exists(args, 'src_url')
     username = exists(args, 'username')
     password = exists(args, 'password')
+    raw_image=validate_bool(args, 'raw', 'false')
     add_partition = validate_bool(args, 'add_partition', 'false')
 
     (proto, netloc, url_path, _, _, _) = urlparse.urlparse(src_url)
@@ -69,19 +70,19 @@ def get_vdi(session, args):
     vdi = create_vdi(session, sr, src_url, vdi_size, False)
     with_vdi_in_dom0(session, vdi, False,
                      lambda dev: get_vdi_(proto, netloc, url_path,
-                                          username, password, add_partition,
+                                          username, password, add_partition,raw_image,
                                           virtual_size, '/dev/%s' % dev))
     return session.xenapi.VDI.get_uuid(vdi)
 
 
-def get_vdi_(proto, netloc, url_path, username, password, add_partition,
+def get_vdi_(proto, netloc, url_path, username, password, add_partition,raw_image,
              virtual_size, dest):
 
     #Salvatore: vdi should not be partitioned for raw images
-    if add_partition:
+    if (add_partition and not raw_image):
         write_partition(virtual_size, dest)
 
-    offset = add_partition and MBR_SIZE_BYTES or 0
+    offset = (add_partition and MBR_SIZE_BYTES and not raw_image) or 0
     get(proto, netloc, url_path, username, password, dest, offset)
 
 

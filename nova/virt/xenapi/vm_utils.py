@@ -69,9 +69,9 @@ class VMHelper():
             'actions_after_reboot': 'restart',
             'actions_after_crash': 'destroy',
             'PV_bootloader': '',
-            'PV_kernel': kernel,
-            'PV_ramdisk': ramdisk,
-            'PV_args': 'root=/dev/xvda1',
+            'PV_kernel': '',
+            'PV_ramdisk': '',
+            'PV_args': '',
             'PV_bootloader_args': '',
             'PV_legacy_args': '',
             'HVM_boot_policy': '',
@@ -83,6 +83,22 @@ class VMHelper():
             'user_version': '0',
             'other_config': {},
             }
+        #TODO: if there is no kernel we need to call a plugin to understand whether 
+        #the VM should be launched as PV or HVM
+        if (instance.kernel_id):
+            logging.debug("A kernel (and hopefully a ramdisk) have been provided")
+            rec['PV_bootloader'] = ''
+            rec['PV_kernel'] = kernel
+            rec['PV_ramdisk'] = ramdisk
+            rec['PV_args'] = 'root=/dev/xvda1'
+            rec['PV_bootloader_args'] = ''
+            rec['PV_legacy_args'] = ''
+        else:
+            logging.debug("This a raw image, hopefully HVM")
+            #TODO: Windows needs a platform flag... 
+            rec['HVM_boot_policy'] = 'BIOS order'
+            rec['HVM_boot_params'] = {'order': 'dc'}
+            
         logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
@@ -137,12 +153,12 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def fetch_image(cls, session, image, user, project, use_sr):
-        """use_sr: True to put the image as a VDI in an SR, False to place
-        it on dom0's filesystem.  The former is for VM disks, the latter for
-        its kernel and ramdisk (if external kernels are being used).
-        Returns a Deferred that gives the new VDI UUID."""
-
+    def fetch_image(cls, session, image, user, project, type):
+        """type: integer field for specifying how to handle the image
+            0 - kernel/ramdisk image (goes on dom0's filesystem)
+            1 - disk image (local SR, partitioned by objectstore plugin)
+            2 - raw disk image (local SR, NOT partitioned by objectstor plugin)"""
+            
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
@@ -151,8 +167,13 @@ class VMHelper():
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
-        if use_sr:
+        args['add_partition']='false'
+        args['raw']='false'
+        if use_sr<>0:
             args['add_partition'] = 'true'
+        else: 
+            if use_sr==2:
+                args['raw']='true'    
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
         defer.returnValue(uuid)

@@ -74,10 +74,22 @@ class ComputeAPI(base.Base):
                 kernel_id = image.get('kernelId', FLAGS.default_kernel)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
+            #Salvatore - No kernel and ramdisk for raw images
+            pv_kernel=None
+            if (kernel_id == str(FLAGS.null_kernel) or kernel_id == str(FLAGS.null_kernel_pv)):
+                if kernel_id == str(FLAGS.null_kernel):
+                    pv_kernel=False
+                else:
+                    pv_kernel=True
+                kernel_id = None
+                ramdisk_id = None
+                logging.debug("Creating a raw instance (no kernel and ramdisk) - Paravirtualization:%s" %str(pv_kernel))
 
-            # Make sure we have access to kernel and ramdisk
-            image_service.show(context, kernel_id)
-            image_service.show(context, ramdisk_id)
+            # Make sure we have access to kernel and ramdisk (as long as we want them)
+            if (kernel_id!=None):
+                image_service.show(context, kernel_id)
+            if (ramdisk_id!=None):
+                image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -97,11 +109,12 @@ class ComputeAPI(base.Base):
             key_data = key_pair['public_key']
 
         type_data = instance_types.INSTANCE_TYPES[instance_type]
+        #Salvatore TODO: PV or HVM
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,
-            'kernel_id': kernel_id,
-            'ramdisk_id': ramdisk_id,
+            'kernel_id': kernel_id or '',
+            'ramdisk_id': ramdisk_id or '',
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
