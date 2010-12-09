@@ -131,13 +131,14 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
+    @defer.inlineCallbacks
     def get_diagnostics(self, instance_id):
         """Return data about VM diagnostics"""
-        vm = VMHelper.lookup_blocking(self._session, instance_id)
+        vm = yield VMHelper.lookup(self._session, instance_id)
         if vm is None:
             raise Exception("instance not present %s" % instance_id)
-        rec = self._session.get_xenapi().VM.get_record(vm)
-        return VMHelper.compile_diagnostics(self._session, rec)
+        rec = yield self._session.get_xenapi().VM.get_record(vm)
+        defer.returnValue(VMHelper.compile_diagnostics(self._session, rec))
 
     def get_console_output(self, instance):
         """ Return snapshot of console """
