@@ -56,8 +56,8 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1):
-    return Instance(id=id + 123456, state=0, image_id=10, user_id=user_id,
-                    display_name='server%s' % id, internal_id=id)
+    return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                    display_name='server%s' % id)
 
 
 class ServersTest(unittest.TestCase):
@@ -71,8 +71,7 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id',
-                       return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
@@ -107,7 +106,7 @@ class ServersTest(unittest.TestCase):
 
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': 1, 'internal_id': 1, 'display_name': ''}
+            return {'id': '1', 'display_name': ''}
 
         def server_update(context, id, params):
             return instance_create(context, id)

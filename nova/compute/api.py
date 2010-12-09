@@ -36,9 +36,9 @@ from nova.db import base
 FLAGS = flags.FLAGS
 
 
-def generate_default_hostname(internal_id):
+def generate_default_hostname(instance_id):
     """Default function to generate a hostname given an instance reference."""
-    return str(internal_id)
+    return str(instance_id)
 
 
 class ComputeAPI(base.Base):
@@ -127,7 +127,6 @@ class ComputeAPI(base.Base):
                             **base_options)
             instance = self.db.instance_create(context, instance)
             instance_id = instance['id']
-            internal_id = instance['internal_id']
 
             elevated = context.elevated()
             if not security_groups:
@@ -138,9 +137,9 @@ class ComputeAPI(base.Base):
                                                     security_group_id)
 
             # Set sane defaults if not specified
-            updates = dict(hostname=generate_hostname(internal_id))
+            updates = dict(hostname=generate_hostname(instance_id))
             if 'display_name' not in instance:
-                updates['display_name'] = "Server %s" % internal_id
+                updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update_instance(context, instance_id, **updates)
             instances.append(instance)
@@ -199,17 +198,16 @@ class ComputeAPI(base.Base):
         return self.db.instance_update(context, instance_id, kwargs)
 
     def delete_instance(self, context, instance_id):
-        logging.debug("Going to try and terminate %d" % instance_id)
+        logging.debug("Going to try and terminate %s" % instance_id)
         try:
-            instance = self.db.instance_get_by_internal_id(context,
-                                                           instance_id)
+            instance = self.db.instance_get_by_id(context, instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found during terminate",
+            logging.warning("Instance %s was not found during terminate",
                             instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning("Instance %d is already being terminated",
+            logging.warning("Instance %s is already being terminated",
                             instance_id)
             return
 
@@ -264,11 +262,11 @@ class ComputeAPI(base.Base):
         return self.db.instance_get_all(context)
 
     def get_instance(self, context, instance_id):
-        return self.db.instance_get_by_internal_id(context, instance_id)
+        return self.db.instance_get_by_id(context, instance_id)
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.db.instance_get_by_id(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -277,7 +275,7 @@ class ComputeAPI(base.Base):
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.db.instance_get_by_id(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -286,7 +284,7 @@ class ComputeAPI(base.Base):
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.db.instance_get_by_id(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),

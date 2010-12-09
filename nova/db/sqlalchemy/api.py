@@ -19,7 +19,7 @@
 Implementation of SQLAlchemy backend.
 """
 
-import random
+import uuid
 import warnings
 
 from nova import db
@@ -525,28 +525,18 @@ def fixed_ip_update(context, address, values):
 ###################
 
 
-#TODO(gundlach): instance_create and volume_create are nearly identical
-#and should be refactored.  I expect there are other copy-and-paste
-#functions between the two of them as well.
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
 
     context - request context object
     values - dict containing column values.
-             'internal_id' is auto-generated and should not be specified.
     """
     instance_ref = models.Instance()
     instance_ref.update(values)
 
     session = get_session()
     with session.begin():
-        while instance_ref.internal_id == None:
-            # Instances have integer internal ids.
-            internal_id = random.randint(0, 2 ** 31 - 1)
-            if not instance_internal_id_exists(context, internal_id,
-                                               session=session):
-                instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
     return instance_ref
 
@@ -652,35 +642,29 @@ def instance_get_all_by_reservation(context, reservation_id):
 
 
 @require_context
-def instance_get_by_internal_id(context, internal_id):
+def instance_get_by_id(context, instance_id):
     session = get_session()
+
+    if type(instance_id) is int:
+        instance_id = uuid.UUID(int=instance_id).hex
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
-                         filter_by(internal_id=internal_id).\
+                         filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
                          filter_by(project_id=context.project_id).\
-                         filter_by(internal_id=internal_id).\
+                         filter_by(id=instance_id).\
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound('Instance %s not found' % (internal_id))
+        raise exception.NotFound('Instance %s not found' % (instance_id))
 
     return result
-
-
-@require_context
-def instance_internal_id_exists(context, internal_id, session=None):
-    if not session:
-        session = get_session()
-    return session.query(exists().\
-                         where(models.Instance.internal_id == internal_id)).\
-                   one()[0]
 
 
 @require_context

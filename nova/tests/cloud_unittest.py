@@ -113,7 +113,7 @@ class CloudTestCase(test.TrialTestCase):
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
@@ -289,7 +289,7 @@ class CloudTestCase(test.TrialTestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get(self.context, inst['id'])

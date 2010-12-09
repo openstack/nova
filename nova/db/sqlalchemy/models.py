@@ -20,6 +20,7 @@ SQLAlchemy models for nova data.
 """
 
 import datetime
+import uuid
 
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
@@ -37,6 +38,10 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 BASE = declarative_base()
+
+
+def make_uuid():
+    return uuid.uuid1().hex
 
 
 class NovaBase(object):
@@ -154,11 +159,13 @@ class Service(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    id = Column(String(32), primary_key=True, default=make_uuid)
+
+    @property
+    def name(self):
+        return "instance-%s" % self.id
 
     admin_pass = Column(String(255))
-
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -169,10 +176,6 @@ class Instance(BASE, NovaBase):
     @property
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
-
-    @property
-    def name(self):
-        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
@@ -238,7 +241,7 @@ class Volume(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(String(32), ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('volumes'),
                             foreign_keys=instance_id,
@@ -311,7 +314,7 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
     id = Column(Integer, primary_key=True)
     security_group_id = Column(Integer, ForeignKey('security_groups.id'))
-    instance_id = Column(Integer, ForeignKey('instances.id'))
+    instance_id = Column(String(32), ForeignKey('instances.id'))
 
 
 class SecurityGroup(BASE, NovaBase):
@@ -431,7 +434,7 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(String(32), ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('fixed_ip', uselist=False),
                             foreign_keys=instance_id,

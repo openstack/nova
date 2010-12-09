@@ -304,9 +304,9 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
-def instance_get_by_internal_id(context, internal_id):
-    """Get an instance by internal id."""
-    return IMPL.instance_get_by_internal_id(context, internal_id)
+def instance_get_by_id(context, instance_id):
+    """Get an instance by id."""
+    return IMPL.instance_get_by_id(context, instance_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -658,7 +658,7 @@ def security_group_get_all(context):
 
 
 def security_group_get(context, security_group_id):
-    """Get security group by its internal id."""
+    """Get security group by its id."""
     return IMPL.security_group_get(context, security_group_id)
 
 

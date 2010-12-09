@@ -72,18 +72,14 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
-def ec2_id_to_internal_id(ec2_id):
-    """Convert an ec2 ID (i-[base 36 number]) to an internal id (int)"""
-    return int(ec2_id[2:], 36)
+def ec2_id_to_id(ec2_id):
+    """Convert an ec2 ID and an instance ID."""
+    return ec2_id[2:]
 
 
-def internal_id_to_ec2_id(internal_id):
-    """Convert an internal ID (int) to an ec2 ID (i-[base 36 number])"""
-    digits = []
-    while internal_id != 0:
-        internal_id, remainder = divmod(internal_id, 36)
-        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
-    return "i-%s" % ''.join(reversed(digits))
+def id_to_ec2_id(instance_id):
+    """Convert an instance ID to an ec2 ID."""
+    return "i-%s" % instance_id
 
 
 class CloudController(object):
@@ -153,7 +149,7 @@ class CloudController(object):
         hostname = instance_ref['hostname']
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
-        ec2_id = internal_id_to_ec2_id(instance_ref['internal_id'])
+        ec2_id = id_to_ec2_id(instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -437,8 +433,8 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
-        internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_id = ec2_id_to_id(ec2_id)
+        instance_ref = self.compute_api.get_instance(context, instance_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -464,8 +460,8 @@ class CloudController(object):
         instance_ec2_id = None
         instance_data = None
         if volume.get('instance', None):
-            internal_id = volume['instance']['internal_id']
-            instance_ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_id = volume['instance']['id']
+            instance_ec2_id = id_to_ec2_id(instance_id)
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
@@ -534,8 +530,8 @@ class CloudController(object):
             raise exception.ApiError("Volume status must be available")
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError("Volume is already attached")
-        internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        instance_ref = self.compute_api.get_instance(context, instance_id)
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -570,11 +566,11 @@ class CloudController(object):
             # If the instance doesn't exist anymore,
             # then we need to call detach blind
             db.volume_detached(context)
-        internal_id = instance_ref['internal_id']
-        ec2_id = internal_id_to_ec2_id(internal_id)
+        instance_id = instance_ref['id']
+        ec2_id = id_to_ec2_id(instance_id)
         return {'attachTime': volume_ref['attach_time'],
                 'device': volume_ref['mountpoint'],
-                'instanceId': internal_id,
+                'instanceId': instance_id,
                 'requestId': context.request_id,
                 'status': volume_ref['attach_status'],
                 'volumeId': volume_ref['id']}
@@ -619,8 +615,8 @@ class CloudController(object):
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            internal_id = instance['internal_id']
-            ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_id = instance['id']
+            ec2_id = id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
             i['imageId'] = instance['image_id']
             i['instanceState'] = {
@@ -673,8 +669,8 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                internal_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
-                ec2_id = internal_id_to_ec2_id(internal_id)
+                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
             if context.user.is_admin():
@@ -709,8 +705,8 @@ class CloudController(object):
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        instance_ref = self.compute_api.get_instance(context, instance_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
@@ -755,7 +751,7 @@ class CloudController(object):
             description=kwargs.get('display_description'),
             key_name=kwargs.get('key_name'),
             security_group=kwargs.get('security_group'),
-            generate_hostname=internal_id_to_ec2_id)
+            generate_hostname=id_to_ec2_id)
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
@@ -764,27 +760,27 @@ class CloudController(object):
         instance_id is a kwarg so its name cannot be modified."""
         logging.debug("Going to start terminating instances")
         for ec2_id in instance_id:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.delete_instance(context, internal_id)
+            instance_id = ec2_id_to_id(ec2_id)
+            self.compute_api.delete_instance(context, instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for ec2_id in instance_id:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.reboot(context, internal_id)
+            instance_id = ec2_id_to_id(ec2_id)
+            self.compute_api.reboot(context, instance_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.rescue(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        self.compute_api.rescue(context, instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.unrescue(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        self.compute_api.unrescue(context, instance_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
@@ -794,8 +790,8 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = self.compute_api.get_instance(context, internal_id)
+            instance_id = ec2_id_to_id(ec2_id)
+            inst = self.compute_api.get_instance(context, instance_id)
             db.instance_update(context, inst['id'], kwargs)
         return True
 

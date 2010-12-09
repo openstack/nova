@@ -46,7 +46,7 @@ def _entity_detail(inst):
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='internal_id')
+        flavorId='instance_type', name='display_name', id='id')
 
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
@@ -61,7 +61,7 @@ def _entity_detail(inst):
 
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name """
-    return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
+    return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
