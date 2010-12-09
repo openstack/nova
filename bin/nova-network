@@ -35,8 +35,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import service_eventlet
+from nova import service
 
 if __name__ == '__main__':
-    service_eventlet.serve()
-    service_eventlet.wait()
+    service.serve()
+    service.wait()

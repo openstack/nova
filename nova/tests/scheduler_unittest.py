@@ -22,7 +22,7 @@ Tests For Scheduler
 from nova import context
 from nova import db
 from nova import flags
-from nova import service_eventlet as service
+from nova import service
 from nova import test
 from nova import rpc
 from nova import utils

@@ -17,21 +17,17 @@
 #    under the License.
 
 """
-A service is a very thin wrapper around a Manager object.  It exposes the
-manager's public methods to other components of the system via rpc.  It will
-report state periodically to the database and is responsible for initiating
-any periodic tasts that need to be executed on a given host.
-
-This module contains Service, a generic baseclass for all workers.
+Generic Node baseclass for all workers that run on hosts
 """
 
 import inspect
 import logging
 import os
+import sys
 
-from twisted.internet import defer
-from twisted.internet import task
-from twisted.application import service
+from eventlet import event
+from eventlet import greenthread
+from eventlet import greenpool
 
 from nova import context
 from nova import db
@@ -50,8 +46,16 @@ flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
 
+flags.DEFINE_string('pidfile', None,
+                    'pidfile to use for this service')
 
-class Service(object, service.Service):
+
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
+
+
+class Service(object):
     """Base class for workers that run on hosts."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
@@ -64,8 +68,9 @@ class Service(object, service.Service):
         self.periodic_interval = periodic_interval
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
+        self.timers = []
 
-    def startService(self):  # pylint: disable-msg C0103
+    def start(self):
         manager_class = utils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *self.saved_args,
                                                      **self.saved_kwargs)
@@ -80,26 +85,29 @@ class Service(object, service.Service):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
-        conn = rpc.Connection.instance()
+        conn1 = rpc.Connection.instance(new=True)
+        conn2 = rpc.Connection.instance(new=True)
         if self.report_interval:
             consumer_all = rpc.AdapterConsumer(
-                    connection=conn,
+                    connection=conn1,
                     topic=self.topic,
                     proxy=self)
             consumer_node = rpc.AdapterConsumer(
-                    connection=conn,
+                    connection=conn2,
                     topic='%s.%s' % (self.topic, self.host),
                     proxy=self)
 
-            consumer_all.attach_to_twisted()
-            consumer_node.attach_to_twisted()
-
-            pulse = task.LoopingCall(self.report_state)
+            self.timers.append(consumer_all.attach_to_eventlet())
+            self.timers.append(consumer_node.attach_to_eventlet())
+            
+            pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
+            self.timers.append(pulse)
 
         if self.periodic_interval:
-            pulse = task.LoopingCall(self.periodic_tasks)
-            pulse.start(interval=self.periodic_interval, now=False)
+            periodic = utils.LoopingCall(self.periodic_tasks)
+            periodic.start(interval=self.periodic_interval, now=False)
+            self.timers.append(periodic)
 
     def _create_service_ref(self, context):
         service_ref = db.service_create(context,
@@ -114,7 +122,7 @@ class Service(object, service.Service):
         return getattr(manager, key)
 
     @classmethod
-    def create(cls,
+    def create(cls, 
                host=None,
                binary=None,
                topic=None,
@@ -147,24 +155,28 @@ class Service(object, service.Service):
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
-        # This is the parent service that twistd will be looking for when it
-        # parses this file, return it so that we can get it into globals.
-        application = service.Application(binary)
-        service_obj.setServiceParent(application)
-        return application
+        return service_obj
 
     def kill(self):
         """Destroy the service object in the datastore"""
+        self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
 
+    def stop(self):
+        for x in self.timers:
+            try:
+                x.stop()
+            except Exception:
+                pass
+        self.timers = []
+
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
-        yield self.manager.periodic_tasks(context.get_admin_context())
+        self.manager.periodic_tasks(context.get_admin_context())
 
-    @defer.inlineCallbacks
     def report_state(self):
         """Update the state of this service in the datastore."""
         ctxt = context.get_admin_context()
@@ -180,7 +192,7 @@ class Service(object, service.Service):
             db.service_update(ctxt,
                              self.service_id,
                              {'report_count': service_ref['report_count'] + 1})
-
+                
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
@@ -191,4 +203,101 @@ class Service(object, service.Service):
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception("model server went away")
-        yield
+
+
+def stop(pidfile):
+    """
+    Stop the daemon
+    """
+    # Get the pid from the pidfile
+    try:
+        pf = file(pidfile, 'r')
+        pid = int(pf.read().strip())
+        pf.close()
+    except IOError:
+        pid = None
+
+    if not pid:
+        message = "pidfile %s does not exist. Daemon not running?\n"
+        sys.stderr.write(message % pidfile)
+        # Not an error in a restart
+        return
+
+    # Try killing the daemon process
+    try:
+        while 1:
+            os.kill(pid, signal.SIGKILL)
+            time.sleep(0.1)
+    except OSError, err:
+        err = str(err)
+        if err.find("No such process") > 0:
+            if os.path.exists(pidfile):
+                os.remove(pidfile)
+        else:
+            print str(err)
+            sys.exit(1)
+
+
+def serve(*services):
+    argv = FLAGS(sys.argv)
+    
+    if not services:
+        services = [Service.create()]
+
+    name = '_'.join(x.binary for x in services)
+    logging.debug("Serving %s" % name)
+
+    logging.getLogger('amqplib').setLevel(logging.DEBUG)
+
+    if not FLAGS.pidfile:
+        FLAGS.pidfile = '%s.pid' % name
+    # NOTE(vish): if we're running nodaemon, redirect the log to stdout
+    #if FLAGS.nodaemon and not FLAGS.logfile:
+    #    FLAGS.logfile = "-"
+    #if not FLAGS.logfile:
+    #    FLAGS.logfile = '%s.log' % name
+    #if not FLAGS.prefix:
+    #    FLAGS.prefix = name
+    #elif FLAGS.prefix.endswith('twisted'):
+    #    FLAGS.prefix = FLAGS.prefix.replace('twisted', name)
+
+    action = 'start'
+    if len(argv) > 1:
+        action = argv.pop()
+
+    if action == 'stop':
+        stop(FLAGS.pidfile)
+        sys.exit()
+    elif action == 'restart':
+        stop(FLAGS.pidfile)
+    elif action == 'start':
+        pass
+    else:
+        print 'usage: %s [options] [start|stop|restart]' % argv[0]
+        sys.exit(1)
+
+    #formatter = logging.Formatter(
+    #    '(%(name)s): %(levelname)s %(message)s')
+    #handler = logging.StreamHandler()
+    #handler.setFormatter(formatter)
+    #logging.getLogger().addHandler(handler)
+
+    if FLAGS.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
+
+    logging.debug("Full set of FLAGS:")
+    for flag in FLAGS:
+        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
+
+    for x in services:
+        x.start()
+    
+    #while True:
+    #    greenthread.sleep(5)
+
+
+def wait():
+    while True:
+        greenthread.sleep(5)

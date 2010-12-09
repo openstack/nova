@@ -37,7 +37,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 from nova import api
 from nova import flags
-from nova import service_eventlet
+from nova import service
 from nova import wsgi
 
 
@@ -54,13 +54,13 @@ flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
 if __name__ == '__main__':
     FLAGS(sys.argv)
     
-    compute = service_eventlet.Service.create(binary='nova-compute')
-    network = service_eventlet.Service.create(binary='nova-network')
-    volume = service_eventlet.Service.create(binary='nova-volume')
-    scheduler = service_eventlet.Service.create(binary='nova-scheduler')
-    #objectstore = service_eventlet.Service.create(binary='nova-objectstore')
+    compute = service.Service.create(binary='nova-compute')
+    network = service.Service.create(binary='nova-network')
+    volume = service.Service.create(binary='nova-volume')
+    scheduler = service.Service.create(binary='nova-scheduler')
+    #objectstore = service.Service.create(binary='nova-objectstore')
 
-    service_eventlet.serve(compute, network, volume, scheduler)
+    service.serve(compute, network, volume, scheduler)
 
     server = wsgi.Server()
     server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)

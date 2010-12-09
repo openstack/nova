@@ -26,7 +26,7 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import test
-from nova import service_eventlet as service
+from nova import service
 from nova import manager
 
 FLAGS = flags.FLAGS
