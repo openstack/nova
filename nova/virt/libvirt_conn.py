@@ -1028,7 +1028,7 @@ class IptablesFirewallDriver(FirewallDriver):
                     args += ['-s', rule.cidr]
                 else:
                     # Something about ipsets
-                    pass
+                    continue
 
                 if rule.protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:
