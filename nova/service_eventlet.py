@@ -285,4 +285,6 @@ def serve(*services):
     #while True:
     #    greenthread.sleep(5)
 
-     
+def wait():
+    while True:
+        greenthread.sleep(5)

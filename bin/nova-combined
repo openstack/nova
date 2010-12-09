@@ -27,8 +27,6 @@ eventlet.monkey_patch()
 import os
 import sys
 
-from eventlet import greenthread
-
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -46,6 +44,12 @@ from nova import wsgi
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('api_port', 8773, 'API port')
 
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
+flags.DEFINE_string('osapi_host', '0.0.0.0', 'OpenStack API host')
+flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
+flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
+
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
@@ -57,5 +61,9 @@ if __name__ == '__main__':
     #objectstore = service_eventlet.Service.create(binary='nova-objectstore')
 
     service_eventlet.serve(compute, network, volume, scheduler)
-    wsgi.run_server(api.API(), FLAGS.api_port)
+
+    server = wsgi.Server()
+    server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
+    server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
+    server.wait()
     

@@ -39,3 +39,4 @@ from nova import service_eventlet
 
 if __name__ == '__main__':
     service_eventlet.serve()
+    service_eventlet.wait()
