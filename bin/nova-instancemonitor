@@ -34,6 +34,7 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import utils
 from nova import twistd
 from nova.compute import monitor
 
@@ -41,6 +42,7 @@ logging.getLogger('boto').setLevel(logging.WARN)
 
 
 if __name__ == '__main__':
+    utils.default_flagfile()
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':

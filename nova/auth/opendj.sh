@@ -16,60 +16,30 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-# LDAP INSTALL SCRIPT - SHOULD BE IDEMPOTENT, but it SCRUBS all USERS
+# LDAP INSTALL SCRIPT -  IS IDEMPOTENT, does not scrub users
 
-apt-get install -y slapd ldap-utils python-ldap
+apt-get install -y ldap-utils python-ldap openjdk-6-jre
+
+if [ ! -d "/usr/opendj" ]
+then
+    # TODO(rlane): Wikimedia Foundation is the current package maintainer.
+    # After the package is included in Ubuntu's channel, change this.
+    wget http://apt.wikimedia.org/wikimedia/pool/main/o/opendj/opendj_2.4.0-7_amd64.deb
+    dpkg -i opendj_2.4.0-7_amd64.deb
+fi
 
 abspath=`dirname "$(cd "${0%/*}" 2>/dev/null; echo "$PWD"/"${0##*/}")"`
-cp $abspath/openssh-lpk_openldap.schema /etc/ldap/schema/openssh-lpk_openldap.schema
-cp $abspath/nova_openldap.schema /etc/ldap/schema/nova_openldap.schema
-
-mv /etc/ldap/slapd.conf /etc/ldap/slapd.conf.orig
-cat >/etc/ldap/slapd.conf <<SLAPD_CONF_EOF
-# slapd.conf - Configuration file for LDAP SLAPD
-##########
-# Basics #
-##########
-include /etc/ldap/schema/core.schema
-include /etc/ldap/schema/cosine.schema
-include /etc/ldap/schema/inetorgperson.schema
-include /etc/ldap/schema/openssh-lpk_openldap.schema
-include /etc/ldap/schema/nova.schema
-pidfile /var/run/slapd/slapd.pid
-argsfile /var/run/slapd/slapd.args
-loglevel none
-modulepath /usr/lib/ldap
-# modulepath /usr/local/libexec/openldap
-moduleload back_hdb
-##########################
-# Database Configuration #
-##########################
-database hdb
-suffix "dc=example,dc=com"
-rootdn "cn=Manager,dc=example,dc=com"
-rootpw changeme
-directory /var/lib/ldap
-# directory /usr/local/var/openldap-data
-index objectClass,cn eq
-########
-# ACLs #
-########
-access to attrs=userPassword
-       by anonymous auth
-       by self write
-       by * none
-access to *
-       by self write
-       by * none
-SLAPD_CONF_EOF
-
-mv /etc/ldap/ldap.conf /etc/ldap/ldap.conf.orig
+schemapath='/var/opendj/instance/config/schema'
+cp $abspath/openssh-lpk_sun.schema $schemapath/97-openssh-lpk_sun.ldif
+cp $abspath/nova_sun.schema $schemapath/98-nova_sun.ldif
+chown opendj:opendj $schemapath/97-openssh-lpk_sun.ldif
+chown opendj:opendj $schemapath/98-nova_sun.ldif
 
 cat >/etc/ldap/ldap.conf <<LDAP_CONF_EOF
 # LDAP Client Settings
 URI ldap://localhost
 BASE dc=example,dc=com
-BINDDN cn=Manager,dc=example,dc=com
+BINDDN cn=Directory Manager
 SIZELIMIT  0
 TIMELIMIT  0
 LDAP_CONF_EOF
@@ -144,12 +114,6 @@ description: IT security users group
 member: uid=admin,ou=Users,dc=example,dc=com
 BASE_LDIF_EOF
 
-/etc/init.d/slapd stop
-rm -rf /var/lib/ldap/*
-rm -rf /etc/ldap/slapd.d/*
-slaptest -f /etc/ldap/slapd.conf -F /etc/ldap/slapd.d
-cp /usr/share/slapd/DB_CONFIG /var/lib/ldap/DB_CONFIG
-slapadd -v -l /etc/ldap/base.ldif
-chown -R openldap:openldap /etc/ldap/slapd.d
-chown -R openldap:openldap /var/lib/ldap
-/etc/init.d/slapd start
+/etc/init.d/opendj stop
+su - opendj -c '/usr/opendj/setup -i -b "dc=example,dc=com" -l /etc/ldap/base.ldif -S -w changeme -O -n --noPropertiesFile'
+/etc/init.d/opendj start

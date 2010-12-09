@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -18,32 +17,20 @@
 #    under the License.
 
 """
-  Twisted daemon for nova objectstore. Supports S3 API.
+Base class for classes that need modular database access.
 """
 
-import os
-import sys
-
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
-
-from nova import flags
 from nova import utils
-from nova import twistd
-from nova.objectstore import handler
-
+from nova import flags
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('db_driver', 'nova.db.api',
+                    'driver to use for database access')
 
 
-if __name__ == '__main__':
-    utils.default_flagfile()
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = handler.get_application()  # pylint: disable-msg=C0103
+class Base(object):
+    """DB driver is injected in the init method"""
+    def __init__(self, db_driver=None):
+        if not db_driver:
+            db_driver = FLAGS.db_driver
+        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103

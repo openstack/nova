@@ -23,10 +23,7 @@ class Context(object):
 class BasicApiAuthManager(object):
     """ Implements a somewhat rudimentary version of OpenStack Auth"""
 
-    def __init__(self, host=None, db_driver=None):
-        if not host:
-            host = FLAGS.host
-        self.host = host
+    def __init__(self, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
@@ -47,7 +44,7 @@ class BasicApiAuthManager(object):
         except KeyError:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        token, user = self._authorize_user(username, key)
+        token, user = self._authorize_user(username, key, req)
         if user and token:
             res = webob.Response()
             res.headers['X-Auth-Token'] = token.token_hash
@@ -82,8 +79,13 @@ class BasicApiAuthManager(object):
                 return {'id': user.id}
         return None
 
-    def _authorize_user(self, username, key):
-        """ Generates a new token and assigns it to a user """
+    def _authorize_user(self, username, key, req):
+        """Generates a new token and assigns it to a user.
+
+        username - string
+        key - string API key
+        req - webob.Request object
+        """
         user = self.auth.get_user_from_access_key(key)
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
@@ -91,12 +93,10 @@ class BasicApiAuthManager(object):
             token_dict = {}
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
-            token_dict['server_management_url'] = self._get_server_mgmt_url()
+            # Same as auth url, e.g. http://foo.org:8774/baz/v1.0
+            token_dict['server_management_url'] = req.url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_create_token(self.context, token_dict)
             return token, user
         return None, None
-
-    def _get_server_mgmt_url(self):
-        return 'https://%s/v1.0/' % self.host
