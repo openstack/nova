@@ -212,18 +212,18 @@ class ComputeManager(manager.Manager):
 
     @defer.inlineCallbacks
     @exception.wrap_exception
-    def resume_instance(self, context, instance_id):
-        """Resume a paused instance on this server."""
+    def unpause_instance(self, context, instance_id):
+        """Unpause a paused instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: resuming',
+        logging.debug('instance %s: unpausing',
                       instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
-                                   'resume')
-        yield self.driver.resume(instance_ref)
+                                   'unpausing')
+        yield self.driver.unpause(instance_ref)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
