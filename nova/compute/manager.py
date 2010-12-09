@@ -194,6 +194,38 @@ class ComputeManager(manager.Manager):
         yield self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def pause_instance(self, context, instance_id):
+        """Pause an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: pausing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'pausing')
+        yield self.driver.pause(instance_ref)
+        self._update_state(context, instance_id)
+
+    @defer.inlineCallbacks
+    @exception.wrap_exception
+    def resume_instance(self, context, instance_id):
+        """Resume a paused instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: resuming',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'resume')
+        yield self.driver.resume(instance_ref)
+        self._update_state(context, instance_id)
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""

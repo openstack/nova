@@ -120,6 +120,26 @@ class VMOps(object):
         except XenAPI.Failure, exc:
             logging.warn(exc)
 
+    @defer.inlineCallbacks
+    def pause(self, instance):
+        """ Pause VM instance """
+        instance_name = instance.name
+        vm = yield VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = yield self._session.call_xenapi('Async.VM.pause', vm)
+        yield self._session.wait_for_task(task)
+
+    @defer.inlineCallbacks
+    def unpause(self, instance):
+        """ Unpause VM instance """
+        instance_name = instance.name
+        vm = yield VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = yield self._session.call_xenapi('Async.VM.unpause', vm)
+        yield self._session.wait_for_task(task)
+
     def get_info(self, instance_id):
         """ Return data about VM instance """
         vm = VMHelper.lookup_blocking(self._session, instance_id)
