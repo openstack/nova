@@ -68,6 +68,7 @@ class Service(object):
         self.periodic_interval = periodic_interval
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
+        self.timers = []
 
     def start(self):
         manager_class = utils.import_class(self.manager_class_name)
@@ -96,15 +97,17 @@ class Service(object):
                     topic='%s.%s' % (self.topic, self.host),
                     proxy=self)
 
-            consumer_all.attach_to_eventlet()
-            consumer_node.attach_to_eventlet()
+            self.timers.append(consumer_all.attach_to_eventlet())
+            self.timers.append(consumer_node.attach_to_eventlet())
             
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
+            self.timers.append(pulse)
 
         if self.periodic_interval:
-            pulse = utils.LoopingCall(self.periodic_tasks)
-            pulse.start(interval=self.periodic_interval, now=False)
+            periodic = utils.LoopingCall(self.periodic_tasks)
+            periodic.start(interval=self.periodic_interval, now=False)
+            self.timers.append(periodic)
 
     def _create_service_ref(self, context):
         service_ref = db.service_create(context,
@@ -156,10 +159,19 @@ class Service(object):
 
     def kill(self):
         """Destroy the service object in the datastore"""
+        self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
+
+    def stop(self):
+        for x in self.timers:
+            try:
+                x.stop()
+            except Exception:
+                pass
+        self.timers = []
 
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""

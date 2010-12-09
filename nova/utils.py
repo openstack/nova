@@ -253,12 +253,17 @@ class LoopingCall(object):
                 return
             
             done.send(True)
+
+        self.done = done
         
         greenthread.spawn(_inner)
-        return done    
+        return self.done
         
     def stop(self):
         self._running = False
+
+    def wait(self):
+        return self.done.wait()
 
 
 def xhtml_escape(value):

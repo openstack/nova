@@ -22,14 +22,11 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
-from twisted.application.app import startApplication
-from twisted.internet import defer
-
 from nova import exception
 from nova import flags
 from nova import rpc
 from nova import test
-from nova import service
+from nova import service_eventlet as service
 from nova import manager
 
 FLAGS = flags.FLAGS
@@ -63,7 +60,7 @@ class ServiceManagerTestCase(test.TrialTestCase):
                                'test',
                                'test',
                                'nova.tests.service_unittest.FakeManager')
-        serv.startService()
+        serv.start()
         self.assertEqual(serv.test_method(), 'manager')
 
     def test_override_manager_method(self):
@@ -71,7 +68,7 @@ class ServiceManagerTestCase(test.TrialTestCase):
                                'test',
                                'test',
                                'nova.tests.service_unittest.FakeManager')
-        serv.startService()
+        serv.start()
         self.assertEqual(serv.test_method(), 'service')
 
 
@@ -94,8 +91,8 @@ class ServiceTestCase(test.TrialTestCase):
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
-        self.mox.StubOutWithMock(
-                service.task, 'LoopingCall', use_mock_anything=True)
+        #self.mox.StubOutWithMock(
+        #        service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
                             topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
@@ -106,19 +103,19 @@ class ServiceTestCase(test.TrialTestCase):
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
-        rpc.AdapterConsumer.attach_to_twisted()
-        rpc.AdapterConsumer.attach_to_twisted()
+        rpc.AdapterConsumer.attach_to_eventlet()
+        rpc.AdapterConsumer.attach_to_eventlet()
 
         # Stub out looping call a bit needlessly since we don't have an easy
         # way to cancel it (yet) when the tests finishes
-        service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
-                        service.task.LoopingCall)
-        service.task.LoopingCall.start(interval=mox.IgnoreArg(),
-                                       now=mox.IgnoreArg())
-        service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
-                        service.task.LoopingCall)
-        service.task.LoopingCall.start(interval=mox.IgnoreArg(),
-                                       now=mox.IgnoreArg())
+        #service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
+        #                service.task.LoopingCall)
+        #service.task.LoopingCall.start(interval=mox.IgnoreArg(),
+        #                               now=mox.IgnoreArg())
+        #service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
+        #                service.task.LoopingCall)
+        #service.task.LoopingCall.start(interval=mox.IgnoreArg(),
+        #                               now=mox.IgnoreArg())
 
         service_create = {'host': host,
                           'binary': binary,
@@ -135,8 +132,9 @@ class ServiceTestCase(test.TrialTestCase):
         service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
-
-        startApplication(app, False)
+        
+        app.start()
+        app.stop()
         self.assert_(app)
 
     # We're testing sort of weird behavior in how report_state decides
@@ -172,7 +170,7 @@ class ServiceTestCase(test.TrialTestCase):
                                binary,
                                topic,
                                'nova.tests.service_unittest.FakeManager')
-        serv.startService()
+        serv.start()
         serv.report_state()
 
     def test_report_state_newly_disconnected(self):
@@ -202,7 +200,7 @@ class ServiceTestCase(test.TrialTestCase):
                                binary,
                                topic,
                                'nova.tests.service_unittest.FakeManager')
-        serv.startService()
+        serv.start()
         serv.report_state()
         self.assert_(serv.model_disconnected)
 
@@ -235,7 +233,7 @@ class ServiceTestCase(test.TrialTestCase):
                                binary,
                                topic,
                                'nova.tests.service_unittest.FakeManager')
-        serv.startService()
+        serv.start()
         serv.model_disconnected = True
         serv.report_state()
 
