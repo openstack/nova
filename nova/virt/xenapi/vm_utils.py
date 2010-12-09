@@ -23,7 +23,7 @@ import logging
 import urllib
 
 from twisted.internet import defer
-from xml.dom.minidom import parseString
+from xml.dom import minidom
 
 from nova import flags
 from nova import utils
@@ -242,7 +242,7 @@ class VMHelper():
                 "Kernel": metrics["os_version"]["uname"],
                 "Distro": metrics["os_version"]["name"]}
             xml = get_rrd(host_ip, record["uuid"])
-            rrd = parseString(xml)
+            rrd = minidom.parseString(xml)
             for i, node in enumerate(rrd.firstChild.childNodes):
                 # We don't want all of the extra garbage
                 if i >= 3 and i <= 11:
