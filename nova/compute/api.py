@@ -275,6 +275,27 @@ class ComputeAPI(base.Base):
                  {"method": "reboot_instance",
                   "args": {"instance_id": instance['id']}})
 
+    def pause(self, context, instance_id):
+        """Pause the given instance."""
+        logging.debug("IN PAUSE - 1")
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        logging.debug("IN PAUSE - 2")
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "pause_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unpause(self, context, instance_id):
+        """Unpause the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unpause_instance",
+                  "args": {"instance_id": instance['id']}})
+
+
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
