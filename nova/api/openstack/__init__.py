@@ -48,6 +48,10 @@ flags.DEFINE_string('nova_api_auth',
     'nova.api.openstack.auth.BasicApiAuthManager',
     'The auth mechanism to use for the OpenStack API implemenation')
 
+flags.DEFINE_bool('allow_admin_api',
+    False,
+    'When True, this API service will accept admin operations.')
+
 
 class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
@@ -182,6 +186,10 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'})
         mapper.resource("sharedipgroup", "sharedipgroups",
                         controller=sharedipgroups.Controller())
+
+        if FLAGS.allow_admin_api:
+            logging.debug("Including admin operations in API.")
+            # TODO: Place routes for admin operations here.
 
         super(APIRouter, self).__init__(mapper)
 
