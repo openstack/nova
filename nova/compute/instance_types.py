@@ -22,7 +22,7 @@ The built-in instance properties.
 """
 
 from nova import flags
-from nova.exception import ApiError
+from nova import exception
 
 FLAGS = flags.FLAGS
 INSTANCE_TYPES = {
@@ -38,7 +38,7 @@ def get_by_type(instance_type):
     if instance_type is None:
         return FLAGS.default_instance_type
     if instance_type not in INSTANCE_TYPES:
-        raise ApiError("Unknown instance type: %s" % instance_type)
+        raise exception.ApiError("Unknown instance type: %s" % instance_type)
     return instance_type
 
 
