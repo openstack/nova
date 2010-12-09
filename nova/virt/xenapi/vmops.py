@@ -41,6 +41,8 @@ class VMOps(object):
         if XenAPI is None:
             XenAPI = __import__('XenAPI')
         self._session = session
+        # Load XenAPI module in the helper class
+        VMHelper.late_import()
 
     def list_instances(self):
         """ List VM instances """

@@ -50,6 +50,15 @@ class VMHelper():
     The class that wraps the helper methods together.
     """
     def __init__(self):
+        return
+
+    @classmethod
+    def late_import(cls):
+        """
+        Load the XenAPI module in for helper class, if required.
+        This is to avoid to install the XenAPI library when other
+        hypervisors are used
+        """
         global XenAPI
         if XenAPI is None:
             XenAPI = __import__('XenAPI')
