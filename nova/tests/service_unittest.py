@@ -143,7 +143,6 @@ class ServiceTestCase(test.TrialTestCase):
     # whether it is disconnected, it looks for a variable on itself called
     # 'model_disconnected' and report_state doesn't really do much so this
     # these are mostly just for coverage
-    @defer.inlineCallbacks
     def test_report_state_no_service(self):
         host = 'foo'
         binary = 'bar'
@@ -174,9 +173,8 @@ class ServiceTestCase(test.TrialTestCase):
                                topic,
                                'nova.tests.service_unittest.FakeManager')
         serv.startService()
-        yield serv.report_state()
+        serv.report_state()
 
-    @defer.inlineCallbacks
     def test_report_state_newly_disconnected(self):
         host = 'foo'
         binary = 'bar'
@@ -205,10 +203,9 @@ class ServiceTestCase(test.TrialTestCase):
                                topic,
                                'nova.tests.service_unittest.FakeManager')
         serv.startService()
-        yield serv.report_state()
+        serv.report_state()
         self.assert_(serv.model_disconnected)
 
-    @defer.inlineCallbacks
     def test_report_state_newly_connected(self):
         host = 'foo'
         binary = 'bar'
@@ -240,6 +237,6 @@ class ServiceTestCase(test.TrialTestCase):
                                'nova.tests.service_unittest.FakeManager')
         serv.startService()
         serv.model_disconnected = True
-        yield serv.report_state()
+        serv.report_state()
 
         self.assert_(not serv.model_disconnected)

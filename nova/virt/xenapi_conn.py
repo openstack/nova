@@ -167,7 +167,6 @@ class XenAPISession(object):
             self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task):
->>>>>>> MERGE-SOURCE
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
 

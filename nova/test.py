@@ -25,11 +25,11 @@ and some black magic for inline callbacks.
 import datetime
 import sys
 import time
+import unittest
 
 import mox
 import stubout
 from twisted.internet import defer
-from twisted.trial import unittest
 
 from nova import context
 from nova import db
@@ -94,7 +94,7 @@ class TrialTestCase(unittest.TestCase):
             db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
                                                     self.start)
             db.network_disassociate_all(ctxt)
-            rpc.Consumer.attach_to_twisted = self.originalAttach
+            rpc.Consumer.attach_to_eventlet = self.originalAttach
             for x in self.injected:
                 try:
                     x.stop()
@@ -125,31 +125,31 @@ class TrialTestCase(unittest.TestCase):
         for k, v in self._original_flags.iteritems():
             setattr(FLAGS, k, v)
 
-    def run(self, result=None):
-        test_method = getattr(self, self._testMethodName)
-        setattr(self,
-                self._testMethodName,
-                self._maybeInlineCallbacks(test_method, result))
-        rv = super(TrialTestCase, self).run(result)
-        setattr(self, self._testMethodName, test_method)
-        return rv
+    #def run(self, result=None):
+    #    test_method = getattr(self, self._testMethodName)
+    #    setattr(self,
+    #            self._testMethodName,
+    #            self._maybeInlineCallbacks(test_method, result))
+    #    rv = super(TrialTestCase, self).run(result)
+    #    setattr(self, self._testMethodName, test_method)
+    #    return rv
 
-    def _maybeInlineCallbacks(self, func, result):
-        def _wrapped():
-            g = func()
-            if isinstance(g, defer.Deferred):
-                return g
-            if not hasattr(g, 'send'):
-                return defer.succeed(g)
+    #def _maybeInlineCallbacks(self, func, result):
+    #    def _wrapped():
+    #        g = func()
+    #        if isinstance(g, defer.Deferred):
+    #            return g
+    #        if not hasattr(g, 'send'):
+    #            return defer.succeed(g)
 
-            inlined = defer.inlineCallbacks(func)
-            d = inlined()
-            return d
-        _wrapped.func_name = func.func_name
-        return _wrapped
+    #        inlined = defer.inlineCallbacks(func)
+    #        d = inlined()
+    #        return d
+    #    _wrapped.func_name = func.func_name
+    #    return _wrapped
 
     def _monkey_patch_attach(self):
-        self.originalAttach = rpc.Consumer.attach_to_twisted
+        self.originalAttach = rpc.Consumer.attach_to_eventlet
 
         def _wrapped(innerSelf):
             rv = self.originalAttach(innerSelf)
@@ -157,4 +157,4 @@ class TrialTestCase(unittest.TestCase):
             return rv
 
         _wrapped.func_name = self.originalAttach.func_name
-        rpc.Consumer.attach_to_twisted = _wrapped
+        rpc.Consumer.attach_to_eventlet = _wrapped

@@ -54,7 +54,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import process
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
@@ -366,8 +365,8 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             logging.info('cool, it\'s a device')
-            r = process.simple_execute("sudo dd if=%s iflag=nonblock" %
-                                       virsh_output, check_exit_code=False)
+            r = utils.execute("sudo dd if=%s iflag=nonblock" %
+                              virsh_output, check_exit_code=False)
             return r[0]
         else:
             return ''
@@ -389,13 +388,13 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
         
-        process.simple_execute('sudo chown %d %s' % (os.getuid(),
-                               console_log))
+        utils.execute('sudo chown %d %s' % (os.getuid(),
+                      console_log))
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
-            virsh_output = process.simple_execute("virsh ttyconsole %s" %
-                                                  instance['name'])
+            virsh_output = utils.execute("virsh ttyconsole %s" %
+                                         instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
         else:
@@ -411,8 +410,8 @@ class LibvirtConnection(object):
                                                  prefix + fname)
 
         # ensure directories exist and are writable
-        process.simple_execute('mkdir -p %s' % basepath(prefix=''))
-        process.simple_execute('chmod 0777 %s' % basepath(prefix=''))
+        utils.execute('mkdir -p %s' % basepath(prefix=''))
+        utils.execute('chmod 0777 %s' % basepath(prefix=''))
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
@@ -443,9 +442,9 @@ class LibvirtConnection(object):
                          project)
         
         def execute(cmd, process_input=None, check_exit_code=True):
-              return process.simple_execute(cmd=cmd,
-                                            process_input=process_input,
-                                            check_exit_code=check_exit_code)
+              return utils.execute(cmd=cmd,
+                                   process_input=process_input,
+                                   check_exit_code=check_exit_code)
 
         key = str(inst['key_data'])
         net = None
@@ -471,7 +470,7 @@ class LibvirtConnection(object):
                              execute=execute)
 
         if os.path.exists(basepath('disk')):
-            process.simple_execute('rm -f %s' % basepath('disk'))
+            utils.execute('rm -f %s' % basepath('disk'))
 
         local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
                                                     ['local_gb']
@@ -485,8 +484,7 @@ class LibvirtConnection(object):
                        local_bytes, resize, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
-            process.simple_execute('sudo chown root %s' %
-                                   basepath('disk'))
+            utils.execute('sudo chown root %s' % basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?

@@ -160,7 +160,6 @@ class Service(object, service.Service):
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
 
-    @defer.inlineCallbacks
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
         yield self.manager.periodic_tasks(context.get_admin_context())

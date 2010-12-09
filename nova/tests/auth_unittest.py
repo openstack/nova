@@ -16,9 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
+#import logging
 from M2Crypto import X509
 import unittest
+
+import eventlet
+logging = eventlet.import_patched('logging')
 
 from nova import crypto
 from nova import flags

@@ -21,8 +21,6 @@ Tests for Volume Code.
 """
 import logging
 
-from twisted.internet import defer
-
 from nova import context
 from nova import exception
 from nova import db
@@ -56,51 +54,48 @@ class VolumeTestCase(test.TrialTestCase):
         vol['attach_status'] = "detached"
         return db.volume_create(context.get_admin_context(), vol)['id']
 
-    @defer.inlineCallbacks
     def test_create_delete_volume(self):
         """Test volume can be created and deleted."""
         volume_id = self._create_volume()
-        yield self.volume.create_volume(self.context, volume_id)
+        self.volume.create_volume(self.context, volume_id)
         self.assertEqual(volume_id, db.volume_get(context.get_admin_context(),
                          volume_id).id)
 
-        yield self.volume.delete_volume(self.context, volume_id)
+        self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.NotFound,
                           db.volume_get,
                           self.context,
                           volume_id)
 
-    @defer.inlineCallbacks
     def test_too_big_volume(self):
         """Ensure failure if a too large of a volume is requested."""
         # FIXME(vish): validation needs to move into the data layer in
         #              volume_create
-        defer.returnValue(True)
+        return True
         try:
             volume_id = self._create_volume('1001')
-            yield self.volume.create_volume(self.context, volume_id)
+            self.volume.create_volume(self.context, volume_id)
             self.fail("Should have thrown TypeError")
         except TypeError:
             pass
 
-    @defer.inlineCallbacks
     def test_too_many_volumes(self):
         """Ensure that NoMoreTargets is raised when we run out of volumes."""
         vols = []
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
-            yield self.volume.create_volume(self.context, volume_id)
+            self.volume.create_volume(self.context, volume_id)
             vols.append(volume_id)
         volume_id = self._create_volume()
-        self.assertFailure(self.volume.create_volume(self.context,
-                                                     volume_id),
-                           db.NoMoreTargets)
+        self.assertRaises(db.NoMoreTargets,
+                          self.volume.create_volume,
+                          self.context,
+                          volume_id)
         db.volume_destroy(context.get_admin_context(), volume_id)
         for volume_id in vols:
-            yield self.volume.delete_volume(self.context, volume_id)
+            self.volume.delete_volume(self.context, volume_id)
 
-    @defer.inlineCallbacks
     def test_run_attach_detach_volume(self):
         """Make sure volume can be attached and detached from instance."""
         inst = {}
@@ -115,15 +110,15 @@ class VolumeTestCase(test.TrialTestCase):
         instance_id = db.instance_create(self.context, inst)['id']
         mountpoint = "/dev/sdf"
         volume_id = self._create_volume()
-        yield self.volume.create_volume(self.context, volume_id)
+        self.volume.create_volume(self.context, volume_id)
         if FLAGS.fake_tests:
             db.volume_attached(self.context, volume_id, instance_id,
                                mountpoint)
         else:
-            yield self.compute.attach_volume(self.context,
-                                             instance_id,
-                                             volume_id,
-                                             mountpoint)
+            self.compute.attach_volume(self.context,
+                                       instance_id,
+                                       volume_id,
+                                       mountpoint)
         vol = db.volume_get(context.get_admin_context(), volume_id)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
@@ -131,25 +126,26 @@ class VolumeTestCase(test.TrialTestCase):
         instance_ref = db.volume_get_instance(self.context, volume_id)
         self.assertEqual(instance_ref['id'], instance_id)
 
-        self.assertFailure(self.volume.delete_volume(self.context, volume_id),
-                           exception.Error)
+        self.assertRaises(exception.Error,
+                          self.volume.delete_volume,
+                          self.context,
+                          volume_id)
         if FLAGS.fake_tests:
             db.volume_detached(self.context, volume_id)
         else:
-            yield self.compute.detach_volume(self.context,
-                                             instance_id,
-                                             volume_id)
+            self.compute.detach_volume(self.context,
+                                       instance_id,
+                                       volume_id)
         vol = db.volume_get(self.context, volume_id)
         self.assertEqual(vol['status'], "available")
 
-        yield self.volume.delete_volume(self.context, volume_id)
+        self.volume.delete_volume(self.context, volume_id)
         self.assertRaises(exception.Error,
                           db.volume_get,
                           self.context,
                           volume_id)
         db.instance_destroy(self.context, instance_id)
 
-    @defer.inlineCallbacks
     def test_concurrent_volumes_get_different_targets(self):
         """Ensure multiple concurrent volumes get different targets."""
         volume_ids = []
@@ -164,15 +160,11 @@ class VolumeTestCase(test.TrialTestCase):
             self.assert_(iscsi_target not in targets)
             targets.append(iscsi_target)
             logging.debug("Target %s allocated", iscsi_target)
-        deferreds = []
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()
             d = self.volume.create_volume(self.context, volume_id)
-            d.addCallback(_check)
-            d.addErrback(self.fail)
-            deferreds.append(d)
-        yield defer.DeferredList(deferreds)
+            _check(d)
         for volume_id in volume_ids:
             self.volume.delete_volume(self.context, volume_id)
 

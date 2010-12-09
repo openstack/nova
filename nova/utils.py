@@ -34,8 +34,6 @@ from xml.sax import saxutils
 from eventlet import event
 from eventlet import greenthread
 
-from twisted.internet.threads import deferToThread
-
 from nova import exception
 from nova import flags
 from nova.exception import ProcessExecutionError
@@ -78,7 +76,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug("Running cmd: %s", cmd)
+    logging.debug("Running cmd (subprocess): %s", cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -98,6 +96,10 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
                                         stdout=stdout,
                                         stderr=stderr,
                                         cmd=cmd)
+    # NOTE(termie): this appears to be necessary to let the subprocess call
+    #               clean something up in between calls, without it two
+    #               execute calls in a row hangs the second one
+    greenthread.sleep(0)
     return result
 
 
@@ -126,13 +128,14 @@ def debug(arg):
 
 def runthis(prompt, cmd, check_exit_code=True):
     logging.debug("Running %s" % (cmd))
-    exit_code = subprocess.call(cmd.split(" "))
-    logging.debug(prompt % (exit_code))
-    if check_exit_code and exit_code != 0:
-        raise ProcessExecutionError(exit_code=exit_code,
-                                    stdout=None,
-                                    stderr=None,
-                                    cmd=cmd)
+    rv, err = execute(cmd, check_exit_code=check_exit_code)
+    #exit_code = subprocess.call(cmd.split(" "))
+    #logging.debug(prompt % (exit_code))
+    #if check_exit_code and exit_code != 0:
+    #    raise ProcessExecutionError(exit_code=exit_code,
+    #                                stdout=None,
+    #                                stderr=None,
+    #                                cmd=cmd)
 
 
 def generate_uid(topic, size=8):

@@ -39,11 +39,16 @@ Due to our use of multiprocessing it we frequently get some ignorable
 
 """
 
+import eventlet
+eventlet.monkey_patch()
+
 import __main__
 import os
 import sys
 
+
 from twisted.scripts import trial as trial_script
+import unittest
 
 from nova import flags
 from nova import twistd
@@ -56,12 +61,12 @@ from nova.tests.compute_unittest import *
 from nova.tests.flags_unittest import *
 from nova.tests.misc_unittest import *
 from nova.tests.network_unittest import *
-from nova.tests.objectstore_unittest import *
-from nova.tests.process_unittest import *
+#from nova.tests.objectstore_unittest import *
+#from nova.tests.process_unittest import *
 from nova.tests.quota_unittest import *
 from nova.tests.rpc_unittest import *
 from nova.tests.scheduler_unittest import *
-from nova.tests.service_unittest import *
+#from nova.tests.service_unittest import *
 from nova.tests.twistd_unittest import *
 from nova.tests.validator_unittest import *
 from nova.tests.virt_unittest import *
@@ -82,6 +87,8 @@ if __name__ == '__main__':
     config = OptionsClass()
     argv = config.parseOptions()
 
+    argv = FLAGS(sys.argv)
+
     FLAGS.verbose = True
 
     # TODO(termie): these should make a call instead of doing work on import
@@ -89,6 +96,7 @@ if __name__ == '__main__':
         from nova.tests.fake_flags import *
     else:
         from nova.tests.real_flags import *
+
 
     # Establish redirect for STDERR
     sys.stderr.flush()

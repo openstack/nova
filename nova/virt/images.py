@@ -26,7 +26,7 @@ import time
 import urlparse
 
 from nova import flags
-from nova import process
+from nova import utils
 from nova.auth import manager
 from nova.auth import signer
 from nova.objectstore import image
@@ -63,15 +63,16 @@ def _fetch_s3_image(image, path, user, project):
 
     cmd = ['/usr/bin/curl', '--fail', '--silent', url]
     for (k, v) in headers.iteritems():
-        cmd += ['-H', '%s: %s' % (k, v)]
+        cmd += ['-H', '"%s: %s"' % (k, v)]
 
     cmd += ['-o', path]
-    return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])
+    cmd_out = ' '.join(cmd)
+    return utils.execute(cmd_out)
 
 
 def _fetch_local_image(image, path, user, project):
     source = _image_path('%s/image' % image)
-    return process.simple_execute('cp %s %s' % (source, path))
+    return utils.execute('cp %s %s' % (source, path))
 
 
 def _image_path(path):

@@ -21,13 +21,12 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import logging
 
-from twisted.internet import defer
-
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -35,6 +34,7 @@ XENAPI_POWER_STATE = {
     'Paused': power_state.PAUSED,
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
+
 
 XenAPI = None
 
@@ -49,7 +49,6 @@ class VMHelper():
             XenAPI = __import__('XenAPI')
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vm(cls, session, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
@@ -87,12 +86,11 @@ class VMHelper():
             'other_config': {},
             }
         logging.debug('Created VM %s...', instance.name)
-        vm_ref = yield session.call_xenapi('VM.create', rec)
+        vm_ref = session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
-        defer.returnValue(vm_ref)
+        return vm_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
@@ -111,13 +109,12 @@ class VMHelper():
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
         logging.debug('Creating VBD for VM %s, VDI %s ... ', vm_ref, vdi_ref)
-        vbd_ref = yield session.call_xenapi('VBD.create', vbd_rec)
+        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
         logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
                       vdi_ref)
-        defer.returnValue(vbd_ref)
+        return vbd_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vif(cls, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
@@ -133,13 +130,12 @@ class VMHelper():
         vif_rec['qos_algorithm_params'] = {}
         logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
                       network_ref)
-        vif_ref = yield session.call_xenapi('VIF.create', vif_rec)
+        vif_ref = session.call_xenapi('VIF.create', vif_rec)
         logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
                       vm_ref, network_ref)
-        defer.returnValue(vif_ref)
+        return vif_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def fetch_image(cls, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
@@ -156,12 +152,11 @@ class VMHelper():
         args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
-        task = yield session.async_call_plugin('objectstore', fn, args)
-        uuid = yield session.wait_for_task(task)
-        defer.returnValue(uuid)
+        task = session.async_call_plugin('objectstore', fn, args)
+        uuid = session.wait_for_task(task)
+        return uuid
 
     @classmethod
-    @utils.deferredToThread
     def lookup(cls, session, i):
         """ Look the instance i up, and returns it if available """
         return VMHelper.lookup_blocking(session, i)
@@ -179,7 +174,6 @@ class VMHelper():
             return vms[0]
 
     @classmethod
-    @utils.deferredToThread
     def lookup_vm_vdis(cls, session, vm):
         """ Look for the VDIs that are attached to the VM """
         return VMHelper.lookup_vm_vdis_blocking(session, vm)

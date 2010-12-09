@@ -55,7 +55,6 @@ from nova import utils
 from nova import flags
 from nova.db import base
 
-from twisted.internet import defer
 
 FLAGS = flags.FLAGS
 
@@ -69,7 +68,7 @@ class Manager(base.Base):
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval"""
-        yield
+        return
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a standalone
