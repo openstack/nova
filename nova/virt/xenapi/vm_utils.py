@@ -242,13 +242,14 @@ class VMHelper():
                 "Kernel": metrics["os_version"]["uname"],
                 "Distro": metrics["os_version"]["name"]}
             xml = get_rrd(host_ip, record["uuid"])
-            rrd = minidom.parseString(xml)
-            for i, node in enumerate(rrd.firstChild.childNodes):
-                # We don't want all of the extra garbage
-                if i >= 3 and i <= 11:
-                    ref = node.childNodes
-                    # Name and Value
-                    diags[ref[0].firstChild.data] = ref[6].firstChild.data
+            if xml:
+                rrd = minidom.parseString(xml)
+                for i, node in enumerate(rrd.firstChild.childNodes):
+                    # We don't want all of the extra garbage
+                    if i >= 3 and i <= 11:
+                        ref = node.childNodes
+                        # Name and Value
+                        diags[ref[0].firstChild.data] = ref[6].firstChild.data
             return diags
         except XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}
@@ -256,9 +257,12 @@ class VMHelper():
 
 def get_rrd(host, uuid):
     """Return the VM RRD XML as a string"""
-    xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
-        FLAGS.xenapi_connection_username,
-        FLAGS.xenapi_connection_password,
-        host,
-        uuid))
-    return xml.read()
+    try:
+        xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
+            FLAGS.xenapi_connection_username,
+            FLAGS.xenapi_connection_password,
+            host,
+            uuid))
+        return xml.read()
+    except IOError:
+        return None
