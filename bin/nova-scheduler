@@ -34,7 +34,9 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 from nova import service
+from nova import utils
 
 if __name__ == '__main__':
+    utils.default_flagfile()
     service.serve()
     service.wait()

@@ -36,6 +36,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 from nova import api
 from nova import flags
 from nova import service
+from nova import utils
 from nova import wsgi
 
 
@@ -50,6 +51,7 @@ flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
 
 
 if __name__ == '__main__':
+    utils.default_flagfile()
     FLAGS(sys.argv)
     
     compute = service.Service.create(binary='nova-compute')
