@@ -139,6 +139,15 @@ class ComputeTestCase(test.TrialTestCase):
         yield self.compute.terminate_instance(self.context, instance_id)
 
     @defer.inlineCallbacks
+    def test_pause(self):
+        """Ensure instance can be paused"""
+        instance_id = self._create_instance()
+        yield self.compute.run_instance(self.context, instance_id)
+        yield self.compute.pause_instance(self.context, instance_id)
+        yield self.compute.unpause_instance(self.context, instance_id)
+        yield self.compute.terminate_instance(self.context, instance_id)
+
+    @defer.inlineCallbacks
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
