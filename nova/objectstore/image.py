@@ -21,15 +21,12 @@ Take uploaded bucket contents and register them as disk images (AMIs).
 Requires decryption using keys in the manifest.
 """
 
-# TODO(jesse): Got these from Euca2ools, will need to revisit them
-
 import binascii
 import glob
 import json
 import os
 import shutil
 import tarfile
-import tempfile
 from xml.etree import ElementTree
 
 from nova import exception
@@ -185,33 +182,38 @@ class Image(object):
         manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
         image_type = 'machine'
 
-        try:
-            kernel_id = manifest.find("machine_configuration/kernel_id").text
-            if kernel_id == 'true':
-                image_type = 'kernel'
-        except:
-            kernel_id = None
-
-        try:
-            ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
-            if ramdisk_id == 'true':
-                image_type = 'ramdisk'
-        except:
-            ramdisk_id = None
-
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
             'imageOwnerId': context.project_id,
             'isPublic': False,  # FIXME: grab public from manifest
-            'architecture': 'x86_64',  # FIXME: grab architecture from manifest
-            'imageType': image_type}
+            'architecture': 'x86_64',
+            'imageType': 'machine'
+        }
 
-        if kernel_id:
-            info['kernelId'] = kernel_id
+        manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
 
-        if ramdisk_id:
-            info['ramdiskId'] = ramdisk_id
+        try:
+            architecture = manifest.find("machine_configuration/kernel_id").text
+            info['architecture'] = architecture
+        except:
+            pass
+        try:
+            kernel_id = manifest.find("machine_configuration/kernel_id").text
+            if kernel_id == 'true':
+                info['imageType'] = 'kernel'
+            else:
+                info['kernelId'] = kernel_id
+        except:
+            pass
+        try:
+            ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
+            if ramdisk_id == 'true':
+                info['imageType'] = 'ramdisk'
+            else:
+                info['ramdiskId'] = ramdisk_id
+        except:
+            pass
 
         def write_state(state):
             info['imageState'] = state
