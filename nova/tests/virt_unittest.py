@@ -30,7 +30,7 @@ FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
-class LibvirtConnTestCase(test.TrialTestCase):
+class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         self.manager = manager.AuthManager()
@@ -123,7 +123,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.manager.delete_user(self.user)
 
 
-class NWFilterTestCase(test.TrialTestCase):
+class NWFilterTestCase(test.TestCase):
 
     def setUp(self):
         super(NWFilterTestCase, self).setUp()

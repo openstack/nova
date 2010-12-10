@@ -309,7 +309,6 @@ def call(context, topic, msg):
 
     class WaitMessage(object):
         def __call__(self, data, message):
-            LOG.debug('data %s, msg %s', data, message)
             """Acks message and sets result."""
             message.ack()
             if data['failure']:
@@ -332,6 +331,10 @@ def call(context, topic, msg):
     except StopIteration:
         pass
     consumer.close()
+    # NOTE(termie): this is a little bit of a change from the original
+    #               twisted-based code where returning a Failure
+    #               instance from a deferred call is very similar to
+    #               raising an exception
     if isinstance(wait_msg.result, Exception):
         raise wait_msg.result
     return wait_msg.result

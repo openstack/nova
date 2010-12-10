@@ -55,11 +55,11 @@ def skip_if_fake(func):
             return func(*args, **kw)
     return _skipper
 
-class TrialTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
     def setUp(self):
         """Run before each test method to initialize test environment"""
-        super(TrialTestCase, self).setUp()
+        super(TestCase, self).setUp()
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
@@ -105,7 +105,7 @@ class TrialTestCase(unittest.TestCase):
                 fakerabbit.reset_all()
 
             db.security_group_destroy_all(ctxt)
-            super(TrialTestCase, self).tearDown()
+            super(TestCase, self).tearDown()
         finally:
             self.reset_flags()
 
@@ -137,7 +137,7 @@ class TrialTestCase(unittest.TestCase):
         rpc.Consumer.attach_to_eventlet = _wrapped
 
 
-class OLDTrialTestCase(trial_unittest.TestCase):
+class TrialTestCase(trial_unittest.TestCase):
     """Test case base class for all unit tests"""
     def setUp(self):
         """Run before each test method to initialize test environment"""
@@ -175,7 +175,6 @@ class OLDTrialTestCase(trial_unittest.TestCase):
             db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
                                                     self.start)
             db.network_disassociate_all(ctxt)
-            rpc.Consumer.attach_to_eventlet = self.originalAttach
             for x in self.injected:
                 try:
                     x.stop()

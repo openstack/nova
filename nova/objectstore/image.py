@@ -26,7 +26,6 @@ Requires decryption using keys in the manifest.
 import binascii
 import glob
 import json
-import logging
 import os
 import shutil
 import tarfile
@@ -265,7 +264,6 @@ class Image(object):
         if err:
             raise exception.Error("Failed to decrypt initialization "
                                   "vector: %s" % err)
-        logging.debug(iv)
 
         _out, err = utils.execute(
                 'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'

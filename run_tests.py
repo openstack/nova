@@ -95,7 +95,6 @@ if __name__ == '__main__':
     else:
         from nova.tests.real_flags import *
 
-
     # Establish redirect for STDERR
     sys.stderr.flush()
     err = open(FLAGS.tests_stderr, 'w+', 0)

@@ -45,7 +45,7 @@ class ExtendedService(service.Service):
         return 'service'
 
 
-class ServiceManagerTestCase(test.TrialTestCase):
+class ServiceManagerTestCase(test.TestCase):
     """Test cases for Services"""
 
     def test_attribute_error_for_no_manager(self):
@@ -72,7 +72,7 @@ class ServiceManagerTestCase(test.TrialTestCase):
         self.assertEqual(serv.test_method(), 'service')
 
 
-class ServiceTestCase(test.TrialTestCase):
+class ServiceTestCase(test.TestCase):
     """Test cases for Services"""
 
     def setUp(self):

@@ -129,13 +129,6 @@ def debug(arg):
 def runthis(prompt, cmd, check_exit_code=True):
     logging.debug("Running %s" % (cmd))
     rv, err = execute(cmd, check_exit_code=check_exit_code)
-    #exit_code = subprocess.call(cmd.split(" "))
-    #logging.debug(prompt % (exit_code))
-    #if check_exit_code and exit_code != 0:
-    #    raise ProcessExecutionError(exit_code=exit_code,
-    #                                stdout=None,
-    #                                stderr=None,
-    #                                cmd=cmd)
 
 
 def generate_uid(topic, size=8):

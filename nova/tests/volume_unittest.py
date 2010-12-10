@@ -31,7 +31,7 @@ from nova import utils
 FLAGS = flags.FLAGS
 
 
-class VolumeTestCase(test.TrialTestCase):
+class VolumeTestCase(test.TestCase):
     """Test Case for volumes."""
 
     def setUp(self):

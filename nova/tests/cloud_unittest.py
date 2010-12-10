@@ -51,7 +51,7 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
-class CloudTestCase(test.TrialTestCase):
+class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake', images_path=IMAGES_PATH)

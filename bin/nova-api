@@ -17,9 +17,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-Nova API daemon.
-"""
+
+"""Starter script for Nova API."""
 
 import os
 import sys
@@ -35,7 +34,6 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 from nova import api
 from nova import flags
 from nova import utils
-from nova import server
 from nova import wsgi
 
 FLAGS = flags.FLAGS

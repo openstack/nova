@@ -44,7 +44,7 @@ class TestDriver(driver.Scheduler):
         return 'named_host'
 
 
-class SchedulerTestCase(test.TrialTestCase):
+class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
@@ -73,7 +73,7 @@ class SchedulerTestCase(test.TrialTestCase):
         scheduler.named_method(ctxt, 'topic', num=7)
 
 
-class SimpleDriverTestCase(test.TrialTestCase):
+class SimpleDriverTestCase(test.TestCase):
     """Test case for simple driver"""
     def setUp(self):
         super(SimpleDriverTestCase, self).setUp()

@@ -159,11 +159,10 @@ class StrWrapper(object):
                 return str(val)
         raise KeyError(name)
 
+
 FLAGS = FlagValues()
 gflags.FLAGS = FLAGS
 gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
-
-gflags.FLAGS = FLAGS
 
 
 def _wrapper(func):
@@ -186,6 +185,7 @@ DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
 DEFINE_flag = _wrapper(gflags.DEFINE_flag)
+
 
 HelpFlag = gflags.HelpFlag
 HelpshortFlag = gflags.HelpshortFlag

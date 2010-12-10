@@ -29,7 +29,7 @@ from nova import test
 FLAGS = flags.FLAGS
 
 
-class RpcTestCase(test.TrialTestCase):
+class RpcTestCase(test.TestCase):
     """Test cases for rpc"""
     def setUp(self):
         super(RpcTestCase, self).setUp()

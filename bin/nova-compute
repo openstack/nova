@@ -17,9 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Twistd daemon for the nova compute nodes.
-"""
+"""Starter script for Nova Compute."""
 
 import eventlet
 eventlet.monkey_patch()

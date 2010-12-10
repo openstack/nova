@@ -35,7 +35,7 @@ from nova.compute import api as compute_api
 FLAGS = flags.FLAGS
 
 
-class ComputeTestCase(test.TrialTestCase):
+class ComputeTestCase(test.TestCase):
     """Test case for compute"""
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)

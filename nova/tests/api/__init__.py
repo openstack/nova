@@ -78,5 +78,4 @@ class Test(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    pass
-    #unittest.main()
+    unittest.main()
