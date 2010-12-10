@@ -20,6 +20,8 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import urllib
+from xml.dom import minidom
 
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -44,6 +46,15 @@ class VMHelper():
     The class that wraps the helper methods together.
     """
     def __init__(self):
+        return
+
+    @classmethod
+    def late_import(cls):
+        """
+        Load the XenAPI module in for helper class, if required.
+        This is to avoid to install the XenAPI library when other
+        hypervisors are used
+        """
         global XenAPI
         if XenAPI is None:
             XenAPI = __import__('XenAPI')
@@ -208,3 +219,40 @@ class VMHelper():
                 'mem': long(record['memory_dynamic_max']) >> 10,
                 'num_cpu': record['VCPUs_max'],
                 'cpu_time': 0}
+
+    @classmethod
+    def compile_diagnostics(cls, session, record):
+        """Compile VM diagnostics data"""
+        try:
+            host = session.get_xenapi_host()
+            host_ip = session.get_xenapi().host.get_record(host)["address"]
+            metrics = session.get_xenapi().VM_guest_metrics.get_record(
+                record["guest_metrics"])
+            diags = {
+                "Kernel": metrics["os_version"]["uname"],
+                "Distro": metrics["os_version"]["name"]}
+            xml = get_rrd(host_ip, record["uuid"])
+            if xml:
+                rrd = minidom.parseString(xml)
+                for i, node in enumerate(rrd.firstChild.childNodes):
+                    # We don't want all of the extra garbage
+                    if i >= 3 and i <= 11:
+                        ref = node.childNodes
+                        # Name and Value
+                        diags[ref[0].firstChild.data] = ref[6].firstChild.data
+            return diags
+        except XenAPI.Failure as e:
+            return {"Unable to retrieve diagnostics": e}
+
+
+def get_rrd(host, uuid):
+    """Return the VM RRD XML as a string"""
+    try:
+        xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
+            FLAGS.xenapi_connection_username,
+            FLAGS.xenapi_connection_password,
+            host,
+            uuid))
+        return xml.read()
+    except IOError:
+        return None
