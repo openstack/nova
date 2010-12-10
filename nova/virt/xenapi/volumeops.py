@@ -25,17 +25,13 @@ from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.volume_utils import VolumeHelper
 from nova.virt.xenapi.volume_utils import StorageError
 
-XenAPI = None
-
 
 class VolumeOps(object):
     """
     Management class for Volume-related tasks
     """
     def __init__(self, session):
-        global XenAPI
-        if XenAPI is None:
-            XenAPI = __import__('XenAPI')
+        self.XenAPI = __import__('XenAPI')
         self._session = session
         # Load XenAPI module in the helper classes respectively
         VolumeHelper.late_import()
@@ -76,7 +72,7 @@ class VolumeOps(object):
                                                     vm_ref, vdi_ref,
                                                     vol_rec['deviceNumber'],
                                                     False)
-            except XenAPI.Failure, exc:
+            except self.XenAPI.Failure, exc:
                 logging.warn(exc)
                 yield VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
                 raise Exception('Unable to use SR %s for instance %s'
@@ -87,7 +83,7 @@ class VolumeOps(object):
                     task = yield self._session.call_xenapi('Async.VBD.plug',
                                                            vbd_ref)
                     yield self._session.wait_for_task(task)
-                except XenAPI.Failure, exc:
+                except self.XenAPI.Failure, exc:
                     logging.warn(exc)
                     yield VolumeHelper.destroy_iscsi_storage(self._session,
                                                              sr_ref)

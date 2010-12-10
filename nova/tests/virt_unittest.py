@@ -25,6 +25,8 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.virt import libvirt_conn
+from nova.virt.xenapi import fake
+from nova.virt.xenapi import volume_utils
 
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
@@ -257,3 +259,47 @@ class NWFilterTestCase(test.TrialTestCase):
         d.addCallback(lambda _: self.teardown_security_group())
 
         return d
+
+
+class XenAPIVolumeTestCase(test.TrialTestCase):
+
+    def setUp(self):
+        super(XenAPIVolumeTestCase, self).setUp()
+        self.flags(xenapi_use_fake_session=True)
+        self.session = fake.FakeXenAPISession()
+        self.helper = volume_utils.VolumeHelper
+        self.helper.late_import()
+
+    def test_create_iscsi_storage_raise_no_exception(self):
+        info = self.helper.parse_volume_info(None, None)
+        label = 'SR-'
+        description = ''
+        self.helper.create_iscsi_storage_blocking(self.session,
+                                                   info,
+                                                   label,
+                                                   description)
+
+    def test_create_iscsi_storage_raise_unable_to_create_sr_exception(self):
+        info = self.helper.parse_volume_info(None, None)
+        label = None
+        description = None
+        self.assertFailure(self.helper.create_iscsi_storage_blocking(self.session,
+                                                       info,
+                                                       label,
+                                                       description),
+                                                       StorageError)
+
+    def test_find_sr_from_vbd_raise_no_exception(self):
+        pass
+
+    def test_destroy_iscsi_storage_raise_no_exception(self):
+        pass
+
+    def test_introduce_vdi_raise_no_exception(self):
+        pass
+
+    def test_introduce_vdi_raise_unable_get_vdi_record_exception(self):
+        pass
+
+    def tearDown(self):
+        super(XenAPIVolumeTestCase, self).tearDown()

@@ -20,15 +20,21 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import urllib
 
 from twisted.internet import defer
+from xml.dom import minidom
 
+from nova import flags
 from nova import utils
+
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 from nova.virt.xenapi.volume_utils import StorageError
+
+FLAGS = flags.FLAGS
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -37,13 +43,14 @@ XENAPI_POWER_STATE = {
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
 
-XenAPI = None
-
 
 class VMHelper():
     """
     The class that wraps the helper methods together.
     """
+
+    XenAPI = None
+
     def __init__(self):
         return
 
@@ -52,9 +59,13 @@ class VMHelper():
         """
         Load XenAPI module in for helper class
         """
-        global XenAPI
-        if XenAPI is None:
-            XenAPI = __import__('XenAPI')
+        xenapi_module = \
+          FLAGS.xenapi_use_fake_session and 'nova.virt.xenapi.fake' or 'XenAPI'
+        from_list = \
+           FLAGS.xenapi_use_fake_session and ['fake'] or []
+        if cls.XenAPI is None:
+            cls.XenAPI = __import__(xenapi_module,
+                                    globals(), locals(), from_list, -1)
 
     @classmethod
     @defer.inlineCallbacks
@@ -140,9 +151,9 @@ class VMHelper():
                     vbd_rec = session.get_xenapi().VBD.get_record(vbd)
                     if vbd_rec['userdevice'] == str(number):
                         return vbd
-                except XenAPI.Failure, exc:
+                except cls.XenAPI.Failure, exc:
                     logging.warn(exc)
-                    raise StorageError('VBD not found in instance %s' % vm_ref)
+        raise StorageError('VBD not found in instance %s' % vm_ref)
 
     @classmethod
     @defer.inlineCallbacks
@@ -150,7 +161,7 @@ class VMHelper():
         """ Unplug VBD from VM """
         try:
             vbd_ref = yield session.call_xenapi('VBD.unplug', vbd_ref)
-        except XenAPI.Failure, exc:
+        except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
                 raise StorageError('Unable to unplug VBD %s' % vbd_ref)
@@ -162,7 +173,7 @@ class VMHelper():
         try:
             task = yield session.call_xenapi('Async.VBD.destroy', vbd_ref)
             yield session.wait_for_task(task)
-        except XenAPI.Failure, exc:
+        except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             raise StorageError('Unable to destroy VBD %s' % vbd_ref)
 
@@ -248,7 +259,7 @@ class VMHelper():
                     # Test valid VDI
                     record = session.get_xenapi().VDI.get_record(vdi)
                     logging.debug('VDI %s is still available', record['uuid'])
-                except XenAPI.Failure, exc:
+                except cls.XenAPI.Failure, exc:
                     logging.warn(exc)
                 else:
                     vdis.append(vdi)
@@ -265,3 +276,40 @@ class VMHelper():
                 'mem': long(record['memory_dynamic_max']) >> 10,
                 'num_cpu': record['VCPUs_max'],
                 'cpu_time': 0}
+
+    @classmethod
+    def compile_diagnostics(cls, session, record):
+        """Compile VM diagnostics data"""
+        try:
+            host = session.get_xenapi_host()
+            host_ip = session.get_xenapi().host.get_record(host)["address"]
+            metrics = session.get_xenapi().VM_guest_metrics.get_record(
+                record["guest_metrics"])
+            diags = {
+                "Kernel": metrics["os_version"]["uname"],
+                "Distro": metrics["os_version"]["name"]}
+            xml = get_rrd(host_ip, record["uuid"])
+            if xml:
+                rrd = minidom.parseString(xml)
+                for i, node in enumerate(rrd.firstChild.childNodes):
+                    # We don't want all of the extra garbage
+                    if i >= 3 and i <= 11:
+                        ref = node.childNodes
+                        # Name and Value
+                        diags[ref[0].firstChild.data] = ref[6].firstChild.data
+            return diags
+        except cls.XenAPI.Failure as e:
+            return {"Unable to retrieve diagnostics": e}
+
+
+def get_rrd(host, uuid):
+    """Return the VM RRD XML as a string"""
+    try:
+        xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
+            FLAGS.xenapi_connection_username,
+            FLAGS.xenapi_connection_password,
+            host,
+            uuid))
+        return xml.read()
+    except IOError:
+        return None

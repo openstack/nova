@@ -36,6 +36,7 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 
 **Related Flags**
 
+:xenapi_use_fake_session:     To be set for unit testing
 :xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
 :xenapi_connection_username:  Username for connection to XenServer/Xen Cloud
                               Platform (default: root).
@@ -62,6 +63,10 @@ from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
 FLAGS = flags.FLAGS
+
+flags.DEFINE_boolean('xenapi_use_fake_session',
+                    True,
+                    'Set to true in order to use the fake XenAPI SDK')
 flags.DEFINE_string('xenapi_connection_url',
                     None,
                     'URL for connection to XenServer/Xen Cloud Platform.'
@@ -89,17 +94,10 @@ flags.DEFINE_string('iqn_prefix',
                     'iqn.2010-10.org.openstack',
                     'IQN Prefix')
 
-XenAPI = None
-
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
-    # This is loaded late so that there's no need to install this
-    # library when not using XenAPI.
-    global XenAPI
-    if XenAPI is None:
-        XenAPI = __import__('XenAPI')
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
@@ -156,7 +154,10 @@ class XenAPIConnection(object):
 class XenAPISession(object):
     """ The session to invoke XenAPI SDK calls """
     def __init__(self, url, user, pw):
-        self._session = XenAPI.Session(url)
+        # This is loaded late so that there's no need to install this
+        # library when not using XenAPI.
+        self.XenAPI = __import__('XenAPI')
+        self._session = self.XenAPI.Session(url)
         self._session.login_with_password(user, pw)
 
     def get_xenapi(self):
@@ -180,7 +181,7 @@ class XenAPISession(object):
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread.  Returns a
         Deferred with the task reference."""
-        return _unwrap_plugin_exceptions(
+        return self._unwrap_plugin_exceptions(
             self._session.xenapi.Async.host.call_plugin,
             self.get_xenapi_host(), plugin, fn, args)
 
@@ -209,33 +210,32 @@ class XenAPISession(object):
                 error_info = self._session.xenapi.task.get_error_info(task)
                 logging.warn('Task %s status: %s.  %s', task, status,
                              error_info)
-                deferred.errback(XenAPI.Failure(error_info))
+                deferred.errback(self.XenAPI.Failure(error_info))
             #logging.debug('Polling task %s done.', task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
             deferred.errback(exc)
 
-
-def _unwrap_plugin_exceptions(func, *args, **kwargs):
-    """ Parse exception details """
-    try:
-        return func(*args, **kwargs)
-    except XenAPI.Failure, exc:
-        logging.debug("Got exception: %s", exc)
-        if (len(exc.details) == 4 and
-            exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
-            exc.details[2] == 'Failure'):
-            params = None
-            try:
-                params = eval(exc.details[3])
-            except:
-                raise exc
-            raise XenAPI.Failure(params)
-        else:
+    def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
+        """ Parse exception details """
+        try:
+            return func(*args, **kwargs)
+        except self.XenAPI.Failure, exc:
+            logging.debug("Got exception: %s", exc)
+            if (len(exc.details) == 4 and
+                exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
+                exc.details[2] == 'Failure'):
+                params = None
+                try:
+                    params = eval(exc.details[3])
+                except:
+                    raise exc
+                raise self.XenAPI.Failure(params)
+            else:
+                raise
+        except xmlrpclib.ProtocolError, exc:
+            logging.debug("Got exception: %s", exc)
             raise
-    except xmlrpclib.ProtocolError, exc:
-        logging.debug("Got exception: %s", exc)
-        raise
 
 
 def _parse_xmlrpc_value(val):
