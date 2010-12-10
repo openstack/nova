@@ -20,8 +20,6 @@ records and their attributes like bridges, PIFs, QoS, as well as
 their lookup functions.
 """
 
-from twisted.internet import defer
-
 
 class NetworkHelper():
     """
@@ -31,14 +29,13 @@ class NetworkHelper():
         return
 
     @classmethod
-    @defer.inlineCallbacks
     def find_network_with_bridge(cls, session, bridge):
         """ Return the network on which the bridge is attached, if found """
         expr = 'field "bridge" = "%s"' % bridge
-        networks = yield session.call_xenapi('network.get_all_records_where',
-                                           expr)
+        networks = session.call_xenapi('network.get_all_records_where',
+                                       expr)
         if len(networks) == 1:
-            defer.returnValue(networks.keys()[0])
+            return networks.keys()[0]
         elif len(networks) > 1:
             raise Exception('Found non-unique network for bridge %s' % bridge)
         else:

@@ -50,7 +50,7 @@ def _fetch_s3_image(image, path, user, project):
 
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
-    # twisted web client.
+    # a web client.
     headers = {}
     headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 

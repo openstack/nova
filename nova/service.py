@@ -258,8 +258,6 @@ def serve(*services):
     #    FLAGS.logfile = '%s.log' % name
     #if not FLAGS.prefix:
     #    FLAGS.prefix = name
-    #elif FLAGS.prefix.endswith('twisted'):
-    #    FLAGS.prefix = FLAGS.prefix.replace('twisted', name)
 
     action = 'start'
     if len(argv) > 1:

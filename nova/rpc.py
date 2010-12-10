@@ -237,7 +237,9 @@ class DirectPublisher(Publisher):
 def msg_reply(msg_id, reply=None, failure=None):
     """Sends a reply or an error on the channel signified by msg_id
 
-    failure should be a twisted failure object"""
+    failure should be a sys.exc_info() tuple.
+
+    """
     if failure:
         message = str(failure[1])
         tb = traceback.format_exception(*failure)
@@ -332,7 +334,7 @@ def call(context, topic, msg):
         pass
     consumer.close()
     # NOTE(termie): this is a little bit of a change from the original
-    #               twisted-based code where returning a Failure
+    #               non-eventlet code where returning a Failure
     #               instance from a deferred call is very similar to
     #               raising an exception
     if isinstance(wait_msg.result, Exception):
