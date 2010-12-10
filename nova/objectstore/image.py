@@ -194,8 +194,8 @@ class Image(object):
         manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
 
         try:
-            architecture = manifest.find("machine_configuration/kernel_id").text
-            info['architecture'] = architecture
+            arch = manifest.find("machine_configuration/kernel_id").text
+            info['architecture'] = arch
         except:
             pass
         try:
