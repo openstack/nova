@@ -65,7 +65,7 @@ from nova.virt.xenapi.volumeops import VolumeOps
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('xenapi_use_fake_session',
-                    True,
+                    False,
                     'Set to true in order to use the fake XenAPI SDK')
 flags.DEFINE_string('xenapi_connection_url',
                     None,
