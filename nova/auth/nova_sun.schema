@@ -2,7 +2,7 @@
 # Person object for Nova
 # inetorgperson with extra attributes
 # Schema version: 2
-# Authors: Vishvananda Ishaya <vishvananda@yahoo.com>
+# Authors: Vishvananda Ishaya <vishvananda@gmail.com>
 #          Ryan Lane <rlane@wikimedia.org>
 #
 # using internet experimental oid arc as per BP64 3.1

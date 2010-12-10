@@ -125,7 +125,7 @@ class LdapDriver(object):
     def get_users(self):
         """Retrieve list of users"""
         attrs = self.__find_objects(FLAGS.ldap_user_subtree,
-                                  '(objectclass=novaUser)')
+                                    '(objectclass=novaUser)')
         users = []
         for attr in attrs:
             user = self.__to_user(attr)
@@ -155,22 +155,24 @@ class LdapDriver(object):
                 attr = []
                 if 'secretKey' in user.keys():
                     attr.append((self.ldap.MOD_REPLACE, 'secretKey',
-                    [secret_key]))
+                                 [secret_key]))
                 else:
                     attr.append((self.ldap.MOD_ADD, 'secretKey',
-                    [secret_key]))
+                                 [secret_key]))
                 if 'accessKey' in user.keys():
                     attr.append((self.ldap.MOD_REPLACE, 'accessKey',
-                    [access_key]))
+                                 [access_key]))
                 else:
                     attr.append((self.ldap.MOD_ADD, 'accessKey',
-                    [access_key]))
+                                 [access_key]))
                 if LdapDriver.isadmin_attribute in user.keys():
                     attr.append((self.ldap.MOD_REPLACE,
-                    LdapDriver.isadmin_attribute, [str(is_admin).upper()]))
+                                 LdapDriver.isadmin_attribute,
+                                 [str(is_admin).upper()]))
                 else:
                     attr.append((self.ldap.MOD_ADD,
-                    LdapDriver.isadmin_attribute, [str(is_admin).upper()]))
+                                 LdapDriver.isadmin_attribute,
+                                 [str(is_admin).upper()]))
                 self.conn.modify_s(self.__uid_to_dn(name), attr)
                 return self.get_user(name)
             else:
@@ -299,7 +301,7 @@ class LdapDriver(object):
         else:
             project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
             query = ('(&(&(objectclass=groupOfNames)(!%s))(member=%s))' %
-                      (LdapDriver.project_pattern, self.__uid_to_dn(uid)))
+                     (LdapDriver.project_pattern, self.__uid_to_dn(uid)))
             roles = self.__find_objects(project_dn, query)
             return [role['cn'][0] for role in roles]
 
@@ -363,7 +365,7 @@ class LdapDriver(object):
     def __get_ldap_user(self, uid):
         """Retrieve LDAP user entry by id"""
         attr = self.__find_object(self.__uid_to_dn(uid),
-                                '(objectclass=novaUser)')
+                                  '(objectclass=novaUser)')
         return attr
 
     def __find_object(self, dn, query=None, scope=None):
@@ -406,7 +408,7 @@ class LdapDriver(object):
     def __find_group_dns_with_member(self, tree, uid):
         """Find dns of group objects in a given tree that contain member"""
         query = ('(&(objectclass=groupOfNames)(member=%s))' %
-                  self.__uid_to_dn(uid))
+                 self.__uid_to_dn(uid))
         dns = self.__find_dns(tree, query)
         return dns
 
@@ -436,7 +438,8 @@ class LdapDriver(object):
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
                     raise exception.NotFound("Group can't be created "
-                            "because user %s doesn't exist" % member_uid)
+                                             "because user %s doesn't exist" %
+                                             member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         dn = self.__uid_to_dn(uid)
         if not dn in members:
@@ -452,7 +455,7 @@ class LdapDriver(object):
         """Check if user is in group"""
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s can't be searched in group "
-                    "because the user doesn't exist" % uid)
+                                     "because the user doesn't exist" % uid)
         if not self.__group_exists(group_dn):
             return False
         res = self.__find_object(group_dn,
@@ -464,7 +467,7 @@ class LdapDriver(object):
         """Add user to group"""
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s can't be added to the group "
-                    "because the user doesn't exist" % uid)
+                                     "because the user doesn't exist" % uid)
         if not self.__group_exists(group_dn):
             raise exception.NotFound("The group at dn %s doesn't exist" %
                                      group_dn)
@@ -481,13 +484,13 @@ class LdapDriver(object):
                                      group_dn)
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s can't be removed from the "
-                    "group because the user doesn't exist" % uid)
+                                     "group because the user doesn't exist" %
+                                     uid)
         if not self.__is_in_group(uid, group_dn):
             raise exception.NotFound("User %s is not a member of the group" %
                                      uid)
         # NOTE(vish): remove user from group and any sub_groups
-        sub_dns = self.__find_group_dns_with_member(
-                group_dn, uid)
+        sub_dns = self.__find_group_dns_with_member(group_dn, uid)
         for sub_dn in sub_dns:
             self.__safe_remove_from_group(uid, sub_dn)
 
@@ -506,7 +509,7 @@ class LdapDriver(object):
         """Remove user from all roles and projects"""
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s can't be removed from all "
-                    "because the user doesn't exist" % uid)
+                                     "because the user doesn't exist" % uid)
         role_dns = self.__find_group_dns_with_member(
                 FLAGS.role_project_subtree, uid)
         for role_dn in role_dns:
@@ -564,8 +567,8 @@ class LdapDriver(object):
     @staticmethod
     def __uid_to_dn(uid):
         """Convert uid to dn"""
-        return FLAGS.ldap_user_id_attribute + '=%s,%s' \
-            % (uid, FLAGS.ldap_user_subtree)
+        return (FLAGS.ldap_user_id_attribute + '=%s,%s'
+                % (uid, FLAGS.ldap_user_subtree))
 
 
 class FakeLdapDriver(LdapDriver):
