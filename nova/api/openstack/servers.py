@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+import traceback
+
 from webob import exc
 
 from nova import context
@@ -26,6 +29,10 @@ from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
+
+
+LOG = logging.getLogger('server')
+LOG.setLevel(logging.DEBUG)
 
 
 def _entity_list(entities):
@@ -173,3 +180,29 @@ class Controller(wsgi.Controller):
         except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
+
+    def pause(self, req, id):
+        """ Permit Admins to Pause the server. """
+        user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
+        try:
+            self.compute_api.pause(ctxt, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("Compute.api::pause %s", readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unpause(self, req, id):
+        """ Permit Admins to Unpause the server. """
+        user_id = req.environ['nova.context']['user']['id']
+        ctxt = context.RequestContext(user_id, user_id)
+        try:
+            self.compute_api.unpause(ctxt, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("Compute.api::unpause %s", readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+
