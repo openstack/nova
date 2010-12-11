@@ -116,7 +116,7 @@ class NetworkManager(manager.Manager):
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
-        logging.debug("setting network host")
+        logging.debug(_("setting network host"))
         host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
@@ -175,10 +175,10 @@ class NetworkManager(manager.Manager):
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error("IP %s leased that isn't associated" %
+            raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s leased to bad mac %s vs %s" %
+            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
                                   (address, instance_ref['mac_address'], mac))
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
@@ -186,7 +186,8 @@ class NetworkManager(manager.Manager):
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip_ref['allocated']:
-            logging.warn("IP %s leased that was already deallocated", address)
+            logging.warn(_("IP %s leased that was already deallocated"),
+                         address)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
@@ -194,13 +195,13 @@ class NetworkManager(manager.Manager):
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error("IP %s released that isn't associated" %
+            raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s released from bad mac %s vs %s" %
+            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
                                   (address, instance_ref['mac_address'], mac))
         if not fixed_ip_ref['leased']:
-            logging.warn("IP %s released that was not leased", address)
+            logging.warn(_("IP %s released that was not leased"), address)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': False})
@@ -410,7 +411,7 @@ class VlanManager(NetworkManager):
                                                            self.host,
                                                            time)
         if num:
-            logging.debug("Dissassociated %s stale fixed ip(s)", num)
+            logging.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a

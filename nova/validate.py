@@ -42,7 +42,7 @@ def rangetest(**argchecks):
                     # was passed by name
                     if float(kargs[argname]) < low or \
                        float(kargs[argname]) > high:
-                        errmsg = '{0} argument "{1}" not in {2}..{3}'
+                        errmsg = _('{0} argument "{1}" not in {2}..{3}')
                         errmsg = errmsg.format(funcname, argname, low, high)
                         raise TypeError(errmsg)
 
@@ -51,8 +51,8 @@ def rangetest(**argchecks):
                     position = positionals.index(argname)
                     if float(pargs[position]) < low or \
                        float(pargs[position]) > high:
-                        errmsg = '{0} argument "{1}" with value of {4} ' \
-                                 'not in {2}..{3}'
+                        errmsg = _('{0} argument "{1}" with value of {4} '
+                                   'not in {2}..{3}')
                         errmsg = errmsg.format(funcname, argname, low, high,
                                                pargs[position])
                         raise TypeError(errmsg)
@@ -76,14 +76,14 @@ def typetest(**argchecks):
             for (argname, typeof) in argchecks.items():
                 if argname in kargs:
                     if not isinstance(kargs[argname], typeof):
-                        errmsg = '{0} argument "{1}" not of type {2}'
+                        errmsg = _('{0} argument "{1}" not of type {2}')
                         errmsg = errmsg.format(funcname, argname, typeof)
                         raise TypeError(errmsg)
                 elif argname in positionals:
                     position = positionals.index(argname)
                     if not isinstance(pargs[position], typeof):
-                        errmsg = '{0} argument "{1}" with value of {2} ' \
-                                 'not of type {3}'
+                        errmsg = _('{0} argument "{1}" with value of {2} '
+                                   'not of type {3}')
                         errmsg = errmsg.format(funcname, argname,
                                                pargs[position], typeof)
                         raise TypeError(errmsg)

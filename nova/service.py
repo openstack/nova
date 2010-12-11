@@ -143,7 +143,7 @@ class Service(object, service.Service):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.warn("Starting %s node", topic)
+        logging.warn(_("Starting %s node"), topic)
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -158,7 +158,7 @@ class Service(object, service.Service):
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
-            logging.warn("Service killed that has no database entry")
+            logging.warn(_("Service killed that has no database entry"))
 
     @defer.inlineCallbacks
     def periodic_tasks(self):
@@ -173,8 +173,8 @@ class Service(object, service.Service):
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
-                logging.debug("The service database object disappeared, "
-                              "Recreating it.")
+                logging.debug(_("The service database object disappeared, "
+                              "Recreating it."))
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
@@ -185,11 +185,11 @@ class Service(object, service.Service):
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
-                logging.error("Recovered model server connection!")
+                logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
-                logging.exception("model server went away")
+                logging.exception(_("model server went away"))
         yield

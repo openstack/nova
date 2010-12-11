@@ -58,7 +58,7 @@ def stop(pidfile):
     try:
         pid = int(open(pidfile, 'r').read().strip())
     except IOError:
-        message = "pidfile %s does not exist. Daemon not running?\n"
+        message = _("pidfile %s does not exist. Daemon not running?\n")
         sys.stderr.write(message % pidfile)
         return
 
@@ -84,7 +84,7 @@ def serve(name, main):
     if not FLAGS.pidfile:
         FLAGS.pidfile = '%s.pid' % name
 
-    logging.debug("Full set of FLAGS: \n\n\n")
+    logging.debug(_("Full set of FLAGS: \n\n\n"))
     for flag in FLAGS:
         logging.debug("%s : %s", flag, FLAGS.get(flag, None))
 

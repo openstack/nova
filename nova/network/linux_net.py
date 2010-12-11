@@ -135,7 +135,7 @@ def ensure_vlan(vlan_num):
     """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
-        logging.debug("Starting VLAN inteface %s", interface)
+        logging.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
@@ -145,7 +145,7 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge interface for %s", interface)
+        logging.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
@@ -202,9 +202,9 @@ def update_dhcp(context, network_id):
                 _execute('sudo kill -HUP %d' % pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
-                logging.debug("Hupping dnsmasq threw %s", exc)
+                logging.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
-            logging.debug("Pid %d is stale, relaunching dnsmasq", pid)
+            logging.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
@@ -276,7 +276,7 @@ def _stop_dnsmasq(network):
         try:
             _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug("Killing dnsmasq threw %s", exc)
+            logging.debug(_("Killing dnsmasq threw %s"), exc)
 
 
 def _dhcp_file(bridge, kind):

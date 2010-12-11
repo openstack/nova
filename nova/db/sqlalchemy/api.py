@@ -41,7 +41,7 @@ FLAGS = flags.FLAGS
 def is_admin_context(context):
     """Indicates if the request context is an administrator."""
     if not context:
-        warnings.warn('Use of empty request context is deprecated',
+        warnings.warn(_('Use of empty request context is deprecated'),
                       DeprecationWarning)
         raise Exception('die')
     return context.is_admin
@@ -130,7 +130,7 @@ def service_get(context, service_id, session=None):
                      first()
 
     if not result:
-        raise exception.NotFound('No service for id %s' % service_id)
+        raise exception.NotFound(_('No service for id %s') % service_id)
 
     return result
 
@@ -227,7 +227,7 @@ def service_get_by_args(context, host, binary):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound('No service for %s, %s' % (host, binary))
+        raise exception.NotFound(_('No service for %s, %s') % (host, binary))
 
     return result
 
@@ -491,7 +491,7 @@ def fixed_ip_get_by_address(context, address, session=None):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.NotFound('No floating ip for address %s' % address)
+        raise exception.NotFound(_('No floating ip for address %s') % address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)
@@ -591,7 +591,7 @@ def instance_get(context, instance_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound('No instance for id %s' % instance_id)
+        raise exception.NotFound(_('No instance for id %s') % instance_id)
 
     return result
 
@@ -669,7 +669,7 @@ def instance_get_by_internal_id(context, internal_id):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound('Instance %s not found' % (internal_id))
+        raise exception.NotFound(_('Instance %s not found') % (internal_id))
 
     return result
 
@@ -790,7 +790,7 @@ def key_pair_get(context, user_id, name, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound('no keypair for user %s, name %s' %
+        raise exception.NotFound(_('no keypair for user %s, name %s') %
                                  (user_id, name))
     return result
 
@@ -905,7 +905,7 @@ def network_get(context, network_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound('No network for id %s' % network_id)
+        raise exception.NotFound(_('No network for id %s') % network_id)
 
     return result
 
@@ -933,7 +933,7 @@ def network_get_by_bridge(context, bridge):
                  first()
 
     if not result:
-        raise exception.NotFound('No network for bridge %s' % bridge)
+        raise exception.NotFound(_('No network for bridge %s') % bridge)
     return result
 
 
@@ -947,7 +947,7 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(deleted=False).\
                  first()
     if not rv:
-        raise exception.NotFound('No network for instance %s' % instance_id)
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
 
 
@@ -961,7 +961,7 @@ def network_set_host(context, network_id, host_id):
                               with_lockmode('update').\
                               first()
         if not network_ref:
-            raise exception.NotFound('No network for id %s' % network_id)
+            raise exception.NotFound(_('No network for id %s') % network_id)
 
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
@@ -1073,7 +1073,7 @@ def auth_get_token(_context, token_hash):
                   filter_by(token_hash=token_hash).\
                   first()
     if not tk:
-        raise exception.NotFound('Token %s does not exist' % token_hash)
+        raise exception.NotFound(_('Token %s does not exist') % token_hash)
     return tk
 
 
@@ -1097,7 +1097,7 @@ def quota_get(context, project_id, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound('No quota for project_id %s' % project_id)
+        raise exception.NotFound(_('No quota for project_id %s') % project_id)
 
     return result
 
@@ -1252,7 +1252,7 @@ def volume_get(context, volume_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound('No volume for id %s' % volume_id)
+        raise exception.NotFound(_('No volume for id %s') % volume_id)
 
     return result
 
@@ -1308,7 +1308,7 @@ def volume_get_by_ec2_id(context, ec2_id):
         raise exception.NotAuthorized()
 
     if not result:
-        raise exception.NotFound('Volume %s not found' % ec2_id)
+        raise exception.NotFound(_('Volume %s not found') % ec2_id)
 
     return result
 
@@ -1332,7 +1332,7 @@ def volume_get_instance(context, volume_id):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.NotFound('Volume %s not found' % ec2_id)
+        raise exception.NotFound(_('Volume %s not found') % ec2_id)
 
     return result.instance
 
@@ -1344,7 +1344,7 @@ def volume_get_shelf_and_blade(context, volume_id):
                      filter_by(volume_id=volume_id).\
                      first()
     if not result:
-        raise exception.NotFound('No export device found for volume %s' %
+        raise exception.NotFound(_('No export device found for volume %s') %
                                  volume_id)
 
     return (result.shelf_id, result.blade_id)
@@ -1357,7 +1357,7 @@ def volume_get_iscsi_target_num(context, volume_id):
                      filter_by(volume_id=volume_id).\
                      first()
     if not result:
-        raise exception.NotFound('No target id found for volume %s' %
+        raise exception.NotFound(_('No target id found for volume %s') %
                                  volume_id)
 
     return result.target_num
@@ -1402,7 +1402,7 @@ def security_group_get(context, security_group_id, session=None):
                          options(joinedload_all('rules')).\
                          first()
     if not result:
-        raise exception.NotFound("No secuity group with id %s" %
+        raise exception.NotFound(_("No security group with id %s") %
                                  security_group_id)
     return result
 
@@ -1419,7 +1419,7 @@ def security_group_get_by_name(context, project_id, group_name):
                         first()
     if not result:
         raise exception.NotFound(
-            'No security group named %s for project: %s' \
+            _('No security group named %s for project: %s')
              % (group_name, project_id))
     return result
 
@@ -1507,7 +1507,7 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
                          filter_by(id=security_group_rule_id).\
                          first()
     if not result:
-        raise exception.NotFound("No secuity group rule with id %s" %
+        raise exception.NotFound(_("No secuity group rule with id %s") %
                                  security_group_rule_id)
     return result
 
@@ -1543,7 +1543,7 @@ def user_get(context, id, session=None):
                      first()
 
     if not result:
-        raise exception.NotFound('No user for id %s' % id)
+        raise exception.NotFound(_('No user for id %s') % id)
 
     return result
 
@@ -1559,7 +1559,7 @@ def user_get_by_access_key(context, access_key, session=None):
                    first()
 
     if not result:
-        raise exception.NotFound('No user for access key %s' % access_key)
+        raise exception.NotFound(_('No user for access key %s') % access_key)
 
     return result
 
@@ -1621,7 +1621,7 @@ def project_get(context, id, session=None):
                      first()
 
     if not result:
-        raise exception.NotFound("No project with id %s" % id)
+        raise exception.NotFound(_("No project with id %s") % id)
 
     return result
 

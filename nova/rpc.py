@@ -91,15 +91,15 @@ class Consumer(messaging.Consumer):
                 self.failed_connection = False
                 break
             except:  # Catching all because carrot sucks
-                logging.exception("AMQP server on %s:%d is unreachable." \
-                    " Trying again in %d seconds." % (
+                logging.exception(_("AMQP server on %s:%d is unreachable."
+                    " Trying again in %d seconds.") % (
                     FLAGS.rabbit_host,
                     FLAGS.rabbit_port,
                     FLAGS.rabbit_retry_interval))
                 self.failed_connection = True
         if self.failed_connection:
-            logging.exception("Unable to connect to AMQP server" \
-                " after %d tries. Shutting down." % FLAGS.rabbit_max_retries)
+            logging.exception(_("Unable to connect to AMQP server"
+                " after %d tries. Shutting down.") % FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
@@ -116,14 +116,14 @@ class Consumer(messaging.Consumer):
                 self.declare()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
             if self.failed_connection:
-                logging.error("Reconnected to queue")
+                logging.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
         #             exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:
-                logging.exception("Failed to fetch message from queue")
+                logging.exception(_("Failed to fetch message from queue"))
                 self.failed_connection = True
 
     def attach_to_eventlet(self):
@@ -161,7 +161,7 @@ class TopicConsumer(Consumer):
 class AdapterConsumer(TopicConsumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
-        LOG.debug('Initing the Adapter Consumer for %s' % (topic))
+        LOG.debug(_('Initing the Adapter Consumer for %s') % (topic))
         self.proxy = proxy
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
@@ -176,7 +176,7 @@ class AdapterConsumer(TopicConsumer):
 
         Example: {'method': 'echo', 'args': {'value': 42}}
         """
-        LOG.debug('received %s' % (message_data))
+        LOG.debug(_('received %s') % (message_data))
         msg_id = message_data.pop('_msg_id', None)
 
         ctxt = _unpack_context(message_data)
@@ -189,8 +189,8 @@ class AdapterConsumer(TopicConsumer):
             #             messages stay in the queue indefinitely, so for now
             #             we just log the message and send an error string
             #             back to the caller
-            LOG.warn('no method for message: %s' % (message_data))
-            msg_reply(msg_id, 'No method for message: %s' % message_data)
+            LOG.warn(_('no method for message: %s') % (message_data))
+            msg_reply(msg_id, _('No method for message: %s') % message_data)
             return
 
         node_func = getattr(self.proxy, str(method))
@@ -246,7 +246,7 @@ def msg_reply(msg_id, reply=None, failure=None):
     if failure:
         message = failure.getErrorMessage()
         traceback = failure.getTraceback()
-        logging.error("Returning exception %s to caller", message)
+        logging.error(_("Returning exception %s to caller"), message)
         logging.error(traceback)
         failure = (failure.type.__name__, str(failure.value), traceback)
     conn = Connection.instance()
@@ -287,7 +287,7 @@ def _unpack_context(msg):
         if key.startswith('_context_'):
             value = msg.pop(key)
             context_dict[key[9:]] = value
-    LOG.debug('unpacked context: %s', context_dict)
+    LOG.debug(_('unpacked context: %s'), context_dict)
     return context.RequestContext.from_dict(context_dict)
 
 
@@ -306,10 +306,10 @@ def _pack_context(msg, context):
 
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
-    LOG.debug("Making asynchronous call...")
+    LOG.debug(_("Making asynchronous call..."))
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
-    LOG.debug("MSG_ID is %s" % (msg_id))
+    LOG.debug(_("MSG_ID is %s") % (msg_id))
     _pack_context(msg, context)
 
     class WaitMessage(object):
@@ -345,7 +345,7 @@ def call_twisted(context, topic, msg):
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
-    LOG.debug("MSG_ID is %s" % (msg_id))
+    LOG.debug(_("MSG_ID is %s") % (msg_id))
     _pack_context(msg, context)
 
     conn = Connection.instance()
@@ -384,7 +384,7 @@ def cast(context, topic, msg):
 
 def generic_response(message_data, message):
     """Logs a result and exits"""
-    LOG.debug('response %s', message_data)
+    LOG.debug(_('response %s'), message_data)
     message.ack()
     sys.exit(0)
 
@@ -393,8 +393,8 @@ def send_message(topic, message, wait=True):
     """Sends a message for testing"""
     msg_id = uuid.uuid4().hex
     message.update({'_msg_id': msg_id})
-    LOG.debug('topic is %s', topic)
-    LOG.debug('message %s', message)
+    LOG.debug(_('topic is %s'), topic)
+    LOG.debug(_('message %s'), message)
 
     if wait:
         consumer = messaging.Consumer(connection=Connection.instance(),

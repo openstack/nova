@@ -114,7 +114,7 @@ class CloudController(object):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis("Generating root CA: %s", "sh genrootca.sh")
+            utils.runthis(_("Generating root CA: %s", "sh genrootca.sh"))
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
@@ -318,11 +318,11 @@ class CloudController(object):
             ip_protocol = str(ip_protocol)
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-                raise InvalidInputException('%s is not a valid ipProtocol' %
+                raise InvalidInputException(_('%s is not a valid ipProtocol') %
                                             (ip_protocol,))
             if ((min(from_port, to_port) < -1) or
                 (max(from_port, to_port) > 65535)):
-                raise InvalidInputException('Invalid port range')
+                raise InvalidInputException(_('Invalid port range'))
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port
@@ -360,7 +360,7 @@ class CloudController(object):
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria == None:
-            raise exception.ApiError("No rule for the specified parameters.")
+            raise exception.ApiError(_("No rule for the specified parameters."))
 
         for rule in security_group.rules:
             match = True
@@ -371,7 +371,7 @@ class CloudController(object):
                 db.security_group_rule_destroy(context, rule['id'])
                 self._trigger_refresh_security_group(context, security_group)
                 return True
-        raise exception.ApiError("No rule for the specified parameters.")
+        raise exception.ApiError(_("No rule for the specified parameters."))
 
     # TODO(soren): This has only been tested with Boto as the client.
     #              Unfortunately, it seems Boto is using an old API
@@ -387,8 +387,8 @@ class CloudController(object):
         values['parent_group_id'] = security_group.id
 
         if self._security_group_rule_exists(security_group, values):
-            raise exception.ApiError('This rule already exists in group %s' %
-                                     group_name)
+            raise exception.ApiError(_('This rule already exists in group %s')
+                                     % group_name)
 
         security_group_rule = db.security_group_rule_create(context, values)
 
@@ -416,7 +416,7 @@ class CloudController(object):
     def create_security_group(self, context, group_name, group_description):
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
-            raise exception.ApiError('group %s already exists' % group_name)
+            raise exception.ApiError(_('group %s already exists') % group_name)
 
         group = {'user_id': context.user.id,
                  'project_id': context.project_id,
@@ -527,13 +527,13 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
-            raise exception.ApiError("Invalid device specified: %s. "
-                                     "Example device: /dev/vdb" % device)
+            raise exception.ApiError(_("Invalid device specified: %s. "
+                                     "Example device: /dev/vdb") % device)
         # TODO(vish): abstract status checking?
         if volume_ref['status'] != "available":
-            raise exception.ApiError("Volume status must be available")
+            raise exception.ApiError(_("Volume status must be available"))
         if volume_ref['attach_status'] == "attached":
-            raise exception.ApiError("Volume is already attached")
+            raise exception.ApiError(_("Volume is already attached"))
         internal_id = ec2_id_to_internal_id(instance_id)
         instance_ref = self.compute_api.get_instance(context, internal_id)
         host = instance_ref['host']
@@ -555,10 +555,10 @@ class CloudController(object):
         instance_ref = db.volume_get_instance(context.elevated(),
                                               volume_ref['id'])
         if not instance_ref:
-            raise exception.ApiError("Volume isn't attached to anything!")
+            raise exception.ApiError(_("Volume isn't attached to anything!"))
         # TODO(vish): abstract status checking?
         if volume_ref['status'] == "available":
-            raise exception.ApiError("Volume is already detached")
+            raise exception.ApiError(_("Volume is already detached"))
         try:
             host = instance_ref['host']
             rpc.cast(context,
@@ -687,10 +687,11 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         # check quota
         if quota.allowed_floating_ips(context, 1) < 1:
-            logging.warn("Quota exceeeded for %s, tried to allocate address",
+            logging.warn(_("Quota exceeeded for %s, tried to allocate "
+                           "address"),
                          context.project_id)
-            raise quota.QuotaError("Address quota exceeded. You cannot "
-                                   "allocate any more addresses")
+            raise quota.QuotaError(_("Address quota exceeded. You cannot "
+                                   "allocate any more addresses"))
         network_topic = self._get_network_topic(context)
         public_ip = rpc.call(context,
                              network_topic,
@@ -803,7 +804,7 @@ class CloudController(object):
         # TODO: return error if not authorized
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         if volume_ref['status'] != "available":
-            raise exception.ApiError("Volume status must be available")
+            raise exception.ApiError(_("Volume status must be available"))
         now = datetime.datetime.utcnow()
         db.volume_update(context, volume_ref['id'], {'status': 'deleting',
                                                      'terminated_at': now})
@@ -834,11 +835,12 @@ class CloudController(object):
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
         if attribute != 'launchPermission':
-            raise exception.ApiError('attribute not supported: %s' % attribute)
+            raise exception.ApiError(_('attribute not supported: %s')
+                                     % attribute)
         try:
             image = self.image_service.show(context, image_id)
         except IndexError:
-            raise exception.ApiError('invalid id: %s' % image_id)
+            raise exception.ApiError(_('invalid id: %s') % image_id)
         result = {'image_id': image_id, 'launchPermission': []}
         if image['isPublic']:
             result['launchPermission'].append({'group': 'all'})
@@ -848,13 +850,14 @@ class CloudController(object):
                                operation_type, **kwargs):
         # TODO(devcamcar): Support users and groups other than 'all'.
         if attribute != 'launchPermission':
-            raise exception.ApiError('attribute not supported: %s' % attribute)
+            raise exception.ApiError(_('attribute not supported: %s')
+                                     % attribute)
         if not 'user_group' in kwargs:
-            raise exception.ApiError('user or group not specified')
+            raise exception.ApiError(_('user or group not specified'))
         if len(kwargs['user_group']) != 1 and kwargs['user_group'][0] != 'all':
-            raise exception.ApiError('only group "all" is supported')
+            raise exception.ApiError(_('only group "all" is supported'))
         if not operation_type in ['add', 'remove']:
-            raise exception.ApiError('operation_type must be add or remove')
+            raise exception.ApiError(_('operation_type must be add or remove'))
         return self.image_service.modify(context, image_id, operation_type)
 
     def update_image(self, context, image_id, **kwargs):

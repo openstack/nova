@@ -102,7 +102,7 @@ def _render_parts(value, write_cb):
                 _render_parts(subsubvalue, write_cb)
                 write_cb('</' + utils.utf8(name) + '>')
     else:
-        raise Exception("Unknown S3 value type %r", value)
+        raise Exception(_("Unknown S3 value type %r"), value)
 
 
 def get_argument(request, key, default_value):
@@ -134,7 +134,7 @@ def get_context(request):
                                           check_type='s3')
         return context.RequestContext(user, project)
     except exception.Error as ex:
-        logging.debug("Authentication Failure: %s", ex)
+        logging.debug(_("Authentication Failure: %s"), ex)
         raise exception.NotAuthorized()
 
 
@@ -227,7 +227,7 @@ class BucketResource(ErrorHandlingResource):
 
     def render_PUT(self, request):
         "Creates the bucket resource"""
-        logging.debug("Creating bucket %s", self.name)
+        logging.debug(_("Creating bucket %s"), self.name)
         logging.debug("calling bucket.Bucket.create(%r, %r)",
                       self.name,
                       request.context)
@@ -237,7 +237,7 @@ class BucketResource(ErrorHandlingResource):
 
     def render_DELETE(self, request):
         """Deletes the bucket resource"""
-        logging.debug("Deleting bucket %s", self.name)
+        logging.debug(_("Deleting bucket %s"), self.name)
         bucket_object = bucket.Bucket(self.name)
 
         if not bucket_object.is_authorized(request.context):
@@ -261,7 +261,7 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug("Getting object: %s / %s", self.bucket.name, self.name)
+        logging.debug(_("Getting object: %s / %s"), self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized()
@@ -279,7 +279,7 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug("Putting object: %s / %s", self.bucket.name, self.name)
+        logging.debug(_("Putting object: %s / %s"), self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized()
@@ -298,7 +298,7 @@ class ObjectResource(ErrorHandlingResource):
         authorized to delete the object.
         """
 
-        logging.debug("Deleting object: %s / %s",
+        logging.debug(_("Deleting object: %s / %s"),
                       self.bucket.name,
                       self.name)
 
@@ -394,17 +394,17 @@ class ImagesResource(resource.Resource):
         image_id = get_argument(request, 'image_id', u'')
         image_object = image.Image(image_id)
         if not image_object.is_authorized(request.context):
-            logging.debug("not authorized for render_POST in images")
+            logging.debug(_("not authorized for render_POST in images"))
             raise exception.NotAuthorized()
 
         operation = get_argument(request, 'operation', u'')
         if operation:
             # operation implies publicity toggle
-            logging.debug("handling publicity toggle")
+            logging.debug(_("handling publicity toggle"))
             image_object.set_public(operation == 'add')
         else:
             # other attributes imply update
-            logging.debug("update user fields")
+            logging.debug(_("update user fields"))
             clean_args = {}
             for arg in request.args.keys():
                 clean_args[arg] = request.args[arg][0]

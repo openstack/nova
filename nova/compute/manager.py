@@ -91,8 +91,8 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['name'] in self.driver.list_instances():
-            raise exception.Error("Instance has already been created")
-        logging.debug("instance %s: starting...", instance_id)
+            raise exception.Error(_("Instance has already been created"))
+        logging.debug(_("instance %s: starting..."), instance_id)
         self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
@@ -111,7 +111,7 @@ class ComputeManager(manager.Manager):
                                     instance_id,
                                     {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
-            logging.exception("instance %s: Failed to spawn",
+            logging.exception(_("instance %s: Failed to spawn"),
                               instance_ref['name'])
             self.db.instance_set_state(context,
                                        instance_id,
@@ -124,7 +124,7 @@ class ComputeManager(manager.Manager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
         context = context.elevated()
-        logging.debug("instance %s: terminating", instance_id)
+        logging.debug(_("instance %s: terminating"), instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
         volumes = instance_ref.get('volumes', []) or []
@@ -132,8 +132,8 @@ class ComputeManager(manager.Manager):
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
-            raise exception.Error('trying to destroy already destroyed'
-                                  ' instance: %s' % instance_id)
+            raise exception.Error(_('trying to destroy already destroyed'
+                                    ' instance: %s') % instance_id)
         yield self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
@@ -148,13 +148,13 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
-            logging.warn('trying to reboot a non-running '
-                         'instance: %s (state: %s excepted: %s)',
+            logging.warn(_('trying to reboot a non-running '
+                           'instance: %s (state: %s excepted: %s)'),
                          instance_ref['internal_id'],
                          instance_ref['state'],
                          power_state.RUNNING)
 
-        logging.debug('instance %s: rebooting', instance_ref['name'])
+        logging.debug(_('instance %s: rebooting'), instance_ref['name'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -169,7 +169,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: rescuing',
+        logging.debug(_('instance %s: rescuing'),
                       instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
@@ -185,7 +185,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: unrescuing',
+        logging.debug(_('instance %s: unrescuing'),
                       instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
@@ -198,7 +198,7 @@ class ComputeManager(manager.Manager):
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()
-        logging.debug("instance %s: getting console output", instance_id)
+        logging.debug(_("instance %s: getting console output"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
         return self.driver.get_console_output(instance_ref)
@@ -208,7 +208,7 @@ class ComputeManager(manager.Manager):
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
-        logging.debug("instance %s: attaching volume %s to %s", instance_id,
+        logging.debug(_("instance %s: attaching volume %s to %s"), instance_id,
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = yield self.volume_manager.setup_compute_volume(context,
@@ -225,7 +225,7 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            logging.exception("instance %s: attach failed %s, removing",
+            logging.exception(_("instance %s: attach failed %s, removing"),
                               instance_id, mountpoint)
             yield self.volume_manager.remove_compute_volume(context,
                                                             volume_id)
@@ -237,13 +237,13 @@ class ComputeManager(manager.Manager):
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
         context = context.elevated()
-        logging.debug("instance %s: detaching volume %s",
+        logging.debug(_("instance %s: detaching volume %s"),
                       instance_id,
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
         if instance_ref['name'] not in self.driver.list_instances():
-            logging.warn("Detaching volume from unknown instance %s",
+            logging.warn(_("Detaching volume from unknown instance %s"),
                          instance_ref['name'])
         else:
             yield self.driver.detach_volume(instance_ref['name'],

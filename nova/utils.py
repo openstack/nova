@@ -49,7 +49,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError):
-        raise exception.NotFound('Class %s cannot be found' % class_str)
+        raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
 def import_object(import_str):
@@ -63,7 +63,7 @@ def import_object(import_str):
 
 
 def fetchfile(url, target):
-    logging.debug("Fetching %s" % url)
+    logging.debug(_("Fetching %s") % url)
 #    c = pycurl.Curl()
 #    fp = open(target, "wb")
 #    c.setopt(c.URL, url)
@@ -75,7 +75,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug("Running cmd: %s", cmd)
+    logging.debug(_("Running cmd: %s"), cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -88,7 +88,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug("Result was %s" % (obj.returncode))
+        logging.debug(_("Result was %s") % (obj.returncode))
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -122,7 +122,7 @@ def debug(arg):
 
 
 def runthis(prompt, cmd, check_exit_code=True):
-    logging.debug("Running %s" % (cmd))
+    logging.debug(_("Running %s") % (cmd))
     exit_code = subprocess.call(cmd.split(" "))
     logging.debug(prompt % (exit_code))
     if check_exit_code and exit_code != 0:
@@ -161,7 +161,7 @@ def get_my_ip():
         csock.close()
         return addr
     except socket.gaierror as ex:
-        logging.warn("Couldn't get IP, using 127.0.0.1 %s", ex)
+        logging.warn(_("Couldn't get IP, using 127.0.0.1 %s"), ex)
         return "127.0.0.1"
 
 
@@ -205,7 +205,7 @@ class LazyPluggable(object):
         if not self.__backend:
             backend_name = self.__pivot.value
             if backend_name not in self.__backends:
-                raise exception.Error('Invalid backend: %s' % backend_name)
+                raise exception.Error(_('Invalid backend: %s') % backend_name)
 
             backend = self.__backends[backend_name]
             if type(backend) == type(tuple()):

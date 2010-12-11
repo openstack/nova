@@ -39,13 +39,13 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('ca_file', 'cacert.pem', 'Filename of root CA')
+flags.DEFINE_string('ca_file', 'cacert.pem', _('Filename of root CA'))
 flags.DEFINE_string('keys_path', '$state_path/keys',
-                    'Where we keep our keys')
+                    _('Where we keep our keys'))
 flags.DEFINE_string('ca_path', '$state_path/CA',
-                    'Where we keep our root CA')
+                    _('Where we keep our root CA'))
 flags.DEFINE_boolean('use_intermediate_ca', False,
-                     'Should we use intermediate CAs for each project?')
+                     _('Should we use intermediate CAs for each project?'))
 
 
 def ca_path(project_id):
@@ -111,9 +111,9 @@ def generate_x509_cert(subject, bits=1024):
     keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
     csrfile = os.path.join(tmpdir, 'temp.csr')
     logging.debug("openssl genrsa -out %s %s" % (keyfile, bits))
-    utils.runthis("Generating private key: %s",
+    utils.runthis(_("Generating private key: %s"),
                   "openssl genrsa -out %s %s" % (keyfile, bits))
-    utils.runthis("Generating CSR: %s",
+    utils.runthis(_("Generating CSR: %s"),
                   "openssl req -new -key %s -out %s -batch -subj %s" %
                   (keyfile, csrfile, subject))
     private_key = open(keyfile).read()
@@ -131,7 +131,7 @@ def sign_csr(csr_text, intermediate=None):
     if not os.path.exists(user_ca):
         start = os.getcwd()
         os.chdir(FLAGS.ca_path)
-        utils.runthis("Generating intermediate CA: %s",
+        utils.runthis(_("Generating intermediate CA: %s"),
                       "sh geninter.sh %s" % (intermediate))
         os.chdir(start)
     return _sign_csr(csr_text, user_ca)
@@ -142,11 +142,11 @@ def _sign_csr(csr_text, ca_folder):
     csrfile = open("%s/inbound.csr" % (tmpfolder), "w")
     csrfile.write(csr_text)
     csrfile.close()
-    logging.debug("Flags path: %s" % ca_folder)
+    logging.debug(_("Flags path: %s") % ca_folder)
     start = os.getcwd()
     # Change working dir to CA
     os.chdir(ca_folder)
-    utils.runthis("Signing cert: %s",
+    utils.runthis(_("Signing cert: %s"),
                   "openssl ca -batch -out %s/outbound.crt "
                   "-config ./openssl.cnf -infiles %s/inbound.csr" %
                   (tmpfolder, tmpfolder))

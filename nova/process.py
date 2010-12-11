@@ -131,7 +131,7 @@ def get_process_output(executable, args=None, env=None, path=None,
     cmd = executable
     if args:
         cmd = " ".join([cmd] + args)
-    logging.debug("Running cmd: %s", cmd)
+    logging.debug(_("Running cmd: %s"), cmd)
     process_handler = BackRelayWithInput(
             deferred,
             cmd,

@@ -65,7 +65,7 @@ class MetadataRequestHandler(object):
         cc = cloud.CloudController()
         meta_data = cc.get_metadata(req.remote_addr)
         if meta_data is None:
-            logging.error('Failed to get metadata for ip: %s' %
+            logging.error(_('Failed to get metadata for ip: %s') %
                           req.remote_addr)
             raise webob.exc.HTTPNotFound()
         data = self.lookup(req.path_info, meta_data)

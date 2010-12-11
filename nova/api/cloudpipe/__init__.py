@@ -45,7 +45,7 @@ class API(wsgi.Application):
     def __call__(self, req):
         if req.method == 'POST':
             return self.sign_csr(req)
-        _log.debug("Cloudpipe path is %s" % req.path_info)
+        _log.debug(_("Cloudpipe path is %s") % req.path_info)
         if req.path_info.endswith("/getca/"):
             return self.send_root_ca(req)
         return webob.exc.HTTPNotFound()
@@ -56,7 +56,7 @@ class API(wsgi.Application):
         return instance['project_id']
 
     def send_root_ca(self, req):
-        _log.debug("Getting root ca")
+        _log.debug(_("Getting root ca"))
         project_id = self.get_project_id_from_ip(req.remote_addr)
         res = webob.Response()
         res.headers["Content-Type"] = "text/plain"
