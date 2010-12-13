@@ -1533,6 +1533,25 @@ def security_group_rule_get_by_security_group(context, security_group_id, sessio
 
 
 @require_context
+def security_group_rule_get_by_security_group_grantee(context,
+                                                      security_group_id,
+                                                      session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         filter_by(group_id=security_group_id).\
+                         all()
+    else:
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=False).\
+                         filter_by(group_id=security_group_id).\
+                         all()
+    return result
+
+
+@require_context
 def security_group_rule_create(context, values):
     security_group_rule_ref = models.SecurityGroupIngressRule()
     security_group_rule_ref.update(values)

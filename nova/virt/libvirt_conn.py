@@ -656,8 +656,11 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
-    def refresh_security_group(self, security_group_id):
-        self.firewall_driver.refresh_security_group(security_group_id)
+    def refresh_security_group_rules(self, security_group_id):
+        self.firewall_driver.refresh_security_group_rules(security_group_id)
+
+    def refresh_security_group_members(self, security_group_id):
+        self.firewall_driver.refresh_security_group_members(security_group_id)
 
 
 class FirewallDriver(object):
@@ -677,11 +680,19 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group(self, security_group_id):
-        """Refresh security group from data store
+    def refresh_security_group_rules(self, security_group_id):
+        """Refresh security group rules from data store
 
-        Gets called when changes have been made to the security
-        group."""
+        Gets called when a rule has been added to or removed from
+        the security group."""
+        raise NotImplementedError()
+
+
+    def refresh_security_group_members(self, security_group_id):
+        """Refresh security group members from data store
+
+        Gets called when an instance gets added to or removed from
+        the security group."""
         raise NotImplementedError()
 
 
@@ -876,7 +887,7 @@ class NWFilterFirewall(FirewallDriver):
 
         for security_group in db.security_group_get_by_instance(ctxt,
                                                                 instance['id']):
-            yield self.refresh_security_group(security_group['id'])
+            yield self.refresh_security_group_rules(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
                                                           security_group['id'])]
@@ -891,7 +902,7 @@ class NWFilterFirewall(FirewallDriver):
 
         return
 
-    def refresh_security_group(self, security_group_id):
+    def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -1062,7 +1073,10 @@ class IptablesFirewallDriver(FirewallDriver):
         logging.info('new_filter: %s', '\n'.join(new_filter))
         return new_filter
 
-    def refresh_security_group(self, security_group):
+    def refresh_security_group_members(self, security_group):
+        pass
+
+    def refresh_security_group_rules(self, security_group):
         self.apply_ruleset()
 
     def _security_group_chain_name(self, security_group):

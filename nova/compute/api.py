@@ -24,6 +24,7 @@ import datetime
 import logging
 import time
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -165,6 +166,10 @@ class ComputeAPI(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id}})
 
+        
+        for group_id in security_groups:
+            self.trigger_security_group_members_refresh(elevated, group_id)
+
         return instances
 
     def ensure_default_security_group(self, context):
@@ -183,6 +188,62 @@ class ComputeAPI(base.Base):
                       'user_id': context.user_id,
                       'project_id': context.project_id}
             db.security_group_create(context, values)
+
+
+    def trigger_security_group_rules_refresh(self, context, security_group_id):
+        """Called when a rule is added to or removed from a security_group"""
+
+        security_group = db.security_group_get(context, security_group_id)
+
+        hosts = set()
+        for instance in security_group['instances']:
+            if instance['host'] is not None:
+                hosts.add(instance['host'])
+
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group",
+                      "args": {"security_group_id": security_group.id}})
+
+
+    def trigger_security_group_members_refresh(self, context, group_id):
+        """Called when a security group gains a new or loses a member
+        
+        Sends an update request to each compute node for whom this is
+        relevant."""
+
+        # First, we get the security group rules that reference this group as
+        # the grantee..
+        security_group_rules = \
+                db.security_group_rule_get_by_security_group_grantee(context,
+                                                                     group_id)
+
+        # ..then we distill the security groups to which they belong..
+        security_groups = set()
+        for rule in security_group_rules:
+            security_groups.add(rule['parent_group_id'])
+        
+        # ..then we find the instances that are members of these groups..
+        instances = set()
+        for security_group in security_groups:
+            for instance in security_group['instances']:
+                instances.add(instance['id'])
+
+        # ...then we find the hosts where they live...
+        hosts = set()
+        for instance in instances:
+            if instance['host']:
+                hosts.add(instance['host'])
+
+        # ...and finally we tell these nodes to refresh their view of this
+        # particular security group.
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_members",
+                      "args": {"security_group_id": group_id}})
+
 
     def update_instance(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
