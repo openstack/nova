@@ -79,7 +79,7 @@ class VMHelper():
             'platform': {},
             'PCI_bus': '',
             'recommendations': '',
-            'affinity': '',
+            'affinity': '',  
             'user_version': '0',
             'other_config': {},
             }
@@ -98,6 +98,7 @@ class VMHelper():
             #TODO: Windows needs a platform flag... 
             rec['HVM_boot_policy'] = 'BIOS order'
             rec['HVM_boot_params'] = {'order': 'dc'}
+            rec['platform']={'acpi':'true','apic':'true','pae':'true','viridian':'true'}
             
         logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
@@ -162,18 +163,21 @@ class VMHelper():
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
-        fn = use_sr and 'get_vdi' or 'get_kernel'
+        logging.debug("Salvatore: image type = %d",type)
+        fn = (type<>0) and 'get_vdi' or 'get_kernel'
+        logging.debug("Salvatore: fn=%s",fn)
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
         args['add_partition']='false'
         args['raw']='false'
-        if use_sr<>0:
+        if type<>0:
             args['add_partition'] = 'true'
-        else: 
-            if use_sr==2:
+            if type==2:
                 args['raw']='true'    
+        logging.debug("Salvatore: args['raw']=%s",args['raw'])
+        logging.debug("Salvatore: args['add_partition']=%s",args['add_partition'])
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
         defer.returnValue(uuid)
