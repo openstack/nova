@@ -26,6 +26,7 @@ import nova.api
 import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
+from nova import context
 from nova.tests.api.openstack import fakes
 
 
@@ -35,6 +36,7 @@ class Test(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
             '__init__', fakes.fake_auth_init)
+        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_rate_limiting(self.stubs)
@@ -131,6 +133,7 @@ class TestLimiter(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
             '__init__', fakes.fake_auth_init)
+        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)

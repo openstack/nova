@@ -24,9 +24,10 @@ import webob
 import webob.dec
 
 from nova import auth
-from nova import utils
-from nova import flags
+from nova import context
 from nova import exception as exc
+from nova import flags
+from nova import utils
 import nova.api.openstack.auth
 from nova.image import service
 from nova.image import glance
@@ -58,7 +59,7 @@ def fake_auth_init(self):
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
-    req.environ['nova.context'] = dict(user=dict(id=1))
+    req.environ['nova.context'] = context.RequestContext(1, 1)
     if req.body:
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
@@ -67,12 +68,11 @@ def fake_wsgi(self, req):
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
-        key_pair)
+    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
 
 
 def stub_out_image_service(stubs):
-    def fake_image_show(meh, id):
+    def fake_image_show(meh, context, id):
         return dict(kernelId=1, ramdiskId=1)
 
     stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)
@@ -170,6 +170,12 @@ class FakeToken(object):
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+
+
+class FakeRequestContext(object):
+    def __init__(self, user, project):
+        self.user_id = 1
+        self.project_id = 1
 
 
 class FakeAuthDatabase(object):

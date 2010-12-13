@@ -43,9 +43,21 @@ def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
 
+def return_security_group(context, instance_id, security_group_id):
+    pass
+
+
+def instance_update(context, instance_id, kwargs):
+    return stub_instance(instance_id)
+
+
+def instance_address(context, instance_id):
+    return None
+
+
 def stub_instance(id, user_id=1):
-    return Instance(id=id, state=0, image_id=10, server_name='server%s' % id,
-                    user_id=user_id)
+    return Instance(id=id + 123456, state=0, image_id=10, user_id=user_id,
+                    display_name='server%s' % id, internal_id=id)
 
 
 class ServersTest(unittest.TestCase):
@@ -63,6 +75,13 @@ class ServersTest(unittest.TestCase):
                        return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
+        self.stubs.Set(nova.db.api, 'instance_add_security_group',
+                       return_security_group)
+        self.stubs.Set(nova.db.api, 'instance_update', instance_update)
+        self.stubs.Set(nova.db.api, 'instance_get_fixed_address',
+                       instance_address)
+        self.stubs.Set(nova.db.api, 'instance_get_floating_address',
+                       instance_address)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -87,11 +106,11 @@ class ServersTest(unittest.TestCase):
             i += 1
 
     def test_create_instance(self):
-        def server_update(context, id, params):
-            pass
-
         def instance_create(context, inst):
-            return {'id': 1, 'internal_id': 1}
+            return {'id': 1, 'internal_id': 1, 'display_name': ''}
+
+        def server_update(context, id, params):
+            return instance_create(context, id)
 
         def fake_method(*args, **kwargs):
             pass
