@@ -91,7 +91,7 @@ flags.DEFINE_string('target_port',
                     '3260',
                     'iSCSI Target Port, 3260 Default')
 flags.DEFINE_string('iqn_prefix',
-                    'iqn.2010-10.org.openstack',
+                    'iqn.2010-12.org.openstack',
                     'IQN Prefix')
 
 

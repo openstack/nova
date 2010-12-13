@@ -24,6 +24,7 @@ from twisted.internet import defer
 
 from nova import db
 from nova import context
+from nova import exception
 
 from nova.auth.manager import AuthManager
 from nova.virt.xenapi.network_utils import NetworkHelper
@@ -123,7 +124,7 @@ class VMOps(object):
         """ Return data about VM instance """
         vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
-            raise Exception('instance not present %s' % instance_id)
+            raise exception.NotFound('Instance not found %s' % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 

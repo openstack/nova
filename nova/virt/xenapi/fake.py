@@ -1,4 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+from twisted.web.domhelpers import _get
+from aptdaemon.defer import defer
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 #
@@ -33,15 +35,15 @@ class Failure(Exception):
 class FakeXenAPISession(object):
     """ The session to invoke XenAPI SDK calls """
     def __init__(self):
-        pass
+        self.fail_next_call = False
 
     def get_xenapi(self):
         """ Return the xenapi object """
-        raise NotImplementedError()
+        return self
 
     def get_xenapi_host(self):
         """ Return the xenapi host """
-        raise NotImplementedError()
+        return 'FAKE_XENAPI_HOST'
 
     def call_xenapi(self, method, *args):
         """Call the specified XenAPI method on a background thread.  Returns
@@ -57,3 +59,70 @@ class FakeXenAPISession(object):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
         raise NotImplementedError()
+
+    def __getattr__(self, name):
+        return FakeXenAPIObject(name, self)
+
+
+class FakeXenAPIObject(object):
+    def __init__(self, name, session):
+        self.name = name
+        self.session = session
+        self.FAKE_REF = 'FAKE_REFERENCE_%s' % name
+
+    def get_by_name_label(self, label):
+        if label is None:
+            return ''   # 'No object found'
+        else:
+            return 'FAKE_OBJECT_%s_%s' % (self.name, label)
+
+    def getter(self, *args):
+        self._check_fail()
+        return self.FAKE_REF
+
+    def ref_list(self, *args):
+        self._check_fail()
+        return [FakeXenAPIRecord()]
+
+    def __getattr__(self, name):
+        if name == 'create':
+            return self._create
+        elif name == 'get_record':
+            return self._record
+        elif name == 'introduce':
+            return self._introduce
+        elif name.startswith('get_'):
+            getter = 'get_%s' % self.name
+            if name == getter:
+                return self.getter
+            else:
+                child = name[name.find('_') + 1:]
+                if child.endswith('s'):
+                    return FakeXenAPIObject(child[:-1], self.session).ref_list
+                else:
+                    return FakeXenAPIObject(child, self.session).getter
+
+    def _create(self, *args):
+        self._check_fail()
+        return self.FAKE_REF
+
+    def _record(self, *args):
+        self._check_fail()
+        return FakeXenAPIRecord()
+
+    def _introduce(self, *args):
+        self._check_fail()
+        pass
+
+    def _check_fail(self):
+        if self.session.fail_next_call:
+            self.session.fail_next_call = False   # Reset!
+            raise Failure('Unable to create %s' % self.name)
+
+
+class FakeXenAPIRecord(dict):
+    def __init__(self):
+        pass
+
+    def __getitem__(self, attr):
+        return ''
