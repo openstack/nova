@@ -26,7 +26,7 @@ Nova is written with the following design guidelines in mind:
 
 * **Component based architecture**: Quickly add new behaviors
 * **Highly available**: Scale to very serious workloads
-* **Fault-Tollerant**: Isloated processes avoid cascading failures
+* **Fault-Tolerant**: Isolated processes avoid cascading failures
 * **Recoverable**: Failures should be easy to diagnose, debug, and rectify
 * **Open Standards**: Be a reference implementation for a community-driven api
 * **API Compatibility**: Nova strives to provide API-compatible with popular systems like Amazon EC2
@@ -61,8 +61,6 @@ Administrator's Documentation
    adminguide/index
    adminguide/single.node.install
    adminguide/multi.node.install
-
-.. todo:: add swiftadmin
 
 Developer Docs
 ==============
