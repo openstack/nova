@@ -317,7 +317,8 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         self.assertEqual(sr_ref, self.session.SR.FAKE_REF)
 
     def test_destroy_iscsi_storage(self):
-        pass
+        sr_ref = self.session.SR.FAKE_REF
+        self.helper.destroy_iscsi_storage_blocking(self.session, sr_ref)
 
     def test_introduce_vdi_raise_no_exception(self):
         sr_ref = self.session.SR.FAKE_REF

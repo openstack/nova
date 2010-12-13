@@ -1,6 +1,4 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-from twisted.web.domhelpers import _get
-from aptdaemon.defer import defer
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 #
@@ -89,8 +87,10 @@ class FakeXenAPIObject(object):
             return self._create
         elif name == 'get_record':
             return self._record
-        elif name == 'introduce':
-            return self._introduce
+        elif name == 'introduce' or\
+        name == 'forget' or\
+        name == 'unplug':
+            return self._fake_action
         elif name.startswith('get_'):
             getter = 'get_%s' % self.name
             if name == getter:
@@ -110,7 +110,7 @@ class FakeXenAPIObject(object):
         self._check_fail()
         return FakeXenAPIRecord()
 
-    def _introduce(self, *args):
+    def _fake_action(self, *args):
         self._check_fail()
         pass
 
