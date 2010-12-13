@@ -861,9 +861,10 @@ class NWFilterFirewall(FirewallDriver):
         instance_secgroup_filter_children = ['nova-base-ipv4', 'nova-base-ipv6',
                                             'nova-allow-dhcp-server']
 
+        ctxt = context.get_admin_context()
+
         if FLAGS.allow_project_net_traffic:
-            network_ref = db.project_get_network(context.get_admin_context(),
-                                                 instance['project_id'])
+            network_ref = db.project_get_network(ctxt, instance['project_id'])
             net, mask = self._get_net_and_mask(network_ref['cidr'])
 
             project_filter = self.nova_project_filter(instance['project_id'],
@@ -873,7 +874,8 @@ class NWFilterFirewall(FirewallDriver):
             instance_secgroup_filter_children += [('nova-project-%s' %
                                                         instance['project_id'])]
 
-        for security_group in db.security_group_get_by_instance(instance['id']):
+        for security_group in db.security_group_get_by_instance(ctxt,
+                                                                instance['id']):
             yield self.refresh_security_group(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
@@ -1027,7 +1029,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 if rule.cidr:
                     args += ['-s', rule.cidr]
                 else:
-                    # Something about ipsets
+                    # Eventually, a mechanism to grant access for security
+                    # groups will turn up here. It'll use ipsets.
                     continue
 
                 if rule.protocol in ['udp', 'tcp']:
