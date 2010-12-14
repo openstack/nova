@@ -108,6 +108,13 @@ def partition(infile, outfile, local_bytes=0, resize=True,
         yield execute('parted --script %s mkpartfs primary %s %ds %ds'
                       % (outfile, local_type, local_first, local_last))
 
+@defer.inlineCallbacks
+def extend(image, size, execute):
+    file_size = os.path.getsize(image)
+    if file_size >= size:
+        return
+    yield execute('truncate -s size %s' % (image,))
+
 
 @defer.inlineCallbacks
 def inject_data(image, key=None, net=None, partition=None, execute=None):

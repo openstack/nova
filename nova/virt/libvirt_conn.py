@@ -421,13 +421,13 @@ class LibvirtConnection(object):
             yield images.fetch(inst.image_id, basepath('disk-raw'), user,
                                project)
 
-        if inst.kernel_id:
+        if inst['kernel_id']:
             if not os.path.exists(basepath('kernel')):
-                yield images.fetch(inst.kernel_id, basepath('kernel'),
+                yield images.fetch(inst['kernel_id'], basepath('kernel'),
                                    user, project)
-            if inst.ramdisk_id:
+            if inst['ramdisk_id']:
                 if not os.path.exists(basepath('ramdisk')):
-                    yield images.fetch(inst.ramdisk_id, basepath('ramdisk'),
+                    yield images.fetch(inst['ramdisk_id'], basepath('ramdisk'),
                                        user, project)
 
         execute = lambda cmd, process_input = None, check_exit_code = True: \
@@ -439,7 +439,7 @@ class LibvirtConnection(object):
         # partitioned disk image where the target partition is the first
         # partition
         target_partition = None
-        if not inst.kernel_id:
+        if not inst['kernel_id']:
             target_partition = "1"
 
         key = str(inst['key_data'])
@@ -472,7 +472,7 @@ class LibvirtConnection(object):
                              ' into image %s (%s)',
                              inst['name'], inst.image_id, e)
 
-        if inst.kernel_id:
+        if inst['kernel_id']:
             if os.path.exists(basepath('disk')):
                 yield process.simple_execute('rm -f %s' % basepath('disk'))
 
@@ -483,8 +483,13 @@ class LibvirtConnection(object):
         resize = True
         if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
             resize = False
-        yield disk.partition(basepath('disk-raw'), basepath('disk'),
-                             local_bytes, resize, execute=execute)
+
+        if inst['kernel_id']:
+            yield disk.partition(basepath('disk-raw'), basepath('disk'),
+                                 local_bytes, resize, execute=execute)
+        else:
+            os.rename(basepath('disk-raw'), basepath('disk'))
+            yield disk.extend(basepath('disk'), local_bytes, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
             yield process.simple_execute('sudo chown root %s' %
