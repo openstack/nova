@@ -22,6 +22,8 @@ USE_MYSQL=${USE_MYSQL:-0}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
+# Use OpenDJ instead of OpenLDAP when using LDAP
+USE_OPENDJ=${USE_OPENDJ:-0}
 LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
 NET_MAN=${NET_MAN:-VlanManager}
 # NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
@@ -46,7 +48,6 @@ cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
 --verbose
 --nodaemon
 --dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
---FAKE_subdomain=ec2
 --network_manager=nova.network.manager.$NET_MAN
 --cc_host=$HOST_IP
 --routing_source_ip=$HOST_IP
@@ -114,7 +115,13 @@ if [ "$CMD" == "run" ]; then
         rm $NOVA_DIR/nova.sqlite
     fi
     if [ "$USE_LDAP" == 1 ]; then
-        sudo $NOVA_DIR/nova/auth/slap.sh
+        if [ "$USE_OPENDJ" == 1 ]; then
+            echo '--ldap_user_dn=cn=Directory Manager' >> \
+                /etc/nova/nova-manage.conf
+            sudo $NOVA_DIR/nova/auth/opendj.sh
+        else
+            sudo $NOVA_DIR/nova/auth/slap.sh
+        fi
     fi
     rm -rf $NOVA_DIR/instances
     mkdir -p $NOVA_DIR/instances

@@ -26,6 +26,7 @@ import nova.api
 import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
+from nova import context
 from nova.tests.api.openstack import fakes
 
 
@@ -35,6 +36,7 @@ class Test(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
             '__init__', fakes.fake_auth_init)
+        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_rate_limiting(self.stubs)
@@ -62,14 +64,14 @@ class Test(unittest.TestCase):
         f = fakes.FakeAuthManager()
         f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
-        req = webob.Request.blank('/v1.0/')
+        req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
         result = req.get_response(nova.api.API('os'))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "https://foo/v1.0/")
+            "http://foo/v1.0/")
         self.assertEqual(result.headers['X-CDN-Management-Url'],
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
@@ -131,6 +133,7 @@ class TestLimiter(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
             '__init__', fakes.fake_auth_init)
+        self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)

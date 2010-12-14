@@ -41,15 +41,14 @@ class LibvirtConnTestCase(test.TrialTestCase):
         FLAGS.instances_path = ''
 
     test_ip = '10.11.12.13'
-    test_instance = {
-                      'memory_kb'      : '1024000',
-                      'basepath'       : '/some/path',
-                      'bridge_name'    : 'br100',
-                      'mac_address'    : '02:12:34:46:56:67',
-                      'vcpus'          : 2,
-                      'project_id'     : 'fake',
-                      'bridge'         : 'br101',
-                      'instance_type'  : 'm1.small'}
+    test_instance = {'memory_kb':     '1024000',
+                     'basepath':      '/some/path',
+                     'bridge_name':   'br100',
+                     'mac_address':   '02:12:34:46:56:67',
+                     'vcpus':         2,
+                     'project_id':    'fake',
+                     'bridge':        'br101',
+                     'instance_type': 'm1.small'}
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
@@ -83,7 +82,6 @@ class LibvirtConnTestCase(test.TrialTestCase):
                                  expect_kernel=True, expect_ramdisk=True,
                                  rescue=True)
 
-
     def do_test_xml_and_uri(self, instance,
                             expect_ramdisk, expect_kernel,
                             rescue=False):
@@ -94,14 +92,14 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.network.set_network_host(context.get_admin_context(),
                                       network_ref['id'])
 
-        fixed_ip = { 'address'    : self.test_ip,
-                     'network_id' : network_ref['id'] }
+        fixed_ip = {'address':    self.test_ip,
+                    'network_id': network_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
         db.fixed_ip_update(ctxt, self.test_ip,
-                                 { 'allocated': True,
-                                   'instance_id': instance_ref['id'] })
+                                 {'allocated':   True,
+                                  'instance_id': instance_ref['id']})
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -131,15 +129,15 @@ class LibvirtConnTestCase(test.TrialTestCase):
                 check_list.append(check)
             else:
                 if expect_kernel:
-                    check = (lambda t: t.find('./os/kernel').text.split('/')[1],
-                             'kernel')
+                    check = (lambda t: t.find('./os/kernel').text.split('/'
+                                       )[1], 'kernel')
                 else:
                     check = (lambda t: t.find('./os/kernel'), None)
                 check_list.append(check)
-    
+
                 if expect_ramdisk:
-                    check = (lambda t: t.find('./os/initrd').text.split('/')[1],
-                             'ramdisk')
+                    check = (lambda t: t.find('./os/initrd').text.split('/'
+                                       )[1], 'ramdisk')
                 else:
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
@@ -189,7 +187,8 @@ class LibvirtConnTestCase(test.TrialTestCase):
                                  expected_result,
                                  '%s failed common check %d' % (xml, i))
 
-        # This test is supposed to make sure we don't override a specifically set uri
+        # This test is supposed to make sure we don't override a specifically
+        # set uri
         #
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
         # checking against that later on. This way we make sure the

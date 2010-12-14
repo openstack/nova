@@ -421,14 +421,14 @@ class LibvirtConnection(object):
             yield images.fetch(inst.image_id, basepath('disk-raw'), user,
                                project)
 
-        using_kernel = inst.kernel_id
-        if using_kernel:
+        if inst.kernel_id:
             if not os.path.exists(basepath('kernel')):
-                yield images.fetch(inst.kernel_id, basepath('kernel'), user,
-                                   project)
-            if not os.path.exists(basepath('ramdisk')):
-                yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
-                                   project)
+                yield images.fetch(inst.kernel_id, basepath('kernel'),
+                                   user, project)
+            if inst.ramdisk_id:
+                if not os.path.exists(basepath('ramdisk')):
+                    yield images.fetch(inst.ramdisk_id, basepath('ramdisk'),
+                                       user, project)
 
         execute = lambda cmd, process_input = None, check_exit_code = True: \
                   process.simple_execute(cmd=cmd,
@@ -439,7 +439,7 @@ class LibvirtConnection(object):
         # partitioned disk image where the target partition is the first
         # partition
         target_partition = None
-        if not using_kernel:
+        if not inst.kernel_id:
             target_partition = "1"
 
         key = str(inst['key_data'])
@@ -472,7 +472,7 @@ class LibvirtConnection(object):
                              ' into image %s (%s)',
                              inst['name'], inst.image_id, e)
 
-        if using_kernel:
+        if inst.kernel_id:
             if os.path.exists(basepath('disk')):
                 yield process.simple_execute('rm -f %s' % basepath('disk'))
 
