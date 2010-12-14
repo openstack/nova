@@ -133,6 +133,18 @@ class FakeConnection(object):
         """
         return defer.succeed(None)
 
+    def pause(self, instance):
+        """
+        Pause the specified instance.
+        """
+        return defer.succeed(None)
+
+    def unpause(self, instance):
+        """
+        Unpause the specified instance.
+        """
+        return defer.succeed(None)
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.
