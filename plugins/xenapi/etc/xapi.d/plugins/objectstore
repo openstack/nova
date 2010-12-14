@@ -43,25 +43,42 @@ SECTOR_SIZE = 512
 MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 
+def is_vdi_pv(session,args):
+    logging.debug("Checking wheter VDI has PV kernel")
+    vdi = exists(args, 'vdi-ref')
+    pv=False
+    pv=with_vdi_in_dom0(session, vdi, False,
+                     lambda dev: _is_vdi_pv('/dev/%s' % dev))
+    return pv
 
+def _is_vdi_pv(dest):
+    logging.debug("Running pygrub against %s",dest)
+    output=os.popen('pygrub -qn %s' % dest)
+    pv=False
+    for line in output.readlines():
+        logging.debug("line:",line)
+        #try to find kernel string
+        m=re.search('(?<=kernel:)/.*(?:>)',line)
+        if (m<>None):
+            if m.group(0).find('xen')<>-1:
+                pv=True
+    logging.debug("PV:%d",pv)
+    return pv 
+        
 def get_vdi(session, args):
     src_url = exists(args, 'src_url')
     username = exists(args, 'username')
     password = exists(args, 'password')
     raw_image=validate_bool(args, 'raw', 'false')
     add_partition = validate_bool(args, 'add_partition', 'false')
-
     (proto, netloc, url_path, _, _, _) = urlparse.urlparse(src_url)
-
     sr = find_sr(session)
     if sr is None:
         raise Exception('Cannot find SR to write VDI to')
-
     virtual_size = \
         get_content_length(proto, netloc, url_path, username, password)
     if virtual_size < 0:
         raise Exception('Cannot get VDI size')
-
     vdi_size = virtual_size
     if add_partition:
         # Make room for MBR.
@@ -230,4 +247,5 @@ def download_all(response, length, dest_file, offset):
 
 if __name__ == '__main__':
     XenAPIPlugin.dispatch({'get_vdi': get_vdi,
-                           'get_kernel': get_kernel})
+                           'get_kernel': get_kernel, 
+                           'is_vdi_pv': is_vdi_pv})

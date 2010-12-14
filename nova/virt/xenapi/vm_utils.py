@@ -47,9 +47,11 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def create_vm(cls, session, instance, kernel, ramdisk):
+    def create_vm(cls, session, instance, kernel, ramdisk,pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
-        VM reference."""
+        VM reference.
+        the pv_kernel flag indicates whether the guest is HVM or PV
+        """
 
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
@@ -79,7 +81,7 @@ class VMHelper():
             'platform': {},
             'PCI_bus': '',
             'recommendations': '',
-            'affinity': '',
+            'affinity': '',  
             'user_version': '0',
             'other_config': {},
             }
@@ -94,11 +96,14 @@ class VMHelper():
             rec['PV_bootloader_args'] = ''
             rec['PV_legacy_args'] = ''
         else:
-            logging.debug("This a raw image, hopefully HVM")
-            #TODO: Windows needs a platform flag... 
-            rec['HVM_boot_policy'] = 'BIOS order'
-            rec['HVM_boot_params'] = {'order': 'dc'}
-            
+            logging.debug("This a raw image")
+            if (pv_kernel):
+                rec['PV_args'] = 'noninteractive'
+                rec['PV_bootloader'] = 'pygrub'    
+            else:
+                rec['HVM_boot_policy'] = 'BIOS order'
+                rec['HVM_boot_params'] = {'order': 'dc'}
+                rec['platform']={'acpi':'true','apic':'true','pae':'true','viridian':'true'}
         logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
@@ -162,21 +167,37 @@ class VMHelper():
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
-        fn = use_sr and 'get_vdi' or 'get_kernel'
+        logging.debug("Salvatore: image type = %d",type)
+        fn = (type<>0) and 'get_vdi' or 'get_kernel'
+        logging.debug("Salvatore: fn=%s",fn)
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
         args['add_partition']='false'
         args['raw']='false'
-        if use_sr<>0:
+        if type<>0:
             args['add_partition'] = 'true'
-        else: 
-            if use_sr==2:
+            if type==2:
                 args['raw']='true'    
+        logging.debug("Salvatore: args['raw']=%s",args['raw'])
+        logging.debug("Salvatore: args['add_partition']=%s",args['add_partition'])
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
         defer.returnValue(uuid)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def lookup_image(cls, session, vdi_ref):
+        logging.debug("Looking up vdi %s for PV kernel",vdi_ref)
+        fn="is_vdi_pv"
+        args={}
+        args['vdi-ref']=vdi_ref
+        #TODO: Call proper function in plugin
+        task = yield session.async_call_plugin('objectstore', fn, args)
+        pv=yield session.wait_for_task(task)
+        logging.debug("PV Kernel in VDI:%d",pv)
+        defer.returnValue(pv)
 
     @classmethod
     @utils.deferredToThread
