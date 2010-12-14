@@ -135,7 +135,7 @@ class VMOps(object):
         """Return data about VM diagnostics"""
         vm = yield VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise Exception("instance not present %s" % instance_id)
+            raise exception.NotFound('Instance not found %s' % instance_id)
         rec = yield self._session.get_xenapi().VM.get_record(vm)
         defer.returnValue(VMHelper.compile_diagnostics(self._session, rec))
 
