@@ -101,6 +101,7 @@ def get_connection(_):
 
 class XenAPIConnection(object):
     """ A connection to XenServer or Xen Cloud Platform """
+
     def __init__(self, url, user, pw):
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
@@ -155,6 +156,7 @@ class XenAPIConnection(object):
 
 class XenAPISession(object):
     """ The session to invoke XenAPI SDK calls """
+
     def __init__(self, url, user, pw):
         self._session = XenAPI.Session(url)
         self._session.login_with_password(user, pw)

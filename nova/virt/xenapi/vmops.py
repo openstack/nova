@@ -36,6 +36,7 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
+
     def __init__(self, session):
         global XenAPI
         if XenAPI is None:

@@ -119,6 +119,7 @@ def get_connection(read_only):
 
 
 class LibvirtConnection(object):
+
     def __init__(self, read_only):
         (self.libvirt_uri,
          template_file,
@@ -298,12 +299,12 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def pause(self, instance, callback):
         raise exception.APIError("pause not supported for libvirt.")
- 
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def unpause(self, instance, callback):
         raise exception.APIError("unpause not supported for libvirt.")
- 
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def rescue(self, instance):

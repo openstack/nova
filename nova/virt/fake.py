@@ -259,5 +259,6 @@ class FakeConnection(object):
 
 
 class FakeInstance(object):
+
     def __init__(self):
         self._state = power_state.NOSTATE

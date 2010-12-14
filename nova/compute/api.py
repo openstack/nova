@@ -293,7 +293,6 @@ class ComputeAPI(base.Base):
                  {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
-
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)

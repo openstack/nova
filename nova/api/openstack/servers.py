@@ -195,5 +195,3 @@ class Controller(wsgi.Controller):
             logging.error("Compute.api::unpause %s", readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
-
-
