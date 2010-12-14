@@ -32,6 +32,7 @@ from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
 
 FLAGS = flags.FLAGS
@@ -44,28 +45,12 @@ XENAPI_POWER_STATE = {
     'Crashed': power_state.CRASHED}
 
 
-class VMHelper():
+class VMHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
-
-    XenAPI = None
-
     def __init__(self):
         return
-
-    @classmethod
-    def late_import(cls):
-        """
-        Load XenAPI module in for helper class
-        """
-        xenapi_module = \
-          FLAGS.xenapi_use_fake_session and 'nova.virt.xenapi.fake' or 'XenAPI'
-        from_list = \
-           FLAGS.xenapi_use_fake_session and ['fake'] or []
-        if cls.XenAPI is None:
-            cls.XenAPI = __import__(xenapi_module,
-                                    globals(), locals(), from_list, -1)
 
     @classmethod
     @defer.inlineCallbacks

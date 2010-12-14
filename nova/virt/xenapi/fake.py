@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2010 Citrix Systems, Inc.
+#
+#    Copyright (c) 2010 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,116 +13,354 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+#
+#============================================================================
+#
+# Parts of this file are based upon xmlrpclib.py, the XML-RPC client
+# interface included in the Python distribution.
+#
+# Copyright (c) 1999-2002 by Secret Labs AB
+# Copyright (c) 1999-2002 by Fredrik Lundh
+#
+# By obtaining, using, and/or copying this software and/or its
+# associated documentation, you agree that you have read, understood,
+# and will comply with the following terms and conditions:
+#
+# Permission to use, copy, modify, and distribute this software and
+# its associated documentation for any purpose and without fee is
+# hereby granted, provided that the above copyright notice appears in
+# all copies, and that both that copyright notice and this permission
+# notice appear in supporting documentation, and that the name of
+# Secret Labs AB or the author not be used in advertising or publicity
+# pertaining to distribution of the software without specific, written
+# prior permission.
+#
+# SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
+# TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANT-
+# ABILITY AND FITNESS.  IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR
+# BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
+# DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+# ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
+# --------------------------------------------------------------------
+
 
 """
 A fake XenAPI SDK.
-
-Allows for xenapi helper classes testing.
 """
 
 
+import datetime
+import logging
+import uuid
+
+from nova import exception
+
+
+_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
+            'VDI', 'VIF', 'VM', 'task']
+
+_db_content = {}
+
+
+def reset():
+    for c in _CLASSES:
+        _db_content[c] = {}
+    create_host('fake')
+
+
+def create_host(name_label):
+    return _create_object('host', {
+        'name_label': name_label,
+        })
+
+
+def create_network(name_label, bridge):
+    return _create_object('network', {
+        'name_label': name_label,
+        'bridge': bridge,
+        })
+
+
+def create_vm(name_label, status):
+    return _create_object('VM', {
+        'name_label': name_label,
+        'power-state': status,
+        })
+
+
+def create_task(name_label):
+    return _create_object('task', {
+        'name_label': name_label,
+        'status': 'pending',
+        })
+
+
+def _create_object(table, obj):
+    ref = str(uuid.uuid4())
+    obj['uuid'] = str(uuid.uuid4())
+    _db_content[table][ref] = obj
+    return ref
+
+
+def get_all(table):
+    return _db_content[table].keys()
+
+
+def get_all_records(table):
+    return _db_content[table]
+
+
+def get_record(table, ref):
+    if ref in _db_content[table]:
+        return _db_content[table].get(ref)
+    else:
+        raise Failure(['HANDLE_INVALID', table, ref])
+
+
+def check_for_session_leaks():
+    if len(_db_content['session']) > 0:
+        raise exception.Error('Sessions have leaked: %s' %
+                              _db_content['session'])
+
+
 class Failure(Exception):
-    def __init__(self, message=None):
-        super(Failure, self).__init__(message)
-        self.details = []
+    def __init__(self, details):
+        self.details = details
 
     def __str__(self):
-        return 'Fake XenAPI Exception'
+        try:
+            return str(self.details)
+        except Exception, exn:
+            return "XenAPI Fake Failure: %s" % str(self.details)
+
+    def _details_map(self):
+        return dict([(str(i), self.details[i])
+                     for i in range(len(self.details))])
 
 
-class FakeXenAPISession(object):
-    """ The session to invoke XenAPI SDK calls """
-    def __init__(self):
-        self.fail_next_call = False
+class SessionBase(object):
+    """
+    Base class for Fake Sessions
+    """
 
-    def get_xenapi(self):
-        """ Return the xenapi object """
-        return self
+    def __init__(self, uri):
+        self._session = None
 
-    def get_xenapi_host(self):
-        """ Return the xenapi host """
-        return 'FAKE_XENAPI_HOST'
-
-    def call_xenapi(self, method, *args):
-        """Call the specified XenAPI method on a background thread.  Returns
-        a Deferred for the result."""
-        raise NotImplementedError()
-
-    def async_call_plugin(self, plugin, fn, args):
-        """Call Async.host.call_plugin on a background thread.  Returns a
-        Deferred with the task reference."""
-        raise NotImplementedError()
-
-    def wait_for_task(self, task):
-        """Return a Deferred that will give the result of the given task.
-        The task is polled until it completes."""
-        raise NotImplementedError()
-
-    def __getattr__(self, name):
-        return FakeXenAPIObject(name, self)
-
-
-class FakeXenAPIObject(object):
-    def __init__(self, name, session):
-        self.name = name
-        self.session = session
-        self.FAKE_REF = 'FAKE_REFERENCE_%s' % name
-
-    def get_by_name_label(self, label):
-        if label is None:
-            return ''   # 'No object found'
+    def xenapi_request(self, methodname, params):
+        if methodname.startswith('login'):
+            self._login(methodname, params)
+            return None
+        elif methodname == 'logout' or methodname == 'session.logout':
+            self._logout()
+            return None
         else:
-            return 'FAKE_OBJECT_%s_%s' % (self.name, label)
+            full_params = (self._session,) + params
+            meth = getattr(self, methodname, None)
+            if meth is None:
+                logging.warn('Raising NotImplemented')
+                raise NotImplementedError(
+                    'xenapi.fake does not have an implementation for %s' %
+                    methodname)
+            return meth(*full_params)
 
-    def getter(self, *args):
-        self._check_fail()
-        return self.FAKE_REF
+    def _login(self, method, params):
+        self._session = str(uuid.uuid4())
+        _db_content['session'][self._session] = {
+            'uuid': str(uuid.uuid4()),
+            'this_host': _db_content['host'].keys()[0],
+            }
 
-    def ref_list(self, *args):
-        self._check_fail()
-        return [FakeXenAPIRecord()]
+    def _logout(self):
+        s = self._session
+        self._session = None
+        if s not in _db_content['session']:
+            raise exception.Error(
+                "Logging out a session that is invalid or already logged "
+                "out: %s" % s)
+        del _db_content['session'][s]
 
     def __getattr__(self, name):
-        if name == 'create':
-            return self._create
-        elif name == 'get_record':
-            return self._record
-        elif name == 'introduce' or\
-        name == 'forget' or\
-        name == 'unplug':
-            return self._fake_action
-        elif name.startswith('get_'):
-            getter = 'get_%s' % self.name
-            if name == getter:
-                return self.getter
-            else:
-                child = name[name.find('_') + 1:]
-                if child.endswith('s'):
-                    return FakeXenAPIObject(child[:-1], self.session).ref_list
-                else:
-                    return FakeXenAPIObject(child, self.session).getter
+        if name == 'handle':
+            return self._session
+        elif name == 'xenapi':
+            return _Dispatcher(self.xenapi_request, None)
+        elif name.startswith('login') or name.startswith('slave_local'):
+            return lambda *params: self._login(name, params)
+        elif name.startswith('Async'):
+            return lambda *params: self._async(name, params)
+        elif '.' in name:
+            impl = getattr(self, name.replace('.', '_'))
+            if impl is not None:
+                def callit(*params):
+                    logging.warn('Calling %s %s', name, impl)
+                    self._check_session(params)
+                    return impl(*params)
+                return callit
+        if self._is_gettersetter(name, True):
+            logging.warn('Calling getter %s', name)
+            return lambda *params: self._getter(name, params)
+        elif self._is_create(name):
+            return lambda *params: self._create(name, params)
+        else:
+            return None
 
-    def _create(self, *args):
-        self._check_fail()
-        return self.FAKE_REF
+    def _is_gettersetter(self, name, getter):
+        bits = name.split('.')
+        return (len(bits) == 2 and
+                bits[0] in _CLASSES and
+                bits[1].startswith(getter and 'get_' or 'set_'))
 
-    def _record(self, *args):
-        self._check_fail()
-        return FakeXenAPIRecord()
+    def _is_create(self, name):
+        bits = name.split('.')
+        return (len(bits) == 2 and
+                bits[0] in _CLASSES and
+                bits[1] == 'create')
 
-    def _fake_action(self, *args):
-        self._check_fail()
-        pass
+    def _getter(self, name, params):
+        self._check_session(params)
+        (cls, func) = name.split('.')
 
-    def _check_fail(self):
-        if self.session.fail_next_call:
-            self.session.fail_next_call = False   # Reset!
-            raise Failure('Unable to create %s' % self.name)
+        if func == 'get_all':
+            self._check_arg_count(params, 1)
+            return get_all(cls)
+
+        if func == 'get_all_records':
+            self._check_arg_count(params, 1)
+            return get_all_records(cls)
+
+        if func == 'get_record':
+            self._check_arg_count(params, 2)
+            return get_record(cls, params[1])
+
+        if (func == 'get_by_name_label' or
+            func == 'get_by_uuid'):
+            self._check_arg_count(params, 2)
+            return self._get_by_field(
+                _db_content[cls], func[len('get_by_'):], params[1])
+
+        if len(params) == 2:
+            field = func[len('get_'):]
+            ref = params[1]
+
+            if (ref in _db_content[cls] and
+                field in _db_content[cls][ref]):
+                return _db_content[cls][ref][field]
+
+        logging.error('Raising NotImplemented')
+        raise NotImplementedError(
+            'xenapi.fake does not have an implementation for %s or it has '
+            'been called with the wrong number of arguments' % name)
+
+    def _setter(self, name, params):
+        self._check_session(params)
+        (cls, func) = name.split('.')
+
+        if len(params) == 3:
+            field = func[len('set_'):]
+            ref = params[1]
+            val = params[2]
+
+            if (ref in _db_content[cls] and
+                field in _db_content[cls][ref]):
+                _db_content[cls][ref][field] = val
+
+        logging.warn('Raising NotImplemented')
+        raise NotImplementedError(
+            'xenapi.fake does not have an implementation for %s or it has '
+            'been called with the wrong number of arguments or the database '
+            'is missing that field' % name)
+
+    def _create(self, name, params):
+        self._check_session(params)
+        expected = 2
+        if name == 'SR.create':
+            expected = 10
+        self._check_arg_count(params, expected)
+        (cls, _) = name.split('.')
+        if name == 'SR.create':
+            ref = _create_object(cls, params[2])
+        else:
+            ref = _create_object(cls, params[1])
+        obj = get_record(cls, ref)
+
+        # Add RO fields
+        if cls == 'VM':
+            obj['power_state'] = 'Halted'
+
+        return ref
+
+    def _async(self, name, params):
+        task_ref = create_task(name)
+        task = _db_content['task'][task_ref]
+        func = name[len('Async.'):]
+        try:
+            task['result'] = self.xenapi_request(func, params[1:])
+            task['status'] = 'success'
+        except Failure, exn:
+            task['error_info'] = exn.details
+            task['status'] = 'failed'
+        task['finished'] = datetime.datetime.now()
+        return task_ref
+
+    def _check_session(self, params):
+        if (self._session is None or
+            self._session not in _db_content['session']):
+            raise Failure(['HANDLE_INVALID', 'session', self._session])
+        if len(params) == 0 or params[0] != self._session:
+            logging.warn('Raising NotImplemented')
+            raise NotImplementedError('Call to XenAPI without using .xenapi')
+
+    def _check_arg_count(self, params, expected):
+        actual = len(params)
+        if actual != expected:
+            raise Failure(['MESSAGE_PARAMETER_COUNT_MISMATCH',
+                                  expected, actual])
+
+    def _get_by_field(self, recs, k, v):
+        result = []
+        for ref, rec in recs.iteritems():
+            if rec.get(k) == v:
+                result.append(ref)
+        return result
 
 
-class FakeXenAPIRecord(dict):
-    def __init__(self):
-        pass
+# Based upon _Method from xmlrpclib.
+class _Dispatcher:
+    def __init__(self, send, name):
+        self.__send = send
+        self.__name = name
 
-    def __getitem__(self, attr):
+    def __repr__(self):
+        if self.__name:
+            return '<xenapi.fake._Dispatcher for %s>' % self.__name
+        else:
+            return '<xenapi.fake._Dispatcher>'
+
+    def __getattr__(self, name):
+        if self.__name is None:
+            return _Dispatcher(self.__send, name)
+        else:
+            return _Dispatcher(self.__send, "%s.%s" % (self.__name, name))
+
+    def __call__(self, *args):
+        return self.__send(self.__name, args)
+
+
+class FakeSession(SessionBase):
+    def __init__(self, uri):
+        super(FakeSession, self).__init__(uri)
+
+    def network_get_all_records_where(self, _1, _2):
+        return self.xenapi.network.get_all_records()
+
+    def host_call_plugin(self, _1, _2, _3, _4, _5):
         return ''
+
+    def VM_start(self, _1, ref, _2, _3):
+        vm = get_record('VM', ref)
+        if vm['power_state'] != 'Halted':
+            raise Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
+                                  vm['power_state']])
+        vm['power_state'] = 'Running'

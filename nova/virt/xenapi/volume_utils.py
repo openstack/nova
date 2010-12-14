@@ -30,7 +30,7 @@ from nova import context
 from nova import flags
 from nova import process
 from nova import utils
-
+from nova.virt.xenapi import HelperBase
 
 FLAGS = flags.FLAGS
 
@@ -41,28 +41,12 @@ class StorageError(Exception):
         super(StorageError, self).__init__(message)
 
 
-class VolumeHelper():
+class VolumeHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
-
-    XenAPI = None
-
     def __init__(self):
         return
-
-    @classmethod
-    def late_import(cls):
-        """
-        Load XenAPI module in for helper class
-        """
-        xenapi_module = \
-          FLAGS.xenapi_use_fake_session and 'nova.virt.xenapi.fake' or 'XenAPI'
-        from_list = \
-           FLAGS.xenapi_use_fake_session and ['fake'] or []
-        if cls.XenAPI is None:
-            cls.XenAPI = __import__(xenapi_module,
-                                    globals(), locals(), from_list, -1)
 
     @classmethod
     @utils.deferredToThread

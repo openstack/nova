@@ -21,9 +21,10 @@ their lookup functions.
 """
 
 from twisted.internet import defer
+from nova.virt.xenapi import HelperBase
 
 
-class NetworkHelper():
+class NetworkHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
