@@ -21,6 +21,7 @@ Take uploaded bucket contents and register them as disk images (AMIs).
 Requires decryption using keys in the manifest.
 """
 
+
 import binascii
 import glob
 import json
@@ -182,38 +183,38 @@ class Image(object):
         manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
         image_type = 'machine'
 
+        try:
+            kernel_id = manifest.find("machine_configuration/kernel_id").text
+            if kernel_id == 'true':
+                image_type = 'kernel'
+        except:
+            kernel_id = None
+
+        try:
+            ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
+            if ramdisk_id == 'true':
+                image_type = 'ramdisk'
+        except:
+            ramdisk_id = None
+
+        try:
+            arch = manifest.find("machine_configuration/architecture").text
+        except:
+            arch = 'x86_64'
+
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
             'imageOwnerId': context.project_id,
             'isPublic': False,  # FIXME: grab public from manifest
-            'architecture': 'x86_64',
-            'imageType': 'machine'
-        }
+            'architecture': arch,
+            'imageType': image_type}
 
-        manifest = ElementTree.fromstring(bucket_object[manifest_path].read())
+        if kernel_id:
+            info['kernelId'] = kernel_id
 
-        try:
-            arch = manifest.find("machine_configuration/kernel_id").text
-            info['architecture'] = arch
-        except:
-            pass
-        try:
-            kernel_id = manifest.find("machine_configuration/kernel_id").text
-            if kernel_id == 'true':
-                info['imageType'] = 'kernel'
-            else:
-                info['kernelId'] = kernel_id
-        except:
-            pass
-        try:
-            ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
-            if ramdisk_id == 'true':
-                info['imageType'] = 'ramdisk'
-            else:
-                info['ramdiskId'] = ramdisk_id
-        except:
-            pass
+        if ramdisk_id:
+            info['ramdiskId'] = ramdisk_id
 
         def write_state(state):
             info['imageState'] = state
