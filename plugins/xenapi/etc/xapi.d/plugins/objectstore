@@ -50,7 +50,10 @@ def is_vdi_pv(session,args):
     pv=with_vdi_in_dom0(session, vdi, False,
                      lambda dev: _is_vdi_pv('/dev/%s' % dev))
     logging.debug("HERE - bye bye")
-    return pv
+    if (pv):
+        return 'true'
+    else:
+        return 'false'
 
 def _is_vdi_pv(dest):
     logging.debug("Running pygrub against %s",dest)
