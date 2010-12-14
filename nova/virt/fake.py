@@ -133,13 +133,13 @@ class FakeConnection(object):
         """
         return defer.succeed(None)
 
-    def pause(self, instance):
+    def pause(self, instance, callback):
         """
         Pause the specified instance.
         """
         return defer.succeed(None)
 
-    def unpause(self, instance):
+    def unpause(self, instance, callback):
         """
         Unpause the specified instance.
         """
