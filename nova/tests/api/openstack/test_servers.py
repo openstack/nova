@@ -84,7 +84,10 @@ class ServersTest(unittest.TestCase):
                        instance_address)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause', fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause', 
+            fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause', 
+            fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
