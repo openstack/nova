@@ -24,9 +24,11 @@ from twisted.internet import defer
 
 from nova import db
 from nova import context
+from nova import flags
 from nova import exception
 
 from nova.auth.manager import AuthManager
+from nova.virt.xenapi import load_sdk
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 
@@ -36,10 +38,10 @@ class VMOps(object):
     Management class for VM-related tasks
     """
     def __init__(self, session):
-        self.XenAPI = __import__('XenAPI')
+        self.XenAPI = load_sdk(flags.FLAGS)
         self._session = session
         # Load XenAPI module in the helper class
-        VMHelper.late_import()
+        VMHelper.late_import(flags.FLAGS)
 
     def list_instances(self):
         """ List VM instances """

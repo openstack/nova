@@ -21,6 +21,8 @@ import logging
 
 from twisted.internet import defer
 
+from nova import flags
+from nova.virt.xenapi import load_sdk
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.volume_utils import VolumeHelper
 from nova.virt.xenapi.volume_utils import StorageError
@@ -31,11 +33,11 @@ class VolumeOps(object):
     Management class for Volume-related tasks
     """
     def __init__(self, session):
-        self.XenAPI = __import__('XenAPI')
+        self.XenAPI = load_sdk(flags.FLAGS)
         self._session = session
         # Load XenAPI module in the helper classes respectively
-        VolumeHelper.late_import()
-        VMHelper.late_import()
+        VolumeHelper.late_import(flags.FLAGS)
+        VMHelper.late_import(flags.FLAGS)
 
     @defer.inlineCallbacks
     def attach_volume(self, instance_name, device_path, mountpoint):

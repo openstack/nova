@@ -59,6 +59,7 @@ from twisted.internet import reactor
 
 from nova import utils
 from nova import flags
+from nova.virt.xenapi import load_sdk
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
@@ -91,7 +92,7 @@ flags.DEFINE_string('target_port',
                     '3260',
                     'iSCSI Target Port, 3260 Default')
 flags.DEFINE_string('iqn_prefix',
-                    'iqn.2010-12.org.openstack',
+                    'iqn.2010-10.org.openstack',
                     'IQN Prefix')
 
 
@@ -156,8 +157,11 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         # This is loaded late so that there's no need to install this
         # library when not using XenAPI.
-        self.XenAPI = __import__('XenAPI')
-        self._session = self.XenAPI.Session(url)
+        self.XenAPI = load_sdk(FLAGS)
+        if FLAGS.xenapi_use_fake_session:
+            self._session = self.XenAPI.FakeSession(url)
+        else:
+            self._session = self.XenAPI.Session(url)
         self._session.login_with_password(user, pw)
 
     def get_xenapi(self):
