@@ -27,12 +27,7 @@ Supports KVM, QEMU, UML, and XEN.
 :libvirt_type:  Libvirt domain type.  Can be kvm, qemu, uml, xen
                 (default: kvm).
 :libvirt_uri:  Override for the default libvirt URI (depends on libvirt_type).
-:libvirt_xml_template:  Libvirt XML Template (QEmu/KVM).
-:libvirt_xen_xml_template:  Libvirt XML Template (Xen).
-:libvirt_uml_xml_template:  Libvirt XML Template (User Mode Linux).
-:libvirt_rescue_xml_template:  XML template for rescue mode (KVM & QEMU).
-:libvirt_rescue_xen_xml_template:  XML templage for rescue mode (XEN).
-:libvirt_rescue_uml_xml_template:  XML template for rescue mode (UML).
+:libvirt_xml_template:  Libvirt XML Template.
 :rescue_image_id:  Rescue ami image (default: ami-rescue).
 :rescue_kernel_id:  Rescue aki image (default: aki-rescue).
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
@@ -70,31 +65,13 @@ libxml2 = None
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('libvirt_rescue_xml_template',
-                    utils.abspath('virt/libvirt.rescue.qemu.xml.template'),
-                    'Libvirt RESCUE XML Template for QEmu/KVM')
-flags.DEFINE_string('libvirt_rescue_xen_xml_template',
-                    utils.abspath('virt/libvirt.rescue.xen.xml.template'),
-                    'Libvirt RESCUE XML Template for xen')
-flags.DEFINE_string('libvirt_rescue_uml_xml_template',
-                    utils.abspath('virt/libvirt.rescue.uml.xml.template'),
-                    'Libvirt RESCUE XML Template for user-mode-linux')
 # TODO(vish): These flags should probably go into a shared location
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
 flags.DEFINE_string('libvirt_xml_template',
-                    utils.abspath('virt/libvirt.qemu.xml.template'),
-                    'Libvirt XML Template for QEmu/KVM')
-flags.DEFINE_string('libvirt_xen_xml_template',
-                    utils.abspath('virt/libvirt.xen.xml.template'),
-                    'Libvirt XML Template for Xen')
-flags.DEFINE_string('libvirt_uml_xml_template',
-                    utils.abspath('virt/libvirt.uml.xml.template'),
-                    'Libvirt XML Template for user-mode-linux')
-flags.DEFINE_string('injected_network_template',
-                    utils.abspath('virt/interfaces.template'),
-                    'Template file for injected network')
+                    utils.abspath('virt/libvirt.xml.template'),
+                    'Libvirt XML Template')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
@@ -122,12 +99,9 @@ def get_connection(read_only):
 
 class LibvirtConnection(object):
     def __init__(self, read_only):
-        (self.libvirt_uri,
-         template_file,
-         rescue_file) = self.get_uri_and_templates()
+        self.libvirt_uri = self.get_uri()
 
-        self.libvirt_xml = open(template_file).read()
-        self.rescue_xml = open(rescue_file).read()
+        self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -150,20 +124,14 @@ class LibvirtConnection(object):
                 return False
             raise
 
-    def get_uri_and_templates(self):
+    def get_uri(self):
         if FLAGS.libvirt_type == 'uml':
             uri = FLAGS.libvirt_uri or 'uml:///system'
-            template_file = FLAGS.libvirt_uml_xml_template
-            rescue_file = FLAGS.libvirt_rescue_uml_xml_template
         elif FLAGS.libvirt_type == 'xen':
             uri = FLAGS.libvirt_uri or 'xen:///'
-            template_file = FLAGS.libvirt_xen_xml_template
-            rescue_file = FLAGS.libvirt_rescue_xen_xml_template
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
-            template_file = FLAGS.libvirt_xml_template
-            rescue_file = FLAGS.libvirt_rescue_xml_template
-        return uri, template_file, rescue_file
+        return uri
 
     def _connect(self, uri, read_only):
         auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_NOECHOPROMPT],
@@ -543,18 +511,16 @@ class LibvirtConnection(object):
                     'bridge_name': network['bridge'],
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
-                    'dhcp_server': dhcp_server}
-        if rescue:
-            xml = self.rescue_xml % xml_info
-        else:
-            if xml_info['kernel_id']:
+                    'dhcp_server': dhcp_server,
+                    'rescue': rescue}
+        if not rescue:
+            if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
 
-            if xml_info['ramdisk_id']:
+            if instance['ramdisk_id']:
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
-            if xml_info['ramdisk_id'] or xml_info['kernel_id']:
-                xml_info['disk'] = xml_info['basepath'] + "/disk"
+            xml_info['disk'] = xml_info['basepath'] + "/disk"
 
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         logging.debug('instance %s: finished toXML method', instance['name'])
