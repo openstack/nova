@@ -122,13 +122,13 @@ class XenAPIConnection(object):
         """ Destroy VM instance """
         self._vmops.destroy(instance)
 
-    def pause(self, instance):
+    def pause(self, instance, callback):
         """ Pause VM instance """
-        self._vmops.pause(instance)
+        self._vmops.pause(instance, callback)
 
-    def unpause(self, instance):
+    def unpause(self, instance, callback):
         """ Unpause paused VM instance """
-        self._vmops.unpause(instance)
+        self._vmops.unpause(instance, callback)
 
     def get_info(self, instance_id):
         """ Return data about VM instance """
