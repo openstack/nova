@@ -228,10 +228,6 @@ DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
 
 DEFINE_string('default_image', 'ami-11111',
               'default image to use, testing only')
-DEFINE_string('default_kernel', 'aki-11111',
-              'default kernel to use, testing only')
-DEFINE_string('default_ramdisk', 'ari-11111',
-              'default ramdisk to use, testing only')
 DEFINE_string('default_instance_type', 'm1.small',
               'default instance type to use, testing only')
 DEFINE_string('null_kernel', 'nokernel',
