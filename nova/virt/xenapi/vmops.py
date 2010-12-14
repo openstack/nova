@@ -121,24 +121,28 @@ class VMOps(object):
             logging.warn(exc)
 
     @defer.inlineCallbacks
-    def pause(self, instance):
+    def pause(self, instance, callback):
         """ Pause VM instance """
         instance_name = instance.name
         vm = yield VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = yield self._session.call_xenapi('Async.VM.pause', vm)
-        yield self._session.wait_for_task(task)
+        deferred = self._session.wait_for_task(task)
+        deferred.addCallback(callback)
+        yield deferred
 
     @defer.inlineCallbacks
-    def unpause(self, instance):
+    def unpause(self, instance, callback):
         """ Unpause VM instance """
         instance_name = instance.name
         vm = yield VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = yield self._session.call_xenapi('Async.VM.unpause', vm)
-        yield self._session.wait_for_task(task)
+        deferred = self._session.wait_for_task(task)
+        deferred.addCallback(callback)
+        yield deferred
 
     def get_info(self, instance_id):
         """ Return data about VM instance """

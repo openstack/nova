@@ -194,6 +194,13 @@ class ComputeManager(manager.Manager):
         yield self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
+    @staticmethod
+    def _update_state_callback(self, context, instance_id, result):
+        """Update instance state when Deferred task completes.
+        This staticmethod must be wrappered in a 
+        lambda to pass in self, context & instance_id."""
+        self._update_state(context, instance_id)
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def pause_instance(self, context, instance_id):
@@ -207,8 +214,11 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'pausing')
-        yield self.driver.pause(instance_ref)
-        self._update_state(context, instance_id)
+        yield self.driver.pause(instance_ref, 
+            lambda result : self._update_state_callback(self, 
+                                                        context, 
+                                                        instance_id, 
+                                                        result))
 
     @defer.inlineCallbacks
     @exception.wrap_exception
@@ -223,8 +233,11 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'unpausing')
-        yield self.driver.unpause(instance_ref)
-        self._update_state(context, instance_id)
+        yield self.driver.unpause(instance_ref,
+             lambda result : self._update_state_callback(self, 
+                                                        context, 
+                                                        instance_id, 
+                                                        result))
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
