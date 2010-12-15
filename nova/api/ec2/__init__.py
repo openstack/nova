@@ -22,7 +22,6 @@ Starting point for routing EC2 requests.
 
 import logging
 import routes
-import time
 import webob
 import webob.dec
 import webob.exc
@@ -44,6 +43,8 @@ flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
+flags.DEFINE_integer('lockout_window', 15,
+                     'Number of minutes for lockout window.')
 flags.DEFINE_list('lockout_memcached_servers', None,
                   'Memcached servers or None for in process cache.')
 
@@ -53,7 +54,6 @@ _log.setLevel(logging.DEBUG)
 
 
 class API(wsgi.Middleware):
-
     """Routing for all EC2 API requests."""
 
     def __init__(self):
@@ -63,57 +63,53 @@ class API(wsgi.Middleware):
 
 
 class Lockout(wsgi.Middleware):
-    """Only allow x failed auths in a y minute period.
+    """Lockout for x minutes on y failed auths in a z minute period.
 
-    x = lockout_attempts flag
-    y = lockout_timeout flag
+    x = lockout_timeout flag
+    y = lockout_window flag
+    z = lockout_attempts flag
 
     Uses memcached if lockout_memcached_servers flag is set, otherwise it
     uses a very simple in-proccess cache. Due to the simplicity of
-    the implementation, the timeout window is reset with every failed
-    request, so it actually blocks if there are x failed logins with no
-    more than y minutes between any two failures.
+    the implementation, the timeout window is started with the first
+    failed request, so it will block if there are x failed logins within
+    that period.
 
     There is a possible race condition where simultaneous requests could
     sneak in before the lockout hits, but this is extremely rare and would
     only result in a couple of extra failed attempts."""
 
-    def __init__(self, application, time_fn=time.time):
-        """The middleware can use a custom time function for testing."""
-        self.time_fn = time_fn
+    def __init__(self, application, time_fn=None):
+        """middleware can pass a custom time function to fake for testing."""
         if FLAGS.lockout_memcached_servers:
             import memcache
+            self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+                                      debug=0)
         else:
-            from nova import fakememcache as memcache
-        self.mc = memcache.Client(FLAGS.lockout_memcached_servers, debug=0)
+            from nova import fakememcache
+            self.mc = fakememcache.Client(time_fn=time_fn)
         super(Lockout, self).__init__(application)
 
     @webob.dec.wsgify
     def __call__(self, req):
         access_key = req.params['AWSAccessKeyId']
-        failures_key = "%s-failures" % access_key
-        last_key = "%s-last" % access_key
-        now = self.time_fn()
-        timeout = now - FLAGS.lockout_minutes * 60
-        # NOTE(vish): To use incr, failures has to be a string.
+        failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
-        last = self.mc.get(last_key)
-        if (failures and failures >= FLAGS.lockout_attempts
-            and last > timeout):
-            self.mc.set(last_key, now)
+        if failures >= FLAGS.lockout_attempts:
             detail = "Too many failed authentications."
             raise webob.exc.HTTPForbidden(detail=detail)
         res = req.get_response(self.application)
         if res.status_int == 403:
-            if last > timeout:
-                failures = int(self.mc.incr(failures_key))
-                if failures >= FLAGS.lockout_attempts:
-                    _log.warn('Access key %s has had %d failed authentications'
-                              ' and will be locked out for %d minutes.' %
-                              (access_key, failures, FLAGS.lockout_minutes))
-            else:
-                self.mc.set(failures_key, '1')
-            self.mc.set(last_key, now)
+            failures = self.mc.incr(failures_key)
+            if failures is None:
+                # NOTE(vish): To use incr, failures has to be a string.
+                self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
+            elif failures >= FLAGS.lockout_attempts:
+                _log.warn('Access key %s has had %d failed authentications'
+                          ' and will be locked out for %d minutes.' %
+                          (access_key, failures, FLAGS.lockout_minutes))
+                self.mc.set(failures_key, str(failures),
+                            time=FLAGS.lockout_minutes * 60)
         return res
 
 

@@ -48,9 +48,9 @@ class LockoutTestCase(test.TrialTestCase):
         """Helper method to force timeouts."""
         return self.local_time
 
-    def _trigger_lockout(self, access_key):
-        """Send x failed requests where x = lockout_attempts."""
-        for i in xrange(FLAGS.lockout_attempts):
+    def _send_bad_attempts(self, access_key, num_attempts=1):
+        """Fail x."""
+        for i in xrange(num_attempts):
             req = webob.Request.blank('/?AWSAccessKeyId=%s&die=1' % access_key)
             self.assertEqual(req.get_response(self.lockout).status_int, 403)
 
@@ -59,24 +59,31 @@ class LockoutTestCase(test.TrialTestCase):
         req = webob.Request.blank('/?AWSAccessKeyId=%s' % access_key)
         return (req.get_response(self.lockout).status_int == 403)
 
-    def _timeout(self):
+    def _advance_time(self, time):
         """Increment time to 1 second past the lockout."""
-        self.local_time = 1 + self.local_time + FLAGS.lockout_minutes * 60
+        self.local_time = self.local_time + time
 
     def test_lockout(self):
-        self._trigger_lockout('test')
+        self._send_bad_attempts('test', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
 
     def test_timeout(self):
-        self._trigger_lockout('test')
+        self._send_bad_attempts('test', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
-        self._timeout()
+        self._advance_time(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test'))
 
     def test_multiple_keys(self):
-        self._trigger_lockout('test1')
+        self._send_bad_attempts('test1', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
-        self._timeout()
+        self._advance_time(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
+
+    def test_window_timeout(self):
+        self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
+        self.assertFalse(self._is_locked_out('test'))
+        self._advance_time(FLAGS.lockout_window * 60)
+        self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
+        self.assertFalse(self._is_locked_out('test'))

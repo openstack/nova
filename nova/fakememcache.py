@@ -18,33 +18,43 @@
 
 """Super simple fake memcache client."""
 
+import time
+
 
 class Client(object):
     """Replicates a tiny subset of memcached client interface."""
-    __cache = {}
 
-    def __init__(self, *args, **kwargs):
-        """Ignores all constructor params."""
-        pass
+    def __init__(self, time_fn=time.time, *args, **kwargs):
+        """Time fn is to allow testing through a custom function"""
+        self.time_fn = time_fn
+        self.cache = {}
 
     def get(self, key):
         """Retrieves the value for a key or None."""
-        return self.__cache.get(key, None)
+        (timeout, value) = self.cache.get(key, (0, None))
+        if timeout == 0 or self.time_fn() < timeout:
+            return value
+        return None
 
-    def set(self, key, value):
+    def set(self, key, value, time=0, min_compress_len=0):
         """Sets the value for a key."""
-        self.__cache[key] = value
+        timeout = 0
+        if time != 0:
+            timeout = self.time_fn() + time
+        self.cache[key] = (timeout, value)
         return True
 
-    def add(self, key, value):
+    def add(self, key, value, time=0, min_compress_len=0):
         """Sets the value for a key if it doesn't exist."""
-        if key in self.__cache:
+        if not self.get(key) is None:
             return False
-        return self.set(key, value)
+        return self.set(key, value, time, min_compress_len)
 
     def incr(self, key, delta=1):
         """Increments the value for a key."""
-        if not key in self.__cache:
-            return 0
-        self.__cache[key] = str(int(self.__cache[key]) + 1)
-        return self.__cache[key]
+        value = self.get(key)
+        if value is None:
+            return None
+        new_value = int(value) + delta
+        self.cache[key] = (self.cache[key][0], str(new_value))
+        return new_value
