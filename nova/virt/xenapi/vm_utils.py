@@ -47,7 +47,7 @@ class VMHelper():
 
     @classmethod
     @defer.inlineCallbacks
-    def create_vm(cls, session, instance, kernel, ramdisk,pv_kernel=False):
+    def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference.
         the pv_kernel flag indicates whether the guest is HVM or PV
@@ -81,7 +81,7 @@ class VMHelper():
             'platform': {},
             'PCI_bus': '',
             'recommendations': '',
-            'affinity': '',  
+            'affinity': '',
             'user_version': '0',
             'other_config': {},
             }
@@ -97,12 +97,12 @@ class VMHelper():
         else:
             if (pv_kernel):
                 rec['PV_args'] = 'noninteractive'
-                rec['PV_bootloader'] = 'pygrub'    
+                rec['PV_bootloader'] = 'pygrub'
             else:
                 rec['HVM_boot_policy'] = 'BIOS order'
                 rec['HVM_boot_params'] = {'order': 'dc'}
-                rec['platform']={'acpi':'true','apic':'true','pae':'true',
-                                 'viridian':'true'}
+                rec['platform'] = {'acpi': 'true', 'apic': 'true',
+                                   'pae': 'true', 'viridian': 'true'}
         logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
@@ -161,22 +161,22 @@ class VMHelper():
         """type: integer field for specifying how to handle the image
             0 - kernel/ramdisk image (goes on dom0's filesystem)
             1 - disk image (local SR, partitioned by objectstore plugin)
-            2 - raw disk image (local SR, NOT partitioned by objectstor plugin)"""
-            
+            2 - raw disk image (local SR, NOT partitioned by plugin)"""
+
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
-        fn = (type<>0) and 'get_vdi' or 'get_kernel'
+        fn = (type != 0) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
-        args['add_partition']='false'
-        args['raw']='false'
-        if type<>0:
+        args['add_partition'] = 'false'
+        args['raw'] = 'false'
+        if type != 0:
             args['add_partition'] = 'true'
-            if type==2:
-                args['raw']='true'    
+            if type == 2:
+                args['raw'] = 'true'
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
         defer.returnValue(uuid)
@@ -184,18 +184,18 @@ class VMHelper():
     @classmethod
     @defer.inlineCallbacks
     def lookup_image(cls, session, vdi_ref):
-        logging.debug("Looking up vdi %s for PV kernel",vdi_ref)
-        fn="is_vdi_pv"
-        args={}
-        args['vdi-ref']=vdi_ref
+        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        fn = "is_vdi_pv"
+        args = {}
+        args['vdi-ref'] = vdi_ref
         #TODO: Call proper function in plugin
         task = yield session.async_call_plugin('objectstore', fn, args)
-        pv_str=yield session.wait_for_task(task)
+        pv_str = yield session.wait_for_task(task)
         if pv_str.lower() == 'true':
-            pv=True
+            pv = True
         elif pv_str.lower() == 'false':
-            pv=False
-        logging.debug("PV Kernel in VDI:%d",pv)
+            pv = False
+        logging.debug("PV Kernel in VDI:%d", pv)
         defer.returnValue(pv)
 
     @classmethod

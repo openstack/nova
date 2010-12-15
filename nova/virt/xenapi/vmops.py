@@ -59,26 +59,26 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         #if kernel is not present we must download a raw disk
         if (instance.kernel_id):
-            disk_image_type=1
+            disk_image_type = 1
         else:
-            disk_image_type=2                
+            disk_image_type = 2
         vdi_uuid = yield VMHelper.fetch_image(self._session,
             instance.image_id, user, project, disk_image_type)
-        vdi_ref = yield self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)        
+        vdi_ref = yield self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         #Have a look at the VDI and see if it has a PV kernel
-        pv_kernel=False
+        pv_kernel = False
         if (not instance.kernel_id):
-            pv_kernel=yield VMHelper.lookup_image(self._session,vdi_ref)
-        kernel=None
+            pv_kernel = yield VMHelper.lookup_image(self._session, vdi_ref)
+        kernel = None
         if (instance.kernel_id):
             kernel = yield VMHelper.fetch_image(self._session,
                 instance.kernel_id, user, project, 0)
-        ramdisk=None
+        ramdisk = None
         if (instance.ramdisk_id):
             ramdisk = yield VMHelper.fetch_image(self._session,
                 instance.ramdisk_id, user, project, 0)
         vm_ref = yield VMHelper.create_vm(self._session,
-                                          instance, kernel, ramdisk,pv_kernel)
+                                          instance, kernel, ramdisk, pv_kernel)
         yield VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
         if network_ref:
             yield VMHelper.create_vif(self._session, vm_ref,

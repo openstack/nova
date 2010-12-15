@@ -80,10 +80,10 @@ class ComputeAPI(base.Base):
                 ramdisk_id = None
                 logging.debug("Creating a raw instance")
 
-            # Make sure we have access to kernel and ramdisk (as long as we want them)
-            if (kernel_id!=None):
+            # Make sure we have access to kernel and ramdisk (if not raw)
+            if (kernel_id != None):
                 image_service.show(context, kernel_id)
-            if (ramdisk_id!=None):
+            if (ramdisk_id != None):
                 image_service.show(context, ramdisk_id)
 
         if security_group is None:
