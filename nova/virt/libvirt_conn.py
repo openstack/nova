@@ -215,7 +215,7 @@ class LibvirtConnection(object):
             self._cleanup(instance)
             done.send()
 
-        greenthread.spawn(_wait_for_time)
+        greenthread.spawn(_wait_for_timer)
         return done
 
     def _cleanup(self, instance):
@@ -365,9 +365,9 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             logging.info('cool, it\'s a device')
-            r = utils.execute("sudo dd if=%s iflag=nonblock" %
-                              virsh_output, check_exit_code=False)
-            return r[0]
+            out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
+                                     virsh_output, check_exit_code=False)
+            return out
         else:
             return ''
 
@@ -388,8 +388,7 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
         
-        utils.execute('sudo chown %d %s' % (os.getuid(),
-                      console_log))
+        utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
@@ -476,7 +475,6 @@ class LibvirtConnection(object):
                                                     ['local_gb']
                                                     * 1024 * 1024 * 1024)
 
-        resize = inst['instance_type'] != 'm1.tiny'
         resize = True
         if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
             resize = False
@@ -743,7 +741,7 @@ class NWFilterFirewall(object):
         if callable(xml):
             xml = xml()
 
-        # execute in a native thread and block until done
+        # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
     @staticmethod

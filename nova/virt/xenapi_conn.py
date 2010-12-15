@@ -175,9 +175,11 @@ class XenAPISession(object):
         The task is polled until it completes."""
 
         done = event.Event()
-        loop = utis.LoopingTask(self._poll_task, task, done)
+        loop = utils.LoopingTask(self._poll_task, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
-        return done.wait()
+        rv = done.wait()
+        loop.stop()
+        return rv
 
     def _poll_task(self, task, done):
         """Poll the given XenAPI task, and fire the given Deferred if we

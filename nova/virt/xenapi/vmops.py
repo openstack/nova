@@ -107,8 +107,7 @@ class VMOps(object):
         if vdis:
             for vdi in vdis:
                 try:
-                    task = self._session.call_xenapi('Async.VDI.destroy',
-                                                     vdi)
+                    task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(task)
                 except XenAPI.Failure, exc:
                     logging.warn(exc)

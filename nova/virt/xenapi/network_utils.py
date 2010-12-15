@@ -30,10 +30,9 @@ class NetworkHelper():
 
     @classmethod
     def find_network_with_bridge(cls, session, bridge):
-        """ Return the network on which the bridge is attached, if found """
+        """ Return the network on which the bridge is attached, if found."""
         expr = 'field "bridge" = "%s"' % bridge
-        networks = session.call_xenapi('network.get_all_records_where',
-                                       expr)
+        networks = session.call_xenapi('network.get_all_records_where', expr)
         if len(networks) == 1:
             return networks.keys()[0]
         elif len(networks) > 1:

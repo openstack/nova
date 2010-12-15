@@ -36,6 +36,7 @@ from nova import flags
 from nova import utils
 from nova import wsgi
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
 flags.DEFINE_string('osapi_host', '0.0.0.0', 'OpenStack API host')
@@ -43,14 +44,10 @@ flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
 flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
 
 
-def main():
+if __name__ == '__main__':
+    utils.default_flagfile()
     FLAGS(sys.argv)
     server = wsgi.Server()
     server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
     server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
     server.wait()
-
-
-if __name__ == '__main__':
-    utils.default_flagfile()
-    main()

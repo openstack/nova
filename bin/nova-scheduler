@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" Starter script for Nova Scheduler."""
+"""Starter script for Nova Scheduler."""
 
 import eventlet
 eventlet.monkey_patch()

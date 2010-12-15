@@ -241,7 +241,7 @@ class LoopingCall(object):
                     self.f(*self.args, **self.kw)
                     greenthread.sleep(interval)
             except Exception:
-                logging.exception('hhmm')
+                logging.exception('in looping call')
                 done.send_exception(*sys.exc_info())
                 return
             

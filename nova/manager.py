@@ -68,7 +68,7 @@ class Manager(base.Base):
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval"""
-        return
+        pass
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a standalone

@@ -91,8 +91,6 @@ class ServiceTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc,
                                  'AdapterConsumer',
                                  use_mock_anything=True)
-        #self.mox.StubOutWithMock(
-        #        service.task, 'LoopingCall', use_mock_anything=True)
         rpc.AdapterConsumer(connection=mox.IgnoreArg(),
                             topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
@@ -105,17 +103,6 @@ class ServiceTestCase(test.TestCase):
 
         rpc.AdapterConsumer.attach_to_eventlet()
         rpc.AdapterConsumer.attach_to_eventlet()
-
-        # Stub out looping call a bit needlessly since we don't have an easy
-        # way to cancel it (yet) when the tests finishes
-        #service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
-        #                service.task.LoopingCall)
-        #service.task.LoopingCall.start(interval=mox.IgnoreArg(),
-        #                               now=mox.IgnoreArg())
-        #service.task.LoopingCall(mox.IgnoreArg()).AndReturn(
-        #                service.task.LoopingCall)
-        #service.task.LoopingCall.start(interval=mox.IgnoreArg(),
-        #                               now=mox.IgnoreArg())
 
         service_create = {'host': host,
                           'binary': binary,

@@ -22,10 +22,10 @@ Drivers for volumes.
 
 import logging
 import os
+import time
 
 from nova import exception
 from nova import flags
-from nova import process
 from nova import utils
 
 
@@ -75,7 +75,7 @@ class VolumeDriver(object):
                     raise
                 logging.exception("Recovering from a failed execute."
                                   "Try number %s", tries)
-                self._execute("sleep %s" % tries ** 2)
+                time.sleep(tries ** 2)
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
@@ -91,21 +91,20 @@ class VolumeDriver(object):
             sizestr = '%sG' % volume['size']
         self._try_execute("sudo lvcreate -L %s -n %s %s" %
                           (sizestr,
-                             volume['name'],
-                             FLAGS.volume_group))
+                           volume['name'],
+                           FLAGS.volume_group))
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         self._try_execute("sudo lvremove -f %s/%s" %
                           (FLAGS.volume_group,
-                                 volume['name']))
+                           volume['name']))
 
     def local_path(self, volume):
         # NOTE(vish): stops deprecation warning
         escaped_group = FLAGS.volume_group.replace('-', '--')
         escaped_name = volume['name'].replace('-', '--')
-        return "/dev/mapper/%s-%s" % (escaped_group,
-                                      escaped_name)
+        return "/dev/mapper/%s-%s" % (escaped_group, escaped_name)
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -165,7 +164,7 @@ class AOEDriver(VolumeDriver):
         #             still works for the other volumes, so we
         #             just wait a bit for the current volume to
         #             be ready and ignore any errors.
-        self._execute("sleep 2")
+        time.sleep(2)
         self._execute("sudo vblade-persist auto all",
                       check_exit_code=False)
         self._execute("sudo vblade-persist start all",
@@ -275,9 +274,8 @@ class ISCSIDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host."""
-        (iscsi_name,
-         iscsi_portal) = self._get_name_and_portal(volume['name'],
-                                                   volume['host'])
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
+                                                             volume['host'])
         self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
                       (iscsi_name, iscsi_portal))
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
@@ -287,9 +285,8 @@ class ISCSIDriver(VolumeDriver):
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
-        (iscsi_name,
-         iscsi_portal) = self._get_name_and_portal(volume['name'],
-                                                   volume['host'])
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
+                                                             volume['host'])
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v manual" %
                       (iscsi_name, iscsi_portal))

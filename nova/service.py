@@ -205,39 +205,6 @@ class Service(object):
                 logging.exception("model server went away")
 
 
-def stop(pidfile):
-    """
-    Stop the daemon
-    """
-    # Get the pid from the pidfile
-    try:
-        pf = file(pidfile, 'r')
-        pid = int(pf.read().strip())
-        pf.close()
-    except IOError:
-        pid = None
-
-    if not pid:
-        message = "pidfile %s does not exist. Daemon not running?\n"
-        sys.stderr.write(message % pidfile)
-        # Not an error in a restart
-        return
-
-    # Try killing the daemon process
-    try:
-        while 1:
-            os.kill(pid, signal.SIGKILL)
-            time.sleep(0.1)
-    except OSError, err:
-        err = str(err)
-        if err.find("No such process") > 0:
-            if os.path.exists(pidfile):
-                os.remove(pidfile)
-        else:
-            print str(err)
-            sys.exit(1)
-
-
 def serve(*services):
     argv = FLAGS(sys.argv)
     
@@ -247,38 +214,7 @@ def serve(*services):
     name = '_'.join(x.binary for x in services)
     logging.debug("Serving %s" % name)
 
-    logging.getLogger('amqplib').setLevel(logging.DEBUG)
-
-    if not FLAGS.pidfile:
-        FLAGS.pidfile = '%s.pid' % name
-    # NOTE(vish): if we're running nodaemon, redirect the log to stdout
-    #if FLAGS.nodaemon and not FLAGS.logfile:
-    #    FLAGS.logfile = "-"
-    #if not FLAGS.logfile:
-    #    FLAGS.logfile = '%s.log' % name
-    #if not FLAGS.prefix:
-    #    FLAGS.prefix = name
-
-    action = 'start'
-    if len(argv) > 1:
-        action = argv.pop()
-
-    if action == 'stop':
-        stop(FLAGS.pidfile)
-        sys.exit()
-    elif action == 'restart':
-        stop(FLAGS.pidfile)
-    elif action == 'start':
-        pass
-    else:
-        print 'usage: %s [options] [start|stop|restart]' % argv[0]
-        sys.exit(1)
-
-    #formatter = logging.Formatter(
-    #    '(%(name)s): %(levelname)s %(message)s')
-    #handler = logging.StreamHandler()
-    #handler.setFormatter(formatter)
-    #logging.getLogger().addHandler(handler)
+    logging.getLogger('amqplib').setLevel(logging.WARN)
 
     if FLAGS.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -292,9 +228,6 @@ def serve(*services):
     for x in services:
         x.start()
     
-    #while True:
-    #    greenthread.sleep(5)
-
 
 def wait():
     while True:

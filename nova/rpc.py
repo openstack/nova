@@ -188,7 +188,6 @@ class AdapterConsumer(TopicConsumer):
         node_func = getattr(self.proxy, str(method))
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
-        # pylint: disable-msg=W0142
         try:
             rval = node_func(context=ctxt, **node_args)
             if msg_id:

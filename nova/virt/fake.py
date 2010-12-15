@@ -122,13 +122,13 @@ class FakeConnection(object):
         """
         Rescue the specified instance.
         """
-        return
+        pass
 
     def unrescue(self, instance):
         """
         Unrescue the specified instance.
         """
-        return
+        pass
 
     def destroy(self, instance):
         """

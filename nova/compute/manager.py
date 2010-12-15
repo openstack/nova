@@ -203,7 +203,7 @@ class ComputeManager(manager.Manager):
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
         dev_path = self.volume_manager.setup_compute_volume(context,
-                                                                  volume_id)
+                                                            volume_id)
         try:
             self.driver.attach_volume(instance_ref['name'],
                                       dev_path,
@@ -238,7 +238,7 @@ class ComputeManager(manager.Manager):
                          instance_ref['name'])
         else:
             self.driver.detach_volume(instance_ref['name'],
-                                            volume_ref['mountpoint'])
+                                      volume_ref['mountpoint'])
         self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         return True

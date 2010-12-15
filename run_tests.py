@@ -46,7 +46,6 @@ import __main__
 import os
 import sys
 
-
 from twisted.scripts import trial as trial_script
 
 from nova import flags
@@ -66,8 +65,6 @@ from nova.tests.rpc_unittest import *
 from nova.tests.scheduler_unittest import *
 from nova.tests.service_unittest import *
 from nova.tests.twistd_unittest import *
-from nova.tests.validator_unittest import *
-from nova.tests.virt_unittest import *
 from nova.tests.virt_unittest import *
 from nova.tests.volume_unittest import *
 
@@ -84,8 +81,6 @@ if __name__ == '__main__':
     OptionsClass = twistd.WrapTwistedOptions(trial_script.Options)
     config = OptionsClass()
     argv = config.parseOptions()
-
-    argv = FLAGS(sys.argv)
 
     FLAGS.verbose = True
 
