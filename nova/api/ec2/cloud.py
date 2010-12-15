@@ -361,7 +361,7 @@ class CloudController(object):
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
                 self.compute_api.trigger_security_group_rules_refresh(context,
-                                                           security_group['id'])
+                                                          security_group['id'])
                 return True
         raise exception.ApiError("No rule for the specified parameters.")
 
@@ -385,7 +385,7 @@ class CloudController(object):
         security_group_rule = db.security_group_rule_create(context, values)
 
         self.compute_api.trigger_security_group_rules_refresh(context,
-                                                           security_group['id'])
+                                                          security_group['id'])
 
         return True
 

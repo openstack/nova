@@ -1515,7 +1515,8 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
 
 
 @require_context
-def security_group_rule_get_by_security_group(context, security_group_id, session=None):
+def security_group_rule_get_by_security_group(context, security_group_id,
+                                              session=None):
     if not session:
         session = get_session()
     if is_admin_context(context):

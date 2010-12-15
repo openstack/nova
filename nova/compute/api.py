@@ -166,7 +166,6 @@ class ComputeAPI(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id}})
 
-        
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
 
@@ -189,7 +188,6 @@ class ComputeAPI(base.Base):
                       'project_id': context.project_id}
             db.security_group_create(context, values)
 
-
     def trigger_security_group_rules_refresh(self, context, security_group_id):
         """Called when a rule is added to or removed from a security_group"""
 
@@ -206,10 +204,9 @@ class ComputeAPI(base.Base):
                      {"method": "refresh_security_group_rules",
                       "args": {"security_group_id": security_group.id}})
 
-
     def trigger_security_group_members_refresh(self, context, group_id):
         """Called when a security group gains a new or loses a member
-        
+
         Sends an update request to each compute node for whom this is
         relevant."""
 
@@ -223,7 +220,7 @@ class ComputeAPI(base.Base):
         security_groups = set()
         for rule in security_group_rules:
             security_groups.add(rule['parent_group_id'])
-        
+
         # ..then we find the instances that are members of these groups..
         instances = set()
         for security_group in security_groups:
@@ -243,7 +240,6 @@ class ComputeAPI(base.Base):
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "refresh_security_group_members",
                       "args": {"security_group_id": group_id}})
-
 
     def update_instance(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.

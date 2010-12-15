@@ -104,8 +104,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
-flags.DEFINE_string('firewall_driver', 'nova.virt.libvirt_conn.IptablesFirewallDriver',
-                  'Firewall driver (defaults to nwfilter)')
+flags.DEFINE_string('firewall_driver',
+                    'nova.virt.libvirt_conn.IptablesFirewallDriver',
+                    'Firewall driver (defaults to nwfilter)')
 
 
 def get_connection(read_only):
@@ -687,7 +688,6 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
-
     def refresh_security_group_members(self, security_group_id):
         """Refresh security group members from data store
 
@@ -855,7 +855,6 @@ class NWFilterFirewall(FirewallDriver):
         net = IPy.IP(cidr)
         return str(net.net()), str(net.netmask())
 
-
     @defer.inlineCallbacks
     def prepare_instance_filter(self, instance):
         """
@@ -869,8 +868,9 @@ class NWFilterFirewall(FirewallDriver):
         instance_filter_name = self._instance_filter_name(instance)
         instance_secgroup_filter_name = '%s-secgroup' % (instance_filter_name,)
         instance_filter_children = ['nova-base', instance_secgroup_filter_name]
-        instance_secgroup_filter_children = ['nova-base-ipv4', 'nova-base-ipv6',
-                                            'nova-allow-dhcp-server']
+        instance_secgroup_filter_children = ['nova-base-ipv4',
+                                             'nova-base-ipv6',
+                                             'nova-allow-dhcp-server']
 
         ctxt = context.get_admin_context()
 
@@ -883,14 +883,14 @@ class NWFilterFirewall(FirewallDriver):
             yield self._define_filter(project_filter)
 
             instance_secgroup_filter_children += [('nova-project-%s' %
-                                                        instance['project_id'])]
+                                                       instance['project_id'])]
 
         for security_group in db.security_group_get_by_instance(ctxt,
-                                                                instance['id']):
+                                                               instance['id']):
             yield self.refresh_security_group_rules(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                          security_group['id'])]
+                                                         security_group['id'])]
 
         yield self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
@@ -978,12 +978,11 @@ class IptablesFirewallDriver(FirewallDriver):
                 if not new_filter[rules_index].startswith(':'):
                     break
 
-
         our_chains = [':nova-ipv4-fallback - [0:0]']
-        our_rules  = ['-A nova-ipv4-fallback -j DROP']
+        our_rules = ['-A nova-ipv4-fallback -j DROP']
 
         our_chains += [':nova-local - [0:0]']
-        our_rules  += ['-A FORWARD -j nova-local']
+        our_rules += ['-A FORWARD -j nova-local']
 
         security_groups = set()
         # Add our chains
@@ -1018,11 +1017,11 @@ class IptablesFirewallDriver(FirewallDriver):
 
             # Allow DHCP responses
             dhcp_server = self._dhcp_server_for_instance(instance)
-            our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' % (chain_name, dhcp_server)]
+            our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
+                                                     (chain_name, dhcp_server)]
 
             # If nothing matches, jump to the fallback chain
             our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
-
 
         # then, security group chains and rules
         for security_group in security_groups:
@@ -1031,7 +1030,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
             rules = \
               db.security_group_rule_get_by_security_group(ctxt,
-                                                           security_group['id'])
+                                                          security_group['id'])
 
             for rule in rules:
                 logging.info('%r', rule)
