@@ -43,6 +43,8 @@ else:
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('logdir',  None, 'directory to keep log files in '
+                                     '(will be prepended to $logfile)')
 
 
 class TwistdServerOptions(ServerOptions):
@@ -51,6 +53,9 @@ class TwistdServerOptions(ServerOptions):
 
 
 class FlagParser(object):
+    # this is a required attribute for gflags
+    syntactic_help = ''
+
     def __init__(self, parser):
         self.parser = parser
 
@@ -61,6 +66,7 @@ class FlagParser(object):
 def WrapTwistedOptions(wrapped):
     class TwistedOptionsToFlags(wrapped):
         subCommands = None
+
         def __init__(self):
             # NOTE(termie): _data exists because Twisted stuff expects
             #               to be able to set arbitrary things that are
@@ -78,16 +84,22 @@ def WrapTwistedOptions(wrapped):
 
         def _absorbFlags(self):
             twistd_flags = []
-            reflect.accumulateClassList(self.__class__, 'optFlags', twistd_flags)
+            reflect.accumulateClassList(self.__class__, 'optFlags',
+                                        twistd_flags)
             for flag in twistd_flags:
                 key = flag[0].replace('-', '_')
+                if hasattr(FLAGS, key):
+                    continue
                 flags.DEFINE_boolean(key, None, str(flag[-1]))
 
         def _absorbParameters(self):
             twistd_params = []
-            reflect.accumulateClassList(self.__class__, 'optParameters', twistd_params)
+            reflect.accumulateClassList(self.__class__, 'optParameters',
+                                        twistd_params)
             for param in twistd_params:
                 key = param[0].replace('-', '_')
+                if hasattr(FLAGS, key):
+                    continue
                 if len(param) > 4:
                     flags.DEFINE(FlagParser(param[4]),
                                  key, param[2], str(param[3]),
@@ -97,13 +109,14 @@ def WrapTwistedOptions(wrapped):
 
         def _absorbHandlers(self):
             twistd_handlers = {}
-            reflect.addMethodNamesToDict(self.__class__, twistd_handlers, "opt_")
+            reflect.addMethodNamesToDict(self.__class__, twistd_handlers,
+                                         "opt_")
 
             # NOTE(termie): Much of the following is derived/copied from
             #               twisted.python.usage with the express purpose of
             #               providing compatibility
             for name in twistd_handlers.keys():
-                method = getattr(self, 'opt_'+name)
+                method = getattr(self, 'opt_' + name)
 
                 takesArg = not usage.flagFunction(method, name)
                 doc = getattr(method, '__doc__', None)
@@ -118,7 +131,6 @@ def WrapTwistedOptions(wrapped):
                     if name not in FLAGS:
                         flags.DEFINE_string(name, None, doc)
                     self._paramHandlers[name] = method
-
 
         def _doHandlers(self):
             for flag, handler in self._flagHandlers.iteritems():
@@ -189,7 +201,7 @@ def stop(pidfile):
     """
     # Get the pid from the pidfile
     try:
-        pf = file(pidfile,'r')
+        pf = file(pidfile, 'r')
         pid = int(pf.read().strip())
         pf.close()
     except IOError:
@@ -198,7 +210,8 @@ def stop(pidfile):
     if not pid:
         message = "pidfile %s does not exist. Daemon not running?\n"
         sys.stderr.write(message % pidfile)
-        return # not an error in a restart
+        # Not an error in a restart
+        return
 
     # Try killing the daemon process
     try:
@@ -228,14 +241,18 @@ def serve(filename):
         if not FLAGS.pidfile:
             FLAGS.pidfile = '%s.pid' % name
         elif FLAGS.pidfile.endswith('twistd.pid'):
-            FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
+            FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid',
+                                                  '%s.pid' % name)
         # NOTE(vish): if we're running nodaemon, redirect the log to stdout
         if FLAGS.nodaemon and not FLAGS.logfile:
             FLAGS.logfile = "-"
         if not FLAGS.logfile:
             FLAGS.logfile = '%s.log' % name
         elif FLAGS.logfile.endswith('twistd.log'):
-            FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
+            FLAGS.logfile = FLAGS.logfile.replace('twistd.log',
+                                                  '%s.log' % name)
+        if FLAGS.logdir:
+            FLAGS.logfile = os.path.join(FLAGS.logdir, FLAGS.logfile)
         if not FLAGS.prefix:
             FLAGS.prefix = name
         elif FLAGS.prefix.endswith('twisted'):

@@ -38,14 +38,16 @@ flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
 
-flags.DEFINE_string('networks_path', utils.abspath('../networks'),
+flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'vlan1',
                     'Interface for public IP addresses')
-flags.DEFINE_string('bridge_dev', 'eth0',
-                        'network device for bridges')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
+flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
+flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 flags.DEFINE_string('routing_source_ip', '127.0.0.1',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
@@ -53,24 +55,27 @@ flags.DEFINE_bool('use_nova_chains', False,
 
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
-def init_host():
-    """Basic networking setup goes here"""
-    # NOTE(devcamcar): Cloud public DNAT entries, CloudPipe port
-    # forwarding entries and a default DNAT entry.
+
+def metadata_forward():
+    """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
              "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
 
+
+def init_host():
+    """Basic networking setup goes here"""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
     _confirm_rule("POSTROUTING", "-t nat -s %s "
              "-j SNAT --to-source %s"
-             % (FLAGS.private_range, FLAGS.routing_source_ip))
+             % (FLAGS.fixed_range, FLAGS.routing_source_ip))
 
     _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
-                  FLAGS.private_range)
+                  FLAGS.fixed_range)
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
-                  {'range': FLAGS.private_range})
+                  {'range': FLAGS.fixed_range})
+
 
 def bind_floating_ip(floating_ip):
     """Bind ip to public interface"""
@@ -103,7 +108,7 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
                            % (fixed_ip))
     for (protocol, port) in DEFAULT_PORTS:
-        _confirm_rule("FORWARD","-d %s -p %s --dport %s -j ACCEPT"
+        _confirm_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
             % (fixed_ip, protocol, port))
 
 
@@ -132,7 +137,7 @@ def ensure_vlan(vlan_num):
     if not _device_exists(interface):
         logging.debug("Starting VLAN inteface %s", interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.bridge_dev, vlan_num))
+        _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
     return interface
 
@@ -140,12 +145,13 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge inteface for %s", interface)
+        logging.debug("Starting Bridge interface for %s", interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo brctl addif %s %s" % (bridge, interface))
+        if interface:
+            _execute("sudo brctl addif %s %s" % (bridge, interface))
     if net_attrs:
         _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
                 (bridge,
@@ -167,11 +173,9 @@ def get_dhcp_hosts(context, network_id):
     return '\n'.join(hosts)
 
 
-# TODO(ja): if the system has restarted or pid numbers have wrapped
-#           then you cannot be certain that the pid refers to the
-#           dnsmasq.  As well, sending a HUP only reloads the hostfile,
-#           so any configuration options (like dchp-range, vlan, ...)
-#           aren't reloaded
+# NOTE(ja): Sending a HUP only reloads the hostfile, so any
+#           configuration options (like dchp-range, vlan, ...)
+#           aren't reloaded.
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -180,24 +184,27 @@ def update_dhcp(context, network_id):
     """
     network_ref = db.network_get(context, network_id)
 
-    conffile = _dhcp_file(network_ref['vlan'], 'conf')
+    conffile = _dhcp_file(network_ref['bridge'], 'conf')
     with open(conffile, 'w') as f:
         f.write(get_dhcp_hosts(context, network_id))
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
 
-    pid = _dnsmasq_pid_for(network_ref['vlan'])
+    pid = _dnsmasq_pid_for(network_ref['bridge'])
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        # TODO(ja): use "/proc/%d/cmdline" % (pid) to determine if pid refers
-        #           correct dnsmasq process
-        try:
-            _execute('sudo kill -HUP %d' % pid)
-            return
-        except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug("Hupping dnsmasq threw %s", exc)
+        out, _err = _execute('cat /proc/%d/cmdline' % pid,
+                             check_exit_code=False)
+        if conffile in out:
+            try:
+                _execute('sudo kill -HUP %d' % pid)
+                return
+            except Exception as exc:  # pylint: disable-msg=W0703
+                logging.debug("Hupping dnsmasq threw %s", exc)
+        else:
+            logging.debug("Pid %d is stale, relaunching dnsmasq", pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
@@ -233,14 +240,15 @@ def _confirm_rule(chain, cmd):
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()
-    _execute("sudo iptables --delete %s %s" % (chain, cmd), check_exit_code=False)
+    _execute("sudo iptables --delete %s %s" % (chain, cmd),
+             check_exit_code=False)
     _execute("sudo iptables -I %s %s" % (chain, cmd))
 
 
 def _remove_rule(chain, cmd):
     """Remove iptables rule"""
     if FLAGS.use_nova_chains:
-        chain = "%S" % chain.lower()
+        chain = "%s" % chain.lower()
     _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 
@@ -250,11 +258,11 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
-           ' --pid-file=%s' % _dhcp_file(net['vlan'], 'pid'),
+           ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
            ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-           ' --dhcp-hostsfile=%s' % _dhcp_file(net['vlan'], 'conf'),
+           ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
     return ''.join(cmd)
@@ -271,24 +279,25 @@ def _stop_dnsmasq(network):
             logging.debug("Killing dnsmasq threw %s", exc)
 
 
-def _dhcp_file(vlan, kind):
-    """Return path to a pid, leases or conf file for a vlan"""
+def _dhcp_file(bridge, kind):
+    """Return path to a pid, leases or conf file for a bridge"""
 
     if not os.path.exists(FLAGS.networks_path):
         os.makedirs(FLAGS.networks_path)
+    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path,
+                                              bridge,
+                                              kind))
 
-    return os.path.abspath("%s/nova-%s.%s" % (FLAGS.networks_path, vlan, kind))
 
-
-def _dnsmasq_pid_for(vlan):
-    """Returns he pid for prior dnsmasq instance for a vlan
+def _dnsmasq_pid_for(bridge):
+    """Returns the pid for prior dnsmasq instance for a bridge
 
     Returns None if no pid file exists
 
     If machine has rebooted pid might be incorrect (caller should check)
     """
 
-    pid_file = _dhcp_file(vlan, 'pid')
+    pid_file = _dhcp_file(bridge, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

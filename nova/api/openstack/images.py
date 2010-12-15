@@ -27,16 +27,14 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "image": [ "id", "name", "updated", "created", "status",
-                           "serverId", "progress" ]
-            }
-        }
-    }
+                "image": ["id", "name", "updated", "created", "status",
+                          "serverId", "progress"]}}}
 
     def __init__(self):
         self._service = utils.import_object(FLAGS.image_service)
@@ -48,13 +46,19 @@ class Controller(wsgi.Controller):
 
     def detail(self, req):
         """Return all public images in detail."""
-        data = self._service.index()
-        data = nova.api.openstack.limited(data, req)
-        return dict(images=data)
+        try:
+            images = self._service.detail(req.environ['nova.context'])
+            images = nova.api.openstack.limited(images, req)
+        except NotImplementedError:
+            # Emulate detail() using repeated calls to show()
+            images = self._service.index(ctxt)
+            images = nova.api.openstack.limited(images, req)
+            images = [self._service.show(ctxt, i['id']) for i in images]
+        return dict(images=images)
 
     def show(self, req, id):
         """Return data about the given image id."""
-        return dict(image=self._service.show(id))
+        return dict(image=self._service.show(req.environ['nova.context'], id))
 
     def delete(self, req, id):
         # Only public images are supported for now.
@@ -66,6 +70,6 @@ class Controller(wsgi.Controller):
         raise faults.Fault(exc.HTTPNotFound())
 
     def update(self, req, id):
-        # Users may not modify public images, and that's all that 
+        # Users may not modify public images, and that's all that
         # we support for now.
         raise faults.Fault(exc.HTTPNotFound())

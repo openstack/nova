@@ -39,12 +39,12 @@ class HyperVTestCase(test.TrialTestCase):
 
     def test_create_destroy(self):
         """Create a VM and destroy it"""
-        instance = {'internal_id'     : random.randint(1, 1000000),
-                     'memory_mb'      : '1024',
-                     'mac_address'    : '02:12:34:46:56:67',
-                     'vcpus'          : 2,
-                     'project_id'     : 'fake',
-                     'instance_type'  : 'm1.small'}
+        instance = {'internal_id': random.randint(1, 1000000),
+                     'memory_mb': '1024',
+                     'mac_address': '02:12:34:46:56:67',
+                     'vcpu': 2,
+                     'project_id': 'fake',
+                     'instance_type': 'm1.small'}
 
         instance_ref = db.instance_create(None, instance)
 

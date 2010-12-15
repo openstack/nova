@@ -17,7 +17,12 @@
 #    under the License.
 
 """
-Generic Node baseclass for all workers that run on hosts
+A service is a very thin wrapper around a Manager object.  It exposes the
+manager's public methods to other components of the system via rpc.  It will
+report state periodically to the database and is responsible for initiating
+any periodic tasts that need to be executed on a given host.
+
+This module contains Service, a generic baseclass for all workers.
 """
 
 import inspect
@@ -28,6 +33,7 @@ from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -48,14 +54,16 @@ flags.DEFINE_integer('periodic_interval', 60,
 class Service(object, service.Service):
     """Base class for workers that run on hosts."""
 
-    def __init__(self, host, binary, topic, manager, *args, **kwargs):
+    def __init__(self, host, binary, topic, manager, report_interval=None,
+                 periodic_interval=None, *args, **kwargs):
         self.host = host
         self.binary = binary
         self.topic = topic
         self.manager_class_name = manager
+        self.report_interval = report_interval
+        self.periodic_interval = periodic_interval
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
-
 
     def startService(self):  # pylint: disable-msg C0103
         manager_class = utils.import_class(self.manager_class_name)
@@ -63,27 +71,47 @@ class Service(object, service.Service):
                                                      **self.saved_kwargs)
         self.manager.init_host()
         self.model_disconnected = False
+        ctxt = context.get_admin_context()
         try:
-            service_ref = db.service_get_by_args(None,
-                                               self.host,
-                                               self.binary)
+            service_ref = db.service_get_by_args(ctxt,
+                                                 self.host,
+                                                 self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
-            self._create_service_ref()
+            self._create_service_ref(ctxt)
 
+        conn = rpc.Connection.instance()
+        if self.report_interval:
+            consumer_all = rpc.AdapterConsumer(
+                    connection=conn,
+                    topic=self.topic,
+                    proxy=self)
+            consumer_node = rpc.AdapterConsumer(
+                    connection=conn,
+                    topic='%s.%s' % (self.topic, self.host),
+                    proxy=self)
 
-    def _create_service_ref(self):
-        service_ref = db.service_create(None, {'host': self.host,
-                                               'binary': self.binary,
-                                               'topic': self.topic,
-                                               'report_count': 0})
+            consumer_all.attach_to_twisted()
+            consumer_node.attach_to_twisted()
+
+            pulse = task.LoopingCall(self.report_state)
+            pulse.start(interval=self.report_interval, now=False)
+
+        if self.periodic_interval:
+            pulse = task.LoopingCall(self.periodic_tasks)
+            pulse.start(interval=self.periodic_interval, now=False)
+
+    def _create_service_ref(self, context):
+        service_ref = db.service_create(context,
+                                        {'host': self.host,
+                                         'binary': self.binary,
+                                         'topic': self.topic,
+                                         'report_count': 0})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
-        try:
-            return super(Service, self).__getattr__(key)
-        except AttributeError:
-            return getattr(self.manager, key)
+        manager = self.__dict__.get('manager', None)
+        return getattr(manager, key)
 
     @classmethod
     def create(cls,
@@ -116,25 +144,8 @@ class Service(object, service.Service):
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
         logging.warn("Starting %s node", topic)
-        service_obj = cls(host, binary, topic, manager)
-        conn = rpc.Connection.instance()
-        consumer_all = rpc.AdapterConsumer(
-                connection=conn,
-                topic=topic,
-                proxy=service_obj)
-        consumer_node = rpc.AdapterConsumer(
-                connection=conn,
-                topic='%s.%s' % (topic, host),
-                proxy=service_obj)
-
-        consumer_all.attach_to_twisted()
-        consumer_node.attach_to_twisted()
-
-        pulse = task.LoopingCall(service_obj.report_state)
-        pulse.start(interval=report_interval, now=False)
-
-        pulse = task.LoopingCall(service_obj.periodic_tasks)
-        pulse.start(interval=periodic_interval, now=False)
+        service_obj = cls(host, binary, topic, manager,
+                          report_interval, periodic_interval)
 
         # This is the parent service that twistd will be looking for when it
         # parses this file, return it so that we can get it into globals.
@@ -142,31 +153,32 @@ class Service(object, service.Service):
         service_obj.setServiceParent(application)
         return application
 
-    def kill(self, context=None):
+    def kill(self):
         """Destroy the service object in the datastore"""
         try:
-            db.service_destroy(context, self.service_id)
+            db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
             logging.warn("Service killed that has no database entry")
 
     @defer.inlineCallbacks
-    def periodic_tasks(self, context=None):
+    def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
-        yield self.manager.periodic_tasks(context)
+        yield self.manager.periodic_tasks(context.get_admin_context())
 
     @defer.inlineCallbacks
-    def report_state(self, context=None):
+    def report_state(self):
         """Update the state of this service in the datastore."""
+        ctxt = context.get_admin_context()
         try:
             try:
-                service_ref = db.service_get(context, self.service_id)
+                service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
                 logging.debug("The service database object disappeared, "
                               "Recreating it.")
-                self._create_service_ref()
-                service_ref = db.service_get(context, self.service_id)
+                self._create_service_ref(ctxt)
+                service_ref = db.service_get(ctxt, self.service_id)
 
-            db.service_update(context,
+            db.service_update(ctxt,
                              self.service_id,
                              {'report_count': service_ref['report_count'] + 1})
 

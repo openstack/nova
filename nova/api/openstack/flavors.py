@@ -22,16 +22,14 @@ from nova.compute import instance_types
 from nova import wsgi
 import nova.api.openstack
 
+
 class Controller(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "flavor": [ "id", "name", "ram", "disk" ]
-            }
-        }
-    }
+                "flavor": ["id", "name", "ram", "disk"]}}}
 
     def index(self, req):
         """Return all flavors in brief."""

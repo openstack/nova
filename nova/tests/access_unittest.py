@@ -20,6 +20,7 @@ import unittest
 import logging
 import webob
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova import test
@@ -28,55 +29,41 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+
+
 class Context(object):
     pass
+
 
 class AccessTestCase(test.TrialTestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
         um = manager.AuthManager()
+        self.context = context.get_admin_context()
         # Make test users
-        try:
-            self.testadmin = um.create_user('testadmin')
-        except Exception, err:
-            logging.error(str(err))
-        try:
-            self.testpmsys = um.create_user('testpmsys')
-        except: pass
-        try:
-            self.testnet = um.create_user('testnet')
-        except: pass
-        try:
-            self.testsys = um.create_user('testsys')
-        except: pass
+        self.testadmin = um.create_user('testadmin')
+        self.testpmsys = um.create_user('testpmsys')
+        self.testnet = um.create_user('testnet')
+        self.testsys = um.create_user('testsys')
         # Assign some rules
-        try:
-            um.add_role('testadmin', 'cloudadmin')
-        except: pass
-        try:
-            um.add_role('testpmsys', 'sysadmin')
-        except: pass
-        try:
-            um.add_role('testnet', 'netadmin')
-        except: pass
-        try:
-            um.add_role('testsys', 'sysadmin')
-        except: pass
+        um.add_role('testadmin', 'cloudadmin')
+        um.add_role('testpmsys', 'sysadmin')
+        um.add_role('testnet', 'netadmin')
+        um.add_role('testsys', 'sysadmin')
 
         # Make a test project
-        try:
-            self.project = um.create_project('testproj', 'testpmsys', 'a test project', ['testpmsys', 'testnet', 'testsys'])
-        except: pass
-        try:
-            self.project.add_role(self.testnet, 'netadmin')
-        except: pass
-        try:
-            self.project.add_role(self.testsys, 'sysadmin')
-        except: pass
+        self.project = um.create_project('testproj',
+                                         'testpmsys',
+                                         'a test project',
+                                         ['testpmsys', 'testnet', 'testsys'])
+        self.project.add_role(self.testnet, 'netadmin')
+        self.project.add_role(self.testsys, 'sysadmin')
         #user is set in each test
+
         def noopWSGIApp(environ, start_response):
             start_response('200 OK', [])
             return ['']
+
         self.mw = ec2.Authorizer(noopWSGIApp)
         self.mw.action_roles = {'str': {
                 '_allow_all': ['all'],
@@ -97,10 +84,8 @@ class AccessTestCase(test.TrialTestCase):
         super(AccessTestCase, self).tearDown()
 
     def response_status(self, user, methodName):
-        context = Context()
-        context.project = self.project
-        context.user = user
-        environ = {'ec2.context' : context,
+        ctxt = context.RequestContext(user, self.project)
+        environ = {'ec2.context': ctxt,
                    'ec2.controller': 'some string',
                    'ec2.action': methodName}
         req = webob.Request.blank('/', environ)

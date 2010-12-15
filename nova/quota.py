@@ -37,6 +37,7 @@ flags.DEFINE_integer('quota_gigabytes', 1000,
 flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 
+
 def get_quota(context, project_id):
     rval = {'instances': FLAGS.quota_instances,
             'cores': FLAGS.quota_cores,
@@ -52,9 +53,11 @@ def get_quota(context, project_id):
         pass
     return rval
 
+
 def allowed_instances(context, num_instances, instance_type):
     """Check quota and return min(num_instances, allowed_instances)"""
-    project_id = context.project.id
+    project_id = context.project_id
+    context = context.elevated()
     used_instances, used_cores = db.instance_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
@@ -69,7 +72,8 @@ def allowed_instances(context, num_instances, instance_type):
 
 def allowed_volumes(context, num_volumes, size):
     """Check quota and return min(num_volumes, allowed_volumes)"""
-    project_id = context.project.id
+    project_id = context.project_id
+    context = context.elevated()
     used_volumes, used_gigabytes = db.volume_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
@@ -84,9 +88,14 @@ def allowed_volumes(context, num_volumes, size):
 
 def allowed_floating_ips(context, num_floating_ips):
     """Check quota and return min(num_floating_ips, allowed_floating_ips)"""
-    project_id = context.project.id
+    project_id = context.project_id
+    context = context.elevated()
     used_floating_ips = db.floating_ip_count_by_project(context, project_id)
     quota = get_quota(context, project_id)
     allowed_floating_ips = quota['floating_ips'] - used_floating_ips
     return min(num_floating_ips, allowed_floating_ips)
 
+
+class QuotaError(exception.ApiError):
+    """Quota Exceeeded"""
+    pass

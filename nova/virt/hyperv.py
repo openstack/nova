@@ -79,18 +79,18 @@ FLAGS = flags.FLAGS
 
 
 HYPERV_POWER_STATE = {
-    3 : power_state.SHUTDOWN,
-    2 : power_state.RUNNING,
-    32768 : power_state.PAUSED,
+    3: power_state.SHUTDOWN,
+    2: power_state.RUNNING,
+    32768: power_state.PAUSED,
 }
 
 
 REQ_POWER_STATE = {
-    'Enabled' : 2,
+    'Enabled': 2,
     'Disabled': 3,
-    'Reboot' : 10,
-    'Reset' : 11,
-    'Paused' : 32768,
+    'Reboot': 10,
+    'Reset': 11,
+    'Paused': 32768,
     'Suspended': 32769
 }
 
@@ -170,8 +170,8 @@ class HyperVConnection(object):
                           wmi_result_class='Msvm_VirtualSystemSettingData')
         vmsetting = [s for s in vmsettings
                         if s.SettingType == 3][0]  # avoid snapshots
-        memsetting = vmsetting.associators(wmi_result_class=
-                                           'Msvm_MemorySettingData')[0]
+        memsetting = vmsetting.associators(
+                           wmi_result_class='Msvm_MemorySettingData')[0]
         #No Dynamic Memory, so reservation, limit and quantity are identical.
         mem = long(str(instance['memory_mb']))
         memsetting.VirtualQuantity = mem
@@ -181,8 +181,8 @@ class HyperVConnection(object):
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                                         vm.path_(), [memsetting.GetText_(1)])
         logging.debug('Set memory for vm %s...', instance.name)
-        procsetting = vmsetting.associators(wmi_result_class=
-                                           'Msvm_ProcessorSettingData')[0]
+        procsetting = vmsetting.associators(
+                          wmi_result_class='Msvm_ProcessorSettingData')[0]
         vcpus = long(instance['vcpus'])
         procsetting.VirtualQuantity = vcpus
         procsetting.Reservation = vcpus
@@ -301,7 +301,8 @@ class HyperVConnection(object):
     def _check_job_status(self, jobpath):
         """Poll WMI job state for completion"""
         #Jobs have a path of the form:
-        #\\WIN-P5IG7367DAG\root\virtualization:Msvm_ConcreteJob.InstanceID="8A496B9C-AF4D-4E98-BD3C-1128CD85320D"
+        #\\WIN-P5IG7367DAG\root\virtualization:Msvm_ConcreteJob.InstanceID=
+        #"8A496B9C-AF4D-4E98-BD3C-1128CD85320D"
         inst_id = jobpath.split('=')[1].strip('"')
         jobs = self._conn.Msvm_ConcreteJob(InstanceID=inst_id)
         if len(jobs) == 0:
@@ -359,10 +360,10 @@ class HyperVConnection(object):
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         #Stop the VM first.
         self._set_vm_state(instance.name, 'Disabled')
-        vmsettings = vm.associators(wmi_result_class=
-                                          'Msvm_VirtualSystemSettingData')
-        rasds = vmsettings[0].associators(wmi_result_class=
-                                          'MSVM_ResourceAllocationSettingData')
+        vmsettings = vm.associators(
+                         wmi_result_class='Msvm_VirtualSystemSettingData')
+        rasds = vmsettings[0].associators(
+                         wmi_result_class='MSVM_ResourceAllocationSettingData')
         disks = [r for r in rasds \
                     if r.ResourceSubType == 'Microsoft Virtual Hard Disk']
         diskfiles = []
@@ -391,8 +392,8 @@ class HyperVConnection(object):
             raise exception.NotFound('instance not present %s' % instance_id)
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance_id)[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        vmsettings = vm.associators(wmi_result_class=
-                                        'Msvm_VirtualSystemSettingData')
+        vmsettings = vm.associators(
+                       wmi_result_class='Msvm_VirtualSystemSettingData')
         settings_paths = [v.path_() for v in vmsettings]
         #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
         summary_info = vs_man_svc.GetSummaryInformation(

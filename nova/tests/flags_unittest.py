@@ -20,8 +20,12 @@ from nova import exception
 from nova import flags
 from nova import test
 
+FLAGS = flags.FLAGS
+flags.DEFINE_string('flags_unittest', 'foo', 'for testing purposes only')
+
 
 class FlagsTestCase(test.TrialTestCase):
+
     def setUp(self):
         super(FlagsTestCase, self).setUp()
         self.FLAGS = flags.FlagValues()
@@ -33,7 +37,8 @@ class FlagsTestCase(test.TrialTestCase):
         self.assert_('false' not in self.FLAGS)
         self.assert_('true' not in self.FLAGS)
 
-        flags.DEFINE_string('string', 'default', 'desc', flag_values=self.FLAGS)
+        flags.DEFINE_string('string', 'default', 'desc',
+                            flag_values=self.FLAGS)
         flags.DEFINE_integer('int', 1, 'desc', flag_values=self.FLAGS)
         flags.DEFINE_bool('false', False, 'desc', flag_values=self.FLAGS)
         flags.DEFINE_bool('true', True, 'desc', flag_values=self.FLAGS)
@@ -85,3 +90,13 @@ class FlagsTestCase(test.TrialTestCase):
 
         self.assert_('runtime_answer' in self.global_FLAGS)
         self.assertEqual(self.global_FLAGS.runtime_answer, 60)
+
+    def test_flag_leak_left(self):
+        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        FLAGS.flags_unittest = 'bar'
+        self.assertEqual(FLAGS.flags_unittest, 'bar')
+
+    def test_flag_leak_right(self):
+        self.assertEqual(FLAGS.flags_unittest, 'foo')
+        FLAGS.flags_unittest = 'bar'
+        self.assertEqual(FLAGS.flags_unittest, 'bar')

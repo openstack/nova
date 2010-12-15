@@ -72,7 +72,7 @@ class Test(unittest.TestCase):
             """Test controller to call from router."""
             test = self
 
-            def show(self, req, id): # pylint: disable-msg=W0622,C0103
+            def show(self, req, id):  # pylint: disable-msg=W0622,C0103
                 """Default action called for requests with an ID."""
                 self.test.assertEqual(req.path_info, '/tests/123')
                 self.test.assertEqual(id, '123')
@@ -95,7 +95,7 @@ class Test(unittest.TestCase):
 class SerializerTest(unittest.TestCase):
 
     def match(self, url, accept, expect):
-        input_dict = dict(servers=dict(a=(2,3)))
+        input_dict = dict(servers=dict(a=(2, 3)))
         expected_xml = '<servers><a>(2,3)</a></servers>'
         expected_json = '{"servers":{"a":[2,3]}}'
         req = webob.Request.blank(url, headers=dict(Accept=accept))
@@ -112,7 +112,7 @@ class SerializerTest(unittest.TestCase):
         self.match('/servers/4.json', None, expect='json')
         self.match('/servers/4', 'application/json', expect='json')
         self.match('/servers/4', 'application/xml', expect='xml')
-        self.match('/servers/4.xml',  None, expect='xml')
+        self.match('/servers/4.xml', None, expect='xml')
 
     def test_defaults_to_json(self):
         self.match('/servers/4', None, expect='json')

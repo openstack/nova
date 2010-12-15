@@ -15,8 +15,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""
+Starting point for routing EC2 requests.
 
-"""Starting point for routing EC2 requests"""
+"""
 
 import logging
 import routes
@@ -25,9 +27,9 @@ import webob.dec
 import webob.exc
 
 from nova import exception
+from nova import context
 from nova import flags
 from nova import wsgi
-from nova.api import context
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
@@ -62,7 +64,8 @@ class Authenticate(wsgi.Middleware):
 
         # Make a copy of args for authentication and signature verification.
         auth_params = dict(req.params)
-        auth_params.pop('Signature') # not part of authentication args
+        # Not part of authentication args
+        auth_params.pop('Signature')
 
         # Authenticate the request.
         try:
@@ -78,7 +81,10 @@ class Authenticate(wsgi.Middleware):
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
-        req.environ['ec2.context'] = context.APIRequestContext(user, project)
+        ctxt = context.RequestContext(user=user,
+                                      project=project,
+                                      remote_address=req.remote_addr)
+        req.environ['ec2.context'] = ctxt
         return self.application
 
 
@@ -106,9 +112,11 @@ class Router(wsgi.Middleware):
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
         try:
-            action = req.params['Action'] # raise KeyError if omitted
+            # Raise KeyError if omitted
+            action = req.params['Action']
             for non_arg in non_args:
-                args.pop(non_arg) # remove, but raise KeyError if omitted
+                # Remove, but raise KeyError if omitted
+                args.pop(non_arg)
         except:
             raise webob.exc.HTTPBadRequest()
 
@@ -142,6 +150,8 @@ class Authorizer(wsgi.Middleware):
                 'CreateKeyPair': ['all'],
                 'DeleteKeyPair': ['all'],
                 'DescribeSecurityGroups': ['all'],
+                'AuthorizeSecurityGroupIngress': ['netadmin'],
+                'RevokeSecurityGroupIngress': ['netadmin'],
                 'CreateSecurityGroup': ['netadmin'],
                 'DeleteSecurityGroup': ['netadmin'],
                 'GetConsoleOutput': ['projectmanager', 'sysadmin'],
@@ -179,7 +189,8 @@ class Authorizer(wsgi.Middleware):
         context = req.environ['ec2.context']
         controller_name = req.environ['ec2.controller'].__class__.__name__
         action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action, ['none'])
+        allowed_roles = self.action_roles[controller_name].get(action,
+                                                               ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
@@ -229,12 +240,12 @@ class Executor(wsgi.Application):
             return self._error(req, type(ex).__name__, str(ex))
 
     def _error(self, req, code, message):
+        logging.error("%s: %s", code, message)
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
-        resp.body = ('<?xml version="1.0"?>\n'
+        resp.body = str('<?xml version="1.0"?>\n'
                      '<Response><Errors><Error><Code>%s</Code>'
                      '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>') % (code, message)
+                     '<RequestID>?</RequestID></Response>' % (code, message))
         return resp
-

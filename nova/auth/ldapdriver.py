@@ -40,6 +40,8 @@ flags.DEFINE_string('ldap_user_dn', 'cn=Manager,dc=example,dc=com',
 flags.DEFINE_string('ldap_user_unit', 'Users', 'OID for Users')
 flags.DEFINE_string('ldap_user_subtree', 'ou=Users,dc=example,dc=com',
                     'OU for Users')
+flags.DEFINE_boolean('ldap_user_modify_only', False,
+                    'Modify attributes for users instead of creating/deleting')
 flags.DEFINE_string('ldap_project_subtree', 'ou=Groups,dc=example,dc=com',
                     'OU for Projects')
 flags.DEFINE_string('role_project_subtree', 'ou=Groups,dc=example,dc=com',
@@ -89,8 +91,7 @@ class LdapDriver(object):
 
     def get_user(self, uid):
         """Retrieve user by id"""
-        attr = self.__find_object(self.__uid_to_dn(uid),
-                                '(objectclass=novaUser)')
+        attr = self.__get_ldap_user(uid)
         return self.__to_user(attr)
 
     def get_user_from_access_key(self, access):
@@ -110,7 +111,12 @@ class LdapDriver(object):
         """Retrieve list of users"""
         attrs = self.__find_objects(FLAGS.ldap_user_subtree,
                                   '(objectclass=novaUser)')
-        return [self.__to_user(attr) for attr in attrs]
+        users = []
+        for attr in attrs:
+            user = self.__to_user(attr)
+            if user is not None:
+                users.append(user)
+        return users
 
     def get_projects(self, uid=None):
         """Retrieve list of projects"""
@@ -125,21 +131,52 @@ class LdapDriver(object):
         """Create a user"""
         if self.__user_exists(name):
             raise exception.Duplicate("LDAP user %s already exists" % name)
-        attr = [
-            ('objectclass', ['person',
-                             'organizationalPerson',
-                             'inetOrgPerson',
-                             'novaUser']),
-            ('ou', [FLAGS.ldap_user_unit]),
-            ('uid', [name]),
-            ('sn', [name]),
-            ('cn', [name]),
-            ('secretKey', [secret_key]),
-            ('accessKey', [access_key]),
-            ('isAdmin', [str(is_admin).upper()]),
-        ]
-        self.conn.add_s(self.__uid_to_dn(name), attr)
-        return self.__to_user(dict(attr))
+        if FLAGS.ldap_user_modify_only:
+            if self.__ldap_user_exists(name):
+                # Retrieve user by name
+                user = self.__get_ldap_user(name)
+                # Entry could be malformed, test for missing attrs.
+                # Malformed entries are useless, replace attributes found.
+                attr = []
+                if 'secretKey' in user.keys():
+                    attr.append((self.ldap.MOD_REPLACE, 'secretKey', \
+                    [secret_key]))
+                else:
+                    attr.append((self.ldap.MOD_ADD, 'secretKey', \
+                    [secret_key]))
+                if 'accessKey' in user.keys():
+                    attr.append((self.ldap.MOD_REPLACE, 'accessKey', \
+                    [access_key]))
+                else:
+                    attr.append((self.ldap.MOD_ADD, 'accessKey', \
+                    [access_key]))
+                if 'isAdmin' in user.keys():
+                    attr.append((self.ldap.MOD_REPLACE, 'isAdmin', \
+                    [str(is_admin).upper()]))
+                else:
+                    attr.append((self.ldap.MOD_ADD, 'isAdmin', \
+                    [str(is_admin).upper()]))
+                self.conn.modify_s(self.__uid_to_dn(name), attr)
+                return self.get_user(name)
+            else:
+                raise exception.NotFound("LDAP object for %s doesn't exist"
+                                         % name)
+        else:
+            attr = [
+                ('objectclass', ['person',
+                                 'organizationalPerson',
+                                 'inetOrgPerson',
+                                 'novaUser']),
+                ('ou', [FLAGS.ldap_user_unit]),
+                ('uid', [name]),
+                ('sn', [name]),
+                ('cn', [name]),
+                ('secretKey', [secret_key]),
+                ('accessKey', [access_key]),
+                ('isAdmin', [str(is_admin).upper()]),
+            ]
+            self.conn.add_s(self.__uid_to_dn(name), attr)
+            return self.__to_user(dict(attr))
 
     def create_project(self, name, manager_uid,
                        description=None, member_uids=None):
@@ -155,7 +192,7 @@ class LdapDriver(object):
         if description is None:
             description = name
         members = []
-        if member_uids != None:
+        if member_uids is not None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
                     raise exception.NotFound("Project can't be created "
@@ -256,7 +293,24 @@ class LdapDriver(object):
         if not self.__user_exists(uid):
             raise exception.NotFound("User %s doesn't exist" % uid)
         self.__remove_from_all(uid)
-        self.conn.delete_s(self.__uid_to_dn(uid))
+        if FLAGS.ldap_user_modify_only:
+            # Delete attributes
+            attr = []
+            # Retrieve user by name
+            user = self.__get_ldap_user(uid)
+            if 'secretKey' in user.keys():
+                attr.append((self.ldap.MOD_DELETE, 'secretKey', \
+                user['secretKey']))
+            if 'accessKey' in user.keys():
+                attr.append((self.ldap.MOD_DELETE, 'accessKey', \
+                user['accessKey']))
+            if 'isAdmin' in user.keys():
+                attr.append((self.ldap.MOD_DELETE, 'isAdmin', \
+                user['isAdmin']))
+            self.conn.modify_s(self.__uid_to_dn(uid), attr)
+        else:
+            # Delete entry
+            self.conn.delete_s(self.__uid_to_dn(uid))
 
     def delete_project(self, project_id):
         """Delete a project"""
@@ -265,7 +319,7 @@ class LdapDriver(object):
         self.__delete_group(project_dn)
 
     def modify_user(self, uid, access_key=None, secret_key=None, admin=None):
-        """Modify an existing project"""
+        """Modify an existing user"""
         if not access_key and not secret_key and admin is None:
             return
         attr = []
@@ -279,11 +333,21 @@ class LdapDriver(object):
 
     def __user_exists(self, uid):
         """Check if user exists"""
-        return self.get_user(uid) != None
+        return self.get_user(uid) is not None
+
+    def __ldap_user_exists(self, uid):
+        """Check if the user exists in ldap"""
+        return self.__get_ldap_user(uid) is not None
 
     def __project_exists(self, project_id):
         """Check if project exists"""
-        return self.get_project(project_id) != None
+        return self.get_project(project_id) is not None
+
+    def __get_ldap_user(self, uid):
+        """Retrieve LDAP user entry by id"""
+        attr = self.__find_object(self.__uid_to_dn(uid),
+                                '(objectclass=novaUser)')
+        return attr
 
     def __find_object(self, dn, query=None, scope=None):
         """Find an object by dn and query"""
@@ -294,24 +358,26 @@ class LdapDriver(object):
 
     def __find_dns(self, dn, query=None, scope=None):
         """Find dns by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the DNs
+        # Just return the DNs
         return [dn for dn, _attributes in res]
 
     def __find_objects(self, dn, query=None, scope=None):
         """Find objects by query"""
-        if scope is None: # one of the flags is 0!!
+        if scope is None:
+            # One of the flags is 0!
             scope = self.ldap.SCOPE_SUBTREE
         try:
             res = self.conn.search_s(dn, scope, query)
         except self.ldap.NO_SUCH_OBJECT:
             return []
-        # just return the attributes
+        # Just return the attributes
         return [attributes for dn, attributes in res]
 
     def __find_role_dns(self, tree):
@@ -328,12 +394,12 @@ class LdapDriver(object):
 
     def __group_exists(self, dn):
         """Check if group exists"""
-        return self.__find_object(dn, '(objectclass=groupOfNames)') != None
+        return self.__find_object(dn, '(objectclass=groupOfNames)') is not None
 
     @staticmethod
     def __role_to_dn(role, project_id=None):
         """Convert role to corresponding dn"""
-        if project_id == None:
+        if project_id is None:
             return FLAGS.__getitem__("ldap_%s" % role).value
         else:
             return 'cn=%s,cn=%s,%s' % (role,
@@ -347,7 +413,7 @@ class LdapDriver(object):
             raise exception.Duplicate("Group can't be created because "
                                       "group %s already exists" % name)
         members = []
-        if member_uids != None:
+        if member_uids is not None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
                     raise exception.NotFound("Group can't be created "
@@ -373,7 +439,7 @@ class LdapDriver(object):
         res = self.__find_object(group_dn,
                                  '(member=%s)' % self.__uid_to_dn(uid),
                                  self.ldap.SCOPE_BASE)
-        return res != None
+        return res is not None
 
     def __add_to_group(self, uid, group_dn):
         """Add user to group"""
@@ -445,18 +511,22 @@ class LdapDriver(object):
     @staticmethod
     def __to_user(attr):
         """Convert ldap attributes to User object"""
-        if attr == None:
+        if attr is None:
             return None
-        return {
-            'id': attr['uid'][0],
-            'name': attr['cn'][0],
-            'access': attr['accessKey'][0],
-            'secret': attr['secretKey'][0],
-            'admin': (attr['isAdmin'][0] == 'TRUE')}
+        if ('accessKey' in attr.keys() and 'secretKey' in attr.keys() \
+            and 'isAdmin' in attr.keys()):
+            return {
+                'id': attr['uid'][0],
+                'name': attr['cn'][0],
+                'access': attr['accessKey'][0],
+                'secret': attr['secretKey'][0],
+                'admin': (attr['isAdmin'][0] == 'TRUE')}
+        else:
+            return None
 
     def __to_project(self, attr):
         """Convert ldap attributes to Project object"""
-        if attr == None:
+        if attr is None:
             return None
         member_dns = attr.get('member', [])
         return {
@@ -480,6 +550,6 @@ class LdapDriver(object):
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self): # pylint: disable-msg=W0231
+    def __init__(self):  # pylint: disable-msg=W0231
         __import__('nova.auth.fakeldap')
         self.ldap = sys.modules['nova.auth.fakeldap']

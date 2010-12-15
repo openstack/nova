@@ -19,6 +19,7 @@
 Tests For Scheduler
 """
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import service
@@ -33,6 +34,7 @@ from nova.scheduler import driver
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
 
+
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
     def schedule(context, topic, *args, **kwargs):
@@ -41,50 +43,53 @@ class TestDriver(driver.Scheduler):
     def schedule_named_method(context, topic, num):
         return 'named_host'
 
+
 class SchedulerTestCase(test.TrialTestCase):
     """Test case for scheduler"""
-    def setUp(self):  # pylint: disable=C0103
+    def setUp(self):
         super(SchedulerTestCase, self).setUp()
         self.flags(scheduler_driver='nova.tests.scheduler_unittest.TestDriver')
 
     def test_fallback(self):
         scheduler = manager.SchedulerManager()
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        rpc.cast('topic.fallback_host',
+        ctxt = context.get_admin_context()
+        rpc.cast(ctxt,
+                 'topic.fallback_host',
                  {'method': 'noexist',
-                  'args': {'context': None,
-                           'num': 7}})
+                  'args': {'num': 7}})
         self.mox.ReplayAll()
-        scheduler.noexist(None, 'topic', num=7)
+        scheduler.noexist(ctxt, 'topic', num=7)
 
     def test_named_method(self):
         scheduler = manager.SchedulerManager()
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        rpc.cast('topic.named_host',
+        ctxt = context.get_admin_context()
+        rpc.cast(ctxt,
+                 'topic.named_host',
                  {'method': 'named_method',
-                  'args': {'context': None,
-                           'num': 7}})
+                  'args': {'num': 7}})
         self.mox.ReplayAll()
-        scheduler.named_method(None, 'topic', num=7)
+        scheduler.named_method(ctxt, 'topic', num=7)
 
 
 class SimpleDriverTestCase(test.TrialTestCase):
     """Test case for simple driver"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(SimpleDriverTestCase, self).setUp()
         self.flags(connection_type='fake',
                    max_cores=4,
                    max_gigabytes=4,
-                   volume_driver='nova.volume.driver.FakeAOEDriver',
+                   network_manager='nova.network.manager.FlatManager',
+                   volume_driver='nova.volume.driver.FakeISCSIDriver',
                    scheduler_driver='nova.scheduler.simple.SimpleScheduler')
         self.scheduler = manager.SchedulerManager()
-        self.context = None
         self.manager = auth_manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = None
+        self.context = context.get_admin_context()
 
-    def tearDown(self):  # pylint: disable-msg=C0103
+    def tearDown(self):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
 

@@ -28,6 +28,7 @@ from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
 
+
 class user_generator(object):
     def __init__(self, manager, **user_state):
         if 'name' not in user_state:
@@ -40,6 +41,7 @@ class user_generator(object):
 
     def __exit__(self, value, type, trace):
         self.manager.delete_user(self.user)
+
 
 class project_generator(object):
     def __init__(self, manager, **project_state):
@@ -55,6 +57,7 @@ class project_generator(object):
 
     def __exit__(self, value, type, trace):
         self.manager.delete_project(self.project)
+
 
 class user_and_project_generator(object):
     def __init__(self, manager, user_state={}, project_state={}):
@@ -75,12 +78,13 @@ class user_and_project_generator(object):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
 
+
 class AuthManagerTestCase(object):
     def setUp(self):
         FLAGS.auth_driver = self.auth_driver
         super(AuthManagerTestCase, self).setUp()
         self.flags(connection_type='fake')
-        self.manager = manager.AuthManager()
+        self.manager = manager.AuthManager(new=True)
 
     def test_create_and_find_user(self):
         with user_generator(self.manager):
@@ -96,7 +100,7 @@ class AuthManagerTestCase(object):
             self.assertEqual('private-party', u.access)
 
     def test_004_signature_is_valid(self):
-        #self.assertTrue(self.manager.authenticate( **boto.generate_url ... ? ? ? ))
+        #self.assertTrue(self.manager.authenticate(**boto.generate_url ...? ))
         pass
         #raise NotImplementedError
 
@@ -117,7 +121,7 @@ class AuthManagerTestCase(object):
                 self.assert_(filter(lambda u: u.id == 'test1', users))
                 self.assert_(filter(lambda u: u.id == 'test2', users))
                 self.assert_(not filter(lambda u: u.id == 'test3', users))
-        
+
     def test_can_add_and_remove_user_role(self):
         with user_generator(self.manager):
             self.assertFalse(self.manager.has_role('test1', 'itsec'))
@@ -127,7 +131,7 @@ class AuthManagerTestCase(object):
             self.assertFalse(self.manager.has_role('test1', 'itsec'))
 
     def test_can_create_and_get_project(self):
-        with user_and_project_generator(self.manager) as (u,p):
+        with user_and_project_generator(self.manager) as (u, p):
             self.assert_(self.manager.get_user('test1'))
             self.assert_(self.manager.get_user('test1'))
             self.assert_(self.manager.get_project('testproj'))
@@ -321,8 +325,23 @@ class AuthManagerTestCase(object):
             self.assertEqual('secret', user.secret)
             self.assertTrue(user.is_admin())
 
+
 class AuthManagerLdapTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+
+    def __init__(self, *args, **kwargs):
+        AuthManagerTestCase.__init__(self)
+        test.TrialTestCase.__init__(self, *args, **kwargs)
+        import nova.auth.fakeldap as fakeldap
+        FLAGS.redis_db = 8
+        if FLAGS.flush_db:
+            logging.info("Flushing redis datastore")
+            try:
+                r = fakeldap.Redis.instance()
+                r.flushdb()
+            except:
+                self.skip = True
+
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TrialTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'

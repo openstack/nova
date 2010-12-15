@@ -24,6 +24,7 @@ where they're used.
 import getopt
 import os
 import socket
+import string
 import sys
 
 import gflags
@@ -38,11 +39,12 @@ class FlagValues(gflags.FlagValues):
 
     """
 
-    def __init__(self):
+    def __init__(self, extra_context=None):
         gflags.FlagValues.__init__(self)
         self.__dict__['__dirty'] = []
         self.__dict__['__was_already_parsed'] = False
         self.__dict__['__stored_argv'] = []
+        self.__dict__['__extra_context'] = extra_context
 
     def __call__(self, argv):
         # We're doing some hacky stuff here so that we don't have to copy
@@ -90,6 +92,12 @@ class FlagValues(gflags.FlagValues):
         self.ClearDirty()
         return args
 
+    def Reset(self):
+        gflags.FlagValues.Reset(self)
+        self.__dict__['__dirty'] = []
+        self.__dict__['__was_already_parsed'] = False
+        self.__dict__['__stored_argv'] = []
+
     def SetDirty(self, name):
         """Mark a flag as dirty so that accessing it will case a reparse."""
         self.__dict__['__dirty'].append(name)
@@ -106,7 +114,7 @@ class FlagValues(gflags.FlagValues):
     def ParseNewFlags(self):
         if '__stored_argv' not in self.__dict__:
             return
-        new_flags = FlagValues()
+        new_flags = FlagValues(self)
         for k in self.__dict__['__dirty']:
             new_flags[k] = gflags.FlagValues.__getitem__(self, k)
 
@@ -128,10 +136,32 @@ class FlagValues(gflags.FlagValues):
     def __getattr__(self, name):
         if self.IsDirty(name):
             self.ParseNewFlags()
-        return gflags.FlagValues.__getattr__(self, name)
+        val = gflags.FlagValues.__getattr__(self, name)
+        if type(val) is str:
+            tmpl = string.Template(val)
+            context = [self, self.__dict__['__extra_context']]
+            return tmpl.substitute(StrWrapper(context))
+        return val
 
+
+class StrWrapper(object):
+    """Wrapper around FlagValues objects
+
+    Wraps FlagValues objects for string.Template so that we're
+    sure to return strings."""
+    def __init__(self, context_objs):
+        self.context_objs = context_objs
+
+    def __getitem__(self, name):
+        for context in self.context_objs:
+            val = getattr(context, name, False)
+            if val:
+                return str(val)
+        raise KeyError(name)
 
 FLAGS = FlagValues()
+gflags.FLAGS = FLAGS
+gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
 
 
 def _wrapper(func):
@@ -171,10 +201,13 @@ DEFINE_list('region_list',
             [],
             'list of region=url pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
+DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
+DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
-DEFINE_string('scheduler_topic', 'scheduler', 'the topic scheduler nodes listen on')
+DEFINE_string('scheduler_topic', 'scheduler',
+              'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
 DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
 
@@ -187,9 +220,9 @@ DEFINE_integer('rabbit_port', 5672, 'rabbit port')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
+DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
+DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
-DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
-DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
 
@@ -209,21 +242,24 @@ DEFINE_string('vpn_key_suffix',
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
+DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
+              "Top-level directory for maintaining nova's state")
+
 DEFINE_string('sql_connection',
-              'sqlite:///%s/nova.sqlite' % os.path.abspath("./"),
+              'sqlite:///$state_path/nova.sqlite',
               'connection string for sql database')
 
 DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
-DEFINE_string('volume_manager', 'nova.volume.manager.AOEManager',
+DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.service.LocalImageService',
+DEFINE_string('image_service', 'nova.image.s3.S3ImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),

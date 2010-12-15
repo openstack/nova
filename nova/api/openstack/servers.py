@@ -15,53 +15,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
-import webob
 from webob import exc
 
-from nova import flags
-from nova import rpc
-from nova import utils
+from nova import exception
 from nova import wsgi
-from nova.api import cloud
-from nova.api.openstack import context
 from nova.api.openstack import faults
+from nova.auth import manager as auth_manager
+from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
-import nova.image.service
 
-FLAGS = flags.FLAGS
-
-def _filter_params(inst_dict):
-    """ Extracts all updatable parameters for a server update request """
-    keys = dict(name='name', admin_pass='adminPass')
-    new_attrs = {}
-    for k, v in keys.items():
-        if inst_dict.has_key(v):
-            new_attrs[k] = inst_dict[v]
-    return new_attrs
 
 def _entity_list(entities):
     """ Coerces a list of servers into proper dictionary format """
     return dict(servers=entities)
 
+
 def _entity_detail(inst):
-    """ Maps everything to valid attributes for return"""
-    power_mapping = { 
-        power_state.NOSTATE:  'build', 
-        power_state.RUNNING:  'active',
-        power_state.BLOCKED:  'active',
-        power_state.PAUSED:   'suspended',
+    """ Maps everything to Rackspace-like attributes for return"""
+    power_mapping = {
+        power_state.NOSTATE: 'build',
+        power_state.RUNNING: 'active',
+        power_state.BLOCKED: 'active',
+        power_state.PAUSED: 'suspended',
         power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF:  'active',
-        power_state.CRASHED:  'error'
-    }
+        power_state.SHUTOFF: 'active',
+        power_state.CRASHED: 'error'}
     inst_dict = {}
 
-    mapped_keys = dict(status='state', imageId='image_id', 
-        flavorId='instance_type', name='server_name', id='id')
+    mapped_keys = dict(status='state', imageId='image_id',
+        flavorId='instance_type', name='display_name', id='internal_id')
 
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
@@ -73,9 +57,11 @@ def _entity_detail(inst):
 
     return dict(server=inst_dict)
 
+
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['server_name']))
+    return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
+
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
@@ -83,16 +69,11 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "server": [ "id", "imageId", "name", "flavorId", "hostId", 
-                            "status", "progress", "progress" ]
-            }
-        }
-    }
+                "server": ["id", "imageId", "name", "flavorId", "hostId",
+                           "status", "progress"]}}}
 
-    def __init__(self, db_driver=None):
-        if not db_driver:
-            db_driver = FLAGS.db_driver
-        self.db_driver = utils.import_object(db_driver)
+    def __init__(self):
+        self.compute_api = compute_api.ComputeAPI()
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -108,169 +89,80 @@ class Controller(wsgi.Controller):
 
         entity_maker - either _entity_detail or _entity_inst
         """
-        user_id = req.environ['nova.context']['user']['id']
-        instance_list = self.db_driver.instance_get_all_by_user(None, user_id)
+        instance_list = self.compute_api.get_instances(
+            req.environ['nova.context'])
         limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
     def show(self, req, id):
         """ Returns server details by server id """
-        user_id = req.environ['nova.context']['user']['id']
-        inst = self.db_driver.instance_get_by_internal_id(None, int(id))
-        if inst:
-            if inst.user_id == user_id:
-                return _entity_detail(inst)
-        raise faults.Fault(exc.HTTPNotFound())
+        try:
+            instance = self.compute_api.get_instance(
+                req.environ['nova.context'], int(id))
+            return _entity_detail(instance)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, id):
         """ Destroys a server """
-        user_id = req.environ['nova.context']['user']['id']
-        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
-        if instance and instance['user_id'] == user_id:
-            self.db_driver.instance_destroy(None, id)
-            return faults.Fault(exc.HTTPAccepted())
-        return faults.Fault(exc.HTTPNotFound())
+        try:
+            self.compute_api.delete_instance(req.environ['nova.context'],
+                int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
 
     def create(self, req):
         """ Creates a new server for a given user """
-
         env = self._deserialize(req.body, req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        #try:
-        inst = self._build_server_instance(req, env)
-        #except Exception, e:
-        #    return faults.Fault(exc.HTTPUnprocessableEntity())
-
-        rpc.cast(
-            FLAGS.compute_topic, {
-                "method": "run_instance",
-                "args": {"instance_id": inst['id']}})
-        return _entity_inst(inst)
+        key_pair = auth_manager.AuthManager.get_key_pairs(
+            req.environ['nova.context'])[0]
+        instances = self.compute_api.create_instances(
+            req.environ['nova.context'],
+            instance_types.get_by_flavor_id(env['server']['flavorId']),
+            env['server']['imageId'],
+            display_name=env['server']['name'],
+            description=env['server']['name'],
+            key_name=key_pair['name'],
+            key_data=key_pair['public_key'])
+        return _entity_inst(instances[0])
 
     def update(self, req, id):
         """ Updates the server name or password """
-        user_id = req.environ['nova.context']['user']['id']
-
         inst_dict = self._deserialize(req.body, req)
-        
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        instance = self.db_driver.instance_get_by_internal_id(None, int(id))
-        if not instance or instance.user_id != user_id:
-            return faults.Fault(exc.HTTPNotFound())
+        update_dict = {}
+        if 'adminPass' in inst_dict['server']:
+            update_dict['admin_pass'] = inst_dict['server']['adminPass']
+        if 'name' in inst_dict['server']:
+            update_dict['display_name'] = inst_dict['server']['name']
 
-        self.db_driver.instance_update(None, int(id), 
-            _filter_params(inst_dict['server']))
-        return faults.Fault(exc.HTTPNoContent())
+        try:
+            self.compute_api.update_instance(req.environ['nova.context'],
+                                             instance['id'],
+                                             **update_dict)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ multi-purpose method used to reboot, rebuild, and 
+        """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
-        user_id = req.environ['nova.context']['user']['id']
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
-            raise faults.Fault(webob.exc.HTTPNotImplemented())
-        inst_ref = self.db.instance_get_by_internal_id(None, int(id))
-        if not inst_ref or (inst_ref and not inst_ref.user_id == user_id):
+            raise faults.Fault(exc.HTTPNotImplemented())
+        try:
+            # TODO(gundlach): pass reboot_type, support soft reboot in
+            # virt driver
+            self.compute_api.reboot(req.environ['nova.context'], id)
+        except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        cloud.reboot(id)
-
-    def _build_server_instance(self, req, env):
-        """Build instance data structure and save it to the data store."""
-        ltime = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        inst = {}
-
-        user_id = req.environ['nova.context']['user']['id']
-
-        flavor_id = env['server']['flavorId']
-
-        instance_type, flavor = [(k, v) for k, v in
-            instance_types.INSTANCE_TYPES.iteritems()
-            if v['flavorid'] == flavor_id][0]
-
-        image_id = env['server']['imageId']
-        
-        img_service = utils.import_object(FLAGS.image_service)
-
-        image = img_service.show(image_id)
-
-        if not image: 
-            raise Exception, "Image not found"
-
-        inst['server_name'] = env['server']['name']
-        inst['image_id'] = image_id
-        inst['user_id'] = user_id
-        inst['launch_time'] = ltime
-        inst['mac_address'] = utils.generate_mac()
-        inst['project_id'] = user_id
-
-        inst['state_description'] = 'scheduling'
-        inst['kernel_id'] = image.get('kernelId', FLAGS.default_kernel)
-        inst['ramdisk_id'] = image.get('ramdiskId', FLAGS.default_ramdisk)
-        inst['reservation_id'] = utils.generate_uid('r')
-
-        inst['display_name'] = env['server']['name']
-        inst['display_description'] = env['server']['name']
-
-        #TODO(dietz) this may be ill advised
-        key_pair_ref = self.db_driver.key_pair_get_all_by_user(
-            None, user_id)[0]
-
-        inst['key_data'] = key_pair_ref['public_key']
-        inst['key_name'] = key_pair_ref['name']
-
-        #TODO(dietz) stolen from ec2 api, see TODO there
-        inst['security_group'] = 'default'
-
-        # Flavor related attributes
-        inst['instance_type'] = instance_type
-        inst['memory_mb'] = flavor['memory_mb']
-        inst['vcpus'] = flavor['vcpus']
-        inst['local_gb'] = flavor['local_gb']
-
-        ref = self.db_driver.instance_create(None, inst)
-        inst['id'] = ref.internal_id
-        
-        # TODO(dietz): this isn't explicitly necessary, but the networking
-        # calls depend on an object with a project_id property, and therefore
-        # should be cleaned up later
-        api_context = context.APIRequestContext(user_id)
-    
-        inst['mac_address'] = utils.generate_mac()
-        
-        #TODO(dietz) is this necessary? 
-        inst['launch_index'] = 0
-
-        inst['hostname'] = str(ref.internal_id)
-        self.db_driver.instance_update(None, inst['id'], inst)
-
-        network_manager = utils.import_object(FLAGS.network_manager)
-        address = network_manager.allocate_fixed_ip(api_context,
-            inst['id'])
-
-        # TODO(vish): This probably should be done in the scheduler
-        #             network is setup when host is assigned
-        network_topic = self._get_network_topic(user_id)
-        rpc.call(network_topic,
-                 {"method": "setup_fixed_ip",
-                  "args": {"context": None,
-                           "address": address}})
-        return inst
-
-    def _get_network_topic(self, user_id):
-        """Retrieves the network host for a project"""
-        network_ref = self.db_driver.project_get_network(None, 
-            user_id)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(FLAGS.network_topic,
-                                  {"method": "set_network_host",
-                                   "args": {"context": None,
-                                            "project_id": user_id}})
-        return self.db_driver.queue_get_for(None, FLAGS.network_topic, host)
+        return exc.HTTPAccepted()

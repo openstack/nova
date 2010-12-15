@@ -89,8 +89,8 @@ def _fetch_s3_image(image, path, user, project):
         return _fetch_image_no_curl(url, path, headers)
     else:
         cmd = ['/usr/bin/curl', '--fail', '--silent', url]
-        for (k,v) in headers.iteritems():
-            cmd += ['-H', '%s: %s' % (k,v)]
+        for (k, v) in headers.iteritems():
+            cmd += ['-H', '%s: %s' % (k, v)]
 
         cmd += ['-o', path]
         return process.SharedPool().execute(executable=cmd[0], args=cmd[1:])

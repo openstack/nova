@@ -22,6 +22,7 @@ from nova import wsgi
 from nova.api.openstack import faults
 import nova.image.service
 
+
 class Controller(wsgi.Controller):
     def __init__(self):
         pass
@@ -34,5 +35,5 @@ class Controller(wsgi.Controller):
         both create and update through a POST """
         return faults.Fault(exc.HTTPNotFound())
 
-    def delete(self, req, server_id):
+    def delete(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotFound())

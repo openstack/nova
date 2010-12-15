@@ -32,6 +32,7 @@ from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from twisted.internet import reactor, threads, defer
 from twisted.web import http, server
 
+from nova import context
 from nova import flags
 from nova import objectstore
 from nova import test
@@ -56,7 +57,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 class ObjectStoreTestCase(test.TrialTestCase):
     """Test objectstore API directly."""
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Setup users and projects."""
         super(ObjectStoreTestCase, self).setUp()
         self.flags(buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
@@ -70,15 +71,9 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.auth_manager.create_user('admin_user', admin=True)
         self.auth_manager.create_project('proj1', 'user1', 'a proj', ['user1'])
         self.auth_manager.create_project('proj2', 'user2', 'a proj', ['user2'])
+        self.context = context.RequestContext('user1', 'proj1')
 
-        class Context(object):
-            """Dummy context for running tests."""
-            user = None
-            project = None
-
-        self.context = Context()
-
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         """Tear down users and projects."""
         self.auth_manager.delete_project('proj1')
         self.auth_manager.delete_project('proj2')
@@ -89,8 +84,6 @@ class ObjectStoreTestCase(test.TrialTestCase):
 
     def test_buckets(self):
         """Test the bucket API."""
-        self.context.user = self.auth_manager.get_user('user1')
-        self.context.project = self.auth_manager.get_project('proj1')
         objectstore.bucket.Bucket.create('new_bucket', self.context)
         bucket = objectstore.bucket.Bucket('new_bucket')
 
@@ -98,14 +91,12 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.assert_(bucket.is_authorized(self.context))
 
         # another user is not authorized
-        self.context.user = self.auth_manager.get_user('user2')
-        self.context.project = self.auth_manager.get_project('proj2')
-        self.assertFalse(bucket.is_authorized(self.context))
+        context2 = context.RequestContext('user2', 'proj2')
+        self.assertFalse(bucket.is_authorized(context2))
 
         # admin is authorized to use bucket
-        self.context.user = self.auth_manager.get_user('admin_user')
-        self.context.project = None
-        self.assertTrue(bucket.is_authorized(self.context))
+        admin_context = context.RequestContext('admin_user', None)
+        self.assertTrue(bucket.is_authorized(admin_context))
 
         # new buckets are empty
         self.assertTrue(bucket.list_keys()['Contents'] == [])
@@ -133,13 +124,20 @@ class ObjectStoreTestCase(test.TrialTestCase):
         self.assertRaises(NotFound, objectstore.bucket.Bucket, 'new_bucket')
 
     def test_images(self):
+        self.do_test_images('1mb.manifest.xml', True,
+                            'image_bucket1', 'i-testing1')
+
+    def test_images_no_kernel_or_ramdisk(self):
+        self.do_test_images('1mb.no_kernel_or_ramdisk.manifest.xml',
+                            False, 'image_bucket2', 'i-testing2')
+
+    def do_test_images(self, manifest_file, expect_kernel_and_ramdisk,
+                             image_bucket, image_name):
         "Test the image API."
-        self.context.user = self.auth_manager.get_user('user1')
-        self.context.project = self.auth_manager.get_project('proj1')
 
         # create a bucket for our bundle
-        objectstore.bucket.Bucket.create('image_bucket', self.context)
-        bucket = objectstore.bucket.Bucket('image_bucket')
+        objectstore.bucket.Bucket.create(image_bucket, self.context)
+        bucket = objectstore.bucket.Bucket(image_bucket)
 
         # upload an image manifest/parts
         bundle_path = os.path.join(os.path.dirname(__file__), 'bundle')
@@ -147,22 +145,31 @@ class ObjectStoreTestCase(test.TrialTestCase):
             bucket[os.path.basename(path)] = open(path, 'rb').read()
 
         # register an image
-        image.Image.register_aws_image('i-testing',
-                                       'image_bucket/1mb.manifest.xml',
+        image.Image.register_aws_image(image_name,
+                                       '%s/%s' % (image_bucket, manifest_file),
                                        self.context)
 
         # verify image
-        my_img = image.Image('i-testing')
+        my_img = image.Image(image_name)
         result_image_file = os.path.join(my_img.path, 'image')
         self.assertEqual(os.stat(result_image_file).st_size, 1048576)
 
         sha = hashlib.sha1(open(result_image_file).read()).hexdigest()
         self.assertEqual(sha, '3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3')
 
+        if expect_kernel_and_ramdisk:
+            # Verify the default kernel and ramdisk are set
+            self.assertEqual(my_img.metadata['kernelId'], 'aki-test')
+            self.assertEqual(my_img.metadata['ramdiskId'], 'ari-test')
+        else:
+            # Verify that the default kernel and ramdisk (the one from FLAGS)
+            # doesn't get embedded in the metadata
+            self.assertFalse('kernelId' in my_img.metadata)
+            self.assertFalse('ramdiskId' in my_img.metadata)
+
         # verify image permissions
-        self.context.user = self.auth_manager.get_user('user2')
-        self.context.project = self.auth_manager.get_project('proj2')
-        self.assertFalse(my_img.is_authorized(self.context))
+        context2 = context.RequestContext('user2', 'proj2')
+        self.assertFalse(my_img.is_authorized(context2))
 
         # change user-editable fields
         my_img.update_user_editable_fields({'display_name': 'my cool image'})
@@ -174,7 +181,7 @@ class ObjectStoreTestCase(test.TrialTestCase):
 class TestHTTPChannel(http.HTTPChannel):
     """Dummy site required for twisted.web"""
 
-    def checkPersistence(self, _, __): # pylint: disable-msg=C0103
+    def checkPersistence(self, _, __):  # pylint: disable-msg=C0103
         """Otherwise we end up with an unclean reactor."""
         return False
 
@@ -187,11 +194,11 @@ class TestSite(server.Site):
 class S3APITestCase(test.TrialTestCase):
     """Test objectstore through S3 API."""
 
-    def setUp(self): # pylint: disable-msg=C0103
+    def setUp(self):
         """Setup users, projects, and start a test server."""
         super(S3APITestCase, self).setUp()
 
-        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver',
+        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
         FLAGS.buckets_path = os.path.join(OSS_TEMPDIR, 'buckets')
 
         self.auth_manager = manager.AuthManager()
@@ -210,7 +217,6 @@ class S3APITestCase(test.TrialTestCase):
         # pylint: enable-msg=E1101
         self.tcp_port = self.listening_port.getHost().port
 
-
         if not boto.config.has_section('Boto'):
             boto.config.add_section('Boto')
         boto.config.set('Boto', 'num_retries', '0')
@@ -227,11 +233,11 @@ class S3APITestCase(test.TrialTestCase):
 
         self.conn.get_http_connection = get_http_connection
 
-    def _ensure_no_buckets(self, buckets): # pylint: disable-msg=C0111
+    def _ensure_no_buckets(self, buckets):  # pylint: disable-msg=C0111
         self.assertEquals(len(buckets), 0, "Bucket list was not empty")
         return True
 
-    def _ensure_one_bucket(self, buckets, name): # pylint: disable-msg=C0111
+    def _ensure_one_bucket(self, buckets, name):  # pylint: disable-msg=C0111
         self.assertEquals(len(buckets), 1,
                           "Bucket list didn't have exactly one element in it")
         self.assertEquals(buckets[0].name, name, "Wrong name")
@@ -302,7 +308,7 @@ class S3APITestCase(test.TrialTestCase):
         deferred.addCallback(self._ensure_no_buckets)
         return deferred
 
-    def tearDown(self): # pylint: disable-msg=C0103
+    def tearDown(self):
         """Tear down auth and test server."""
         self.auth_manager.delete_user('admin')
         self.auth_manager.delete_project('admin')

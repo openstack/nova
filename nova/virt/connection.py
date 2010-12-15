@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Abstraction of the underlying virtualization API"""
+"""Abstraction of the underlying virtualization API."""
 
 import logging
 import sys
@@ -25,7 +25,7 @@ import sys
 from nova import flags
 from nova.virt import fake
 from nova.virt import libvirt_conn
-from nova.virt import xenapi
+from nova.virt import xenapi_conn
 from nova.virt import hyperv
 
 
@@ -33,13 +33,26 @@ FLAGS = flags.FLAGS
 
 
 def get_connection(read_only=False):
-    """Returns an object representing the connection to a virtualization
-    platform.  This could be nova.virt.fake.FakeConnection in test mode,
-    a connection to KVM or QEMU via libvirt, or a connection to XenServer
-    or Xen Cloud Platform via XenAPI.
+    """
+    Returns an object representing the connection to a virtualization
+    platform.
+
+    This could be :mod:`nova.virt.fake.FakeConnection` in test mode,
+    a connection to KVM, QEMU, or UML via :mod:`libvirt_conn`, or a connection
+    to XenServer or Xen Cloud Platform via :mod:`xenapi`.
 
     Any object returned here must conform to the interface documented by
-    FakeConnection.
+    :mod:`FakeConnection`.
+
+    **Related flags**
+
+    :connection_type:  A string literal that falls through a if/elif structure
+                       to determine what virtualization mechanism to use.
+                       Values may be
+
+                            * fake
+                            * libvirt
+                            * xenapi
     """
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
@@ -49,7 +62,7 @@ def get_connection(read_only=False):
     elif t == 'libvirt':
         conn = libvirt_conn.get_connection(read_only)
     elif t == 'xenapi':
-        conn = xenapi.get_connection(read_only)
+        conn = xenapi_conn.get_connection(read_only)
     elif t == 'hyperv':
         conn = hyperv.get_connection(read_only)
     else:

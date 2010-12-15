@@ -15,54 +15,68 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import cPickle as pickle
-import httplib
-import json
-import logging
-import os.path
-import random
-import string
-import urlparse
-
-import webob.exc
-
-from nova import utils
-from nova import flags
-from nova import exception
-
-
-FLAGS = flags.FLAGS
-
-
-flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
-                    'IP address or URL where Glance\'s Teller service resides')
-flags.DEFINE_string('glance_teller_port', '9191',
-                    'Port for Glance\'s Teller service')
-flags.DEFINE_string('glance_parallax_address', 'http://127.0.0.1',
-                    'IP address or URL where Glance\'s Parallax service resides')
-flags.DEFINE_string('glance_parallax_port', '9292',
-                    'Port for Glance\'s Parallax service')
-
 
 class BaseImageService(object):
 
     """Base class for providing image search and retrieval services"""
 
-    def index(self):
+    def index(self, context):
         """
-        Return a dict from opaque image id to image data.
+        Returns a sequence of mappings of id and name information about
+        images.
+
+        :rtype: array
+        :retval: a sequence of mappings with the following signature
+                    {'id': opaque id of image, 'name': name of image}
+
         """
         raise NotImplementedError
 
-    def show(self, id):
+    def detail(self, context):
+        """
+        Returns a sequence of mappings of detailed information about images.
+
+        :rtype: array
+        :retval: a sequence of mappings with the following signature
+                    {'id': opaque id of image,
+                     'name': name of image,
+                     'created_at': creation timestamp,
+                     'updated_at': modification timestamp,
+                     'deleted_at': deletion timestamp or None,
+                     'deleted': boolean indicating if image has been deleted,
+                     'status': string description of image status,
+                     'is_public': boolean indicating if image is public
+                     }
+
+        If the service does not implement a method that provides a detailed
+        set of information about images, then the method should raise
+        NotImplementedError, in which case Nova will emulate this method
+        with repeated calls to show() for each image received from the
+        index() method.
+        """
+        raise NotImplementedError
+
+    def show(self, context, id):
         """
         Returns a dict containing image data for the given opaque image id.
+
+        :retval a mapping with the following signature:
+
+            {'id': opaque id of image,
+             'name': name of image,
+             'created_at': creation timestamp,
+             'updated_at': modification timestamp,
+             'deleted_at': deletion timestamp or None,
+             'deleted': boolean indicating if image has been deleted,
+             'status': string description of image status,
+             'is_public': boolean indicating if image is public
+             }, ...
 
         :raises NotFound if the image does not exist
         """
         raise NotImplementedError
 
-    def create(self, data):
+    def create(self, context, data):
         """
         Store the image data and return the new image id.
 
@@ -71,7 +85,7 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def update(self, image_id, data):
+    def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.
 
         :raises NotFound if the image does not exist.
@@ -79,207 +93,11 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def delete(self, image_id):
+    def delete(self, context, image_id):
         """
-        Delete the given image. 
-        
+        Delete the given image.
+
         :raises NotFound if the image does not exist.
-        
+
         """
         raise NotImplementedError
-
-
-class TellerClient(object):
-
-    def __init__(self):
-        self.address = FLAGS.glance_teller_address
-        self.port = FLAGS.glance_teller_port
-        url = urlparse.urlparse(self.address)
-        self.netloc = url.netloc
-        self.connection_type = {'http': httplib.HTTPConnection,
-                                'https': httplib.HTTPSConnection}[url.scheme]
-
-
-class ParallaxClient(object):
-
-    def __init__(self):
-        self.address = FLAGS.glance_parallax_address
-        self.port = FLAGS.glance_parallax_port
-        url = urlparse.urlparse(self.address)
-        self.netloc = url.netloc
-        self.connection_type = {'http': httplib.HTTPConnection,
-                                'https': httplib.HTTPSConnection}[url.scheme]
-
-    def get_images(self):
-        """
-        Returns a list of image data mappings from Parallax
-        """
-        try:
-            c = self.connection_type(self.netloc, self.port)
-            c.request("GET", "images")
-            res = c.getresponse()
-            if res.status == 200:
-                # Parallax returns a JSONified dict(images=image_list)
-                data = json.loads(res.read())['images']
-                return data
-            else:
-                logging.warn("Parallax returned HTTP error %d from "
-                             "request for /images", res.status_int)
-                return []
-        finally:
-            c.close()
-
-    def get_image_metadata(self, image_id):
-        """
-        Returns a mapping of image metadata from Parallax
-        """
-        try:
-            c = self.connection_type(self.netloc, self.port)
-            c.request("GET", "images/%s" % image_id)
-            res = c.getresponse()
-            if res.status == 200:
-                # Parallax returns a JSONified dict(image=image_info)
-                data = json.loads(res.read())['image']
-                return data
-            else:
-                # TODO(jaypipes): log the error?
-                return None
-        finally:
-            c.close()
-
-    def add_image_metadata(self, image_metadata):
-        """
-        Tells parallax about an image's metadata
-        """
-        pass
-
-    def update_image_metadata(self, image_id, image_metadata):
-        """
-        Updates Parallax's information about an image
-        """
-        pass
-
-    def delete_image_metadata(self, image_id):
-        """
-        Deletes Parallax's information about an image
-        """
-        pass
-
-
-class GlanceImageService(BaseImageService):
-    
-    """Provides storage and retrieval of disk image objects within Glance."""
-
-    def __init__(self):
-        self.teller = TellerClient()
-        self.parallax = ParallaxClient()
-
-    def index(self):
-        """
-        Calls out to Parallax for a list of images available
-        """
-        images = self.parallax.get_images()
-        return images
-
-    def show(self, id):
-        """
-        Returns a dict containing image data for the given opaque image id.
-        """
-        image = self.parallax.get_image_metadata(id)
-        if image:
-            return image
-        raise exception.NotFound
-
-    def create(self, data):
-        """
-        Store the image data and return the new image id.
-
-        :raises AlreadyExists if the image already exist.
-
-        """
-        return self.parallax.add_image_metadata(data)
-
-    def update(self, image_id, data):
-        """Replace the contents of the given image with the new data.
-
-        :raises NotFound if the image does not exist.
-
-        """
-        self.parallax.update_image_metadata(image_id, data)
-
-    def delete(self, image_id):
-        """
-        Delete the given image. 
-        
-        :raises NotFound if the image does not exist.
-        
-        """
-        self.parallax.delete_image_metadata(image_id)
-
-    def delete_all(self):
-        """
-        Clears out all images
-        """
-        pass
-
-
-class LocalImageService(BaseImageService):
-
-    """Image service storing images to local disk.
-    
-    It assumes that image_ids are integers."""
-
-    def __init__(self):
-        self._path = "/tmp/nova/images"
-        try:
-            os.makedirs(self._path)
-        except OSError: # exists
-            pass
-
-    def _path_to(self, image_id):
-        return os.path.join(self._path, str(image_id))
-
-    def _ids(self):
-        """The list of all image ids."""
-        return [int(i) for i in os.listdir(self._path)]
-
-    def index(self):
-        return [ self.show(id) for id in self._ids() ]
-
-    def show(self, id):
-        try:
-            return pickle.load(open(self._path_to(id))) 
-        except IOError:
-            raise exception.NotFound
-
-    def create(self, data):
-        """
-        Store the image data and return the new image id.
-        """
-        id = random.randint(0, 2**32-1)
-        data['id'] = id
-        self.update(id, data)
-        return id
-
-    def update(self, image_id, data):
-        """Replace the contents of the given image with the new data."""
-        try:
-            pickle.dump(data, open(self._path_to(image_id), 'w'))
-        except IOError:
-            raise exception.NotFound
-
-    def delete(self, image_id):
-        """
-        Delete the given image.  Raises OSError if the image does not exist.
-        """
-        try:
-            os.unlink(self._path_to(image_id))
-        except IOError:
-            raise exception.NotFound
-
-    def delete_all(self):
-        """
-        Clears out all images in local directory
-        """
-        for id in self._ids():
-            os.unlink(self._path_to(id))

@@ -15,18 +15,32 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Tests of the new image services, both as a service layer,
+and as a WSGI layer
+"""
+
+import json
+import datetime
 import logging
 import unittest
 
 import stubout
+import webob
 
+from nova import context
 from nova import exception
+from nova import flags
 from nova import utils
+import nova.api.openstack
 from nova.api.openstack import images
 from nova.tests.api.openstack import fakes
 
 
-class BaseImageServiceTests():
+FLAGS = flags.FLAGS
+
+
+class BaseImageServiceTests(object):
 
     """Tasks to test for all image services"""
 
@@ -39,12 +53,13 @@ class BaseImageServiceTests():
                    'serverId': None,
                    'progress': None}
 
-        num_images = len(self.service.index())
+        num_images = len(self.service.index(self.context))
 
-        id = self.service.create(fixture)
+        id = self.service.create(self.context, fixture)
 
         self.assertNotEquals(None, id)
-        self.assertEquals(num_images + 1, len(self.service.index()))
+        self.assertEquals(num_images + 1,
+                          len(self.service.index(self.context)))
 
     def test_create_and_show_non_existing_image(self):
 
@@ -55,14 +70,15 @@ class BaseImageServiceTests():
                    'serverId': None,
                    'progress': None}
 
-        num_images = len(self.service.index())
+        num_images = len(self.service.index(self.context))
 
-        id = self.service.create(fixture)
+        id = self.service.create(self.context, fixture)
 
         self.assertNotEquals(None, id)
 
         self.assertRaises(exception.NotFound,
                           self.service.show,
+                          self.context,
                           'bad image id')
 
     def test_update(self):
@@ -74,12 +90,12 @@ class BaseImageServiceTests():
                    'serverId': None,
                    'progress': None}
 
-        id = self.service.create(fixture)
+        id = self.service.create(self.context, fixture)
 
         fixture['status'] = 'in progress'
-        
-        self.service.update(id, fixture)
-        new_image_data = self.service.show(id)
+
+        self.service.update(self.context, id, fixture)
+        new_image_data = self.service.show(self.context, id)
         self.assertEquals('in progress', new_image_data['status'])
 
     def test_delete(self):
@@ -98,17 +114,20 @@ class BaseImageServiceTests():
                      'serverId': None,
                      'progress': None}]
 
+        num_images = len(self.service.index(self.context))
+        self.assertEquals(0, num_images, str(self.service.index(self.context)))
+
         ids = []
         for fixture in fixtures:
-            new_id = self.service.create(fixture)
+            new_id = self.service.create(self.context, fixture)
             ids.append(new_id)
 
-        num_images = len(self.service.index())
-        self.assertEquals(2, num_images)
-        
-        self.service.delete(ids[0])
+        num_images = len(self.service.index(self.context))
+        self.assertEquals(2, num_images, str(self.service.index(self.context)))
 
-        num_images = len(self.service.index())
+        self.service.delete(self.context, ids[0])
+
+        num_images = len(self.service.index(self.context))
         self.assertEquals(1, num_images)
 
 
@@ -119,7 +138,9 @@ class LocalImageServiceTest(unittest.TestCase,
 
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.service = utils.import_object('nova.image.service.LocalImageService')
+        service_class = 'nova.image.local.LocalImageService'
+        self.service = utils.import_object(service_class)
+        self.context = context.RequestContext(None, None)
 
     def tearDown(self):
         self.service.delete_all()
@@ -134,8 +155,74 @@ class GlanceImageServiceTest(unittest.TestCase,
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
-        self.service = utils.import_object('nova.image.service.GlanceImageService')
+        service_class = 'nova.image.glance.GlanceImageService'
+        self.service = utils.import_object(service_class)
+        self.context = context.RequestContext(None, None)
+        self.service.delete_all()
 
     def tearDown(self):
-        self.service.delete_all()
         self.stubs.UnsetAll()
+
+
+class ImageControllerWithGlanceServiceTest(unittest.TestCase):
+
+    """Test of the OpenStack API /images application controller"""
+
+    # Registered images at start of each test.
+
+    IMAGE_FIXTURES = [
+        {'id': '23g2ogk23k4hhkk4k42l',
+         'name': 'public image #1',
+         'created_at': str(datetime.datetime.utcnow()),
+         'updated_at': str(datetime.datetime.utcnow()),
+         'deleted_at': None,
+         'deleted': False,
+         'is_public': True,
+         'status': 'available',
+         'image_type': 'kernel'},
+        {'id': 'slkduhfas73kkaskgdas',
+         'name': 'public image #2',
+         'created_at': str(datetime.datetime.utcnow()),
+         'updated_at': str(datetime.datetime.utcnow()),
+         'deleted_at': None,
+         'deleted': False,
+         'is_public': True,
+         'status': 'available',
+         'image_type': 'ramdisk'}]
+
+    def setUp(self):
+        self.orig_image_service = FLAGS.image_service
+        FLAGS.image_service = 'nova.image.glance.GlanceImageService'
+        self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_glance(self.stubs, initial_fixtures=self.IMAGE_FIXTURES)
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        FLAGS.image_service = self.orig_image_service
+
+    def test_get_image_index(self):
+        req = webob.Request.blank('/v1.0/images')
+        res = req.get_response(nova.api.API('os'))
+        res_dict = json.loads(res.body)
+
+        fixture_index = [dict(id=f['id'], name=f['name']) for f
+                         in self.IMAGE_FIXTURES]
+
+        for image in res_dict['images']:
+            self.assertEquals(1, fixture_index.count(image),
+                              "image %s not in fixture index!" % str(image))
+
+    def test_get_image_details(self):
+        req = webob.Request.blank('/v1.0/images/detail')
+        res = req.get_response(nova.api.API('os'))
+        res_dict = json.loads(res.body)
+
+        for image in res_dict['images']:
+            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
+                              "image %s not in fixtures!" % str(image))

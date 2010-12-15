@@ -23,11 +23,12 @@ Nova authentication management
 import logging
 import os
 import shutil
-import string # pylint: disable-msg=W0402
+import string  # pylint: disable-msg=W0402
 import tempfile
 import uuid
 import zipfile
 
+from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
@@ -83,12 +84,11 @@ class AuthBase(object):
 
     @classmethod
     def safe_id(cls, obj):
-        """Safe get object id
+        """Safely get object id.
 
         This method will return the id of the object if the object
         is of this class, otherwise it will return the original object.
         This allows methods to accept objects or ids as paramaters.
-
         """
         if isinstance(obj, cls):
             return obj.id
@@ -201,7 +201,7 @@ class AuthManager(object):
 
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
-        if not cls._instance:
+        if not cls._instance or ('new' in kwargs and kwargs['new']):
             cls._instance = super(AuthManager, cls).__new__(cls)
         return cls._instance
 
@@ -454,7 +454,7 @@ class AuthManager(object):
             return [Project(**project_dict) for project_dict in project_list]
 
     def create_project(self, name, manager_user, description=None,
-                       member_users=None, context=None):
+                       member_users=None):
         """Create a project
 
         @type name: str
@@ -484,12 +484,6 @@ class AuthManager(object):
                                               member_users)
             if project_dict:
                 project = Project(**project_dict)
-                try:
-                    self.network_manager.allocate_network(context,
-                                                          project.id)
-                except:
-                    drv.delete_project(project.id)
-                    raise
                 return project
 
     def modify_project(self, project, manager_user=None, description=None):
@@ -537,7 +531,7 @@ class AuthManager(object):
                                             Project.safe_id(project))
 
     @staticmethod
-    def get_project_vpn_data(project, context=None):
+    def get_project_vpn_data(project):
         """Gets vpn ip and port for project
 
         @type project: Project or project_id
@@ -548,7 +542,7 @@ class AuthManager(object):
         not been allocated for user.
         """
 
-        network_ref = db.project_get_network(context,
+        network_ref = db.project_get_network(context.get_admin_context(),
                                              Project.safe_id(project))
 
         if not network_ref['vpn_public_port']:
@@ -556,15 +550,8 @@ class AuthManager(object):
         return (network_ref['vpn_public_address'],
                 network_ref['vpn_public_port'])
 
-    def delete_project(self, project, context=None):
+    def delete_project(self, project):
         """Deletes a project"""
-        try:
-            network_ref = db.project_get_network(context,
-                                                 Project.safe_id(project))
-            db.network_destroy(context, network_ref['id'])
-        except:
-            logging.exception('Could not destroy network for %s',
-                              project)
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 
@@ -626,7 +613,8 @@ class AuthManager(object):
 
         Additionally deletes all users key_pairs"""
         uid = User.safe_id(user)
-        db.key_pair_destroy_all_by_user(None, uid)
+        db.key_pair_destroy_all_by_user(context.get_admin_context(),
+                                        uid)
         with self.driver() as drv:
             drv.delete_user(uid)
 
@@ -635,6 +623,10 @@ class AuthManager(object):
         uid = User.safe_id(user)
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
+
+    @staticmethod
+    def get_key_pairs(context):
+        return db.key_pair_get_all_by_user(context.elevated(), context.user_id)
 
     def get_credentials(self, user, project=None):
         """Get credential zip for user in project"""
@@ -653,7 +645,10 @@ class AuthManager(object):
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        try:
+            (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
+        except exception.NotFound:
+            vpn_ip = None
         if vpn_ip:
             configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())

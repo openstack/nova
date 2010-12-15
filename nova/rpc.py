@@ -24,20 +24,22 @@ No fan-out support yet.
 import json
 import logging
 import sys
+import time
 import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+from eventlet import greenthread
 from twisted.internet import defer
 from twisted.internet import task
 
 from nova import exception
 from nova import fakerabbit
 from nova import flags
+from nova import context
 
 
 FLAGS = flags.FLAGS
-
 
 LOG = logging.getLogger('amqplib')
 LOG.setLevel(logging.DEBUG)
@@ -81,8 +83,24 @@ class Consumer(messaging.Consumer):
     Contains methods for connecting the fetch method to async loops
     """
     def __init__(self, *args, **kwargs):
-        self.failed_connection = False
-        super(Consumer, self).__init__(*args, **kwargs)
+        for i in xrange(FLAGS.rabbit_max_retries):
+            if i > 0:
+                time.sleep(FLAGS.rabbit_retry_interval)
+            try:
+                super(Consumer, self).__init__(*args, **kwargs)
+                self.failed_connection = False
+                break
+            except:  # Catching all because carrot sucks
+                logging.exception("AMQP server on %s:%d is unreachable." \
+                    " Trying again in %d seconds." % (
+                    FLAGS.rabbit_host,
+                    FLAGS.rabbit_port,
+                    FLAGS.rabbit_retry_interval))
+                self.failed_connection = True
+        if self.failed_connection:
+            logging.exception("Unable to connect to AMQP server" \
+                " after %d tries. Shutting down." % FLAGS.rabbit_max_retries)
+            sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
         """Wraps the parent fetch with some logic for failed connections"""
@@ -90,11 +108,12 @@ class Consumer(messaging.Consumer):
         #             refactored into some sort of connection manager object
         try:
             if self.failed_connection:
-                # NOTE(vish): conn is defined in the parent class, we can
+                # NOTE(vish): connection is defined in the parent class, we can
                 #             recreate it as long as we create the backend too
                 # pylint: disable-msg=W0201
-                self.conn = Connection.recreate()
-                self.backend = self.conn.create_backend()
+                self.connection = Connection.recreate()
+                self.backend = self.connection.create_backend()
+                self.declare()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
             if self.failed_connection:
                 logging.error("Reconnected to queue")
@@ -106,6 +125,14 @@ class Consumer(messaging.Consumer):
             if not self.failed_connection:
                 logging.exception("Failed to fetch message from queue")
                 self.failed_connection = True
+
+    def attach_to_eventlet(self):
+        """Only needed for unit tests!"""
+        def fetch_repeatedly():
+            while True:
+                self.fetch(enable_callbacks=True)
+                greenthread.sleep(0.1)
+        greenthread.spawn(fetch_repeatedly)
 
     def attach_to_twisted(self):
         """Attach a callback to twisted that fires 10 times a second"""
@@ -152,6 +179,8 @@ class AdapterConsumer(TopicConsumer):
         LOG.debug('received %s' % (message_data))
         msg_id = message_data.pop('_msg_id', None)
 
+        ctxt = _unpack_context(message_data)
+
         method = message_data.get('method')
         args = message_data.get('args', {})
         message.ack()
@@ -168,7 +197,7 @@ class AdapterConsumer(TopicConsumer):
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
         # pylint: disable-msg=W0142
-        d = defer.maybeDeferred(node_func, **node_args)
+        d = defer.maybeDeferred(node_func, context=ctxt, **node_args)
         if msg_id:
             d.addCallback(lambda rval: msg_reply(msg_id, rval, None))
             d.addErrback(lambda e: msg_reply(msg_id, None, e))
@@ -195,6 +224,7 @@ class DirectConsumer(Consumer):
         self.routing_key = msg_id
         self.exchange = msg_id
         self.auto_delete = True
+        self.exclusive = True
         super(DirectConsumer, self).__init__(connection=connection)
 
 
@@ -247,12 +277,40 @@ class RemoteError(exception.Error):
                                                          traceback))
 
 
-def call(topic, msg):
+def _unpack_context(msg):
+    """Unpack context from msg."""
+    context_dict = {}
+    for key in list(msg.keys()):
+        # NOTE(vish): Some versions of python don't like unicode keys
+        #             in kwargs.
+        key = str(key)
+        if key.startswith('_context_'):
+            value = msg.pop(key)
+            context_dict[key[9:]] = value
+    LOG.debug('unpacked context: %s', context_dict)
+    return context.RequestContext.from_dict(context_dict)
+
+
+def _pack_context(msg, context):
+    """Pack context into msg.
+
+    Values for message keys need to be less than 255 chars, so we pull
+    context out into a bunch of separate keys. If we want to support
+    more arguments in rabbit messages, we may want to do the same
+    for args at some point.
+    """
+    context = dict([('_context_%s' % key, value)
+                   for (key, value) in context.to_dict().iteritems()])
+    msg.update(context)
+
+
+def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
+    _pack_context(msg, context)
 
     class WaitMessage(object):
 
@@ -282,12 +340,13 @@ def call(topic, msg):
     return wait_msg.result
 
 
-def call_twisted(topic, msg):
+def call_twisted(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
     LOG.debug("Making asynchronous call...")
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug("MSG_ID is %s" % (msg_id))
+    _pack_context(msg, context)
 
     conn = Connection.instance()
     d = defer.Deferred()
@@ -313,9 +372,10 @@ def call_twisted(topic, msg):
     return d
 
 
-def cast(topic, msg):
+def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
     LOG.debug("Making asynchronous cast...")
+    _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)

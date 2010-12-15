@@ -33,6 +33,7 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import rpc
@@ -41,7 +42,6 @@ from nova.network import linux_net
 
 FLAGS = flags.FLAGS
 flags.DECLARE('auth_driver', 'nova.auth.manager')
-flags.DECLARE('redis_db', 'nova.datastore')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
@@ -52,18 +52,21 @@ def add_lease(mac, ip_address, _hostname, _interface):
     if FLAGS.fake_rabbit:
         logging.debug("leasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.lease_fixed_ip(None, mac, ip_address)
+        network_manager.lease_fixed_ip(context.get_admin_context(),
+                                       mac,
+                                       ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
+        rpc.cast(context.get_admin_context(),
+                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "lease_fixed_ip",
-                  "args": {"context": None,
-                           "mac": mac,
+                  "args": {"mac": mac,
                            "address": ip_address}})
 
 
-def old_lease(_mac, _ip_address, _hostname, _interface):
-    """Do nothing, just an old lease update."""
+def old_lease(mac, ip_address, hostname, interface):
+    """Update just as add lease."""
     logging.debug("Adopted old lease or got a change of mac/hostname")
+    add_lease(mac, ip_address, hostname, interface)
 
 
 def del_lease(mac, ip_address, _hostname, _interface):
@@ -71,19 +74,22 @@ def del_lease(mac, ip_address, _hostname, _interface):
     if FLAGS.fake_rabbit:
         logging.debug("releasing ip")
         network_manager = utils.import_object(FLAGS.network_manager)
-        network_manager.release_fixed_ip(None, mac, ip_address)
+        network_manager.release_fixed_ip(context.get_admin_context(),
+                                         mac,
+                                         ip_address)
     else:
-        rpc.cast("%s.%s" % (FLAGS.network_topic, FLAGS.host),
+        rpc.cast(context.get_admin_context(),
+                 "%s.%s" % (FLAGS.network_topic, FLAGS.host),
                  {"method": "release_fixed_ip",
-                  "args": {"context": None,
-                           "mac": mac,
+                  "args": {"mac": mac,
                            "address": ip_address}})
 
 
 def init_leases(interface):
     """Get the list of hosts for an interface."""
-    network_ref = db.network_get_by_bridge(None, interface)
-    return linux_net.get_dhcp_hosts(None, network_ref['id'])
+    ctxt = context.get_admin_context()
+    network_ref = db.network_get_by_bridge(ctxt, interface)
+    return linux_net.get_dhcp_hosts(ctxt, network_ref['id'])
 
 
 def main():
@@ -94,11 +100,10 @@ def main():
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
-        FLAGS.redis_db = 8
         FLAGS.network_size = 16
         FLAGS.connection_type = 'fake'
         FLAGS.fake_network = True
-        FLAGS.auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
+        FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
         FLAGS.num_networks = 5
         path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             '..',

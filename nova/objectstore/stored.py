@@ -50,8 +50,8 @@ class Object(object):
         return os.path.getmtime(self.path)
 
     def read(self):
-         """ read all contents of key into memory and return """
-         return self.file.read()
+        """ read all contents of key into memory and return """
+        return self.file.read()
 
     @property
     def file(self):

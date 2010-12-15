@@ -24,18 +24,18 @@ import webob
 import webob.dec
 
 from nova import auth
-from nova import utils
-from nova import flags
+from nova import context
 from nova import exception as exc
+from nova import flags
+from nova import utils
 import nova.api.openstack.auth
 from nova.image import service
+from nova.image import glance
+from nova.tests import fake_flags
 from nova.wsgi import Router
 
 
-FLAGS = flags.FLAGS
-
-
-class Context(object): 
+class Context(object):
     pass
 
 
@@ -55,12 +55,11 @@ def fake_auth_init(self):
     self.db = FakeAuthDatabase()
     self.context = Context()
     self.auth = FakeAuthManager()
-    self.host = 'foo'
 
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
-    req.environ['nova.context'] = dict(user=dict(id=1))
+    req.environ['nova.context'] = context.RequestContext(1, 1)
     if req.body:
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
@@ -69,24 +68,24 @@ def fake_wsgi(self, req):
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
-        key_pair)
+    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
 
 
 def stub_out_image_service(stubs):
-    def fake_image_show(meh, id):
+    def fake_image_show(meh, context, id):
         return dict(kernelId=1, ramdiskId=1)
 
-    stubs.Set(nova.image.service.LocalImageService, 'show', fake_image_show)
+    stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)
+
 
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
-    
-    stubs.Set(nova.api.openstack.AuthMiddleware, 
-        '__init__', fake_auth_init) 
-    stubs.Set(nova.api.openstack.AuthMiddleware, 
-        '__call__', fake_wsgi) 
+
+    stubs.Set(nova.api.openstack.AuthMiddleware,
+        '__init__', fake_auth_init)
+    stubs.Set(nova.api.openstack.AuthMiddleware,
+        '__call__', fake_wsgi)
 
 
 def stub_out_rate_limiting(stubs):
@@ -103,63 +102,80 @@ def stub_out_rate_limiting(stubs):
 
 def stub_out_networking(stubs):
     def get_my_ip():
-        return '127.0.0.1' 
+        return '127.0.0.1'
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
-    FLAGS.FAKE_subdomain = 'rs'
 
 
-def stub_out_glance(stubs):
+def stub_out_glance(stubs, initial_fixtures=[]):
 
     class FakeParallaxClient:
 
-        def __init__(self):
-            self.fixtures = {}
+        def __init__(self, initial_fixtures):
+            self.fixtures = initial_fixtures
 
-        def fake_get_images(self):
+        def fake_get_image_index(self):
+            return [dict(id=f['id'], name=f['name'])
+                    for f in self.fixtures]
+
+        def fake_get_image_details(self):
             return self.fixtures
 
         def fake_get_image_metadata(self, image_id):
-            for k, f in self.fixtures.iteritems():
-                if k == image_id:
+            for f in self.fixtures:
+                if f['id'] == image_id:
                     return f
             return None
 
         def fake_add_image_metadata(self, image_data):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_data['id'] = id
-            self.fixtures[id] = image_data
+            self.fixtures.append(image_data)
             return id
 
         def fake_update_image_metadata(self, image_id, image_data):
-            
-            if image_id not in self.fixtures.keys():
+            f = self.fake_get_image_metadata(image_id)
+            if not f:
                 raise exc.NotFound
 
-            self.fixtures[image_id].update(image_data)
+            f.update(image_data)
 
         def fake_delete_image_metadata(self, image_id):
-            
-            if image_id not in self.fixtures.keys():
+            f = self.fake_get_image_metadata(image_id)
+            if not f:
                 raise exc.NotFound
 
-            del self.fixtures[image_id]
+            self.fixtures.remove(f)
 
         def fake_delete_all(self):
-            self.fixtures = {}
+            self.fixtures = []
 
-    fake_parallax_client = FakeParallaxClient()
-    stubs.Set(nova.image.service.ParallaxClient, 'get_images',
-              fake_parallax_client.fake_get_images)
-    stubs.Set(nova.image.service.ParallaxClient, 'get_image_metadata',
+    fake_parallax_client = FakeParallaxClient(initial_fixtures)
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_index',
+              fake_parallax_client.fake_get_image_index)
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_details',
+              fake_parallax_client.fake_get_image_details)
+    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_metadata',
               fake_parallax_client.fake_get_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'add_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'add_image_metadata',
               fake_parallax_client.fake_add_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'update_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'update_image_metadata',
               fake_parallax_client.fake_update_image_metadata)
-    stubs.Set(nova.image.service.ParallaxClient, 'delete_image_metadata',
+    stubs.Set(nova.image.glance.ParallaxClient, 'delete_image_metadata',
               fake_parallax_client.fake_delete_image_metadata)
-    stubs.Set(nova.image.service.GlanceImageService, 'delete_all',
+    stubs.Set(nova.image.glance.GlanceImageService, 'delete_all',
               fake_parallax_client.fake_delete_all)
+
+
+class FakeToken(object):
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
+class FakeRequestContext(object):
+    def __init__(self, user, project):
+        self.user_id = 1
+        self.project_id = 1
 
 
 class FakeAuthDatabase(object):
@@ -171,24 +187,25 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_create_token(context, token):
-        token['created_at'] = datetime.datetime.now()
-        FakeAuthDatabase.data[token['token_hash']] = token
+        fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
+        FakeAuthDatabase.data[fake_token.token_hash] = fake_token
+        return fake_token
 
     @staticmethod
     def auth_destroy_token(context, token):
-        if FakeAuthDatabase.data.has_key(token['token_hash']):
+        if token.token_hash in FakeAuthDatabase.data:
             del FakeAuthDatabase.data['token_hash']
 
 
 class FakeAuthManager(object):
     auth_data = {}
 
-    def add_user(self, key, user):        
+    def add_user(self, key, user):
         FakeAuthManager.auth_data[key] = user
 
     def get_user(self, uid):
         for k, v in FakeAuthManager.auth_data.iteritems():
-            if v['uid'] == uid:
+            if v.id == uid:
                 return v
         return None
 

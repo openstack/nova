@@ -6,6 +6,7 @@ import webob
 
 import nova.api.openstack.ratelimiting as ratelimiting
 
+
 class LimiterTest(unittest.TestCase):
 
     def setUp(self):
@@ -66,13 +67,16 @@ class LimiterTest(unittest.TestCase):
 
 class FakeLimiter(object):
     """Fake Limiter class that you can tell how to behave."""
+
     def __init__(self, test):
         self._action = self._username = self._delay = None
         self.test = test
+
     def mock(self, action, username, delay):
         self._action = action
         self._username = username
         self._delay = delay
+
     def perform(self, action, username):
         self.test.assertEqual(action, self._action)
         self.test.assertEqual(username, self._username)
@@ -88,7 +92,7 @@ class WSGIAppTest(unittest.TestCase):
     def test_invalid_methods(self):
         requests = []
         for method in ['GET', 'PUT', 'DELETE']:
-            req = webob.Request.blank('/limits/michael/breakdance', 
+            req = webob.Request.blank('/limits/michael/breakdance',
                                       dict(REQUEST_METHOD=method))
             requests.append(req)
         for req in requests:
@@ -180,7 +184,7 @@ def wire_HTTPConnection_to_WSGI(host, app):
 
     the connection object will be a fake.  Its requests will be sent directly
     to the given WSGI app rather than through a socket.
-    
+
     Code connecting to hosts other than host will not be affected.
 
     This method may be called multiple times to map different hosts to
@@ -189,13 +193,16 @@ def wire_HTTPConnection_to_WSGI(host, app):
     class HTTPConnectionDecorator(object):
         """Wraps the real HTTPConnection class so that when you instantiate
         the class you might instead get a fake instance."""
+
         def __init__(self, wrapped):
             self.wrapped = wrapped
+
         def __call__(self, connection_host, *args, **kwargs):
             if connection_host == host:
                 return FakeHttplibConnection(app, host)
             else:
                 return self.wrapped(connection_host, *args, **kwargs)
+
     httplib.HTTPConnection = HTTPConnectionDecorator(httplib.HTTPConnection)
 
 

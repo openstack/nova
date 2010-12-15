@@ -22,6 +22,7 @@ import logging
 
 from twisted.internet import defer
 
+from nova import context
 from nova import flags
 from nova import rpc
 from nova import test
@@ -32,7 +33,7 @@ FLAGS = flags.FLAGS
 
 class RpcTestCase(test.TrialTestCase):
     """Test cases for rpc"""
-    def setUp(self):  # pylint: disable-msg=C0103
+    def setUp(self):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance()
         self.receiver = TestReceiver()
@@ -40,13 +41,23 @@ class RpcTestCase(test.TrialTestCase):
                                             topic='test',
                                             proxy=self.receiver)
         self.consumer.attach_to_twisted()
+        self.context = context.get_admin_context()
 
     def test_call_succeed(self):
         """Get a value through rpc call"""
         value = 42
-        result = yield rpc.call_twisted('test', {"method": "echo",
+        result = yield rpc.call_twisted(self.context,
+                                        'test', {"method": "echo",
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
+
+    def test_context_passed(self):
+        """Makes sure a context is passed through rpc call"""
+        value = 42
+        result = yield rpc.call_twisted(self.context,
+                                        'test', {"method": "context",
+                                                 "args": {"value": value}})
+        self.assertEqual(self.context.to_dict(), result)
 
     def test_call_exception(self):
         """Test that exception gets passed back properly
@@ -56,11 +67,13 @@ class RpcTestCase(test.TrialTestCase):
         to an int in the test.
         """
         value = 42
-        self.assertFailure(rpc.call_twisted('test', {"method": "fail",
-                                                     "args": {"value": value}}),
+        self.assertFailure(rpc.call_twisted(self.context, 'test',
+                                            {"method": "fail",
+                                             "args": {"value": value}}),
                            rpc.RemoteError)
         try:
-            yield rpc.call_twisted('test', {"method": "fail",
+            yield rpc.call_twisted(self.context,
+                                   'test', {"method": "fail",
                                             "args": {"value": value}})
             self.fail("should have thrown rpc.RemoteError")
         except rpc.RemoteError as exc:
@@ -73,12 +86,18 @@ class TestReceiver(object):
     Uses static methods because we aren't actually storing any state"""
 
     @staticmethod
-    def echo(value):
+    def echo(context, value):
         """Simply returns whatever value is sent in"""
         logging.debug("Received %s", value)
         return defer.succeed(value)
 
     @staticmethod
-    def fail(value):
+    def context(context, value):
+        """Returns dictionary version of context"""
+        logging.debug("Received %s", context)
+        return defer.succeed(context.to_dict())
+
+    @staticmethod
+    def fail(context, value):
         """Raises an exception with the value sent in"""
         raise Exception(value)

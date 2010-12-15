@@ -15,29 +15,57 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 """
-Base class for managers of different parts of the system
+Managers are responsible for a certain aspect of the sytem.  It is a logical
+grouping of code relating to a portion of the system.  In general other
+components should be using the manager to make changes to the components that
+it is responsible for.
+
+For example, other components that need to deal with volumes in some way,
+should do so by calling methods on the VolumeManager instead of directly
+changing fields in the database.  This allows us to keep all of the code
+relating to volumes in the same place.
+
+We have adopted a basic strategy of Smart managers and dumb data, which means
+rather than attaching methods to data objects, components should call manager
+methods that act on the data.
+
+Methods on managers that can be executed locally should be called directly. If
+a particular method must execute on a remote host, this should be done via rpc
+to the service that wraps the manager
+
+Managers should be responsible for most of the db access, and
+non-implementation specific data.  Anything implementation specific that can't
+be generalized should be done by the Driver.
+
+In general, we prefer to have one manager with multiple drivers for different
+implementations, but sometimes it makes sense to have multiple managers.  You
+can think of it this way: Abstract different overall strategies at the manager
+level(FlatNetwork vs VlanNetwork), and different implementations at the driver
+level(LinuxNetDriver vs CiscoNetDriver).
+
+Managers will often provide methods for initial setup of a host or periodic
+tasksto a wrapping service.
+
+This module provides Manager, a base class for managers.
 """
 
 from nova import utils
 from nova import flags
+from nova.db import base
 
 from twisted.internet import defer
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('db_driver', 'nova.db.api',
-                    'driver to use for volume creation')
 
 
-class Manager(object):
-    """DB driver is injected in the init method"""
+class Manager(base.Base):
     def __init__(self, host=None, db_driver=None):
         if not host:
             host = FLAGS.host
         self.host = host
-        if not db_driver:
-            db_driver = FLAGS.db_driver
-        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
+        super(Manager, self).__init__(db_driver)
 
     @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
@@ -45,8 +73,6 @@ class Manager(object):
         yield
 
     def init_host(self):
-       """Do any initialization that needs to be run if this is a standalone service.
-
-       Child classes should override this method.
-       """
-       pass
+        """Do any initialization that needs to be run if this is a standalone
+        service. Child classes should override this method."""
+        pass

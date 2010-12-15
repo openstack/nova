@@ -47,7 +47,7 @@ class ApiError(Error):
     def __init__(self, message='Unknown', code='Unknown'):
         self.message = message
         self.code = code
-        super(ApiError, self).__init__('%s: %s'% (code, message))
+        super(ApiError, self).__init__('%s: %s' % (code, message))
 
 
 class NotFound(Error):
@@ -70,6 +70,10 @@ class Invalid(Error):
     pass
 
 
+class InvalidInputException(Error):
+    pass
+
+
 def wrap_exception(f):
     def _wrap(*args, **kw):
         try:
@@ -83,5 +87,3 @@ def wrap_exception(f):
             raise
     _wrap.func_name = f.func_name
     return _wrap
-
-

@@ -15,10 +15,31 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-Volume manager manages creating, attaching, detaching, and
-destroying persistent storage volumes, ala EBS.
+Volume manager manages creating, attaching, detaching, and persistent storage.
+
+Persistant storage volumes keep their state independent of instances.  You can
+attach to an instance, terminate the instance, spawn a new instance (even
+one from a different image) and re-attach the volume with the same data
+intact.
+
+**Related Flags**
+
+:volume_topic:  What :mod:`rpc` topic to listen to (default: `volume`).
+:volume_manager:  The module name of a class derived from
+                  :class:`manager.Manager` (default:
+                  :class:`nova.volume.manager.AOEManager`).
+:storage_availability_zone:  Defaults to `nova`.
+:volume_driver:  Used by :class:`AOEManager`.  Defaults to
+                 :class:`nova.volume.driver.AOEDriver`.
+:num_shelves:  Number of shelves for AoE (default: 100).
+:num_blades:  Number of vblades per shelf to allocate AoE storage from
+              (default: 16).
+:volume_group:  Name of the group that will contain exported volumes (default:
+                `nova-volumes`)
+:aoe_eth_dev:  Device name the volumes will be exported on (default: `eth0`).
+:num_shell_tries:  Number of times to attempt to run AoE commands (default: 3)
+
 """
 
 import logging
@@ -26,6 +47,7 @@ import datetime
 
 from twisted.internet import defer
 
+from nova import context
 from nova import exception
 from nova import flags
 from nova import manager
@@ -36,96 +58,98 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('storage_availability_zone',
                     'nova',
                     'availability zone of this service')
-flags.DEFINE_string('volume_driver', 'nova.volume.driver.AOEDriver',
+flags.DEFINE_string('volume_driver', 'nova.volume.driver.ISCSIDriver',
                     'Driver to use for volume creation')
-flags.DEFINE_integer('num_shelves',
-                    100,
-                    'Number of vblade shelves')
-flags.DEFINE_integer('blades_per_shelf',
-                    16,
-                    'Number of vblade blades per shelf')
+flags.DEFINE_boolean('use_local_volumes', True,
+                     'if True, will not discover local volumes')
 
 
-class AOEManager(manager.Manager):
-    """Manages Ata-Over_Ethernet volumes"""
+class VolumeManager(manager.Manager):
+    """Manages attachable block storage devices."""
     def __init__(self, volume_driver=None, *args, **kwargs):
+        """Load the driver from the one specified in args, or from flags."""
         if not volume_driver:
             volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
-        super(AOEManager, self).__init__(*args, **kwargs)
+        super(VolumeManager, self).__init__(*args, **kwargs)
+        # NOTE(vish): Implementation specific db handling is done
+        #             by the driver.
+        self.driver.db = self.db
 
-    def _ensure_blades(self, context):
-        """Ensure that blades have been created in datastore"""
-        total_blades = FLAGS.num_shelves * FLAGS.blades_per_shelf
-        if self.db.export_device_count(context) >= total_blades:
-            return
-        for shelf_id in xrange(FLAGS.num_shelves):
-            for blade_id in xrange(FLAGS.blades_per_shelf):
-                dev = {'shelf_id': shelf_id, 'blade_id': blade_id}
-                self.db.export_device_create(context, dev)
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service."""
+        self.driver.check_for_setup_error()
+        ctxt = context.get_admin_context()
+        volumes = self.db.volume_get_all_by_host(ctxt, self.host)
+        logging.debug("Re-exporting %s volumes", len(volumes))
+        for volume in volumes:
+            self.driver.ensure_export(ctxt, volume)
 
     @defer.inlineCallbacks
     def create_volume(self, context, volume_id):
-        """Creates and exports the volume"""
-        logging.info("volume %s: creating", volume_id)
-
+        """Creates and exports the volume."""
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
+        logging.info("volume %s: creating", volume_ref['name'])
 
         self.db.volume_update(context,
                               volume_id,
                               {'host': self.host})
+        # NOTE(vish): so we don't have to get volume from db again
+        #             before passing it to the driver.
+        volume_ref['host'] = self.host
 
-        size = volume_ref['size']
-        logging.debug("volume %s: creating lv of size %sG", volume_id, size)
-        yield self.driver.create_volume(volume_ref['ec2_id'], size)
+        logging.debug("volume %s: creating lv of size %sG",
+                      volume_ref['name'], volume_ref['size'])
+        yield self.driver.create_volume(volume_ref)
 
-        logging.debug("volume %s: allocating shelf & blade", volume_id)
-        self._ensure_blades(context)
-        rval = self.db.volume_allocate_shelf_and_blade(context, volume_id)
-        (shelf_id, blade_id) = rval
-
-        logging.debug("volume %s: exporting shelf %s & blade %s", volume_id,
-                      shelf_id, blade_id)
-
-        yield self.driver.create_export(volume_ref['ec2_id'],
-                                        shelf_id,
-                                        blade_id)
-
-        logging.debug("volume %s: re-exporting all values", volume_id)
-        yield self.driver.ensure_exports()
+        logging.debug("volume %s: creating export", volume_ref['name'])
+        yield self.driver.create_export(context, volume_ref)
 
         now = datetime.datetime.utcnow()
-        self.db.volume_update(context, volume_id, {'status': 'available',
-                                                   'launched_at': now})
-        logging.debug("volume %s: created successfully", volume_id)
+        self.db.volume_update(context,
+                              volume_ref['id'], {'status': 'available',
+                                                 'launched_at': now})
+        logging.debug("volume %s: created successfully", volume_ref['name'])
         defer.returnValue(volume_id)
 
     @defer.inlineCallbacks
     def delete_volume(self, context, volume_id):
-        """Deletes and unexports volume"""
-        logging.debug("Deleting volume with id of: %s", volume_id)
+        """Deletes and unexports volume."""
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
         if volume_ref['attach_status'] == "attached":
             raise exception.Error("Volume is still attached")
         if volume_ref['host'] != self.host:
             raise exception.Error("Volume is not local to this node")
-        shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
-                                                                volume_id)
-        yield self.driver.remove_export(volume_ref['ec2_id'],
-                                        shelf_id,
-                                        blade_id)
-        yield self.driver.delete_volume(volume_ref['ec2_id'])
+        logging.debug("volume %s: removing export", volume_ref['name'])
+        yield self.driver.remove_export(context, volume_ref)
+        logging.debug("volume %s: deleting", volume_ref['name'])
+        yield self.driver.delete_volume(volume_ref)
         self.db.volume_destroy(context, volume_id)
+        logging.debug("volume %s: deleted successfully", volume_ref['name'])
         defer.returnValue(True)
 
     @defer.inlineCallbacks
     def setup_compute_volume(self, context, volume_id):
-        """Setup remote volume on compute host
+        """Setup remote volume on compute host.
 
-        Returns path to device.
-        """
+        Returns path to device."""
+        context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
-        yield self.driver.discover_volume(volume_ref['ec2_id'])
-        shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
-                                                                volume_id)
-        defer.returnValue("/dev/etherd/e%s.%s" % (shelf_id, blade_id))
+        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
+            path = yield self.driver.local_path(volume_ref)
+        else:
+            path = yield self.driver.discover_volume(volume_ref)
+        defer.returnValue(path)
+
+    @defer.inlineCallbacks
+    def remove_compute_volume(self, context, volume_id):
+        """Remove remote volume on compute host."""
+        context = context.elevated()
+        volume_ref = self.db.volume_get(context, volume_id)
+        if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
+            defer.returnValue(True)
+        else:
+            yield self.driver.undiscover_volume(volume_ref)
