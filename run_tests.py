@@ -43,8 +43,11 @@ import eventlet
 eventlet.monkey_patch()
 
 import __main__
+import gettext
 import os
 import sys
+
+gettext.install('nova', unicode=1)
 
 from twisted.scripts import trial as trial_script
 
