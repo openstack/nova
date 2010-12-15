@@ -443,13 +443,15 @@ class CloudController(object):
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
 
-    def describe_volumes(self, context, **kwargs):
+    def describe_volumes(self, context, volume_id=None, **kwargs):
         if context.user.is_admin():
             volumes = db.volume_get_all(context)
         else:
             volumes = db.volume_get_all_by_project(context, context.project_id)
 
-        volumes = [self._format_volume(context, v) for v in volumes]
+        # NOTE(vish): volume_id is an optional list of volume ids to filter by.
+        volumes = [self._format_volume(context, v) for v in volumes
+                   if volume_id is None or v['ec2_id'] in volume_id]
 
         return {'volumeSet': volumes}
 

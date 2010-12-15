@@ -35,7 +35,6 @@ Requirements for a multi-node installation
 * For a recommended HA setup, consider a MySQL master/slave replication, with as many slaves as you like, and probably a heartbeat to kick one of the slaves into being a master if it dies.
 * For performance optimization, split reads and writes to the database. MySQL proxy is the easiest way to make this work if running MySQL.
 
-
 Assumptions
 ^^^^^^^^^^^
 
@@ -69,14 +68,14 @@ Step 1 Use apt-get to get the latest code
 
 It is highly likely that there will be errors when the nova services come up since they are not yet configured. Don't worry, you're only at step 1!
 
-Step 2 Setup configuration files (installed in /etc/nova)
+Step 2 Setup configuration file (installed in /etc/nova)
 ---------------------------------------------------------
 
 Note: CC_ADDR=<the external IP address of your cloud controller>
 
-1. These need to be defined in EACH configuration file
+Nova development has consolidated all .conf files to nova.conf as of November 2010. References to specific .conf files may be ignored.
 
-::
+#. These need to be defined in the nova.conf configuration file::
 
    --sql_connection=mysql://root:nova@$CC_ADDR/nova # location of nova sql db
    --s3_host=$CC_ADDR  # This is where nova is hosting the objectstore service, which
@@ -87,31 +86,14 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
    --ec2_url=http://$CC_ADDR:8773/services/Cloud
    --network_manager=nova.network.manager.FlatManager # simple, no-vlan networking type
 
-
-2. nova-manage specific flags
-
-::
-
    --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
    --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
-
-3. nova-network specific flags
-
-::
-
-   --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
-   --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
-
-4. Create a nova group
-
-::
+#. Create a nova group::
 
    sudo addgroup nova
 
-5. nova-objectstore specific flags < no specific config needed >
-
-Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
+The Nova config file should have its owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
 
 ::
 
@@ -121,7 +103,7 @@ Config files should be have their owner set to root:nova, and mode set to 0640, 
 Step 3 Setup the sql db
 -----------------------
 
-1. First you 'preseed' (using vishy's :doc:`../quickstart`). Run this as root.
+1. First you 'preseed' (using the Quick Start method :doc:`../quickstart`). Run this as root.
 
 ::
 

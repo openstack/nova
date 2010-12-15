@@ -54,6 +54,8 @@ Cloud computing offers different service models depending on the capabilities a 
 The US-based National Institute of Standards and Technology offers definitions for cloud computing
 and the service models that are emerging. 
 
+These definitions are summarized from http://csrc.nist.gov/groups/SNS/cloud-computing/.
+
 SaaS - Software as a Service
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -72,12 +74,15 @@ IaaS - Infrastructure as a Service
 Provides infrastructure such as computer instances, network connections, and storage so that people 
 can run any software or operating system.
 
-.. todo:: Use definitions from http://csrc.nist.gov/groups/SNS/cloud-computing/ and attribute NIST
 
 Types of Cloud Deployments
 --------------------------
-.. todo:: describe public/private/hybrid/etc
 
+When you hear terms such as public cloud or private cloud, these refer to the deployment model for the cloud. A private cloud operates for a single organization, but can be managed on-premise or off-premise. A public cloud has an infrastructure that is available to the general public or a large industry group and is likely owned by a cloud services company. 
+
+The NIST also defines community cloud as shared by several organizations supporting a specific community with shared concerns. 
+
+A hybrid cloud can be a deployment model, as a composition of both public and private clouds, or a hybrid model for cloud computing may involve both virtual and physical servers.
 
 Work in the Clouds
 ------------------
