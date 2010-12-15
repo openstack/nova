@@ -52,6 +52,7 @@ import sys
 import xmlrpclib
 
 from eventlet import event
+from eventlet import tpool
 
 from nova import utils
 from nova import flags
@@ -164,20 +165,20 @@ class XenAPISession(object):
         f = self._session.xenapi
         for m in method.split('.'):
             f = f.__getattr__(m)
-        return f(*args)
+        return tpool.execute(f, *args)
 
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
-        return _unwrap_plugin_exceptions(
-            self._session.xenapi.Async.host.call_plugin,
-            self.get_xenapi_host(), plugin, fn, args)
+        return tpool.execute(_unwrap_plugin_exceptions,
+                             self._session.xenapi.Async.host.call_plugin,
+                             self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
 
         done = event.Event()
-        loop = utils.LoopingTask(self._poll_task, task, done)
+        loop = utils.LoopingCall(self._poll_task, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
         rv = done.wait()
         loop.stop()
