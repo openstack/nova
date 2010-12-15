@@ -21,6 +21,7 @@
 apt-get install -y slapd ldap-utils python-ldap
 
 abspath=`dirname "$(cd "${0%/*}" 2>/dev/null; echo "$PWD"/"${0##*/}")"`
+cp $abspath/openssh-lpk_openldap.schema /etc/ldap/schema/openssh-lpk_openldap.schema
 cp $abspath/nova_openldap.schema /etc/ldap/schema/nova.schema
 
 mv /etc/ldap/slapd.conf /etc/ldap/slapd.conf.orig
