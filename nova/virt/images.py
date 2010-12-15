@@ -70,7 +70,6 @@ def _fetch_image_no_curl(url, path, headers):
 
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
-    logging.debug("About to retrieve %s and place it in %s", url, path)
 
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
@@ -98,7 +97,6 @@ def _fetch_s3_image(image, path, user, project):
 
 def _fetch_local_image(image, path, user, project):
     source = _image_path(os.path.join(image, 'image'))
-    logging.debug("About to copy %s to %s", source, path)
     if sys.platform.startswith('win'):
         return shutil.copy(source, path)
     else:
