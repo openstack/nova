@@ -85,10 +85,9 @@ class VMHelper():
             'user_version': '0',
             'other_config': {},
             }
-        #TODO: if there is no kernel we need to call a plugin to understand whether 
-        #the VM should be launched as PV or HVM
+        #Complete VM configuration record according to the image type
+        #non-raw/raw with PV kernel/raw in HVM mode
         if (instance.kernel_id):
-            logging.debug("A kernel (and hopefully a ramdisk) have been provided")
             rec['PV_bootloader'] = ''
             rec['PV_kernel'] = kernel
             rec['PV_ramdisk'] = ramdisk
@@ -96,14 +95,14 @@ class VMHelper():
             rec['PV_bootloader_args'] = ''
             rec['PV_legacy_args'] = ''
         else:
-            logging.debug("This a raw image")
             if (pv_kernel):
                 rec['PV_args'] = 'noninteractive'
                 rec['PV_bootloader'] = 'pygrub'    
             else:
                 rec['HVM_boot_policy'] = 'BIOS order'
                 rec['HVM_boot_params'] = {'order': 'dc'}
-                rec['platform']={'acpi':'true','apic':'true','pae':'true','viridian':'true'}
+                rec['platform']={'acpi':'true','apic':'true','pae':'true',
+                                 'viridian':'true'}
         logging.debug('Created VM %s...', instance.name)
         vm_ref = yield session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
@@ -167,9 +166,7 @@ class VMHelper():
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
-        logging.debug("Salvatore: image type = %d",type)
         fn = (type<>0) and 'get_vdi' or 'get_kernel'
-        logging.debug("Salvatore: fn=%s",fn)
         args = {}
         args['src_url'] = url
         args['username'] = access
@@ -180,8 +177,6 @@ class VMHelper():
             args['add_partition'] = 'true'
             if type==2:
                 args['raw']='true'    
-        logging.debug("Salvatore: args['raw']=%s",args['raw'])
-        logging.debug("Salvatore: args['add_partition']=%s",args['add_partition'])
         task = yield session.async_call_plugin('objectstore', fn, args)
         uuid = yield session.wait_for_task(task)
         defer.returnValue(uuid)

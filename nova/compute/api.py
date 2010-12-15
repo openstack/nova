@@ -75,12 +75,7 @@ class ComputeAPI(base.Base):
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
             #Salvatore - No kernel and ramdisk for raw images
-            pv_kernel=None
-            if (kernel_id == str(FLAGS.null_kernel) or kernel_id == str(FLAGS.null_kernel_pv)):
-                if kernel_id == str(FLAGS.null_kernel):
-                    pv_kernel=False
-                else:
-                    pv_kernel=True
+            if (kernel_id == str(FLAGS.null_kernel)):
                 kernel_id = None
                 ramdisk_id = None
                 logging.debug("Creating a raw instance (no kernel and ramdisk) - Paravirtualization:%s" %str(pv_kernel))
