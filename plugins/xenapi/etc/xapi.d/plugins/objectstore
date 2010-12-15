@@ -101,7 +101,7 @@ def get_vdi_(proto, netloc, url_path, username, password, add_partition,raw_imag
     if (add_partition and not raw_image):
         write_partition(virtual_size, dest)
 
-    offset = (add_partition and MBR_SIZE_BYTES and not raw_image) or 0
+    offset = (add_partition and not raw_image and MBR_SIZE_BYTES) or 0
     get(proto, netloc, url_path, username, password, dest, offset)
 
 

@@ -59,7 +59,7 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         #if kernel is not present we must download a raw disk
         if (instance.kernel_id):
-            disk_image_tye=1
+            disk_image_type=1
         else:
             disk_image_type=2                
         vdi_uuid = yield VMHelper.fetch_image(self._session,

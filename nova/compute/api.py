@@ -78,7 +78,7 @@ class ComputeAPI(base.Base):
             if (kernel_id == str(FLAGS.null_kernel)):
                 kernel_id = None
                 ramdisk_id = None
-                logging.debug("Creating a raw instance (no kernel and ramdisk) - Paravirtualization:%s" %str(pv_kernel))
+                logging.debug("Creating a raw instance")
 
             # Make sure we have access to kernel and ramdisk (as long as we want them)
             if (kernel_id!=None):

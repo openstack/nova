@@ -190,7 +190,6 @@ class VMHelper():
         args['vdi-ref']=vdi_ref
         #TODO: Call proper function in plugin
         task = yield session.async_call_plugin('objectstore', fn, args)
-        logging.debug("Waiting for task completion")
         pv_str=yield session.wait_for_task(task)
         if pv_str.lower() == 'true':
             pv=True
