@@ -51,6 +51,8 @@ import logging
 import sys
 import xmlrpclib
 
+from eventlet import event
+
 from nova import utils
 from nova import flags
 from nova.virt.xenapi.vmops import VMOps
