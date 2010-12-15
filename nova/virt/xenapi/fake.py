@@ -154,7 +154,7 @@ class Failure(Exception):
     def __str__(self):
         try:
             return str(self.details)
-        except Exception, exn:
+        except Exception, exc:
             return "XenAPI Fake Failure: %s" % str(self.details)
 
     def _details_map(self):
@@ -324,8 +324,8 @@ class SessionBase(object):
         try:
             task['result'] = self.xenapi_request(func, params[1:])
             task['status'] = 'success'
-        except Failure, exn:
-            task['error_info'] = exn.details
+        except Failure, exc:
+            task['error_info'] = exc.details
             task['status'] = 'failed'
         task['finished'] = datetime.datetime.now()
         return task_ref
@@ -372,37 +372,3 @@ class _Dispatcher:
 
     def __call__(self, *args):
         return self.__send(self.__name, args)
-
-
-class FakeSession(SessionBase):
-    def __init__(self, uri):
-        super(FakeSession, self).__init__(uri)
-
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
-
-    def host_call_plugin(self, _1, _2, _3, _4, _5):
-        return ''
-
-    def VM_start(self, _1, ref, _2, _3):
-        vm = get_record('VM', ref)
-        if vm['power_state'] != 'Halted':
-            raise Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
-                                  vm['power_state']])
-        vm['power_state'] = 'Running'
-
-    def VBD_plug(self, _1, _2):
-        #FIXME(armando):make proper plug
-        pass
-
-    def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
-                      _6, _7, _8, _9, _10, _11):
-        #FIXME(armando):make proper introduce
-        valid_vdi = False
-        refs = get_all('VDI')
-        for ref in refs:
-            rec = get_record('VDI', ref)
-            if rec['uuid'] == uuid:
-                valid_vdi = True
-        if not valid_vdi:
-            raise Failure([['INVALID_VDI', 'session', self._session]])
