@@ -141,6 +141,10 @@ class XenAPIConnection(object):
         """ Return snapshot of console """
         return self._vmops.get_console_output(instance)
 
+    def get_diagnostics(self, instance_id):
+        """Return data about VM diagnostics"""
+        return self._vmops.get_diagnostics(instance_id)
+
     def attach_volume(self, instance_name, device_path, mountpoint):
         """ Attach volume storage to VM instance """
         return self._volumeops.attach_volume(instance_name,

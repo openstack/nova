@@ -31,6 +31,7 @@
 #    under the License.
 
 
+import mox
 import uuid
 
 from twisted.internet import defer
@@ -38,6 +39,7 @@ from twisted.internet import threads
 
 from nova import db
 from nova import context
+from nova import exception
 from nova import flags
 from nova import test
 from nova import utils
@@ -47,19 +49,22 @@ from nova.compute import power_state
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import volumeops
 
 FLAGS = flags.FLAGS
 
 
 class XenAPIVolumeTestCase(test.TrialTestCase):
-
+    """
+    This uses Ewan's fake session approach
+    """
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         FLAGS.xenapi_use_fake_session = True
         FLAGS.target_host = '127.0.0.1'
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
-        fake.reset()
 
     def _create_volume(self, size='0'):
         """Create a volume object."""
@@ -74,6 +79,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         return db.volume_create(context.get_admin_context(), vol)
 
     def test_create_iscsi_storage_raise_no_exception(self):
+        fake.reset()
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         helper = volume_utils.VolumeHelper
         helper.late_import(FLAGS)
@@ -88,6 +94,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_attach_volume(self):
+        fake.reset()
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = FakeInstance(1, 'fake', 'fake', 1, 2, 3,
@@ -97,10 +104,14 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
                                     '/dev/sdc')
 
         def check(_):
-            # check that
-            # 1. the SR has been created
-            # 2. the instance has a VBD attached to it
-            pass
+            # check that the VM has a VBD attached to it
+            # Get XenAPI reference for the VM
+            vms = fake.get_all('VM')
+            # Get XenAPI record for VBD
+            vbds = fake.get_all('VBD')
+            vbd = fake.get_record('VBD', vbds[0])
+            vm_ref = vbd['VM']
+            self.assertEqual(vm_ref, vms[0])
 
         result.addCallback(check)
         return result
@@ -110,7 +121,9 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
 
 
 class XenAPIVMTestCase(test.TrialTestCase):
-
+    """
+    This uses Ewan's fake session approach
+    """
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
         self.manager = manager.AuthManager()
@@ -128,7 +141,7 @@ class XenAPIVMTestCase(test.TrialTestCase):
         conn = xenapi_conn.get_connection(False)
         instances = conn.list_instances()
         self.assertEquals(instances, [])
-    test_list_instances_0.skip = "E"
+    #test_list_instances_0.skip = "E"
 
     def test_spawn(self):
         conn = xenapi_conn.get_connection(False)

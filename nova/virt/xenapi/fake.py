@@ -59,7 +59,7 @@ from nova import exception
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
-            'VDI', 'VIF', 'VM', 'task']
+            'PBD', 'VDI', 'VIF', 'VM', 'task']
 
 _db_content = {}
 
@@ -87,6 +87,28 @@ def create_vm(name_label, status):
     return _create_object('VM', {
         'name_label': name_label,
         'power-state': status,
+        })
+
+
+def create_vdi(name_label, read_only, sr_ref, sharable):
+    return _create_object('VDI', {
+        'name_label': name_label,
+        'read_only': read_only,
+        'SR': sr_ref,
+        'type': '',
+        'name_description': '',
+        'sharable': sharable,
+        'other_config': {},
+        'location': '',
+        'xenstore_data': '',
+        'sm_config': {},
+        })
+
+
+def create_pbd(config, attached):
+    return _create_object('PBD', {
+        'device-config': config,
+        'currently-attached': attached,
         })
 
 
@@ -280,6 +302,10 @@ class SessionBase(object):
         self._check_arg_count(params, expected)
         (cls, _) = name.split('.')
         if name == 'SR.create':
+            vdi_ref = create_vdi('', False, '', False)
+            pbd_ref = create_pbd('', True)
+            params[2]['VDIs'] = [vdi_ref]
+            params[2]['PBDs'] = [pbd_ref]
             ref = _create_object(cls, params[2])
         else:
             ref = _create_object(cls, params[1])
@@ -364,3 +390,19 @@ class FakeSession(SessionBase):
             raise Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
                                   vm['power_state']])
         vm['power_state'] = 'Running'
+
+    def VBD_plug(self, _1, _2):
+        #FIXME(armando):make proper plug
+        pass
+
+    def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
+                      _6, _7, _8, _9, _10, _11):
+        #FIXME(armando):make proper introduce
+        valid_vdi = False
+        refs = get_all('VDI')
+        for ref in refs:
+            rec = get_record('VDI', ref)
+            if rec['uuid'] == uuid:
+                valid_vdi = True
+        if not valid_vdi:
+            raise Failure([['INVALID_VDI', 'session', self._session]])
