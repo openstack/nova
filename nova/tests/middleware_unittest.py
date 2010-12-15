@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import webob
 import webob.dec
 import webob.exc
@@ -23,6 +24,7 @@ import webob.exc
 from nova.api import ec2
 from nova import flags
 from nova import test
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -39,14 +41,13 @@ def conditional_forbid(req):
 class LockoutTestCase(test.TrialTestCase):
     """Test case for the Lockout middleware."""
     def setUp(self):  # pylint: disable-msg=C0103
-        self.local_time = 0
-        self.lockout = ec2.Lockout(conditional_forbid,
-                                   time_fn=self._constant_time)
         super(LockoutTestCase, self).setUp()
+        utils.set_time_override()
+        self.lockout = ec2.Lockout(conditional_forbid)
 
-    def _constant_time(self):
-        """Helper method to force timeouts."""
-        return self.local_time
+    def tearDown(self):  # pylint: disable-msg=C0103
+        utils.clear_time_override()
+        super(LockoutTestCase, self).tearDown()
 
     def _send_bad_attempts(self, access_key, num_attempts=1):
         """Fail x."""
@@ -59,10 +60,6 @@ class LockoutTestCase(test.TrialTestCase):
         req = webob.Request.blank('/?AWSAccessKeyId=%s' % access_key)
         return (req.get_response(self.lockout).status_int == 403)
 
-    def _advance_time(self, time):
-        """Increment time to 1 second past the lockout."""
-        self.local_time = self.local_time + time
-
     def test_lockout(self):
         self._send_bad_attempts('test', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
@@ -70,20 +67,20 @@ class LockoutTestCase(test.TrialTestCase):
     def test_timeout(self):
         self._send_bad_attempts('test', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test'))
-        self._advance_time(FLAGS.lockout_minutes * 60)
+        utils.advance_time_seconds(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test'))
 
     def test_multiple_keys(self):
         self._send_bad_attempts('test1', FLAGS.lockout_attempts)
         self.assertTrue(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
-        self._advance_time(FLAGS.lockout_minutes * 60)
+        utils.advance_time_seconds(FLAGS.lockout_minutes * 60)
         self.assertFalse(self._is_locked_out('test1'))
         self.assertFalse(self._is_locked_out('test2'))
 
     def test_window_timeout(self):
         self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))
-        self._advance_time(FLAGS.lockout_window * 60)
+        utils.advance_time_seconds(FLAGS.lockout_window * 60)
         self._send_bad_attempts('test', FLAGS.lockout_attempts - 1)
         self.assertFalse(self._is_locked_out('test'))

@@ -79,15 +79,14 @@ class Lockout(wsgi.Middleware):
     sneak in before the lockout hits, but this is extremely rare and would
     only result in a couple of extra failed attempts."""
 
-    def __init__(self, application, time_fn=None):
-        """middleware can pass a custom time function to fake for testing."""
+    def __init__(self, application):
+        """middleware can use fake for testing."""
         if FLAGS.lockout_memcached_servers:
             import memcache
-            self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
-                                      debug=0)
         else:
-            from nova import fakememcache
-            self.mc = fakememcache.Client(time_fn=time_fn)
+            from nova import fakememcache as memcache
+        self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+                                  debug=0)
         super(Lockout, self).__init__(application)
 
     @webob.dec.wsgify

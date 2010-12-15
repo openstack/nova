@@ -18,21 +18,20 @@
 
 """Super simple fake memcache client."""
 
-import time
+import utils
 
 
 class Client(object):
     """Replicates a tiny subset of memcached client interface."""
 
-    def __init__(self, time_fn=time.time, *args, **kwargs):
-        """Time fn is to allow testing through a custom function"""
-        self.time_fn = time_fn
+    def __init__(self, *args, **kwargs):
+        """Ignores the passed in args"""
         self.cache = {}
 
     def get(self, key):
         """Retrieves the value for a key or None."""
         (timeout, value) = self.cache.get(key, (0, None))
-        if timeout == 0 or self.time_fn() < timeout:
+        if timeout == 0 or utils.utcnow_ts() < timeout:
             return value
         return None
 
@@ -40,7 +39,7 @@ class Client(object):
         """Sets the value for a key."""
         timeout = 0
         if time != 0:
-            timeout = self.time_fn() + time
+            timeout = utils.utcnow_ts() + time
         self.cache[key] = (timeout, value)
         return True
 
