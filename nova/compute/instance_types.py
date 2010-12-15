@@ -22,6 +22,7 @@ The built-in instance properties.
 """
 
 from nova import flags
+from nova import exception
 
 FLAGS = flags.FLAGS
 INSTANCE_TYPES = {

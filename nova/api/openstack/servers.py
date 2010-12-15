@@ -17,7 +17,6 @@
 
 from webob import exc
 
-from nova import context
 from nova import exception
 from nova import wsgi
 from nova.api.openstack import faults
@@ -90,29 +89,26 @@ class Controller(wsgi.Controller):
 
         entity_maker - either _entity_detail or _entity_inst
         """
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
-        instance_list = self.compute_api.get_instances(ctxt)
+        instance_list = self.compute_api.get_instances(
+            req.environ['nova.context'])
         limited_list = nova.api.openstack.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
     def show(self, req, id):
         """ Returns server details by server id """
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
-        inst = self.compute_api.get_instance(ctxt, int(id))
-        if inst:
-            if inst.user_id == user_id:
-                return _entity_detail(inst)
-        raise faults.Fault(exc.HTTPNotFound())
+        try:
+            instance = self.compute_api.get_instance(
+                req.environ['nova.context'], int(id))
+            return _entity_detail(instance)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, id):
         """ Destroys a server """
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
         try:
-            self.compute_api.delete_instance(ctxt, int(id))
+            self.compute_api.delete_instance(req.environ['nova.context'],
+                int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
@@ -123,10 +119,10 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
-        key_pair = auth_manager.AuthManager.get_key_pairs(ctxt)[0]
-        instances = self.compute_api.create_instances(ctxt,
+        key_pair = auth_manager.AuthManager.get_key_pairs(
+            req.environ['nova.context'])[0]
+        instances = self.compute_api.create_instances(
+            req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             env['server']['imageId'],
             display_name=env['server']['name'],
@@ -137,8 +133,6 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
         inst_dict = self._deserialize(req.body, req)
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
@@ -150,7 +144,8 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            self.compute_api.update_instance(ctxt, instance['id'],
+            self.compute_api.update_instance(req.environ['nova.context'],
+                                             instance['id'],
                                              **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -159,8 +154,6 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
-        user_id = req.environ['nova.context']['user']['id']
-        ctxt = context.RequestContext(user_id, user_id)
         input_dict = self._deserialize(req.body, req)
         try:
             reboot_type = input_dict['reboot']['type']
@@ -169,7 +162,7 @@ class Controller(wsgi.Controller):
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
-            self.compute_api.reboot(ctxt, id)
+            self.compute_api.reboot(req.environ['nova.context'], id)
         except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()

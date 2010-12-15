@@ -30,6 +30,7 @@ import webob.dec
 import webob.exc
 import webob
 
+from nova import context
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -88,9 +89,7 @@ class AuthMiddleware(wsgi.Middleware):
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        if 'nova.context' not in req.environ:
-            req.environ['nova.context'] = {}
-        req.environ['nova.context']['user'] = user
+        req.environ['nova.context'] = context.RequestContext(user, user)
         return self.application
 
 
@@ -125,12 +124,12 @@ class RateLimitingMiddleware(wsgi.Middleware):
         If the request should be rate limited, return a 413 status with a
         Retry-After header giving the time when the request would succeed.
         """
-        user_id = req.environ['nova.context']['user']['id']
         action_name = self.get_action_name(req)
         if not action_name:
             # Not rate limited
             return self.application
-        delay = self.get_delay(action_name, user_id)
+        delay = self.get_delay(action_name,
+            req.environ['nova.context'].user_id)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
             exc = webob.exc.HTTPRequestEntityTooLarge(
