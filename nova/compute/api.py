@@ -20,6 +20,7 @@
 Handles all API requests relating to instances (guest vms).
 """
 
+import datetime
 import logging
 import time
 
@@ -43,16 +44,18 @@ def generate_default_hostname(internal_id):
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, **kwargs):
-        self.network_manager = utils.import_object(FLAGS.network_manager)
+    def __init__(self, network_manager=None, image_service=None, **kwargs):
+        if not network_manager:
+            network_manager = utils.import_object(FLAGS.network_manager)
+        self.network_manager = network_manager
+        if not image_service:
+            image_service = utils.import_object(FLAGS.image_service)
+        self.image_service = image_service
         super(ComputeAPI, self).__init__(**kwargs)
 
-    # TODO(eday): network_topic arg should go away once we push network
-    # allocation into the scheduler or compute worker.
-    def create_instances(self, context, instance_type, image_service, image_id,
-                         network_topic, min_count=1, max_count=1,
-                         kernel_id=None, ramdisk_id=None, name='',
-                         description='', user_data='', key_name=None,
+    def create_instances(self, context, instance_type, image_id, min_count=1,
+                         max_count=1, kernel_id=None, ramdisk_id=None,
+                         display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
@@ -69,15 +72,15 @@ class ComputeAPI(base.Base):
 
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
-            image = image_service.show(context, image_id)
+            image = self.image_service.show(context, image_id)
             if kernel_id is None:
                 kernel_id = image.get('kernelId', FLAGS.default_kernel)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
 
             # Make sure we have access to kernel and ramdisk
-            image_service.show(context, kernel_id)
-            image_service.show(context, ramdisk_id)
+            self.image_service.show(context, kernel_id)
+            self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -110,7 +113,7 @@ class ComputeAPI(base.Base):
             'memory_mb': type_data['memory_mb'],
             'vcpus': type_data['vcpus'],
             'local_gb': type_data['local_gb'],
-            'display_name': name,
+            'display_name': display_name,
             'display_description': description,
             'key_name': key_name,
             'key_data': key_data}
@@ -122,14 +125,25 @@ class ComputeAPI(base.Base):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
                             **base_options)
-            instance_ref = self.create_instance(context, security_groups,
-                                                **instance)
-            instance_id = instance_ref['id']
-            internal_id = instance_ref['internal_id']
-            hostname = generate_hostname(internal_id)
-            self.update_instance(context, instance_id, hostname=hostname)
-            instances.append(dict(id=instance_id, internal_id=internal_id,
-                             hostname=hostname, **instance))
+            instance = self.db.instance_create(context, instance)
+            instance_id = instance['id']
+            internal_id = instance['internal_id']
+
+            elevated = context.elevated()
+            if not security_groups:
+                security_groups = []
+            for security_group_id in security_groups:
+                self.db.instance_add_security_group(elevated,
+                                                    instance_id,
+                                                    security_group_id)
+
+            # Set sane defaults if not specified
+            updates = dict(hostname=generate_hostname(internal_id))
+            if 'display_name' not in instance:
+                updates['display_name'] = "Server %s" % internal_id
+
+            instance = self.update_instance(context, instance_id, **updates)
+            instances.append(instance)
 
             # TODO(vish): This probably should be done in the scheduler
             #             or in compute as a call.  The network should be
@@ -139,12 +153,12 @@ class ComputeAPI(base.Base):
                                                              instance_id,
                                                              is_vpn)
             rpc.cast(elevated,
-                     network_topic,
+                     self._get_network_topic(context),
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
 
-            logging.debug("Casting to scheduler for %s/%s's instance %s" %
-                          (context.project_id, context.user_id, instance_id))
+            logging.debug("Casting to scheduler for %s/%s's instance %s",
+                          context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
@@ -154,6 +168,12 @@ class ComputeAPI(base.Base):
         return instances
 
     def ensure_default_security_group(self, context):
+        """ Create security group for the security context if it
+        does not already exist
+
+        :param context: the security context
+
+        """
         try:
             db.security_group_get_by_name(context, context.project_id,
                                           'default')
@@ -162,40 +182,7 @@ class ComputeAPI(base.Base):
                       'description': 'default',
                       'user_id': context.user_id,
                       'project_id': context.project_id}
-            group = db.security_group_create(context, values)
-
-    def create_instance(self, context, security_groups=None, **kwargs):
-        """Creates the instance in the datastore and returns the
-        new instance as a mapping
-
-        :param context: The security context
-        :param security_groups: list of security group ids to
-                                attach to the instance
-        :param kwargs: All additional keyword args are treated
-                       as data fields of the instance to be
-                       created
-
-        :retval Returns a mapping of the instance information
-                that has just been created
-
-        """
-        instance_ref = self.db.instance_create(context, kwargs)
-        inst_id = instance_ref['id']
-        # Set sane defaults if not specified
-        if kwargs.get('display_name') is None:
-            display_name = "Server %s" % instance_ref['internal_id']
-            instance_ref['display_name'] = display_name
-            self.db.instance_update(context, inst_id,
-                                    {'display_name': display_name})
-
-        elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
-        for security_group_id in security_groups:
-            self.db.instance_add_security_group(elevated,
-                                                inst_id,
-                                                security_group_id)
-        return instance_ref
+            db.security_group_create(context, values)
 
     def update_instance(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
@@ -209,4 +196,110 @@ class ComputeAPI(base.Base):
         :retval None
 
         """
-        self.db.instance_update(context, instance_id, kwargs)
+        return self.db.instance_update(context, instance_id, kwargs)
+
+    def delete_instance(self, context, instance_id):
+        logging.debug("Going to try and terminate %d" % instance_id)
+        try:
+            instance = self.db.instance_get_by_internal_id(context,
+                                                           instance_id)
+        except exception.NotFound as e:
+            logging.warning("Instance %d was not found during terminate",
+                            instance_id)
+            raise e
+
+        if (instance['state_description'] == 'terminating'):
+            logging.warning("Instance %d is already being terminated",
+                            instance_id)
+            return
+
+        self.update_instance(context,
+                             instance['id'],
+                             state_description='terminating',
+                             state=0,
+                             terminated_at=datetime.datetime.utcnow())
+
+        # FIXME(ja): where should network deallocate occur?
+        address = self.db.instance_get_floating_address(context,
+                                                        instance['id'])
+        if address:
+            logging.debug("Disassociating address %s" % address)
+            # NOTE(vish): Right now we don't really care if the ip is
+            #             disassociated.  We may need to worry about
+            #             checking this later.  Perhaps in the scheduler?
+            rpc.cast(context,
+                     self._get_network_topic(context),
+                     {"method": "disassociate_floating_ip",
+                      "args": {"floating_address": address}})
+
+        address = self.db.instance_get_fixed_address(context, instance['id'])
+        if address:
+            logging.debug("Deallocating address %s" % address)
+            # NOTE(vish): Currently, nothing needs to be done on the
+            #             network node until release. If this changes,
+            #             we will need to cast here.
+            self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                     address)
+
+        host = instance['host']
+        if host:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "terminate_instance",
+                      "args": {"instance_id": instance['id']}})
+        else:
+            self.db.instance_destroy(context, instance['id'])
+
+    def get_instances(self, context, project_id=None):
+        """Get all instances, possibly filtered by project ID or
+        user ID. If there is no filter and the context is an admin,
+        it will retreive all instances in the system."""
+        if project_id or not context.is_admin:
+            if not context.project:
+                return self.db.instance_get_all_by_user(context,
+                                                        context.user_id)
+            if project_id is None:
+                project_id = context.project_id
+            return self.db.instance_get_all_by_project(context, project_id)
+        return self.db.instance_get_all(context)
+
+    def get_instance(self, context, instance_id):
+        return self.db.instance_get_by_internal_id(context, instance_id)
+
+    def reboot(self, context, instance_id):
+        """Reboot the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "reboot_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def rescue(self, context, instance_id):
+        """Rescue the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "rescue_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unrescue(self, context, instance_id):
+        """Unrescue the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unrescue_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def _get_network_topic(self, context):
+        """Retrieves the network host for a project"""
+        network_ref = self.network_manager.get_network(context)
+        host = network_ref['host']
+        if not host:
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+        return self.db.queue_get_for(context, FLAGS.network_topic, host)

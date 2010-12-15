@@ -40,8 +40,11 @@ Due to our use of multiprocessing it we frequently get some ignorable
 """
 
 import __main__
+import gettext
 import os
 import sys
+
+gettext.install('nova', unicode=1)
 
 from twisted.scripts import trial as trial_script
 
