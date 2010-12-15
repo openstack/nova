@@ -124,6 +124,19 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
 
+    def test_describe_volumes(self):
+        """Makes sure describe_volumes works and filters results."""
+        vol1 = db.volume_create(self.context, {})
+        vol2 = db.volume_create(self.context, {})
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 2)
+        result = self.cloud.describe_volumes(self.context,
+                                             volume_id=[vol2['ec2_id']])
+        self.assertEqual(len(result['volumeSet']), 1)
+        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['ec2_id'])
+        db.volume_destroy(self.context, vol1['id'])
+        db.volume_destroy(self.context, vol2['id'])
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
