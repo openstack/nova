@@ -91,7 +91,7 @@ class Lockout(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        access_key = req.params['AWSAccessKeyId']
+        access_key = str(req.params['AWSAccessKeyId'])
         failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
         if failures >= FLAGS.lockout_attempts:
