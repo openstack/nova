@@ -295,12 +295,10 @@ class LibvirtConnection(object):
     def pause(self, instance, callback):
         raise exception.APIError("pause not supported for libvirt.")
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def unpause(self, instance, callback):
         raise exception.APIError("unpause not supported for libvirt.")
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def rescue(self, instance):
         self.destroy(instance, False)
