@@ -203,7 +203,7 @@ class ComputeAPI(base.Base):
         for host in hosts:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "refresh_security_group",
+                     {"method": "refresh_security_group_rules",
                       "args": {"security_group_id": security_group.id}})
 
 
