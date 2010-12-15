@@ -36,7 +36,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 
 **Related Flags**
 
-:xenapi_use_fake_session:     To be set for unit testing
 :xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
 :xenapi_connection_username:  Username for connection to XenServer/Xen Cloud
                               Platform (default: root).
@@ -59,15 +58,11 @@ from twisted.internet import reactor
 
 from nova import utils
 from nova import flags
-from nova.virt.xenapi import load_sdk
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('xenapi_use_fake_session',
-                    False,
-                    'Set to true in order to use the fake XenAPI SDK')
 flags.DEFINE_string('xenapi_connection_url',
                     None,
                     'URL for connection to XenServer/Xen Cloud Platform.'
@@ -123,7 +118,7 @@ class XenAPIConnection(object):
 
     def spawn(self, instance):
         """ Create VM instance """
-        self._vmops.spawn(instance)
+        return self._vmops.spawn(instance)
 
     def reboot(self, instance):
         """ Reboot VM instance """
@@ -159,14 +154,13 @@ class XenAPIConnection(object):
 class XenAPISession(object):
     """ The session to invoke XenAPI SDK calls """
     def __init__(self, url, user, pw):
-        # This is loaded late so that there's no need to install this
-        # library when not using XenAPI.
-        self.XenAPI = load_sdk(FLAGS)
-        if FLAGS.xenapi_use_fake_session:
-            self._session = self.XenAPI.FakeSession(url)
-        else:
-            self._session = self.XenAPI.Session(url)
+        self.XenAPI = self.get_imported_xenapi()
+        self._session = self._create_session(url)
         self._session.login_with_password(user, pw)
+
+    def get_imported_xenapi(self):
+        """Stubout point. This can be replaced with a mock xenapi module."""
+        return __import__('XenAPI')
 
     def get_xenapi(self):
         """ Return the xenapi object """
@@ -200,6 +194,10 @@ class XenAPISession(object):
         reactor.callLater(0, self._poll_task, task, d)
         return d
 
+    def _create_session(self, url):
+        """Stubout point. This can be replaced with a mock session."""
+        return self.XenAPI.Session(url)
+
     @utils.deferredToThread
     def _poll_task(self, task, deferred):
         """Poll the given XenAPI task, and fire the given Deferred if we
@@ -220,7 +218,7 @@ class XenAPISession(object):
                              error_info)
                 deferred.errback(self.XenAPI.Failure(error_info))
             #logging.debug('Polling task %s done.', task)
-        except self.XenAPI.Failure, exc:
+        except Exception, exc:
             logging.warn(exc)
             deferred.errback(exc)
 

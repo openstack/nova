@@ -25,6 +25,8 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.virt import libvirt_conn
+from nova.virt.xenapi import fake
+from nova.virt.xenapi import volume_utils
 
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
