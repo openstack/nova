@@ -21,14 +21,19 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import logging
 import urllib
+
 from xml.dom import minidom
 
+from nova import flags
 from nova import utils
+
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
+
+FLAGS = flags.FLAGS
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -36,7 +41,6 @@ XENAPI_POWER_STATE = {
     'Paused': power_state.PAUSED,
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
-
 
 XenAPI = None
 
