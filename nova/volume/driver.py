@@ -22,12 +22,10 @@ Drivers for volumes.
 
 import logging
 import os
-
-from twisted.internet import defer
+import time
 
 from nova import exception
 from nova import flags
-from nova import process
 from nova import utils
 
 
@@ -55,14 +53,13 @@ flags.DEFINE_string('iscsi_ip_prefix', '127.0',
 
 class VolumeDriver(object):
     """Executes commands relating to Volumes."""
-    def __init__(self, execute=process.simple_execute,
+    def __init__(self, execute=utils.execute,
                  sync_exec=utils.execute, *args, **kwargs):
         # NOTE(vish): db is set by Manager
         self.db = None
         self._execute = execute
         self._sync_exec = sync_exec
 
-    @defer.inlineCallbacks
     def _try_execute(self, command):
         # NOTE(vish): Volume commands can partially fail due to timing, but
         #             running them a second time on failure will usually
@@ -70,15 +67,15 @@ class VolumeDriver(object):
         tries = 0
         while True:
             try:
-                yield self._execute(command)
-                defer.returnValue(True)
+                self._execute(command)
+                return True
             except exception.ProcessExecutionError:
                 tries = tries + 1
                 if tries >= FLAGS.num_shell_tries:
                     raise
                 logging.exception("Recovering from a failed execute."
                                   "Try number %s", tries)
-                yield self._execute("sleep %s" % tries ** 2)
+                time.sleep(tries ** 2)
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
@@ -86,53 +83,45 @@ class VolumeDriver(object):
             raise exception.Error("volume group %s doesn't exist"
                                   % FLAGS.volume_group)
 
-    @defer.inlineCallbacks
     def create_volume(self, volume):
         """Creates a logical volume."""
         if int(volume['size']) == 0:
             sizestr = '100M'
         else:
             sizestr = '%sG' % volume['size']
-        yield self._try_execute("sudo lvcreate -L %s -n %s %s" %
-                            (sizestr,
-                             volume['name'],
-                             FLAGS.volume_group))
+        self._try_execute("sudo lvcreate -L %s -n %s %s" %
+                          (sizestr,
+                           volume['name'],
+                           FLAGS.volume_group))
 
-    @defer.inlineCallbacks
     def delete_volume(self, volume):
         """Deletes a logical volume."""
-        yield self._try_execute("sudo lvremove -f %s/%s" %
-                                (FLAGS.volume_group,
-                                 volume['name']))
+        self._try_execute("sudo lvremove -f %s/%s" %
+                          (FLAGS.volume_group,
+                           volume['name']))
 
-    @defer.inlineCallbacks
     def local_path(self, volume):
-        yield  # NOTE(vish): stops deprecation warning
+        # NOTE(vish): stops deprecation warning
         escaped_group = FLAGS.volume_group.replace('-', '--')
         escaped_name = volume['name'].replace('-', '--')
-        defer.returnValue("/dev/mapper/%s-%s" % (escaped_group,
-                                                 escaped_name))
+        return "/dev/mapper/%s-%s" % (escaped_group, escaped_name)
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
         raise NotImplementedError()
 
-    @defer.inlineCallbacks
     def create_export(self, context, volume):
         """Exports the volume."""
         raise NotImplementedError()
 
-    @defer.inlineCallbacks
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    @defer.inlineCallbacks
     def discover_volume(self, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
-    @defer.inlineCallbacks
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
         raise NotImplementedError()
@@ -155,14 +144,13 @@ class AOEDriver(VolumeDriver):
                 dev = {'shelf_id': shelf_id, 'blade_id': blade_id}
                 self.db.export_device_create_safe(context, dev)
 
-    @defer.inlineCallbacks
     def create_export(self, context, volume):
         """Creates an export for a logical volume."""
         self._ensure_blades(context)
         (shelf_id,
          blade_id) = self.db.volume_allocate_shelf_and_blade(context,
                                                              volume['id'])
-        yield self._try_execute(
+        self._try_execute(
                 "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
                 (shelf_id,
                  blade_id,
@@ -176,33 +164,30 @@ class AOEDriver(VolumeDriver):
         #             still works for the other volumes, so we
         #             just wait a bit for the current volume to
         #             be ready and ignore any errors.
-        yield self._execute("sleep 2")
-        yield self._execute("sudo vblade-persist auto all",
-                            check_exit_code=False)
-        yield self._execute("sudo vblade-persist start all",
-                            check_exit_code=False)
+        time.sleep(2)
+        self._execute("sudo vblade-persist auto all",
+                      check_exit_code=False)
+        self._execute("sudo vblade-persist start all",
+                      check_exit_code=False)
 
-    @defer.inlineCallbacks
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume['id'])
-        yield self._try_execute("sudo vblade-persist stop %s %s" %
-                                (shelf_id, blade_id))
-        yield self._try_execute("sudo vblade-persist destroy %s %s" %
-                                (shelf_id, blade_id))
+        self._try_execute("sudo vblade-persist stop %s %s" %
+                          (shelf_id, blade_id))
+        self._try_execute("sudo vblade-persist destroy %s %s" %
+                          (shelf_id, blade_id))
 
-    @defer.inlineCallbacks
     def discover_volume(self, _volume):
         """Discover volume on a remote host."""
-        yield self._execute("sudo aoe-discover")
-        yield self._execute("sudo aoe-stat", check_exit_code=False)
+        self._execute("sudo aoe-discover")
+        self._execute("sudo aoe-stat", check_exit_code=False)
 
-    @defer.inlineCallbacks
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
-        yield
+        pass
 
 
 class FakeAOEDriver(AOEDriver):
@@ -252,7 +237,6 @@ class ISCSIDriver(VolumeDriver):
             target = {'host': host, 'target_num': target_num}
             self.db.iscsi_target_create_safe(context, target)
 
-    @defer.inlineCallbacks
     def create_export(self, context, volume):
         """Creates an export for a logical volume."""
         self._ensure_iscsi_targets(context, volume['host'])
@@ -261,61 +245,55 @@ class ISCSIDriver(VolumeDriver):
                                                       volume['host'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        yield self._execute("sudo ietadm --op new "
-                            "--tid=%s --params Name=%s" %
-                            (iscsi_target, iscsi_name))
-        yield self._execute("sudo ietadm --op new --tid=%s "
-                            "--lun=0 --params Path=%s,Type=fileio" %
-                            (iscsi_target, volume_path))
+        self._execute("sudo ietadm --op new "
+                      "--tid=%s --params Name=%s" %
+                      (iscsi_target, iscsi_name))
+        self._execute("sudo ietadm --op new --tid=%s "
+                      "--lun=0 --params Path=%s,Type=fileio" %
+                      (iscsi_target, volume_path))
 
-    @defer.inlineCallbacks
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
         iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
-        yield self._execute("sudo ietadm --op delete --tid=%s "
-                            "--lun=0" % iscsi_target)
-        yield self._execute("sudo ietadm --op delete --tid=%s" %
-                            iscsi_target)
+        self._execute("sudo ietadm --op delete --tid=%s "
+                      "--lun=0" % iscsi_target)
+        self._execute("sudo ietadm --op delete --tid=%s" %
+                      iscsi_target)
 
-    @defer.inlineCallbacks
     def _get_name_and_portal(self, volume_name, host):
         """Gets iscsi name and portal from volume name and host."""
-        (out, _err) = yield self._execute("sudo iscsiadm -m discovery -t "
-                                         "sendtargets -p %s" % host)
+        (out, _err) = self._execute("sudo iscsiadm -m discovery -t "
+                                    "sendtargets -p %s" % host)
         for target in out.splitlines():
             if FLAGS.iscsi_ip_prefix in target and volume_name in target:
                 (location, _sep, iscsi_name) = target.partition(" ")
                 break
         iscsi_portal = location.split(",")[0]
-        defer.returnValue((iscsi_name, iscsi_portal))
+        return (iscsi_name, iscsi_portal)
 
-    @defer.inlineCallbacks
     def discover_volume(self, volume):
         """Discover volume on a remote host."""
-        (iscsi_name,
-         iscsi_portal) = yield self._get_name_and_portal(volume['name'],
-                                                         volume['host'])
-        yield self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
-                            (iscsi_name, iscsi_portal))
-        yield self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                            "-n node.startup -v automatic" %
-                            (iscsi_name, iscsi_portal))
-        defer.returnValue("/dev/iscsi/%s" % volume['name'])
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
+                                                             volume['host'])
+        self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
+                      (iscsi_name, iscsi_portal))
+        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
+                      "-n node.startup -v automatic" %
+                      (iscsi_name, iscsi_portal))
+        return "/dev/iscsi/%s" % volume['name']
 
-    @defer.inlineCallbacks
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
-        (iscsi_name,
-         iscsi_portal) = yield self._get_name_and_portal(volume['name'],
-                                                         volume['host'])
-        yield self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                            "-n node.startup -v manual" %
-                            (iscsi_name, iscsi_portal))
-        yield self._execute("sudo iscsiadm -m node -T %s -p %s --logout " %
-                            (iscsi_name, iscsi_portal))
-        yield self._execute("sudo iscsiadm -m node --op delete "
-                            "--targetname %s" % iscsi_name)
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
+                                                             volume['host'])
+        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
+                      "-n node.startup -v manual" %
+                      (iscsi_name, iscsi_portal))
+        self._execute("sudo iscsiadm -m node -T %s -p %s --logout " %
+                      (iscsi_name, iscsi_portal))
+        self._execute("sudo iscsiadm -m node --op delete "
+                      "--targetname %s" % iscsi_name)
 
 
 class FakeISCSIDriver(ISCSIDriver):

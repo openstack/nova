@@ -608,6 +608,12 @@ def fixed_ip_update(context, address, values):
 #functions between the two of them as well.
 @require_context
 def instance_create(context, values):
+    """Create a new Instance record in the database.
+
+    context - request context object
+    values - dict containing column values.
+             'internal_id' is auto-generated and should not be specified.
+    """
     instance_ref = models.Instance()
     instance_ref.update(values)
 
@@ -615,7 +621,7 @@ def instance_create(context, values):
     with session.begin():
         while instance_ref.internal_id == None:
             # Instances have integer internal ids.
-            internal_id = random.randint(0, 2 ** 32 - 1)
+            internal_id = random.randint(0, 2 ** 31 - 1)
             if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
@@ -816,6 +822,7 @@ def instance_update(context, instance_id, values):
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
         instance_ref.save(session=session)
+        return instance_ref
 
 
 def instance_add_security_group(context, instance_id, security_group_id):

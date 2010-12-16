@@ -16,27 +16,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-import unittest
+"""
+Base class for classes that need modular database access.
+"""
 
+from nova import utils
 from nova import flags
-from nova import test
-from nova import validate
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('db_driver', 'nova.db.api',
+                    'driver to use for database access')
 
 
-class ValidationTestCase(test.TrialTestCase):
-    def setUp(self):
-        super(ValidationTestCase, self).setUp()
-
-    def tearDown(self):
-        super(ValidationTestCase, self).tearDown()
-
-    def test_type_validation(self):
-        self.assertTrue(type_case("foo", 5, 1))
-        self.assertRaises(TypeError, type_case, "bar", "5", 1)
-        self.assertRaises(TypeError, type_case, None, 5, 1)
-
-
-@validate.typetest(instanceid=str, size=int, number_of_instances=int)
-def type_case(instanceid, size, number_of_instances):
-    return True
+class Base(object):
+    """DB driver is injected in the init method"""
+    def __init__(self, db_driver=None):
+        if not db_driver:
+            db_driver = FLAGS.db_driver
+        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103

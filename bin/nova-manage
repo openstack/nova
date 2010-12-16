@@ -53,6 +53,7 @@
   CLI interface for nova management.
 """
 
+import gettext
 import logging
 import os
 import sys
@@ -67,6 +68,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir))
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
+
+gettext.install('nova', unicode=1)
 
 from nova import context
 from nova import crypto
@@ -379,9 +382,14 @@ class ProjectCommands(object):
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
-        zip_file = self.manager.get_credentials(user_id, project_id)
-        with open(filename, 'w') as f:
-            f.write(zip_file)
+        try:
+            zip_file = self.manager.get_credentials(user_id, project_id)
+            with open(filename, 'w') as f:
+                f.write(zip_file)
+        except db.api.NoMoreNetworks:
+            print ('No more networks available. If this is a new '
+                   'installation, you need\nto call something like this:\n\n'
+                   '    nova-manage network create 10.0.0.0/8 10 64\n\n')
 
 
 class FloatingIpCommands(object):

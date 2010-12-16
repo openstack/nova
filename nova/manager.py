@@ -53,28 +53,22 @@ This module provides Manager, a base class for managers.
 
 from nova import utils
 from nova import flags
+from nova.db import base
 
-from twisted.internet import defer
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('db_driver', 'nova.db.api',
-                    'driver to use for volume creation')
 
 
-class Manager(object):
-    """DB driver is injected in the init method"""
+class Manager(base.Base):
     def __init__(self, host=None, db_driver=None):
         if not host:
             host = FLAGS.host
         self.host = host
-        if not db_driver:
-            db_driver = FLAGS.db_driver
-        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
+        super(Manager, self).__init__(db_driver)
 
-    @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval"""
-        yield
+        pass
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a standalone

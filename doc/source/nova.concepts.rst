@@ -23,13 +23,13 @@ Nova Concepts and Introduction
 Introduction
 ------------
 
-Nova is the software that controls your Infrastructure as as Service (IaaS)
+Nova, also known as OpenStack Compute, is the software that controls your Infrastructure as as Service (IaaS)
 cloud computing platform.  It is similar in scope to Amazon EC2 and Rackspace
-CloudServers.  Nova does not include any virtualization software, rather it
+Cloud Servers.  Nova does not include any virtualization software, rather it
 defines drivers that interact with underlying virtualization mechanisms that
 run on your host operating system, and exposes functionality over a web API.
 
-This document does not attempt to explain fundamental concepts of cloud
+This site does not attempt to explain fundamental concepts of cloud
 computing, IaaS, virtualization, or other related technologies.  Instead, it
 focuses on describing how Nova's implementation of those concepts is achieved.
 
@@ -63,6 +63,19 @@ Concept: Instances
 ------------------
 
 An 'instance' is a word for a virtual machine that runs inside the cloud.
+
+Concept: System Architecture
+----------------------------
+
+Nova consists of seven main components, with the Cloud Controller component representing the global state and interacting with all other components. API Server acts as the Web services front end for the cloud controller. Compute Controller provides compute server resources, and the Object Store component provides storage services. Auth Manager provides authentication and authorization services. Volume Controller provides fast and permanent block-level storage for the comput servers. Network Controller provides virtual networks to enable compute servers to interact with each other and with the public network. Scheduler selects the most suitable compute controller to host an instance.
+
+    .. image:: images/Novadiagram.png 
+
+Nova is built on a shared-nothing, messaging-based architecture. All of the major components, that is Compute Controller, Volume Controller, Network Controller, and Object Store can be run on multiple servers. Cloud Controller communicates with Object Store via HTTP (Hyper Text Transfer Protocol), but it communicates with Scheduler, Network Controller, and Volume Controller via AMQP (Advanced Message Queue Protocol). To avoid blocking each component while waiting for a response, Nova uses asynchronous calls, with a call-back that gets triggered when a response is received.
+
+To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
+
+    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>_`. 
 
 Concept: Storage
 ----------------
@@ -104,9 +117,9 @@ Concept: API
 Concept: Networking
 -------------------
 
-Nova has a concept of Fixed Ips and Floating ips.  Fixed ips are assigned to an instance on creation and stay the same until the instance is explicitly terminated.  Floating ips are ip addresses that can be dynamically associated with an instance.  This address can be disassociated and associated with another instance at any time.
+Nova has a concept of Fixed IPs and Floating IPs.  Fixed IPs are assigned to an instance on creation and stay the same until the instance is explicitly terminated.  Floating ips are ip addresses that can be dynamically associated with an instance.  This address can be disassociated and associated with another instance at any time.
 
-There are multiple strategies available for implementing fixed ips:
+There are multiple strategies available for implementing fixed IPs:
 
 Flat Mode
 ~~~~~~~~~
@@ -116,7 +129,7 @@ The simplest networking mode.  Each instance receives a fixed ip from the pool. 
 Flat DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed ips by doing a dhcpdiscover.
+This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed IPs by doing a dhcpdiscover.
 
 VLAN DHCP Mode
 ~~~~~~~~~~~~~~
@@ -150,7 +163,7 @@ See doc:`nova.manage` in the Administration Guide for more details.
 Concept: Flags
 --------------
 
-python-gflags
+Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within flag files. When you install Nova packages, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. 
 
 
 Concept: Plugins
@@ -187,8 +200,17 @@ Concept: Scheduler
 Concept: Security Groups
 ------------------------
 
-Security groups
+In Nova, a security group is a named collection of network access rules, like firewall policies. These access rules specify which incoming network traffic should be delivered to all VM instances in the group, all other incoming traffic being discarded. Users can modify rules for a group at any time. The new rules are automatically enforced for all running instances and instances launched from then on.
 
+When launching VM instances, the project manager specifies which security groups it wants to join. It will become a member of these specified security groups when it is launched. If no groups are specified, the instances is assigned to the default group, which by default allows all network traffic from other members of this group and discards traffic from other IP addresses and groups. If this does not meet a user's needs, the user can modify the rule settings of the default group.
+
+A security group can be thought of as a security profile or a security role - it promotes the good practice of managing firewalls by role, not by machine. For example, a user could stipulate that servers with the "webapp" role must be able to connect to servers with the "mysql" role on port 3306. Going further with the security profile analogy, an instance can be launched with membership of multiple security groups - similar to a server with multiple roles. Because all rules in security groups are ACCEPT rules, it's trivial to combine them.
+
+Each rule in a security group must specify the source of packets to be allowed, which can either be a subnet anywhere on the Internet (in CIDR notation, with 0.0.0./0 representing the entire Internet) or another security group. In the latter case, the source security group can be any user's group. This makes it easy to grant selective access to one user's instances from instances run by the user's friends, partners, and vendors. 
+
+The creation of rules with other security groups specified as sources helps users deal with dynamic IP addressing. Without this feature, the user would have had to adjust the security groups each time a new instance is launched. This practice would become cumbersome if an application running in Nova is very dynamic and elastic, for example scales up or down frequently.
+
+Security groups for a VM are passed at launch time by the cloud controller to the compute node, and applied at the compute node when a VM is started.
 
 Concept: Certificate Authority
 ------------------------------

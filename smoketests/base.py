@@ -16,36 +16,26 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import boto
 import commands
+import httplib
 import os
+import paramiko
 import random
 import sys
 import unittest
+from boto.ec2.regioninfo import RegionInfo
 
-
-import paramiko
-
-from nova import adminclient
 from smoketests import flags
 
 FLAGS = flags.FLAGS
 
 
-class NovaTestCase(unittest.TestCase):
-    def setUp(self):
-        self.nova_admin = adminclient.NovaAdminClient(
-            access_key=FLAGS.admin_access_key,
-            secret_key=FLAGS.admin_secret_key,
-            clc_ip=FLAGS.clc_ip)
-
-    def tearDown(self):
-        pass
-
+class SmokeTestCase(unittest.TestCase):
     def connect_ssh(self, ip, key_name):
         # TODO(devcamcar): set a more reasonable connection timeout time
         key = paramiko.RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
         client = paramiko.SSHClient()
-        client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.WarningPolicy())
         client.connect(ip, username='root', pkey=key)
         stdin, stdout, stderr = client.exec_command('uptime')
@@ -53,26 +43,50 @@ class NovaTestCase(unittest.TestCase):
         return client
 
     def can_ping(self, ip):
-        return commands.getstatusoutput('ping -c 1 %s' % ip)[0] == 0
+        """ Attempt to ping the specified IP, and give up after 1 second. """
 
-    @property
-    def admin(self):
-        return self.nova_admin.connection_for('admin')
+        # NOTE(devcamcar): ping timeout flag is different in OSX.
+        if sys.platform == 'darwin':
+            timeout_flag = 't'
+        else:
+            timeout_flag = 'w'
 
-    def connection_for(self, username):
-        return self.nova_admin.connection_for(username)
+        status, output = commands.getstatusoutput('ping -c1 -%s1 %s' %
+                                                  (timeout_flag, ip))
+        return status == 0
 
-    def create_user(self, username):
-        return self.nova_admin.create_user(username)
+    def connection_for_env(self, **kwargs):
+        """
+        Returns a boto ec2 connection for the current environment.
+        """
+        access_key = os.getenv('EC2_ACCESS_KEY')
+        secret_key = os.getenv('EC2_SECRET_KEY')
+        clc_url = os.getenv('EC2_URL')
 
-    def get_user(self, username):
-        return self.nova_admin.get_user(username)
+        if not access_key or not secret_key or not clc_url:
+            raise Exception('Missing EC2 environment variables. Please source '
+                            'the appropriate novarc file before running this '
+                            'test.')
 
-    def delete_user(self, username):
-        return self.nova_admin.delete_user(username)
+        parts = self.split_clc_url(clc_url)
+        return boto.connect_ec2(aws_access_key_id=access_key,
+                                aws_secret_access_key=secret_key,
+                                is_secure=parts['is_secure'],
+                                region=RegionInfo(None,
+                                                  'nova',
+                                                  parts['ip']),
+                                port=parts['port'],
+                                path='/services/Cloud',
+                                **kwargs)
 
-    def get_signed_zip(self, username):
-        return self.nova_admin.get_zip(username)
+    def split_clc_url(self, clc_url):
+        """
+        Splits a cloud controller endpoint url.
+        """
+        parts = httplib.urlsplit(clc_url)
+        is_secure = parts.scheme == 'https'
+        ip, port = parts.netloc.split(':')
+        return {'ip': ip, 'port': int(port), 'is_secure': is_secure}
 
     def create_key_pair(self, conn, key_name):
         try:
@@ -116,15 +130,25 @@ class NovaTestCase(unittest.TestCase):
             raise Exception(output)
         return True
 
-    def register_image(self, bucket_name, manifest):
-        conn = nova_admin.connection_for('admin')
-        return conn.register_image("%s/%s.manifest.xml" % (bucket_name, manifest))
+def run_tests(suites):
+    argv = FLAGS(sys.argv)
 
-    def setUp_test_image(self, image, kernel=False):
-        self.bundle_image(image, kernel=kernel)
-        bucket = "auto_test_%s" % int(random.random() * 1000000)
-        self.upload_image(bucket, image)
-        return self.register_image(bucket, image)
+    if not os.getenv('EC2_ACCESS_KEY'):
+        print >> sys.stderr, 'Missing EC2 environment variables. Please ' \
+                             'source the appropriate novarc file before ' \
+                             'running this test.'
+        return 1
 
-    def tearDown_test_image(self, conn, image_id):
-        conn.deregister_image(image_id)
+    if FLAGS.suite:
+        try:
+            suite = suites[FLAGS.suite]
+        except KeyError:
+            print >> sys.stderr, 'Available test suites:', \
+                                 ', '.join(suites.keys())
+            return 1
+
+        unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        for suite in suites.itervalues():
+            unittest.TextTestRunner(verbosity=2).run(suite)
+
