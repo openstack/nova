@@ -43,7 +43,7 @@ def is_admin_context(context):
     if not context:
         warnings.warn('Use of empty request context is deprecated',
                       DeprecationWarning)
-        #raise Exception('die')
+        raise Exception('die')
     return context.is_admin
 
 
