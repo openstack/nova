@@ -631,6 +631,10 @@ class LibvirtConnection(object):
 
         return interfaces
 
+    def get_vcpu_number(self):
+        """ get vcpu number of physical computer """
+        return self._conn.getMaxVcpus(None)
+
     def block_stats(self, instance_name, disk):
         """
         Note that this function takes an instance name, not an Instance, so

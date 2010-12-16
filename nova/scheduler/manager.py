@@ -109,9 +109,9 @@ class SchedulerManager(manager.Manager):
 
         # get host information
         host_ref = db.host_get_by_name(context, dest)
-        total_cpu = int(host_ref['cpu'])
+        total_cpu = int(host_ref['vcpus'])
         total_mem = int(host_ref['memory_mb'])
-        total_hdd = int(host_ref['hdd_gb'])
+        total_hdd = int(host_ref['local_gb'])
 
         instances_ref = db.instance_get_all_by_host(context, dest)
         for i_ref in instances_ref:
@@ -144,9 +144,9 @@ class SchedulerManager(manager.Manager):
             raise
 
         # get physical resource information
-        h_resource = {'cpu': host_ref['cpu'],
+        h_resource = {'vcpus': host_ref['vcpus'],
                      'memory_mb': host_ref['memory_mb'],
-                     'hdd_gb': host_ref['hdd_gb']}
+                     'local_gb': host_ref['local_gb']}
 
         # get usage resource information
         u_resource = {}
@@ -158,7 +158,7 @@ class SchedulerManager(manager.Manager):
         project_ids = [i['project_id'] for i in instances_ref]
         project_ids = list(set(project_ids))
         for p_id in project_ids:
-            cpu = db.instance_get_vcpu_sum_by_host_and_project(context,
+            vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,
                                                                host,
                                                                p_id)
             mem = db.instance_get_memory_sum_by_host_and_project(context,
@@ -167,6 +167,8 @@ class SchedulerManager(manager.Manager):
             hdd = db.instance_get_disk_sum_by_host_and_project(context,
                                                                host,
                                                                p_id)
-            u_resource[p_id] = {'cpu': cpu, 'memory_mb': mem, 'hdd_gb': hdd}
+            u_resource[p_id] = {'vcpus': vcpus, 
+                                'memory_mb': mem, 
+                                'local_gb': hdd}
 
         return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}

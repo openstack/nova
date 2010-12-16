@@ -260,9 +260,9 @@ class ComputeManager(manager.Manager):
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)
 
-    def get_cpu_number(self):
-        """Get the number of physical computer cpu core ."""
-        return open('/proc/cpuinfo').read().count('processor')
+    def get_vcpu_number(self):
+        """Get the number of vcpu on physical computer."""
+        return self.driver.get_vcpu_number()
 
     def get_mem_size(self):
         """Get the memory size of physical computer ."""
@@ -302,27 +302,19 @@ class ComputeManager(manager.Manager):
                           ''.join(traceback.format_tb(sys.exc_info()[2])))
             return
 
-        # 3. getting network refs
-        network_ref = db.fixed_ip_get_network(context, fixed_ip)
-
-        # 4. security rules (filtering rules)
-        secgrp_refs = db.security_group_get_by_instance(context, instance_id)
-
-        # 5. if any volume is mounted, prepare here.
+        # 3. if any volume is mounted, prepare here.
         if 0 != len(shelf_slots):
             pass
 
-        # 6. create nova-instance-instance-xxx in hypervisor through libvirt
-        #     (This rule can be seen by executing virsh nwfilter-list)
+        # 4. Creating nova-instance-instance-xxx, this is written to libvirt.xml, 
+        #    and can be seen when executin "virsh nwfiter-list" On destination host,
+        #    this nwfilter is necessary.
+        #    In addition this method is creating security rule ingress rule onto
+        #    destination host.
         self.driver.setup_nwfilters_for_instance(instance_ref)
 
-        # 7. insert filtering rule
-        for secgrp_ref in secgrp_refs:
-            self.driver.refresh_security_group(secgrp_ref.id)
-
-        # 8. vlan settings
-        self.network_manager.driver.ensure_vlan_bridge(network_ref['vlan'],
-                                                       network_ref['bridge'])
+        # 5. bridge settings
+        self.network_manager.setup_compute_network(instance_id)
 
     def nwfilter_for_instance_exists(self, context, instance_id):
         """Check nova-instance-instance-xxx filter exists """
@@ -375,5 +367,3 @@ class ComputeManager(manager.Manager):
         if not ret:
             logging.debug('Fail to live migration')
             return
-
-

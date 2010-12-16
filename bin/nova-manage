@@ -441,10 +441,6 @@ class InstanceCommands(object):
         logging.basicConfig()
         ctxt = context.get_admin_context()
 
-        if 'nova.network.manager.VlanManager' != FLAGS.network_manager :
-            msg = 'Only nova.network.manager.VlanManager is supported now. Sorry!'
-            raise Exception(msg)
-
         # 1. whether destination host exists
         host_ref = db.host_get_by_name(ctxt, dest)
 
@@ -513,18 +509,18 @@ class HostCommands(object):
         elif not result['ret'] :
             print '%s' % result['msg']
         else :
-            cpu = result['phy_resource']['cpu']
+            cpu = result['phy_resource']['vcpus']
             mem = result['phy_resource']['memory_mb']
-            hdd = result['phy_resource']['hdd_gb']
+            hdd = result['phy_resource']['local_gb']
 
             print 'HOST\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
             print '%s\t\t\t%s\t%s\t%s' % ( host,cpu, mem, hdd)
             for p_id, val in result['usage'].items() :
                 print '%s\t%s\t\t%s\t%s\t%s' % ( host,
                                              p_id,
-                                             val['cpu'],
+                                             val['vcpus'],
                                              val['memory_mb'],
-                                             val['hdd_gb'])
+                                             val['local_gb'])
 
     def has_keys(self, dic, keys):
         not_found = [ key for key in keys if not dict.has_key(key) ]

@@ -144,9 +144,9 @@ class Host(BASE, NovaBase):
     __tablename__ = 'hosts'
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
-    cpu = Column(Integer, nullable=False, default=-1)
+    vcpus = Column(Integer, nullable=False, default=-1)
     memory_mb = Column(Integer, nullable=False, default=-1)
-    hdd_gb = Column(Integer, nullable=False, default=-1)
+    local_gb = Column(Integer, nullable=False, default=-1)
     #cpuid = Column(Integer, nullable=False)
     deleted = Column(Boolean, default=False)
     # C: when calling service_create()

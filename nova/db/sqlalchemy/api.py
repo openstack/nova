@@ -744,6 +744,7 @@ def instance_update(context, instance_id, values):
         instance_ref.save(session=session)
 
 
+@require_context
 def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance"""
     session = get_session()
@@ -756,6 +757,7 @@ def instance_add_security_group(context, instance_id, security_group_id):
         instance_ref.save(session=session)
 
 
+@require_context
 def instance_get_all_by_host(context, hostname):
     session = get_session()
     if not session:
@@ -770,6 +772,7 @@ def instance_get_all_by_host(context, hostname):
     return result
 
 
+@require_context
 def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
     session = get_session()
 
@@ -783,16 +786,19 @@ def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
     return result
 
 
+@require_context
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'vcpus', hostname,
                                                  proj_id)
 
 
+@require_context
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'memory_mb',
                                                  hostname, proj_id)
 
 
+@require_context
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'local_gb',
                                                  hostname, proj_id)

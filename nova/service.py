@@ -119,14 +119,14 @@ class Service(object, service.Service):
     def _update_host_ref(self, context, host_ref):
 
         if 0 <= self.manager_class_name.find('ComputeManager'):
-            cpu = self.manager.get_cpu_number()
+            cpu = self.manager.get_vcpu_number()
             memory_mb = self.manager.get_mem_size()
-            hdd_gb = self.manager.get_hdd_size()
+            local_gb = self.manager.get_hdd_size()
             db.host_update(context,
                            host_ref['id'],
-                           {'cpu': cpu,
+                           {'vcpus': cpu,
                            'memory_mb': memory_mb,
-                           'hdd_gb': hdd_gb})
+                           'local_gb': local_gb})
         return host_ref
 
     def __getattr__(self, key):

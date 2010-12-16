@@ -139,7 +139,7 @@ class NetworkManager(manager.Manager):
         """Called when this host becomes the host for a network."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
         raise NotImplementedError()
 
@@ -298,7 +298,7 @@ class FlatManager(NetworkManager):
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context.elevated(), address)
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Network is created manually."""
         pass
 
@@ -358,9 +358,10 @@ class FlatDHCPManager(FlatManager):
         super(FlatDHCPManager, self).init_host()
         self.driver.metadata_forward()
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
-        network_ref = db.network_get_by_instance(context, instance_id)
+        if network_ref is None:
+            network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
                                   network_ref)
@@ -454,9 +455,11 @@ class VlanManager(NetworkManager):
                                             network_ref['vpn_private_address'])
         self.driver.update_dhcp(context, network_ref['id'])
 
-    def setup_compute_network(self, context, instance_id):
+
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
-        network_ref = db.network_get_by_instance(context, instance_id)
+        if network_ref is None:
+            network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
 
