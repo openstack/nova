@@ -40,7 +40,7 @@ def _entity_detail(inst):
         'pending': 'queued',
         'decrypting': 'preparing',
         'untarring': 'saving',
-        'available': 'active',
+        'available': 'active'}
     new_inst = {}
     mapped_keys = {status:'imageState', id:'imageId', name:'imageLocation'}
 
