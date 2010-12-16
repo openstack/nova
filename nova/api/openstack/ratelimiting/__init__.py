@@ -14,6 +14,66 @@ PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
 
+class BasicRateLimiting(object):
+    """ Implements Rate limits as per the Rackspace CloudServers API spec. """
+
+    def __init__(self, service_host):
+        if not service_host:
+            #TODO(gundlach): These limits were based on limitations of Cloud
+            #Servers.  We should revisit them in Nova.
+            self.limiter = ratelimiting.Limiter(limits={
+                    'DELETE': (100, ratelimiting.PER_MINUTE),
+                    'PUT': (10, ratelimiting.PER_MINUTE),
+                    'POST': (10, ratelimiting.PER_MINUTE),
+                    'POST servers': (50, ratelimiting.PER_DAY),
+                    'GET changes-since': (3, ratelimiting.PER_MINUTE),
+                })
+        else:
+            self.limiter = ratelimiting.WSGIAppProxy(service_host)
+
+    def limited_request(self, req):
+        """Rate limit the request.
+
+        If the request should be rate limited, return a 413 status with a
+        Retry-After header giving the time when the request would succeed.
+        """
+        action_name = self.get_action_name(req)
+        if not action_name:
+            # Not rate limited
+            return self.application
+        delay = self.get_delay(action_name,
+            req.environ['nova.context'].user_id)
+        if delay:
+            # TODO(gundlach): Get the retry-after format correct.
+            exc = webob.exc.HTTPRequestEntityTooLarge(
+                    explanation='Too many requests.',
+                    headers={'Retry-After': time.time() + delay})
+            raise faults.Fault(exc)
+        return self.application
+
+    def get_delay(self, action_name, username):
+        """Return the delay for the given action and username, or None if
+        the action would not be rate limited.
+        """
+        if action_name == 'POST servers':
+            # "POST servers" is a POST, so it counts against "POST" too.
+            # Attempt the "POST" first, lest we are rate limited by "POST" but
+            # use up a precious "POST servers" call.
+            delay = self.limiter.perform("POST", username=username)
+            if delay:
+                return delay
+        return self.limiter.perform(action_name, username=username)
+
+    def get_action_name(self, req):
+        """Return the action name for this request."""
+        if req.method == 'GET' and 'changes-since' in req.GET:
+            return 'GET changes-since'
+        if req.method == 'POST' and req.path_info.startswith('/servers'):
+            return 'POST servers'
+        if req.method in ['PUT', 'POST', 'DELETE']:
+            return req.method
+        return None
+
 class Limiter(object):
 
     """Class providing rate limiting of arbitrary actions."""

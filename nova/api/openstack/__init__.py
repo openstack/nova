@@ -49,6 +49,10 @@ flags.DEFINE_string('nova_api_auth',
     'nova.api.openstack.auth.BasicApiAuthManager',
     'The auth mechanism to use for the OpenStack API implemenation')
 
+flags.DEFINE_string('os_api_ratelimiting',
+    'nova.api.openstack.ratelimiting.BasicRateLimiting',
+    'Default ratelimiting implementation for the Openstack API')
+
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
@@ -81,10 +85,10 @@ class AuthMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        if 'X-Auth-Token' not in req.headers:
+        if not self.auth_driver.has_authentication(req)
             return self.auth_driver.authenticate(req)
 
-        user = self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
+        user = self.auth_driver.get_user_by_authentication(req)
 
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
@@ -104,62 +108,12 @@ class RateLimitingMiddleware(wsgi.Middleware):
         at the given host+port to keep rate counters.
         """
         super(RateLimitingMiddleware, self).__init__(application)
-        if not service_host:
-            #TODO(gundlach): These limits were based on limitations of Cloud
-            #Servers.  We should revisit them in Nova.
-            self.limiter = ratelimiting.Limiter(limits={
-                    'DELETE': (100, ratelimiting.PER_MINUTE),
-                    'PUT': (10, ratelimiting.PER_MINUTE),
-                    'POST': (10, ratelimiting.PER_MINUTE),
-                    'POST servers': (50, ratelimiting.PER_DAY),
-                    'GET changes-since': (3, ratelimiting.PER_MINUTE),
-                })
-        else:
-            self.limiter = ratelimiting.WSGIAppProxy(service_host)
+        self._limiting_driver =
+            utils.import_class(FLAGS.os_api_ratelimiting)(service_host)
 
     @webob.dec.wsgify
     def __call__(self, req):
-        """Rate limit the request.
-
-        If the request should be rate limited, return a 413 status with a
-        Retry-After header giving the time when the request would succeed.
-        """
-        action_name = self.get_action_name(req)
-        if not action_name:
-            # Not rate limited
-            return self.application
-        delay = self.get_delay(action_name,
-            req.environ['nova.context'].user_id)
-        if delay:
-            # TODO(gundlach): Get the retry-after format correct.
-            exc = webob.exc.HTTPRequestEntityTooLarge(
-                    explanation='Too many requests.',
-                    headers={'Retry-After': time.time() + delay})
-            raise faults.Fault(exc)
-        return self.application
-
-    def get_delay(self, action_name, username):
-        """Return the delay for the given action and username, or None if
-        the action would not be rate limited.
-        """
-        if action_name == 'POST servers':
-            # "POST servers" is a POST, so it counts against "POST" too.
-            # Attempt the "POST" first, lest we are rate limited by "POST" but
-            # use up a precious "POST servers" call.
-            delay = self.limiter.perform("POST", username=username)
-            if delay:
-                return delay
-        return self.limiter.perform(action_name, username=username)
-
-    def get_action_name(self, req):
-        """Return the action name for this request."""
-        if req.method == 'GET' and 'changes-since' in req.GET:
-            return 'GET changes-since'
-        if req.method == 'POST' and req.path_info.startswith('/servers'):
-            return 'POST servers'
-        if req.method in ['PUT', 'POST', 'DELETE']:
-            return req.method
-        return None
+       return self._limiting_driver.limited_request(req) 
 
 
 class APIRouter(wsgi.Router):
@@ -191,22 +145,3 @@ class APIRouter(wsgi.Router):
             # TODO: Place routes for admin operations here.
 
         super(APIRouter, self).__init__(mapper)
-
-
-def limited(items, req):
-    """Return a slice of items according to requested offset and limit.
-
-    items - a sliceable
-    req - wobob.Request possibly containing offset and limit GET variables.
-          offset is where to start in the list, and limit is the maximum number
-          of items to return.
-
-    If limit is not specified, 0, or > 1000, defaults to 1000.
-    """
-    offset = int(req.GET.get('offset', 0))
-    limit = int(req.GET.get('limit', 0))
-    if not limit:
-        limit = 1000
-    limit = min(1000, limit)
-    range_end = offset + limit
-    return items[offset:range_end]

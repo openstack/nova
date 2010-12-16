@@ -7,6 +7,7 @@ import webob.exc
 import webob.dec
 
 from nova import auth
+from nova import context
 from nova import db
 from nova import flags
 from nova import manager
@@ -14,10 +15,6 @@ from nova import utils
 from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
-
-
-class Context(object):
-    pass
 
 
 class BasicApiAuthManager(object):
@@ -28,8 +25,13 @@ class BasicApiAuthManager(object):
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
         self.auth = auth.manager.AuthManager()
-        self.context = Context()
         super(BasicApiAuthManager, self).__init__()
+
+    def has_authentication(self, req):
+        return 'X-Auth-Token' in req.headers:
+
+    def get_user_by_authentication(self, req):
+        return self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
 
     def authenticate(self, req):
         # Unless the request is explicitly made against /<version>/ don't
@@ -68,11 +70,12 @@ class BasicApiAuthManager(object):
         This method will also remove the token if the timestamp is older than
         2 days ago.
         """
-        token = self.db.auth_get_token(self.context, token_hash)
+        ctxt = context.get_admin_context()
+        token = self.db.auth_get_token(ctxt, token_hash)
         if token:
             delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
-                self.db.auth_destroy_token(self.context, token)
+                self.db.auth_destroy_token(ctxt, token)
             else:
                 return self.auth.get_user(token.user_id)
         return None
@@ -84,6 +87,7 @@ class BasicApiAuthManager(object):
         key - string API key
         req - webob.Request object
         """
+        ctxt = context.get_admin_context()
         user = self.auth.get_user_from_access_key(key)
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
@@ -95,6 +99,6 @@ class BasicApiAuthManager(object):
             token_dict['server_management_url'] = req.url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
-            token = self.db.auth_create_token(self.context, token_dict)
+            token = self.db.auth_create_token(ctxt, token_dict)
             return token, user
         return None, None
