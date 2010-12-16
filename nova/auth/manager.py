@@ -65,7 +65,8 @@ flags.DEFINE_string('credential_key_file', 'pk.pem',
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
 flags.DEFINE_string('credential_rc_file', '%src',
-                    'Filename of rc in credentials zip')
+                    'Filename of rc in credentials zip, %s will be '
+                    'replaced by name of the region (nova by default)')
 flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
