@@ -233,6 +233,7 @@ class LoopingCall(object):
     def start(self, interval, now=True):
         self._running = True
         done = event.Event()
+
         def _inner():
             if not now:
                 greenthread.sleep(interval)
@@ -244,14 +245,14 @@ class LoopingCall(object):
                 logging.exception('in looping call')
                 done.send_exception(*sys.exc_info())
                 return
-            
+
             done.send(True)
 
         self.done = done
-        
+
         greenthread.spawn(_inner)
         return self.done
-        
+
     def stop(self):
         self._running = False
 

@@ -55,6 +55,7 @@ def skip_if_fake(func):
             return func(*args, **kw)
     return _skipper
 
+
 class TestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
     def setUp(self):

@@ -64,7 +64,7 @@ class ComputeManager(manager.Manager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         super(ComputeManager, self).__init__(*args, **kwargs)
-    
+
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
