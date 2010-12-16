@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, String, schema
+from sqlalchemy import Column, Integer, Float, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -224,6 +224,23 @@ class Instance(BASE, NovaBase):
     #def validate_state(self, key, state):
     #    assert(state in ['nostate', 'running', 'blocked', 'paused',
     #                     'shutdown', 'shutoff', 'crashed'])
+
+
+class InstanceDiagnostics(BASE, NovaBase):
+    """Represents a guest VM's diagnostics"""
+    __tablename__ = "instance_diagnostics"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    vbd_xvda_read = Column(Float)
+    vbd_xvda_write = Column(Float)
+    vbd_xvdb_read = Column(Float)
+    vbd_xvdb_write = Column(Float)
+    memory = Column(Float)
+    memory_internal_free = Column(Float)
+    cpu0 = Column(Float)
+    vif_0_tx = Column(Float)
+    vif_0_rx = Column(Float)
 
 
 class Volume(BASE, NovaBase):
@@ -526,8 +543,8 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
-              FloatingIp, Network, SecurityGroup,
+    models = (Service, Instance, InstanceDiagnostics, Volume, ExportDevice,
+              IscsiTarget, FixedIp, FloatingIp, Network, SecurityGroup,
               SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
               AuthToken, User, Project)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
