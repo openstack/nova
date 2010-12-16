@@ -49,7 +49,7 @@ class ProcessTestCase(test.TrialTestCase):
 
     def test_execute_stderr(self):
         pool = process.ProcessPool(2)
-        d = pool.simple_execute('cat BAD_FILE', check_exit_code=False)
+        d = pool.simple_execute('LC_ALL=C cat BAD_FILE', check_exit_code=False)
 
         def _check(rv):
             self.assertEqual(rv[0], '')
