@@ -27,6 +27,40 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+def _entity_list(entities):
+    """ Coerces a list of images into proper dictionary format
+        entities is a list of entities (dicts) """
+    return dict(images=entities)
+
+def _entity_detail(inst):
+    """ Maps everything to Rackspace-like attributes for return
+        also pares down attributes to those we want
+        inst is a single entity (dict) """
+    status_mapping = {
+        'pending': 'queued',
+        'decrypting': 'preparing',
+        'untarring': 'saving',
+        'available': 'active',
+    new_inst = {}
+    mapped_keys = {status:'imageState', id:'imageId', name:'imageLocation'}
+
+    for k,v in mapped_keys.iteritems():
+        new_inst[k] = inst[v]
+
+    new_inst['status'] = status_mapping[inew_inst['status']]
+
+    return new_inst
+
+def _entity_inst(inst):
+    """ Filters all model attributes save for id and name
+        inst is a single entity (dict) """
+    return _filter_keys(inst, ['id','name'])
+
+def _filter_keys(inst, keys):
+    """ Filters all model attributes for keys
+        inst is a single entity (dict) """
+    return dict( (k,v) for k,v in inst.iteritems() if k in keys)
+
 
 class Controller(wsgi.Controller):
 
@@ -40,24 +74,24 @@ class Controller(wsgi.Controller):
         self._service = utils.import_object(FLAGS.image_service)
 
     def index(self, req):
-        """Return all public images in brief."""
-        return dict(images=[dict(id=img['id'], name=img['name'])
-                            for img in self.detail(req)['images']])
+        """ Return all public images in brief """
+        items = self._service.index(req.environ['nova.context'])
+        items = nova.api.openstack.limited(items, req)
+        items = [_entity_inst(item) for item in items]
+        return dict(images=items)
 
     def detail(self, req):
-        """Return all public images in detail."""
+        """ Return all public images in detail """
         try:
-            images = self._service.detail(req.environ['nova.context'])
-            images = nova.api.openstack.limited(images, req)
+            items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
-            # Emulate detail() using repeated calls to show()
-            images = self._service.index(ctxt)
-            images = nova.api.openstack.limited(images, req)
-            images = [self._service.show(ctxt, i['id']) for i in images]
-        return dict(images=images)
+            items = self._service.index(req.environ['nova.context'])
+        items = nova.api.openstack.limited(items, req)
+        items = [_entity_detail(item) for item in items]
+        return dict(images=items)
 
     def show(self, req, id):
-        """Return data about the given image id."""
+        """ Return data about the given image id """
         return dict(image=self._service.show(req.environ['nova.context'], id))
 
     def delete(self, req, id):
