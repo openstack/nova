@@ -141,14 +141,13 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         result = conn.attach_volume(instance.name, volume['ec2_id'],
                                     '/dev/sdc')
 
-        def check(exc):
+        def check_exception(exc):
             """ handler """
             if exc:
                 pass
             else:
                 self.fail('Oops, no exception has been raised!')
-
-        result.addErrback(check)
+        result.addErrback(check_exception)
         return result
 
     def tearDown(self):

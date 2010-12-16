@@ -152,18 +152,23 @@ class VolumeHelper(HelperBase):
             logging.warn(exc)
             raise StorageError('Unable to get record of VDI %s on' % vdis[0])
         else:
-            return session.get_xenapi().VDI.introduce(
-                vdi_rec['uuid'],
-                vdi_rec['name_label'],
-                vdi_rec['name_description'],
-                vdi_rec['SR'],
-                vdi_rec['type'],
-                vdi_rec['sharable'],
-                vdi_rec['read_only'],
-                vdi_rec['other_config'],
-                vdi_rec['location'],
-                vdi_rec['xenstore_data'],
-                vdi_rec['sm_config'])
+            try:
+                vdi_ref = session.get_xenapi().VDI.introduce(
+                    vdi_rec['uuid'],
+                    vdi_rec['name_label'],
+                    vdi_rec['name_description'],
+                    vdi_rec['SR'],
+                    vdi_rec['type'],
+                    vdi_rec['sharable'],
+                    vdi_rec['read_only'],
+                    vdi_rec['other_config'],
+                    vdi_rec['location'],
+                    vdi_rec['xenstore_data'],
+                    vdi_rec['sm_config'])
+            except cls.XenAPI.Failure, exc:
+                logging.warn(exc)
+                raise StorageError('Unable to introduce VDI for SR %s'
+                                   % sr_ref)
 
     @classmethod
     @defer.inlineCallbacks

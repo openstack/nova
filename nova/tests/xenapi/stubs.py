@@ -58,21 +58,12 @@ class FakeSessionForVolumeTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForVolumeTests, self).__init__(uri)
 
-    def VBD_plug(self, _1, _2):
-        #FIXME(armando):make proper plug
-        pass
-
-    def PBD_unplug(self, _1, _2):
-        #FIXME(armando):make proper unplug
-        pass
-
-    def SR_forget(self, _1, _2):
-        #FIXME(armando):make proper forget
-        pass
+    def VBD_plug(self, _1, ref):
+        rec = fake.get_record('VBD', ref)
+        rec['currently-attached'] = True
 
     def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
                       _6, _7, _8, _9, _10, _11):
-        #FIXME(armando):make proper introduce
         valid_vdi = False
         refs = fake.get_all('VDI')
         for ref in refs:
@@ -93,6 +84,9 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
         # This is for testing failure
         raise fake.Failure([['INVALID_VDI', 'session', self._session]])
 
-    def VBD_plug(self, _1, _2):
-        # This is for testing failure
-        raise fake.Failure([['INVALID_VBD', 'session', self._session]])
+    def PBD_unplug(self, _1, ref):
+        rec = fake.get_record('PBD', ref)
+        rec['currently-attached'] = False
+
+    def SR_forget(self, _1, ref):
+        pass
