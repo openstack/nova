@@ -74,9 +74,7 @@ class BasicApiAuthManager(object):
             if delta.days >= 2:
                 self.db.auth_destroy_token(self.context, token)
             else:
-                #TODO(gundlach): Why not just return dict(id=token.user_id)?
-                user = self.auth.get_user(token.user_id)
-                return {'id': user.id}
+                return self.auth.get_user(token.user_id)
         return None
 
     def _authorize_user(self, username, key, req):

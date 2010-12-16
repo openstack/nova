@@ -9,7 +9,7 @@ The fastest way to get a test cloud running is through our :doc:`../quickstart`.
 Step 1 and 2: Get the latest Nova code system software
 ------------------------------------------------------
 
-Depending on your system, the mehod for accomplishing this varies
+Depending on your system, the method for accomplishing this varies
 
 .. toctree::
    :maxdepth: 1
@@ -139,7 +139,7 @@ Type or copy/paste the following to source the novarc file in your current worki
 
 Step 9: Pat yourself on the back :)
 -----------------------------------
-Congratulations, your cloud is up and running, you’ve created an admin user, retrieved the user's credentials and put them in your environment.
+Congratulations, your cloud is up and running, you’ve created an admin user, created a network, retrieved the user's credentials and put them in your environment.
 
 Now you need an image.
 

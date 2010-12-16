@@ -19,15 +19,17 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import logging
-import XenAPI
 
 from twisted.internet import defer
 
 from nova import db
 from nova import context
+
 from nova.auth.manager import AuthManager
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
+
+XenAPI = None
 
 
 class VMOps(object):
@@ -35,7 +37,12 @@ class VMOps(object):
     Management class for VM-related tasks
     """
     def __init__(self, session):
+        global XenAPI
+        if XenAPI is None:
+            XenAPI = __import__('XenAPI')
         self._session = session
+        # Load XenAPI module in the helper class
+        VMHelper.late_import()
 
     def list_instances(self):
         """ List VM instances """
@@ -136,6 +143,15 @@ class VMOps(object):
             raise Exception('instance not present %s' % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
+
+    @defer.inlineCallbacks
+    def get_diagnostics(self, instance_id):
+        """Return data about VM diagnostics"""
+        vm = yield VMHelper.lookup(self._session, instance_id)
+        if vm is None:
+            raise Exception("instance not present %s" % instance_id)
+        rec = yield self._session.get_xenapi().VM.get_record(vm)
+        defer.returnValue(VMHelper.compile_diagnostics(self._session, rec))
 
     def get_console_output(self, instance):
         """ Return snapshot of console """

@@ -23,7 +23,7 @@ In Nova, users organize their cloud resources in projects. A Nova project consis
 Nova Network Strategies
 -----------------------
 
-Currently, Nova supports three kinds of networks, implemented in three "Network Manager" types respectively: Flat Network Manager, Flat DHCP Network Manager, and VLAN Network Manager. The three kinds of networks can c-exist in a cloud system. However, the scheduler for selecting the type of network for a given project is not yet implemented. Here is a brief description of each of the different network strategies, with a focus on the VLAN Manager in a separate section. 
+Currently, Nova supports three kinds of networks, implemented in three "Network Manager" types respectively: Flat Network Manager, Flat DHCP Network Manager, and VLAN Network Manager. The three kinds of networks can co-exist in a cloud system. However, the scheduler for selecting the type of network for a given project is not yet implemented. Here is a brief description of each of the different network strategies, with a focus on the VLAN Manager in a separate section. 
 
 Read more about Nova network strategies here:
 

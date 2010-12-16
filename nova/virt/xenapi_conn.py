@@ -49,7 +49,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 
 import logging
 import xmlrpclib
-import XenAPI
 
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -78,10 +77,17 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    '(Async.VM.start, etc).  Used only if '
                    'connection_type=xenapi.')
 
+XenAPI = None
+
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
+    # This is loaded late so that there's no need to install this
+    # library when not using XenAPI.
+    global XenAPI
+    if XenAPI is None:
+        XenAPI = __import__('XenAPI')
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
@@ -119,6 +125,10 @@ class XenAPIConnection(object):
     def get_info(self, instance_id):
         """ Return data about VM instance """
         return self._vmops.get_info(instance_id)
+
+    def get_diagnostics(self, instance_id):
+        """Return data about VM diagnostics"""
+        return self._vmops.get_diagnostics(instance_id)
 
     def get_console_output(self, instance):
         """ Return snapshot of console """
