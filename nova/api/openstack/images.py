@@ -41,15 +41,15 @@ def _entity_detail(inst):
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    new_inst = {}
-    mapped_keys = {status:'imageState', id:'imageId', name:'imageLocation'}
+    mapped_inst = {}
+    mapped_keys = {'status':'imageState', 'id':'imageId', 'name':'imageLocation'}
 
     for k,v in mapped_keys.iteritems():
-        new_inst[k] = inst[v]
+        mapped_inst[k] = inst[v]
 
-    new_inst['status'] = status_mapping[inew_inst['status']]
+    mapped_inst['status'] = status_mapping[mapped_inst['status']]
 
-    return new_inst
+    return mapped_inst
 
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name
