@@ -72,7 +72,7 @@ fi
 # You should only have to run this once
 if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-software-properties
-    sudo add-apt-repository ppa:nova-core/ppa
+    sudo add-apt-repository ppa:nova-core/trunk
     sudo apt-get update
     sudo apt-get install -y dnsmasq kpartx kvm gawk iptables ebtables
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
