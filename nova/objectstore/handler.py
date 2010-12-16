@@ -261,7 +261,9 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug(_("Getting object: %s / %s"), self.bucket.name, self.name)
+        logging.debug(_("Getting object: %s / %s"),
+                      self.bucket.name,
+                      self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized()
@@ -279,7 +281,9 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug(_("Putting object: %s / %s"), self.bucket.name, self.name)
+        logging.debug(_("Putting object: %s / %s"),
+                      self.bucket.name,
+                      self.name)
 
         if not self.bucket.is_authorized(request.context):
             raise exception.NotAuthorized()

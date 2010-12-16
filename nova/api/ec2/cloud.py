@@ -360,7 +360,8 @@ class CloudController(object):
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria == None:
-            raise exception.ApiError(_("No rule for the specified parameters."))
+            raise exception.ApiError(_("No rule for the specified "
+                                       "parameters."))
 
         for rule in security_group.rules:
             match = True
