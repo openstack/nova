@@ -17,9 +17,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-Nova API daemon.
-"""
+
+"""Starter script for Nova API."""
 
 import gettext
 import os
@@ -35,9 +34,11 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import api
 from nova import flags
 from nova import utils
-from nova import server
+from nova import wsgi
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
@@ -46,15 +47,10 @@ flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
 flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
 
 
-def main(_args):
-    from nova import api
-    from nova import wsgi
+if __name__ == '__main__':
+    utils.default_flagfile()
+    FLAGS(sys.argv)
     server = wsgi.Server()
     server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
     server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
     server.wait()
-
-
-if __name__ == '__main__':
-    utils.default_flagfile()
-    server.serve('nova-api', main)
