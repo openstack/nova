@@ -67,7 +67,7 @@ class RpcTestCase(test.TestCase):
         self.assertRaises(rpc.RemoteError,
                           rpc.call,
                           self.context,
-                          'test', 
+                          'test',
                           {"method": "fail",
                            "args": {"value": value}})
         try:

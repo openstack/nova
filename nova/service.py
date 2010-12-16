@@ -99,7 +99,7 @@ class Service(object):
 
             self.timers.append(consumer_all.attach_to_eventlet())
             self.timers.append(consumer_node.attach_to_eventlet())
-            
+
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
             self.timers.append(pulse)
@@ -122,7 +122,7 @@ class Service(object):
         return getattr(manager, key)
 
     @classmethod
-    def create(cls, 
+    def create(cls,
                host=None,
                binary=None,
                topic=None,
@@ -192,7 +192,7 @@ class Service(object):
             db.service_update(ctxt,
                              self.service_id,
                              {'report_count': service_ref['report_count'] + 1})
-                
+
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
@@ -207,7 +207,7 @@ class Service(object):
 
 def serve(*services):
     argv = FLAGS(sys.argv)
-    
+
     if not services:
         services = [Service.create()]
 
@@ -227,7 +227,7 @@ def serve(*services):
 
     for x in services:
         x.start()
-    
+
 
 def wait():
     while True:

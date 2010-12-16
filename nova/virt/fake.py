@@ -134,13 +134,13 @@ class FakeConnection(object):
         """
         Pause the specified instance.
         """
-        return defer.succeed(None)
+        pass
 
     def unpause(self, instance, callback):
         """
         Unpause the specified instance.
         """
-        return defer.succeed(None)
+        pass
 
     def destroy(self, instance):
         """

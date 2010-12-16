@@ -210,7 +210,7 @@ class XenAPISession(object):
                 error_info = self._session.xenapi.task.get_error_info(task)
                 logging.warn('Task %s status: %s.  %s', task, status,
                              error_info)
-                done.send_exception(XenAPI.Failure(error_info))   
+                done.send_exception(XenAPI.Failure(error_info))
                 #logging.debug('Polling task %s done.', task)
         except XenAPI.Failure, exc:
             logging.warn(exc)

@@ -206,7 +206,7 @@ class LibvirtConnection(object):
 
         timer.f = _wait_for_shutdown
         timer_done = timer.start(interval=0.5, now=True)
-        
+
         # NOTE(termie): this is strictly superfluous (we could put the
         #               cleanup code in the timer), but this emulates the
         #               previous model so I am keeping it around until
@@ -396,7 +396,7 @@ class LibvirtConnection(object):
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
-        
+
         utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
 
         if FLAGS.libvirt_type == 'xen':
@@ -448,11 +448,11 @@ class LibvirtConnection(object):
         if not os.path.exists(basepath('ramdisk')):
             images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
                          project)
-        
+
         def execute(cmd, process_input=None, check_exit_code=True):
-              return utils.execute(cmd=cmd,
-                                   process_input=process_input,
-                                   check_exit_code=check_exit_code)
+            return utils.execute(cmd=cmd,
+                                 process_input=process_input,
+                                 check_exit_code=check_exit_code)
 
         key = str(inst['key_data'])
         net = None

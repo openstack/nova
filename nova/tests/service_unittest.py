@@ -119,7 +119,7 @@ class ServiceTestCase(test.TestCase):
         service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
         self.mox.ReplayAll()
-        
+
         app.start()
         app.stop()
         self.assert_(app)
