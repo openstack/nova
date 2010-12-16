@@ -50,7 +50,7 @@ flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
-    
+
     compute = service.Service.create(binary='nova-compute')
     network = service.Service.create(binary='nova-network')
     volume = service.Service.create(binary='nova-volume')
@@ -63,4 +63,3 @@ if __name__ == '__main__':
     server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
     server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
     server.wait()
-    
