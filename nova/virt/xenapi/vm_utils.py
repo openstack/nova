@@ -21,12 +21,10 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import logging
 import urllib
-
 from xml.dom import minidom
 
 from nova import flags
 from nova import utils
-
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
