@@ -45,16 +45,15 @@ import logging
 import os
 import shutil
 
+from eventlet import event
+from eventlet import tpool
+
 import IPy
-from twisted.internet import defer
-from twisted.internet import task
-from twisted.internet import threads
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import process
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
@@ -184,14 +183,12 @@ class LibvirtConnection(object):
         except Exception as _err:
             pass
             # If the instance is already terminated, we're still happy
-        d = defer.Deferred()
-        if cleanup:
-            d.addCallback(lambda _: self._cleanup(instance))
-        # FIXME: What does this comment mean?
-        # TODO(termie): short-circuit me for tests
-        # WE'LL save this for when we do shutdown,
+
+        done = event.Event()
+
+        # We'll save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
-        timer = task.LoopingCall(f=None)
+        timer = utils.LoopingCall(f=None)
 
         def _wait_for_shutdown():
             try:
@@ -200,17 +197,26 @@ class LibvirtConnection(object):
                                       instance['id'], state)
                 if state == power_state.SHUTDOWN:
                     timer.stop()
-                    d.callback(None)
             except Exception:
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
-                d.callback(None)
 
         timer.f = _wait_for_shutdown
-        timer.start(interval=0.5, now=True)
-        return d
+        timer_done = timer.start(interval=0.5, now=True)
+
+        # NOTE(termie): this is strictly superfluous (we could put the
+        #               cleanup code in the timer), but this emulates the
+        #               previous model so I am keeping it around until
+        #               everything has been vetted a bit
+        def _wait_for_timer():
+            timer_done.wait()
+            self._cleanup(instance)
+            done.send()
+
+        greenthread.spawn(_wait_for_timer)
+        return done
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
@@ -219,7 +225,6 @@ class LibvirtConnection(object):
         if os.path.exists(target):
             shutil.rmtree(target)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
@@ -230,7 +235,6 @@ class LibvirtConnection(object):
                      <target dev='%s' bus='virtio'/>
                  </disk>""" % (device_path, mount_device)
         virt_dom.attachDevice(xml)
-        yield
 
     def _get_disk_xml(self, xml, device):
         """Returns the xml for the disk mounted at device"""
@@ -252,7 +256,6 @@ class LibvirtConnection(object):
             if doc != None:
                 doc.freeDoc()
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
@@ -261,17 +264,13 @@ class LibvirtConnection(object):
         if not xml:
             raise exception.NotFound(_("No disk at %s") % mount_device)
         virt_dom.detachDevice(xml)
-        yield
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot(self, instance):
-        yield self.destroy(instance, False)
+        self.destroy(instance, False)
         xml = self.to_xml(instance)
-        yield self._conn.createXML(xml, 0)
-
-        d = defer.Deferred()
-        timer = task.LoopingCall(f=None)
+        self._conn.createXML(xml, 0)
+        timer = utils.LoopingCall(f=None)
 
         def _wait_for_reboot():
             try:
@@ -281,33 +280,28 @@ class LibvirtConnection(object):
                 if state == power_state.RUNNING:
                     logging.debug(_('instance %s: rebooted'), instance['name'])
                     timer.stop()
-                    d.callback(None)
             except Exception, exn:
                 logging.error(_('_wait_for_reboot failed: %s'), exn)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
-                d.callback(None)
 
         timer.f = _wait_for_reboot
-        timer.start(interval=0.5, now=True)
-        yield d
+        return timer.start(interval=0.5, now=True)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def rescue(self, instance):
-        yield self.destroy(instance, False)
+        self.destroy(instance, False)
 
         xml = self.to_xml(instance, rescue=True)
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        yield self._create_image(instance, xml, 'rescue-', rescue_images)
-        yield self._conn.createXML(xml, 0)
+        self._create_image(instance, xml, 'rescue-', rescue_images)
+        self._conn.createXML(xml, 0)
 
-        d = defer.Deferred()
-        timer = task.LoopingCall(f=None)
+        timer = utils.LoopingCall(f=None)
 
         def _wait_for_rescue():
             try:
@@ -316,27 +310,22 @@ class LibvirtConnection(object):
                 if state == power_state.RUNNING:
                     logging.debug(_('instance %s: rescued'), instance['name'])
                     timer.stop()
-                    d.callback(None)
             except Exception, exn:
                 logging.error(_('_wait_for_rescue failed: %s'), exn)
                 db.instance_set_state(None,
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
-                d.callback(None)
 
         timer.f = _wait_for_rescue
-        timer.start(interval=0.5, now=True)
-        yield d
+        return timer.start(interval=0.5, now=True)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def unrescue(self, instance):
         # NOTE(vish): Because reboot destroys and recreates an instance using
         #             the normal xml file, we can just call reboot here
-        yield self.reboot(instance)
+        self.reboot(instance)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def spawn(self, instance):
         xml = self.to_xml(instance)
@@ -344,14 +333,12 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        yield NWFilterFirewall(self._conn).\
-              setup_nwfilters_for_instance(instance)
-        yield self._create_image(instance, xml)
-        yield self._conn.createXML(xml, 0)
+        NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
+        self._create_image(instance, xml)
+        self._conn.createXML(xml, 0)
         logging.debug(_("instance %s: is running"), instance['name'])
 
-        local_d = defer.Deferred()
-        timer = task.LoopingCall(f=None)
+        timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
             try:
@@ -361,7 +348,6 @@ class LibvirtConnection(object):
                 if state == power_state.RUNNING:
                     logging.debug(_('instance %s: booted'), instance['name'])
                     timer.stop()
-                    local_d.callback(None)
             except:
                 logging.exception(_('instance %s: failed to boot'),
                                   instance['name'])
@@ -369,10 +355,9 @@ class LibvirtConnection(object):
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
-                local_d.callback(None)
+
         timer.f = _wait_for_boot
-        timer.start(interval=0.5, now=True)
-        yield local_d
+        return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):
         logging.info('virsh said: %r' % (virsh_output,))
@@ -380,10 +365,9 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             logging.info(_('cool, it\'s a device'))
-            d = process.simple_execute("sudo dd if=%s iflag=nonblock" %
-                                       virsh_output, check_exit_code=False)
-            d.addCallback(lambda r: r[0])
-            return d
+            out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
+                                     virsh_output, check_exit_code=False)
+            return out
         else:
             return ''
 
@@ -403,21 +387,20 @@ class LibvirtConnection(object):
     def get_console_output(self, instance):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
-        d = process.simple_execute('sudo chown %d %s' % (os.getuid(),
-                                   console_log))
-        if FLAGS.libvirt_type == 'xen':
-            # Xen is spethial
-            d.addCallback(lambda _:
-                process.simple_execute("virsh ttyconsole %s" %
-                                       instance['name']))
-            d.addCallback(self._flush_xen_console)
-            d.addCallback(self._append_to_file, console_log)
-        else:
-            d.addCallback(lambda _: defer.succeed(console_log))
-        d.addCallback(self._dump_file)
-        return d
 
-    @defer.inlineCallbacks
+        utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
+
+        if FLAGS.libvirt_type == 'xen':
+            # Xen is special
+            virsh_output = utils.execute("virsh ttyconsole %s" %
+                                         instance['name'])
+            data = self._flush_xen_console(virsh_output)
+            fpath = self._append_to_file(data, console_log)
+        else:
+            fpath = console_log
+
+        return self._dump_file(fpath)
+
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
         basepath = lambda fname = '', prefix = prefix: os.path.join(
@@ -426,8 +409,8 @@ class LibvirtConnection(object):
                                                  prefix + fname)
 
         # ensure directories exist and are writable
-        yield process.simple_execute('mkdir -p %s' % basepath(prefix=''))
-        yield process.simple_execute('chmod 0777 %s' % basepath(prefix=''))
+        utils.execute('mkdir -p %s' % basepath(prefix=''))
+        utils.execute('chmod 0777 %s' % basepath(prefix=''))
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
@@ -448,19 +431,19 @@ class LibvirtConnection(object):
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
         if not os.path.exists(basepath('disk')):
-            yield images.fetch(inst.image_id, basepath('disk-raw'), user,
-                               project)
+            images.fetch(inst.image_id, basepath('disk-raw'), user,
+                         project)
         if not os.path.exists(basepath('kernel')):
-            yield images.fetch(inst.kernel_id, basepath('kernel'), user,
-                               project)
+            images.fetch(inst.kernel_id, basepath('kernel'), user,
+                         project)
         if not os.path.exists(basepath('ramdisk')):
-            yield images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
-                               project)
+            images.fetch(inst.ramdisk_id, basepath('ramdisk'), user,
+                         project)
 
-        execute = lambda cmd, process_input = None, check_exit_code = True: \
-                  process.simple_execute(cmd=cmd,
-                                         process_input=process_input,
-                                         check_exit_code=check_exit_code)
+        def execute(cmd, process_input=None, check_exit_code=True):
+            return utils.execute(cmd=cmd,
+                                 process_input=process_input,
+                                 check_exit_code=check_exit_code)
 
         key = str(inst['key_data'])
         net = None
@@ -482,11 +465,11 @@ class LibvirtConnection(object):
             if net:
                 logging.info(_('instance %s: injecting net into image %s'),
                     inst['name'], inst.image_id)
-            yield disk.inject_data(basepath('disk-raw'), key, net,
-                                   execute=execute)
+            disk.inject_data(basepath('disk-raw'), key, net,
+                             execute=execute)
 
         if os.path.exists(basepath('disk')):
-            yield process.simple_execute('rm -f %s' % basepath('disk'))
+            utils.execute('rm -f %s' % basepath('disk'))
 
         local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
                                                     ['local_gb']
@@ -495,12 +478,11 @@ class LibvirtConnection(object):
         resize = True
         if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
             resize = False
-        yield disk.partition(basepath('disk-raw'), basepath('disk'),
-                             local_bytes, resize, execute=execute)
+        disk.partition(basepath('disk-raw'), basepath('disk'),
+                       local_bytes, resize, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
-            yield process.simple_execute('sudo chown root %s' %
-                                         basepath('disk'))
+            utils.execute('sudo chown root %s' % basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
@@ -761,15 +743,15 @@ class NWFilterFirewall(object):
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
-        d = threads.deferToThread(self._conn.nwfilterDefineXML, xml)
-        return d
+
+        # execute in a native thread and block current greenthread until done
+        tpool.execute(self._conn.nwfilterDefineXML, xml)
 
     @staticmethod
     def _get_net_and_mask(cidr):
         net = IPy.IP(cidr)
         return str(net.net()), str(net.netmask())
 
-    @defer.inlineCallbacks
     def setup_nwfilters_for_instance(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
@@ -777,10 +759,10 @@ class NWFilterFirewall(object):
         the base filter are all in place.
         """
 
-        yield self._define_filter(self.nova_base_ipv4_filter)
-        yield self._define_filter(self.nova_base_ipv6_filter)
-        yield self._define_filter(self.nova_dhcp_filter)
-        yield self._define_filter(self.nova_base_filter)
+        self._define_filter(self.nova_base_ipv4_filter)
+        self._define_filter(self.nova_base_ipv6_filter)
+        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_base_filter)
 
         nwfilter_xml = "<filter name='nova-instance-%s' chain='root'>\n" \
                        "  <filterref filter='nova-base' />\n" % \
@@ -792,20 +774,19 @@ class NWFilterFirewall(object):
             net, mask = self._get_net_and_mask(network_ref['cidr'])
             project_filter = self.nova_project_filter(instance['project_id'],
                                                       net, mask)
-            yield self._define_filter(project_filter)
+            self._define_filter(project_filter)
 
             nwfilter_xml += "  <filterref filter='nova-project-%s' />\n" % \
                             instance['project_id']
 
         for security_group in instance.security_groups:
-            yield self.ensure_security_group_filter(security_group['id'])
+            self.ensure_security_group_filter(security_group['id'])
 
             nwfilter_xml += "  <filterref filter='nova-secgroup-%d' />\n" % \
                             security_group['id']
         nwfilter_xml += "</filter>"
 
-        yield self._define_filter(nwfilter_xml)
-        return
+        self._define_filter(nwfilter_xml)
 
     def ensure_security_group_filter(self, security_group_id):
         return self._define_filter(

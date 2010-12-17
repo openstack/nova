@@ -35,7 +35,7 @@ class Context(object):
     pass
 
 
-class AccessTestCase(test.TrialTestCase):
+class AccessTestCase(test.TestCase):
     def setUp(self):
         super(AccessTestCase, self).setUp()
         um = manager.AuthManager()

@@ -37,8 +37,6 @@ terminating it.
 import datetime
 import logging
 
-from twisted.internet import defer
-
 from nova import exception
 from nova import flags
 from nova import manager
@@ -78,13 +76,11 @@ class ComputeManager(manager.Manager):
             state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
         """This call passes stright through to the virtualization driver."""
-        yield self.driver.refresh_security_group(security_group_id)
+        self.driver.refresh_security_group(security_group_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
@@ -105,7 +101,7 @@ class ComputeManager(manager.Manager):
                                    'spawning')
 
         try:
-            yield self.driver.spawn(instance_ref)
+            self.driver.spawn(instance_ref)
             now = datetime.datetime.utcnow()
             self.db.instance_update(context,
                                     instance_id,
@@ -119,7 +115,6 @@ class ComputeManager(manager.Manager):
 
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
@@ -134,12 +129,11 @@ class ComputeManager(manager.Manager):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
-        yield self.driver.destroy(instance_ref)
+        self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
@@ -159,10 +153,9 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        yield self.driver.reboot(instance_ref)
+        self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
@@ -175,10 +168,9 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        yield self.driver.rescue(instance_ref)
+        self.driver.rescue(instance_ref)
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
@@ -191,7 +183,7 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'unrescuing')
-        yield self.driver.unrescue(instance_ref)
+        self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -203,7 +195,6 @@ class ComputeManager(manager.Manager):
 
         return self.driver.get_console_output(instance_ref)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
@@ -211,12 +202,12 @@ class ComputeManager(manager.Manager):
         logging.debug(_("instance %s: attaching volume %s to %s"), instance_id,
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
-        dev_path = yield self.volume_manager.setup_compute_volume(context,
-                                                                  volume_id)
+        dev_path = self.volume_manager.setup_compute_volume(context,
+                                                            volume_id)
         try:
-            yield self.driver.attach_volume(instance_ref['name'],
-                                            dev_path,
-                                            mountpoint)
+            self.driver.attach_volume(instance_ref['name'],
+                                      dev_path,
+                                      mountpoint)
             self.db.volume_attached(context,
                                     volume_id,
                                     instance_id,
@@ -227,12 +218,12 @@ class ComputeManager(manager.Manager):
             #             ecxception below.
             logging.exception(_("instance %s: attach failed %s, removing"),
                               instance_id, mountpoint)
-            yield self.volume_manager.remove_compute_volume(context,
-                                                            volume_id)
+            self.volume_manager.remove_compute_volume(context,
+                                                      volume_id)
             raise exc
-        defer.returnValue(True)
 
-    @defer.inlineCallbacks
+        return True
+
     @exception.wrap_exception
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
@@ -246,8 +237,8 @@ class ComputeManager(manager.Manager):
             logging.warn(_("Detaching volume from unknown instance %s"),
                          instance_ref['name'])
         else:
-            yield self.driver.detach_volume(instance_ref['name'],
-                                            volume_ref['mountpoint'])
-        yield self.volume_manager.remove_compute_volume(context, volume_id)
+            self.driver.detach_volume(instance_ref['name'],
+                                      volume_ref['mountpoint'])
+        self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
-        defer.returnValue(True)
+        return True

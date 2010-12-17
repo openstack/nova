@@ -54,7 +54,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'images'))
 os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 
 
-class ObjectStoreTestCase(test.TrialTestCase):
+class ObjectStoreTestCase(test.TestCase):
     """Test objectstore API directly."""
 
     def setUp(self):
@@ -191,7 +191,7 @@ class TestSite(server.Site):
     protocol = TestHTTPChannel
 
 
-class S3APITestCase(test.TrialTestCase):
+class S3APITestCase(test.TestCase):
     """Test objectstore through S3 API."""
 
     def setUp(self):

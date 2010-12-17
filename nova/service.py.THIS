@@ -17,17 +17,21 @@
 #    under the License.
 
 """
-Generic Node baseclass for all workers that run on hosts
+A service is a very thin wrapper around a Manager object.  It exposes the
+manager's public methods to other components of the system via rpc.  It will
+report state periodically to the database and is responsible for initiating
+any periodic tasts that need to be executed on a given host.
+
+This module contains Service, a generic baseclass for all workers.
 """
 
 import inspect
 import logging
 import os
-import sys
 
-from eventlet import event
-from eventlet import greenthread
-from eventlet import greenpool
+from twisted.internet import defer
+from twisted.internet import task
+from twisted.application import service
 
 from nova import context
 from nova import db
@@ -46,16 +50,8 @@ flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
 
-flags.DEFINE_string('pidfile', None,
-                    'pidfile to use for this service')
 
-
-flags.DEFINE_flag(flags.HelpFlag())
-flags.DEFINE_flag(flags.HelpshortFlag())
-flags.DEFINE_flag(flags.HelpXMLFlag())
-
-
-class Service(object):
+class Service(object, service.Service):
     """Base class for workers that run on hosts."""
 
     def __init__(self, host, binary, topic, manager, report_interval=None,
@@ -68,9 +64,8 @@ class Service(object):
         self.periodic_interval = periodic_interval
         super(Service, self).__init__(*args, **kwargs)
         self.saved_args, self.saved_kwargs = args, kwargs
-        self.timers = []
 
-    def start(self):
+    def startService(self):  # pylint: disable-msg C0103
         manager_class = utils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *self.saved_args,
                                                      **self.saved_kwargs)
@@ -85,29 +80,26 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
-        conn1 = rpc.Connection.instance(new=True)
-        conn2 = rpc.Connection.instance(new=True)
+        conn = rpc.Connection.instance()
         if self.report_interval:
             consumer_all = rpc.AdapterConsumer(
-                    connection=conn1,
+                    connection=conn,
                     topic=self.topic,
                     proxy=self)
             consumer_node = rpc.AdapterConsumer(
-                    connection=conn2,
+                    connection=conn,
                     topic='%s.%s' % (self.topic, self.host),
                     proxy=self)
 
-            self.timers.append(consumer_all.attach_to_eventlet())
-            self.timers.append(consumer_node.attach_to_eventlet())
+            consumer_all.attach_to_twisted()
+            consumer_node.attach_to_twisted()
 
-            pulse = utils.LoopingCall(self.report_state)
+            pulse = task.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
-            self.timers.append(pulse)
 
         if self.periodic_interval:
-            periodic = utils.LoopingCall(self.periodic_tasks)
-            periodic.start(interval=self.periodic_interval, now=False)
-            self.timers.append(periodic)
+            pulse = task.LoopingCall(self.periodic_tasks)
+            pulse.start(interval=self.periodic_interval, now=False)
 
     def _create_service_ref(self, context):
         service_ref = db.service_create(context,
@@ -151,32 +143,29 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.warn("Starting %s node", topic)
+        logging.warn(_("Starting %s node"), topic)
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
-        return service_obj
+        # This is the parent service that twistd will be looking for when it
+        # parses this file, return it so that we can get it into globals.
+        application = service.Application(binary)
+        service_obj.setServiceParent(application)
+        return application
 
     def kill(self):
         """Destroy the service object in the datastore"""
-        self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
-            logging.warn("Service killed that has no database entry")
+            logging.warn(_("Service killed that has no database entry"))
 
-    def stop(self):
-        for x in self.timers:
-            try:
-                x.stop()
-            except Exception:
-                pass
-        self.timers = []
-
+    @defer.inlineCallbacks
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
-        self.manager.periodic_tasks(context.get_admin_context())
+        yield self.manager.periodic_tasks(context.get_admin_context())
 
+    @defer.inlineCallbacks
     def report_state(self):
         """Update the state of this service in the datastore."""
         ctxt = context.get_admin_context()
@@ -184,8 +173,8 @@ class Service(object):
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
-                logging.debug("The service database object disappeared, "
-                              "Recreating it.")
+                logging.debug(_("The service database object disappeared, "
+                              "Recreating it."))
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
@@ -196,39 +185,11 @@ class Service(object):
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
-                logging.error("Recovered model server connection!")
+                logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
-                logging.exception("model server went away")
-
-
-def serve(*services):
-    argv = FLAGS(sys.argv)
-
-    if not services:
-        services = [Service.create()]
-
-    name = '_'.join(x.binary for x in services)
-    logging.debug("Serving %s" % name)
-
-    logging.getLogger('amqplib').setLevel(logging.WARN)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
-    logging.debug("Full set of FLAGS:")
-    for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
-
-    for x in services:
-        x.start()
-
-
-def wait():
-    while True:
-        greenthread.sleep(5)
+                logging.exception(_("model server went away"))
+        yield
