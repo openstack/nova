@@ -78,14 +78,14 @@ class ComputeAPI(base.Base):
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
             #Salvatore - No kernel and ramdisk for raw images
-            if (kernel_id == str(FLAGS.null_kernel)):
+            if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
                 ramdisk_id = None
                 logging.debug("Creating a raw instance")
             # Make sure we have access to kernel and ramdisk (if not raw)
-            if (kernel_id != None):
+            if kernel_id:
                 image_service.show(context, kernel_id)
-            if (ramdisk_id != None):
+            if ramdisk_id:
                 image_service.show(context, ramdisk_id)
             # Make sure we have access to kernel and ramdisk
             self.image_service.show(context, kernel_id)
@@ -109,7 +109,6 @@ class ComputeAPI(base.Base):
             key_data = key_pair['public_key']
 
         type_data = instance_types.INSTANCE_TYPES[instance_type]
-        #Salvatore TODO: PV or HVM
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,

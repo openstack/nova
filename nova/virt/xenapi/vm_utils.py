@@ -105,7 +105,7 @@ class VMHelper():
             }
         #Complete VM configuration record according to the image type
         #non-raw/raw with PV kernel/raw in HVM mode
-        if (instance.kernel_id):
+        if instance.kernel_id:
             rec['PV_bootloader'] = ''
             rec['PV_kernel'] = kernel
             rec['PV_ramdisk'] = ramdisk
@@ -113,7 +113,7 @@ class VMHelper():
             rec['PV_bootloader_args'] = ''
             rec['PV_legacy_args'] = ''
         else:
-            if (pv_kernel):
+            if pv_kernel:
                 rec['PV_args'] = 'noninteractive'
                 rec['PV_bootloader'] = 'pygrub'
             else:

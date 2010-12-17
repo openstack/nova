@@ -48,7 +48,7 @@ def is_vdi_pv(session,args):
     vdi = exists(args, 'vdi-ref')
     pv=with_vdi_in_dom0(session, vdi, False,
                      lambda dev: _is_vdi_pv('/dev/%s' % dev))
-    if (pv):
+    if pv:
         return 'true'
     else:
         return 'false'
@@ -58,11 +58,10 @@ def _is_vdi_pv(dest):
     output=os.popen('pygrub -qn %s' % dest)
     pv=False
     for line in output.readlines():
-        #logging.debug("line:",line)
         #try to find kernel string
         m=re.search('(?<=kernel:)/.*(?:>)',line)
-        if (m<>None):
-            if m.group(0).find('xen')<>-1:
+        if m:
+            if m.group(0).find('xen')!=-1:
                 pv=True
     logging.debug("PV:%d",pv)
     return pv 
