@@ -48,10 +48,11 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 """
 
 import logging
+import sys
 import xmlrpclib
 
-from twisted.internet import defer
-from twisted.internet import reactor
+from eventlet import event
+from eventlet import tpool
 
 from nova import utils
 from nova import flags
@@ -126,6 +127,10 @@ class XenAPIConnection(object):
         """ Return data about VM instance """
         return self._vmops.get_info(instance_id)
 
+    def get_diagnostics(self, instance_id):
+        """Return data about VM diagnostics"""
+        return self._vmops.get_diagnostics(instance_id)
+
     def get_console_output(self, instance):
         """ Return snapshot of console """
         return self._vmops.get_console_output(instance)
@@ -155,53 +160,51 @@ class XenAPISession(object):
         """ Return the xenapi host """
         return self._session.xenapi.session.get_this_host(self._session.handle)
 
-    @utils.deferredToThread
     def call_xenapi(self, method, *args):
-        """Call the specified XenAPI method on a background thread.  Returns
-        a Deferred for the result."""
+        """Call the specified XenAPI method on a background thread."""
         f = self._session.xenapi
         for m in method.split('.'):
             f = f.__getattr__(m)
-        return f(*args)
+        return tpool.execute(f, *args)
 
-    @utils.deferredToThread
     def async_call_plugin(self, plugin, fn, args):
-        """Call Async.host.call_plugin on a background thread.  Returns a
-        Deferred with the task reference."""
-        return _unwrap_plugin_exceptions(
-            self._session.xenapi.Async.host.call_plugin,
-            self.get_xenapi_host(), plugin, fn, args)
+        """Call Async.host.call_plugin on a background thread."""
+        return tpool.execute(_unwrap_plugin_exceptions,
+                             self._session.xenapi.Async.host.call_plugin,
+                             self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes."""
-        d = defer.Deferred()
-        reactor.callLater(0, self._poll_task, task, d)
-        return d
 
-    @utils.deferredToThread
-    def _poll_task(self, task, deferred):
+        done = event.Event()
+        loop = utils.LoopingCall(self._poll_task, task, done)
+        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
+        rv = done.wait()
+        loop.stop()
+        return rv
+
+    def _poll_task(self, task, done):
         """Poll the given XenAPI task, and fire the given Deferred if we
         get a result."""
         try:
             #logging.debug('Polling task %s...', task)
             status = self._session.xenapi.task.get_status(task)
             if status == 'pending':
-                reactor.callLater(FLAGS.xenapi_task_poll_interval,
-                                  self._poll_task, task, deferred)
+                return
             elif status == 'success':
                 result = self._session.xenapi.task.get_result(task)
                 logging.info('Task %s status: success.  %s', task, result)
-                deferred.callback(_parse_xmlrpc_value(result))
+                done.send(_parse_xmlrpc_value(result))
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 logging.warn('Task %s status: %s.  %s', task, status,
                              error_info)
-                deferred.errback(XenAPI.Failure(error_info))
-            #logging.debug('Polling task %s done.', task)
+                done.send_exception(XenAPI.Failure(error_info))
+                #logging.debug('Polling task %s done.', task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
-            deferred.errback(exc)
+            done.send_exception(*sys.exc_info())
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):

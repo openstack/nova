@@ -17,12 +17,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Starter script for Nova Network."""
+"""Combined starter script for Nova services."""
 
 import eventlet
 eventlet.monkey_patch()
 
-import gettext
 import os
 import sys
 
@@ -34,12 +33,33 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-gettext.install('nova', unicode=1)
-
+from nova import api
+from nova import flags
 from nova import service
 from nova import utils
+from nova import wsgi
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
+flags.DEFINE_string('osapi_host', '0.0.0.0', 'OpenStack API host')
+flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
+flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
+
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    service.serve()
-    service.wait()
+    FLAGS(sys.argv)
+
+    compute = service.Service.create(binary='nova-compute')
+    network = service.Service.create(binary='nova-network')
+    volume = service.Service.create(binary='nova-volume')
+    scheduler = service.Service.create(binary='nova-scheduler')
+    #objectstore = service.Service.create(binary='nova-objectstore')
+
+    service.serve(compute, network, volume, scheduler)
+
+    server = wsgi.Server()
+    server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
+    server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
+    server.wait()
