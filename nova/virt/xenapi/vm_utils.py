@@ -175,26 +175,12 @@ class VMHelper():
         logging.debug('Created snapshot %s from VM %s.', template_vm_ref,
                       vm_ref)
 
-        #NOTE(sirp): wait for any coalescing
-        #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
-        # XS5.6
-        #TODO(sirp): clean this up, perhaps use LoopingCall
         sr_ref = vdi_rec["SR"]
-        scan_sr(session, sr_ref)
-        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
-        time.sleep(5)
-        while original_parent_uuid and (parent_uuid != original_parent_uuid):
-            scan_sr(session, sr_ref)
-            logging.debug(
-                "Parent %s doesn't match original parent %s, "
-                "waiting for coalesce...", parent_uuid, original_parent_uuid)
-            #TODO(sirp): make this non-blocking
-            time.sleep(5)
-            parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        parent_uuid = wait_for_vhd_coalesce(
+            session, sr_ref, vdi_ref, original_parent_uuid) 
 
-        vdi_uuids = [vdi_uuid, parent_uuid]
-        return template_vm_ref, vdi_uuids
-
+        #TODO(sirp): we need to assert only one parent, not parents two deep
+        return template_vm_ref, [vdi_uuid, parent_uuid]
 
     @classmethod
     def upload_image(cls, session, vdi_uuids, glance_label):
@@ -336,6 +322,7 @@ def get_vhd_parent(session, vdi_rec):
     else:
         return None
 
+
 def get_vhd_parent_uuid(session, vdi_ref):
     vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
     ret = get_vhd_parent(session, vdi_rec)
@@ -345,7 +332,36 @@ def get_vhd_parent_uuid(session, vdi_ref):
     else:
         return None
 
+
 def scan_sr(session, sr_ref):
     logging.debug("Re-scanning SR %s", sr_ref)
     task = session.call_xenapi('Async.SR.scan', sr_ref)
     session.wait_for_task(task)
+
+
+def wait_for_vhd_coalesce(session, sr_ref, vdi_ref, original_parent_uuid):
+    """ TODO Explain why coalescing has to occur here """
+    #TODO(sirp): we need to timeout this req after a while
+    #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
+    # XS5.6
+    #TODO(sirp): clean this up, perhaps use LoopingCall
+    def _get_vhd_parent_uuid_with_refresh(first_time):
+        if not first_time:
+            #TODO(sirp): should this interval be a gflag?
+            #TODO(sirp): make this non-blocking
+            time.sleep(5)
+        scan_sr(session, sr_ref)
+        return get_vhd_parent_uuid(session, vdi_ref)
+
+    parent_uuid = _get_vhd_parent_uuid_with_refresh(first_time=True)
+    logging.debug(
+        "Parent %s doesn't match original parent %s, "
+        "waiting for coalesce...", parent_uuid, original_parent_uuid)
+    while original_parent_uuid and (parent_uuid != original_parent_uuid):
+        logging.debug(
+            "Parent %s doesn't match original parent %s, "
+            "waiting for coalesce...", parent_uuid, original_parent_uuid)
+        parent_uuid = _get_vhd_parent_uuid_with_refresh(first_time=False)
+
+    return parent_uuid
+

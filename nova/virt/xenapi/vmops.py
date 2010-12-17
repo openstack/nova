@@ -81,6 +81,7 @@ class VMOps(object):
     
     def snapshot(self, instance):
         """ Create snapshot from a running VM instance """
+        logging.debug("Starting snapshot for VM %s", instance)
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
         vm_ref = VMHelper.lookup(self._session, instance.name)
@@ -103,6 +104,8 @@ class VMOps(object):
                 self._session, template_vdi_uuids, glance_name)
         finally:
             self._destroy(template_vm_ref, shutdown=False)
+
+        logging.debug("Finished snapshot and upload for VM %s", instance)
 
     def reboot(self, instance):
         """ Reboot VM instance """
