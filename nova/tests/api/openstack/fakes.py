@@ -29,8 +29,9 @@ from nova import exception as exc
 from nova import flags
 from nova import utils
 import nova.api.openstack.auth
-from nova.image import service
 from nova.image import glance
+from nova.image import local
+from nova.image import service
 from nova.tests import fake_flags
 from nova.wsgi import Router
 
@@ -75,7 +76,7 @@ def stub_out_image_service(stubs):
     def fake_image_show(meh, context, id):
         return dict(kernelId=1, ramdiskId=1)
 
-    stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)
+    stubs.Set(local.LocalImageService, 'show', fake_image_show)
 
 
 def stub_out_auth(stubs):
