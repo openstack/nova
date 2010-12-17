@@ -20,7 +20,7 @@ from nova import test
 from nova.utils import parse_mailmap, str_dict_replace
 
 
-class ProjectTestCase(test.TrialTestCase):
+class ProjectTestCase(test.TestCase):
     def test_authors_up_to_date(self):
         if os.path.exists('../.bzr'):
             contributors = set()

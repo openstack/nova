@@ -17,9 +17,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Twistd daemon for the nova volume nodes.
-"""
+"""Starter script for Nova Volume."""
+
+import eventlet
+eventlet.monkey_patch()
 
 import gettext
 import os
@@ -36,13 +37,9 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import service
-from nova import twistd
 from nova import utils
-
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.Service.create()  # pylint: disable-msg=C0103
+    service.serve()
+    service.wait()
