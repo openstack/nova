@@ -266,6 +266,13 @@ class LibvirtConnection(object):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
+    def snapshot(self, instance):
+        """ Create snapshot from a running VM instance """
+        #TODO(sirp): only exists for XenAPI driver for now
+        raise NotImplementedError(
+            "Instance snapshotting is not supported for libvirt at this time")
+
+    @exception.wrap_exception
     def reboot(self, instance):
         self.destroy(instance, False)
         xml = self.to_xml(instance)

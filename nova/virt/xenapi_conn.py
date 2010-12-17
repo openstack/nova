@@ -115,6 +115,13 @@ class XenAPIConnection(object):
         """ Create VM instance """
         self._vmops.spawn(instance)
 
+
+    def snapshot(self, instance):
+        """ Create snapshot from a running VM instance """
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+        self._vmops.snapshot(instance)
+
     def reboot(self, instance):
         """ Reboot VM instance """
         self._vmops.reboot(instance)

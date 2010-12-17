@@ -78,6 +78,31 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         logging.info('Spawning VM %s created %s.', instance.name,
                      vm_ref)
+    
+    def snapshot(self, instance):
+        """ Create snapshot from a running VM instance """
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+
+        #TODO(sirp): this is the label in Xen, we need to add a human friendly
+        # label that we store in paralalx
+        label = "%s-snapshot" % instance.name
+        glance_name = "MySnapshot"
+    
+        try:
+            template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
+                self._session, vm_ref, label)
+        except XenAPI.Failure, exc:
+            logging.error("Unable to Snapshot %s: %s", vm_ref, exc)
+            return
+        
+        try:
+            # call plugin to ship snapshot off to glance
+            VMHelper.upload_image(
+                self._session, template_vdi_uuids, glance_name)
+        finally:
+            self._destroy(template_vm_ref, shutdown=False)
 
     def reboot(self, instance):
         """ Reboot VM instance """
@@ -89,20 +114,24 @@ class VMOps(object):
         self._session.wait_for_task(task)
 
     def destroy(self, instance):
-        """ Destroy VM instance """
         vm = VMHelper.lookup(self._session, instance.name)
+        return self._destroy(vm, shutdown=True)
+
+    def _destroy(self, vm, shutdown=True):
+        """ Destroy VM instance """
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
             return
         # Get the VDIs related to the VM
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
-        try:
-            task = self._session.call_xenapi('Async.VM.hard_shutdown',
-                                                   vm)
-            self._session.wait_for_task(task)
-        except XenAPI.Failure, exc:
-            logging.warn(exc)
+        if shutdown:
+            try:
+                task = self._session.call_xenapi('Async.VM.hard_shutdown',
+                                                       vm)
+                self._session.wait_for_task(task)
+            except XenAPI.Failure, exc:
+                logging.warn(exc)
         # Disk clean-up
         if vdis:
             for vdi in vdis:

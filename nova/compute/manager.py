@@ -134,8 +134,10 @@ class ComputeManager(manager.Manager):
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
 
+    #FIXME(sirp): Hacking reboot to snapshot
     @exception.wrap_exception
-    def reboot_instance(self, context, instance_id):
+    def XXreboot_instance(self, context, instance_id):
+    #def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -155,6 +157,32 @@ class ComputeManager(manager.Manager):
                                    'rebooting')
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
+
+    #FIXME(sirp): Hacking reboot to snapshot
+    @exception.wrap_exception
+    def reboot_instance(self, context, instance_id):
+    #def snapshot_instance(self, context, instance_id):
+        """Snapshot an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        #FIXME(sirp): update_state currently only refreshes the state field
+        # if we add is_snapshotting, we will need this refreshed too,
+        # potentially?
+        self._update_state(context, instance_id)
+
+        #TODO(sirp): check for is_snapshotting=True here?
+        if instance_ref['state'] != power_state.RUNNING:
+            logging.warn('trying to snapshot a non-running '
+                         'instance: %s (state: %s excepted: %s)',
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
+
+        logging.debug('instance %s: snapshotting', instance_ref['name'])
+        #TODO(sirp): set is_snapshotting=True here?
+        self.driver.snapshot(instance_ref)
+        #self._update_state(context, instance_id)
 
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):

@@ -19,6 +19,7 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
+import time #FIXME(sirp): take this out, replace with greenthread.sleep
 import logging
 import urllib
 from xml.dom import minidom
@@ -148,6 +149,63 @@ class VMHelper():
                       vm_ref, network_ref)
         return vif_ref
 
+
+    @classmethod
+    def create_snapshot(cls, session, vm_ref, label):
+        logging.debug("Snapshotting VM %s with label '%s'...", vm_ref, label)
+        
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+
+        #TODO(sirp): Make safe_lookup_vdi for assert?
+        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+        if vdi_refs is None or len(vdi_refs) != 1:
+            raise Exception("Unexpected number of VDIs (%s) found for VM %s"
+                            % (len(vdi_refs), vm_ref)) 
+        vdi_ref = vdi_refs[0]
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        vdi_uuid = vdi_rec["uuid"]
+
+        #NOTE(sirp): We may need to wait for our parent to coalese with his 
+        # parent
+        original_parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+
+        task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
+        template_vm_ref = session.wait_for_task(task)
+        logging.debug('Created snapshot %s from VM %s.', template_vm_ref,
+                      vm_ref)
+
+        #NOTE(sirp): wait for any coalescing
+        #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
+        # XS5.6
+        #TODO(sirp): clean this up, perhaps use LoopingCall
+        sr_ref = vdi_rec["SR"]
+        scan_sr(session, sr_ref)
+        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        time.sleep(5)
+        while original_parent_uuid and (parent_uuid != original_parent_uuid):
+            scan_sr(session, sr_ref)
+            logging.debug(
+                "Parent %s doesn't match original parent %s, "
+                "waiting for coalesce...", parent_uuid, original_parent_uuid)
+            #TODO(sirp): make this non-blocking
+            time.sleep(5)
+            parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+
+        vdi_uuids = [vdi_uuid, parent_uuid]
+        return template_vm_ref, vdi_uuids
+
+
+    @classmethod
+    def upload_image(cls, session, vdi_uuids, glance_label):
+        logging.debug("Asking xapi to upload %s as '%s'", vdi_uuids,
+                      glance_label)
+        kwargs = {'vdi_uuids': ','.join(vdi_uuids), 
+                  'glance_label': glance_label}
+        task = session.async_call_plugin('glance', 'put_vdis', kwargs)
+        session.wait_for_task(task)
+
+
     @classmethod
     def fetch_image(cls, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
@@ -258,3 +316,36 @@ def get_rrd(host, uuid):
         return xml.read()
     except IOError:
         return None
+
+
+#TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
+# use that implmenetation
+def get_vhd_parent(session, vdi_rec):
+    """
+    Returns the VHD parent of the given VDI record, as a (ref, rec) pair.
+    Returns None if we're at the root of the tree.
+    """
+    if 'vhd-parent' in vdi_rec['sm_config']:
+        parent_uuid = vdi_rec['sm_config']['vhd-parent']
+        #NOTE(sirp): changed xenapi -> get_xenapi()
+        parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
+        parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
+        #NOTE(sirp): changed log -> logging
+        logging.debug("VHD %s has parent %s", vdi_rec['uuid'], parent_ref)
+        return parent_ref, parent_rec
+    else:
+        return None
+
+def get_vhd_parent_uuid(session, vdi_ref):
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    ret = get_vhd_parent(session, vdi_rec)
+    if ret:
+        parent_ref, parent_rec = ret
+        return parent_rec["uuid"]
+    else:
+        return None
+
+def scan_sr(session, sr_ref):
+    logging.debug("Re-scanning SR %s", sr_ref)
+    task = session.call_xenapi('Async.SR.scan', sr_ref)
+    session.wait_for_task(task)
