@@ -23,12 +23,9 @@ import re
 import string
 import logging
 
-from twisted.internet import defer
-
 from nova import db
 from nova import context
 from nova import flags
-from nova import process
 from nova import utils
 from nova.virt.xenapi import HelperBase
 
@@ -49,19 +46,11 @@ class VolumeHelper(HelperBase):
         return
 
     @classmethod
-    @utils.deferredToThread
     def create_iscsi_storage(cls, session, info, label, description):
         """
         Create an iSCSI storage repository that will be used to mount
         the volume for the specified instance
         """
-        return VolumeHelper.create_iscsi_storage_blocking(session, info,
-                                                          label,
-                                                          description)
-
-    @classmethod
-    def create_iscsi_storage_blocking(cls, session, info, label, description):
-        """ Synchronous create_iscsi_storage """
         sr_ref = session.get_xenapi().SR.get_by_name_label(label)
         if len(sr_ref) == 0:
             logging.debug('Introducing %s...', label)
@@ -92,26 +81,19 @@ class VolumeHelper(HelperBase):
             return sr_ref[0]
 
     @classmethod
-    @defer.inlineCallbacks
     def find_sr_from_vbd(cls, session, vbd_ref):
         """ Find the SR reference from the VBD reference """
         try:
-            vdi_ref = yield session.get_xenapi().VBD.get_VDI(vbd_ref)
-            sr_ref = yield session.get_xenapi().VDI.get_SR(vdi_ref)
+            vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
+            sr_ref = session.get_xenapi().VDI.get_SR(vdi_ref)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             raise StorageError('Unable to find SR from VBD %s' % vbd_ref)
-        defer.returnValue(sr_ref)
+        return sr_ref
 
     @classmethod
-    @utils.deferredToThread
     def destroy_iscsi_storage(cls, session, sr_ref):
         """ Forget the SR whilst preserving the state of the disk """
-        VolumeHelper.destroy_iscsi_storage_blocking(session, sr_ref)
-
-    @classmethod
-    def destroy_iscsi_storage_blocking(cls, session, sr_ref):
-        """ Synchronous destroy_iscsi_storage """
         logging.debug("Forgetting SR %s ... ", sr_ref)
         pbds = []
         try:
@@ -133,14 +115,8 @@ class VolumeHelper(HelperBase):
                          exc, sr_ref)
 
     @classmethod
-    @utils.deferredToThread
     def introduce_vdi(cls, session, sr_ref):
         """ Introduce VDI in the host """
-        return VolumeHelper.introduce_vdi_blocking(session, sr_ref)
-
-    @classmethod
-    def introduce_vdi_blocking(cls, session, sr_ref):
-        """ Synchronous introduce_vdi """
         try:
             vdis = session.get_xenapi().SR.get_VDIs(sr_ref)
         except cls.XenAPI.Failure, exc:
@@ -153,7 +129,7 @@ class VolumeHelper(HelperBase):
             raise StorageError('Unable to get record of VDI %s on' % vdis[0])
         else:
             try:
-                vdi_ref = session.get_xenapi().VDI.introduce(
+                return session.get_xenapi().VDI.introduce(
                     vdi_rec['uuid'],
                     vdi_rec['name_label'],
                     vdi_rec['name_description'],
@@ -171,7 +147,6 @@ class VolumeHelper(HelperBase):
                                    % sr_ref)
 
     @classmethod
-    @defer.inlineCallbacks
     def parse_volume_info(cls, device_path, mountpoint):
         """
         Parse device_path and mountpoint as they can be used by XenAPI.
@@ -187,7 +162,7 @@ class VolumeHelper(HelperBase):
         """
         device_number = VolumeHelper.mountpoint_to_number(mountpoint)
         volume_id = _get_volume_id(device_path)
-        (iscsi_name, iscsi_portal) = yield _get_target(volume_id)
+        (iscsi_name, iscsi_portal) = _get_target(volume_id)
         target_host = _get_target_host(iscsi_portal)
         target_port = _get_target_port(iscsi_portal)
         target_iqn = _get_iqn(iscsi_name, volume_id)
@@ -208,7 +183,7 @@ class VolumeHelper(HelperBase):
         volume_info['targetHost'] = target_host
         volume_info['targetPort'] = target_port
         volume_info['targetIQN'] = target_iqn
-        defer.returnValue(volume_info)
+        return volume_info
 
     @classmethod
     def mountpoint_to_number(cls, mountpoint):
@@ -263,7 +238,6 @@ def _get_iqn(iscsi_string, id):
         return '%s:%s' % (FLAGS.iqn_prefix, volume_id)
 
 
-@defer.inlineCallbacks
 def _get_target(volume_id):
     """
     Gets iscsi name and portal from volume name and host.
@@ -275,7 +249,7 @@ def _get_target(volume_id):
     volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
                                          volume_id)
 
-    (r, _e) = yield process.simple_execute("sudo iscsiadm -m discovery -t "
+    (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
                                      "sendtargets -p %s" %
                                      volume_ref['host'])
     targets = r.splitlines()
@@ -285,6 +259,6 @@ def _get_target(volume_id):
                 (location, _sep, iscsi_name) = target.partition(" ")
                 break
         iscsi_portal = location.split(",")[0]
-        defer.returnValue((iscsi_name, iscsi_portal))
+        return (iscsi_name, iscsi_portal)
     else:
-        defer.returnValue((None, None))
+        return (None, None)

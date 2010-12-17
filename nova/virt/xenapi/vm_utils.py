@@ -21,19 +21,17 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import logging
 import urllib
-
-from twisted.internet import defer
 from xml.dom import minidom
 
 from nova import flags
 from nova import utils
-
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
+
 
 FLAGS = flags.FLAGS
 
@@ -53,11 +51,9 @@ class VMHelper(HelperBase):
         return
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vm(cls, session, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
-
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
@@ -91,16 +87,14 @@ class VMHelper(HelperBase):
             'other_config': {},
             }
         logging.debug('Created VM %s...', instance.name)
-        vm_ref = yield session.call_xenapi('VM.create', rec)
+        vm_ref = session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
-        defer.returnValue(vm_ref)
+        return vm_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
-
         vbd_rec = {}
         vbd_rec['VM'] = vm_ref
         vbd_rec['VDI'] = vdi_ref
@@ -115,20 +109,14 @@ class VMHelper(HelperBase):
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
         logging.debug('Creating VBD for VM %s, VDI %s ... ', vm_ref, vdi_ref)
-        vbd_ref = yield session.call_xenapi('VBD.create', vbd_rec)
+        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
         logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
                       vdi_ref)
-        defer.returnValue(vbd_ref)
+        return vbd_ref
 
     @classmethod
-    @utils.deferredToThread
     def find_vbd_by_number(cls, session, vm_ref, number):
         """ Get the VBD reference from the device number """
-        return VMHelper.find_vbd_by_number_blocking(session, vm_ref, number)
-
-    @classmethod
-    def find_vbd_by_number_blocking(cls, session, vm_ref, number):
-        """ Synchronous find_vbd_by_number """
         vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
         if vbds:
             for vbd in vbds:
@@ -141,33 +129,29 @@ class VMHelper(HelperBase):
         raise StorageError('VBD not found in instance %s' % vm_ref)
 
     @classmethod
-    @defer.inlineCallbacks
     def unplug_vbd(cls, session, vbd_ref):
         """ Unplug VBD from VM """
         try:
-            vbd_ref = yield session.call_xenapi('VBD.unplug', vbd_ref)
+            vbd_ref = session.call_xenapi('VBD.unplug', vbd_ref)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
                 raise StorageError('Unable to unplug VBD %s' % vbd_ref)
 
     @classmethod
-    @defer.inlineCallbacks
     def destroy_vbd(cls, session, vbd_ref):
         """ Destroy VBD from host database """
         try:
-            task = yield session.call_xenapi('Async.VBD.destroy', vbd_ref)
-            yield session.wait_for_task(task)
+            task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
+            session.wait_for_task(task)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             raise StorageError('Unable to destroy VBD %s' % vbd_ref)
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vif(cls, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
-
         vif_rec = {}
         vif_rec['device'] = '0'
         vif_rec['network'] = network_ref
@@ -179,13 +163,12 @@ class VMHelper(HelperBase):
         vif_rec['qos_algorithm_params'] = {}
         logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
                       network_ref)
-        vif_ref = yield session.call_xenapi('VIF.create', vif_rec)
+        vif_ref = session.call_xenapi('VIF.create', vif_rec)
         logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
                       vm_ref, network_ref)
-        defer.returnValue(vif_ref)
+        return vif_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def fetch_image(cls, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
@@ -202,19 +185,13 @@ class VMHelper(HelperBase):
         args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
-        task = yield session.async_call_plugin('objectstore', fn, args)
-        uuid = yield session.wait_for_task(task)
-        defer.returnValue(uuid)
+        task = session.async_call_plugin('objectstore', fn, args)
+        uuid = session.wait_for_task(task)
+        return uuid
 
     @classmethod
-    @utils.deferredToThread
     def lookup(cls, session, i):
         """ Look the instance i up, and returns it if available """
-        return VMHelper.lookup_blocking(session, i)
-
-    @classmethod
-    def lookup_blocking(cls, session, i):
-        """ Synchronous lookup """
         vms = session.get_xenapi().VM.get_by_name_label(i)
         n = len(vms)
         if n == 0:
@@ -225,14 +202,8 @@ class VMHelper(HelperBase):
             return vms[0]
 
     @classmethod
-    @utils.deferredToThread
     def lookup_vm_vdis(cls, session, vm):
         """ Look for the VDIs that are attached to the VM """
-        return VMHelper.lookup_vm_vdis_blocking(session, vm)
-
-    @classmethod
-    def lookup_vm_vdis_blocking(cls, session, vm):
-        """ Synchronous lookup_vm_vdis """
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
         vbds = session.get_xenapi().VM.get_VBDs(vm)

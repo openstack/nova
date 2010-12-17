@@ -20,7 +20,7 @@ from nova import test
 from nova.utils import parse_mailmap, str_dict_replace
 
 
-class ProjectTestCase(test.TrialTestCase):
+class ProjectTestCase(test.TestCase):
     def test_authors_up_to_date(self):
         if os.path.exists('../.bzr'):
             contributors = set()
@@ -30,23 +30,26 @@ class ProjectTestCase(test.TrialTestCase):
             import bzrlib.workingtree
             tree = bzrlib.workingtree.WorkingTree.open('..')
             tree.lock_read()
-            parents = tree.get_parent_ids()
-            g = tree.branch.repository.get_graph()
-            for p in parents[1:]:
-                rev_ids = [r for r, _ in g.iter_ancestry(parents)
-                           if r != "null:"]
-                revs = tree.branch.repository.get_revisions(rev_ids)
-                for r in revs:
-                    for author in r.get_apparent_authors():
-                        email = author.split(' ')[-1]
-                        contributors.add(str_dict_replace(email, mailmap))
+            try:
+                parents = tree.get_parent_ids()
+                g = tree.branch.repository.get_graph()
+                for p in parents[1:]:
+                    rev_ids = [r for r, _ in g.iter_ancestry(parents)
+                               if r != "null:"]
+                    revs = tree.branch.repository.get_revisions(rev_ids)
+                    for r in revs:
+                        for author in r.get_apparent_authors():
+                            email = author.split(' ')[-1]
+                            contributors.add(str_dict_replace(email, mailmap))
 
-            authors_file = open('../Authors', 'r').read()
+                authors_file = open('../Authors', 'r').read()
 
-            missing = set()
-            for contributor in contributors:
-                if not contributor in authors_file:
-                    missing.add(contributor)
+                missing = set()
+                for contributor in contributors:
+                    if not contributor in authors_file:
+                        missing.add(contributor)
 
-            self.assertTrue(len(missing) == 0,
-                            '%r not listed in Authors' % missing)
+                self.assertTrue(len(missing) == 0,
+                                '%r not listed in Authors' % missing)
+            finally:
+                tree.unlock()

@@ -22,8 +22,6 @@ Tests For Compute
 import datetime
 import logging
 
-from twisted.internet import defer
-
 from nova import context
 from nova import db
 from nova import exception
@@ -33,10 +31,11 @@ from nova import utils
 from nova.auth import manager
 from nova.compute import api as compute_api
 
+
 FLAGS = flags.FLAGS
 
 
-class ComputeTestCase(test.TrialTestCase):
+class ComputeTestCase(test.TestCase):
     """Test case for compute"""
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
@@ -94,24 +93,22 @@ class ComputeTestCase(test.TrialTestCase):
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
 
-    @defer.inlineCallbacks
     def test_run_terminate(self):
         """Make sure it is possible to  run and terminate instance"""
         instance_id = self._create_instance()
 
-        yield self.compute.run_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
         logging.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
-        yield self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
         logging.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
 
-    @defer.inlineCallbacks
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
         instance_id = self._create_instance()
@@ -119,42 +116,40 @@ class ComputeTestCase(test.TrialTestCase):
         self.assertEqual(instance_ref['launched_at'], None)
         self.assertEqual(instance_ref['deleted_at'], None)
         launch = datetime.datetime.utcnow()
-        yield self.compute.run_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] > launch)
         self.assertEqual(instance_ref['deleted_at'], None)
         terminate = datetime.datetime.utcnow()
-        yield self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
         self.context = self.context.elevated(True)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
 
-    @defer.inlineCallbacks
     def test_reboot(self):
         """Ensure instance can be rebooted"""
         instance_id = self._create_instance()
-        yield self.compute.run_instance(self.context, instance_id)
-        yield self.compute.reboot_instance(self.context, instance_id)
-        yield self.compute.terminate_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.reboot_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
 
-    @defer.inlineCallbacks
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
-        yield self.compute.run_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
 
-        console = yield self.compute.get_console_output(self.context,
+        console = self.compute.get_console_output(self.context,
                                                         instance_id)
         self.assert_(console)
-        yield self.compute.terminate_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
 
-    @defer.inlineCallbacks
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
-        yield self.compute.run_instance(self.context, instance_id)
-        self.assertFailure(self.compute.run_instance(self.context,
-                                                     instance_id),
-                           exception.Error)
-        yield self.compute.terminate_instance(self.context, instance_id)
+        self.compute.run_instance(self.context, instance_id)
+        self.assertRaises(exception.Error,
+                          self.compute.run_instance,
+                          self.context,
+                          instance_id)
+        self.compute.terminate_instance(self.context, instance_id)

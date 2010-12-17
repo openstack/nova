@@ -20,14 +20,14 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import logging
 
-from twisted.internet import defer
-
 from nova import db
 from nova import context
 from nova import flags
 from nova import exception
+from nova import utils
 
 from nova.auth.manager import AuthManager
+from nova.compute import power_state
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 
@@ -46,10 +46,9 @@ class VMOps(object):
         return [self._session.get_xenapi().VM.get_name_label(vm) \
                 for vm in self._session.get_xenapi().VM.get_all()]
 
-    @defer.inlineCallbacks
     def spawn(self, instance):
         """ Create VM instance """
-        vm = yield VMHelper.lookup(self._session, instance.name)
+        vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
@@ -57,85 +56,102 @@ class VMOps(object):
         bridge = db.project_get_network(context.get_admin_context(),
                                       instance.project_id).bridge
         network_ref = \
-            yield NetworkHelper.find_network_with_bridge(self._session, bridge)
+            NetworkHelper.find_network_with_bridge(self._session, bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
-        vdi_uuid = yield VMHelper.fetch_image(self._session,
-            instance.image_id, user, project, True)
-        kernel = yield VMHelper.fetch_image(self._session,
-            instance.kernel_id, user, project, False)
-        ramdisk = yield VMHelper.fetch_image(self._session,
-            instance.ramdisk_id, user, project, False)
-        vdi_ref = yield self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        vm_ref = yield VMHelper.create_vm(self._session,
-                                          instance, kernel, ramdisk)
-        yield VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
+        vdi_uuid = VMHelper.fetch_image(
+                self._session, instance.image_id, user, project, True)
+        kernel = VMHelper.fetch_image(
+                self._session, instance.kernel_id, user, project, False)
+        ramdisk = VMHelper.fetch_image(
+                self._session, instance.ramdisk_id, user, project, False)
+        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        vm_ref = VMHelper.create_vm(
+                self._session, instance, kernel, ramdisk)
+        VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
         if network_ref:
-            yield VMHelper.create_vif(self._session, vm_ref,
-                                      network_ref, instance.mac_address)
+            VMHelper.create_vif(self._session, vm_ref,
+                                network_ref, instance.mac_address)
         logging.debug('Starting VM %s...', vm_ref)
-        yield self._session.call_xenapi('VM.start', vm_ref, False, False)
+        self._session.call_xenapi('VM.start', vm_ref, False, False)
         logging.info('Spawning VM %s created %s.', instance.name,
                      vm_ref)
 
-    @defer.inlineCallbacks
+        timer = utils.LoopingCall(f=None)
+
+        def _wait_for_boot():
+            try:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
+                if state == power_state.RUNNING:
+                    logging.debug('Instance %s: booted', instance['name'])
+                    timer.stop()
+            except:
+                logging.exception('instance %s: failed to boot',
+                                  instance['name'])
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                timer.stop()
+
+        timer.f = _wait_for_boot
+        return timer.start(interval=0.5, now=True)
+
     def reboot(self, instance):
         """ Reboot VM instance """
         instance_name = instance.name
-        vm = yield VMHelper.lookup(self._session, instance_name)
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
-        task = yield self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        yield self._session.wait_for_task(task)
+        task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
+        return self._session.wait_for_task(task)
 
-    @defer.inlineCallbacks
     def destroy(self, instance):
         """ Destroy VM instance """
-        vm = yield VMHelper.lookup(self._session, instance.name)
+        vm = VMHelper.lookup(self._session, instance.name)
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
-            defer.returnValue(None)
+            return
         # Get the VDIs related to the VM
-        vdis = yield VMHelper.lookup_vm_vdis(self._session, vm)
+        vdis = VMHelper.lookup_vm_vdis(self._session, vm)
         try:
-            task = yield self._session.call_xenapi('Async.VM.hard_shutdown',
+            task = self._session.call_xenapi('Async.VM.hard_shutdown',
                                                    vm)
-            yield self._session.wait_for_task(task)
+            self._session.wait_for_task(task)
         except self.XenAPI.Failure, exc:
             logging.warn(exc)
         # Disk clean-up
         if vdis:
             for vdi in vdis:
                 try:
-                    task = yield self._session.call_xenapi('Async.VDI.destroy',
-                                                           vdi)
-                    yield self._session.wait_for_task(task)
+                    task = self._session.call_xenapi('Async.VDI.destroy', vdi)
+                    self._session.wait_for_task(task)
                 except self.XenAPI.Failure, exc:
                     logging.warn(exc)
         try:
-            task = yield self._session.call_xenapi('Async.VM.destroy', vm)
-            yield self._session.wait_for_task(task)
+            task = self._session.call_xenapi('Async.VM.destroy', vm)
+            self._session.wait_for_task(task)
         except self.XenAPI.Failure, exc:
             logging.warn(exc)
 
     def get_info(self, instance_id):
         """ Return data about VM instance """
-        vm = VMHelper.lookup_blocking(self._session, instance_id)
+        vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
             raise exception.NotFound('Instance not found %s' % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
-    @defer.inlineCallbacks
     def get_diagnostics(self, instance_id):
         """Return data about VM diagnostics"""
-        vm = yield VMHelper.lookup(self._session, instance_id)
+        vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise exception.NotFound('Instance not found %s' % instance_id)
-        rec = yield self._session.get_xenapi().VM.get_record(vm)
-        defer.returnValue(VMHelper.compile_diagnostics(self._session, rec))
+            raise exception.Exception("Instance not found %s" % instance_id)
+        rec = self._session.get_xenapi().VM.get_record(vm)
+        return VMHelper.compile_diagnostics(self._session, rec)
 
     def get_console_output(self, instance):
         """ Return snapshot of console """
