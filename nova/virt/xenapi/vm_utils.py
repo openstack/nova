@@ -62,7 +62,6 @@ class VMHelper():
             XenAPI = __import__('XenAPI')
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference.
@@ -170,7 +169,6 @@ class VMHelper():
         return vif_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def fetch_image(cls, session, image, user, project, type):
         """type: integer field for specifying how to handle the image
             0 - kernel/ramdisk image (goes on dom0's filesystem)
@@ -196,24 +194,22 @@ class VMHelper():
         return uuid
 
     @classmethod
-    @defer.inlineCallbacks
     def lookup_image(cls, session, vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
         fn = "is_vdi_pv"
         args = {}
         args['vdi-ref'] = vdi_ref
         #TODO: Call proper function in plugin
-        task = yield session.async_call_plugin('objectstore', fn, args)
-        pv_str = yield session.wait_for_task(task)
+        task = session.async_call_plugin('objectstore', fn, args)
+        pv_str = session.wait_for_task(task)
         if pv_str.lower() == 'true':
             pv = True
         elif pv_str.lower() == 'false':
             pv = False
         logging.debug("PV Kernel in VDI:%d", pv)
-        defer.returnValue(pv)
+        return pv
 
     @classmethod
-    @utils.deferredToThread
     def lookup(cls, session, i):
         """ Look the instance i up, and returns it if available """
         return VMHelper.lookup_blocking(session, i)
