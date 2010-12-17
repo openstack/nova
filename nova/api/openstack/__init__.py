@@ -85,7 +85,7 @@ class AuthMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        if not self.auth_driver.has_authentication(req)
+        if not self.auth_driver.has_authentication(req):
             return self.auth_driver.authenticate(req)
 
         user = self.auth_driver.get_user_by_authentication(req)
@@ -108,7 +108,7 @@ class RateLimitingMiddleware(wsgi.Middleware):
         at the given host+port to keep rate counters.
         """
         super(RateLimitingMiddleware, self).__init__(application)
-        self._limiting_driver =
+        self._limiting_driver = \
             utils.import_class(FLAGS.os_api_ratelimiting)(service_host)
 
     @webob.dec.wsgify

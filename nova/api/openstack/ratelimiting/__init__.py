@@ -21,7 +21,7 @@ class BasicRateLimiting(object):
         if not service_host:
             #TODO(gundlach): These limits were based on limitations of Cloud
             #Servers.  We should revisit them in Nova.
-            self.limiter = ratelimiting.Limiter(limits={
+            self.limiter = Limiter(limits={
                     'DELETE': (100, ratelimiting.PER_MINUTE),
                     'PUT': (10, ratelimiting.PER_MINUTE),
                     'POST': (10, ratelimiting.PER_MINUTE),
@@ -29,7 +29,7 @@ class BasicRateLimiting(object):
                     'GET changes-since': (3, ratelimiting.PER_MINUTE),
                 })
         else:
-            self.limiter = ratelimiting.WSGIAppProxy(service_host)
+            self.limiter = WSGIAppProxy(service_host)
 
     def limited_request(self, req):
         """Rate limit the request.

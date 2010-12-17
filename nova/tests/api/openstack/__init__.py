@@ -17,7 +17,7 @@
 
 import unittest
 
-from nova.api.openstack import limited
+from nova.api.openstack.common import limited
 from nova.api.openstack import RateLimitingMiddleware
 from nova.tests.api.fakes import APIStub
 from webob import Request

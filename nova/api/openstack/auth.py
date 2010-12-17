@@ -28,10 +28,10 @@ class BasicApiAuthManager(object):
         super(BasicApiAuthManager, self).__init__()
 
     def has_authentication(self, req):
-        return 'X-Auth-Token' in req.headers:
+        return 'X-Auth-Token' in req.headers
 
     def get_user_by_authentication(self, req):
-        return self.auth_driver.authorize_token(req.headers["X-Auth-Token"])
+        return self.authorize_token(req.headers["X-Auth-Token"])
 
     def authenticate(self, req):
         # Unless the request is explicitly made against /<version>/ don't
