@@ -335,11 +335,8 @@ class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
         import nova.auth.fakeldap as fakeldap
         if FLAGS.flush_db:
             logging.info("Flushing datastore")
-            try:
-                r = fakeldap.Store.instance()
-                r.flushdb()
-            except:
-                self.skip = True
+            r = fakeldap.Store.instance()
+            r.flushdb()
 
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
