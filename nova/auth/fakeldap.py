@@ -82,8 +82,6 @@ class _StorageDict(dict):
             hashdict[field] = val
 
 
-
-
 SCOPE_BASE = 0
 SCOPE_ONELEVEL = 1  # Not implemented
 SCOPE_SUBTREE = 2
@@ -217,7 +215,6 @@ class FakeLDAP(object):
         key = "%s%s" % (self.__prefix, dn)
         value_dict = dict([(k, _to_json(v)) for k, v in attr])
         Store.instance().hmset(key, value_dict)
-
 
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
