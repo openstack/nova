@@ -21,7 +21,6 @@ System-level utilities and helper functions.
 """
 
 import datetime
-import functools
 import inspect
 import logging
 import os
@@ -36,11 +35,9 @@ from eventlet import event
 from eventlet import greenthread
 
 from nova import exception
-from nova import flags
 from nova.exception import ProcessExecutionError
 
 
-FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -197,8 +194,6 @@ def last_octet(address):
 
 def get_my_ip():
     """Returns the actual ip of the local machine."""
-    if getattr(FLAGS, 'fake_tests', None):
-        return '127.0.0.1'
     try:
         csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         csock.connect(('8.8.8.8', 80))

@@ -29,7 +29,6 @@ import routes
 import webob.dec
 
 from nova import flags
-from nova import utils
 from nova import wsgi
 from nova.api import ec2
 from nova.api import openstack
@@ -40,6 +39,7 @@ flags.DEFINE_string('osapi_subdomain', 'api',
                     'subdomain running the OpenStack API')
 flags.DEFINE_string('ec2api_subdomain', 'ec2',
                     'subdomain running the EC2 API')
+
 FLAGS = flags.FLAGS
 
 

@@ -46,8 +46,7 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-flags.DEFINE_string('routing_source_ip', '127.0.0.1',
+flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
@@ -59,7 +58,7 @@ def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.cc_dmz, FLAGS.cc_port))
 
 
 def init_host():
