@@ -130,6 +130,45 @@ def service_update(context, service_id, values):
 ###################
 
 
+def certificate_create(context, values):
+    """Create a certificate from the values dictionary."""
+    return IMPL.certificate_create(context, values)
+
+
+def certificate_destroy(context, certificate_id):
+    """Destroy the certificate or raise if it does not exist."""
+    return IMPL.certificate_destroy(context, certificate_id)
+
+
+def certificate_get_all_by_project(context, project_id):
+    """Get all certificates for a project."""
+    return IMPL.certificate_get_all_by_project(context, project_id)
+
+
+def certificate_get_all_by_user(context, user_id):
+    """Get all certificates for a user."""
+    return IMPL.certificate_get_all_by_user(context, user_id)
+
+
+def certificate_get_all_by_user_and_project(context, user_id, project_id):
+    """Get all certificates for a user and project."""
+    return IMPL.certificate_get_all_by_user_and_project(context,
+                                                        user_id,
+                                                        project_id)
+
+
+def certificate_update(context, certificate_id, values):
+    """Set the given properties on an certificate and update it.
+
+    Raises NotFound if service does not exist.
+
+    """
+    return IMPL.service_update(context, certificate_id, values)
+
+
+###################
+
+
 def floating_ip_allocate_address(context, host, project_id):
     """Allocate free floating ip and return the address.
 
@@ -302,6 +341,11 @@ def instance_get_fixed_address(context, instance_id):
 def instance_get_floating_address(context, instance_id):
     """Get the first floating ip address of an instance."""
     return IMPL.instance_get_floating_address(context, instance_id)
+
+
+def instance_get_project_vpn(context, project_id):
+    """Get a vpn instance by project or return None."""
+    return IMPL.instance_get_project_vpn(context, project_id)
 
 
 def instance_get_by_internal_id(context, internal_id):

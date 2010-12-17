@@ -252,6 +252,84 @@ def service_update(context, service_id, values):
 ###################
 
 
+@require_admin_context
+def certificate_get(context, certificate_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Certificate).\
+                     filter_by(id=certificate_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound('No certificate for id %s' % certificate_id)
+
+    return result
+
+
+@require_admin_context
+def certificate_create(context, values):
+    certificate_ref = models.Certificate()
+    for (key, value) in values.iteritems():
+        certificate_ref[key] = value
+    certificate_ref.save()
+    return certificate_ref
+
+
+@require_admin_context
+def certificate_destroy(context, certificate_id):
+    session = get_session()
+    with session.begin():
+        certificate_ref = certificate_get(context,
+                                          certificate_id,
+                                          session=session)
+        certificate_ref.delete(session=session)
+
+
+@require_admin_context
+def certificate_get_all_by_project(context, project_id):
+    session = get_session()
+    return session.query(models.Certificate).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_admin_context
+def certificate_get_all_by_user(context, user_id):
+    session = get_session()
+    return session.query(models.Certificate).\
+                   filter_by(user_id=user_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_admin_context
+def certificate_get_all_by_user_and_project(_context, user_id, project_id):
+    session = get_session()
+    return session.query(models.Certificate).\
+                   filter_by(user_id=user_id).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_admin_context
+def certificate_update(context, certificate_id, values):
+    session = get_session()
+    with session.begin():
+        certificate_ref = certificate_get(context,
+                                          certificate_id,
+                                          session=session)
+        for (key, value) in values.iteritems():
+            certificate_ref[key] = value
+        certificate_ref.save(session=session)
+
+
+###################
+
+
 @require_context
 def floating_ip_allocate_address(context, host, project_id):
     authorize_project_context(context, project_id)
@@ -649,6 +727,18 @@ def instance_get_all_by_reservation(context, reservation_id):
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
                        all()
+
+
+@require_admin_context
+def instance_get_project_vpn(context, project_id):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(project_id=project_id).\
+                   filter_by(image_id=FLAGS.vpn_image_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   first()
 
 
 @require_context

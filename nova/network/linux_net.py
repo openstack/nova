@@ -45,8 +45,6 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
 flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,

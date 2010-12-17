@@ -64,12 +64,9 @@ flags.DEFINE_string('credential_key_file', 'pk.pem',
                     'Filename of private key in credentials zip')
 flags.DEFINE_string('credential_cert_file', 'cert.pem',
                     'Filename of certificate in credentials zip')
-flags.DEFINE_string('credential_rc_file', 'novarc',
-                    'Filename of rc in credentials zip')
-flags.DEFINE_string('credential_cert_subject',
-                    '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
-                    'OU=NovaDev/CN=%s-%s',
-                    'Subject for certificate for users')
+flags.DEFINE_string('credential_rc_file', '%src',
+                    'Filename of rc in credentials zip, %s will be '
+                    'replaced by name of the region (nova by default)')
 flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
@@ -628,27 +625,37 @@ class AuthManager(object):
     def get_key_pairs(context):
         return db.key_pair_get_all_by_user(context.elevated(), context.user_id)
 
-    def get_credentials(self, user, project=None):
+    def get_credentials(self, user, project=None, use_dmz=True):
         """Get credential zip for user in project"""
         if not isinstance(user, User):
             user = self.get_user(user)
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        rc = self.__generate_rc(user.access, user.secret, pid)
-        private_key, signed_cert = self._generate_x509_cert(user.id, pid)
+        private_key, signed_cert = crypto.generate_x509_cert(user.id, pid)
 
         tmpdir = tempfile.mkdtemp()
         zf = os.path.join(tmpdir, "temp.zip")
         zippy = zipfile.ZipFile(zf, 'w')
-        zippy.writestr(FLAGS.credential_rc_file, rc)
+        if use_dmz and FLAGS.region_list:
+            regions = {}
+            for item in FLAGS.region_list:
+                region, _sep, region_host = item.partition("=")
+                regions[region] = region_host
+        else:
+            regions = {'nova': FLAGS.cc_host}
+        for region, host in regions.iteritems():
+            rc = self.__generate_rc(user.access,
+                                    user.secret,
+                                    pid,
+                                    use_dmz,
+                                    host)
+            zippy.writestr(FLAGS.credential_rc_file % region, rc)
+
         zippy.writestr(FLAGS.credential_key_file, private_key)
         zippy.writestr(FLAGS.credential_cert_file, signed_cert)
 
-        try:
-            (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
-        except exception.NotFound:
-            vpn_ip = None
+        (vpn_ip, vpn_port) = self.get_project_vpn_data(project)
         if vpn_ip:
             configfile = open(FLAGS.vpn_client_template, "r")
             s = string.Template(configfile.read())
@@ -659,10 +666,9 @@ class AuthManager(object):
                                   port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
-            logging.warn("No vpn data for project %s" %
-                                  pid)
+            logging.warn("No vpn data for project %s", pid)
 
-        zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(user.id))
+        zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(pid))
         zippy.close()
         with open(zf, 'rb') as f:
             read_buffer = f.read()
@@ -670,38 +676,38 @@ class AuthManager(object):
         shutil.rmtree(tmpdir)
         return read_buffer
 
-    def get_environment_rc(self, user, project=None):
+    def get_environment_rc(self, user, project=None, use_dmz=True):
         """Get credential zip for user in project"""
         if not isinstance(user, User):
             user = self.get_user(user)
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        return self.__generate_rc(user.access, user.secret, pid)
+        return self.__generate_rc(user.access, user.secret, pid, use_dmz)
 
     @staticmethod
-    def __generate_rc(access, secret, pid):
+    def __generate_rc(access, secret, pid, use_dmz=True, host=None):
         """Generate rc file for user"""
+        if use_dmz:
+            cc_host = FLAGS.cc_dmz
+        else:
+            cc_host = FLAGS.cc_host
+        # NOTE(vish): Always use the dmz since it is used from inside the
+        #             instance
+        s3_host = FLAGS.s3_dmz
+        if host:
+            s3_host = host
+            cc_host = host
         rc = open(FLAGS.credentials_template).read()
         rc = rc % {'access': access,
                    'project': pid,
                    'secret': secret,
-                   'ec2': FLAGS.ec2_url,
-                   's3': 'http://%s:%s' % (FLAGS.s3_host, FLAGS.s3_port),
+                   'ec2': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
+                                            cc_host,
+                                            FLAGS.cc_port,
+                                            FLAGS.ec2_suffix),
+                   's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
                    'nova': FLAGS.ca_file,
                    'cert': FLAGS.credential_cert_file,
                    'key': FLAGS.credential_key_file}
         return rc
-
-    def _generate_x509_cert(self, uid, pid):
-        """Generate x509 cert for user"""
-        (private_key, csr) = crypto.generate_x509_cert(
-                self.__cert_subject(uid))
-        # TODO(joshua): This should be async call back to the cloud controller
-        signed_cert = crypto.sign_csr(csr, pid)
-        return (private_key, signed_cert)
-
-    @staticmethod
-    def __cert_subject(uid):
-        """Helper to generate cert subject"""
-        return FLAGS.credential_cert_subject % (uid, utils.isotime())
