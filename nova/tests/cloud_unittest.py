@@ -27,8 +27,6 @@ import tempfile
 import time
 
 from eventlet import greenthread
-from twisted.internet import defer
-import unittest
 from xml.etree import ElementTree
 
 from nova import context
@@ -53,7 +51,7 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
-class CloudTestCase(test.TrialTestCase):
+class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake', images_path=IMAGES_PATH)
@@ -199,7 +197,7 @@ class CloudTestCase(test.TrialTestCase):
         logging.debug("Need to watch instance %s until it's running..." %
                       instance['instance_id'])
         while True:
-            rv = yield defer.succeed(time.sleep(1))
+            greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
             logging.debug(info['state'])
             if info['state'] == power_state.RUNNING:

@@ -24,7 +24,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('flags_unittest', 'foo', 'for testing purposes only')
 
 
-class FlagsTestCase(test.TrialTestCase):
+class FlagsTestCase(test.TestCase):
 
     def setUp(self):
         super(FlagsTestCase, self).setUp()

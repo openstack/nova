@@ -267,6 +267,7 @@ class Image(object):
         if err:
             raise exception.Error("Failed to decrypt initialization "
                                   "vector: %s" % err)
+
         _out, err = utils.execute(
                 'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'
                  % (encrypted_filename, key, iv, decrypted_filename),

@@ -31,7 +31,8 @@ import socket
 import sys
 from xml.sax import saxutils
 
-from twisted.internet.threads import deferToThread
+from eventlet import event
+from eventlet import greenthread
 
 from nova import exception
 from nova import flags
@@ -75,7 +76,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug("Running cmd: %s", cmd)
+    logging.debug("Running cmd (subprocess): %s", cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -95,6 +96,10 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
                                         stdout=stdout,
                                         stderr=stderr,
                                         cmd=cmd)
+    # NOTE(termie): this appears to be necessary to let the subprocess call
+    #               clean something up in between calls, without it two
+    #               execute calls in a row hangs the second one
+    greenthread.sleep(0)
     return result
 
 
@@ -123,13 +128,7 @@ def debug(arg):
 
 def runthis(prompt, cmd, check_exit_code=True):
     logging.debug("Running %s" % (cmd))
-    exit_code = subprocess.call(cmd.split(" "))
-    logging.debug(prompt % (exit_code))
-    if check_exit_code and exit_code != 0:
-        raise ProcessExecutionError(exit_code=exit_code,
-                                    stdout=None,
-                                    stderr=None,
-                                    cmd=cmd)
+    rv, err = execute(cmd, check_exit_code=check_exit_code)
 
 
 def generate_uid(topic, size=8):
@@ -224,10 +223,41 @@ class LazyPluggable(object):
         return getattr(backend, key)
 
 
-def deferredToThread(f):
-    def g(*args, **kwargs):
-        return deferToThread(f, *args, **kwargs)
-    return g
+class LoopingCall(object):
+    def __init__(self, f=None, *args, **kw):
+        self.args = args
+        self.kw = kw
+        self.f = f
+        self._running = False
+
+    def start(self, interval, now=True):
+        self._running = True
+        done = event.Event()
+
+        def _inner():
+            if not now:
+                greenthread.sleep(interval)
+            try:
+                while self._running:
+                    self.f(*self.args, **self.kw)
+                    greenthread.sleep(interval)
+            except Exception:
+                logging.exception('in looping call')
+                done.send_exception(*sys.exc_info())
+                return
+
+            done.send(True)
+
+        self.done = done
+
+        greenthread.spawn(_inner)
+        return self.done
+
+    def stop(self):
+        self._running = False
+
+    def wait(self):
+        return self.done.wait()
 
 
 def xhtml_escape(value):

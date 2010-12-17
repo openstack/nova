@@ -25,8 +25,6 @@ semantics of real hypervisor connections.
 
 """
 
-from twisted.internet import defer
-
 from nova import exception
 from nova.compute import power_state
 
@@ -107,7 +105,6 @@ class FakeConnection(object):
         fake_instance = FakeInstance()
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
-        return defer.succeed(None)
 
     def reboot(self, instance):
         """
@@ -119,19 +116,19 @@ class FakeConnection(object):
         The work will be done asynchronously.  This function returns a
         Deferred that allows the caller to detect when it is complete.
         """
-        return defer.succeed(None)
+        pass
 
     def rescue(self, instance):
         """
         Rescue the specified instance.
         """
-        return defer.succeed(None)
+        pass
 
     def unrescue(self, instance):
         """
         Unrescue the specified instance.
         """
-        return defer.succeed(None)
+        pass
 
     def destroy(self, instance):
         """
@@ -144,7 +141,6 @@ class FakeConnection(object):
         Deferred that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
-        return defer.succeed(None)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach the disk at device_path to the instance at mountpoint"""
