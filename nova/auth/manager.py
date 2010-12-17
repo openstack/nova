@@ -478,10 +478,13 @@ class AuthManager(object):
         if member_users:
             member_users = [User.safe_id(u) for u in member_users]
         with self.driver() as drv:
-            project_dict = drv.create_project(name,
+            try:
+                project_dict = drv.create_project(name,
                                               User.safe_id(manager_user),
                                               description,
                                               member_users)
+            except:
+                project_dict = drv.get_project(name)
             if project_dict:
                 project = Project(**project_dict)
                 return project
@@ -604,7 +607,10 @@ class AuthManager(object):
         if secret == None:
             secret = str(uuid.uuid4())
         with self.driver() as drv:
-            user_dict = drv.create_user(name, access, secret, admin)
+            try:
+                user_dict = drv.create_user(name, access, secret, admin)
+            except:
+                user_dict = drv.get_user(name)
             if user_dict:
                 return User(**user_dict)
 
