@@ -31,6 +31,7 @@ import gflags
 
 from nova import utils
 
+
 class FlagValues(gflags.FlagValues):
     """Extension of gflags.FlagValues that allows undefined and runtime flags.
 
