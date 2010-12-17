@@ -33,7 +33,7 @@ from nova.auth import manager
 FLAGS = flags.FLAGS
 
 
-class NetworkTestCase(test.TrialTestCase):
+class NetworkTestCase(test.TestCase):
     """Test cases for network code"""
     def setUp(self):
         super(NetworkTestCase, self).setUp()

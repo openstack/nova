@@ -30,7 +30,7 @@ FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
-class LibvirtConnTestCase(test.TrialTestCase):
+class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         self.manager = manager.AuthManager()
@@ -207,7 +207,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.manager.delete_user(self.user)
 
 
-class NWFilterTestCase(test.TrialTestCase):
+class NWFilterTestCase(test.TestCase):
 
     def setUp(self):
         super(NWFilterTestCase, self).setUp()
@@ -319,7 +319,7 @@ class NWFilterTestCase(test.TrialTestCase):
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
 
-        def _ensure_all_called(_):
+        def _ensure_all_called():
             instance_filter = 'nova-instance-%s' % instance_ref['name']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
@@ -337,7 +337,6 @@ class NWFilterTestCase(test.TrialTestCase):
         instance = db.instance_get(self.context, inst_id)
 
         d = self.fw.setup_nwfilters_for_instance(instance)
-        d.addCallback(_ensure_all_called)
-        d.addCallback(lambda _: self.teardown_security_group())
-
+        _ensure_all_called()
+        self.teardown_security_group()
         return d

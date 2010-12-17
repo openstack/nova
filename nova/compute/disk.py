@@ -26,8 +26,6 @@ import logging
 import os
 import tempfile
 
-from twisted.internet import defer
-
 from nova import exception
 from nova import flags
 
@@ -39,7 +37,6 @@ flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
 
 
-@defer.inlineCallbacks
 def partition(infile, outfile, local_bytes=0, resize=True,
               local_type='ext2', execute=None):
     """
@@ -64,10 +61,10 @@ def partition(infile, outfile, local_bytes=0, resize=True,
     file_size = os.path.getsize(infile)
     if resize and file_size < FLAGS.minimum_root_size:
         last_sector = FLAGS.minimum_root_size / sector_size - 1
-        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                      % (infile, last_sector, sector_size))
-        yield execute('e2fsck -fp %s' % infile, check_exit_code=False)
-        yield execute('resize2fs %s' % infile)
+        execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                % (infile, last_sector, sector_size))
+        execute('e2fsck -fp %s' % infile, check_exit_code=False)
+        execute('resize2fs %s' % infile)
         file_size = FLAGS.minimum_root_size
     elif file_size % sector_size != 0:
         logging.warn("Input partition size not evenly divisible by"
@@ -86,37 +83,34 @@ def partition(infile, outfile, local_bytes=0, resize=True,
     last_sector = local_last  # e
 
     # create an empty file
-    yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                  % (outfile, mbr_last, sector_size))
+    execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+            % (outfile, mbr_last, sector_size))
 
     # make mbr partition
-    yield execute('parted --script %s mklabel msdos' % outfile)
+    execute('parted --script %s mklabel msdos' % outfile)
 
     # append primary file
-    yield execute('dd if=%s of=%s bs=%s conv=notrunc,fsync oflag=append'
-                  % (infile, outfile, FLAGS.block_size))
+    execute('dd if=%s of=%s bs=%s conv=notrunc,fsync oflag=append'
+            % (infile, outfile, FLAGS.block_size))
 
     # make primary partition
-    yield execute('parted --script %s mkpart primary %ds %ds'
-                  % (outfile, primary_first, primary_last))
+    execute('parted --script %s mkpart primary %ds %ds'
+            % (outfile, primary_first, primary_last))
 
     if local_bytes > 0:
         # make the file bigger
-        yield execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                      % (outfile, last_sector, sector_size))
+        execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
+                % (outfile, last_sector, sector_size))
         # make and format local partition
-        yield execute('parted --script %s mkpartfs primary %s %ds %ds'
-                      % (outfile, local_type, local_first, local_last))
+        execute('parted --script %s mkpartfs primary %s %ds %ds'
+                % (outfile, local_type, local_first, local_last))
 
-@defer.inlineCallbacks
 def extend(image, size, execute):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    yield execute('truncate -s size %s' % (image,))
+    return execute('truncate -s size %s' % (image,))
 
-
-@defer.inlineCallbacks
 def inject_data(image, key=None, net=None, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
 
@@ -126,14 +120,14 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
     If partition is not specified it mounts the image as a single partition.
 
     """
-    out, err = yield execute('sudo losetup --find --show %s' % image)
+    out, err = execute('sudo losetup --find --show %s' % image)
     if err:
         raise exception.Error('Could not attach image to loopback: %s' % err)
     device = out.strip()
     try:
         if not partition is None:
             # create partition
-            out, err = yield execute('sudo kpartx -a %s' % device)
+            out, err = execute('sudo kpartx -a %s' % device)
             if err:
                 raise exception.Error('Failed to load partition: %s' % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
@@ -149,12 +143,12 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                                   mapped_device)
 
         # Configure ext2fs so that it doesn't auto-check every N boots
-        out, err = yield execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
+        out, err = execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
 
         tmpdir = tempfile.mkdtemp()
         try:
             # mount loopback to dir
-            out, err = yield execute(
+            out, err = execute(
                     'sudo mount %s %s' % (mapped_device, tmpdir))
             if err:
                 raise exception.Error('Failed to mount filesystem: %s' % err)
@@ -162,24 +156,23 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
             try:
                 if key:
                     # inject key file
-                    yield _inject_key_into_fs(key, tmpdir, execute=execute)
+                    _inject_key_into_fs(key, tmpdir, execute=execute)
                 if net:
-                    yield _inject_net_into_fs(net, tmpdir, execute=execute)
+                    _inject_net_into_fs(net, tmpdir, execute=execute)
             finally:
                 # unmount device
-                yield execute('sudo umount %s' % mapped_device)
+                execute('sudo umount %s' % mapped_device)
         finally:
             # remove temporary directory
-            yield execute('rmdir %s' % tmpdir)
+            execute('rmdir %s' % tmpdir)
             if not partition is None:
                 # remove partitions
-                yield execute('sudo kpartx -d %s' % device)
+                execute('sudo kpartx -d %s' % device)
     finally:
         # remove loopback
-        yield execute('sudo losetup --detach %s' % device)
+        execute('sudo losetup --detach %s' % device)
 
 
-@defer.inlineCallbacks
 def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
 
@@ -187,22 +180,21 @@ def _inject_key_into_fs(key, fs, execute=None):
     fs is the path to the base of the filesystem into which to inject the key.
     """
     sshdir = os.path.join(fs, 'root', '.ssh')
-    yield execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
-    yield execute('sudo chown root %s' % sshdir)
-    yield execute('sudo chmod 700 %s' % sshdir)
+    execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
+    execute('sudo chown root %s' % sshdir)
+    execute('sudo chmod 700 %s' % sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    yield execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
+    execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
 
 
-@defer.inlineCallbacks
 def _inject_net_into_fs(net, fs, execute=None):
     """Inject /etc/network/interfaces into the filesystem rooted at fs.
 
     net is the contents of /etc/network/interfaces.
     """
     netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    yield execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
-    yield execute('sudo chown root:root %s' % netdir)
-    yield execute('sudo chmod 755 %s' % netdir)
+    execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
+    execute('sudo chown root:root %s' % netdir)
+    execute('sudo chmod 755 %s' % netdir)
     netfile = os.path.join(netdir, 'interfaces')
-    yield execute('sudo tee %s' % netfile, net)
+    execute('sudo tee %s' % netfile, net)

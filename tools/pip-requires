@@ -22,3 +22,4 @@ mox==0.5.0
 greenlet==0.3.1
 nose
 bzr
+Twisted>=10.1.0
