@@ -1062,11 +1062,13 @@ def iscsi_target_create_safe(context, values):
 ###################
 
 
+@require_admin_context
 def auth_destroy_token(_context, token):
     session = get_session()
     session.delete(token)
 
 
+@require_admin_context
 def auth_get_token(_context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken).\
@@ -1077,6 +1079,7 @@ def auth_get_token(_context, token_hash):
     return tk
 
 
+@require_admin_context
 def auth_create_token(_context, token):
     tk = models.AuthToken()
     tk.update(token)

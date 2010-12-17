@@ -173,7 +173,7 @@ class FakeToken(object):
 
 
 class FakeRequestContext(object):
-    def __init__(self, user, project):
+    def __init__(self, user, project, *args, **kwargs):
         self.user_id = 1
         self.project_id = 1
 
