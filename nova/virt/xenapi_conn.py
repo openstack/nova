@@ -119,11 +119,11 @@ class XenAPIConnection(object):
 
     def spawn(self, instance):
         """ Create VM instance """
-        return self._vmops.spawn(instance)
+        self._vmops.spawn(instance)
 
     def reboot(self, instance):
         """ Reboot VM instance """
-        return self._vmops.reboot(instance)
+        self._vmops.reboot(instance)
 
     def destroy(self, instance):
         """ Destroy VM instance """
@@ -143,13 +143,13 @@ class XenAPIConnection(object):
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """ Attach volume storage to VM instance """
-        return self._volumeops.attach_volume(instance_name,
+        self._volumeops.attach_volume(instance_name,
                                                device_path,
                                                mountpoint)
 
     def detach_volume(self, instance_name, mountpoint):
         """ Detach volume storage to VM instance """
-        return self._volumeops.detach_volume(instance_name, mountpoint)
+        self._volumeops.detach_volume(instance_name, mountpoint)
 
 
 class XenAPISession(object):

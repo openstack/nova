@@ -24,7 +24,6 @@ import urllib
 from xml.dom import minidom
 
 from nova import flags
-from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -48,7 +47,7 @@ class VMHelper(HelperBase):
     The class that wraps the helper methods together.
     """
     def __init__(self):
-        return
+        super(VMHelper, self).__init__()
 
     @classmethod
     def create_vm(cls, session, instance, kernel, ramdisk):

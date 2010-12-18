@@ -20,7 +20,7 @@
 """
 
 
-class HelperBase():
+class HelperBase(object):
     """
     The base for helper classes. This adds the XenAPI class attribute
     """

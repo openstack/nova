@@ -19,7 +19,6 @@ Management class for Storage-related functions (attach, detach, etc).
 """
 import logging
 
-from nova import flags
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.volume_utils import VolumeHelper
 from nova.virt.xenapi.volume_utils import StorageError

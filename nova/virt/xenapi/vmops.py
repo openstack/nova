@@ -22,7 +22,6 @@ import logging
 
 from nova import db
 from nova import context
-from nova import flags
 from nova import exception
 from nova import utils
 
@@ -78,6 +77,7 @@ class VMOps(object):
         logging.info('Spawning VM %s created %s.', instance.name,
                      vm_ref)
 
+        # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
@@ -88,7 +88,8 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     logging.debug('Instance %s: booted', instance['name'])
                     timer.stop()
-            except:
+            except Exception, exc:
+                logging.warn(exc)
                 logging.exception('instance %s: failed to boot',
                                   instance['name'])
                 db.instance_set_state(context.get_admin_context(),
@@ -131,6 +132,7 @@ class VMOps(object):
                     self._session.wait_for_task(task)
                 except self.XenAPI.Failure, exc:
                     logging.warn(exc)
+        # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(task)
@@ -149,7 +151,7 @@ class VMOps(object):
         """Return data about VM diagnostics"""
         vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise exception.Exception("Instance not found %s" % instance_id)
+            raise exception.NotFound("Instance not found %s" % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 

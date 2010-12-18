@@ -43,7 +43,7 @@ class VolumeHelper(HelperBase):
     The class that wraps the helper methods together.
     """
     def __init__(self):
-        return
+        super(VolumeHelper, self).__init__()
 
     @classmethod
     def create_iscsi_storage(cls, session, info, label, description):

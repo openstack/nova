@@ -29,7 +29,7 @@ class NetworkHelper(HelperBase):
     The class that wraps the helper methods together.
     """
     def __init__(self):
-        return
+        super(NetworkHelper, self).__init__()
 
     @classmethod
     def find_network_with_bridge(cls, session, bridge):

@@ -78,13 +78,10 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         helper = volume_utils.VolumeHelper
         helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
-        info = yield helper.parse_volume_info(vol['ec2_id'], '/dev/sdc')
+        info = helper.parse_volume_info(vol['ec2_id'], '/dev/sdc')
         label = 'SR-%s' % vol['ec2_id']
         description = 'Test-SR'
-        sr_ref = helper.create_iscsi_storage_blocking(session,
-                                                      info,
-                                                      label,
-                                                      description)
+        sr_ref = helper.create_iscsi_storage(session, info, label, description)
         srs = fake.get_all('SR')
         self.assertEqual(sr_ref, srs[0])
         db.volume_destroy(context.get_admin_context(), vol['id'])
@@ -97,13 +94,10 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
         # oops, wrong mount point!
-        info = helper.parse_volume_info(vol['ec2_id'], '/dev/sd')
-
-        def check(exc):
-            """ handler """
-            self.assertIsInstance(exc.value, volume_utils.StorageError)
-
-        info.addErrback(check)
+        self.assertRaises(volume_utils.StorageError,
+                          helper.parse_volume_info,
+                          vol['ec2_id'],
+                          '/dev/sd')
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_attach_volume(self):
@@ -116,8 +110,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         result = conn.attach_volume(instance.name, volume['ec2_id'],
                                     '/dev/sdc')
 
-        def check(_):
-            """ handler """
+        def check():
             # check that the VM has a VBD attached to it
             # Get XenAPI reference for the VM
             vms = fake.get_all('VM')
@@ -127,8 +120,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
             vm_ref = vbd['VM']
             self.assertEqual(vm_ref, vms[0])
 
-        result.addCallback(check)
-        return result
+        check()
 
     def test_attach_volume_raise_exception(self):
         """ This shows how to test when exceptions are raised """
@@ -138,17 +130,11 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         volume = self._create_volume()
         instance = db.instance_create(self.values)
         fake.create_vm(instance.name, 'Running')
-        result = conn.attach_volume(instance.name, volume['ec2_id'],
-                                    '/dev/sdc')
-
-        def check_exception(exc):
-            """ handler """
-            if exc:
-                pass
-            else:
-                self.fail('Oops, no exception has been raised!')
-        result.addErrback(check_exception)
-        return result
+        self.assertRaises(Exception,
+                          conn.attach_volume,
+                          instance.name,
+                          volume['ec2_id'],
+                          '/dev/sdc')
 
     def tearDown(self):
         super(XenAPIVolumeTestCase, self).tearDown()
@@ -192,10 +178,9 @@ class XenAPIVMTestCase(test.TrialTestCase):
                   }
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
-        result = conn.spawn(instance)
+        conn.spawn(instance)
 
-        def check(_):
-            """ handler """
+        def check():
             instances = conn.list_instances()
             self.assertEquals(instances, [1])
 
@@ -225,8 +210,7 @@ class XenAPIVMTestCase(test.TrialTestCase):
             # Check that the VM is running according to XenAPI.
             self.assertEquals(vm['power_state'], 'Running')
 
-        result.addCallback(check)
-        return result
+        check()
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
