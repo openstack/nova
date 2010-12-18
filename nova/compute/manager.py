@@ -181,7 +181,8 @@ class ComputeManager(manager.Manager):
 
         logging.debug('instance %s: snapshotting', instance_ref['name'])
         #TODO(sirp): set is_snapshotting=True here?
-        self.driver.snapshot(instance_ref)
+        glance_name = "MySnapshot3"
+        self.driver.snapshot(instance_ref, glance_name)
         #self._update_state(context, instance_id)
 
     @exception.wrap_exception

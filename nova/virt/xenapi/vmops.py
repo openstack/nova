@@ -79,29 +79,26 @@ class VMOps(object):
         logging.info('Spawning VM %s created %s.', instance.name,
                      vm_ref)
     
-    def snapshot(self, instance):
+    def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance """
-        logging.debug("Starting snapshot for VM %s", instance)
+
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
+
+        logging.debug("Starting snapshot for VM %s", instance)
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
-        #TODO(sirp): this is the label in Xen, we need to add a human friendly
-        # label that we store in paralalx
         label = "%s-snapshot" % instance.name
-        glance_name = "MySnapshot"
-    
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, vm_ref, label)
         except XenAPI.Failure, exc:
             logging.error("Unable to Snapshot %s: %s", vm_ref, exc)
             return
-        
+       
         try:
             # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(
-                self._session, template_vdi_uuids, glance_name)
+            VMHelper.upload_image(self._session, template_vdi_uuids, name) 
         finally:
             self._destroy(template_vm_ref, shutdown=False)
 

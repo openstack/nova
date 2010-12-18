@@ -77,7 +77,10 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc).  Used only if '
                    'connection_type=xenapi.')
-
+flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
+                   5.0,
+                   'The interval used for polling of coalescing vhds.'
+                   '  Used only if connection_type=xenapi.')
 XenAPI = None
 
 
@@ -116,11 +119,11 @@ class XenAPIConnection(object):
         self._vmops.spawn(instance)
 
 
-    def snapshot(self, instance):
+    def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance """
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
-        self._vmops.snapshot(instance)
+        self._vmops.snapshot(instance, name)
 
     def reboot(self, instance):
         """ Reboot VM instance """

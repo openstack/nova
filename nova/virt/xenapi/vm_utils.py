@@ -19,11 +19,12 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
-import time #FIXME(sirp): take this out, replace with greenthread.sleep
 import logging
+import pickle
 import urllib
 from xml.dom import minidom
 
+from eventlet import event
 from nova import flags
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -166,8 +167,6 @@ class VMHelper():
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec["uuid"]
 
-        #NOTE(sirp): We may need to wait for our parent to coalese with his 
-        # parent
         original_parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
@@ -186,8 +185,14 @@ class VMHelper():
     def upload_image(cls, session, vdi_uuids, glance_label):
         logging.debug("Asking xapi to upload %s as '%s'", vdi_uuids,
                       glance_label)
-        kwargs = {'vdi_uuids': ','.join(vdi_uuids), 
-                  'glance_label': glance_label}
+
+        params = {'vdi_uuids': vdi_uuids, 
+                  'glance_label': glance_label,
+                  'glance_storage_location': FLAGS.glance_storage_location,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port}
+
+        kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'put_vdis', kwargs)
         session.wait_for_task(task)
 
@@ -341,27 +346,24 @@ def scan_sr(session, sr_ref):
 
 def wait_for_vhd_coalesce(session, sr_ref, vdi_ref, original_parent_uuid):
     """ TODO Explain why coalescing has to occur here """
-    #TODO(sirp): we need to timeout this req after a while
     #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
     # XS5.6
-    #TODO(sirp): clean this up, perhaps use LoopingCall
-    def _get_vhd_parent_uuid_with_refresh(first_time):
-        if not first_time:
-            #TODO(sirp): should this interval be a gflag?
-            #TODO(sirp): make this non-blocking
-            time.sleep(5)
+    #TODO(sirp): we need to timeout this req after a while
+
+    def _poll_vhds():
         scan_sr(session, sr_ref)
-        return get_vhd_parent_uuid(session, vdi_ref)
-
-    parent_uuid = _get_vhd_parent_uuid_with_refresh(first_time=True)
-    logging.debug(
-        "Parent %s doesn't match original parent %s, "
-        "waiting for coalesce...", parent_uuid, original_parent_uuid)
-    while original_parent_uuid and (parent_uuid != original_parent_uuid):
-        logging.debug(
-            "Parent %s doesn't match original parent %s, "
-            "waiting for coalesce...", parent_uuid, original_parent_uuid)
-        parent_uuid = _get_vhd_parent_uuid_with_refresh(first_time=False)
-
+        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        if original_parent_uuid and (parent_uuid != original_parent_uuid):
+            logging.debug(
+                "Parent %s doesn't match original parent %s, "
+                "waiting for coalesce...", parent_uuid, original_parent_uuid)
+        else:
+            done.send(parent_uuid)
+ 
+    done = event.Event()
+    loop = utils.LoopingCall(_poll_vhds)
+    loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
+    parent_uuid = done.wait()
+    loop.stop()
     return parent_uuid
 

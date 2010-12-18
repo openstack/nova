@@ -24,8 +24,10 @@
 import base64
 import errno
 import hmac
+import httplib
 import os
 import os.path
+import pickle
 import sha
 import subprocess
 import time
@@ -37,43 +39,69 @@ import XenAPIPlugin
 from pluginlib_nova import *
 configure_logging('glance')
 
-#FIXME(sirp): Should this just be 64K like elsewhere
-CHUNK_SIZE = 4096
-
+CHUNK_SIZE = 8192
 FILE_SR_PATH = '/var/run/sr-mount'
 
-#TODO(sirp): use get_vhd_parent code from Citrix guys
-#TODO(sirp): look for Citrix guys get VDI from VM_ref (does this exist in
-#pluginlib?
-# Need to add glance client to plugins (how do we get this onto XenServer
-# machine?)
-# WHen do we cleanup unused VDI's in SR
-
 def put_vdis(session, args):
-    vdi_uuids = exists(args, 'vdi_uuids').split(',')
-    glance_label = exists(args, 'glance_label')
+    params = pickle.loads(exists(args, 'params'))
+    vdi_uuids = params["vdi_uuids"]
+    glance_label = params["glance_label"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+    glance_storage_location = params["glance_storage_location"]
     
     sr_path = get_sr_path(session)
-    tar_cmd = ['tar', '-zc', '--directory=%s' % sr_path]
+    #FIXME(sirp): writing to a temp file until Glance supports chunked-PUTs
+    tmp_file = "%s.tar.gz" % os.path.join('/tmp', glance_label) 
+    tar_cmd = ['tar', '-zcf', tmp_file, '--directory=%s' % sr_path]
     paths = [ "%s.vhd" % vdi_uuid for vdi_uuid in vdi_uuids ]
     tar_cmd.extend(paths)
     logging.debug("Bundling image with cmd: %s", tar_cmd)
-    tar_proc = subprocess.Popen(tar_cmd, stdout=subprocess.PIPE)
-  
-    test_file = "%s.tar.gz" % os.path.join('/tmp', glance_label) 
-    logging.debug("Writing to test file %s", test_file) 
-    bundle = tar_proc.stdout
-    f = open(test_file, 'w')
-    try:
-        chunk = bundle.read(CHUNK_SIZE)
-        while chunk:
-            f.write(chunk)
-            chunk = bundle.read(CHUNK_SIZE)
-    finally:
-        f.close()
-
+    subprocess.call(tar_cmd)
+    logging.debug("Writing to test file %s", tmp_file) 
+    put_bundle_in_glance(tmp_file, glance_label, glance_storage_location,
+                         glance_host, glance_port)
     return "" # FIXME(sirp): return anything useful here?
 
+
+def put_bundle_in_glance(tmp_file, glance_label, glance_storage_location,
+                         glance_host, glance_port):
+
+    size = os.path.getsize(tmp_file) 
+
+    basename = os.path.basename(tmp_file)
+    location = os.path.join(glance_storage_location, basename)
+
+    bundle = open(tmp_file, 'r')
+    try:
+        headers = {
+            'x-image-meta-is_public': 'True',
+            'x-image-meta-name': glance_label,
+            'x-image-meta-location': location,
+            'x-image-meta-size': size,
+            'content-length': size,
+         }
+        conn = httplib.HTTPConnection(glance_host, glance_port)
+        #NOTE(sirp): httplib under python2.4 won't accept a file-like object
+        # to request
+        conn.putrequest('POST', '/images')
+
+        for header, value in headers.iteritems():
+            conn.putheader(header, value)
+        conn.endheaders()
+        
+        chunk = bundle.read(CHUNK_SIZE)
+        while chunk:
+            conn.send(chunk)
+            chunk = bundle.read(CHUNK_SIZE)
+        
+
+        res = conn.getresponse()
+        #FIXME(sirp): should this be 201 Created?
+        if res.status != httplib.OK:
+            raise Exception("Unexpected response from Glance %i" % res.status)
+    finally:
+        bundle.close()
 
 def get_sr_path(session):
     sr_ref = find_sr(session)
