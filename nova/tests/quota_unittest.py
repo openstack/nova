@@ -32,7 +32,7 @@ from nova.api.ec2 import cloud
 FLAGS = flags.FLAGS
 
 
-class QuotaTestCase(test.TrialTestCase):
+class QuotaTestCase(test.TestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()

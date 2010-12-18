@@ -49,7 +49,6 @@ import logging
 import math
 
 import IPy
-from twisted.internet import defer
 
 from nova import context
 from nova import db
@@ -399,10 +398,9 @@ class VlanManager(NetworkManager):
     instances in its subnet.
     """
 
-    @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
-        yield super(VlanManager, self).periodic_tasks(context)
+        super(VlanManager, self).periodic_tasks(context)
         now = datetime.datetime.utcnow()
         timeout = FLAGS.fixed_ip_disassociate_timeout
         time = now - datetime.timedelta(seconds=timeout)

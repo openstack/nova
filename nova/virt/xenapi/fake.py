@@ -102,12 +102,14 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
         'location': '',
         'xenstore_data': '',
         'sm_config': {},
+        'VBDs': {},
         })
 
 
-def create_pbd(config, attached):
+def create_pbd(config, sr_ref, attached):
     return _create_object('PBD', {
         'device-config': config,
+        'SR': sr_ref,
         'currently-attached': attached,
         })
 
@@ -124,6 +126,21 @@ def _create_object(table, obj):
     obj['uuid'] = str(uuid.uuid4())
     _db_content[table][ref] = obj
     return ref
+
+
+def _create_sr(table, obj):
+    sr_type = obj[6]
+    # Forces fake to support iscsi only
+    if sr_type != 'iscsi':
+        raise Failure(['SR_UNKNOWN_DRIVER', sr_type])
+    sr_ref = _create_object(table, obj[2])
+    vdi_ref = create_vdi('', False, sr_ref, False)
+    pbd_ref = create_pbd('', sr_ref, True)
+    _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
+    _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
+    _db_content['VDI'][vdi_ref]['SR'] = sr_ref
+    _db_content['PBD'][pbd_ref]['SR'] = sr_ref
+    return sr_ref
 
 
 def get_all(table):
@@ -296,19 +313,13 @@ class SessionBase(object):
 
     def _create(self, name, params):
         self._check_session(params)
-        expected = 2
-        if name == 'SR.create':
-            expected = 10
+        is_sr_create = name == 'SR.create'
+        # Storage Repositories have a different API
+        expected = is_sr_create and 10 or 2
         self._check_arg_count(params, expected)
         (cls, _) = name.split('.')
-        if name == 'SR.create':
-            vdi_ref = create_vdi('', False, '', False)
-            pbd_ref = create_pbd('', True)
-            params[2]['VDIs'] = [vdi_ref]
-            params[2]['PBDs'] = [pbd_ref]
-            ref = _create_object(cls, params[2])
-        else:
-            ref = _create_object(cls, params[1])
+        ref = is_sr_create and \
+            _create_sr(cls, params) or _create_object(cls, params[1])
         obj = get_record(cls, ref)
 
         # Add RO fields
