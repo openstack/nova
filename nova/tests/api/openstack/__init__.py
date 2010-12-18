@@ -17,11 +17,15 @@
 
 import unittest
 
+from nova import context
+from nova import flags
 from nova.api.openstack.common import limited
 from nova.api.openstack import RateLimitingMiddleware
 from nova.tests.api.fakes import APIStub
+from nova import utils
 from webob import Request
 
+FLAGS = flags.FLAGS
 
 class RateLimitingMiddlewareTest(unittest.TestCase):
 
@@ -31,7 +35,7 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         def verify(method, url, action_name):
             req = Request.blank(url)
             req.method = method
-            action = middleware.get_action_name(req)
+            action = middleware._limiting_driver.get_action_name(req)
             self.assertEqual(action, action_name)
 
         verify('PUT', '/servers/4', 'PUT')
@@ -46,6 +50,8 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
     def exhaust(self, middleware, method, url, username, times):
         req = Request.blank(url, dict(REQUEST_METHOD=method),
                             headers={'X-Auth-User': username})
+        req.environ['nova.context'] = context.RequestContext(username,
+                            username)
         for i in range(times):
             resp = req.get_response(middleware)
             self.assertEqual(resp.status_int, 200)
@@ -62,7 +68,7 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         middleware = RateLimitingMiddleware(APIStub())
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
         self.exhaust(middleware, 'POST', '/images/4', 'usr2', 10)
-        self.assertTrue(set(middleware.limiter._levels) ==
+        self.assertTrue(set(middleware._limiting_driver.limiter._levels) == \
                         set(['usr1:POST', 'usr1:POST servers', 'usr2:POST']))
 
     def test_POST_servers_action_correctly_ratelimited(self):
@@ -71,15 +77,15 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         for i in range(5):
             self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
             # Reset the 'POST' action counter.
-            del middleware.limiter._levels['usr1:POST']
+            del middleware._limiting_driver.limiter._levels['usr1:POST']
         # All 50 daily "POST servers" actions should be all used up
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 0)
 
     def test_proxy_ctor_works(self):
         middleware = RateLimitingMiddleware(APIStub())
-        self.assertEqual(middleware.limiter.__class__.__name__, "Limiter")
+        self.assertEqual(middleware._limiting_driver.limiter.__class__.__name__, "Limiter")
         middleware = RateLimitingMiddleware(APIStub(), service_host='foobar')
-        self.assertEqual(middleware.limiter.__class__.__name__, "WSGIAppProxy")
+        self.assertEqual(middleware._limiting_driver.limiter.__class__.__name__, "WSGIAppProxy")
 
 
 class LimiterTest(unittest.TestCase):

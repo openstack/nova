@@ -6,6 +6,7 @@ import urllib
 import webob.dec
 import webob.exc
 
+from nova.api.openstack import faults
 
 # Convenience constants for the limits dictionary passed to Limiter().
 PER_SECOND = 1
@@ -22,16 +23,16 @@ class BasicRateLimiting(object):
             #TODO(gundlach): These limits were based on limitations of Cloud
             #Servers.  We should revisit them in Nova.
             self.limiter = Limiter(limits={
-                    'DELETE': (100, ratelimiting.PER_MINUTE),
-                    'PUT': (10, ratelimiting.PER_MINUTE),
-                    'POST': (10, ratelimiting.PER_MINUTE),
-                    'POST servers': (50, ratelimiting.PER_DAY),
-                    'GET changes-since': (3, ratelimiting.PER_MINUTE),
+                    'DELETE': (100, PER_MINUTE),
+                    'PUT': (10, PER_MINUTE),
+                    'POST': (10, PER_MINUTE),
+                    'POST servers': (50, PER_DAY),
+                    'GET changes-since': (3, PER_MINUTE),
                 })
         else:
             self.limiter = WSGIAppProxy(service_host)
 
-    def limited_request(self, req):
+    def limited_request(self, req, application):
         """Rate limit the request.
 
         If the request should be rate limited, return a 413 status with a
@@ -40,7 +41,7 @@ class BasicRateLimiting(object):
         action_name = self.get_action_name(req)
         if not action_name:
             # Not rate limited
-            return self.application
+            return application
         delay = self.get_delay(action_name,
             req.environ['nova.context'].user_id)
         if delay:
@@ -49,7 +50,7 @@ class BasicRateLimiting(object):
                     explanation='Too many requests.',
                     headers={'Retry-After': time.time() + delay})
             raise faults.Fault(exc)
-        return self.application
+        return application
 
     def get_delay(self, action_name, username):
         """Return the delay for the given action and username, or None if

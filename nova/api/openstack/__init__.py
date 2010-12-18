@@ -113,7 +113,7 @@ class RateLimitingMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-       return self._limiting_driver.limited_request(req) 
+       return self._limiting_driver.limited_request(req, self.application) 
 
 
 class APIRouter(wsgi.Router):
