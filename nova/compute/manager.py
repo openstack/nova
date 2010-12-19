@@ -39,6 +39,7 @@ import logging
 import sys
 import traceback
 import os
+import time
 
 
 from twisted.internet import defer
@@ -297,10 +298,10 @@ class ComputeManager(manager.Manager):
         # 2. getting fixed ips
         fixed_ip = db.instance_get_fixed_address(context, instance_id)
         if None == fixed_ip:
-            logging.error('Not found fixedip for %s\n%s',
-                          ec2_id,
-                          ''.join(traceback.format_tb(sys.exc_info()[2])))
-            return
+            exc_type = 'NotFoundError'
+            val = '%s(%s) doesnt have fixed_ip ' % (instance_id, ec2_id)
+            tb = ''.join(traceback.format_tb(sys.exc_info()[2]))
+            raise rpc.RemoteError(exc_type, val, tb)
 
         # 3. if any volume is mounted, prepare here.
         if 0 != len(shelf_slots):
@@ -315,6 +316,7 @@ class ComputeManager(manager.Manager):
 
         # 5. bridge settings
         self.network_manager.setup_compute_network(instance_id)
+        return True
 
     def nwfilter_for_instance_exists(self, context, instance_id):
         """Check nova-instance-instance-xxx filter exists """
@@ -324,7 +326,6 @@ class ComputeManager(manager.Manager):
     def live_migration(self, context, instance_id, dest):
         """executes live migration."""
 
-        import time
         # 1. ask dest host to preparing live migration.
         compute_topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
         ret = rpc.call(context,
@@ -333,7 +334,7 @@ class ComputeManager(manager.Manager):
                          "args": {'instance_id': instance_id,
                                     'dest': dest}})
 
-        if rpc.RemoteError == type(ret):
+        if True != ret:
             logging.error('Live migration failed(err at %s)', dest)
             db.instance_set_state(context,
                                   instance_id,
