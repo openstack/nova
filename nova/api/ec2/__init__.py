@@ -37,6 +37,9 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_boolean('use_forwarded_for', False,
+                     'Treat X-Forwarded-For as the canonical remote address. '
+                     'Only enable this if you have a sanitizing proxy.')
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
 
@@ -81,9 +84,12 @@ class Authenticate(wsgi.Middleware):
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
+        remote_address = req.remote_addr
+        if FLAGS.use_forwarded_for:
+            remote_address = req.headers.get('X-Forwarded-For', remote_address)
         ctxt = context.RequestContext(user=user,
                                       project=project,
-                                      remote_address=req.remote_addr)
+                                      remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
         return self.application
 
