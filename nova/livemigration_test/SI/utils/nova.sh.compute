@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+DIRNAME=nova
+NOVA_DIR=$DIR/$DIRNAME
+if [ -n "$3" ]; then
+    NOVA_DIR=$DIR/$3
+fi
+
+DIR=/opt/nova-2010.4
+REDIS_DIR=/opt/redis-2.0.0-rc4/
+NOVA_DIR=$DIR/nova
+HOST_IP=172.19.0.131
+
+mkdir -p /etc/nova
+cat >/etc/nova/nova-manage.conf << NOVA_CONF_EOF
+--verbose
+--nodaemon
+--dhcpbridge_flagfile=/etc/nova/nova-manage.conf
+--FAKE_subdomain=ec2
+--libvirt_type=qemu
+--no_internet_conn=True
+--public_netif=eth0
+--public_interface=eth0
+
+--cc-host=$HOST_IP
+--routing_source_ip=$HOST_IP
+--sql_connection=mysql://root:nova@$HOST_IP/nova
+--rabbit_host=$HOST_IP
+--redis_host=$HOST_IP
+--s3_host=$HOST_IP
+--auth_driver=nova.auth.ldapdriver.LdapDriver
+--ldap_url=ldap://$HOST_IP
+
+NOVA_CONF_EOF
+
+$DIR/bin/nova-compute --flagfile=/etc/nova/nova-manage.conf
+
