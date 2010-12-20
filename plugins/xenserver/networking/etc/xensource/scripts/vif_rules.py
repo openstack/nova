@@ -17,8 +17,8 @@
 #    under the License.
 
 """
-This script is used to configure iptables, ebtables, and arptables rules for
-XenServer instances.
+This script is used to configure iptables, ebtables, and arptables rules on
+XenServer hosts.
 """
 
 import os
@@ -55,6 +55,7 @@ def execute(command, return_stdout=False):
     devnull = open(os.devnull, 'w')
     proc = subprocess.Popen(command, shell=True, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
+    devnull.close()
     if return_stdout:
         return proc.stdout.read()
     else:
