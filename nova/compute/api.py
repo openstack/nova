@@ -73,14 +73,19 @@ class ComputeAPI(base.Base):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = self.image_service.show(context, image_id)
+
+            # If kernel_id/ramdisk_id isn't explicitly set in API call
+            # we take the defaults from the image's metadata
             if kernel_id is None:
-                kernel_id = image.get('kernelId', FLAGS.default_kernel)
+                kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
+                ramdisk_id = image.get('ramdiskId', None)
 
             # Make sure we have access to kernel and ramdisk
-            self.image_service.show(context, kernel_id)
-            self.image_service.show(context, ramdisk_id)
+            if kernel_id:
+                self.image_service.show(context, kernel_id)
+            if ramdisk_id:
+                self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -103,8 +108,8 @@ class ComputeAPI(base.Base):
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,
-            'kernel_id': kernel_id,
-            'ramdisk_id': ramdisk_id,
+            'kernel_id': kernel_id or '',
+            'ramdisk_id': ramdisk_id or '',
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
