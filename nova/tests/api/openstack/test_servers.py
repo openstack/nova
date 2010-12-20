@@ -62,7 +62,9 @@ def stub_instance(id, user_id=1):
 def fake_compute_api(cls, req, id):
     return True
 
+
 class ServersTest(unittest.TestCase):
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
