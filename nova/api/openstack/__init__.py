@@ -170,9 +170,16 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
+
+        server_members = {'action': 'POST'}
+        if FLAGS.allow_admin_api:
+            logging.debug("Including admin operations in API.")
+            server_members['pause'] = 'POST'
+            server_members['unpause'] = 'POST'
+
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
-                        member={'action': 'POST'})
+                        member=server_members)
 
         mapper.resource("backup_schedule", "backup_schedules",
                         controller=backup_schedules.Controller(),
@@ -185,10 +192,6 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'})
         mapper.resource("sharedipgroup", "sharedipgroups",
                         controller=sharedipgroups.Controller())
-
-        if FLAGS.allow_admin_api:
-            logging.debug("Including admin operations in API.")
-            # TODO: Place routes for admin operations here.
 
         super(APIRouter, self).__init__(mapper)
 
