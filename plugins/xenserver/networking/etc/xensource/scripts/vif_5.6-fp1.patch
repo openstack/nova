@@ -4,7 +4,7 @@
  
          # xs-xen.pq.hq:91e986b8e49f netback-wait-for-hotplug
          xenstore-write "/local/domain/0/backend/vif/${DOMID}/${DEVID}/hotplug-status" "connected"
-+       python /etc/xensource/scripts/vif_rules.py ${DOMID} online 2>&1 >> /dev/null
++       python /etc/xensource/scripts/vif_rules.py ${DOMID} online 2>&1 > /dev/null
      fi
      ;;
  
@@ -12,7 +12,7 @@
  
  remove)
      if [ "${TYPE}" = "vif" ] ;then
-+       python /etc/xensource/scripts/vif_rules.py ${DOMID} offline 2>&1 >> /dev/null
++       python /etc/xensource/scripts/vif_rules.py ${DOMID} offline 2>&1 > /dev/null
          xenstore-rm "${HOTPLUG}/hotplug"
      fi
      logger -t scripts-vif "${dev} has been removed"

@@ -5,50 +5,54 @@
 # chkconfig: 2345 85 15
 # description: Networking Host Rules for Multi Tenancy Protections
 
+IPTABLES=/sbin/iptables
+EBTABLES=/sbin/ebtables
+ARPTABLES=/sbin/arptables
+
 iptables-up()
 {
-        iptables -P FORWARD DROP
-        iptables -A FORWARD -m physdev --physdev-in eth0 -j ACCEPT
-        iptables -A FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+        $IPTABLES -P FORWARD DROP
+        $IPTABLES -A FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        $IPTABLES -A FORWARD -m physdev --physdev-in eth1 -j ACCEPT
 }
 
 ebtables-up()
 {
-        ebtables -P FORWARD DROP
-        ebtables -A FORWARD -o eth0 -j ACCEPT
-        ebtables -A FORWARD -o eth1 -j ACCEPT
+        $EBTABLES -P FORWARD DROP
+        $EBTABLES -A FORWARD -o eth0 -j ACCEPT
+        $EBTABLES -A FORWARD -o eth1 -j ACCEPT
 }
 
 arptables-up()
 {
-        arptables -P FORWARD DROP
-        arptables -A FORWARD --opcode Request --in-interface eth0 -j ACCEPT
-        arptables -A FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
-        arptables -A FORWARD --opcode Request --in-interface eth1 -j ACCEPT
-        arptables -A FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+        $ARPTABLES -P FORWARD DROP
+        $ARPTABLES -A FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
 }
 
 iptables-down()
 {
-        iptables -P FORWARD ACCEPT
-        iptables -D FORWARD -m physdev --physdev-in eth0 -j ACCEPT
-        iptables -D FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+        $IPTABLES -P FORWARD ACCEPT
+        $IPTABLES -D FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        $IPTABLES -D FORWARD -m physdev --physdev-in eth1 -j ACCEPT
 }
 
 ebtables-down()
 {
-        ebtables -P FORWARD ACCEPT
-        ebtables -D FORWARD -o eth0 -j ACCEPT
-        ebtables -D FORWARD -o eth1 -j ACCEPT
+        $EBTABLES -P FORWARD ACCEPT
+        $EBTABLES -D FORWARD -o eth0 -j ACCEPT
+        $EBTABLES -D FORWARD -o eth1 -j ACCEPT
 }
 
 arptables-down()
 {
-        arptables -P FORWARD ACCEPT
-        arptables -D FORWARD --opcode Request --in-interface eth0 -j ACCEPT
-        arptables -D FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
-        arptables -D FORWARD --opcode Request --in-interface eth1 -j ACCEPT
-        arptables -D FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+        $ARPTABLES -P FORWARD ACCEPT
+        $ARPTABLES -D FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
 }
 
 start()
@@ -68,16 +72,20 @@ stop()
 case "$1" in
         start)
                 start
+                RETVAL=$?
                 ;;
         stop)
                 stop
+                RETVAL=$?
                 ;;
         restart)
                 stop
                 start
+                RETVAL=$?
                 ;;
         *)
                 echo $"Usage: $0 {start|stop|restart}"
                 exit 1
+                ;;
 esac
-exit 0
+exit $RETVAL
