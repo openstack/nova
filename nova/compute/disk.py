@@ -105,11 +105,13 @@ def partition(infile, outfile, local_bytes=0, resize=True,
         execute('parted --script %s mkpartfs primary %s %ds %ds'
                 % (outfile, local_type, local_first, local_last))
 
+
 def extend(image, size, execute):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
     return execute('truncate -s size %s' % (image,))
+
 
 def inject_data(image, key=None, net=None, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
