@@ -232,15 +232,13 @@ class InstanceDiagnostics(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     instance_id = Column(Integer, ForeignKey('instances.id'))
 
-    vbd_xvda_read = Column(Float)
-    vbd_xvda_write = Column(Float)
-    vbd_xvdb_read = Column(Float)
-    vbd_xvdb_write = Column(Float)
-    memory = Column(Float)
-    memory_internal_free = Column(Float)
-    cpu0 = Column(Float)
-    vif_0_tx = Column(Float)
-    vif_0_rx = Column(Float)
+    memory_available = Column(Float)
+    memory_free = Column(Float)
+    cpu_load = Column(Float)
+    disk_read = Column(Float)
+    disk_write = Column(Float)
+    net_tx = Column(Float)
+    net_rx = Column(Float)
 
 
 class InstanceActions(BASE, NovaBase):
