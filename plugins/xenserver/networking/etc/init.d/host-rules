@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# host-rules          Start/Stop the networking host rules
+#
+# chkconfig: 2345 85 15
+# description: Networking Host Rules for Multi Tenancy Protections
+
+iptables-up()
+{
+        iptables -P FORWARD DROP
+        iptables -A FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        iptables -A FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+}
+
+ebtables-up()
+{
+        ebtables -P FORWARD DROP
+        ebtables -A FORWARD -o eth0 -j ACCEPT
+        ebtables -A FORWARD -o eth1 -j ACCEPT
+}
+
+arptables-up()
+{
+        arptables -P FORWARD DROP
+        arptables -A FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        arptables -A FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        arptables -A FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        arptables -A FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+}
+
+iptables-down()
+{
+        iptables -P FORWARD ACCEPT
+        iptables -D FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        iptables -D FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+}
+
+ebtables-down()
+{
+        ebtables -P FORWARD ACCEPT
+        ebtables -D FORWARD -o eth0 -j ACCEPT
+        ebtables -D FORWARD -o eth1 -j ACCEPT
+}
+
+arptables-down()
+{
+        arptables -P FORWARD ACCEPT
+        arptables -D FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        arptables -D FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        arptables -D FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        arptables -D FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+}
+
+start()
+{
+        iptables-up
+        ebtables-up
+        arptables-up
+}
+
+stop()
+{
+        iptables-down
+        ebtables-down
+        arptables-down
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        *)
+                echo $"Usage: $0 {start|stop|restart}"
+                exit 1
+esac
+exit 0
