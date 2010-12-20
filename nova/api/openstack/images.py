@@ -27,10 +27,12 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+
 def _entity_list(entities):
     """ Coerces a list of images into proper dictionary format
         entities is a list of entities (dicts) """
     return dict(images=entities)
+
 
 def _entity_detail(inst):
     """ Maps everything to Rackspace-like attributes for return
@@ -44,27 +46,29 @@ def _entity_detail(inst):
 
     # TODO(tr3buchet): this map is specific to s3 object store,
     # fix once the local image service is working
-    mapped_keys = {'status':'imageState',
-                   'id':'imageId',
-                   'name':'imageLocation'}
+    mapped_keys = {'status': 'imageState',
+                   'id': 'imageId',
+                   'name': 'imageLocation'}
 
     mapped_inst = {}
-    for k,v in mapped_keys.iteritems():
+    for k, v in mapped_keys.iteritems():
         mapped_inst[k] = inst[v]
 
     mapped_inst['status'] = status_mapping[mapped_inst['status']]
 
     return mapped_inst
 
+
 def _entity_inst(inst):
     """ Filters all model attributes save for id and name
         inst is a single entity (dict) """
-    return _select_keys(inst, ['id','name'])
+    return _select_keys(inst, ['id', 'name'])
+
 
 def _select_keys(inst, keys):
     """ Filters all model attributes for keys
         inst is a single entity (dict) """
-    return dict( (k,v) for k,v in inst.iteritems() if k in keys)
+    return dict((k, v) for k, v in inst.iteritems() if k in keys)
 
 
 class Controller(wsgi.Controller):
