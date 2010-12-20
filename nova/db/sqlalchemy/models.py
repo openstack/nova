@@ -243,6 +243,17 @@ class InstanceDiagnostics(BASE, NovaBase):
     vif_0_rx = Column(Float)
 
 
+class InstanceActions(BASE, NovaBase):
+    """Represents a guest VM's actions and results"""
+    __tablename__ = "instance_actions"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    action = Column(String(255))
+    result = Column(Boolean)
+    error = Column(Text)
+
+
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
@@ -543,10 +554,11 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceDiagnostics, Volume, ExportDevice,
-              IscsiTarget, FixedIp, FloatingIp, Network, SecurityGroup,
-              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project)  # , Image, Host
+    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Network, SecurityGroup, SecurityGroupIngressRule,
+              SecurityGroupInstanceAssociation, AuthToken, User,
+              Project)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
