@@ -46,8 +46,9 @@ class Controller(wsgi.Controller):
 
     def detail(self, req):
         """Return all public images in detail."""
+        ctxt = req.environ['nova.context']
         try:
-            images = self._service.detail(req.environ['nova.context'])
+            images = self._service.detail(ctxt)
             images = nova.api.openstack.limited(images, req)
         except NotImplementedError:
             # Emulate detail() using repeated calls to show()

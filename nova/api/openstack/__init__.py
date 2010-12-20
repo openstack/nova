@@ -89,7 +89,9 @@ class AuthMiddleware(wsgi.Middleware):
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        req.environ['nova.context'] = context.RequestContext(user, user)
+        #FIXME(sirp): stubbing project to admin for now
+        project = manager.AuthManager().get_project('admin')
+        req.environ['nova.context'] = context.RequestContext(user, project)
         return self.application
 
 
