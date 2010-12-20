@@ -60,4 +60,4 @@ Tests
 -----
 
 Tests are lacking for the db api layer and for the sqlalchemy driver.
-Failures in the drivers would be dectected in other test cases, though.
+Failures in the drivers would be detected in other test cases, though.
