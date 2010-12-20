@@ -74,9 +74,9 @@ class ComputeAPI(base.Base):
         if not is_vpn:
             image = self.image_service.show(context, image_id)
             if kernel_id is None:
-                kernel_id = image.get('kernelId', FLAGS.default_kernel)
+                kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
+                ramdisk_id = image.get('ramdiskId', None)
             #Salvatore - No kernel and ramdisk for raw images
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
