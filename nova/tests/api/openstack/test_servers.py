@@ -59,6 +59,7 @@ def stub_instance(id, user_id=1):
     return Instance(id=int(id) + 123456, state=0, image_id=10, user_id=user_id,
                     display_name='server%s' % id, internal_id=id)
 
+
 def fake_compute_api(cls, req, id):
     return True
 
