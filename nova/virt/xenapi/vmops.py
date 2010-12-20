@@ -34,6 +34,7 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
+
     def __init__(self, session):
         global XenAPI
         if XenAPI is None:
@@ -145,6 +146,32 @@ class VMOps(object):
             self._session.wait_for_task(task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
+
+    def _wait_with_callback(self, task, callback):
+        ret = None
+        try:
+            ret = self._session.wait_for_task(task)
+        except XenAPI.Failure, exc:
+            logging.warn(exc)
+        callback(ret)
+
+    def pause(self, instance, callback):
+        """ Pause VM instance """
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = self._session.call_xenapi('Async.VM.pause', vm)
+        self._wait_with_callback(task, callback)
+
+    def unpause(self, instance, callback):
+        """ Unpause VM instance """
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = self._session.call_xenapi('Async.VM.unpause', vm)
+        self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
         """ Return data about VM instance """
