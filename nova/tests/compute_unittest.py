@@ -135,6 +135,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.unpause_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_suspend(self):
+        """ensure instance can be suspended"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.suspend_instance(self.context, instance_id)
+        self.compute.resume_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_reboot(self):
         """Ensure instance can be rebooted"""
         instance_id = self._create_instance()

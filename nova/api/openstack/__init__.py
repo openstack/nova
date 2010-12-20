@@ -176,6 +176,8 @@ class APIRouter(wsgi.Router):
             logging.debug("Including admin operations in API.")
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
+            server_members['suspend'] = 'POST'
+            server_members['resume'] = 'POST'
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},

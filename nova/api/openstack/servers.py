@@ -195,3 +195,25 @@ class Controller(wsgi.Controller):
             logging.error("Compute.api::unpause %s", readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
+
+    def suspend(self, req, id):
+        """permit admins to suspend the server"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.suspend(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("compute.api::suspend %s", readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def resume(self, req, id):
+        """permit admins to resume the server from suspend"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.resume(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("compute.api::resume %s", readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()

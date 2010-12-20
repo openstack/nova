@@ -144,11 +144,29 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.unpause', vm)
         self._wait_with_callback(task, callback)
 
+    def suspend(self, instance, callback):
+        """suspend the specified instance"""
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception("suspend: instance not present %s" % instance_name)
+        task = self._session.call_xenapi('Async.VM.suspend', vm)
+        self._wait_with_callback(task, callback)
+
+    def resume(self, instance, callback):
+        """resume the specified instance"""
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception("resume: instance not present %s" % instance_name)
+        task = self._session.call_xenapi('Async.VM.resume', vm)
+        self._wait_with_callback(task, callback)
+
     def get_info(self, instance_id):
         """ Return data about VM instance """
         vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
-            raise Exception('instance not present %s' % instance_id)
+            raise Exception("get_info: instance not present %s" % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
@@ -156,7 +174,8 @@ class VMOps(object):
         """Return data about VM diagnostics"""
         vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise Exception("instance not present %s" % instance_id)
+            raise Exception("get_diagnostics: instance not present %s" % \
+                                                                   instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 

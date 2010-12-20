@@ -132,6 +132,14 @@ class XenAPIConnection(object):
         """ Unpause paused VM instance """
         self._vmops.unpause(instance, callback)
 
+    def suspend(self, instance, callback):
+        """suspend the specified instance"""
+        self._vmops.suspend(instance, callback)
+
+    def resume(self, instance, callback):
+        """resume the specified instance"""
+        self._vmops.resume(instance, callback)
+
     def get_info(self, instance_id):
         """ Return data about VM instance """
         return self._vmops.get_info(instance_id)
