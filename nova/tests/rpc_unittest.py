@@ -33,7 +33,6 @@ class RpcTestCase(test.TestCase):
     """Test cases for rpc"""
     def setUp(self):
         super(RpcTestCase, self).setUp()
-        self.flags(fake_rabbit=False)
         self.conn = rpc.Connection.instance(True)
         self.receiver = TestReceiver()
         self.consumer = rpc.AdapterConsumer(connection=self.conn,
