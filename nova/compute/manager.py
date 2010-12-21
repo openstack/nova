@@ -186,6 +186,47 @@ class ComputeManager(manager.Manager):
         self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
 
+    @staticmethod
+    def _update_state_callback(self, context, instance_id, result):
+        """Update instance state when async task completes."""
+        self._update_state(context, instance_id)
+
+    @exception.wrap_exception
+    def pause_instance(self, context, instance_id):
+        """Pause an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: pausing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'pausing')
+        self.driver.pause(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
+    @exception.wrap_exception
+    def unpause_instance(self, context, instance_id):
+        """Unpause a paused instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: unpausing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'unpausing')
+        self.driver.unpause(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""

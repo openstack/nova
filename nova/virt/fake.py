@@ -130,6 +130,18 @@ class FakeConnection(object):
         """
         pass
 
+    def pause(self, instance, callback):
+        """
+        Pause the specified instance.
+        """
+        pass
+
+    def unpause(self, instance, callback):
+        """
+        Unpause the specified instance.
+        """
+        pass
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.
@@ -244,5 +256,6 @@ class FakeConnection(object):
 
 
 class FakeInstance(object):
+
     def __init__(self):
         self._state = power_state.NOSTATE

@@ -27,6 +27,7 @@ import traceback
 
 
 class ProcessExecutionError(IOError):
+
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
                  description=None):
         if description is None:
@@ -39,11 +40,13 @@ class ProcessExecutionError(IOError):
 
 
 class Error(Exception):
+
     def __init__(self, message=None):
         super(Error, self).__init__(message)
 
 
 class ApiError(Error):
+
     def __init__(self, message='Unknown', code='Unknown'):
         self.message = message
         self.code = code
