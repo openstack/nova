@@ -29,7 +29,6 @@ import routes
 import webob.dec
 
 from nova import flags
-from nova import utils
 from nova import wsgi
 from nova.api import cloudpipe
 from nova.api import ec2

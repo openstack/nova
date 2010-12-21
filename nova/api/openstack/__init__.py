@@ -210,3 +210,16 @@ def limited(items, req):
     limit = min(1000, limit)
     range_end = offset + limit
     return items[offset:range_end]
+
+def auth_factory(global_conf, **local_conf):
+    def auth(app):
+        return AuthMiddleware(app)
+    return auth
+
+def ratelimit_factory(global_conf, **local_conf):
+    def rl(app):
+        return RateLimitingMiddleware(app)
+    return rl
+
+def router_factory(global_cof, **local_conf):
+    return APIRouter()

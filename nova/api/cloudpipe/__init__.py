@@ -67,3 +67,6 @@ class API(wsgi.Application):
         project_id = self.get_project_id_from_ip(req.remote_addr)
         cert = self.str_params['cert']
         return crypto.sign_csr(urllib.unquote(cert), project_id)
+
+def cloudpipe_factory(global_opts, **local_opts):
+    return API()
