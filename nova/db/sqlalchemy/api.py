@@ -528,6 +528,8 @@ def fixed_ip_update(context, address, values):
 #TODO(gundlach): instance_create and volume_create are nearly identical
 #and should be refactored.  I expect there are other copy-and-paste
 #functions between the two of them as well.
+
+
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
@@ -913,6 +915,8 @@ def network_get(context, network_id, session=None):
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
+
+
 @require_admin_context
 def network_get_associated_fixed_ips(context, network_id):
     session = get_session()
