@@ -22,12 +22,10 @@ import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
-import StringIO
 import tempfile
 import time
 
 from eventlet import greenthread
-from xml.etree import ElementTree
 
 from nova import context
 from nova import crypto
@@ -36,7 +34,6 @@ from nova import flags
 from nova import rpc
 from nova import service
 from nova import test
-from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
@@ -75,7 +72,8 @@ class CloudTestCase(test.TestCase):
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
         self.context = context.RequestContext(user=self.user,
-                                                 project=self.project)
+                                              project=self.project)
+
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)

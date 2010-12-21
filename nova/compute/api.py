@@ -275,4 +275,3 @@ class ComputeAPI(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
-
