@@ -108,6 +108,7 @@ def get_connection(_):
 
 class XenAPIConnection(object):
     """ A connection to XenServer or Xen Cloud Platform """
+
     def __init__(self, url, user, pw):
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
@@ -128,6 +129,14 @@ class XenAPIConnection(object):
     def destroy(self, instance):
         """ Destroy VM instance """
         self._vmops.destroy(instance)
+
+    def pause(self, instance, callback):
+        """ Pause VM instance """
+        self._vmops.pause(instance, callback)
+
+    def unpause(self, instance, callback):
+        """ Unpause paused VM instance """
+        self._vmops.unpause(instance, callback)
 
     def get_info(self, instance_id):
         """ Return data about VM instance """
@@ -154,6 +163,7 @@ class XenAPIConnection(object):
 
 class XenAPISession(object):
     """ The session to invoke XenAPI SDK calls """
+
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)

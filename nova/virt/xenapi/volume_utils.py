@@ -25,6 +25,7 @@ import logging
 
 from nova import db
 from nova import context
+from nova import exception
 from nova import flags
 from nova import utils
 from nova.virt.xenapi import HelperBase
@@ -248,17 +249,20 @@ def _get_target(volume_id):
     """
     volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
                                          volume_id)
-
-    (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
+    result = (None, None)
+    try:
+        (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
                                      "sendtargets -p %s" %
                                      volume_ref['host'])
-    targets = r.splitlines()
-    if len(_e) == 0 and len(targets) == 1:
-        for target in targets:
-            if volume_id in target:
-                (location, _sep, iscsi_name) = target.partition(" ")
-                break
-        iscsi_portal = location.split(",")[0]
-        return (iscsi_name, iscsi_portal)
+    except exception.ProcessExecutionError, exc:
+        logging.warn(exc)
     else:
-        return (None, None)
+        targets = r.splitlines()
+        if len(_e) == 0 and len(targets) == 1:
+            for target in targets:
+                if volume_id in target:
+                    (location, _sep, iscsi_name) = target.partition(" ")
+                    break
+            iscsi_portal = location.split(",")[0]
+            result = (iscsi_name, iscsi_portal)
+    return result

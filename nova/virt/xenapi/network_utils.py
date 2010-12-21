@@ -28,6 +28,7 @@ class NetworkHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
+
     def __init__(self):
         super(NetworkHelper, self).__init__()
 

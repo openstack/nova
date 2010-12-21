@@ -28,6 +28,7 @@ class VolumeOps(object):
     """
     Management class for Volume-related tasks
     """
+
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session

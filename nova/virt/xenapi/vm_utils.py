@@ -46,6 +46,7 @@ class VMHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
+
     def __init__(self):
         super(VMHelper, self).__init__()
 
