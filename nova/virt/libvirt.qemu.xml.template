@@ -4,9 +4,6 @@
         <type>hvm</type>
         <kernel>%(basepath)s/kernel</kernel>
         <initrd>%(basepath)s/ramdisk</initrd>
-<!--
-        <cmdline>root=/dev/vda1 console=tty0 console=ttyS0,115200</cmdline>
--->
         <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
     </os>
     <features>
@@ -28,15 +25,22 @@
                 <parameter name="DHCPSERVER" value="%(dhcp_server)s" />
             </filterref>
         </interface>
-        <serial type='pty'>
-            <source path='/dev/pts/2'/>
-            <target port='0'/>
-        </serial>
-<!--
+
+        <!-- The order is significant here.  File is first -->
         <serial type="file">
             <source path='%(basepath)s/console.log'/>
             <target port='1'/>
         </serial>
--->
+
+        <console type='pty' tty='/dev/pts/2'>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
+        </console>
+
+        <serial type='pty'>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
+        </serial>
+
     </devices>
 </domain>

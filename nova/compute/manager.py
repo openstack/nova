@@ -154,6 +154,15 @@ class ComputeManager(manager.Manager):
 
         return self.driver.get_console_output(instance_ref)
 
+    @exception.wrap_exception
+    def get_ajax_console(self, context, instance_id):
+        """Send the console output for an instance."""
+        context = context.elevated()
+        logging.debug("instance %s: getting ajax console", instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        return self.driver.get_console_output(instance_ref)
+
     @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
