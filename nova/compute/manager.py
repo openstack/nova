@@ -138,8 +138,8 @@ class ComputeManager(manager.Manager):
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
         self._update_state(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn('trying to reboot a non-running '
@@ -153,6 +153,7 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
+        self.network_manager.setup_compute_network(context, instance_id)
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
@@ -168,6 +169,7 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
+        self.network_manager.setup_compute_network(context, instance_id)
         self.driver.rescue(instance_ref)
         self._update_state(context, instance_id)
 
