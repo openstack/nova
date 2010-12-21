@@ -43,7 +43,7 @@ else:
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('logdir',  None, 'directory to keep log files in '
+flags.DEFINE_string('logdir', None, 'directory to keep log files in '
                                      '(will be prepended to $logfile)')
 
 

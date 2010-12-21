@@ -26,6 +26,7 @@ from nova import context
 from nova.auth.manager import AuthManager
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
+from nova.virt.xenapi.vm_utils import ImageType
 
 XenAPI = None
 
@@ -34,6 +35,7 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
+
     def __init__(self, session):
         global XenAPI
         if XenAPI is None:
@@ -63,9 +65,9 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         #if kernel is not present we must download a raw disk
         if instance.kernel_id:
-            disk_image_type = 1
+            disk_image_type = ImageType.DISK
         else:
-            disk_image_type = 2
+            disk_image_type = ImageType.DISK_RAW
         vdi_uuid = VMHelper.fetch_image(self._session,
             instance.image_id, user, project, disk_image_type)
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
@@ -76,11 +78,11 @@ class VMOps(object):
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session,
-                instance.kernel_id, user, project, 0)
+                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session,
-                instance.ramdisk_id, user, project, 0)
+                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
@@ -130,6 +132,32 @@ class VMOps(object):
             self._session.wait_for_task(task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
+
+    def _wait_with_callback(self, task, callback):
+        ret = None
+        try:
+            ret = self._session.wait_for_task(task)
+        except XenAPI.Failure, exc:
+            logging.warn(exc)
+        callback(ret)
+
+    def pause(self, instance, callback):
+        """ Pause VM instance """
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = self._session.call_xenapi('Async.VM.pause', vm)
+        self._wait_with_callback(task, callback)
+
+    def unpause(self, instance, callback):
+        """ Unpause VM instance """
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = self._session.call_xenapi('Async.VM.unpause', vm)
+        self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
         """ Return data about VM instance """

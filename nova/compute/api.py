@@ -77,7 +77,7 @@ class ComputeAPI(base.Base):
                 kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', None)
-            #Salvatore - No kernel and ramdisk for raw images
+            #No kernel and ramdisk for raw images
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
                 ramdisk_id = None
@@ -279,6 +279,24 @@ class ComputeAPI(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "reboot_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def pause(self, context, instance_id):
+        """Pause the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "pause_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unpause(self, context, instance_id):
+        """Unpause the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
     def rescue(self, context, instance_id):

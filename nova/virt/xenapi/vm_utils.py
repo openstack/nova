@@ -43,10 +43,24 @@ XENAPI_POWER_STATE = {
 XenAPI = None
 
 
+class ImageType:
+        """
+        Enumeration class for distinguishing different image types
+            0 - kernel/ramdisk image (goes on dom0's filesystem)
+            1 - disk image (local SR, partitioned by objectstore plugin)
+            2 - raw disk image (local SR, NOT partitioned by plugin)
+        """
+
+        KERNEL_RAMDISK = 0
+        DISK = 1
+        DISK_RAW = 2
+
+
 class VMHelper():
     """
     The class that wraps the helper methods together.
     """
+
     def __init__(self):
         return
 
@@ -170,24 +184,22 @@ class VMHelper():
 
     @classmethod
     def fetch_image(cls, session, image, user, project, type):
-        """type: integer field for specifying how to handle the image
-            0 - kernel/ramdisk image (goes on dom0's filesystem)
-            1 - disk image (local SR, partitioned by objectstore plugin)
-            2 - raw disk image (local SR, NOT partitioned by plugin)"""
-
+        """
+        type is interpreted as an ImageType instance
+        """
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
-        fn = (type != 0) and 'get_vdi' or 'get_kernel'
+        fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
         args['add_partition'] = 'false'
         args['raw'] = 'false'
-        if type != 0:
+        if type != ImageType.KERNEL_RAMDISK:
             args['add_partition'] = 'true'
-            if type == 2:
+            if type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         uuid = session.wait_for_task(task)
