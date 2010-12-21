@@ -159,7 +159,7 @@ class VMOps(object):
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception("resume: instance not present %s" % instance_name)
-        task = self._session.call_xenapi('Async.VM.resume', vm)
+        task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
         self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
