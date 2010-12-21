@@ -20,7 +20,6 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-import json
 import time
 
 import logging
@@ -41,7 +40,6 @@ from nova.api.openstack import images
 from nova.api.openstack import ratelimiting
 from nova.api.openstack import servers
 from nova.api.openstack import sharedipgroups
-from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
@@ -193,6 +191,19 @@ class APIRouter(wsgi.Router):
         super(APIRouter, self).__init__(mapper)
 
 
+class Versions(wsgi.Application):
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Respond to a request for all OpenStack API versions."""
+        response = {
+                "versions": [
+                    dict(status="CURRENT", id="v1.0")]}
+        metadata = {
+            "application/xml": {
+                "attributes": dict(version=["status", "id"])}}
+        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+
 def limited(items, req):
     """Return a slice of items according to requested offset and limit.
 
@@ -223,3 +234,6 @@ def ratelimit_factory(global_conf, **local_conf):
 
 def router_factory(global_cof, **local_conf):
     return APIRouter()
+
+def versions_factory(global_conf, **local_conf):
+    return Versions()
