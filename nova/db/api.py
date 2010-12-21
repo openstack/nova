@@ -512,12 +512,14 @@ def network_update(context, network_id, values):
 ###################
 
 
-def project_get_network(context, project_id):
+def project_get_network(context, project_id, associate=True):
     """Return the network associated with the project.
 
-    Raises NotFound if no such network can be found.
+    If associate is true, it will attempt to associate a new
+    network if one is not found, otherwise it returns None.
 
     """
+
     return IMPL.project_get_network(context, project_id)
 
 
