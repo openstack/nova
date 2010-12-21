@@ -44,12 +44,12 @@ class VMOps(object):
         VMHelper.late_import()
 
     def list_instances(self):
-        """ List VM instances """
+        """List VM instances"""
         return [self._session.get_xenapi().VM.get_name_label(vm) \
                 for vm in self._session.get_xenapi().VM.get_all()]
 
     def spawn(self, instance):
-        """ Create VM instance """
+        """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
             raise Exception('Attempted to create non-unique name %s' %
@@ -81,7 +81,7 @@ class VMOps(object):
                      vm_ref)
 
     def reboot(self, instance):
-        """ Reboot VM instance """
+        """Reboot VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
@@ -90,7 +90,7 @@ class VMOps(object):
         self._session.wait_for_task(task)
 
     def destroy(self, instance):
-        """ Destroy VM instance """
+        """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
@@ -127,7 +127,7 @@ class VMOps(object):
         callback(ret)
 
     def pause(self, instance, callback):
-        """ Pause VM instance """
+        """Pause VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
@@ -136,7 +136,7 @@ class VMOps(object):
         self._wait_with_callback(task, callback)
 
     def unpause(self, instance, callback):
-        """ Unpause VM instance """
+        """Unpause VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
@@ -145,7 +145,7 @@ class VMOps(object):
         self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
-        """ Return data about VM instance """
+        """Return data about VM instance"""
         vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
             raise Exception('instance not present %s' % instance_id)
@@ -161,6 +161,6 @@ class VMOps(object):
         return VMHelper.compile_diagnostics(self._session, rec)
 
     def get_console_output(self, instance):
-        """ Return snapshot of console """
+        """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
