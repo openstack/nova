@@ -751,7 +751,7 @@ def instance_add_security_group(context, instance_id, security_group_id):
 
 @require_context
 def instance_action_create(context, values):
-    """Create an instance action and the action results"""
+    """Create an instance action from the values dictionary."""
     action_ref = models.InstanceActions()
     action_ref.update(values)
 
