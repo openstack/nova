@@ -45,8 +45,12 @@ class VMOps(object):
 
     def list_instances(self):
         """List VM instances"""
-        return [self._session.get_xenapi().VM.get_name_label(vm) \
-                for vm in self._session.get_xenapi().VM.get_all()]
+        vms = []
+        for vm in self._session.get_xenapi().VM.get_all():
+            rec = self._session.get_xenapi().VM.get_record(vm)
+            if not rec["is_a_template"] and not rec["is_control_domain"]:
+                vms.append(rec["name_label"])
+        return vms
 
     def spawn(self, instance):
         """Create VM instance"""
