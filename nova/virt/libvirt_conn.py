@@ -45,6 +45,7 @@ import logging
 import os
 import shutil
 
+from eventlet import greenthread
 from eventlet import event
 from eventlet import tpool
 
