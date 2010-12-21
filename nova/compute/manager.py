@@ -158,7 +158,6 @@ class ComputeManager(manager.Manager):
 
         instance_ref = self.db.instance_get(context, instance_id)
 
-
         if not FLAGS.stub_network:
             address = self.db.instance_get_floating_address(context,
                                                             instance_ref['id'])
