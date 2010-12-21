@@ -27,7 +27,6 @@ import datetime
 import logging
 import re
 import os
-import time
 
 from nova import context
 import IPy
@@ -706,7 +705,7 @@ class CloudController(object):
     def release_address(self, context, public_ip, **kwargs):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         # NOTE(vish): We don't know which network host should get the ip
-        #             when we allocate, so just send it to any one.  This
+        #             when we deallocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
         #             at some point.
         rpc.cast(context,
