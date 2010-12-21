@@ -1075,24 +1075,26 @@ def network_update(context, network_id, values):
 
 
 @require_context
-def project_get_network(context, project_id):
+def project_get_network(context, project_id, associate=True):
     session = get_session()
-    rv = session.query(models.Network).\
-                 filter_by(project_id=project_id).\
-                 filter_by(deleted=False).\
-                 first()
-    if not rv:
+    result = session.query(models.Network).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=False).\
+                     first()
+    if not result:
+        if not associate:
+            return None
         try:
             return network_associate(context, project_id)
         except IntegrityError:
             # NOTE(vish): We hit this if there is a race and two
             #             processes are attempting to allocate the
             #             network at the same time
-            rv = session.query(models.Network).\
-                         filter_by(project_id=project_id).\
-                         filter_by(deleted=False).\
-                         first()
-    return rv
+            result = session.query(models.Network).\
+                             filter_by(project_id=project_id).\
+                             filter_by(deleted=False).\
+                             first()
+    return result
 
 
 ###################

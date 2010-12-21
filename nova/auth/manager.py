@@ -540,10 +540,10 @@ class AuthManager(object):
         """
 
         network_ref = db.project_get_network(context.get_admin_context(),
-                                             Project.safe_id(project))
+                                             Project.safe_id(project), False)
 
-        if not network_ref['vpn_public_port']:
-            raise exception.NotFound('project network data has not been set')
+        if not network_ref:
+            return (None, None)
         return (network_ref['vpn_public_address'],
                 network_ref['vpn_public_port'])
 
