@@ -206,8 +206,7 @@ class ComputeAPI(base.Base):
     def delete_instance(self, context, instance_id):
         logging.debug("Going to try and terminate %d" % instance_id)
         try:
-            instance = self.db.instance_get_by_internal_id(context,
-                                                           instance_id)
+            instance = self.get_instance(context, instance_id)
         except exception.NotFound as e:
             logging.warning("Instance %d was not found during terminate",
                             instance_id)
@@ -271,50 +270,38 @@ class ComputeAPI(base.Base):
     def get_instance(self, context, instance_id):
         return self.db.instance_get_by_internal_id(context, instance_id)
 
-    def reboot(self, context, instance_id):
-        """Reboot the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+    def _cast_compute_message(method, context, instance_id):
+        """Generic handler for RPC calls."""
+        instance = self.get_instance(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "reboot_instance",
+                 {"method": method,
                   "args": {"instance_id": instance['id']}})
+
+    def reboot(self, context, instance_id):
+        """Reboot the given instance."""
+        self._cast_compute_message("reboot_instance", context, instance_id)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "pause_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message("pause_instance", context, instance_id)
 
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "unpause_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message("unpause_instance", context, instance_id)
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "rescue_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message("rescue_instance", context, instance_id)
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "unrescue_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message("unrescue_instance", context, instance_id)
+
+    def reset_root_password(self, context, instance_id):
+        """Reset the root/admin pw for the given instance."""
+        self._cast_compute_message("reset_root_password", context, instance_id)
 
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""

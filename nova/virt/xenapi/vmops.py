@@ -34,7 +34,6 @@ class VMOps(object):
     """
     Management class for VM-related tasks
     """
-
     def __init__(self, session):
         global XenAPI
         if XenAPI is None:
@@ -45,8 +44,9 @@ class VMOps(object):
 
     def list_instances(self):
         """ List VM instances """
-        return [self._session.get_xenapi().VM.get_name_label(vm) \
-                for vm in self._session.get_xenapi().VM.get_all()]
+        xVM = self._session.get_xenapi().VM
+        return [xVM.get_name_label(vm)
+                for vm in xVM.get_all()]
 
     def spawn(self, instance):
         """ Create VM instance """
@@ -87,6 +87,15 @@ class VMOps(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
+        self._session.wait_for_task(task)
+
+    def reset_root_password(self, instance):
+        """ Reset the root/admin password on the VM instance """
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception('instance not present %s' % instance_name)
+        task = self._session.call_xenapi('Async.VM.reset_root_password', vm)
         self._session.wait_for_task(task)
 
     def destroy(self, instance):

@@ -118,6 +118,18 @@ class FakeConnection(object):
         """
         pass
 
+    def reset_root_password(self, instance):
+        """
+        Reset the root password on the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+        """
+        pass
+
     def rescue(self, instance):
         """
         Rescue the specified instance.

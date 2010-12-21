@@ -156,6 +156,38 @@ class ComputeManager(manager.Manager):
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
+
+
+
+    # WORKING CODE
+    @exception.wrap_exception
+    def reset_root_password(self, context, instance_id):
+        """Reset the root/admin password for  an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        self._update_state(context, instance_id)
+
+        if instance_ref['state'] != power_state.RUNNING:
+            logging.warn('trying to reset the password on a non-running '
+                         'instance: %s (state: %s excepted: %s)',
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
+
+        logging.debug('instance %s: resetting root password',
+                      instance_ref['name'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'resetting_password')
+        #TODO: (dabo) not sure how we will implement this yet.
+        self.driver.reset_root_password(instance_ref)
+        self._update_state(context, instance_id)
+
+
+
+
+
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""

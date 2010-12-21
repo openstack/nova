@@ -19,15 +19,15 @@ A connection to XenServer or Xen Cloud Platform.
 
 The concurrency model for this class is as follows:
 
-All XenAPI calls are on a thread (using t.i.t.deferToThread, via the decorator
-deferredToThread).  They are remote calls, and so may hang for the usual
-reasons.  They should not be allowed to block the reactor thread.
+All XenAPI calls are on a green thread (using eventlet's "tpool"
+thread pool). They are remote calls, and so may hang for the usual
+reasons.
 
 All long-running XenAPI calls (VM.start, VM.reboot, etc) are called async
-(using XenAPI.VM.async_start etc).  These return a task, which can then be
-polled for completion.  Polling is handled using reactor.callLater.
+(using XenAPI.VM.async_start etc). These return a task, which can then be
+polled for completion.
 
-This combination of techniques means that we don't block the reactor thread at
+This combination of techniques means that we don't block the main thread at
 all, and at the same time we don't hold lots of threads waiting for
 long-running operations.
 
@@ -75,7 +75,7 @@ flags.DEFINE_string('xenapi_connection_password',
 flags.DEFINE_float('xenapi_task_poll_interval',
                    0.5,
                    'The interval used for polling of remote tasks '
-                   '(Async.VM.start, etc).  Used only if '
+                   '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
 
 XenAPI = None
@@ -101,7 +101,7 @@ def get_connection(_):
 
 
 class XenAPIConnection(object):
-    """ A connection to XenServer or Xen Cloud Platform """
+    """A connection to XenServer or Xen Cloud Platform"""
 
     def __init__(self, url, user, pw):
         session = XenAPISession(url, user, pw)
@@ -109,31 +109,35 @@ class XenAPIConnection(object):
         self._volumeops = VolumeOps(session)
 
     def list_instances(self):
-        """ List VM instances """
+        """List VM instances"""
         return self._vmops.list_instances()
 
     def spawn(self, instance):
-        """ Create VM instance """
+        """Create VM instance"""
         self._vmops.spawn(instance)
 
     def reboot(self, instance):
-        """ Reboot VM instance """
+        """Reboot VM instance"""
         self._vmops.reboot(instance)
 
+    def reset_root_password(self, instance):
+        """Reset the root/admin password on the VM instance"""
+        self._vmops.reset_root_password(instance)
+
     def destroy(self, instance):
-        """ Destroy VM instance """
+        """Destroy VM instance"""
         self._vmops.destroy(instance)
 
     def pause(self, instance, callback):
-        """ Pause VM instance """
+        """Pause VM instance"""
         self._vmops.pause(instance, callback)
 
     def unpause(self, instance, callback):
-        """ Unpause paused VM instance """
+        """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
 
     def get_info(self, instance_id):
-        """ Return data about VM instance """
+        """Return data about VM instance"""
         return self._vmops.get_info(instance_id)
 
     def get_diagnostics(self, instance_id):
@@ -141,33 +145,33 @@ class XenAPIConnection(object):
         return self._vmops.get_diagnostics(instance_id)
 
     def get_console_output(self, instance):
-        """ Return snapshot of console """
+        """Return snapshot of console"""
         return self._vmops.get_console_output(instance)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
-        """ Attach volume storage to VM instance """
+        """Attach volume storage to VM instance"""
         return self._volumeops.attach_volume(instance_name,
-                                               device_path,
-                                               mountpoint)
+                                             device_path,
+                                             mountpoint)
 
     def detach_volume(self, instance_name, mountpoint):
-        """ Detach volume storage to VM instance """
+        """Detach volume storage to VM instance"""
         return self._volumeops.detach_volume(instance_name, mountpoint)
 
 
 class XenAPISession(object):
-    """ The session to invoke XenAPI SDK calls """
+    """The session to invoke XenAPI SDK calls"""
 
     def __init__(self, url, user, pw):
         self._session = XenAPI.Session(url)
         self._session.login_with_password(user, pw)
 
     def get_xenapi(self):
-        """ Return the xenapi object """
+        """Return the xenapi object"""
         return self._session.xenapi
 
     def get_xenapi_host(self):
-        """ Return the xenapi host """
+        """Return the xenapi host"""
         return self._session.xenapi.session.get_this_host(self._session.handle)
 
     def call_xenapi(self, method, *args):
@@ -184,9 +188,8 @@ class XenAPISession(object):
                              self.get_xenapi_host(), plugin, fn, args)
 
     def wait_for_task(self, task):
-        """Return a Deferred that will give the result of the given task.
+        """Return the result of the given task.
         The task is polled until it completes."""
-
         done = event.Event()
         loop = utils.LoopingCall(self._poll_task, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
@@ -195,7 +198,7 @@ class XenAPISession(object):
         return rv
 
     def _poll_task(self, task, done):
-        """Poll the given XenAPI task, and fire the given Deferred if we
+        """Poll the given XenAPI task, and fire the given action if we
         get a result."""
         try:
             #logging.debug('Polling task %s...', task)
@@ -218,7 +221,7 @@ class XenAPISession(object):
 
 
 def _unwrap_plugin_exceptions(func, *args, **kwargs):
-    """ Parse exception details """
+    """Parse exception details"""
     try:
         return func(*args, **kwargs)
     except XenAPI.Failure, exc:
@@ -240,7 +243,7 @@ def _unwrap_plugin_exceptions(func, *args, **kwargs):
 
 
 def _parse_xmlrpc_value(val):
-    """Parse the given value as if it were an XML-RPC value.  This is
+    """Parse the given value as if it were an XML-RPC value. This is
     sometimes used as the format for the task.result field."""
     if not val:
         return val

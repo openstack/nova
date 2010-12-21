@@ -142,6 +142,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.reboot_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_reset_root_password(self):
+        """Ensure instance can have its root password reset"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.reset_root_password(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
