@@ -52,8 +52,7 @@ os.makedirs(IMAGES_PATH)
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(fake_rabbit=False,
-                   connection_type='fake',
+        self.flags(connection_type='fake',
                    images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
