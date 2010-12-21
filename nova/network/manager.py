@@ -361,8 +361,7 @@ class FlatDHCPManager(FlatManager):
         """Sets up matching network for compute hosts."""
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.flat_interface,
-                                  network_ref)
+                                  FLAGS.flat_interface)
 
     def setup_fixed_ip(self, context, address):
         """Setup dhcp for this network."""
