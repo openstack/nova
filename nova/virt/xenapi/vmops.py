@@ -87,7 +87,7 @@ class VMOps(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        self._session.wait_for_task(task)
+        self._session.wait_for_task(instance.id, task)
 
     def destroy(self, instance):
         """Destroy VM instance"""
@@ -101,7 +101,7 @@ class VMOps(object):
         try:
             task = self._session.call_xenapi('Async.VM.hard_shutdown',
                                                    vm)
-            self._session.wait_for_task(task)
+            self._session.wait_for_task(instance.id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
         # Disk clean-up
@@ -109,19 +109,19 @@ class VMOps(object):
             for vdi in vdis:
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
-                    self._session.wait_for_task(task)
+                    self._session.wait_for_task(instance.id, task)
                 except XenAPI.Failure, exc:
                     logging.warn(exc)
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(task)
+            self._session.wait_for_task(instance.id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
 
-    def _wait_with_callback(self, task, callback):
+    def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
-            ret = self._session.wait_for_task(task)
+            ret = self._session.wait_for_task(instance_id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
         callback(ret)
@@ -133,7 +133,7 @@ class VMOps(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = self._session.call_xenapi('Async.VM.pause', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def unpause(self, instance, callback):
         """Unpause VM instance"""
@@ -142,7 +142,7 @@ class VMOps(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         task = self._session.call_xenapi('Async.VM.unpause', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
