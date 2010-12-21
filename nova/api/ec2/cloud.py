@@ -723,10 +723,8 @@ class CloudController(object):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         # NOTE(vish): Perhaps we should just pass this on to compute and
         #             let compute communicate with network.
-        print "in cloud get"
         network_topic = self.compute_api.get_network_topic(context,
                                                            internal_id)
-        print "got the network topic", network_topic
         rpc.cast(context,
                  network_topic,
                  {"method": "associate_floating_ip",
