@@ -54,8 +54,8 @@ class VMOps(object):
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
 
-        bridge = db.project_get_network(context.get_admin_context(),
-                                      instance.project_id).bridge
+        bridge = db.network_get_by_instance(context.get_admin_context(),
+                                            instance['id'])['bridge']
         network_ref = \
             NetworkHelper.find_network_with_bridge(self._session, bridge)
 

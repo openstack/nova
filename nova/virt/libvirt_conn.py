@@ -488,8 +488,8 @@ class LibvirtConnection(object):
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
         logging.debug('instance %s: starting toXML method', instance['name'])
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         # FIXME(vish): stick this in db
         instance_type = instance['instance_type']
         instance_type = instance_types.INSTANCE_TYPES[instance_type]
