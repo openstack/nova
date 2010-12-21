@@ -245,7 +245,7 @@ def msg_reply(msg_id, reply=None, failure=None):
         logging.error("Returning exception %s to caller", message)
         logging.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
-    conn = Connection.instance()
+    conn = Connection.instance(True)
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
     try:
         publisher.send({'result': reply, 'failure': failure})

@@ -33,7 +33,8 @@ class RpcTestCase(test.TestCase):
     """Test cases for rpc"""
     def setUp(self):
         super(RpcTestCase, self).setUp()
-        self.conn = rpc.Connection.instance()
+        self.flags(fake_rabbit=False)
+        self.conn = rpc.Connection.instance(True)
         self.receiver = TestReceiver()
         self.consumer = rpc.AdapterConsumer(connection=self.conn,
                                             topic='test',
@@ -78,6 +79,33 @@ class RpcTestCase(test.TestCase):
             self.fail("should have thrown rpc.RemoteError")
         except rpc.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
+
+    def test_nested_calls(self):
+        """Test that we can do an rpc.call inside another call"""
+        class Nested(object):
+            @staticmethod
+            def echo(context, queue, value):
+                """Calls echo in the passed queue"""
+                logging.debug("Nested received %s, %s", queue, value)
+                ret = rpc.call(context,
+                               queue,
+                               {"method": "echo",
+                                "args": {"value": value}})
+                logging.debug("Nested return %s", ret)
+                return value
+
+        nested = Nested()
+        conn = rpc.Connection.instance(True)
+        consumer = rpc.AdapterConsumer(connection=conn,
+                                       topic='nested',
+                                       proxy=nested)
+        consumer.attach_to_eventlet()
+        value = 42
+        result = rpc.call(self.context,
+                          'nested', {"method": "echo",
+                                     "args": {"queue": "test",
+                                              "value": value}})
+        self.assertEqual(value, result)
 
 
 class TestReceiver(object):

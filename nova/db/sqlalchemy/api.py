@@ -385,6 +385,7 @@ def floating_ip_get_by_address(context, address, session=None):
         session = get_session()
 
     result = session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.network')).\
                      filter_by(address=address).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()

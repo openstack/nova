@@ -77,10 +77,11 @@ def init_host():
                   {'range': FLAGS.fixed_range})
 
 
-def bind_floating_ip(floating_ip):
+def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface"""
     _execute("sudo ip addr add %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface))
+                                             FLAGS.public_interface),
+             check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):

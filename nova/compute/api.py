@@ -53,6 +53,23 @@ class ComputeAPI(base.Base):
         self.image_service = image_service
         super(ComputeAPI, self).__init__(**kwargs)
 
+    def get_network_topic(self, context, instance_id):
+        try:
+            instance = self.db.instance_get_by_internal_id(context,
+                                                           instance_id)
+        except exception.NotFound as e:
+            logging.warning("Instance %d was not found in get_network_topic",
+                            instance_id)
+            raise e
+
+        host = instance['host']
+        if not host:
+            raise exception.Error("Instance %d has no host" % instance_id)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        return rpc.call(context,
+                        topic,
+                        {"method": "get_network_topic", "args": {'fake': 1}})
+
     def create_instances(self, context, instance_type, image_id, min_count=1,
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,

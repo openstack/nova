@@ -49,6 +49,8 @@ flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
+flags.DEFINE_string('stub_network', False,
+                    'Stub network related code')
 
 
 class ComputeManager(manager.Manager):
@@ -77,16 +79,19 @@ class ComputeManager(manager.Manager):
             state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
 
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return self.db.queue_get_for(context, FLAGS.network_topic, host)
+    def get_network_topic(self, context, **_kwargs):
+        """Retrieves the network host for a project on this host"""
+        # TODO(vish): This method should be memoized. This will make
+        #             the call to get_network_host cheaper, so that
+        #             it can pas messages instead of checking the db
+        #             locally.
+        if FLAGS.stub_network:
+            host = FLAGS.network_host
+        else:
+            host = self.network_manager.get_network_host(context)
+        return self.db.queue_get_for(context,
+                                     FLAGS.network_topic,
+                                     host)
 
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
@@ -111,15 +116,19 @@ class ComputeManager(manager.Manager):
                                    'networking')
 
         is_vpn = instance_ref['image_id'] == FLAGS.vpn_image_id
-        address = self.network_manager.allocate_fixed_ip(context,
-                                                         instance_id,
-                                                         is_vpn)
-        rpc.cast(context,
-                 self._get_network_topic(context),
-                 {"method": "setup_fixed_ip",
-                  "args": {"address": address}})
+        # NOTE(vish): This could be a cast because we don't do anything
+        #             with the address currently, but I'm leaving it as
+        #             a call to ensure that network setup completes.  We
+        #             will eventually also need to save the address here.
+        if not FLAGS.stub_network:
+            address = rpc.call(context,
+                               self.get_network_topic(context),
+                               {"method": "allocate_fixed_ip",
+                                "args": {"instance_id": instance_id,
+                                         "vpn": is_vpn}})
 
-        self.network_manager.setup_compute_network(context, instance_id)
+            self.network_manager.setup_compute_network(context,
+                                                       instance_id)
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
@@ -149,27 +158,29 @@ class ComputeManager(manager.Manager):
 
         instance_ref = self.db.instance_get(context, instance_id)
 
-        address = self.db.instance_get_floating_address(context,
-                                                        instance_ref['id'])
-        if address:
-            logging.debug("Disassociating address %s" % address)
-            # NOTE(vish): Right now we don't really care if the ip is
-            #             disassociated.  We may need to worry about
-            #             checking this later.
-            rpc.cast(context,
-                     self._get_network_topic(context),
-                     {"method": "disassociate_floating_ip",
-                      "args": {"floating_address": address}})
 
-        address = self.db.instance_get_fixed_address(context,
-                                                     instance_ref['id'])
-        if address:
-            logging.debug("Deallocating address %s" % address)
-            # NOTE(vish): Currently, nothing needs to be done on the
-            #             network node until release. If this changes,
-            #             we will need to cast here.
-            self.network_manager.deallocate_fixed_ip(context.elevated(),
-                                                     address)
+        if not FLAGS.stub_network:
+            address = self.db.instance_get_floating_address(context,
+                                                            instance_ref['id'])
+            if address:
+                logging.debug("Disassociating address %s" % address)
+                # NOTE(vish): Right now we don't really care if the ip is
+                #             disassociated.  We may need to worry about
+                #             checking this later.
+                rpc.cast(context,
+                         self.get_network_topic(context),
+                         {"method": "disassociate_floating_ip",
+                          "args": {"floating_address": address}})
+
+            address = self.db.instance_get_fixed_address(context,
+                                                         instance_ref['id'])
+            if address:
+                logging.debug("Deallocating address %s" % address)
+                # NOTE(vish): Currently, nothing needs to be done on the
+                #             network node until release. If this changes,
+                #             we will need to cast here.
+                self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                         address)
 
         logging.debug("instance %s: terminating", instance_id)
 
