@@ -160,11 +160,11 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./memory').text, '2097152')]
 
         if rescue:
-            common_checks += [(lambda t: t.findall(
-                './devices/disk/source')[0].get('file').split('/')[1],
-                    'rescue-disk'), (lambda t: t.findall(
-                        './devices/disk/source')[1].get(
-                            'file').split('/')[1], 'disk')]
+            common_checks += [
+                (lambda t: t.findall('./devices/disk/source')[0].get(
+                    'file').split('/')[1], 'rescue-disk'),
+                (lambda t: t.findall('./devices/disk/source')[1].get(
+                    'file').split('/')[1], 'disk')]
         else:
             common_checks += [(lambda t: t.findall(
                 './devices/disk/source')[0].get('file').split('/')[1],
