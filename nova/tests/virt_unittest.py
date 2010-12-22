@@ -252,7 +252,7 @@ class NWFilterTestCase(test.TestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
-        d = self.fw.setup_nwfilters_for_instance(instance)
+        self.fw.setup_base_nwfilters()
+        self.fw.setup_nwfilters_for_instance(instance)
         _ensure_all_called()
         self.teardown_security_group()
-        return d
