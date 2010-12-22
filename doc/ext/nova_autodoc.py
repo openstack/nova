@@ -1,4 +1,7 @@
+import gettext
 import os
+
+gettext.install('nova')
 
 from nova import utils
 

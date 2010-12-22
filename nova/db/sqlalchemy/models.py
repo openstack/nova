@@ -151,6 +151,16 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
 
 
+class Certificate(BASE, NovaBase):
+    """Represents a an x509 certificate"""
+    __tablename__ = 'certificates'
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    file_name = Column(String(255))
+
+
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
@@ -549,7 +559,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project)  # , Image, Host
+              Project, Certificate)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
