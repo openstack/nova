@@ -26,11 +26,8 @@ import base64
 import datetime
 import logging
 import os
-import random
 import re
-import subprocess
 import time
-import uuid
 
 from nova import context
 import IPy
@@ -45,13 +42,10 @@ from nova import utils
 from nova.compute.instance_types import INSTANCE_TYPES
 from nova.api import cloud
 from nova.api.ec2 import images
-from nova.virt import libvirt_conn
-from xml.dom import minidom
 
 
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
-flags.DEFINE_string("console_dmz", "tonbuntu:8000", "location of console proxy")
 
 InvalidInputException = exception.InvalidInputException
 
@@ -466,44 +460,13 @@ class CloudController(object):
         internal_id = ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
 
-        def get_open_port():
-            for i in xrange(0,100): # don't loop forever
-                port = random.randint(10000, 12000)
-                cmd = "netcat 0.0.0.0 %s -w 2 < /dev/null" % (port,)
-                # this Popen  will exit with 0 only if the port is in use,
-                # so a nonzero return value implies it is unused
-                port_is_unused = (subprocess.Popen(cmd, shell=True).wait() != 0)
-                if port_is_unused:
-                    return port
-            raise 'Unable to find an open port'
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance_ref['host']),
+                          {"method": "get_ajax_console",
+                           "args": {"instance_id": instance_ref['id']}})
 
-        def get_pty_for_instance(instance_id):
-            stdout, stderr = utils.execute('virsh dumpxml instance-%d' % int(instance_id))
-            dom = minidom.parseString(stdout)
-            serials = dom.getElementsByTagName('serial')
-            for serial in serials:
-                if serial.getAttribute('type') == 'pty':
-                    source = serial.getElementsByTagName('source')[0]
-                    return source.getAttribute('path')
-
-        port = get_open_port()
-        token = str(uuid.uuid4())
-
-        host = instance_ref['host']
-
-        if FLAGS.libvirt_type == 'uml':
-            pass #FIXME
-        elif FLAGS.libvirt_type == 'xen':
-            pass #FIXME
-        else:
-            ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(internal_id)
-
-        cmd = "%s/tools/ajaxterm/ajaxterm.py --command '%s' -t %s -p %s" \
-            % (utils.novadir(), ajaxterm_cmd, token, port)
-
-        subprocess.Popen(cmd, shell=True)
-        FLAGS.console_dmz = 'tonbuntu:8000'
-        return {'url': 'http://%s/?token=%s&host=%s&port=%s' % (FLAGS.console_dmz, token, host, port)}
+        return {"url": output }
 
     def describe_volumes(self, context, **kwargs):
         if context.user.is_admin():

@@ -42,6 +42,10 @@ from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+import subprocess
+import random
+import uuid
+from xml.dom import minidom
 
 libvirt = None
 libxml2 = None
@@ -71,7 +75,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
-
+flags.DEFINE_string('console_dmz',
+                    'tonbuntu:8000',
+                    'location of console proxy')
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
@@ -309,6 +315,47 @@ class LibvirtConnection(object):
             d.addCallback(lambda _: defer.succeed(console_log))
         d.addCallback(self._dump_file)
         return d
+
+    @exception.wrap_exception
+    def get_ajax_console(self, instance):
+        def get_open_port():
+            for i in xrange(0,100): # don't loop forever
+                port = random.randint(10000, 12000)
+                cmd = 'netcat 0.0.0.0 %s -w 2 < /dev/null' % (port,)
+                # this Popen  will exit with 0 only if the port is in use,
+                # so a nonzero return value implies it is unused
+                port_is_unused = (subprocess.Popen(cmd, shell=True).wait() != 0)
+                if port_is_unused:
+                    return port
+            raise 'Unable to find an open port'
+
+        def get_pty_for_instance(instance_name):
+            stdout, stderr = utils.execute('virsh dumpxml %s' % instance_name)
+            dom = minidom.parseString(stdout)
+            serials = dom.getElementsByTagName('serial')
+            for serial in serials:
+                if serial.getAttribute('type') == 'pty':
+                    source = serial.getElementsByTagName('source')[0]
+                    return source.getAttribute('path')
+
+        port = get_open_port()
+        token = str(uuid.uuid4())
+
+        host = instance['host']
+
+        if FLAGS.libvirt_type == 'uml':
+            pass #FIXME
+        elif FLAGS.libvirt_type == 'xen':
+            pass #FIXME
+        else:
+            ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(instance['name'])
+
+        cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
+            % (utils.novadir(), ajaxterm_cmd, token, port)
+
+        subprocess.Popen(cmd, shell=True)
+        return 'http://%s/?token=%s&host=%s&port=%s' \
+               % (FLAGS.console_dmz, token, host, port)
 
     @defer.inlineCallbacks
     def _create_image(self, inst, libvirt_xml):

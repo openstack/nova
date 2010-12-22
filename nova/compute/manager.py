@@ -161,7 +161,7 @@ class ComputeManager(manager.Manager):
         logging.debug("instance %s: getting ajax console", instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
-        return self.driver.get_console_output(instance_ref)
+        return self.driver.get_ajax_console(instance_ref)
 
     @defer.inlineCallbacks
     @exception.wrap_exception
