@@ -67,12 +67,12 @@ def partition(infile, outfile, local_bytes=0, resize=True,
         execute('resize2fs %s' % infile)
         file_size = FLAGS.minimum_root_size
     elif file_size % sector_size != 0:
-        logging.warn("Input partition size not evenly divisible by"
-                     " sector size: %d / %d", file_size, sector_size)
+        logging.warn(_("Input partition size not evenly divisible by"
+                       " sector size: %d / %d"), file_size, sector_size)
     primary_sectors = file_size / sector_size
     if local_bytes % sector_size != 0:
-        logging.warn("Bytes for local storage not evenly divisible"
-                     " by sector size: %d / %d", local_bytes, sector_size)
+        logging.warn(_("Bytes for local storage not evenly divisible"
+                       " by sector size: %d / %d"), local_bytes, sector_size)
     local_sectors = local_bytes / sector_size
 
     mbr_last = 62  # a
@@ -124,14 +124,15 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
     """
     out, err = execute('sudo losetup --find --show %s' % image)
     if err:
-        raise exception.Error('Could not attach image to loopback: %s' % err)
+        raise exception.Error(_('Could not attach image to loopback: %s')
+                              % err)
     device = out.strip()
     try:
         if not partition is None:
             # create partition
             out, err = execute('sudo kpartx -a %s' % device)
             if err:
-                raise exception.Error('Failed to load partition: %s' % err)
+                raise exception.Error(_('Failed to load partition: %s') % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
                                                    partition)
         else:
@@ -153,7 +154,8 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
             out, err = execute(
                     'sudo mount %s %s' % (mapped_device, tmpdir))
             if err:
-                raise exception.Error('Failed to mount filesystem: %s' % err)
+                raise exception.Error(_('Failed to mount filesystem: %s')
+                                      % err)
 
             try:
                 if key:

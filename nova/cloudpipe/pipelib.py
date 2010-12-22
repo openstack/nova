@@ -49,7 +49,7 @@ class CloudPipe(object):
         self.manager = manager.AuthManager()
 
     def launch_vpn_instance(self, project_id):
-        logging.debug("Launching VPN for %s" % (project_id))
+        logging.debug(_("Launching VPN for %s") % (project_id))
         project = self.manager.get_project(project_id)
         # Make a payload.zip
         tmpfolder = tempfile.mkdtemp()
