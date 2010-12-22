@@ -97,6 +97,11 @@ def get_connection(read_only):
     return LibvirtConnection(read_only)
 
 
+def _get_net_and_mask(cidr):
+    net = IPy.IP(cidr)
+    return str(net.net()), str(net.netmask())
+
+
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -105,6 +110,9 @@ class LibvirtConnection(object):
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
+
+    def init_host(self):
+        NWFilterFirewall(self._conn).setup_base_nwfilters()
 
     @property
     def _conn(self):
@@ -500,6 +508,15 @@ class LibvirtConnection(object):
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
+
+        if FLAGS.allow_project_net_traffic:
+            net, mask = _get_net_and_mask(network['cidr'])
+            extra_params = ("<parameter name=\"PROJNET\" value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASK\" value=\"%s\" />\n"
+                           ) % (net, mask)
+        else:
+            extra_params = "\n"
+
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -510,6 +527,7 @@ class LibvirtConnection(object):
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
+                    'extra_params': extra_params,
                     'rescue': rescue}
         if not rescue:
             if instance['kernel_id']:
@@ -717,6 +735,14 @@ class NWFilterFirewall(object):
                               </rule>
                             </filter>'''
 
+    nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
+                           <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
+                           <filterref filter='allow-dhcp-server'/>
+                           <filterref filter='nova-allow-dhcp-server'/>
+                           <filterref filter='nova-base-ipv4'/>
+                           <filterref filter='nova-base-ipv6'/>
+                         </filter>'''
+
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
@@ -741,12 +767,12 @@ class NWFilterFirewall(object):
         retval += '</filter>'
         return retval
 
-    def nova_project_filter(self, project, net, mask):
-        retval = "<filter name='nova-project-%s' chain='ipv4'>" % project
+    def nova_project_filter(self):
+        retval = "<filter name='nova-project' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             retval += """<rule action='accept' direction='in' priority='200'>
-                           <%s srcipaddr='%s' srcipmask='%s' />
-                         </rule>""" % (protocol, net, mask)
+                           <%s srcipaddr='$PROJNET' srcipmask='$PROJMASK' />
+                         </rule>""" % protocol
         retval += '</filter>'
         return retval
 
@@ -757,10 +783,14 @@ class NWFilterFirewall(object):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    @staticmethod
-    def _get_net_and_mask(cidr):
-        net = IPy.IP(cidr)
-        return str(net.net()), str(net.netmask())
+    def setup_base_nwfilters(self):
+        self._define_filter(self.nova_base_ipv4_filter)
+        self._define_filter(self.nova_base_ipv6_filter)
+        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_base_filter)
+        self._define_filter(self.nova_vpn_filter)
+        if FLAGS.allow_project_net_traffic:
+            self._define_filter(self.nova_project_filter)
 
     def setup_nwfilters_for_instance(self, instance):
         """
@@ -769,31 +799,22 @@ class NWFilterFirewall(object):
         the base filter are all in place.
         """
 
-        self._define_filter(self.nova_base_ipv4_filter)
-        self._define_filter(self.nova_base_ipv6_filter)
-        self._define_filter(self.nova_dhcp_filter)
-        self._define_filter(self.nova_base_filter)
+        nwfilter_xml = ("<filter name='nova-instance-%s' chain='root'>\n"
+                       ) % instance['name']
 
-        nwfilter_xml = "<filter name='nova-instance-%s' chain='root'>\n" \
-                       "  <filterref filter='nova-base' />\n" % \
-                       instance['name']
+        if instance['image_id'] == FLAGS.vpn_image_id:
+            nwfilter_xml += "  <filterref filter='nova-vpn' />\n"
+        else:
+            nwfilter_xml += "  <filterref filter='nova-base' />\n"
 
         if FLAGS.allow_project_net_traffic:
-            network_ref = db.project_get_network(context.get_admin_context(),
-                                                 instance['project_id'])
-            net, mask = self._get_net_and_mask(network_ref['cidr'])
-            project_filter = self.nova_project_filter(instance['project_id'],
-                                                      net, mask)
-            self._define_filter(project_filter)
-
-            nwfilter_xml += "  <filterref filter='nova-project-%s' />\n" % \
-                            instance['project_id']
+            nwfilter_xml += "  <filterref filter='nova-project' />\n"
 
         for security_group in instance.security_groups:
             self.ensure_security_group_filter(security_group['id'])
 
-            nwfilter_xml += "  <filterref filter='nova-secgroup-%d' />\n" % \
-                            security_group['id']
+            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
+                            ) % security_group['id']
         nwfilter_xml += "</filter>"
 
         self._define_filter(nwfilter_xml)
@@ -809,7 +830,7 @@ class NWFilterFirewall(object):
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
-                net, mask = self._get_net_and_mask(rule.cidr)
+                net, mask = _get_net_and_mask(rule.cidr)
                 rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
                             (rule.protocol, net, mask)
                 if rule.protocol in ['tcp', 'udp']:
