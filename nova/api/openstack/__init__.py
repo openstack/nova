@@ -45,12 +45,12 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('nova_api_auth',
-    'nova.api.openstack.auth.BasicApiAuthManager',
+flags.DEFINE_string('os_api_auth',
+    'nova.api.openstack.auth.AuthMiddleware',
     'The auth mechanism to use for the OpenStack API implemenation')
 
 flags.DEFINE_string('os_api_ratelimiting',
-    'nova.api.openstack.ratelimiting.BasicRateLimiting',
+    'nova.api.openstack.ratelimiting.RateLimitingMiddleware',
     'Default ratelimiting implementation for the Openstack API')
 
 flags.DEFINE_bool('allow_admin_api',
@@ -62,7 +62,10 @@ class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
 
     def __init__(self):
-        app = AuthMiddleware(RateLimitingMiddleware(APIRouter()))
+        auth_middleware = utils.import_class(FLAGS.os_api_auth)
+        ratelimiting_middleware = \
+            utils.import_class(FLAGS.os_api_ratelimiting)
+        app = auth_middleware(ratelimiting_middleware(APIRouter()))
         super(API, self).__init__(app)
 
     @webob.dec.wsgify
@@ -74,51 +77,6 @@ class API(wsgi.Middleware):
             logging.debug(traceback.format_exc())
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
-
-
-class AuthMiddleware(wsgi.Middleware):
-    """Authorize the openstack API request or return an HTTP Forbidden."""
-
-    def __init__(self, application):
-        self.auth_driver = utils.import_class(FLAGS.nova_api_auth)()
-        super(AuthMiddleware, self).__init__(application)
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        if not self.auth_driver.has_authentication(req):
-            return self.auth_driver.authenticate(req)
-
-        user = self.auth_driver.get_user_by_authentication(req)
-
-        if not user:
-            return faults.Fault(webob.exc.HTTPUnauthorized())
-
-        req.environ['nova.context'] = context.RequestContext(user, user)
-        return self.application
-
-
-class RateLimitingMiddleware(wsgi.Middleware):
-    """Rate limit incoming requests according to the OpenStack rate limits."""
-
-    def __init__(self, application, service_host=None):
-        """Create a rate limiting middleware that wraps the given application.
-
-        By default, rate counters are stored in memory.  If service_host is
-        specified, the middleware instead relies on the ratelimiting.WSGIApp
-        at the given host+port to keep rate counters.
-        """
-        super(RateLimitingMiddleware, self).__init__(application)
-        self._limiting_driver = \
-            utils.import_class(FLAGS.os_api_ratelimiting)(service_host)
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        """Rate limit the request.
-
-        If the request should be rate limited, return a 413 status with a
-        Retry-After header giving the time when the request would succeed.
-        """
-        return self._limiting_driver.limited_request(req, self.application) 
 
 
 class APIRouter(wsgi.Router):

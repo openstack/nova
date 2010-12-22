@@ -16,16 +16,28 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+class AuthMiddleware(wsgi.Middleware):
+    """Authorize the openstack API request or return an HTTP Forbidden."""
 
-class BasicApiAuthManager(object):
-    """ Implements a somewhat rudimentary version of OpenStack Auth"""
-
-    def __init__(self, db_driver=None):
+    def __init__(self, application):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
         self.auth = auth.manager.AuthManager()
-        super(BasicApiAuthManager, self).__init__()
+        super(AuthMiddleware, self).__init__(application)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        if not self.has_authentication(req):
+            return self.authenticate(req)
+
+        user = self.get_user_by_authentication(req)
+
+        if not user:
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        req.environ['nova.context'] = context.RequestContext(user, user)
+        return self.application
 
     def has_authentication(self, req):
         return 'X-Auth-Token' in req.headers

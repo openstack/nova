@@ -14,11 +14,16 @@ PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
+class RateLimitingMiddleware(wsgi.Middleware):
+    """Rate limit incoming requests according to the OpenStack rate limits."""
 
-class BasicRateLimiting(object):
-    """ Implements Rate limits as per the Rackspace CloudServers API spec. """
+    def __init__(self, application, service_host=None):
+        """Create a rate limiting middleware that wraps the given application.
 
-    def __init__(self, service_host):
+        By default, rate counters are stored in memory.  If service_host is
+        specified, the middleware instead relies on the ratelimiting.WSGIApp
+        at the given host+port to keep rate counters.
+        """
         if not service_host:
             #TODO(gundlach): These limits were based on limitations of Cloud
             #Servers.  We should revisit them in Nova.
@@ -31,6 +36,16 @@ class BasicRateLimiting(object):
                 })
         else:
             self.limiter = WSGIAppProxy(service_host)
+        super(RateLimitingMiddleware, self).__init__(application)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Rate limit the request.
+
+        If the request should be rate limited, return a 413 status with a
+        Retry-After header giving the time when the request would succeed.
+        """
+        return self.limited_request(req, self.application)
 
     def limited_request(self, req, application):
         """Rate limit the request.
@@ -74,6 +89,7 @@ class BasicRateLimiting(object):
         if req.method in ['PUT', 'POST', 'DELETE']:
             return req.method
         return None
+
 
 class Limiter(object):
 
