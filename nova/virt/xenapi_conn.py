@@ -204,7 +204,7 @@ class XenAPISession(object):
             status = self._session.xenapi.task.get_status(task)
             action = dict(
                 instance_id=int(instance_id),
-                action=name,
+                action=name[0:255],  # Ensure action is never > 255
                 error=None)
             if status == "pending":
                 return

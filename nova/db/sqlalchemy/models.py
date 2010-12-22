@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, Float, String, schema
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -232,13 +232,7 @@ class InstanceDiagnostics(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     instance_id = Column(Integer, ForeignKey('instances.id'))
 
-    memory_available = Column(Float)
-    memory_free = Column(Float)
-    cpu_load = Column(Float)
-    disk_read = Column(Float)
-    disk_write = Column(Float)
-    net_tx = Column(Float)
-    net_rx = Column(Float)
+    diagnostics = Column(Text)
 
 
 class InstanceActions(BASE, NovaBase):
