@@ -195,3 +195,12 @@ class Controller(wsgi.Controller):
             logging.error("Compute.api::unpause %s", readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
+
+    def get_ajax_console(self, req, id):
+        """ Returns a url to and ajaxterm instance console. """
+        try:
+            self.compute_api.get_ajax_console(req.environ['nova.context'],
+                int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()

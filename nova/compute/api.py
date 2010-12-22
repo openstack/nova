@@ -316,6 +316,30 @@ class ComputeAPI(base.Base):
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
 
+    def get_ajax_console(self, context, instance_id):
+        """Get an AJAX Console
+
+        In order for this to work properly, a ttyS0 must be configured
+        in the instance
+        """
+
+        instance_ref = db.instance_get_by_internal_id(context, instance_id)
+
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance_ref['host']),
+                          {'method': 'get_ajax_console',
+                           'args': {'instance_id': instance_ref['id']}})
+
+        # TODO: make this a call
+        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
+                 {'method': 'authorize_ajax_console',
+                  'args': {'token': output['token'], 'host': output['host'], 
+                  'port':output['port']}})
+
+        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+                output['token'])}
+
     def _get_network_topic(self, context):
         """Retrieves the network host for a project"""
         network_ref = self.network_manager.get_network(context)
