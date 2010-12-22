@@ -44,7 +44,6 @@ import multiprocessing
 import os
 import urllib
 
-from tornado import escape
 from twisted.application import internet
 from twisted.application import service
 from twisted.web import error
@@ -55,12 +54,14 @@ from twisted.web import static
 from nova import context
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.auth import manager
 from nova.objectstore import bucket
 from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('s3_listen_host', '', 'Host to listen on.')
 
 
 def render_xml(request, value):
@@ -70,10 +71,10 @@ def render_xml(request, value):
 
     name = value.keys()[0]
     request.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    request.write('<' + escape.utf8(name) +
+    request.write('<' + utils.utf8(name) +
                  ' xmlns="http://doc.s3.amazonaws.com/2006-03-01">')
     _render_parts(value.values()[0], request.write)
-    request.write('</' + escape.utf8(name) + '>')
+    request.write('</' + utils.utf8(name) + '>')
     request.finish()
 
 
@@ -87,7 +88,7 @@ def finish(request, content=None):
 def _render_parts(value, write_cb):
     """Helper method to render different Python objects to XML"""
     if isinstance(value, basestring):
-        write_cb(escape.xhtml_escape(value))
+        write_cb(utils.xhtml_escape(value))
     elif isinstance(value, int) or isinstance(value, long):
         write_cb(str(value))
     elif isinstance(value, datetime.datetime):
@@ -97,9 +98,9 @@ def _render_parts(value, write_cb):
             if not isinstance(subvalue, list):
                 subvalue = [subvalue]
             for subsubvalue in subvalue:
-                write_cb('<' + escape.utf8(name) + '>')
+                write_cb('<' + utils.utf8(name) + '>')
                 _render_parts(subsubvalue, write_cb)
-                write_cb('</' + escape.utf8(name) + '>')
+                write_cb('</' + utils.utf8(name) + '>')
     else:
         raise Exception("Unknown S3 value type %r", value)
 
@@ -438,6 +439,7 @@ def get_application():
     # Disabled because of lack of proper introspection in Twisted
     # or possibly different versions of twisted?
     # pylint: disable-msg=E1101
-    objectStoreService = internet.TCPServer(FLAGS.s3_port, factory)
+    objectStoreService = internet.TCPServer(FLAGS.s3_port, factory,
+                                            interface=FLAGS.s3_listen_host)
     objectStoreService.setServiceParent(application)
     return application

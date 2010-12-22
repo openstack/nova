@@ -1,0 +1,71 @@
+ul.todo_list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.todo_list li {
+    display: block;
+    margin: 0;
+    padding: 7px 0;
+    border-top: 1px solid #eee;
+}
+
+ul.todo_list li p {
+    display: inline;
+}
+
+ul.todo_list li p.link {
+    font-weight: bold;
+}
+
+ul.todo_list li p.details {
+    font-style: italic;
+}
+
+ul.todo_list li {
+}
+
+div.admonition {
+    border: 1px solid #8F1000;
+}
+
+div.admonition p.admonition-title {
+    background-color: #8F1000;
+    border-bottom: 1px solid #8E8E8E;
+}
+
+a {
+	color: #CF2F19;
+}
+
+div.related ul li a {
+	color: #CF2F19;
+}
+
+div.sphinxsidebar h4 {
+	background-color:#8E8E8E;
+	border:1px solid #255E6E;
+	color:white;
+	font-size:1em;
+	margin:1em 0 0.5em;
+	padding:0.1em 0 0.1em 0.5em;
+}
+
+em {
+    font-style: normal;
+}
+
+table.docutils {
+	font-size: 11px;
+}
+
+.tweet_list li {
+    font-size: 0.9em;
+    border-bottom: 1px solid #eee;
+    padding: 5px 0;
+}
+
+.tweet_list li .tweet_avatar {
+    float: left;
+}

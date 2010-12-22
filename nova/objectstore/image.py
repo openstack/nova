@@ -21,7 +21,6 @@ Take uploaded bucket contents and register them as disk images (AMIs).
 Requires decryption using keys in the manifest.
 """
 
-# TODO(jesse): Got these from Euca2ools, will need to revisit them
 
 import binascii
 import glob
@@ -29,7 +28,6 @@ import json
 import os
 import shutil
 import tarfile
-import tempfile
 from xml.etree import ElementTree
 
 from nova import exception
@@ -39,8 +37,8 @@ from nova.objectstore import bucket
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('images_path', utils.abspath('../images'),
-                        'path to decrypted images')
+flags.DEFINE_string('images_path', '$state_path/images',
+                    'path to decrypted images')
 
 
 class Image(object):
@@ -48,8 +46,8 @@ class Image(object):
         self.image_id = image_id
         self.path = os.path.abspath(os.path.join(FLAGS.images_path, image_id))
         if not self.path.startswith(os.path.abspath(FLAGS.images_path)) or \
-            not os.path.isdir(self.path):
-                raise exception.NotFound
+        not os.path.isdir(self.path):
+            raise exception.NotFound
 
     @property
     def image_path(self):
@@ -199,12 +197,17 @@ class Image(object):
         except:
             ramdisk_id = None
 
+        try:
+            arch = manifest.find("machine_configuration/architecture").text
+        except:
+            arch = 'x86_64'
+
         info = {
             'imageId': image_id,
             'imageLocation': image_location,
             'imageOwnerId': context.project_id,
             'isPublic': False,  # FIXME: grab public from manifest
-            'architecture': 'x86_64',  # FIXME: grab architecture from manifest
+            'architecture': arch,
             'imageType': image_type}
 
         if kernel_id:
@@ -264,6 +267,7 @@ class Image(object):
         if err:
             raise exception.Error("Failed to decrypt initialization "
                                   "vector: %s" % err)
+
         _out, err = utils.execute(
                 'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'
                  % (encrypted_filename, key, iv, decrypted_filename),

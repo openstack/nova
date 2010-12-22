@@ -15,17 +15,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
-SQLAlchemy models for nova data
+SQLAlchemy models for nova data.
 """
 
-import sys
 import datetime
 
-# TODO(vish): clean up these imports
-from sqlalchemy.orm import relationship, backref, exc, object_mapper
-from sqlalchemy import Column, Integer, String, schema
+from sqlalchemy.orm import relationship, backref, object_mapper
+from sqlalchemy import Column, Integer, Float, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -37,28 +34,22 @@ from nova import auth
 from nova import exception
 from nova import flags
 
-FLAGS = flags.FLAGS
 
+FLAGS = flags.FLAGS
 BASE = declarative_base()
 
 
 class NovaBase(object):
-    """Base class for Nova Models"""
+    """Base class for Nova Models."""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
-    __prefix__ = 'none'
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
 
-    @property
-    def str_id(self):
-        """Get string id of object (generally prefix + '-' + id)"""
-        return "%s-%s" % (self.__prefix__, self.id)
-
     def save(self, session=None):
-        """Save this object"""
+        """Save this object."""
         if not session:
             session = get_session()
         session.add(self)
@@ -71,7 +62,7 @@ class NovaBase(object):
                 raise
 
     def delete(self, session=None):
-        """Delete this object"""
+        """Delete this object."""
         self.deleted = True
         self.deleted_at = datetime.datetime.utcnow()
         self.save(session=session)
@@ -82,6 +73,9 @@ class NovaBase(object):
     def __getitem__(self, key):
         return getattr(self, key)
 
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
     def __iter__(self):
         self._i = iter(object_mapper(self).columns)
         return self
@@ -90,11 +84,20 @@ class NovaBase(object):
         n = self._i.next().name
         return n, getattr(self, n)
 
+    def update(self, values):
+        """Make the model object behave like a dict"""
+        for k, v in values.iteritems():
+            setattr(self, k, v)
+
+    def iteritems(self):
+        """Make the model object behave like a dict"""
+        return iter(self)
+
+
 # TODO(vish): Store images in the database instead of file system
 #class Image(BASE, NovaBase):
 #    """Represents an image in the datastore"""
 #    __tablename__ = 'images'
-#    __prefix__ = 'ami'
 #    id = Column(Integer, primary_key=True)
 #    ec2_id = Column(String(12), unique=True)
 #    user_id = Column(String(255))
@@ -137,7 +140,8 @@ class NovaBase(object):
 
 
 class Service(BASE, NovaBase):
-    """Represents a running service on a host"""
+    """Represents a running service on a host."""
+
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
     host = Column(String(255))  # , ForeignKey('hosts.id'))
@@ -148,9 +152,8 @@ class Service(BASE, NovaBase):
 
 
 class Instance(BASE, NovaBase):
-    """Represents a guest vm"""
+    """Represents a guest vm."""
     __tablename__ = 'instances'
-    __prefix__ = 'i'
     id = Column(Integer, primary_key=True)
     internal_id = Column(Integer, unique=True)
 
@@ -174,8 +177,6 @@ class Instance(BASE, NovaBase):
     image_id = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
-
-    server_name = Column(String(255))
 
 #    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
@@ -209,6 +210,7 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
 
@@ -224,10 +226,35 @@ class Instance(BASE, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
+class InstanceDiagnostics(BASE, NovaBase):
+    """Represents a guest VM's diagnostics"""
+    __tablename__ = "instance_diagnostics"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    memory_available = Column(Float)
+    memory_free = Column(Float)
+    cpu_load = Column(Float)
+    disk_read = Column(Float)
+    disk_write = Column(Float)
+    net_tx = Column(Float)
+    net_rx = Column(Float)
+
+
+class InstanceActions(BASE, NovaBase):
+    """Represents a guest VM's actions and results"""
+    __tablename__ = "instance_actions"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    action = Column(String(255))
+    result = Column(Boolean)
+    error = Column(Text)
+
+
 class Volume(BASE, NovaBase):
-    """Represents a block storage device that can be attached to a vm"""
+    """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    __prefix__ = 'vol'
     id = Column(Integer, primary_key=True)
     ec2_id = Column(String(12), unique=True)
 
@@ -255,9 +282,13 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    @property
+    def name(self):
+        return self.ec2_id
+
 
 class Quota(BASE, NovaBase):
-    """Represents quota overrides for a project"""
+    """Represents quota overrides for a project."""
     __tablename__ = 'quotas'
     id = Column(Integer, primary_key=True)
 
@@ -269,13 +300,9 @@ class Quota(BASE, NovaBase):
     gigabytes = Column(Integer)
     floating_ips = Column(Integer)
 
-    @property
-    def str_id(self):
-        return self.project_id
-
 
 class ExportDevice(BASE, NovaBase):
-    """Represates a shelf and blade that a volume can be exported on"""
+    """Represates a shelf and blade that a volume can be exported on."""
     __tablename__ = 'export_devices'
     __table_args__ = (schema.UniqueConstraint("shelf_id", "blade_id"),
                       {'mysql_engine': 'InnoDB'})
@@ -290,6 +317,22 @@ class ExportDevice(BASE, NovaBase):
                                            'ExportDevice.deleted==False)')
 
 
+class IscsiTarget(BASE, NovaBase):
+    """Represates an iscsi target for a given host"""
+    __tablename__ = 'iscsi_targets'
+    __table_args__ = (schema.UniqueConstraint("target_num", "host"),
+                      {'mysql_engine': 'InnoDB'})
+    id = Column(Integer, primary_key=True)
+    target_num = Column(Integer)
+    host = Column(String(255))
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume,
+                          backref=backref('iscsi_target', uselist=False),
+                          foreign_keys=volume_id,
+                          primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
+                                           'IscsiTarget.deleted==False)')
+
+
 class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
     id = Column(Integer, primary_key=True)
@@ -298,7 +341,7 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
 
 
 class SecurityGroup(BASE, NovaBase):
-    """Represents a security group"""
+    """Represents a security group."""
     __tablename__ = 'security_groups'
     id = Column(Integer, primary_key=True)
 
@@ -328,7 +371,7 @@ class SecurityGroup(BASE, NovaBase):
 
 
 class SecurityGroupIngressRule(BASE, NovaBase):
-    """Represents a rule in a security group"""
+    """Represents a rule in a security group."""
     __tablename__ = 'security_group_rules'
     id = Column(Integer, primary_key=True)
 
@@ -350,7 +393,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
 
 
 class KeyPair(BASE, NovaBase):
-    """Represents a public key pair for ssh"""
+    """Represents a public key pair for ssh."""
     __tablename__ = 'key_pairs'
     id = Column(Integer, primary_key=True)
 
@@ -361,13 +404,9 @@ class KeyPair(BASE, NovaBase):
     fingerprint = Column(String(255))
     public_key = Column(Text)
 
-    @property
-    def str_id(self):
-        return '%s.%s' % (self.user_id, self.name)
-
 
 class Network(BASE, NovaBase):
-    """Represents a network"""
+    """Represents a network."""
     __tablename__ = 'networks'
     __table_args__ = (schema.UniqueConstraint("vpn_public_address",
                                               "vpn_public_port"),
@@ -396,9 +435,12 @@ class Network(BASE, NovaBase):
 
 
 class AuthToken(BASE, NovaBase):
-    """Represents an authorization token for all API transactions. Fields
-    are a string representing the actual token and a user id for mapping
-    to the actual user"""
+    """Represents an authorization token for all API transactions.
+
+    Fields are a string representing the actual token and a user id for
+    mapping to the actual user
+
+    """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
     user_id = Column(Integer)
@@ -409,7 +451,7 @@ class AuthToken(BASE, NovaBase):
 
 # TODO(vish): can these both come from the same baseclass?
 class FixedIp(BASE, NovaBase):
-    """Represents a fixed ip for an instance"""
+    """Represents a fixed ip for an instance."""
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
@@ -426,13 +468,9 @@ class FixedIp(BASE, NovaBase):
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
 
-    @property
-    def str_id(self):
-        return self.address
-
 
 class User(BASE, NovaBase):
-    """Represents a user"""
+    """Represents a user."""
     __tablename__ = 'users'
     id = Column(String(255), primary_key=True)
 
@@ -444,7 +482,7 @@ class User(BASE, NovaBase):
 
 
 class Project(BASE, NovaBase):
-    """Represents a project"""
+    """Represents a project."""
     __tablename__ = 'projects'
     id = Column(String(255), primary_key=True)
     name = Column(String(255))
@@ -492,7 +530,7 @@ class UserProjectAssociation(BASE, NovaBase):
 
 
 class FloatingIp(BASE, NovaBase):
-    """Represents a floating ip that dynamically forwards to a fixed ip"""
+    """Represents a floating ip that dynamically forwards to a fixed ip."""
     __tablename__ = 'floating_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
@@ -508,12 +546,17 @@ class FloatingIp(BASE, NovaBase):
 
 
 def register_models():
-    """Register Models and create metadata"""
+    """Register Models and create metadata.
+
+    Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
+    it will never need to be called explicitly elsewhere.
+    """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, FixedIp,
-              FloatingIp, Network, SecurityGroup,
-              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project)  # , Image, Host
+    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Network, SecurityGroup, SecurityGroupIngressRule,
+              SecurityGroupInstanceAssociation, AuthToken, User,
+              Project)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

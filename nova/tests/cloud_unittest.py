@@ -27,8 +27,6 @@ import tempfile
 import time
 
 from eventlet import greenthread
-from twisted.internet import defer
-import unittest
 from xml.etree import ElementTree
 
 from nova import context
@@ -53,7 +51,7 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
-class CloudTestCase(test.TrialTestCase):
+class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.flags(connection_type='fake', images_path=IMAGES_PATH)
@@ -90,6 +88,54 @@ class CloudTestCase(test.TrialTestCase):
     def _create_key(self, name):
         # NOTE(vish): create depends on pool, so just call helper directly
         return cloud._gen_key(self.context, self.context.user.id, name)
+
+    def test_describe_addresses(self):
+        """Makes sure describe addresses runs without raising an exception"""
+        address = "10.10.10.10"
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': FLAGS.host})
+        self.cloud.allocate_address(self.context)
+        self.cloud.describe_addresses(self.context)
+        self.cloud.release_address(self.context,
+                                  public_ip=address)
+        greenthread.sleep(0.3)
+        db.floating_ip_destroy(self.context, address)
+
+    def test_associate_disassociate_address(self):
+        """Verifies associate runs cleanly without raising an exception"""
+        address = "10.10.10.10"
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': FLAGS.host})
+        self.cloud.allocate_address(self.context)
+        inst = db.instance_create(self.context, {})
+        fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
+        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        self.cloud.associate_address(self.context,
+                                     instance_id=ec2_id,
+                                     public_ip=address)
+        self.cloud.disassociate_address(self.context,
+                                        public_ip=address)
+        self.cloud.release_address(self.context,
+                                  public_ip=address)
+        greenthread.sleep(0.3)
+        self.network.deallocate_fixed_ip(self.context, fixed)
+        db.instance_destroy(self.context, inst['id'])
+        db.floating_ip_destroy(self.context, address)
+
+    def test_describe_volumes(self):
+        """Makes sure describe_volumes works and filters results."""
+        vol1 = db.volume_create(self.context, {})
+        vol2 = db.volume_create(self.context, {})
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 2)
+        result = self.cloud.describe_volumes(self.context,
+                                             volume_id=[vol2['ec2_id']])
+        self.assertEqual(len(result['volumeSet']), 1)
+        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['ec2_id'])
+        db.volume_destroy(self.context, vol1['id'])
+        db.volume_destroy(self.context, vol2['id'])
 
     def test_console_output(self):
         image_id = FLAGS.default_image
@@ -151,7 +197,7 @@ class CloudTestCase(test.TrialTestCase):
         logging.debug("Need to watch instance %s until it's running..." %
                       instance['instance_id'])
         while True:
-            rv = yield defer.succeed(time.sleep(1))
+            greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
             logging.debug(info['state'])
             if info['state'] == power_state.RUNNING:

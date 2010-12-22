@@ -32,7 +32,7 @@ from nova.api.ec2 import cloud
 FLAGS = flags.FLAGS
 
 
-class QuotaTestCase(test.TrialTestCase):
+class QuotaTestCase(test.TestCase):
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()
@@ -94,11 +94,12 @@ class QuotaTestCase(test.TrialTestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
-        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small')
+                                            instance_type='m1.small',
+                                            image_id='fake')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -106,11 +107,12 @@ class QuotaTestCase(test.TrialTestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
-        self.assertRaises(cloud.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small')
+                                            instance_type='m1.small',
+                                            image_id='fake')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -119,7 +121,7 @@ class QuotaTestCase(test.TrialTestCase):
         for i in range(FLAGS.quota_volumes):
             volume_id = self._create_volume()
             volume_ids.append(volume_id)
-        self.assertRaises(cloud.QuotaError, self.cloud.create_volume,
+        self.assertRaises(quota.QuotaError, self.cloud.create_volume,
                                             self.context,
                                             size=10)
         for volume_id in volume_ids:
@@ -129,7 +131,7 @@ class QuotaTestCase(test.TrialTestCase):
         volume_ids = []
         volume_id = self._create_volume(size=20)
         volume_ids.append(volume_id)
-        self.assertRaises(cloud.QuotaError,
+        self.assertRaises(quota.QuotaError,
                           self.cloud.create_volume,
                           self.context,
                           size=10)
@@ -138,16 +140,14 @@ class QuotaTestCase(test.TrialTestCase):
 
     def test_too_many_addresses(self):
         address = '192.168.0.100'
-        try:
-            db.floating_ip_get_by_address(context.get_admin_context(), address)
-        except exception.NotFound:
-            db.floating_ip_create(context.get_admin_context(),
-                                  {'address': address, 'host': FLAGS.host})
+        db.floating_ip_create(context.get_admin_context(),
+                              {'address': address, 'host': FLAGS.host})
         float_addr = self.network.allocate_floating_ip(self.context,
                                                        self.project.id)
         # NOTE(vish): This assert never fails. When cloud attempts to
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertRaises(cloud.QuotaError, self.cloud.allocate_address,
+        self.assertRaises(quota.QuotaError, self.cloud.allocate_address,
                           self.context)
+        db.floating_ip_destroy(context.get_admin_context(), address)

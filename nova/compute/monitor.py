@@ -46,7 +46,7 @@ flags.DEFINE_integer('monitoring_instances_delay', 5,
                      'Sleep time between updates')
 flags.DEFINE_integer('monitoring_instances_step', 300,
                      'Interval of RRD updates')
-flags.DEFINE_string('monitoring_rrd_path', '/var/nova/monitor/instances',
+flags.DEFINE_string('monitoring_rrd_path', '$state_path/monitor/instances',
                     'Location of RRD files')
 
 
@@ -211,8 +211,8 @@ def store_graph(instance_id, filename):
     #       the response we can make our own client that does the actual
     #       request and hands it off to the response parser.
     s3 = boto.s3.connection.S3Connection(
-        aws_access_key_id='admin',
-        aws_secret_access_key='admin',
+        aws_access_key_id=FLAGS.aws_access_key_id,
+        aws_secret_access_key=FLAGS.aws_secret_access_key,
         is_secure=False,
         calling_format=boto.s3.connection.OrdinaryCallingFormat(),
         port=FLAGS.s3_port,

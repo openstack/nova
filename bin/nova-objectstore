@@ -21,6 +21,7 @@
   Twisted daemon for nova objectstore. Supports S3 API.
 """
 
+import gettext
 import os
 import sys
 
@@ -32,6 +33,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+gettext.install('nova', unicode=1)
+
 from nova import flags
 from nova import utils
 from nova import twistd
@@ -42,8 +45,8 @@ FLAGS = flags.FLAGS
 
 
 if __name__ == '__main__':
+    utils.default_flagfile()
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    utils.default_flagfile()
     application = handler.get_application()  # pylint: disable-msg=C0103

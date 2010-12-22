@@ -168,6 +168,7 @@ class AdminController(object):
 
     # FIXME(vish): these host commands don't work yet, perhaps some of the
     #              required data can be retrieved from service objects?
+
     def describe_hosts(self, _context, **_kwargs):
         """Returns status info for all nodes. Includes:
             * Disk Space

@@ -18,14 +18,14 @@
 #    under the License.
 
 """
-A fake (in-memory) hypervisor+api. Allows nova testing w/o a hypervisor.
-This module also documents the semantics of real hypervisor connections.
+A fake (in-memory) hypervisor+api.
+
+Allows nova testing w/o a hypervisor.  This module also documents the
+semantics of real hypervisor connections.
+
 """
 
-import logging
-
-from twisted.internet import defer
-
+from nova import exception
 from nova.compute import power_state
 
 
@@ -105,7 +105,6 @@ class FakeConnection(object):
         fake_instance = FakeInstance()
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
-        return defer.succeed(None)
 
     def reboot(self, instance):
         """
@@ -117,7 +116,31 @@ class FakeConnection(object):
         The work will be done asynchronously.  This function returns a
         Deferred that allows the caller to detect when it is complete.
         """
-        return defer.succeed(None)
+        pass
+
+    def rescue(self, instance):
+        """
+        Rescue the specified instance.
+        """
+        pass
+
+    def unrescue(self, instance):
+        """
+        Unrescue the specified instance.
+        """
+        pass
+
+    def pause(self, instance, callback):
+        """
+        Pause the specified instance.
+        """
+        pass
+
+    def unpause(self, instance, callback):
+        """
+        Unpause the specified instance.
+        """
+        pass
 
     def destroy(self, instance):
         """
@@ -130,7 +153,6 @@ class FakeConnection(object):
         Deferred that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
-        return defer.succeed(None)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach the disk at device_path to the instance at mountpoint"""
@@ -148,7 +170,12 @@ class FakeConnection(object):
         current memory the instance has, in KiB, 'num_cpu': The current number
         of virtual CPUs the instance has, 'cpu_time': The total CPU time used
         by the instance, in nanoseconds.
+
+        This method should raise exception.NotFound if the hypervisor has no
+        knowledge of the instance
         """
+        if instance_name not in self.instances:
+            raise exception.NotFound("Instance %s Not Found" % instance_name)
         i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
@@ -228,5 +255,6 @@ class FakeConnection(object):
 
 
 class FakeInstance(object):
+
     def __init__(self):
         self._state = power_state.NOSTATE

@@ -16,9 +16,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Implementation of SQLAlchemy backend
+Implementation of SQLAlchemy backend.
 """
 
+import random
 import warnings
 
 from nova import db
@@ -43,7 +44,6 @@ def is_admin_context(context):
         warnings.warn('Use of empty request context is deprecated',
                       DeprecationWarning)
         raise Exception('die')
-        return True
     return context.is_admin
 
 
@@ -235,8 +235,7 @@ def service_get_by_args(context, host, binary):
 @require_admin_context
 def service_create(context, values):
     service_ref = models.Service()
-    for (key, value) in values.iteritems():
-        service_ref[key] = value
+    service_ref.update(values)
     service_ref.save()
     return service_ref
 
@@ -246,8 +245,7 @@ def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
         service_ref = service_get(context, service_id, session=session)
-        for (key, value) in values.iteritems():
-            service_ref[key] = value
+        service_ref.update(values)
         service_ref.save(session=session)
 
 
@@ -278,8 +276,7 @@ def floating_ip_allocate_address(context, host, project_id):
 @require_context
 def floating_ip_create(context, values):
     floating_ip_ref = models.FloatingIp()
-    for (key, value) in values.iteritems():
-        floating_ip_ref[key] = value
+    floating_ip_ref.update(values)
     floating_ip_ref.save()
     return floating_ip_ref['address']
 
@@ -392,7 +389,7 @@ def floating_ip_get_by_address(context, address, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound('No fixed ip for address %s' % address)
+        raise exception.NotFound('No floating ip for address %s' % address)
 
     return result
 
@@ -450,8 +447,7 @@ def fixed_ip_associate_pool(context, network_id, instance_id):
 @require_context
 def fixed_ip_create(_context, values):
     fixed_ip_ref = models.FixedIp()
-    for (key, value) in values.iteritems():
-        fixed_ip_ref[key] = value
+    fixed_ip_ref.update(values)
     fixed_ip_ref.save()
     return fixed_ip_ref['address']
 
@@ -505,14 +501,14 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 @require_context
 def fixed_ip_get_instance(context, address):
-        fixed_ip_ref = fixed_ip_get_by_address(context, address)
-        return fixed_ip_ref.instance
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
 
 
 @require_admin_context
 def fixed_ip_get_network(context, address):
-        fixed_ip_ref = fixed_ip_get_by_address(context, address)
-        return fixed_ip_ref.network
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.network
 
 
 @require_context
@@ -522,8 +518,7 @@ def fixed_ip_update(context, address, values):
         fixed_ip_ref = fixed_ip_get_by_address(context,
                                                address,
                                                session=session)
-        for (key, value) in values.iteritems():
-            fixed_ip_ref[key] = value
+        fixed_ip_ref.update(values)
         fixed_ip_ref.save(session=session)
 
 
@@ -533,16 +528,24 @@ def fixed_ip_update(context, address, values):
 #TODO(gundlach): instance_create and volume_create are nearly identical
 #and should be refactored.  I expect there are other copy-and-paste
 #functions between the two of them as well.
+
+
 @require_context
 def instance_create(context, values):
+    """Create a new Instance record in the database.
+
+    context - request context object
+    values - dict containing column values.
+             'internal_id' is auto-generated and should not be specified.
+    """
     instance_ref = models.Instance()
-    for (key, value) in values.iteritems():
-        instance_ref[key] = value
+    instance_ref.update(values)
 
     session = get_session()
     with session.begin():
         while instance_ref.internal_id == None:
-            internal_id = utils.generate_uid(instance_ref.__prefix__)
+            # Instances have integer internal ids.
+            internal_id = random.randint(0, 2 ** 31 - 1)
             if not instance_internal_id_exists(context, internal_id,
                                                session=session):
                 instance_ref.internal_id = internal_id
@@ -729,9 +732,9 @@ def instance_update(context, instance_id, values):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        for (key, value) in values.iteritems():
-            instance_ref[key] = value
+        instance_ref.update(values)
         instance_ref.save(session=session)
+        return instance_ref
 
 
 def instance_add_security_group(context, instance_id, security_group_id):
@@ -752,8 +755,7 @@ def instance_add_security_group(context, instance_id, security_group_id):
 @require_context
 def key_pair_create(context, values):
     key_pair_ref = models.KeyPair()
-    for (key, value) in values.iteritems():
-        key_pair_ref[key] = value
+    key_pair_ref.update(values)
     key_pair_ref.save()
     return key_pair_ref
 
@@ -868,8 +870,7 @@ def network_count_reserved_ips(context, network_id):
 @require_admin_context
 def network_create_safe(context, values):
     network_ref = models.Network()
-    for (key, value) in values.iteritems():
-        network_ref[key] = value
+    network_ref.update(values)
     try:
         network_ref.save()
         return network_ref
@@ -914,6 +915,8 @@ def network_get(context, network_id, session=None):
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
+
+
 @require_admin_context
 def network_get_associated_fixed_ips(context, network_id):
     session = get_session()
@@ -978,8 +981,7 @@ def network_update(context, network_id, values):
     session = get_session()
     with session.begin():
         network_ref = network_get(context, network_id, session=session)
-        for (key, value) in values.iteritems():
-            network_ref[key] = value
+        network_ref.update(values)
         network_ref.save(session=session)
 
 
@@ -1029,11 +1031,34 @@ def export_device_count(context):
 @require_admin_context
 def export_device_create_safe(context, values):
     export_device_ref = models.ExportDevice()
-    for (key, value) in values.iteritems():
-        export_device_ref[key] = value
+    export_device_ref.update(values)
     try:
         export_device_ref.save()
         return export_device_ref
+    except IntegrityError:
+        return None
+
+
+###################
+
+
+@require_admin_context
+def iscsi_target_count_by_host(context, host):
+    session = get_session()
+    return session.query(models.IscsiTarget).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(host=host).\
+                   count()
+
+
+@require_admin_context
+def iscsi_target_create_safe(context, values):
+    iscsi_target_ref = models.IscsiTarget()
+    for (key, value) in values.iteritems():
+        iscsi_target_ref[key] = value
+    try:
+        iscsi_target_ref.save()
+        return iscsi_target_ref
     except IntegrityError:
         return None
 
@@ -1058,8 +1083,7 @@ def auth_get_token(_context, token_hash):
 
 def auth_create_token(_context, token):
     tk = models.AuthToken()
-    for k, v in token.iteritems():
-        tk[k] = v
+    tk.update(token)
     tk.save()
     return tk
 
@@ -1085,8 +1109,7 @@ def quota_get(context, project_id, session=None):
 @require_admin_context
 def quota_create(context, values):
     quota_ref = models.Quota()
-    for (key, value) in values.iteritems():
-        quota_ref[key] = value
+    quota_ref.update(values)
     quota_ref.save()
     return quota_ref
 
@@ -1096,8 +1119,7 @@ def quota_update(context, project_id, values):
     session = get_session()
     with session.begin():
         quota_ref = quota_get(context, project_id, session=session)
-        for (key, value) in values.iteritems():
-            quota_ref[key] = value
+        quota_ref.update(values)
         quota_ref.save(session=session)
 
 
@@ -1131,6 +1153,25 @@ def volume_allocate_shelf_and_blade(context, volume_id):
 
 
 @require_admin_context
+def volume_allocate_iscsi_target(context, volume_id, host):
+    session = get_session()
+    with session.begin():
+        iscsi_target_ref = session.query(models.IscsiTarget).\
+                                filter_by(volume=None).\
+                                filter_by(host=host).\
+                                filter_by(deleted=False).\
+                                with_lockmode('update').\
+                                first()
+        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+        #             then this has concurrency issues
+        if not iscsi_target_ref:
+            raise db.NoMoreTargets()
+        iscsi_target_ref.volume_id = volume_id
+        session.add(iscsi_target_ref)
+    return iscsi_target_ref.target_num
+
+
+@require_admin_context
 def volume_attached(context, volume_id, instance_id, mountpoint):
     session = get_session()
     with session.begin():
@@ -1146,13 +1187,12 @@ def volume_attached(context, volume_id, instance_id, mountpoint):
 @require_context
 def volume_create(context, values):
     volume_ref = models.Volume()
-    for (key, value) in values.iteritems():
-        volume_ref[key] = value
+    volume_ref.update(values)
 
     session = get_session()
     with session.begin():
         while volume_ref.ec2_id == None:
-            ec2_id = utils.generate_uid(volume_ref.__prefix__)
+            ec2_id = utils.generate_uid('vol')
             if not volume_ec2_id_exists(context, ec2_id, session=session):
                 volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
@@ -1179,6 +1219,9 @@ def volume_destroy(context, volume_id):
         session.execute('update volumes set deleted=1 where id=:id',
                         {'id': volume_id})
         session.execute('update export_devices set volume_id=NULL '
+                        'where volume_id=:id',
+                        {'id': volume_id})
+        session.execute('update iscsi_targets set volume_id=NULL '
                         'where volume_id=:id',
                         {'id': volume_id})
 
@@ -1222,6 +1265,17 @@ def volume_get(context, volume_id, session=None):
 def volume_get_all(context):
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_admin_context
+def volume_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Volume).\
+                   options(joinedload('instance')).\
+                   filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -1232,6 +1286,7 @@ def volume_get_all_by_project(context, project_id):
 
     session = get_session()
     return session.query(models.Volume).\
+                   options(joinedload('instance')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -1299,13 +1354,25 @@ def volume_get_shelf_and_blade(context, volume_id):
     return (result.shelf_id, result.blade_id)
 
 
+@require_admin_context
+def volume_get_iscsi_target_num(context, volume_id):
+    session = get_session()
+    result = session.query(models.IscsiTarget).\
+                     filter_by(volume_id=volume_id).\
+                     first()
+    if not result:
+        raise exception.NotFound('No target id found for volume %s' %
+                                 volume_id)
+
+    return result.target_num
+
+
 @require_context
 def volume_update(context, volume_id, values):
     session = get_session()
     with session.begin():
         volume_ref = volume_get(context, volume_id, session=session)
-        for (key, value) in values.iteritems():
-            volume_ref[key] = value
+        volume_ref.update(values)
         volume_ref.save(session=session)
 
 
@@ -1398,8 +1465,7 @@ def security_group_create(context, values):
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
     # once save() is called.  This will get cleaned up in next orm pass.
     security_group_ref.rules
-    for (key, value) in values.iteritems():
-        security_group_ref[key] = value
+    security_group_ref.update(values)
     security_group_ref.save()
     return security_group_ref
 
@@ -1453,8 +1519,7 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
 @require_context
 def security_group_rule_create(context, values):
     security_group_rule_ref = models.SecurityGroupIngressRule()
-    for (key, value) in values.iteritems():
-        security_group_rule_ref[key] = value
+    security_group_rule_ref.update(values)
     security_group_rule_ref.save()
     return security_group_rule_ref
 
@@ -1506,8 +1571,7 @@ def user_get_by_access_key(context, access_key, session=None):
 @require_admin_context
 def user_create(_context, values):
     user_ref = models.User()
-    for (key, value) in values.iteritems():
-        user_ref[key] = value
+    user_ref.update(values)
     user_ref.save()
     return user_ref
 
@@ -1535,8 +1599,7 @@ def user_get_all(context):
 
 def project_create(_context, values):
     project_ref = models.Project()
-    for (key, value) in values.iteritems():
-        project_ref[key] = value
+    project_ref.update(values)
     project_ref.save()
     return project_ref
 
@@ -1598,8 +1661,7 @@ def user_update(context, user_id, values):
     session = get_session()
     with session.begin():
         user_ref = user_get(context, user_id, session=session)
-        for (key, value) in values.iteritems():
-            user_ref[key] = value
+        user_ref.update(values)
         user_ref.save(session=session)
 
 
@@ -1607,8 +1669,7 @@ def project_update(context, project_id, values):
     session = get_session()
     with session.begin():
         project_ref = project_get(context, project_id, session=session)
-        for (key, value) in values.iteritems():
-            project_ref[key] = value
+        project_ref.update(values)
         project_ref.save(session=session)
 
 

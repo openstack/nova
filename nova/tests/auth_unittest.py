@@ -326,24 +326,20 @@ class AuthManagerTestCase(object):
             self.assertTrue(user.is_admin())
 
 
-class AuthManagerLdapTestCase(AuthManagerTestCase, test.TrialTestCase):
+class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
     def __init__(self, *args, **kwargs):
         AuthManagerTestCase.__init__(self)
-        test.TrialTestCase.__init__(self, *args, **kwargs)
+        test.TestCase.__init__(self, *args, **kwargs)
         import nova.auth.fakeldap as fakeldap
-        FLAGS.redis_db = 8
         if FLAGS.flush_db:
-            logging.info("Flushing redis datastore")
-            try:
-                r = fakeldap.Redis.instance()
-                r.flushdb()
-            except:
-                self.skip = True
+            logging.info("Flushing datastore")
+            r = fakeldap.Store.instance()
+            r.flushdb()
 
 
-class AuthManagerDbTestCase(AuthManagerTestCase, test.TrialTestCase):
+class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
 
 

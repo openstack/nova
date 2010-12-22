@@ -25,12 +25,12 @@ and some black magic for inline callbacks.
 import datetime
 import sys
 import time
+import unittest
 
 import mox
 import stubout
-from tornado import ioloop
 from twisted.internet import defer
-from twisted.trial import unittest
+from twisted.trial import unittest as trial_unittest
 
 from nova import context
 from nova import db
@@ -56,11 +56,11 @@ def skip_if_fake(func):
     return _skipper
 
 
-class TrialTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """Test case base class for all unit tests"""
     def setUp(self):
         """Run before each test method to initialize test environment"""
-        super(TrialTestCase, self).setUp()
+        super(TestCase, self).setUp()
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
@@ -95,7 +95,87 @@ class TrialTestCase(unittest.TestCase):
             db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
                                                     self.start)
             db.network_disassociate_all(ctxt)
-            rpc.Consumer.attach_to_twisted = self.originalAttach
+            rpc.Consumer.attach_to_eventlet = self.originalAttach
+            for x in self.injected:
+                try:
+                    x.stop()
+                except AssertionError:
+                    pass
+
+            if FLAGS.fake_rabbit:
+                fakerabbit.reset_all()
+
+            db.security_group_destroy_all(ctxt)
+            super(TestCase, self).tearDown()
+        finally:
+            self.reset_flags()
+
+    def flags(self, **kw):
+        """Override flag variables for a test"""
+        for k, v in kw.iteritems():
+            if k in self.flag_overrides:
+                self.reset_flags()
+                raise Exception(
+                        'trying to override already overriden flag: %s' % k)
+            self.flag_overrides[k] = getattr(FLAGS, k)
+            setattr(FLAGS, k, v)
+
+    def reset_flags(self):
+        """Resets all flag variables for the test.  Runs after each test"""
+        FLAGS.Reset()
+        for k, v in self._original_flags.iteritems():
+            setattr(FLAGS, k, v)
+
+    def _monkey_patch_attach(self):
+        self.originalAttach = rpc.Consumer.attach_to_eventlet
+
+        def _wrapped(innerSelf):
+            rv = self.originalAttach(innerSelf)
+            self.injected.append(rv)
+            return rv
+
+        _wrapped.func_name = self.originalAttach.func_name
+        rpc.Consumer.attach_to_eventlet = _wrapped
+
+
+class TrialTestCase(trial_unittest.TestCase):
+    """Test case base class for all unit tests"""
+    def setUp(self):
+        """Run before each test method to initialize test environment"""
+        super(TrialTestCase, self).setUp()
+        # NOTE(vish): We need a better method for creating fixtures for tests
+        #             now that we have some required db setup for the system
+        #             to work properly.
+        self.start = datetime.datetime.utcnow()
+        ctxt = context.get_admin_context()
+        if db.network_count(ctxt) != 5:
+            network_manager.VlanManager().create_networks(ctxt,
+                                                          FLAGS.fixed_range,
+                                                          5, 16,
+                                                          FLAGS.vlan_start,
+                                                          FLAGS.vpn_start)
+
+        # emulate some of the mox stuff, we can't use the metaclass
+        # because it screws with our generators
+        self.mox = mox.Mox()
+        self.stubs = stubout.StubOutForTesting()
+        self.flag_overrides = {}
+        self.injected = []
+        self._original_flags = FLAGS.FlagValuesDict()
+
+    def tearDown(self):
+        """Runs after each test method to finalize/tear down test
+        environment."""
+        try:
+            self.mox.UnsetStubs()
+            self.stubs.UnsetAll()
+            self.stubs.SmartUnsetAll()
+            self.mox.VerifyAll()
+            # NOTE(vish): Clean up any ips associated during the test.
+            ctxt = context.get_admin_context()
+            db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
+                                                    self.start)
+            db.network_disassociate_all(ctxt)
             for x in self.injected:
                 try:
                     x.stop()
@@ -148,169 +228,3 @@ class TrialTestCase(unittest.TestCase):
             return d
         _wrapped.func_name = func.func_name
         return _wrapped
-
-    def _monkey_patch_attach(self):
-        self.originalAttach = rpc.Consumer.attach_to_twisted
-
-        def _wrapped(innerSelf):
-            rv = self.originalAttach(innerSelf)
-            self.injected.append(rv)
-            return rv
-
-        _wrapped.func_name = self.originalAttach.func_name
-        rpc.Consumer.attach_to_twisted = _wrapped
-
-
-class BaseTestCase(TrialTestCase):
-    # TODO(jaypipes): Can this be moved into the TrialTestCase class?
-    """Base test case class for all unit tests.
-
-    DEPRECATED: This is being removed once Tornado is gone, use TrialTestCase.
-    """
-    def setUp(self):
-        """Run before each test method to initialize test environment"""
-        super(BaseTestCase, self).setUp()
-        # TODO(termie): we could possibly keep a more global registry of
-        #               the injected listeners... this is fine for now though
-        self.ioloop = ioloop.IOLoop.instance()
-
-        self._waiting = None
-        self._done_waiting = False
-        self._timed_out = False
-
-    def _wait_for_test(self, timeout=60):
-        """ Push the ioloop along to wait for our test to complete. """
-        self._waiting = self.ioloop.add_timeout(time.time() + timeout,
-                                                self._timeout)
-
-        def _wait():
-
-            """Wrapped wait function. Called on timeout."""
-            if self._timed_out:
-                self.fail('test timed out')
-                self._done()
-            if self._done_waiting:
-                self.ioloop.stop()
-                return
-            # we can use add_callback here but this uses less cpu when testing
-            self.ioloop.add_timeout(time.time() + 0.01, _wait)
-
-        self.ioloop.add_callback(_wait)
-        self.ioloop.start()
-
-    def _done(self):
-        """Callback used for cleaning up deferred test methods."""
-        if self._waiting:
-            try:
-                self.ioloop.remove_timeout(self._waiting)
-            except Exception:  # pylint: disable-msg=W0703
-                # TODO(jaypipes): This produces a pylint warning.  Should
-                # we really be catching Exception and then passing here?
-                pass
-            self._waiting = None
-        self._done_waiting = True
-
-    def _maybe_inline_callbacks(self, func):
-        """ If we're doing async calls in our tests, wait on them.
-
-        This is probably the most complicated hunk of code we have so far.
-
-        First up, if the function is normal (not async) we just act normal
-        and return.
-
-        Async tests will use the "Inline Callbacks" pattern, which means
-        you yield Deferreds at every "waiting" step of your code instead
-        of making epic callback chains.
-
-        Example (callback chain, ugly):
-
-        # A deferred instance
-        d = self.compute.terminate_instance(instance_id)
-        def _describe(_):
-            # Another deferred instance
-            d_desc = self.compute.describe_instances()
-            return d_desc
-        def _checkDescribe(rv):
-            self.assertEqual(rv, [])
-        d.addCallback(_describe)
-        d.addCallback(_checkDescribe)
-        d.addCallback(lambda x: self._done())
-        self._wait_for_test()
-
-        Example (inline callbacks! yay!):
-
-        yield self.compute.terminate_instance(instance_id)
-        rv = yield self.compute.describe_instances()
-        self.assertEqual(rv, [])
-
-        If the test fits the Inline Callbacks pattern we will automatically
-        handle calling wait and done.
-        """
-        # TODO(termie): this can be a wrapper function instead and
-        #               and we can make a metaclass so that we don't
-        #               have to copy all that "run" code below.
-        g = func()
-        if not hasattr(g, 'send'):
-            self._done()
-            return defer.succeed(g)
-
-        inlined = defer.inlineCallbacks(func)
-        d = inlined()
-        return d
-
-    def _catch_exceptions(self, result, failure):
-        """Catches all exceptions and handles keyboard interrupts."""
-        exc = (failure.type, failure.value, failure.getTracebackObject())
-        if isinstance(failure.value, self.failureException):
-            result.addFailure(self, exc)
-        elif isinstance(failure.value, KeyboardInterrupt):
-            raise
-        else:
-            result.addError(self, exc)
-
-        self._done()
-
-    def _timeout(self):
-        """Helper method which trips the timeouts"""
-        self._waiting = False
-        self._timed_out = True
-
-    def run(self, result=None):
-        """Runs the test case"""
-
-        result.startTest(self)
-        test_method = getattr(self, self._testMethodName)
-        try:
-            try:
-                self.setUp()
-            except KeyboardInterrupt:
-                raise
-            except:
-                result.addError(self, sys.exc_info())
-                return
-
-            ok = False
-            try:
-                d = self._maybe_inline_callbacks(test_method)
-                d.addErrback(lambda x: self._catch_exceptions(result, x))
-                d.addBoth(lambda x: self._done() and x)
-                self._wait_for_test()
-                ok = True
-            except self.failureException:
-                result.addFailure(self, sys.exc_info())
-            except KeyboardInterrupt:
-                raise
-            except:
-                result.addError(self, sys.exc_info())
-
-            try:
-                self.tearDown()
-            except KeyboardInterrupt:
-                raise
-            except:
-                result.addError(self, sys.exc_info())
-                ok = False
-            if ok:
-                result.addSuccess(self)
-        finally:
-            result.stopTest(self)

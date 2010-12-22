@@ -112,7 +112,7 @@ class SerializerTest(unittest.TestCase):
         self.match('/servers/4.json', None, expect='json')
         self.match('/servers/4', 'application/json', expect='json')
         self.match('/servers/4', 'application/xml', expect='xml')
-        self.match('/servers/4.xml',  None, expect='xml')
+        self.match('/servers/4.xml', None, expect='xml')
 
     def test_defaults_to_json(self):
         self.match('/servers/4', None, expect='json')
