@@ -65,4 +65,4 @@ class SchedulerManager(manager.Manager):
                  db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        logging.debug("Casting to %s %s for %s", topic, host, method)
+        logging.debug(_("Casting to %s %s for %s"), topic, host, method)

@@ -79,7 +79,8 @@ class S3ImageService(service.BaseImageService):
         result = self.index(context)
         result = [i for i in result if i['imageId'] == image_id]
         if not result:
-            raise exception.NotFound('Image %s could not be found' % image_id)
+            raise exception.NotFound(_('Image %s could not be found')
+                                     % image_id)
         image = result[0]
         return image
 
