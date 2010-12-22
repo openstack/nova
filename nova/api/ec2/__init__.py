@@ -77,7 +77,7 @@ class Authenticate(wsgi.Middleware):
                     req.host,
                     req.path)
         except exception.Error, ex:
-            logging.debug("Authentication Failure: %s" % ex)
+            logging.debug(_("Authentication Failure: %s") % ex)
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -120,9 +120,9 @@ class Router(wsgi.Middleware):
         except:
             raise webob.exc.HTTPBadRequest()
 
-        _log.debug('action: %s' % action)
+        _log.debug(_('action: %s') % action)
         for key, value in args.items():
-            _log.debug('arg: %s\t\tval: %s' % (key, value))
+            _log.debug(_('arg: %s\t\tval: %s') % (key, value))
 
         # Success!
         req.environ['ec2.controller'] = controller
