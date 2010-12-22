@@ -37,12 +37,12 @@ class Exchange(object):
         self._routes = {}
 
     def publish(self, message, routing_key=None):
-        logging.debug('(%s) publish (key: %s) %s',
+        logging.debug(_('(%s) publish (key: %s) %s'),
                       self.name, routing_key, message)
         routing_key = routing_key.split('.')[0]
         if routing_key in self._routes:
             for f in self._routes[routing_key]:
-                logging.debug('Publishing to route %s', f)
+                logging.debug(_('Publishing to route %s'), f)
                 f(message, routing_key=routing_key)
 
     def bind(self, callback, routing_key):
@@ -82,16 +82,16 @@ class Backend(object):
 
         def queue_declare(self, queue, **kwargs):
             if queue not in self._queues:
-                logging.debug('Declaring queue %s', queue)
+                logging.debug(_('Declaring queue %s'), queue)
                 self._queues[queue] = Queue(queue)
 
         def exchange_declare(self, exchange, type, *args, **kwargs):
             if exchange not in self._exchanges:
-                logging.debug('Declaring exchange %s', exchange)
+                logging.debug(_('Declaring exchange %s'), exchange)
                 self._exchanges[exchange] = Exchange(exchange, type)
 
         def queue_bind(self, queue, exchange, routing_key, **kwargs):
-            logging.debug('Binding %s to %s with key %s',
+            logging.debug(_('Binding %s to %s with key %s'),
                           queue, exchange, routing_key)
             self._exchanges[exchange].bind(self._queues[queue].push,
                                            routing_key)
@@ -117,7 +117,7 @@ class Backend(object):
                               content_type=content_type,
                               content_encoding=content_encoding)
             message.result = True
-            logging.debug('Getting from %s: %s', queue, message)
+            logging.debug(_('Getting from %s: %s'), queue, message)
             return message
 
         def prepare_message(self, message_data, delivery_mode,
