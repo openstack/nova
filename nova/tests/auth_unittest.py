@@ -330,14 +330,10 @@ class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
         AuthManagerTestCase.__init__(self)
         test.TestCase.__init__(self, *args, **kwargs)
         import nova.auth.fakeldap as fakeldap
-        FLAGS.redis_db = 8
         if FLAGS.flush_db:
-            logging.info("Flushing redis datastore")
-            try:
-                r = fakeldap.Redis.instance()
-                r.flushdb()
-            except:
-                self.skip = True
+            logging.info("Flushing datastore")
+            r = fakeldap.Store.instance()
+            r.flushdb()
 
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):

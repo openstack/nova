@@ -39,33 +39,33 @@ from nova import flags
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('ca_file', 'cacert.pem', 'Filename of root CA')
+flags.DEFINE_string('ca_file', 'cacert.pem', _('Filename of root CA'))
 flags.DEFINE_string('key_file',
                     os.path.join('private', 'cakey.pem'),
-                    'Filename of private key')
+                    _('Filename of private key'))
 flags.DEFINE_string('crl_file', 'crl.pem',
-                    'Filename of root Certificate Revokation List')
+                    _('Filename of root Certificate Revokation List'))
 flags.DEFINE_string('keys_path', '$state_path/keys',
-                    'Where we keep our keys')
+                    _('Where we keep our keys'))
 flags.DEFINE_string('ca_path', '$state_path/CA',
-                    'Where we keep our root CA')
+                    _('Where we keep our root CA'))
 flags.DEFINE_boolean('use_project_ca', False,
-                     'Should we use a CA for each project?')
+                     _('Should we use a CA for each project?'))
 flags.DEFINE_string('user_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=%s-%s-%s',
-                    'Subject for certificate for users, '
-                    '%s for project, user, timestamp')
+                    _('Subject for certificate for users, '
+                    '%s for project, user, timestamp'))
 flags.DEFINE_string('project_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=project-ca-%s-%s',
-                    'Subject for certificate for projects, '
-                    '%s for project, timestamp')
+                    _('Subject for certificate for projects, '
+                    '%s for project, timestamp'))
 flags.DEFINE_string('vpn_cert_subject',
                     '/C=US/ST=California/L=MountainView/O=AnsoLabs/'
                     'OU=NovaDev/CN=project-vpn-%s-%s',
-                    'Subject for certificate for vpns, '
-                    '%s for project, timestamp')
+                    _('Subject for certificate for vpns, '
+                    '%s for project, timestamp'))
 
 
 def ca_folder(project_id=None):
@@ -251,7 +251,7 @@ def _sign_csr(csr_text, ca_folder):
     csrfile = open(inbound, "w")
     csrfile.write(csr_text)
     csrfile.close()
-    logging.debug("Flags path: %s", ca_folder)
+    logging.debug(_("Flags path: %s") % ca_folder)
     start = os.getcwd()
     # Change working dir to CA
     os.chdir(ca_folder)

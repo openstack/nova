@@ -42,13 +42,13 @@ from nova.api.ec2 import cloud
 FLAGS = flags.FLAGS
 flags.DEFINE_string('boot_script_template',
                     utils.abspath('cloudpipe/bootscript.template'),
-                    'Template for script to run on cloudpipe instance boot')
+                    _('Template for script to run on cloudpipe instance boot'))
 flags.DEFINE_string('dmz_net',
                     '10.0.0.0',
-                    'Network to push into openvpn config')
+                    _('Network to push into openvpn config'))
 flags.DEFINE_string('dmz_mask',
                     '255.255.255.0',
-                    'Netmask to push into openvpn config')
+                    _('Netmask to push into openvpn config'))
 
 
 LOG = logging.getLogger('nova-cloudpipe')
@@ -94,7 +94,7 @@ class CloudPipe(object):
         return encoded
 
     def launch_vpn_instance(self, project_id):
-        LOG.debug("Launching VPN for %s" % (project_id))
+        LOG.debug(_("Launching VPN for %s") % (project_id))
         project = self.manager.get_project(project_id)
         ctxt = context.RequestContext(user=project.project_manager,
                                       project=project)

@@ -24,6 +24,7 @@ import nova.image.service
 
 
 class Controller(wsgi.Controller):
+
     def __init__(self):
         pass
 

@@ -254,12 +254,12 @@ class AuthManager(object):
         # TODO(vish): check for valid timestamp
         (access_key, _sep, project_id) = access.partition(':')
 
-        logging.info('Looking up user: %r', access_key)
+        logging.info(_('Looking up user: %r'), access_key)
         user = self.get_user_from_access_key(access_key)
         logging.info('user: %r', user)
         if user == None:
-            raise exception.NotFound('No user found for access key %s' %
-                                     access_key)
+            raise exception.NotFound(_('No user found for access key %s')
+                                     % access_key)
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
@@ -268,12 +268,12 @@ class AuthManager(object):
 
         project = self.get_project(project_id)
         if project == None:
-            raise exception.NotFound('No project called %s could be found' %
-                                     project_id)
+            raise exception.NotFound(_('No project called %s could be found')
+                                     % project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
-            raise exception.NotFound('User %s is not a member of project %s' %
-                                     (user.id, project.id))
+            raise exception.NotFound(_('User %s is not a member of project %s')
+                                     % (user.id, project.id))
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
@@ -281,7 +281,7 @@ class AuthManager(object):
             logging.debug('expected_signature: %s', expected_signature)
             logging.debug('signature: %s', signature)
             if signature != expected_signature:
-                raise exception.NotAuthorized('Signature does not match')
+                raise exception.NotAuthorized(_('Signature does not match'))
         elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
@@ -291,7 +291,7 @@ class AuthManager(object):
             logging.debug('expected_signature: %s', expected_signature)
             logging.debug('signature: %s', signature)
             if signature != expected_signature:
-                raise exception.NotAuthorized('Signature does not match')
+                raise exception.NotAuthorized(_('Signature does not match'))
         return (user, project)
 
     def get_access_key(self, user, project):
@@ -361,7 +361,7 @@ class AuthManager(object):
         with self.driver() as drv:
             if role == 'projectmanager':
                 if not project:
-                    raise exception.Error("Must specify project")
+                    raise exception.Error(_("Must specify project"))
                 return self.is_project_manager(user, project)
 
             global_role = drv.has_role(User.safe_id(user),
@@ -395,9 +395,9 @@ class AuthManager(object):
         @param project: Project in which to add local role.
         """
         if role not in FLAGS.allowed_roles:
-            raise exception.NotFound("The %s role can not be found" % role)
+            raise exception.NotFound(_("The %s role can not be found") % role)
         if project is not None and role in FLAGS.global_roles:
-            raise exception.NotFound("The %s role is global only" % role)
+            raise exception.NotFound(_("The %s role is global only") % role)
         with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
@@ -666,7 +666,7 @@ class AuthManager(object):
                                   port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
-            logging.warn("No vpn data for project %s", pid)
+            logging.warn(_("No vpn data for project %s"), pid)
 
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(pid))
         zippy.close()
