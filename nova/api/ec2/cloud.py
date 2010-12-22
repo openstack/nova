@@ -114,7 +114,7 @@ class CloudController(object):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s", "sh genrootca.sh"))
+            utils.runthis(_("Generating root CA: %s"), "sh genrootca.sh")
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
