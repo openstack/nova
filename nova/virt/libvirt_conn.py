@@ -87,9 +87,6 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
-flags.DEFINE_string('console_dmz',
-                    'tonbuntu:8000',
-                    'location of console proxy')
 
 
 def get_connection(read_only):
@@ -426,8 +423,9 @@ class LibvirtConnection(object):
             % (utils.novadir(), ajaxterm_cmd, token, port)
 
         subprocess.Popen(cmd, shell=True)
-        return 'http://%s/?token=%s&host=%s&port=%s' \
-               % (FLAGS.console_dmz, token, host, port)
+        return {'token': token, 'host': host, 'port': port}
+        #return 'http://%s/?token=%s&host=%s&port=%s' \
+        #       % (FLAGS.console_dmz, token, host, port)
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety

@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-import datetime
 import os
 import sys
+import time
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -12,8 +12,9 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import utils
+from nova import exception
 from nova import flags
+from nova import utils
 from nova import rpc
 
 import exceptions
@@ -23,10 +24,13 @@ import urlparse
 FLAGS = flags.FLAGS
 from twisted.internet import reactor
 from twisted.internet import task
-from twisted.web import http
+from twisted.web import error, http
 from twisted.web.proxy import Proxy, ProxyRequest
+
+flags.DEFINE_integer('ajax_console_idle_timeout', 300, 
+                     'Seconds before idle connection destroyed')
  
-class AjaxProxyRequest(ProxyRequest):
+class AjaxConsoleProxyRequest(ProxyRequest):
     def process(self):
         if 'referer' in self.received_headers:
             auth_uri = self.received_headers['referer']
@@ -36,42 +40,63 @@ class AjaxProxyRequest(ProxyRequest):
         try:
             auth_params = urlparse.parse_qs(urlparse.urlparse(auth_uri).query)
             parsed_uri = urlparse.urlparse(self.uri)
+
+            auth_info = auth_params['token'][0]
+            auth_info  = AjaxConsoleProxy.tokens[auth_params['token'][0]]
+            args = auth_info['args'] 
+            auth_info['last_activity_at'] = time.time() 
+
             
-            self.uri = "http://%s:%s%s?%s"% (auth_params['host'][0], auth_params['port'][0], parsed_uri.path, parsed_uri.query)
+            self.uri = ("http://%s:%s%s?token=%s"% (
+                        str(args['host']),
+                        str(args['port']),
+                        parsed_uri.path,
+                        str(args['token'])))
 
             ProxyRequest.process(self)
         except (exceptions.KeyError):
-            pass
+            raise exception.NotAuthorized("Unauthorized Request")
 
-class AjaxProxy(Proxy):
-    tokens = {}
-    requestFactory = AjaxProxyRequest
+class AjaxConsoleProxy(Proxy):
+    #tokens = {}
+    tokens = {'key': {'args':'','last_activity_at':time.time()}}
+    requestFactory = AjaxConsoleProxyRequest
 
     def start(self):
         conn = rpc.Connection.instance(new=True)
         self.consumer = rpc.TopicConsumer(
                         connection=conn,
-                        topic=FLAGS.ajax_proxy_topic)
+                        topic=FLAGS.ajax_console_proxy_topic)
         self.consumer.register_callback(self)
 
         task.LoopingCall(self.age).start(1.0)
         task.LoopingCall(self.pollq).start(0.1)
 
         factory = http.HTTPFactory()
-        factory.protocol = AjaxProxy
+        factory.protocol = AjaxConsoleProxy
          
-        reactor.listenTCP(8000, factory)
+        port = urlparse.urlparse(FLAGS.ajax_console_proxy_url).port
+        reactor.listenTCP(port, factory)
         reactor.run()
 
     def age(self):
-        pass
+        now = time.time()
+        print now
+        to_delete = []
+        for k, v in AjaxConsoleProxy.tokens.items():
+            if now - v['last_activity_at'] > FLAGS.ajax_console_idle_timeout:
+                to_delete.append(k)
+
+        for k in to_delete:
+            print "del"
+            del AjaxConsoleProxy.tokens[k]
 
     def pollq(self):
         self.consumer.fetch(auto_ack=True, enable_callbacks=True)
  
     def __call__(self, data, message):
-        if data['method'] == 'authorize':
-            AjaxProxy.tokens['token'] = {'args': data['args'], 'born_at': datetime.datetime.now()}
+        if data['method'] == 'authorize_ajax_console':
+            AjaxConsoleProxy.tokens[data['args']['token']] = {'args': data['args'], 'born_at': time.time()}
 
 
 if __name__ == '__main__':
@@ -83,6 +108,6 @@ if __name__ == '__main__':
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
 
-    ajaxproxy = AjaxProxy()
+    ajaxproxy = AjaxConsoleProxy()
     ajaxproxy.start()
      

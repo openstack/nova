@@ -452,7 +452,11 @@ class CloudController(object):
                 "output": base64.b64encode(output)}
 
     def get_ajax_console(self, context, instance_id, **kwargs):
-        """Create an AJAX Console"""
+        """Get an AJAX Console
+
+        In order for this to work properly, a ttyS0 must be configured
+        in the instance
+        """
 
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
@@ -461,14 +465,17 @@ class CloudController(object):
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
-                          {"method": "get_ajax_console",
-                           "args": {"instance_id": instance_ref['id']}})
+                          {'method': 'get_ajax_console',
+                           'args': {'instance_id': instance_ref['id']}})
 
-        rpc.cast(context, '%s' % FLAGS.ajax_proxy_topic,
-                 {"method": "authorize",
-                  "args": {"token": "token", "host": "host", "port":8000}})
+        # TODO: make this a call
+        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
+                 {'method': 'authorize_ajax_console',
+                  'args': {'token': output['token'], 'host': output['host'], 
+                  'port':output['port']}})
 
-        return {"url": output }
+        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+                output['token'])}
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if context.user.is_admin():
