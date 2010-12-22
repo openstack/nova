@@ -30,9 +30,7 @@ import routes
 import webob.dec
 
 from nova import flags
-from nova import utils
 from nova import wsgi
-from nova.api import cloudpipe
 from nova.api import ec2
 from nova.api import openstack
 from nova.api.ec2 import metadatarequesthandler
@@ -42,6 +40,7 @@ flags.DEFINE_string('osapi_subdomain', 'api',
                     'subdomain running the OpenStack API')
 flags.DEFINE_string('ec2api_subdomain', 'ec2',
                     'subdomain running the EC2 API')
+
 FLAGS = flags.FLAGS
 
 
@@ -81,7 +80,6 @@ class API(wsgi.Router):
             mapper.connect('%s/{path_info:.*}' % s, controller=mrh,
                            conditions=ec2api_subdomain)
 
-        mapper.connect("/cloudpipe/{path_info:.*}", controller=cloudpipe.API())
         super(API, self).__init__(mapper)
 
     @webob.dec.wsgify

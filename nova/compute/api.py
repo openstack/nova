@@ -57,6 +57,7 @@ class ComputeAPI(base.Base):
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
+                         user_data=None,
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
@@ -120,12 +121,13 @@ class ComputeAPI(base.Base):
             'local_gb': type_data['local_gb'],
             'display_name': display_name,
             'display_description': description,
+            'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data}
 
         elevated = context.elevated()
         instances = []
-        logging.debug("Going to run %s instances...", num_instances)
+        logging.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
@@ -162,7 +164,7 @@ class ComputeAPI(base.Base):
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
 
-            logging.debug("Casting to scheduler for %s/%s's instance %s",
+            logging.debug(_("Casting to scheduler for %s/%s's instance %s"),
                           context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
@@ -209,12 +211,12 @@ class ComputeAPI(base.Base):
             instance = self.db.instance_get_by_internal_id(context,
                                                            instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found during terminate",
+            logging.warning(_("Instance %d was not found during terminate"),
                             instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning("Instance %d is already being terminated",
+            logging.warning(_("Instance %d is already being terminated"),
                             instance_id)
             return
 
@@ -228,7 +230,7 @@ class ComputeAPI(base.Base):
         address = self.db.instance_get_floating_address(context,
                                                         instance['id'])
         if address:
-            logging.debug("Disassociating address %s" % address)
+            logging.debug(_("Disassociating address %s") % address)
             # NOTE(vish): Right now we don't really care if the ip is
             #             disassociated.  We may need to worry about
             #             checking this later.  Perhaps in the scheduler?
@@ -239,7 +241,7 @@ class ComputeAPI(base.Base):
 
         address = self.db.instance_get_fixed_address(context, instance['id'])
         if address:
-            logging.debug("Deallocating address %s" % address)
+            logging.debug(_("Deallocating address %s") % address)
             # NOTE(vish): Currently, nothing needs to be done on the
             #             network node until release. If this changes,
             #             we will need to cast here.

@@ -47,7 +47,7 @@ class BasicRateLimiting(object):
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
             exc = webob.exc.HTTPRequestEntityTooLarge(
-                    explanation='Too many requests.',
+                    explanation=('Too many requests.'),
                     headers={'Retry-After': time.time() + delay})
             raise faults.Fault(exc)
         return application

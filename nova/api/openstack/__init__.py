@@ -70,7 +70,7 @@ class API(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            logging.warn("Caught error: %s" % str(ex))
+            logging.warn(_("Caught error: %s") % str(ex))
             logging.debug(traceback.format_exc())
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
@@ -113,7 +113,12 @@ class RateLimitingMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-       return self._limiting_driver.limited_request(req, self.application) 
+        """Rate limit the request.
+
+        If the request should be rate limited, return a 413 status with a
+        Retry-After header giving the time when the request would succeed.
+        """
+        return self._limiting_driver.limited_request(req, self.application) 
 
 
 class APIRouter(wsgi.Router):
