@@ -92,16 +92,63 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
         self._session.wait_for_task(instance.id, task)
 
-    def reset_root_password(self, instance):
-        """Reset the root/admin password on the VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
+    def _get_vm_opaque_ref(self, instance_or_vm):
+        try:
+            instance_name = instance_or_vm.name
+            vm = VMHelper.lookup(self._session, instance_name)
+        except AttributeError:
+            # A vm opaque ref was passed
+            vm = instance_or_vm
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
-        #### TODO: (dabo) Need to figure out the correct command to 
-        ####       write to the xenstore.
-        task = self._session.call_xenapi('VM.get_xenstore_data', vm)
-        self._session.wait_for_task(task)
+        return vm
+
+    def remove_from_xenstore(self, instance_or_vm, keys):
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        for key in keys:
+            self._session._session.xenapi_request('VM.remove_from_xenstore_data',
+                    (vm, key))
+
+    def read_from_xenstore(self, instance_or_vm, keys=None):
+        """Returns the xenstore data for the specified VM instance as
+        a dict. Accepts an optional list of keys; if the list of keys is 
+        passed, the returned dict is filtered to only return the values
+        for those keys.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        ret = self._session._session.xenapi_request('VM.get_xenstore_data', (vm, ))
+        if keys:
+            allkeys = set(ret.keys())
+            badkeys = allkeys.difference(keys)
+            for k in badkeys:
+                ret.pop(k)
+        return ret
+
+    def add_to_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and adds it to the xenstore record for
+        the given vm instance. Existing data is preserved, but any
+        existing values for the mapping's keys are overwritten.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        current_data = self.read_from_xenstore(vm)
+        current_data.update(mapping)
+        self.write_to_xenstore(vm, current_data)
+
+    def write_to_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and writes it to the xenstore record for
+        the given vm instance. Any existing data is overwritten.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        self._session._session.xenapi_request('VM.set_xenstore_data',
+                (vm, mapping))
+
+    def reset_root_password(self, instance):
+        """Reset the root/admin password on the VM instance"""
+        self.add_to_xenstore(instance, {"reset_root_password": "requested"})
+        self.add_to_xenstore(instance, {"TEST": "OMG!"})
+        import time
+        self.add_to_xenstore(instance, {"timestamp": time.ctime()})
+
 
     def destroy(self, instance):
         """Destroy VM instance"""
