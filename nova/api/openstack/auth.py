@@ -20,7 +20,7 @@ FLAGS = flags.FLAGS
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the openstack API request or return an HTTP Forbidden."""
 
-    def __init__(self, application):
+    def __init__(self, application, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)

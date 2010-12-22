@@ -29,6 +29,8 @@ from nova import exception as exc
 from nova import flags
 from nova import utils
 import nova.api.openstack.auth
+from nova.api.openstack import auth
+from nova.api.openstack import ratelimiting
 from nova.image import glance
 from nova.image import local
 from nova.image import service
@@ -52,10 +54,11 @@ class FakeRouter(Router):
         return res
 
 
-def fake_auth_init(self):
+def fake_auth_init(self, application):
     self.db = FakeAuthDatabase()
     self.context = Context()
     self.auth = FakeAuthManager()
+    self.application = application
 
 
 @webob.dec.wsgify
@@ -83,21 +86,21 @@ def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
 
-    stubs.Set(nova.api.openstack.AuthMiddleware,
+    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
         '__init__', fake_auth_init)
-    stubs.Set(nova.api.openstack.AuthMiddleware,
+    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
         '__call__', fake_wsgi)
 
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(nova.api.openstack.RateLimitingMiddleware, self).__init__(app)
+        super(nova.api.openstack.ratelimiting.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
