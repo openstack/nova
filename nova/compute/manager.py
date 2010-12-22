@@ -156,10 +156,6 @@ class ComputeManager(manager.Manager):
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
-
-
-
-    # WORKING CODE
     @exception.wrap_exception
     def reset_root_password(self, context, instance_id):
         """Reset the root/admin password for  an instance on this server."""
@@ -180,13 +176,9 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'resetting_password')
-        #TODO: (dabo) not sure how we will implement this yet.
+        #### TODO: (dabo) not sure how we will implement this yet.
         self.driver.reset_root_password(instance_ref)
         self._update_state(context, instance_id)
-
-
-
-
 
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
