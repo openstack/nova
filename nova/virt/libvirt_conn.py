@@ -392,17 +392,18 @@ class LibvirtConnection(object):
                 port = random.randint(10000, 12000)
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-                cmd = 'netcat 0.0.0.0 %s -w 1 < /dev/null || echo free' % (port)
+                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
                 stdout, stderr = utils.execute(cmd)
                 if stdout.strip() == 'free':
                     return port
             raise Exception('Unable to find an open port')
 
         def get_pty_for_instance(instance_name):
-            stdout, stderr = utils.execute('virsh dumpxml %s' % instance_name)
-            dom = minidom.parseString(stdout)
-            serials = dom.getElementsByTagName('serial')
-            for serial in serials:
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            dom = minidom.parseString(xml)
+
+            for serial in dom.getElementsByTagName('serial'):
                 if serial.getAttribute('type') == 'pty':
                     source = serial.getElementsByTagName('source')[0]
                     return source.getAttribute('path')
