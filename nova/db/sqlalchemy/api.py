@@ -749,6 +749,18 @@ def instance_add_security_group(context, instance_id, security_group_id):
         instance_ref.save(session=session)
 
 
+@require_context
+def instance_action_create(context, values):
+    """Create an instance action from the values dictionary."""
+    action_ref = models.InstanceActions()
+    action_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        action_ref.save(session=session)
+    return action_ref
+
+
 ###################
 
 
