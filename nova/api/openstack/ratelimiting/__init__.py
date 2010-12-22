@@ -6,6 +6,7 @@ import urllib
 import webob.dec
 import webob.exc
 
+from nova import wsgi
 from nova.api.openstack import faults
 
 # Convenience constants for the limits dictionary passed to Limiter().

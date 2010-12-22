@@ -27,6 +27,8 @@ from webob import Request
 
 FLAGS = flags.FLAGS
 
+RateLimitingMiddleware = utils.import_class(FLAGS.os_api_ratelimiting)
+
 class RateLimitingMiddlewareTest(unittest.TestCase):
 
     def test_get_action_name(self):

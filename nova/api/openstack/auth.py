@@ -12,6 +12,7 @@ from nova import db
 from nova import flags
 from nova import manager
 from nova import utils
+from nova import wsgi
 from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
