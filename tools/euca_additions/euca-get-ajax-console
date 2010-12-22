@@ -3,7 +3,6 @@
 import getopt
 import os
 import sys
-sys.path.append('/root/anso/deploy')
 import nova
 from euca2ools import Euca2ool, InstanceValidationError, Util, ConnectionFailed
 from nova.boto_extensions import *
