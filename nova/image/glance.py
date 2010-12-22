@@ -24,6 +24,7 @@ import urlparse
 
 import webob.exc
 
+from nova.compute import api as compute_api
 from nova import utils
 from nova import flags
 from nova import exception
@@ -202,7 +203,9 @@ class GlanceImageService(nova.image.service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        return self.parallax.add_image_metadata(data)
+        instance_id = data["instance_id"]
+        name = data["name"]
+        compute_api.ComputeAPI().snapshot(context, instance_id, name)
 
     def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.

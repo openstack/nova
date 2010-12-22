@@ -183,13 +183,11 @@ class VMHelper():
         return template_vm_ref, [vdi_uuid, parent_uuid]
 
     @classmethod
-    def upload_image(cls, session, vdi_uuids, glance_label):
-        logging.debug("Asking xapi to upload %s as '%s'", vdi_uuids,
-                      glance_label)
+    def upload_image(cls, session, vdi_uuids, image_name):
+        logging.debug("Asking xapi to upload %s as '%s'", vdi_uuids, image_name)
 
         params = {'vdi_uuids': vdi_uuids, 
-                  'glance_label': glance_label,
-                  'glance_storage_location': FLAGS.glance_storage_location,
+                  'image_name': image_name,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port}
 

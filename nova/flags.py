@@ -214,7 +214,6 @@ DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '127.0.0.1', 's3 host')
 DEFINE_integer('glance_port', 9292, 'glance port')
 DEFINE_string('glance_host', '127.0.0.1', 'glance host')
-DEFINE_string('glance_storage_location', 'swift://username:api_key@auth.api.rackspacecloud.com/v1.0/cloudservers', 'glance storage location')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
@@ -236,6 +235,7 @@ DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
               'Url to ec2 api server')
 
+DEFINE_string('default_project', 'openstack', 'default project for openstack')
 DEFINE_string('default_image', 'ami-11111',
               'default image to use, testing only')
 DEFINE_string('default_instance_type', 'm1.small',

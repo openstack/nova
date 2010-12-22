@@ -66,9 +66,11 @@ class Controller(wsgi.Controller):
         raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
-        # Only public images are supported for now, so a request to
-        # make a backup of a server cannot be supproted.
-        raise faults.Fault(exc.HTTPNotFound())
+        ctxt = req.environ['nova.context']
+        env = self._deserialize(req.body, req)
+        data = {'instance_id': env["image"]["serverId"],
+                'name': env["image"]["name"] }
+        return dict(image=self._service.create(ctxt, data))
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that
