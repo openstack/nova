@@ -42,6 +42,7 @@ import shutil
 import random
 import subprocess
 import uuid
+from xml.dom import minidom
 
 
 from eventlet import event
@@ -86,6 +87,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_string('console_dmz',
+                    'tonbuntu:8000',
+                    'location of console proxy')
 
 
 def get_connection(read_only):
@@ -389,13 +393,13 @@ class LibvirtConnection(object):
         def get_open_port():
             for i in xrange(0,100): # don't loop forever
                 port = random.randint(10000, 12000)
-                cmd = 'netcat 0.0.0.0 %s -w 2 < /dev/null' % (port,)
-                # this Popen  will exit with 0 only if the port is in use,
+                # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-                port_is_unused = (subprocess.Popen(cmd, shell=True).wait() != 0)
-                if port_is_unused:
+                cmd = 'netcat 0.0.0.0 %s -w 1 < /dev/null || echo free' % (port)
+                stdout, stderr = utils.execute(cmd)
+                if stdout.strip() == 'free':
                     return port
-            raise 'Unable to find an open port'
+            raise Exception('Unable to find an open port')
 
         def get_pty_for_instance(instance_name):
             stdout, stderr = utils.execute('virsh dumpxml %s' % instance_name)
