@@ -464,6 +464,10 @@ class CloudController(object):
                           {"method": "get_ajax_console",
                            "args": {"instance_id": instance_ref['id']}})
 
+        rpc.cast(context, '%s' % FLAGS.ajax_proxy_topic,
+                 {"method": "authorize",
+                  "args": {"token": "token", "host": "host", "port":8000}})
+
         return {"url": output }
 
     def describe_volumes(self, context, volume_id=None, **kwargs):

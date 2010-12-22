@@ -1,8 +1,30 @@
 #!/usr/bin/python
+
+import datetime
+import os
+import sys
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
+from nova import utils
+from nova import flags
+from nova import rpc
+
+import exceptions
+import logging
+import urlparse
+
+FLAGS = flags.FLAGS
 from twisted.internet import reactor
+from twisted.internet import task
 from twisted.web import http
 from twisted.web.proxy import Proxy, ProxyRequest
-import urlparse, exceptions
  
 class AjaxProxyRequest(ProxyRequest):
     def process(self):
@@ -20,12 +42,47 @@ class AjaxProxyRequest(ProxyRequest):
             ProxyRequest.process(self)
         except (exceptions.KeyError):
             pass
- 
+
 class AjaxProxy(Proxy):
+    tokens = {}
     requestFactory = AjaxProxyRequest
+
+    def start(self):
+        conn = rpc.Connection.instance(new=True)
+        self.consumer = rpc.TopicConsumer(
+                        connection=conn,
+                        topic=FLAGS.ajax_proxy_topic)
+        self.consumer.register_callback(self)
+
+        task.LoopingCall(self.age).start(1.0)
+        task.LoopingCall(self.pollq).start(0.1)
+
+        factory = http.HTTPFactory()
+        factory.protocol = AjaxProxy
+         
+        reactor.listenTCP(8000, factory)
+        reactor.run()
+
+    def age(self):
+        pass
+
+    def pollq(self):
+        self.consumer.fetch(auto_ack=True, enable_callbacks=True)
  
-factory = http.HTTPFactory()
-factory.protocol = AjaxProxy
- 
-reactor.listenTCP(8000, factory)
-reactor.run()
+    def __call__(self, data, message):
+        if data['method'] == 'authorize':
+            AjaxProxy.tokens['token'] = {'args': data['args'], 'born_at': datetime.datetime.now()}
+
+
+if __name__ == '__main__':
+    utils.default_flagfile()
+    FLAGS(sys.argv)
+
+    formatter = logging.Formatter('(%(name)s): %(levelname)s %(message)s')
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logging.getLogger().addHandler(handler)
+
+    ajaxproxy = AjaxProxy()
+    ajaxproxy.start()
+     
