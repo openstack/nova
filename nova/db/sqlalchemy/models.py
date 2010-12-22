@@ -248,7 +248,6 @@ class InstanceActions(BASE, NovaBase):
     instance_id = Column(Integer, ForeignKey('instances.id'))
 
     action = Column(String(255))
-    result = Column(Boolean)
     error = Column(Text)
 
 
