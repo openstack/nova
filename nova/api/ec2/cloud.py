@@ -751,7 +751,7 @@ class CloudController(object):
             kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
-            kernel_id=kwargs.get('kernel_id'),
+            kernel_id=kwargs.get('kernel_id', None),
             ramdisk_id=kwargs.get('ramdisk_id'),
             display_name=kwargs.get('display_name'),
             description=kwargs.get('display_description'),
