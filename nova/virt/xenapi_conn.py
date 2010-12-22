@@ -95,10 +95,10 @@ def get_connection(_):
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
     if not url or password is None:
-        raise Exception('Must specify xenapi_connection_url, '
-                        'xenapi_connection_username (optionally), and '
-                        'xenapi_connection_password to use '
-                        'connection_type=xenapi')
+        raise Exception(_('Must specify xenapi_connection_url, '
+                          'xenapi_connection_username (optionally), and '
+                          'xenapi_connection_password to use '
+                          'connection_type=xenapi'))
     return XenAPIConnection(url, username, password)
 
 
@@ -210,7 +210,7 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                logging.info("Task [%s] %s status: success    %s" % (
+                logging.info(_("Task [%s] %s status: success    %s") % (
                     name,
                     task,
                     result))
@@ -218,7 +218,7 @@ class XenAPISession(object):
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                logging.warn("Task [%s] %s status: %s    %s" % (
+                logging.warn(_("Task [%s] %s status: %s    %s") % (
                     name,
                     task,
                     status,
@@ -235,7 +235,7 @@ def _unwrap_plugin_exceptions(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except XenAPI.Failure, exc:
-        logging.debug("Got exception: %s", exc)
+        logging.debug(_("Got exception: %s"), exc)
         if (len(exc.details) == 4 and
             exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
             exc.details[2] == 'Failure'):
@@ -248,7 +248,7 @@ def _unwrap_plugin_exceptions(func, *args, **kwargs):
         else:
             raise
     except xmlrpclib.ProtocolError, exc:
-        logging.debug("Got exception: %s", exc)
+        logging.debug(_("Got exception: %s"), exc)
         raise
 
 

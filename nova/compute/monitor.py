@@ -255,7 +255,7 @@ class Instance(object):
         Updates the instances statistics and stores the resulting graphs
         in the internal object store on the cloud controller.
         """
-        logging.debug('updating %s...', self.instance_id)
+        logging.debug(_('updating %s...'), self.instance_id)
 
         try:
             data = self.fetch_cpu_stats()
@@ -285,7 +285,7 @@ class Instance(object):
             graph_disk(self, '1w')
             graph_disk(self, '1m')
         except Exception:
-            logging.exception('unexpected error during update')
+            logging.exception(_('unexpected error during update'))
 
         self.last_updated = utcnow()
 
@@ -351,7 +351,7 @@ class Instance(object):
                 rd += rd_bytes
                 wr += wr_bytes
             except TypeError:
-                logging.error('Cannot get blockstats for "%s" on "%s"',
+                logging.error(_('Cannot get blockstats for "%s" on "%s"'),
                               disk, self.instance_id)
                 raise
 
@@ -373,7 +373,7 @@ class Instance(object):
                 rx += stats[0]
                 tx += stats[4]
             except TypeError:
-                logging.error('Cannot get ifstats for "%s" on "%s"',
+                logging.error(_('Cannot get ifstats for "%s" on "%s"'),
                               interface, self.instance_id)
                 raise
 
@@ -408,7 +408,7 @@ class InstanceMonitor(object, service.Service):
         try:
             conn = virt_connection.get_connection(read_only=True)
         except Exception, exn:
-            logging.exception('unexpected exception getting connection')
+            logging.exception(_('unexpected exception getting connection'))
             time.sleep(FLAGS.monitoring_instances_delay)
             return
 
@@ -423,7 +423,7 @@ class InstanceMonitor(object, service.Service):
             if not domain_id in self._instances:
                 instance = Instance(conn, domain_id)
                 self._instances[domain_id] = instance
-                logging.debug('Found instance: %s', domain_id)
+                logging.debug(_('Found instance: %s'), domain_id)
 
         for key in self._instances.keys():
             instance = self._instances[key]

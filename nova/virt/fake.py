@@ -175,7 +175,8 @@ class FakeConnection(object):
         knowledge of the instance
         """
         if instance_name not in self.instances:
-            raise exception.NotFound("Instance %s Not Found" % instance_name)
+            raise exception.NotFound(_("Instance %s Not Found")
+                                     % instance_name)
         i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
