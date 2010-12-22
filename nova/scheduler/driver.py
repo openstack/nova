@@ -37,6 +37,11 @@ class NoValidHost(exception.Error):
     pass
 
 
+class WillNotSchedule(exception.Error):
+    """The specified host is not up or doesn't exist."""
+    pass
+
+
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""
 

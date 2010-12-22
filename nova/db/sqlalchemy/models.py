@@ -148,7 +148,7 @@ class Service(BASE, NovaBase):
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
-    disabled = Column(Boolean, default=False)
+    disabled = Column(Boolean, default=True)
 
 
 class Instance(BASE, NovaBase):
@@ -209,6 +209,8 @@ class Instance(BASE, NovaBase):
     scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
+
+    availability_zone = Column(String(255))
 
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
