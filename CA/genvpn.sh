@@ -1,3 +1,4 @@
+#!/bin/bash
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -16,27 +17,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-import unittest
+# This gets zipped and run on the cloudpipe-managed OpenVPN server
+NAME=$1
+SUBJ=$2
 
-from nova import flags
-from nova import test
-from nova import validate
+mkdir -p projects/$NAME
+cd projects/$NAME
 
+# generate a server priv key
+openssl genrsa -out server.key 2048
 
-class ValidationTestCase(test.TrialTestCase):
-    def setUp(self):
-        super(ValidationTestCase, self).setUp()
+# generate a server CSR
+openssl req -new -key server.key -out server.csr -batch -subj "$SUBJ"
 
-    def tearDown(self):
-        super(ValidationTestCase, self).tearDown()
-
-    def test_type_validation(self):
-        self.assertTrue(type_case("foo", 5, 1))
-        self.assertRaises(TypeError, type_case, "bar", "5", 1)
-        self.assertRaises(TypeError, type_case, None, 5, 1)
-
-
-@validate.typetest(instanceid=str, size=int, number_of_instances=int)
-def type_case(instanceid, size, number_of_instances):
-    return True
+novauid=`getent passwd nova | awk -F: '{print $3}'`
+if [ ! -z "${novauid}" ] && [ "`id -u`" != "${novauid}" ]; then
+    sudo chown -R nova:nogroup .
+fi

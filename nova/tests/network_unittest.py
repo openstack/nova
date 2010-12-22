@@ -26,6 +26,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import service
 from nova import test
 from nova import utils
 from nova.auth import manager
@@ -33,13 +34,14 @@ from nova.auth import manager
 FLAGS = flags.FLAGS
 
 
-class NetworkTestCase(test.TrialTestCase):
+class NetworkTestCase(test.TestCase):
     """Test cases for network code"""
     def setUp(self):
         super(NetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
+                   fake_call=True,
                    fake_network=True,
                    network_size=16,
                    num_networks=5)
@@ -56,16 +58,13 @@ class NetworkTestCase(test.TrialTestCase):
             # create the necessary network data for the project
             user_context = context.RequestContext(project=self.projects[i],
                                                      user=self.user)
-            network_ref = self.network.get_network(user_context)
-            self.network.set_network_host(context.get_admin_context(),
-                                          network_ref['id'])
+            host = self.network.get_network_host(user_context.elevated())
         instance_ref = self._create_instance(0)
         self.instance_id = instance_ref['id']
         instance_ref = self._create_instance(1)
         self.instance2_id = instance_ref['id']
 
     def tearDown(self):
-        super(NetworkTestCase, self).tearDown()
         # TODO(termie): this should really be instantiating clean datastores
         #               in between runs, one failure kills all the tests
         db.instance_destroy(context.get_admin_context(), self.instance_id)
@@ -73,6 +72,7 @@ class NetworkTestCase(test.TrialTestCase):
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
+        super(NetworkTestCase, self).tearDown()
 
     def _create_instance(self, project_num, mac=None):
         if not mac:

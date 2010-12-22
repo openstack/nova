@@ -20,14 +20,18 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import urllib
+from xml.dom import minidom
 
-from twisted.internet import defer
-
+from nova import flags
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+
+
+FLAGS = flags.FLAGS
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -43,13 +47,22 @@ class VMHelper():
     """
     The class that wraps the helper methods together.
     """
+
     def __init__(self):
+        return
+
+    @classmethod
+    def late_import(cls):
+        """
+        Load the XenAPI module in for helper class, if required.
+        This is to avoid to install the XenAPI library when other
+        hypervisors are used
+        """
         global XenAPI
         if XenAPI is None:
             XenAPI = __import__('XenAPI')
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vm(cls, session, instance, kernel, ramdisk):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference."""
@@ -87,12 +100,11 @@ class VMHelper():
             'other_config': {},
             }
         logging.debug('Created VM %s...', instance.name)
-        vm_ref = yield session.call_xenapi('VM.create', rec)
+        vm_ref = session.call_xenapi('VM.create', rec)
         logging.debug('Created VM %s as %s.', instance.name, vm_ref)
-        defer.returnValue(vm_ref)
+        return vm_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
@@ -111,13 +123,12 @@ class VMHelper():
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
         logging.debug('Creating VBD for VM %s, VDI %s ... ', vm_ref, vdi_ref)
-        vbd_ref = yield session.call_xenapi('VBD.create', vbd_rec)
+        vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
         logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
                       vdi_ref)
-        defer.returnValue(vbd_ref)
+        return vbd_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def create_vif(cls, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
@@ -133,13 +144,12 @@ class VMHelper():
         vif_rec['qos_algorithm_params'] = {}
         logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
                       network_ref)
-        vif_ref = yield session.call_xenapi('VIF.create', vif_rec)
+        vif_ref = session.call_xenapi('VIF.create', vif_rec)
         logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
                       vm_ref, network_ref)
-        defer.returnValue(vif_ref)
+        return vif_ref
 
     @classmethod
-    @defer.inlineCallbacks
     def fetch_image(cls, session, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
@@ -156,12 +166,11 @@ class VMHelper():
         args['password'] = user.secret
         if use_sr:
             args['add_partition'] = 'true'
-        task = yield session.async_call_plugin('objectstore', fn, args)
-        uuid = yield session.wait_for_task(task)
-        defer.returnValue(uuid)
+        task = session.async_call_plugin('objectstore', fn, args)
+        uuid = session.wait_for_task(task)
+        return uuid
 
     @classmethod
-    @utils.deferredToThread
     def lookup(cls, session, i):
         """ Look the instance i up, and returns it if available """
         return VMHelper.lookup_blocking(session, i)
@@ -179,7 +188,6 @@ class VMHelper():
             return vms[0]
 
     @classmethod
-    @utils.deferredToThread
     def lookup_vm_vdis(cls, session, vm):
         """ Look for the VDIs that are attached to the VM """
         return VMHelper.lookup_vm_vdis_blocking(session, vm)
@@ -214,3 +222,36 @@ class VMHelper():
                 'mem': long(record['memory_dynamic_max']) >> 10,
                 'num_cpu': record['VCPUs_max'],
                 'cpu_time': 0}
+
+    @classmethod
+    def compile_diagnostics(cls, session, record):
+        """Compile VM diagnostics data"""
+        try:
+            host = session.get_xenapi_host()
+            host_ip = session.get_xenapi().host.get_record(host)["address"]
+            diags = {}
+            xml = get_rrd(host_ip, record["uuid"])
+            if xml:
+                rrd = minidom.parseString(xml)
+                for i, node in enumerate(rrd.firstChild.childNodes):
+                    # We don't want all of the extra garbage
+                    if i >= 3 and i <= 11:
+                        ref = node.childNodes
+                        # Name and Value
+                        diags[ref[0].firstChild.data] = ref[6].firstChild.data
+            return diags
+        except XenAPI.Failure as e:
+            return {"Unable to retrieve diagnostics": e}
+
+
+def get_rrd(host, uuid):
+    """Return the VM RRD XML as a string"""
+    try:
+        xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
+            FLAGS.xenapi_connection_username,
+            FLAGS.xenapi_connection_password,
+            host,
+            uuid))
+        return xml.read()
+    except IOError:
+        return None

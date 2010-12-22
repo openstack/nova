@@ -176,7 +176,7 @@ class LdapDriver(object):
                 self.conn.modify_s(self.__uid_to_dn(name), attr)
                 return self.get_user(name)
             else:
-                raise exception.NotFound("LDAP object for %s doesn't exist"
+                raise exception.NotFound(_("LDAP object for %s doesn't exist")
                                          % name)
         else:
             attr = [
@@ -199,11 +199,12 @@ class LdapDriver(object):
                        description=None, member_uids=None):
         """Create a project"""
         if self.__project_exists(name):
-            raise exception.Duplicate("Project can't be created because "
-                                      "project %s already exists" % name)
+            raise exception.Duplicate(_("Project can't be created because "
+                                        "project %s already exists") % name)
         if not self.__user_exists(manager_uid):
-            raise exception.NotFound("Project can't be created because "
-                                     "manager %s doesn't exist" % manager_uid)
+            raise exception.NotFound(_("Project can't be created because "
+                                       "manager %s doesn't exist")
+                                     % manager_uid)
         manager_dn = self.__uid_to_dn(manager_uid)
         # description is a required attribute
         if description is None:
@@ -212,8 +213,8 @@ class LdapDriver(object):
         if member_uids is not None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
-                    raise exception.NotFound("Project can't be created "
-                                             "because user %s doesn't exist"
+                    raise exception.NotFound(_("Project can't be created "
+                                               "because user %s doesn't exist")
                                              % member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         # always add the manager as a member because members is required
@@ -235,9 +236,9 @@ class LdapDriver(object):
         attr = []
         if manager_uid:
             if not self.__user_exists(manager_uid):
-                raise exception.NotFound("Project can't be modified because "
-                                         "manager %s doesn't exist" %
-                                         manager_uid)
+                raise exception.NotFound(_("Project can't be modified because "
+                                           "manager %s doesn't exist")
+                                         % manager_uid)
             manager_dn = self.__uid_to_dn(manager_uid)
             attr.append((self.ldap.MOD_REPLACE, LdapDriver.project_attribute,
                          manager_dn))
@@ -472,8 +473,8 @@ class LdapDriver(object):
             raise exception.NotFound("The group at dn %s doesn't exist" %
                                      group_dn)
         if self.__is_in_group(uid, group_dn):
-            raise exception.Duplicate("User %s is already a member of "
-                                      "the group %s" % (uid, group_dn))
+            raise exception.Duplicate(_("User %s is already a member of "
+                                        "the group %s") % (uid, group_dn))
         attr = [(self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))]
         self.conn.modify_s(group_dn, attr)
 
@@ -501,8 +502,8 @@ class LdapDriver(object):
         try:
             self.conn.modify_s(group_dn, attr)
         except self.ldap.OBJECT_CLASS_VIOLATION:
-            logging.debug("Attempted to remove the last member of a group. "
-                          "Deleting the group at %s instead.", group_dn)
+            logging.debug(_("Attempted to remove the last member of a group. "
+                            "Deleting the group at %s instead."), group_dn)
             self.__delete_group(group_dn)
 
     def __remove_from_all(self, uid):
@@ -522,7 +523,8 @@ class LdapDriver(object):
     def __delete_group(self, group_dn):
         """Delete Group"""
         if not self.__group_exists(group_dn):
-            raise exception.NotFound("Group at dn %s doesn't exist" % group_dn)
+            raise exception.NotFound(_("Group at dn %s doesn't exist")
+                                     % group_dn)
         self.conn.delete_s(group_dn)
 
     def __delete_roles(self, project_dn):

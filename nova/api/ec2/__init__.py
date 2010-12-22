@@ -26,8 +26,8 @@ import webob
 import webob.dec
 import webob.exc
 
-from nova import exception
 from nova import context
+from nova import exception
 from nova import flags
 from nova import wsgi
 from nova.api.ec2 import apirequest
@@ -37,16 +37,79 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_boolean('use_lockout', False,
+                     'Whether or not to use lockout middleware.')
+flags.DEFINE_integer('lockout_attempts', 5,
+                     'Number of failed auths before lockout.')
+flags.DEFINE_integer('lockout_minutes', 15,
+                     'Number of minutes to lockout if triggered.')
+flags.DEFINE_integer('lockout_window', 15,
+                     'Number of minutes for lockout window.')
+flags.DEFINE_list('lockout_memcached_servers', None,
+                  'Memcached servers or None for in process cache.')
+
+
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
 
 
 class API(wsgi.Middleware):
-
     """Routing for all EC2 API requests."""
 
     def __init__(self):
         self.application = Authenticate(Router(Authorizer(Executor())))
+        if FLAGS.use_lockout:
+            self.application = Lockout(self.application)
+
+
+class Lockout(wsgi.Middleware):
+    """Lockout for x minutes on y failed auths in a z minute period.
+
+    x = lockout_timeout flag
+    y = lockout_window flag
+    z = lockout_attempts flag
+
+    Uses memcached if lockout_memcached_servers flag is set, otherwise it
+    uses a very simple in-proccess cache. Due to the simplicity of
+    the implementation, the timeout window is started with the first
+    failed request, so it will block if there are x failed logins within
+    that period.
+
+    There is a possible race condition where simultaneous requests could
+    sneak in before the lockout hits, but this is extremely rare and would
+    only result in a couple of extra failed attempts."""
+
+    def __init__(self, application):
+        """middleware can use fake for testing."""
+        if FLAGS.lockout_memcached_servers:
+            import memcache
+        else:
+            from nova import fakememcache as memcache
+        self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+                                  debug=0)
+        super(Lockout, self).__init__(application)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        access_key = str(req.params['AWSAccessKeyId'])
+        failures_key = "authfailures-%s" % access_key
+        failures = int(self.mc.get(failures_key) or 0)
+        if failures >= FLAGS.lockout_attempts:
+            detail = "Too many failed authentications."
+            raise webob.exc.HTTPForbidden(detail=detail)
+        res = req.get_response(self.application)
+        if res.status_int == 403:
+            failures = self.mc.incr(failures_key)
+            if failures is None:
+                # NOTE(vish): To use incr, failures has to be a string.
+                self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
+            elif failures >= FLAGS.lockout_attempts:
+                _log.warn('Access key %s has had %d failed authentications'
+                          ' and will be locked out for %d minutes.' %
+                          (access_key, failures, FLAGS.lockout_minutes))
+                self.mc.set(failures_key, str(failures),
+                            time=FLAGS.lockout_minutes * 60)
+        return res
 
 
 class Authenticate(wsgi.Middleware):
@@ -77,7 +140,7 @@ class Authenticate(wsgi.Middleware):
                     req.host,
                     req.path)
         except exception.Error, ex:
-            logging.debug("Authentication Failure: %s" % ex)
+            logging.debug(_("Authentication Failure: %s") % ex)
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -120,9 +183,9 @@ class Router(wsgi.Middleware):
         except:
             raise webob.exc.HTTPBadRequest()
 
-        _log.debug('action: %s' % action)
+        _log.debug(_('action: %s') % action)
         for key, value in args.items():
-            _log.debug('arg: %s\t\tval: %s' % (key, value))
+            _log.debug(_('arg: %s\t\tval: %s') % (key, value))
 
         # Success!
         req.environ['ec2.controller'] = controller

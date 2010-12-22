@@ -17,10 +17,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-  Twistd daemon for the nova compute nodes.
-"""
+"""Starter script for Nova Compute."""
 
+import eventlet
+eventlet.monkey_patch()
+
+import gettext
 import os
 import sys
 
@@ -32,14 +34,12 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import service
-from nova import twistd
-from nova import utils
+gettext.install('nova', unicode=1)
 
+from nova import service
+from nova import utils
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = service.Service.create()  # pylint: disable=C0103
+    service.serve()
+    service.wait()

@@ -30,6 +30,7 @@ import webob.dec
 import webob.exc
 import webob
 
+from nova import context
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -48,6 +49,10 @@ flags.DEFINE_string('nova_api_auth',
     'nova.api.openstack.auth.BasicApiAuthManager',
     'The auth mechanism to use for the OpenStack API implemenation')
 
+flags.DEFINE_bool('allow_admin_api',
+    False,
+    'When True, this API service will accept admin operations.')
+
 
 class API(wsgi.Middleware):
     """WSGI entry point for all OpenStack API requests."""
@@ -61,7 +66,7 @@ class API(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            logging.warn("Caught error: %s" % str(ex))
+            logging.warn(_("Caught error: %s") % str(ex))
             logging.debug(traceback.format_exc())
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
@@ -84,9 +89,7 @@ class AuthMiddleware(wsgi.Middleware):
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        if 'nova.context' not in req.environ:
-            req.environ['nova.context'] = {}
-        req.environ['nova.context']['user'] = user
+        req.environ['nova.context'] = context.RequestContext(user, user)
         return self.application
 
 
@@ -121,16 +124,16 @@ class RateLimitingMiddleware(wsgi.Middleware):
         If the request should be rate limited, return a 413 status with a
         Retry-After header giving the time when the request would succeed.
         """
-        user_id = req.environ['nova.context']['user']['id']
         action_name = self.get_action_name(req)
         if not action_name:
             # Not rate limited
             return self.application
-        delay = self.get_delay(action_name, user_id)
+        delay = self.get_delay(action_name,
+            req.environ['nova.context'].user_id)
         if delay:
             # TODO(gundlach): Get the retry-after format correct.
             exc = webob.exc.HTTPRequestEntityTooLarge(
-                    explanation='Too many requests.',
+                    explanation=_('Too many requests.'),
                     headers={'Retry-After': time.time() + delay})
             raise faults.Fault(exc)
         return self.application
@@ -167,9 +170,16 @@ class APIRouter(wsgi.Router):
 
     def __init__(self):
         mapper = routes.Mapper()
+
+        server_members = {'action': 'POST'}
+        if FLAGS.allow_admin_api:
+            logging.debug("Including admin operations in API.")
+            server_members['pause'] = 'POST'
+            server_members['unpause'] = 'POST'
+
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
-                        member={'action': 'POST'})
+                        member=server_members)
 
         mapper.resource("backup_schedule", "backup_schedules",
                         controller=backup_schedules.Controller(),
