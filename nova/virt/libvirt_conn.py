@@ -40,6 +40,7 @@ import logging
 import os
 import shutil
 
+from eventlet import greenthread
 from eventlet import event
 from eventlet import tpool
 
@@ -498,8 +499,8 @@ class LibvirtConnection(object):
         # TODO(termie): cache?
         logging.debug(_('instance %s: starting toXML method'),
                         instance['name'])
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         # FIXME(vish): stick this in db
         instance_type = instance['instance_type']
         instance_type = instance_types.INSTANCE_TYPES[instance_type]

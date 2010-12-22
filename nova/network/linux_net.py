@@ -51,6 +51,8 @@ flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
+flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
+                    'dmz range that should be accepted')
 
 
 def metadata_forward():
