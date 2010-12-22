@@ -46,9 +46,7 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
-flags.DEFINE_string('routing_source_ip', '127.0.0.1',
+flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
@@ -60,7 +58,7 @@ def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.cc_dmz, FLAGS.cc_port))
 
 
 def init_host():
@@ -135,7 +133,7 @@ def ensure_vlan(vlan_num):
     """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
-        logging.debug("Starting VLAN inteface %s", interface)
+        logging.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
@@ -145,7 +143,7 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge interface for %s", interface)
+        logging.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
@@ -202,9 +200,9 @@ def update_dhcp(context, network_id):
                 _execute('sudo kill -HUP %d' % pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
-                logging.debug("Hupping dnsmasq threw %s", exc)
+                logging.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
-            logging.debug("Pid %d is stale, relaunching dnsmasq", pid)
+            logging.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
@@ -276,7 +274,7 @@ def _stop_dnsmasq(network):
         try:
             _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug("Killing dnsmasq threw %s", exc)
+            logging.debug(_("Killing dnsmasq threw %s"), exc)
 
 
 def _dhcp_file(bridge, kind):
