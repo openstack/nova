@@ -124,8 +124,6 @@ class XenAPIConnection(object):
 
     def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance """
-        #TODO(sirp): Add quiesce and VSS locking support when Windows support
-        # is added
         self._vmops.snapshot(instance, name)
 
     def reboot(self, instance):

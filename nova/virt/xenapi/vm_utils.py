@@ -153,17 +153,22 @@ class VMHelper():
 
 
     @classmethod
-    def create_snapshot(cls, session, vm_ref, label):
-        logging.debug("Snapshotting VM %s with label '%s'...", vm_ref, label)
+    def create_snapshot(cls, session, instance_id, vm_ref, label):
+        logging.debug(_("Snapshotting VM %s with label '%s'..."), vm_ref, label)
         
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
         #TODO(sirp): Make safe_lookup_vdi for assert?
         vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-        if vdi_refs is None or len(vdi_refs) != 1:
-            raise Exception("Unexpected number of VDIs (%s) found for VM %s"
-                            % (len(vdi_refs), vm_ref)) 
+        if vdi_refs is None:
+            raise Exception(_("No VDIs found for VM %s") % vm_ref)
+        else:
+            num_vdis = len(vdi_refs)
+            if num_vdis != 1:
+                raise Exception(_("Unexpected number of VDIs (%s) found for "
+                                   "VM %s") % (num_vdis, vm_ref)) 
+
         vdi_ref = vdi_refs[0]
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec["uuid"]
@@ -171,20 +176,21 @@ class VMHelper():
         original_parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(task)
-        logging.debug('Created snapshot %s from VM %s.', template_vm_ref,
+        template_vm_ref = session.wait_for_task(instance_id, task)
+        logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
                       vm_ref)
 
         sr_ref = vdi_rec["SR"]
         parent_uuid = wait_for_vhd_coalesce(
-            session, sr_ref, vdi_ref, original_parent_uuid) 
+            session, instance_id, sr_ref, vdi_ref, original_parent_uuid) 
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
         return template_vm_ref, [vdi_uuid, parent_uuid]
 
     @classmethod
-    def upload_image(cls, session, vdi_uuids, image_name):
-        logging.debug("Asking xapi to upload %s as '%s'", vdi_uuids, image_name)
+    def upload_image(cls, session, instance_id, vdi_uuids, image_name):
+        logging.debug(_("Asking xapi to upload %s as '%s'"),
+                      vdi_uuids, image_name)
 
         params = {'vdi_uuids': vdi_uuids, 
                   'image_name': image_name,
@@ -193,11 +199,11 @@ class VMHelper():
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'put_vdis', kwargs)
-        session.wait_for_task(task)
+        session.wait_for_task(instance_id, task)
 
 
     @classmethod
-    def fetch_image(cls, session, image, user, project, use_sr):
+    def fetch_image(cls, session, instance_id, image, user, project, use_sr):
         """use_sr: True to put the image as a VDI in an SR, False to place
         it on dom0's filesystem.  The former is for VM disks, the latter for
         its kernel and ramdisk (if external kernels are being used).
@@ -214,7 +220,7 @@ class VMHelper():
         if use_sr:
             args['add_partition'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(task)
+        uuid = session.wait_for_task(instance_id, task)
         return uuid
 
     @classmethod
@@ -317,7 +323,7 @@ def get_vhd_parent(session, vdi_rec):
         parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
         parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
         #NOTE(sirp): changed log -> logging
-        logging.debug("VHD %s has parent %s", vdi_rec['uuid'], parent_ref)
+        logging.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
         return parent_ref, parent_rec
     else:
         return None
@@ -333,25 +339,27 @@ def get_vhd_parent_uuid(session, vdi_ref):
         return None
 
 
-def scan_sr(session, sr_ref):
-    logging.debug("Re-scanning SR %s", sr_ref)
+def scan_sr(session, instance_id, sr_ref):
+    logging.debug(_("Re-scanning SR %s"), sr_ref)
     task = session.call_xenapi('Async.SR.scan', sr_ref)
-    session.wait_for_task(task)
+    session.wait_for_task(instance_id, task)
 
 
-def wait_for_vhd_coalesce(session, sr_ref, vdi_ref, original_parent_uuid):
+def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
+                          original_parent_uuid):
     """ TODO Explain why coalescing has to occur here """
     #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
     # XS5.6
     #TODO(sirp): we need to timeout this req after a while
 
     def _poll_vhds():
-        scan_sr(session, sr_ref)
+        scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             logging.debug(
-                "Parent %s doesn't match original parent %s, "
-                "waiting for coalesce...", parent_uuid, original_parent_uuid)
+                _("Parent %s doesn't match original parent %s, "
+                  "waiting for coalesce..."),
+                parent_uuid, original_parent_uuid)
         else:
             done.send(parent_uuid)
  

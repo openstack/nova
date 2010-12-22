@@ -162,23 +162,20 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        #FIXME(sirp): update_state currently only refreshes the state field
+        #NOTE(sirp): update_state currently only refreshes the state field
         # if we add is_snapshotting, we will need this refreshed too,
         # potentially?
         self._update_state(context, instance_id)
 
-        #TODO(sirp): check for is_snapshotting=True here?
+        logging.debug(_('instance %s: snapshotting'), instance_ref['name'])
         if instance_ref['state'] != power_state.RUNNING:
-            logging.warn('trying to snapshot a non-running '
-                         'instance: %s (state: %s excepted: %s)',
+            logging.warn(_('trying to snapshot a non-running '
+                           'instance: %s (state: %s excepted: %s)'),
                          instance_ref['internal_id'],
                          instance_ref['state'],
                          power_state.RUNNING)
 
-        logging.debug('instance %s: snapshotting', instance_ref['name'])
-        #TODO(sirp): set is_snapshotting=True here?
         self.driver.snapshot(instance_ref, name)
-        #self._update_state(context, instance_id)
 
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):

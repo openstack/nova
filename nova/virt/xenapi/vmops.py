@@ -67,11 +67,14 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         vdi_uuid = VMHelper.fetch_image(
-                self._session, instance.image_id, user, project, True)
+                self._session, instance.id, instance.image_id, user, project,
+                True)
         kernel = VMHelper.fetch_image(
-                self._session, instance.kernel_id, user, project, False)
+                self._session, instance.id, instance.kernel_id, user, project,
+                False)
         ramdisk = VMHelper.fetch_image(
-                self._session, instance.ramdisk_id, user, project, False)
+                self._session, instance.id, instance.ramdisk_id, user, project,
+                False)
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         vm_ref = VMHelper.create_vm(
                 self._session, instance, kernel, ramdisk)
@@ -90,24 +93,25 @@ class VMOps(object):
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
-        logging.debug("Starting snapshot for VM %s", instance)
+        logging.debug(_("Starting snapshot for VM %s"), instance)
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         label = "%s-snapshot" % instance.name
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
-                self._session, vm_ref, label)
+                self._session, instance.id, vm_ref, label)
         except XenAPI.Failure, exc:
-            logging.error("Unable to Snapshot %s: %s", vm_ref, exc)
+            logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
             return
        
         try:
             # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(self._session, template_vdi_uuids, name) 
+            VMHelper.upload_image(
+                self._session, instance.id, template_vdi_uuids, name) 
         finally:
-            self._destroy(template_vm_ref, shutdown=False)
+            self._destroy(instance, template_vm_ref, shutdown=False)
 
-        logging.debug("Finished snapshot and upload for VM %s", instance)
+        logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -121,9 +125,9 @@ class VMOps(object):
     def destroy(self, instance):
         """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(vm, shutdown=True)
+        return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, vm, shutdown=True):
+    def _destroy(self, instance, vm, shutdown=True):
         """ Destroy VM instance """
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
