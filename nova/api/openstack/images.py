@@ -53,6 +53,7 @@ class Controller(wsgi.Controller):
             images = common.limited(images, req)
         except NotImplementedError:
             # Emulate detail() using repeated calls to show()
+            ctxt = req.environ['nova.context']
             images = self._service.index(ctxt)
             images = common.limited(images, req)
             images = [self._service.show(ctxt, i['id']) for i in images]
