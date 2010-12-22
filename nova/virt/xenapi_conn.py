@@ -54,6 +54,8 @@ import xmlrpclib
 from eventlet import event
 from eventlet import tpool
 
+from nova import context
+from nova import db
 from nova import utils
 from nova import flags
 from nova.virt.xenapi.vmops import VMOps
@@ -93,10 +95,10 @@ def get_connection(_):
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
     if not url or password is None:
-        raise Exception('Must specify xenapi_connection_url, '
-                        'xenapi_connection_username (optionally), and '
-                        'xenapi_connection_password to use '
-                        'connection_type=xenapi')
+        raise Exception(_('Must specify xenapi_connection_url, '
+                          'xenapi_connection_username (optionally), and '
+                          'xenapi_connection_password to use '
+                          'connection_type=xenapi'))
     return XenAPIConnection(url, username, password)
 
 
@@ -187,34 +189,45 @@ class XenAPISession(object):
                              self._session.xenapi.Async.host.call_plugin,
                              self.get_xenapi_host(), plugin, fn, args)
 
-    def wait_for_task(self, task):
+    def wait_for_task(self, instance_id, task):
         """Return the result of the given task.
         The task is polled until it completes."""
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, task, done)
+        loop = utils.LoopingCall(self._poll_task, instance_id, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
         rv = done.wait()
         loop.stop()
         return rv
 
-    def _poll_task(self, task, done):
+    def _poll_task(self, instance_id, task, done):
         """Poll the given XenAPI task, and fire the given action if we
         get a result."""
         try:
-            #logging.debug('Polling task %s...', task)
+            name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
-            if status == 'pending':
+            action = dict(
+                instance_id=int(instance_id),
+                action=name,
+                error=None)
+            if status == "pending":
                 return
-            elif status == 'success':
+            elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                logging.info('Task %s status: success.  %s', task, result)
+                logging.info(_("Task [%s] %s status: success    %s") % (
+                    name,
+                    task,
+                    result))
                 done.send(_parse_xmlrpc_value(result))
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
-                logging.warn('Task %s status: %s.  %s', task, status,
-                             error_info)
+                action["error"] = str(error_info)
+                logging.warn(_("Task [%s] %s status: %s    %s") % (
+                    name,
+                    task,
+                    status,
+                    error_info))
                 done.send_exception(XenAPI.Failure(error_info))
-                #logging.debug('Polling task %s done.', task)
+            db.instance_action_create(context.get_admin_context(), action)
         except XenAPI.Failure, exc:
             logging.warn(exc)
             done.send_exception(*sys.exc_info())
@@ -225,7 +238,7 @@ def _unwrap_plugin_exceptions(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except XenAPI.Failure, exc:
-        logging.debug("Got exception: %s", exc)
+        logging.debug(_("Got exception: %s"), exc)
         if (len(exc.details) == 4 and
             exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
             exc.details[2] == 'Failure'):
@@ -238,7 +251,7 @@ def _unwrap_plugin_exceptions(func, *args, **kwargs):
         else:
             raise
     except xmlrpclib.ProtocolError, exc:
-        logging.debug("Got exception: %s", exc)
+        logging.debug(_("Got exception: %s"), exc)
         raise
 
 
