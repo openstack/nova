@@ -72,7 +72,7 @@ class MetadataRequestHandler(object):
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         meta_data = cc.get_metadata(remote_address)
         if meta_data is None:
-            logging.error('Failed to get metadata for ip: %s' %
+            logging.error(_('Failed to get metadata for ip: %s') %
                           remote_address)
             raise webob.exc.HTTPNotFound()
         data = self.lookup(req.path_info, meta_data)

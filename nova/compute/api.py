@@ -57,6 +57,7 @@ class ComputeAPI(base.Base):
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
+                         user_data=None,
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
@@ -73,14 +74,19 @@ class ComputeAPI(base.Base):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = self.image_service.show(context, image_id)
+
+            # If kernel_id/ramdisk_id isn't explicitly set in API call
+            # we take the defaults from the image's metadata
             if kernel_id is None:
-                kernel_id = image.get('kernelId', FLAGS.default_kernel)
+                kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', FLAGS.default_ramdisk)
+                ramdisk_id = image.get('ramdiskId', None)
 
             # Make sure we have access to kernel and ramdisk
-            self.image_service.show(context, kernel_id)
-            self.image_service.show(context, ramdisk_id)
+            if kernel_id:
+                self.image_service.show(context, kernel_id)
+            if ramdisk_id:
+                self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -103,8 +109,8 @@ class ComputeAPI(base.Base):
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,
-            'kernel_id': kernel_id,
-            'ramdisk_id': ramdisk_id,
+            'kernel_id': kernel_id or '',
+            'ramdisk_id': ramdisk_id or '',
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
@@ -115,12 +121,13 @@ class ComputeAPI(base.Base):
             'local_gb': type_data['local_gb'],
             'display_name': display_name,
             'display_description': description,
+            'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data}
 
         elevated = context.elevated()
         instances = []
-        logging.debug("Going to run %s instances...", num_instances)
+        logging.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
@@ -157,7 +164,7 @@ class ComputeAPI(base.Base):
                      {"method": "setup_fixed_ip",
                       "args": {"address": address}})
 
-            logging.debug("Casting to scheduler for %s/%s's instance %s",
+            logging.debug(_("Casting to scheduler for %s/%s's instance %s"),
                           context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
@@ -204,12 +211,12 @@ class ComputeAPI(base.Base):
             instance = self.db.instance_get_by_internal_id(context,
                                                            instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found during terminate",
+            logging.warning(_("Instance %d was not found during terminate"),
                             instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning("Instance %d is already being terminated",
+            logging.warning(_("Instance %d is already being terminated"),
                             instance_id)
             return
 
@@ -223,7 +230,7 @@ class ComputeAPI(base.Base):
         address = self.db.instance_get_floating_address(context,
                                                         instance['id'])
         if address:
-            logging.debug("Disassociating address %s" % address)
+            logging.debug(_("Disassociating address %s") % address)
             # NOTE(vish): Right now we don't really care if the ip is
             #             disassociated.  We may need to worry about
             #             checking this later.  Perhaps in the scheduler?
@@ -234,7 +241,7 @@ class ComputeAPI(base.Base):
 
         address = self.db.instance_get_fixed_address(context, instance['id'])
         if address:
-            logging.debug("Deallocating address %s" % address)
+            logging.debug(_("Deallocating address %s") % address)
             # NOTE(vish): Currently, nothing needs to be done on the
             #             network node until release. If this changes,
             #             we will need to cast here.
@@ -273,6 +280,24 @@ class ComputeAPI(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "reboot_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def pause(self, context, instance_id):
+        """Pause the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "pause_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unpause(self, context, instance_id):
+        """Unpause the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
     def rescue(self, context, instance_id):

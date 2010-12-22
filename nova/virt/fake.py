@@ -76,6 +76,12 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
+    def init_host(self):
+        """
+        Initialize anything that is necessary for the driver to function
+        """
+        return
+
     def list_instances(self):
         """
         Return the names of all the instances known to the virtualization
@@ -130,6 +136,18 @@ class FakeConnection(object):
         """
         pass
 
+    def pause(self, instance, callback):
+        """
+        Pause the specified instance.
+        """
+        pass
+
+    def unpause(self, instance, callback):
+        """
+        Unpause the specified instance.
+        """
+        pass
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.
@@ -163,7 +181,8 @@ class FakeConnection(object):
         knowledge of the instance
         """
         if instance_name not in self.instances:
-            raise exception.NotFound("Instance %s Not Found" % instance_name)
+            raise exception.NotFound(_("Instance %s Not Found")
+                                     % instance_name)
         i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
@@ -243,5 +262,6 @@ class FakeConnection(object):
 
 
 class FakeInstance(object):
+
     def __init__(self):
         self._state = power_state.NOSTATE

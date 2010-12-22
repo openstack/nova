@@ -29,6 +29,8 @@ import sys
 
 import gflags
 
+from nova import utils
+
 
 class FlagValues(gflags.FlagValues):
     """Extension of gflags.FlagValues that allows undefined and runtime flags.
@@ -211,7 +213,8 @@ DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_string('s3_host', '127.0.0.1', 's3 host')
+DEFINE_string('s3_host', utils.get_my_ip(), 's3 host (for infrastructure)')
+DEFINE_string('s3_dmz', utils.get_my_ip(), 's3 dmz ip (for instances)')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
@@ -230,22 +233,24 @@ DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')
 DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
-DEFINE_string('ec2_url', 'http://127.0.0.1:8773/services/Cloud',
-              'Url to ec2 api server')
+DEFINE_string('ec2_prefix', 'http', 'prefix for ec2')
+DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
+DEFINE_string('cc_dmz', utils.get_my_ip(), 'internal ip of api server')
+DEFINE_integer('cc_port', 8773, 'cloud controller port')
+DEFINE_string('ec2_suffix', '/services/Cloud', 'suffix for ec2')
 
 DEFINE_string('default_image', 'ami-11111',
               'default image to use, testing only')
-DEFINE_string('default_kernel', 'aki-11111',
-              'default kernel to use, testing only')
-DEFINE_string('default_ramdisk', 'ari-11111',
-              'default ramdisk to use, testing only')
 DEFINE_string('default_instance_type', 'm1.small',
               'default instance type to use, testing only')
+DEFINE_string('null_kernel', 'nokernel',
+              'kernel image that indicates not to use a kernel,'
+              ' but to use a raw disk image instead')
 
-DEFINE_string('vpn_image_id', 'ami-CLOUDPIPE', 'AMI for cloudpipe vpn server')
+DEFINE_string('vpn_image_id', 'ami-cloudpipe', 'AMI for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
-              '-key',
-              'Suffix to add to project name for vpn key')
+              '-vpn',
+              'Suffix to add to project name for vpn key and secgroups')
 
 DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
