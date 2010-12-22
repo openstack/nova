@@ -28,6 +28,7 @@ from eventlet import greenthread
 EXCHANGES = {}
 QUEUES = {}
 
+
 class Message(base.BaseMessage):
     pass
 
