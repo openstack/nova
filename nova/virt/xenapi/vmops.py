@@ -88,7 +88,27 @@ class VMOps(object):
                      vm_ref)
     
     def snapshot(self, instance, name):
-        """ Create snapshot from a running VM instance """
+        """ Create snapshot from a running VM instance
+      
+        :param instance: instance to be snapshotted
+        :param name: name/label to be given to the snapshot
+
+        Steps involved in a XenServer snapshot:
+
+        1. XAPI-Snapshot: Snapshotting the instance using XenAPI. This
+            creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+            Snapshot VHD
+    
+        2. Wait-for-coalesce: The Snapshot VDI and Instance VDI both point to
+            a 'base-copy' VDI.  The base_copy is immutable and may be chained
+            with other base_copies.  If chained, the base_copies
+            coalesce together, so, we must wait for this coalescing to occur to
+            get a stable representation of the data on disk.
+
+        3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
+            that will bundle the VHDs together and then push the bundle into
+            Glance.
+        """
 
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added

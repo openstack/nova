@@ -154,6 +154,9 @@ class VMHelper():
 
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
+        """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+        Snapshot VHD
+        """
         logging.debug(_("Snapshotting VM %s with label '%s'..."), vm_ref, label)
         
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
@@ -189,6 +192,9 @@ class VMHelper():
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_name):
+        """ Requests that the Glance plugin bundle the specified VDIs and
+        push them into Glance using the specified human-friendly name.
+        """
         logging.debug(_("Asking xapi to upload %s as '%s'"),
                       vdi_uuids, image_name)
 
@@ -347,9 +353,17 @@ def scan_sr(session, instance_id, sr_ref):
 
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                           original_parent_uuid):
-    """ TODO Explain why coalescing has to occur here """
-    #NOTE(sirp): for some reason re-scan wasn't occuring automatically on 
-    # XS5.6
+    """ Spin until the parent VHD is coalesced into its parent VHD
+  
+    Before coalesce:
+        * original_parent_vhd
+            * parent_vhd
+                snapshot
+
+    Atter coalesce:
+        * parent_vhd
+            snapshot
+    """
     #TODO(sirp): we need to timeout this req after a while
 
     def _poll_vhds():

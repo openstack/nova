@@ -106,6 +106,22 @@ class FakeConnection(object):
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
 
+
+    def snapshot(self, instance, name):
+        """
+        Snapshots the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The second parameter is the name of the snapshot.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+        """
+        pass
+
+
     def reboot(self, instance):
         """
         Reboot the specified instance.

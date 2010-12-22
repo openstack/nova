@@ -121,7 +121,6 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
-
     def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, name)

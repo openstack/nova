@@ -237,7 +237,7 @@ class LibvirtConnection(object):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
-    def snapshot(self, instance):
+    def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance """
         raise NotImplementedError(
             _("Instance snapshotting is not supported for libvirt"
