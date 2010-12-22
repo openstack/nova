@@ -196,15 +196,19 @@ class CloudController(object):
         if FLAGS.region_list:
             regions = []
             for region in FLAGS.region_list:
-                name, _sep, url = region.partition('=')
+                name, _sep, host = region.partition('=')
+                endpoint = '%s://%s:%s%s' % (FLAGS.ec2_prefix,
+                                             host,
+                                             FLAGS.cc_port,
+                                             FLAGS.ec2_suffix)
                 regions.append({'regionName': name,
-                                'regionEndpoint': url})
+                                'regionEndpoint': endpoint})
         else:
             regions = [{'regionName': 'nova',
-                        'regionEndpoint': FLAGS.ec2_url}]
-        if region_name:
-            regions = [r for r in regions if r['regionName'] in region_name]
-        return {'regionInfo': regions}
+                        'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
+                                                            FLAGS.cc_host,
+                                                            FLAGS.cc_port,
+                                                            FLAGS.ec2_suffix)}]
 
     def describe_snapshots(self,
                            context,
