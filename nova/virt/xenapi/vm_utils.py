@@ -229,11 +229,7 @@ class VMHelper():
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
-            metrics = session.get_xenapi().VM_guest_metrics.get_record(
-                record["guest_metrics"])
-            diags = {
-                "Kernel": metrics["os_version"]["uname"],
-                "Distro": metrics["os_version"]["name"]}
+            diags = {}
             xml = get_rrd(host_ip, record["uuid"])
             if xml:
                 rrd = minidom.parseString(xml)
