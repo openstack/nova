@@ -57,6 +57,7 @@ class ComputeAPI(base.Base):
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
+                         user_data=None,
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
@@ -120,6 +121,7 @@ class ComputeAPI(base.Base):
             'local_gb': type_data['local_gb'],
             'display_name': display_name,
             'display_description': description,
+            'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data}
 
