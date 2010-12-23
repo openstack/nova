@@ -232,7 +232,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
             return False
 
         for image in res_dict['images']:
-            for image_fixture in IMAGE_FIXTURES:
+            for image_fixture in self.IMAGE_FIXTURES:
                 if _is_equivalent_subset(image, image_fixture):
                     break
             else:
