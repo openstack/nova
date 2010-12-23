@@ -29,15 +29,21 @@ FLAGS = flags.FLAGS
 
 
 def _entity_list(entities):
-    """ Coerces a list of images into proper dictionary format
-        entities is a list of entities (dicts) """
+    """
+    Coerces a list of images into proper dictionary format
+    entities is a list of entities (dicts)
+
+    """
     return dict(images=entities)
 
 
 def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return
-        also pares down attributes to those we want
-        inst is a single entity (dict) """
+    """
+    Maps everything to Rackspace-like attributes for return
+    also pares down attributes to those we want
+    inst is a single entity (dict)
+
+    """
     status_mapping = {
         'pending': 'queued',
         'decrypting': 'preparing',
@@ -45,14 +51,23 @@ def _entity_detail(inst):
         'available': 'active'}
 
     # TODO(tr3buchet): this map is specific to s3 object store,
-    # fix once the local image service is working
+    # replace with a list of keys for _select_keys later
     mapped_keys = {'status': 'imageState',
                    'id': 'imageId',
                    'name': 'imageLocation'}
 
     mapped_inst = {}
-    for k, v in mapped_keys.iteritems():
-        mapped_inst[k] = inst[v]
+    # TODO(tr3buchet):
+    # this chunk of code works with s3 and the local image service/glance
+    # when we switch to glance/local image service it can be replaced with
+    # a call to _select_keys, and mapped_keys can be changed to a list
+    try:
+        for k, v in mapped_keys.iteritems():
+            # map s3 fields
+            mapped_inst[k] = inst[v]
+    except KeyError:
+        mapped_inst = _select_keys(inst, mapped_keys.keys())
+
 
     mapped_inst['status'] = status_mapping[mapped_inst['status']]
 
@@ -60,14 +75,20 @@ def _entity_detail(inst):
 
 
 def _entity_inst(inst):
-    """ Filters all model attributes save for id and name
-        inst is a single entity (dict) """
+    """
+    Filters all model attributes save for id and name
+    inst is a single entity (dict)
+
+    """
     return _select_keys(inst, ['id', 'name'])
 
 
 def _select_keys(inst, keys):
-    """ Filters all model attributes for keys
-        inst is a single entity (dict) """
+    """
+    Filters all model attributes except for keys
+    inst is a single entity (dict)
+
+    """
     return dict((k, v) for k, v in inst.iteritems() if k in keys)
 
 
@@ -83,14 +104,14 @@ class Controller(wsgi.Controller):
         self._service = utils.import_object(FLAGS.image_service)
 
     def index(self, req):
-        """ Return all public images in brief """
+        """Return all public images in brief"""
         items = self._service.index(req.environ['nova.context'])
         items = nova.api.openstack.limited(items, req)
         items = [_entity_inst(item) for item in items]
         return dict(images=items)
 
     def detail(self, req):
-        """ Return all public images in detail """
+        """Return all public images in detail"""
         try:
             items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
@@ -100,7 +121,7 @@ class Controller(wsgi.Controller):
         return dict(images=items)
 
     def show(self, req, id):
-        """ Return data about the given image id """
+        """Return data about the given image id"""
         return dict(image=self._service.show(req.environ['nova.context'], id))
 
     def delete(self, req, id):
