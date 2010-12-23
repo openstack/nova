@@ -14,4 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Stubouts, mocks and fixtures for the test suite"""
+"""
+:mod:`xenapi` -- Stubs for XenAPI
+=================================
+"""

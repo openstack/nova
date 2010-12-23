@@ -29,17 +29,15 @@ class NetworkHelper(HelperBase):
     The class that wraps the helper methods together.
     """
 
-    def __init__(self):
-        super(NetworkHelper, self).__init__()
-
     @classmethod
     def find_network_with_bridge(cls, session, bridge):
-        """ Return the network on which the bridge is attached, if found."""
+        """Return the network on which the bridge is attached, if found."""
         expr = 'field "bridge" = "%s"' % bridge
         networks = session.call_xenapi('network.get_all_records_where', expr)
         if len(networks) == 1:
             return networks.keys()[0]
         elif len(networks) > 1:
-            raise Exception('Found non-unique network for bridge %s' % bridge)
+            raise Exception(_('Found non-unique network'
+                              ' for bridge %s') % bridge)
         else:
-            raise Exception('Found no network for bridge %s' % bridge)
+            raise Exception(_('Found no network for bridge %s') % bridge)

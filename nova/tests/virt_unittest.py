@@ -129,43 +129,45 @@ class LibvirtConnTestCase(test.TestCase):
                 check_list.append(check)
             else:
                 if expect_kernel:
-                    check = (lambda t: t.find('./os/kernel').text.split('/'
-                                       )[1], 'kernel')
+                    check = (lambda t: t.find('./os/kernel').text.split(
+                        '/')[1], 'kernel')
                 else:
                     check = (lambda t: t.find('./os/kernel'), None)
                 check_list.append(check)
 
                 if expect_ramdisk:
-                    check = (lambda t: t.find('./os/initrd').text.split('/'
-                                       )[1], 'ramdisk')
+                    check = (lambda t: t.find('./os/initrd').text.split(
+                        '/')[1], 'ramdisk')
                 else:
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
 
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
-            (lambda t: t.find('./devices/interface/filterref/parameter'
-                        ).get('name'), 'IP'),
-            (lambda t: t.find('./devices/interface/filterref/parameter'
-                       ).get('value'), '10.11.12.13'),
-            (lambda t: t.findall('./devices/interface/filterref/parameter'
-                        )[1].get('name'), 'DHCPSERVER'),
-            (lambda t: t.findall('./devices/interface/filterref/parameter'
-                       )[1].get('value'), '10.0.0.1'),
-            (lambda t: t.find('./devices/serial/source').get('path'
-                       ).split('/')[1], 'console.log'),
+            (lambda t: t.find(
+                './devices/interface/filterref/parameter').get('name'), 'IP'),
+            (lambda t: t.find(
+                './devices/interface/filterref/parameter').get(
+                    'value'), '10.11.12.13'),
+            (lambda t: t.findall(
+                './devices/interface/filterref/parameter')[1].get(
+                    'name'), 'DHCPSERVER'),
+            (lambda t: t.findall(
+                './devices/interface/filterref/parameter')[1].get(
+                    'value'), '10.0.0.1'),
+            (lambda t: t.find('./devices/serial/source').get(
+                'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
 
         if rescue:
-            common_checks += [(lambda t: t.findall('./devices/disk/source'
-                                         )[0].get('file').split('/')[1],
-                               'rescue-disk'),
-                              (lambda t: t.findall('./devices/disk/source'
-                                         )[1].get('file').split('/')[1],
-                               'disk')]
+            common_checks += [
+                (lambda t: t.findall('./devices/disk/source')[0].get(
+                    'file').split('/')[1], 'rescue-disk'),
+                (lambda t: t.findall('./devices/disk/source')[1].get(
+                    'file').split('/')[1], 'disk')]
         else:
-            common_checks += [(lambda t: t.findall('./devices/disk/source'
-                                         )[0].get('file').split('/')[1],
+            common_checks += [(lambda t: t.findall(
+                './devices/disk/source')[0].get('file').split('/')[1],
                                'disk')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():

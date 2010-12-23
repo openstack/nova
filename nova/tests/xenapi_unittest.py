@@ -37,7 +37,7 @@ from nova.tests.xenapi import stubs
 FLAGS = flags.FLAGS
 
 
-class XenAPIVolumeTestCase(test.TrialTestCase):
+class XenAPIVolumeTestCase(test.TestCase):
     """
     Unit tests for Volume operations
     """
@@ -141,7 +141,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         self.stubs.UnsetAll()
 
 
-class XenAPIVMTestCase(test.TrialTestCase):
+class XenAPIVMTestCase(test.TestCase):
     """
     Unit tests for VM operations
     """
