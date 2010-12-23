@@ -18,7 +18,10 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
+import json
 import logging
+import random
+import uuid
 
 from nova import db
 from nova import context
@@ -53,13 +56,12 @@ class VMOps(object):
         """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
-            raise exception.Duplicate(_('Attempted to create'
-            ' non-unique name %s') % instance.name)
+            raise exception.Duplicate(_('Attempted to create non-unique name %s')
+            		% instance.name)
 
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
-        network_ref = \
-            NetworkHelper.find_network_with_bridge(self._session, bridge)
+        network_ref = NetworkHelper.find_network_with_bridge(self._session, bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
@@ -104,16 +106,6 @@ class VMOps(object):
         timer.f = _wait_for_boot
         return timer.start(interval=0.5, now=True)
 
-    def reboot(self, instance):
-        """Reboot VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('instance not'
-                                       ' found %s') % instance_name)
-        task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        self._session.wait_for_task(instance.id, task)
-
     def _get_vm_opaque_ref(self, instance_or_vm):
         try:
             instance_name = instance_or_vm.name
@@ -122,15 +114,21 @@ class VMOps(object):
             # A vm opaque ref was passed
             vm = instance_or_vm
         if vm is None:
-            raise Exception('instance not present %s' % instance_name)
+            raise Exception(_('Instance not present %s') % instance_name)
         return vm
+
+    def reboot(self, instance):
+        """Reboot VM instance"""
+        vm = self._get_vm_opaque_ref(instance)
+        task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
+        self._session.wait_for_task(instance.id, task)
 
     def reset_root_password(self, instance):
         """Reset the root/admin password on the VM instance"""
-        self.add_to_xenstore(instance, {"reset_root_password": "requested"})
-        self.add_to_xenstore(instance, {"TEST": "OMG!"})
+        self.add_to_param_xenstore(instance, "reset_root_password", "requested")
+        self.add_to_param_xenstore(instance, "TEST", "OMG!")
         import time
-        self.add_to_xenstore(instance, {"timestamp": time.ctime()})
+        self.add_to_param_xenstore(instance, "timestamp", time.ctime())
 
 
     def destroy(self, instance):
@@ -173,38 +171,27 @@ class VMOps(object):
 
     def pause(self, instance, callback):
         """Pause VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.pause', vm)
         self._wait_with_callback(instance.id, task, callback)
 
     def unpause(self, instance, callback):
         """Unpause VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm)
         self._wait_with_callback(instance.id, task, callback)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
-        vm = VMHelper.lookup(self._session, instance_id)
+        vm = VMHelper.lookup_blocking(self._session, instance_id)
         if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_id)
+            raise Exception(_('Instance not present %s') % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
     def get_diagnostics(self, instance_id):
         """Return data about VM diagnostics"""
-        vm = VMHelper.lookup(self._session, instance_id)
-        if vm is None:
-            raise exception.NotFound(_("Instance not found %s") % instance_id)
+        vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 
@@ -213,40 +200,75 @@ class VMOps(object):
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
 
-    def read_from_xenstore(self, instance_or_vm, keys=None):
+    def dh_keyinit(self, instance):
+        """Initiates a Diffie-Hellman (or, more precisely, a
+        Diffie-Hellman-Merkle) key exchange with the agent. It will
+        compute one side of the exchange and write it to xenstore.
+        When a response is received, it will then compute the shared
+        secret key, which is returned.
+        NOTE: the base and prime are pre-set; this may change in
+        the future.
+        """
+        base = 5
+        prime = 162259276829213363391578010288127
+        secret_int = random.randint(100,1000)
+        val = (base ** secret_int) % prime
+        msgname = str(uuid.uuid4())
+        key = "/data/host/%s" % msgname
+        self.add_to_param_xenstore(instance, key=key,
+                value={"name": "keyinit", "value": val})
+
+    def read_partial_from_param_xenstore(self, instance_or_vm, key_prefix):
+        """Returns a dict of all the keys in the xenstore for the given instance
+        that begin with the key_prefix.
+        """
+        data = self.read_from_param_xenstore(instance_or_vm)
+        badkeys = [k for k in data.keys()
+                if not k.startswith(key_prefix)]
+        for badkey in badkeys:
+            del data[badkey]
+        return data
+
+    def read_from_param_xenstore(self, instance_or_vm, keys=None):
         """Returns the xenstore data for the specified VM instance as
-        a dict. Accepts an optional list of keys; if the list of keys is 
-        passed, the returned dict is filtered to only return the values
+        a dict. Accepts an optional key or list of keys; if a value for 'keys' 
+        is passed, the returned dict is filtered to only return the values
         for those keys.
         """
         vm = self._get_vm_opaque_ref(instance_or_vm)
-        ret = self._session.call_xenapi_request('VM.get_xenstore_data', (vm, ))
-        if keys:
-            allkeys = set(ret.keys())
-            badkeys = allkeys.difference(keys)
-            for k in badkeys:
-                del ret[k]
+        data = self._session.call_xenapi_request('VM.get_xenstore_data', (vm, ))
+        ret = {}
+        if keys is None:
+            keys = data.keys()
+        elif isinstance(keys, basestring):
+            keys = [keys]
+        for key in keys:
+            raw = data.get(key)
+            if raw:
+                ret[key] = json.loads(raw)
+            else:
+                ret[key] = raw
         return ret
 
-    def add_to_xenstore(self, instance_or_vm, mapping):
-        """Takes a dict and adds it to the xenstore record for
-        the given vm instance. Existing data is preserved, but any
-        existing values for the mapping's keys are overwritten.
-        """
+    def add_to_param_xenstore(self, instance_or_vm, key, val):
+        """Takes a key/value pair and adds it to the xenstore record
+        for the given vm instance. If the key exists in xenstore, it is
+        overwritten"""
         vm = self._get_vm_opaque_ref(instance_or_vm)
-        current_data = self.read_from_xenstore(vm)
-        current_data.update(mapping)
-        self.write_to_xenstore(vm, current_data)
+        self.remove_from_param_xenstore(instance_or_vm, key)
+        jsonval = json.dumps(val)
+        self._session.call_xenapi_request('VM.add_to_xenstore_data',
+                (vm, key, jsonval))
 
-    def write_to_xenstore(self, instance_or_vm, mapping):
-        """Takes a dict and writes it to the xenstore record for
-        the given vm instance. Any existing data is overwritten.
+    def write_to_param_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and writes each key/value pair to the xenstore
+        record for the given vm instance. Any existing data for those
+        keys is overwritten.
         """
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        self._session.call_xenapi_request('VM.set_xenstore_data',
-                (vm, mapping))
+        for k, v in mapping.iteritems():
+            self.add_to_param_xenstore(instance_or_vm, k, v)
 
-    def remove_from_xenstore(self, instance_or_vm, key_or_keys):
+    def remove_from_param_xenstore(self, instance_or_vm, key_or_keys):
         """Takes either a single key or a list of keys and removes
         them from the xenstore data for the given VM. If the key
         doesn't exist, the request is ignored.
@@ -270,6 +292,6 @@ class VMOps(object):
         for key in keys:
             self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
 
-    def clear_xenstore(self, instance_or_vm):
+    def clear_param_xenstore(self, instance_or_vm):
         """Removes all data from the xenstore record for this VM."""
-        self.write_to_xenstore(instance_or_vm, {})
+        self.write_to_param_xenstore(instance_or_vm, {})
