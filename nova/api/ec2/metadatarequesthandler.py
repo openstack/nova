@@ -23,7 +23,11 @@ import logging
 import webob.dec
 import webob.exc
 
+from nova import flags
 from nova.api.ec2 import cloud
+
+
+FLAGS = flags.FLAGS
 
 
 class MetadataRequestHandler(object):
@@ -63,10 +67,13 @@ class MetadataRequestHandler(object):
     @webob.dec.wsgify
     def __call__(self, req):
         cc = cloud.CloudController()
-        meta_data = cc.get_metadata(req.remote_addr)
+        remote_address = req.remote_addr
+        if FLAGS.use_forwarded_for:
+            remote_address = req.headers.get('X-Forwarded-For', remote_address)
+        meta_data = cc.get_metadata(remote_address)
         if meta_data is None:
             logging.error(_('Failed to get metadata for ip: %s') %
-                          req.remote_addr)
+                          remote_address)
             raise webob.exc.HTTPNotFound()
         data = self.lookup(req.path_info, meta_data)
         if data is None:

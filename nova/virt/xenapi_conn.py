@@ -44,7 +44,10 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 :xenapi_task_poll_interval:  The interval (seconds) used for polling of
                              remote tasks (Async.VM.start, etc)
                              (default: 0.5).
-
+:target_host:                the iSCSI Target Host IP address, i.e. the IP
+                             address for the nova-volume host
+:target_port:                iSCSI Target Port, 3260 Default
+:iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
 """
 
 import logging
@@ -62,6 +65,7 @@ from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
 FLAGS = flags.FLAGS
+
 flags.DEFINE_string('xenapi_connection_url',
                     None,
                     'URL for connection to XenServer/Xen Cloud Platform.'
@@ -79,18 +83,20 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
-
-XenAPI = None
+flags.DEFINE_string('target_host',
+                    None,
+                    'iSCSI Target Host')
+flags.DEFINE_string('target_port',
+                    '3260',
+                    'iSCSI Target Port, 3260 Default')
+flags.DEFINE_string('iqn_prefix',
+                    'iqn.2010-10.org.openstack',
+                    'IQN Prefix')
 
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
-    # This is loaded late so that there's no need to install this
-    # library when not using XenAPI.
-    global XenAPI
-    if XenAPI is None:
-        XenAPI = __import__('XenAPI')
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
@@ -109,6 +115,13 @@ class XenAPIConnection(object):
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
+
+    def init_host(self):
+        #FIXME(armando): implement this
+        #NOTE(armando): would we need a method
+        #to call when shutting down the host?
+        #e.g. to do session logout?
+        pass
 
     def list_instances(self):
         """List VM instances"""
@@ -165,8 +178,13 @@ class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
 
     def __init__(self, url, user, pw):
-        self._session = XenAPI.Session(url)
+        self.XenAPI = self.get_imported_xenapi()
+        self._session = self._create_session(url)
         self._session.login_with_password(user, pw)
+
+    def get_imported_xenapi(self):
+        """Stubout point. This can be replaced with a mock xenapi module."""
+        return __import__('XenAPI')
 
     def get_xenapi(self):
         """Return the xenapi object"""
@@ -192,28 +210,32 @@ class XenAPISession(object):
 
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
-        return tpool.execute(_unwrap_plugin_exceptions,
+        return tpool.execute(self._unwrap_plugin_exceptions,
                              self._session.xenapi.Async.host.call_plugin,
                              self.get_xenapi_host(), plugin, fn, args)
 
-    def wait_for_task(self, instance_id, task):
-        """Return the result of the given task.
-        The task is polled until it completes."""
+    def wait_for_task(self, id, task):
+        """Return the result of the given task. The task is polled
+        until it completes."""
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, instance_id, task, done)
+        loop = utils.LoopingCall(self._poll_task, id, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
         rv = done.wait()
         loop.stop()
         return rv
 
-    def _poll_task(self, instance_id, task, done):
+    def _create_session(self, url):
+        """Stubout point. This can be replaced with a mock session."""
+        return self.XenAPI.Session(url)
+
+    def _poll_task(self, id, task, done):
         """Poll the given XenAPI task, and fire the given action if we
         get a result."""
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
             action = dict(
-                instance_id=int(instance_id),
+                id=int(id),
                 action=name,
                 error=None)
             if status == "pending":
@@ -233,33 +255,32 @@ class XenAPISession(object):
                     task,
                     status,
                     error_info))
-                done.send_exception(XenAPI.Failure(error_info))
+                done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
             done.send_exception(*sys.exc_info())
 
-
-def _unwrap_plugin_exceptions(func, *args, **kwargs):
-    """Parse exception details"""
-    try:
-        return func(*args, **kwargs)
-    except XenAPI.Failure, exc:
-        logging.debug(_("Got exception: %s"), exc)
-        if (len(exc.details) == 4 and
-            exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
-            exc.details[2] == 'Failure'):
-            params = None
-            try:
-                params = eval(exc.details[3])
-            except:
-                raise exc
-            raise XenAPI.Failure(params)
-        else:
+    def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
+        """Parse exception details"""
+        try:
+            return func(*args, **kwargs)
+        except self.XenAPI.Failure, exc:
+            logging.debug(_("Got exception: %s"), exc)
+            if (len(exc.details) == 4 and
+                exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
+                exc.details[2] == 'Failure'):
+                params = None
+                try:
+                    params = eval(exc.details[3])
+                except:
+                    raise exc
+                raise self.XenAPI.Failure(params)
+            else:
+                raise
+        except xmlrpclib.ProtocolError, exc:
+            logging.debug(_("Got exception: %s"), exc)
             raise
-    except xmlrpclib.ProtocolError, exc:
-        logging.debug(_("Got exception: %s"), exc)
-        raise
 
 
 def _parse_xmlrpc_value(val):

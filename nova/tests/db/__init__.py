@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010 Citrix Systems, Inc.
+#    Copyright (c) 2010 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,16 +15,6 @@
 #    under the License.
 
 """
-:mod:`xenapi` -- Nova support for XenServer and XCP through XenAPI
-==================================================================
+:mod:`db` -- Stubs for DB API
+=============================
 """
-
-
-class HelperBase(object):
-    """
-    The base for helper classes. This adds the XenAPI class attribute
-    """
-    XenAPI = None
-
-    def __init__(self):
-        return
