@@ -22,6 +22,8 @@ from nova import utils
 from nova import wsgi
 import nova.api.openstack
 import nova.image.service
+
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
@@ -48,11 +50,12 @@ class Controller(wsgi.Controller):
         """Return all public images in detail."""
         try:
             images = self._service.detail(req.environ['nova.context'])
-            images = nova.api.openstack.limited(images, req)
+            images = common.limited(images, req)
         except NotImplementedError:
             # Emulate detail() using repeated calls to show()
+            ctxt = req.environ['nova.context']
             images = self._service.index(ctxt)
-            images = nova.api.openstack.limited(images, req)
+            images = common.limited(images, req)
             images = [self._service.show(ctxt, i['id']) for i in images]
         return dict(images=images)
 

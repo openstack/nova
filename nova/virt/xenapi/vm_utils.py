@@ -23,12 +23,14 @@ import logging
 import urllib
 from xml.dom import minidom
 
+from nova import exception
 from nova import flags
-from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
+from nova.virt.xenapi import HelperBase
+from nova.virt.xenapi.volume_utils import StorageError
 
 
 FLAGS = flags.FLAGS
@@ -39,8 +41,6 @@ XENAPI_POWER_STATE = {
     'Paused': power_state.PAUSED,
     'Suspended': power_state.SHUTDOWN,  # FIXME
     'Crashed': power_state.CRASHED}
-
-XenAPI = None
 
 
 class ImageType:
@@ -56,24 +56,10 @@ class ImageType:
         DISK_RAW = 2
 
 
-class VMHelper():
+class VMHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
-
-    def __init__(self):
-        return
-
-    @classmethod
-    def late_import(cls):
-        """
-        Load the XenAPI module in for helper class, if required.
-        This is to avoid to install the XenAPI library when other
-        hypervisors are used
-        """
-        global XenAPI
-        if XenAPI is None:
-            XenAPI = __import__('XenAPI')
 
     @classmethod
     def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
@@ -134,14 +120,13 @@ class VMHelper():
                                    'pae': 'true', 'viridian': 'true'}
         logging.debug('Created VM %s...', instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
-        logging.debug('Created VM %s as %s.', instance.name, vm_ref)
+        logging.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
         return vm_ref
 
     @classmethod
     def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
-
         vbd_rec = {}
         vbd_rec['VM'] = vm_ref
         vbd_rec['VDI'] = vdi_ref
@@ -155,17 +140,53 @@ class VMHelper():
         vbd_rec['qos_algorithm_type'] = ''
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
-        logging.debug('Creating VBD for VM %s, VDI %s ... ', vm_ref, vdi_ref)
+        logging.debug(_('Creating VBD for VM %s, VDI %s ... '),
+                      vm_ref, vdi_ref)
         vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
-        logging.debug('Created VBD %s for VM %s, VDI %s.', vbd_ref, vm_ref,
+        logging.debug(_('Created VBD %s for VM %s, VDI %s.'), vbd_ref, vm_ref,
                       vdi_ref)
         return vbd_ref
+
+    @classmethod
+    def find_vbd_by_number(cls, session, vm_ref, number):
+        """Get the VBD reference from the device number"""
+        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbds:
+            for vbd in vbds:
+                try:
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    if vbd_rec['userdevice'] == str(number):
+                        return vbd
+                except cls.XenAPI.Failure, exc:
+                    logging.warn(exc)
+        raise StorageError(_('VBD not found in instance %s') % vm_ref)
+
+    @classmethod
+    def unplug_vbd(cls, session, vbd_ref):
+        """Unplug VBD from VM"""
+        try:
+            vbd_ref = session.call_xenapi('VBD.unplug', vbd_ref)
+        except cls.XenAPI.Failure, exc:
+            logging.warn(exc)
+            if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
+                raise StorageError(_('Unable to unplug VBD %s') % vbd_ref)
+
+    @classmethod
+    def destroy_vbd(cls, session, vbd_ref):
+        """Destroy VBD from host database"""
+        try:
+            task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
+            #FIXME(armando): find a solution to missing instance_id
+            #with Josh Kearney
+            session.wait_for_task(0, task)
+        except cls.XenAPI.Failure, exc:
+            logging.warn(exc)
+            raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
     def create_vif(cls, session, vm_ref, network_ref, mac_address):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
-
         vif_rec = {}
         vif_rec['device'] = '0'
         vif_rec['network'] = network_ref
@@ -175,10 +196,10 @@ class VMHelper():
         vif_rec['other_config'] = {}
         vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
-        logging.debug('Creating VIF for VM %s, network %s ... ', vm_ref,
+        logging.debug(_('Creating VIF for VM %s, network %s.'), vm_ref,
                       network_ref)
         vif_ref = session.call_xenapi('VIF.create', vif_rec)
-        logging.debug('Created VIF %s for VM %s, network %s.', vif_ref,
+        logging.debug(_('Created VIF %s for VM %s, network %s.'), vif_ref,
                       vm_ref, network_ref)
         return vif_ref
 
@@ -202,7 +223,9 @@ class VMHelper():
             if type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(task)
+        #FIXME(armando): find a solution to missing instance_id
+        #with Josh Kearney
+        uuid = session.wait_for_task(0, task)
         return uuid
 
     @classmethod
@@ -223,29 +246,19 @@ class VMHelper():
 
     @classmethod
     def lookup(cls, session, i):
-        """ Look the instance i up, and returns it if available """
-        return VMHelper.lookup_blocking(session, i)
-
-    @classmethod
-    def lookup_blocking(cls, session, i):
-        """ Synchronous lookup """
+        """Look the instance i up, and returns it if available"""
         vms = session.get_xenapi().VM.get_by_name_label(i)
         n = len(vms)
         if n == 0:
             return None
         elif n > 1:
-            raise Exception('duplicate name found: %s' % i)
+            raise exception.Duplicate(_('duplicate name found: %s') % i)
         else:
             return vms[0]
 
     @classmethod
     def lookup_vm_vdis(cls, session, vm):
-        """ Look for the VDIs that are attached to the VM """
-        return VMHelper.lookup_vm_vdis_blocking(session, vm)
-
-    @classmethod
-    def lookup_vm_vdis_blocking(cls, session, vm):
-        """ Synchronous lookup_vm_vdis """
+        """Look for the VDIs that are attached to the VM"""
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
         vbds = session.get_xenapi().VM.get_VBDs(vm)
@@ -256,8 +269,9 @@ class VMHelper():
                     vdi = session.get_xenapi().VBD.get_VDI(vbd)
                     # Test valid VDI
                     record = session.get_xenapi().VDI.get_record(vdi)
-                    logging.debug('VDI %s is still available', record['uuid'])
-                except XenAPI.Failure, exc:
+                    logging.debug(_('VDI %s is still available'),
+                                  record['uuid'])
+                except cls.XenAPI.Failure, exc:
                     logging.warn(exc)
                 else:
                     vdis.append(vdi)
@@ -268,6 +282,7 @@ class VMHelper():
 
     @classmethod
     def compile_info(cls, record):
+        """Fill record with VM status information"""
         return {'state': XENAPI_POWER_STATE[record['power_state']],
                 'max_mem': long(record['memory_static_max']) >> 10,
                 'mem': long(record['memory_dynamic_max']) >> 10,
@@ -280,11 +295,7 @@ class VMHelper():
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
-            metrics = session.get_xenapi().VM_guest_metrics.get_record(
-                record["guest_metrics"])
-            diags = {
-                "Kernel": metrics["os_version"]["uname"],
-                "Distro": metrics["os_version"]["name"]}
+            diags = {}
             xml = get_rrd(host_ip, record["uuid"])
             if xml:
                 rrd = minidom.parseString(xml)
@@ -295,7 +306,7 @@ class VMHelper():
                         # Name and Value
                         diags[ref[0].firstChild.data] = ref[6].firstChild.data
             return diags
-        except XenAPI.Failure as e:
+        except cls.XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}
 
 
