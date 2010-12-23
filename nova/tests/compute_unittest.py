@@ -100,13 +100,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info("Running instances: %s", instances)
+        logging.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
         self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info("After terminating instances: %s", instances)
+        logging.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
     def test_run_terminate_timestamps(self):

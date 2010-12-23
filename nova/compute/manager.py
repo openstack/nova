@@ -233,7 +233,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: suspending', instance_ref['internal_id'])
+        logging.debug(_('instance %s: suspending'), instance_ref['internal_id'])
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'suspending')
@@ -249,7 +249,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: resuming', instance_ref['internal_id'])
+        logging.debug(_('instance %s: resuming'), instance_ref['internal_id'])
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'resuming')

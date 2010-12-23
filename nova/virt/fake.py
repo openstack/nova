@@ -143,11 +143,15 @@ class FakeConnection(object):
         pass
 
     def suspend(self, instance, callback):
-        """suspend the specified instance"""
+        """
+        suspend the specified instance
+        """
         pass
 
     def resume(self, instance, callback):
-        """resume the specified instance"""
+        """
+        resume the specified instance
+        """
         pass
 
     def destroy(self, instance):

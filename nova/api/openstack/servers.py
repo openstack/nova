@@ -182,7 +182,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::pause %s", readable)
+            logging.error(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -193,7 +193,7 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::unpause %s", readable)
+            logging.error(_("Compute.api::unpause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -204,7 +204,7 @@ class Controller(wsgi.Controller):
             self.compute_api.suspend(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error("compute.api::suspend %s", readable)
+            logging.error(_("compute.api::suspend %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -215,6 +215,6 @@ class Controller(wsgi.Controller):
             self.compute_api.resume(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error("compute.api::resume %s", readable)
+            logging.error(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
