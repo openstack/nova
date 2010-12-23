@@ -31,6 +31,7 @@ The general flow of a request is:
 
 """
 
+import inspect
 import urllib
 
 import routes
@@ -102,6 +103,52 @@ class SundayMorning(wsgi.Router):
             mapper.connect('/%s/{action}' % route,
                            controller=ServiceWrapper(EASY_ROUTES[route]))
 
+  
+class Reflection(object):
+    def __init__(self):
+        self._methods = {}
+
+    def _gather_methods(self):
+        methods = {}
+        for route, handler in EASY_ROUTES.iteritems():
+            for k in dir(handler):
+                if k.startswith('_'):
+                    continue
+                f = getattr(handler, k)
+                if not callable(f):
+                    continue
+
+                # bunch of ugly formatting stuff
+                argspec = inspect.getargspec(f)
+                args = [x for x in argspec[0] if x != 'self' and x != 'context']
+                defaults = argspec[3] and argspec[3] or []
+                args_r = list(reversed(args))
+                defaults_r = list(reversed(defaults))
+                args_out = []
+                while args_r:
+                    if defaults_r:
+                        args_out.append((args_r.pop(0), defaults_r.pop(0)))
+                    else:
+                        args_out.append(str(args_r.pop(0)))
+
+                methods['/%s/%s' % (route, k)] = {
+                        'name': k,
+                        'args': list(reversed(args_out))}
+        return methods
+
+    def get_methods(self, context):
+        if not self._methods:
+            self._methods = self._gather_methods()
+
+        method_list = self._methods.keys()
+        method_list.sort()
+        return {'methods': method_list}
+
+    def get_method_info(self, context, method):
+        if not self._methods:
+            self._methods = self._gather_methods()
+        return self._methods[method]
+
 
 class ServiceWrapper(wsgi.Controller):
     def __init__(self, service_handle):
@@ -148,7 +195,7 @@ class Proxy(object):
 
     def __getattr__(self, key):
         if self.prefix is None:
-            return self.__class__(self.app, key)
+            return self.__class__(self.app, prefix=key)
         
         def _wrapper(context, **kwargs):
             return self.__do_request('/%s/%s' % (self.prefix, key),
@@ -156,6 +203,3 @@ class Proxy(object):
                                      **kwargs)
         _wrapper.func_name = key
         return _wrapper
-
-
-
