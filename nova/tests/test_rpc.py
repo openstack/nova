@@ -20,8 +20,6 @@ Unit Tests for remote procedure calls using queue
 """
 import logging
 
-from twisted.internet import defer
-
 from nova import context
 from nova import flags
 from nova import rpc
@@ -31,32 +29,31 @@ from nova import test
 FLAGS = flags.FLAGS
 
 
-class RpcTestCase(test.TrialTestCase):
+class RpcTestCase(test.TestCase):
     """Test cases for rpc"""
     def setUp(self):
         super(RpcTestCase, self).setUp()
-        self.conn = rpc.Connection.instance()
+        self.conn = rpc.Connection.instance(True)
         self.receiver = TestReceiver()
         self.consumer = rpc.AdapterConsumer(connection=self.conn,
                                             topic='test',
                                             proxy=self.receiver)
-        self.consumer.attach_to_twisted()
+        self.consumer.attach_to_eventlet()
         self.context = context.get_admin_context()
 
     def test_call_succeed(self):
         """Get a value through rpc call"""
         value = 42
-        result = yield rpc.call_twisted(self.context,
-                                        'test', {"method": "echo",
+        result = rpc.call(self.context, 'test', {"method": "echo",
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
 
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call"""
         value = 42
-        result = yield rpc.call_twisted(self.context,
-                                        'test', {"method": "context",
-                                                 "args": {"value": value}})
+        result = rpc.call(self.context,
+                          'test', {"method": "context",
+                                   "args": {"value": value}})
         self.assertEqual(self.context.to_dict(), result)
 
     def test_call_exception(self):
@@ -67,17 +64,47 @@ class RpcTestCase(test.TrialTestCase):
         to an int in the test.
         """
         value = 42
-        self.assertFailure(rpc.call_twisted(self.context, 'test',
-                                            {"method": "fail",
-                                             "args": {"value": value}}),
-                           rpc.RemoteError)
+        self.assertRaises(rpc.RemoteError,
+                          rpc.call,
+                          self.context,
+                          'test',
+                          {"method": "fail",
+                           "args": {"value": value}})
         try:
-            yield rpc.call_twisted(self.context,
-                                   'test', {"method": "fail",
-                                            "args": {"value": value}})
+            rpc.call(self.context,
+                     'test',
+                     {"method": "fail",
+                      "args": {"value": value}})
             self.fail("should have thrown rpc.RemoteError")
         except rpc.RemoteError as exc:
             self.assertEqual(int(exc.value), value)
+
+    def test_nested_calls(self):
+        """Test that we can do an rpc.call inside another call"""
+        class Nested(object):
+            @staticmethod
+            def echo(context, queue, value):
+                """Calls echo in the passed queue"""
+                logging.debug("Nested received %s, %s", queue, value)
+                ret = rpc.call(context,
+                               queue,
+                               {"method": "echo",
+                                "args": {"value": value}})
+                logging.debug("Nested return %s", ret)
+                return value
+
+        nested = Nested()
+        conn = rpc.Connection.instance(True)
+        consumer = rpc.AdapterConsumer(connection=conn,
+                                       topic='nested',
+                                       proxy=nested)
+        consumer.attach_to_eventlet()
+        value = 42
+        result = rpc.call(self.context,
+                          'nested', {"method": "echo",
+                                     "args": {"queue": "test",
+                                              "value": value}})
+        self.assertEqual(value, result)
 
 
 class TestReceiver(object):
@@ -89,13 +116,13 @@ class TestReceiver(object):
     def echo(context, value):
         """Simply returns whatever value is sent in"""
         logging.debug("Received %s", value)
-        return defer.succeed(value)
+        return value
 
     @staticmethod
     def context(context, value):
         """Returns dictionary version of context"""
         logging.debug("Received %s", context)
-        return defer.succeed(context.to_dict())
+        return context.to_dict()
 
     @staticmethod
     def fail(context, value):

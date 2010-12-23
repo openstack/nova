@@ -22,6 +22,8 @@ from nova import utils
 from nova import wsgi
 import nova.api.openstack
 import nova.image.service
+
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 

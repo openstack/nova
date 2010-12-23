@@ -44,11 +44,11 @@ class TestDriver(driver.Scheduler):
         return 'named_host'
 
 
-class SchedulerTestCase(test.TrialTestCase):
+class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.flags(scheduler_driver='nova.tests.scheduler_unittest.TestDriver')
+        self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
 
     def test_fallback(self):
         scheduler = manager.SchedulerManager()
@@ -73,11 +73,12 @@ class SchedulerTestCase(test.TrialTestCase):
         scheduler.named_method(ctxt, 'topic', num=7)
 
 
-class SimpleDriverTestCase(test.TrialTestCase):
+class SimpleDriverTestCase(test.TestCase):
     """Test case for simple driver"""
     def setUp(self):
         super(SimpleDriverTestCase, self).setUp()
         self.flags(connection_type='fake',
+                   stub_network=True,
                    max_cores=4,
                    max_gigabytes=4,
                    network_manager='nova.network.manager.FlatManager',
@@ -122,12 +123,12 @@ class SimpleDriverTestCase(test.TrialTestCase):
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute1.startService()
+        compute1.start()
         compute2 = service.Service('host2',
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute2.startService()
+        compute2.start()
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(len(hosts), 2)
         compute1.kill()
@@ -139,12 +140,12 @@ class SimpleDriverTestCase(test.TrialTestCase):
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute1.startService()
+        compute1.start()
         compute2 = service.Service('host2',
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute2.startService()
+        compute2.start()
         instance_id1 = self._create_instance()
         compute1.run_instance(self.context, instance_id1)
         instance_id2 = self._create_instance()
@@ -162,12 +163,12 @@ class SimpleDriverTestCase(test.TrialTestCase):
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute1.startService()
+        compute1.start()
         compute2 = service.Service('host2',
                                    'nova-compute',
                                    'compute',
                                    FLAGS.compute_manager)
-        compute2.startService()
+        compute2.start()
         instance_ids1 = []
         instance_ids2 = []
         for index in xrange(FLAGS.max_cores):
@@ -195,12 +196,12 @@ class SimpleDriverTestCase(test.TrialTestCase):
                                    'nova-volume',
                                    'volume',
                                    FLAGS.volume_manager)
-        volume1.startService()
+        volume1.start()
         volume2 = service.Service('host2',
                                    'nova-volume',
                                    'volume',
                                    FLAGS.volume_manager)
-        volume2.startService()
+        volume2.start()
         volume_id1 = self._create_volume()
         volume1.create_volume(self.context, volume_id1)
         volume_id2 = self._create_volume()
@@ -218,12 +219,12 @@ class SimpleDriverTestCase(test.TrialTestCase):
                                    'nova-volume',
                                    'volume',
                                    FLAGS.volume_manager)
-        volume1.startService()
+        volume1.start()
         volume2 = service.Service('host2',
                                    'nova-volume',
                                    'volume',
                                    FLAGS.volume_manager)
-        volume2.startService()
+        volume2.start()
         volume_ids1 = []
         volume_ids2 = []
         for index in xrange(FLAGS.max_gigabytes):

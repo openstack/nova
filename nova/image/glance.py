@@ -77,8 +77,8 @@ class ParallaxClient(object):
                 data = json.loads(res.read())['images']
                 return data
             else:
-                logging.warn("Parallax returned HTTP error %d from "
-                             "request for /images", res.status_int)
+                logging.warn(_("Parallax returned HTTP error %d from "
+                               "request for /images"), res.status_int)
                 return []
         finally:
             c.close()
@@ -96,8 +96,8 @@ class ParallaxClient(object):
                 data = json.loads(res.read())['images']
                 return data
             else:
-                logging.warn("Parallax returned HTTP error %d from "
-                             "request for /images/detail", res.status_int)
+                logging.warn(_("Parallax returned HTTP error %d from "
+                               "request for /images/detail"), res.status_int)
                 return []
         finally:
             c.close()

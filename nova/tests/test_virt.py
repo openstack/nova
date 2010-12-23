@@ -30,9 +30,10 @@ FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
-class LibvirtConnTestCase(test.TrialTestCase):
+class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
+        self.flags(fake_call=True)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
@@ -40,33 +41,64 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.network = utils.import_object(FLAGS.network_manager)
         FLAGS.instances_path = ''
 
-    def test_get_uri_and_template(self):
-        ip = '10.11.12.13'
+    test_ip = '10.11.12.13'
+    test_instance = {'memory_kb':     '1024000',
+                     'basepath':      '/some/path',
+                     'bridge_name':   'br100',
+                     'mac_address':   '02:12:34:46:56:67',
+                     'vcpus':         2,
+                     'project_id':    'fake',
+                     'bridge':        'br101',
+                     'instance_type': 'm1.small'}
 
-        instance = {'internal_id': 1,
-                    'memory_kb': '1024000',
-                    'basepath': '/some/path',
-                    'bridge_name': 'br100',
-                    'mac_address': '02:12:34:46:56:67',
-                    'vcpus': 2,
-                    'project_id': 'fake',
-                    'bridge': 'br101',
-                    'instance_type': 'm1.small'}
+    def test_xml_and_uri_no_ramdisk_no_kernel(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=False, expect_ramdisk=False)
 
+    def test_xml_and_uri_no_ramdisk(self):
+        instance_data = dict(self.test_instance)
+        instance_data['kernel_id'] = 'aki-deadbeef'
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=True, expect_ramdisk=False)
+
+    def test_xml_and_uri_no_kernel(self):
+        instance_data = dict(self.test_instance)
+        instance_data['ramdisk_id'] = 'ari-deadbeef'
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=False, expect_ramdisk=False)
+
+    def test_xml_and_uri(self):
+        instance_data = dict(self.test_instance)
+        instance_data['ramdisk_id'] = 'ari-deadbeef'
+        instance_data['kernel_id'] = 'aki-deadbeef'
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=True, expect_ramdisk=True)
+
+    def test_xml_and_uri_rescue(self):
+        instance_data = dict(self.test_instance)
+        instance_data['ramdisk_id'] = 'ari-deadbeef'
+        instance_data['kernel_id'] = 'aki-deadbeef'
+        self._check_xml_and_uri(instance_data, expect_kernel=True,
+                                expect_ramdisk=True, rescue=True)
+
+    def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
+                           rescue=False):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
-        network_ref = self.network.get_network(user_context)
-        self.network.set_network_host(context.get_admin_context(),
-                                      network_ref['id'])
+        host = self.network.get_network_host(user_context.elevated())
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             self.project.id)
 
-        fixed_ip = {'address': ip,
+        fixed_ip = {'address':    self.test_ip,
                     'network_id': network_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
-        db.fixed_ip_update(ctxt, ip, {'allocated': True,
-                                      'instance_id': instance_ref['id']})
+        db.fixed_ip_update(ctxt, self.test_ip,
+                                 {'allocated':   True,
+                                  'instance_id': instance_ref['id']})
 
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
@@ -78,23 +110,73 @@ class LibvirtConnTestCase(test.TrialTestCase):
                               (lambda t: t.find('./devices/emulator'), None)]),
                         'uml': ('uml:///system',
                              [(lambda t: t.find('.').get('type'), 'uml'),
-                              (lambda t: t.find('./os/type').text, 'uml')])}
+                              (lambda t: t.find('./os/type').text, 'uml')]),
+                        'xen': ('xen:///',
+                             [(lambda t: t.find('.').get('type'), 'xen'),
+                              (lambda t: t.find('./os/type').text, 'linux')]),
+                              }
+
+        for hypervisor_type in ['qemu', 'kvm', 'xen']:
+            check_list = type_uri_map[hypervisor_type][1]
+
+            if rescue:
+                check = (lambda t: t.find('./os/kernel').text.split('/')[1],
+                         'rescue-kernel')
+                check_list.append(check)
+                check = (lambda t: t.find('./os/initrd').text.split('/')[1],
+                         'rescue-ramdisk')
+                check_list.append(check)
+            else:
+                if expect_kernel:
+                    check = (lambda t: t.find('./os/kernel').text.split(
+                        '/')[1], 'kernel')
+                else:
+                    check = (lambda t: t.find('./os/kernel'), None)
+                check_list.append(check)
+
+                if expect_ramdisk:
+                    check = (lambda t: t.find('./os/initrd').text.split(
+                        '/')[1], 'ramdisk')
+                else:
+                    check = (lambda t: t.find('./os/initrd'), None)
+                check_list.append(check)
 
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
-            (lambda t: t.find('./devices/interface/filterref/parameter').\
-                         get('name'), 'IP'),
-            (lambda t: t.find('./devices/interface/filterref/parameter').\
-                         get('value'), '10.11.12.13')]
+            (lambda t: t.find(
+                './devices/interface/filterref/parameter').get('name'), 'IP'),
+            (lambda t: t.find(
+                './devices/interface/filterref/parameter').get(
+                    'value'), '10.11.12.13'),
+            (lambda t: t.findall(
+                './devices/interface/filterref/parameter')[1].get(
+                    'name'), 'DHCPSERVER'),
+            (lambda t: t.findall(
+                './devices/interface/filterref/parameter')[1].get(
+                    'value'), '10.0.0.1'),
+            (lambda t: t.find('./devices/serial/source').get(
+                'path').split('/')[1], 'console.log'),
+            (lambda t: t.find('./memory').text, '2097152')]
+
+        if rescue:
+            common_checks += [
+                (lambda t: t.findall('./devices/disk/source')[0].get(
+                    'file').split('/')[1], 'rescue-disk'),
+                (lambda t: t.findall('./devices/disk/source')[1].get(
+                    'file').split('/')[1], 'disk')]
+        else:
+            common_checks += [(lambda t: t.findall(
+                './devices/disk/source')[0].get('file').split('/')[1],
+                               'disk')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
 
-            uri, _template, _rescue = conn.get_uri_and_templates()
+            uri = conn.get_uri()
             self.assertEquals(uri, expected_uri)
 
-            xml = conn.to_xml(instance_ref)
+            xml = conn.to_xml(instance_ref, rescue)
             tree = xml_to_tree(xml)
             for i, (check, expected_result) in enumerate(checks):
                 self.assertEqual(check(tree),
@@ -106,6 +188,9 @@ class LibvirtConnTestCase(test.TrialTestCase):
                                  expected_result,
                                  '%s failed common check %d' % (xml, i))
 
+        # This test is supposed to make sure we don't override a specifically
+        # set uri
+        #
         # Deliberately not just assigning this string to FLAGS.libvirt_uri and
         # checking against that later on. This way we make sure the
         # implementation doesn't fiddle around with the FLAGS.
@@ -114,7 +199,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
             conn = libvirt_conn.LibvirtConnection(True)
-            uri, _template, _rescue = conn.get_uri_and_templates()
+            uri = conn.get_uri()
             self.assertEquals(uri, testuri)
 
     def tearDown(self):
@@ -123,7 +208,7 @@ class LibvirtConnTestCase(test.TrialTestCase):
         self.manager.delete_user(self.user)
 
 
-class NWFilterTestCase(test.TrialTestCase):
+class NWFilterTestCase(test.TestCase):
 
     def setUp(self):
         super(NWFilterTestCase, self).setUp()
@@ -235,7 +320,7 @@ class NWFilterTestCase(test.TrialTestCase):
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
 
-        def _ensure_all_called(_):
+        def _ensure_all_called():
             instance_filter = 'nova-instance-%s' % instance_ref['name']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
@@ -252,8 +337,7 @@ class NWFilterTestCase(test.TrialTestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
-        d = self.fw.setup_nwfilters_for_instance(instance)
-        d.addCallback(_ensure_all_called)
-        d.addCallback(lambda _: self.teardown_security_group())
-
-        return d
+        self.fw.setup_base_nwfilters()
+        self.fw.setup_nwfilters_for_instance(instance)
+        _ensure_all_called()
+        self.teardown_security_group()

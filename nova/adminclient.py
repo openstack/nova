@@ -194,6 +194,7 @@ class HostInfo(object):
 
 
 class NovaAdminClient(object):
+
     def __init__(
             self,
             clc_url=DEFAULT_CLC_URL,

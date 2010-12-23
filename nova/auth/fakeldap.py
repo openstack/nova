@@ -15,7 +15,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""Fake LDAP server for test harness, backs to ReDIS.
+"""Fake LDAP server for test harness.
 
 This class does very little error checking, and knows nothing about ldap
 class definitions.  It implements the minimum emulation of the python ldap
@@ -23,32 +23,63 @@ library to work with nova.
 
 """
 
+import fnmatch
 import json
-import redis
-
-from nova import flags
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string('redis_host', '127.0.0.1',
-                    'Host that redis is running on.')
-flags.DEFINE_integer('redis_port', 6379,
-                    'Port that redis is running on.')
-flags.DEFINE_integer('redis_db', 0, 'Multiple DB keeps tests away')
 
 
-class Redis(object):
+class Store(object):
     def __init__(self):
         if hasattr(self.__class__, '_instance'):
-            raise Exception('Attempted to instantiate singleton')
+            raise Exception(_('Attempted to instantiate singleton'))
 
     @classmethod
     def instance(cls):
         if not hasattr(cls, '_instance'):
-            inst = redis.Redis(host=FLAGS.redis_host,
-                               port=FLAGS.redis_port,
-                               db=FLAGS.redis_db)
-            cls._instance = inst
+            cls._instance = _StorageDict()
         return cls._instance
+
+
+class _StorageDict(dict):
+    def keys(self, pat=None):
+        ret = super(_StorageDict, self).keys()
+        if pat is not None:
+            ret = fnmatch.filter(ret, pat)
+        return ret
+
+    def delete(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            pass
+
+    def flushdb(self):
+        self.clear()
+
+    def hgetall(self, key):
+        """Returns the hash for the given key; creates
+        the hash if the key doesn't exist."""
+        try:
+            return self[key]
+        except KeyError:
+            self[key] = {}
+            return self[key]
+
+    def hget(self, key, field):
+        hashdict = self.hgetall(key)
+        try:
+            return hashdict[field]
+        except KeyError:
+            hashdict[field] = {}
+            return hashdict[field]
+
+    def hset(self, key, field, val):
+        hashdict = self.hgetall(key)
+        hashdict[field] = val
+
+    def hmset(self, key, value_dict):
+        hashdict = self.hgetall(key)
+        for field, val in value_dict.items():
+            hashdict[field] = val
 
 
 SCOPE_BASE = 0
@@ -119,6 +150,9 @@ def _match(key, value, attrs):
     """Match a given key and value against an attribute list."""
     if key not in attrs:
         return False
+    # This is a wild card search. Implemented as all or nothing for now.
+    if value == "*":
+        return True
     if key != "objectclass":
         return value in attrs[key]
     # it is an objectclass check, so check subclasses
@@ -169,8 +203,6 @@ def _to_json(unencoded):
 
 
 class FakeLDAP(object):
-    #TODO(vish): refactor this class to use a wrapper instead of accessing
-    #            redis directly
     """Fake LDAP connection."""
 
     def simple_bind_s(self, dn, password):
@@ -183,14 +215,13 @@ class FakeLDAP(object):
 
     def add_s(self, dn, attr):
         """Add an object with the specified attributes at dn."""
-        key = "%s%s" % (self.__redis_prefix, dn)
-
+        key = "%s%s" % (self.__prefix, dn)
         value_dict = dict([(k, _to_json(v)) for k, v in attr])
-        Redis.instance().hmset(key, value_dict)
+        Store.instance().hmset(key, value_dict)
 
     def delete_s(self, dn):
         """Remove the ldap object at specified dn."""
-        Redis.instance().delete("%s%s" % (self.__redis_prefix, dn))
+        Store.instance().delete("%s%s" % (self.__prefix, dn))
 
     def modify_s(self, dn, attrs):
         """Modify the object at dn using the attribute list.
@@ -201,18 +232,18 @@ class FakeLDAP(object):
             ([MOD_ADD | MOD_DELETE | MOD_REPACE], attribute, value)
 
         """
-        redis = Redis.instance()
-        key = "%s%s" % (self.__redis_prefix, dn)
+        store = Store.instance()
+        key = "%s%s" % (self.__prefix, dn)
 
         for cmd, k, v in attrs:
-            values = _from_json(redis.hget(key, k))
+            values = _from_json(store.hget(key, k))
             if cmd == MOD_ADD:
                 values.append(v)
             elif cmd == MOD_REPLACE:
                 values = [v]
             else:
                 values.remove(v)
-            values = redis.hset(key, k, _to_json(values))
+            values = store.hset(key, k, _to_json(values))
 
     def search_s(self, dn, scope, query=None, fields=None):
         """Search for all matching objects under dn using the query.
@@ -226,16 +257,17 @@ class FakeLDAP(object):
         """
         if scope != SCOPE_BASE and scope != SCOPE_SUBTREE:
             raise NotImplementedError(str(scope))
-        redis = Redis.instance()
+        store = Store.instance()
         if scope == SCOPE_BASE:
-            keys = ["%s%s" % (self.__redis_prefix, dn)]
+            keys = ["%s%s" % (self.__prefix, dn)]
         else:
-            keys = redis.keys("%s*%s" % (self.__redis_prefix, dn))
+            keys = store.keys("%s*%s" % (self.__prefix, dn))
+
         objects = []
         for key in keys:
-            # get the attributes from redis
-            attrs = redis.hgetall(key)
-            # turn the values from redis into lists
+            # get the attributes from the store
+            attrs = store.hgetall(key)
+            # turn the values from the store into lists
             # pylint: disable-msg=E1103
             attrs = dict([(k, _from_json(v))
                           for k, v in attrs.iteritems()])
@@ -244,13 +276,13 @@ class FakeLDAP(object):
                 # filter the attributes by fields
                 attrs = dict([(k, v) for k, v in attrs.iteritems()
                               if not fields or k in fields])
-                objects.append((key[len(self.__redis_prefix):], attrs))
+                objects.append((key[len(self.__prefix):], attrs))
             # pylint: enable-msg=E1103
         if objects == []:
             raise NO_SUCH_OBJECT()
         return objects
 
     @property
-    def __redis_prefix(self):  # pylint: disable-msg=R0201
-        """Get the prefix to use for all redis keys."""
+    def __prefix(self):  # pylint: disable-msg=R0201
+        """Get the prefix to use for all keys."""
         return 'ldap:'
