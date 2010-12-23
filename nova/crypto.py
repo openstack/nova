@@ -22,6 +22,7 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 """
 
 import base64
+import gettext
 import hashlib
 import logging
 import os
@@ -32,6 +33,8 @@ import time
 import utils
 
 import M2Crypto
+
+gettext.install('nova', unicode=1)
 
 from nova import context
 from nova import db

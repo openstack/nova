@@ -48,7 +48,7 @@ class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.flags(scheduler_driver='nova.tests.scheduler_unittest.TestDriver')
+        self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
 
     def test_fallback(self):
         scheduler = manager.SchedulerManager()
