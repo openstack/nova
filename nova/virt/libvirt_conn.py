@@ -427,12 +427,7 @@ class LibvirtConnection(object):
 
         host = instance['host']
 
-        if FLAGS.libvirt_type == 'uml':
-            pass #FIXME
-        elif FLAGS.libvirt_type == 'xen':
-            pass #FIXME
-        else:
-            ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(instance['name'])
+        ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(instance['name'])
 
         cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
             % (utils.novadir(), ajaxterm_cmd, token, port)
