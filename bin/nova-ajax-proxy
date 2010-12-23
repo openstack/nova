@@ -46,7 +46,6 @@ class AjaxConsoleProxyRequest(ProxyRequest):
             args = auth_info['args'] 
             auth_info['last_activity_at'] = time.time() 
 
-            
             self.uri = ("http://%s:%s%s?token=%s"% (
                         str(args['host']),
                         str(args['port']),

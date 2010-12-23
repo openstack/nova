@@ -331,7 +331,6 @@ class ComputeAPI(base.Base):
                           {'method': 'get_ajax_console',
                            'args': {'instance_id': instance_ref['id']}})
 
-        # TODO: make this a call
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'], 
