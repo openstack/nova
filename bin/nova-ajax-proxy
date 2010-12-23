@@ -20,7 +20,6 @@
 
 """Ajax Console Proxy Server"""
 
-
 from eventlet import greenthread
 from eventlet.green import urllib2  
 
@@ -30,7 +29,6 @@ import os
 import sys
 import time
 import urlparse
-
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -90,7 +88,6 @@ class AjaxConsoleProxy(object):
         except Exception:
             start_response("500 ERROR",[])
             return "Server Error"
-
 
     def register_listeners(self):
         class Callback:
