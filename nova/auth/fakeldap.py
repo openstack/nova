@@ -30,7 +30,7 @@ import json
 class Store(object):
     def __init__(self):
         if hasattr(self.__class__, '_instance'):
-            raise Exception('Attempted to instantiate singleton')
+            raise Exception(_('Attempted to instantiate singleton'))
 
     @classmethod
     def instance(cls):

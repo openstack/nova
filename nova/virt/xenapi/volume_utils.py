@@ -25,6 +25,7 @@ import logging
 
 from nova import db
 from nova import context
+from nova import exception
 from nova import flags
 from nova import utils
 from nova.virt.xenapi import HelperBase
@@ -33,7 +34,8 @@ FLAGS = flags.FLAGS
 
 
 class StorageError(Exception):
-    """ To raise errors related to SR, VDI, PBD, and VBD commands """
+    """To raise errors related to SR, VDI, PBD, and VBD commands"""
+
     def __init__(self, message=None):
         super(StorageError, self).__init__(message)
 
@@ -42,8 +44,6 @@ class VolumeHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
-    def __init__(self):
-        super(VolumeHelper, self).__init__()
 
     @classmethod
     def create_iscsi_storage(cls, session, info, label, description):
@@ -76,24 +76,24 @@ class VolumeHelper(HelperBase):
                 return sr_ref
             except cls.XenAPI.Failure, exc:
                 logging.warn(exc)
-                raise StorageError('Unable to create Storage Repository')
+                raise StorageError(_('Unable to create Storage Repository'))
         else:
             return sr_ref[0]
 
     @classmethod
     def find_sr_from_vbd(cls, session, vbd_ref):
-        """ Find the SR reference from the VBD reference """
+        """Find the SR reference from the VBD reference"""
         try:
             vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
             sr_ref = session.get_xenapi().VDI.get_SR(vdi_ref)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
-            raise StorageError('Unable to find SR from VBD %s' % vbd_ref)
+            raise StorageError(_('Unable to find SR from VBD %s') % vbd_ref)
         return sr_ref
 
     @classmethod
     def destroy_iscsi_storage(cls, session, sr_ref):
-        """ Forget the SR whilst preserving the state of the disk """
+        """Forget the SR whilst preserving the state of the disk"""
         logging.debug("Forgetting SR %s ... ", sr_ref)
         pbds = []
         try:
@@ -116,17 +116,18 @@ class VolumeHelper(HelperBase):
 
     @classmethod
     def introduce_vdi(cls, session, sr_ref):
-        """ Introduce VDI in the host """
+        """Introduce VDI in the host"""
         try:
             vdis = session.get_xenapi().SR.get_VDIs(sr_ref)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
-            raise StorageError('Unable to introduce VDI on SR %s' % sr_ref)
+            raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
         try:
             vdi_rec = session.get_xenapi().VDI.get_record(vdis[0])
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
-            raise StorageError('Unable to get record of VDI %s on' % vdis[0])
+            raise StorageError(_('Unable to get record'
+                                 ' of VDI %s on') % vdis[0])
         else:
             try:
                 return session.get_xenapi().VDI.introduce(
@@ -143,7 +144,7 @@ class VolumeHelper(HelperBase):
                     vdi_rec['sm_config'])
             except cls.XenAPI.Failure, exc:
                 logging.warn(exc)
-                raise StorageError('Unable to introduce VDI for SR %s'
+                raise StorageError(_('Unable to introduce VDI for SR %s')
                                    % sr_ref)
 
     @classmethod
@@ -175,8 +176,8 @@ class VolumeHelper(HelperBase):
             (volume_id is None) or \
             (target_host is None) or \
             (target_iqn is None):
-            raise StorageError('Unable to obtain target information %s, %s' %
-                            (device_path, mountpoint))
+            raise StorageError(_('Unable to obtain target information %s, %s')
+                               % (device_path, mountpoint))
         volume_info = {}
         volume_info['deviceNumber'] = device_number
         volume_info['volumeId'] = volume_id
@@ -187,7 +188,7 @@ class VolumeHelper(HelperBase):
 
     @classmethod
     def mountpoint_to_number(cls, mountpoint):
-        """ Translate a mountpoint like /dev/sdc into a numberic """
+        """Translate a mountpoint like /dev/sdc into a numeric"""
         if mountpoint.startswith('/dev/'):
             mountpoint = mountpoint[5:]
         if re.match('^[hs]d[a-p]$', mountpoint):
@@ -202,7 +203,7 @@ class VolumeHelper(HelperBase):
 
 
 def _get_volume_id(path):
-    """ Retrieve the volume id from device_path """
+    """Retrieve the volume id from device_path"""
     # n must contain at least the volume_id
     # /vol- is for remote volumes
     # -vol- is for local volumes
@@ -214,7 +215,7 @@ def _get_volume_id(path):
 
 
 def _get_target_host(iscsi_string):
-    """ Retrieve target host """
+    """Retrieve target host"""
     if iscsi_string:
         return iscsi_string[0:iscsi_string.find(':')]
     elif iscsi_string is None or FLAGS.target_host:
@@ -222,7 +223,7 @@ def _get_target_host(iscsi_string):
 
 
 def _get_target_port(iscsi_string):
-    """ Retrieve target port """
+    """Retrieve target port"""
     if iscsi_string:
         return iscsi_string[iscsi_string.find(':') + 1:]
     elif  iscsi_string is None or FLAGS.target_port:
@@ -230,7 +231,7 @@ def _get_target_port(iscsi_string):
 
 
 def _get_iqn(iscsi_string, id):
-    """ Retrieve target IQN """
+    """Retrieve target IQN"""
     if iscsi_string:
         return iscsi_string
     elif iscsi_string is None or FLAGS.iqn_prefix:
@@ -248,17 +249,20 @@ def _get_target(volume_id):
     """
     volume_ref = db.volume_get_by_ec2_id(context.get_admin_context(),
                                          volume_id)
-
-    (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
+    result = (None, None)
+    try:
+        (r, _e) = utils.execute("sudo iscsiadm -m discovery -t "
                                      "sendtargets -p %s" %
                                      volume_ref['host'])
-    targets = r.splitlines()
-    if len(_e) == 0 and len(targets) == 1:
-        for target in targets:
-            if volume_id in target:
-                (location, _sep, iscsi_name) = target.partition(" ")
-                break
-        iscsi_portal = location.split(",")[0]
-        return (iscsi_name, iscsi_portal)
+    except exception.ProcessExecutionError, exc:
+        logging.warn(exc)
     else:
-        return (None, None)
+        targets = r.splitlines()
+        if len(_e) == 0 and len(targets) == 1:
+            for target in targets:
+                if volume_id in target:
+                    (location, _sep, iscsi_name) = target.partition(" ")
+                    break
+            iscsi_portal = location.split(",")[0]
+            result = (iscsi_name, iscsi_portal)
+    return result

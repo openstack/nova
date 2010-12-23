@@ -24,7 +24,6 @@ dir			= .
 
 [ ca ]
 default_ca		= CA_default
-unique_subject		= no
 
 [ CA_default ]
 serial			= $dir/serial
@@ -32,6 +31,8 @@ database		= $dir/index.txt
 new_certs_dir		= $dir/newcerts
 certificate		= $dir/cacert.pem
 private_key		= $dir/private/cakey.pem
+unique_subject		= no
+default_crl_days	= 365
 default_days		= 365
 default_md		= md5
 preserve		= no

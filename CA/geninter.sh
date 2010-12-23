@@ -16,16 +16,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# ARG is the id of the user
-export SUBJ="/C=US/ST=California/L=MountainView/O=AnsoLabs/OU=NovaDev/CN=customer-intCA-$1"
-mkdir INTER/$1
-cd INTER/$1
+# $1 is the id of the project and $2 is the subject of the cert
+NAME=$1
+SUBJ=$2
+mkdir -p projects/$NAME
+cd projects/$NAME
 cp ../../openssl.cnf.tmpl openssl.cnf
-sed -i -e s/%USERNAME%/$1/g openssl.cnf
+sed -i -e s/%USERNAME%/$NAME/g openssl.cnf
 mkdir certs crl newcerts private
+openssl req -new -x509 -extensions v3_ca -keyout private/cakey.pem -out cacert.pem -days 365 -config ./openssl.cnf -batch -nodes
 echo "10" > serial
 touch index.txt
-openssl genrsa -out private/cakey.pem 1024 -config ./openssl.cnf -batch -nodes
-openssl req -new -sha2 -key private/cakey.pem -out ../../reqs/inter$1.csr -batch -subj "$SUBJ"
-cd ../../
-openssl ca -extensions v3_ca -days 365 -out INTER/$1/cacert.pem -in reqs/inter$1.csr -config openssl.cnf -batch
+# NOTE(vish): Disabling intermediate ca's because we don't actually need them.
+#             It makes more sense to have each project have its own root ca.
+# openssl genrsa -out private/cakey.pem 1024 -config ./openssl.cnf -batch -nodes
+# openssl req -new -sha256 -key private/cakey.pem -out ../../reqs/inter$NAME.csr -batch -subj "$SUBJ"
+openssl ca -gencrl -config ./openssl.cnf -out crl.pem
+if [ "`id -u`" != "`grep nova /etc/passwd | cut -d':' -f3`" ]; then
+    sudo chown -R nova:nogroup .
+fi
+# cd ../../
+# openssl ca -extensions v3_ca -days 365 -out INTER/$NAME/cacert.pem -in reqs/inter$NAME.csr -config openssl.cnf -batch

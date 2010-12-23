@@ -37,7 +37,7 @@ from nova.tests.xenapi import stubs
 FLAGS = flags.FLAGS
 
 
-class XenAPIVolumeTestCase(test.TrialTestCase):
+class XenAPIVolumeTestCase(test.TestCase):
     """
     Unit tests for Volume operations
     """
@@ -49,7 +49,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         FLAGS.xenapi_connection_password = 'test_pass'
         fakes.stub_out_db_instance_api(self.stubs)
         fake.reset()
-        self.values = {'name': 1,
+        self.values = {'name': 1, 'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
                   'image_id': 1,
@@ -141,7 +141,7 @@ class XenAPIVolumeTestCase(test.TrialTestCase):
         self.stubs.UnsetAll()
 
 
-class XenAPIVMTestCase(test.TrialTestCase):
+class XenAPIVMTestCase(test.TestCase):
     """
     Unit tests for VM operations
     """
@@ -167,7 +167,7 @@ class XenAPIVMTestCase(test.TrialTestCase):
 
     def test_spawn(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1,
+        values = {'name': 1, 'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': 1,

@@ -51,6 +51,8 @@ class FakeSessionForVMTests(fake.SessionBase):
             raise fake.Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
                                   vm['power_state']])
         vm['power_state'] = 'Running'
+        vm['is_a_template'] = False
+        vm['is_control_domain'] = False
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):

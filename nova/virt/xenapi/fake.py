@@ -83,10 +83,13 @@ def create_network(name_label, bridge):
         })
 
 
-def create_vm(name_label, status):
+def create_vm(name_label, status,
+              is_a_template=False, is_control_domain=False):
     return _create_object('VM', {
         'name_label': name_label,
         'power-state': status,
+        'is_a_template': is_a_template,
+        'is_control_domain': is_control_domain,
         })
 
 

@@ -1,6 +1,9 @@
+#!/bin/bash
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#    Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,7 +17,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-:mod:`xenapi` -- Stubs for XenAPI
-=================================
-"""
+# This gets zipped and run on the cloudpipe-managed OpenVPN server
+NAME=$1
+SUBJ=$2
+
+mkdir -p projects/$NAME
+cd projects/$NAME
+
+# generate a server priv key
+openssl genrsa -out server.key 2048
+
+# generate a server CSR
+openssl req -new -key server.key -out server.csr -batch -subj "$SUBJ"
+
+novauid=`getent passwd nova | awk -F: '{print $3}'`
+if [ ! -z "${novauid}" ] && [ "`id -u`" != "${novauid}" ]; then
+    sudo chown -R nova:nogroup .
+fi
