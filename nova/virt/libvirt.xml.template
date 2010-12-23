@@ -66,6 +66,9 @@
             <filterref filter="nova-instance-${name}">
                 <parameter name="IP" value="${ip_address}" />
                 <parameter name="DHCPSERVER" value="${dhcp_server}" />
+#if $getVar('extra_params', False)
+                ${extra_params}
+#end if
             </filterref>
         </interface>
         <serial type="file">

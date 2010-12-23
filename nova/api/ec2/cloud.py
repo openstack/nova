@@ -27,7 +27,6 @@ import datetime
 import logging
 import re
 import os
-import time
 
 from nova import context
 import IPy
@@ -699,19 +698,24 @@ class CloudController(object):
                          context.project_id)
             raise quota.QuotaError(_("Address quota exceeded. You cannot "
                                    "allocate any more addresses"))
-        network_topic = self._get_network_topic(context)
+        # NOTE(vish): We don't know which network host should get the ip
+        #             when we allocate, so just send it to any one.  This
+        #             will probably need to move into a network supervisor
+        #             at some point.
         public_ip = rpc.call(context,
-                             network_topic,
+                             FLAGS.network_topic,
                              {"method": "allocate_floating_ip",
                               "args": {"project_id": context.project_id}})
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
-        # NOTE(vish): Should we make sure this works?
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = self._get_network_topic(context)
+        # NOTE(vish): We don't know which network host should get the ip
+        #             when we deallocate, so just send it to any one.  This
+        #             will probably need to move into a network supervisor
+        #             at some point.
         rpc.cast(context,
-                 network_topic,
+                 FLAGS.network_topic,
                  {"method": "deallocate_floating_ip",
                   "args": {"floating_address": floating_ip_ref['address']}})
         return {'releaseResponse': ["Address released."]}
@@ -722,7 +726,10 @@ class CloudController(object):
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = self._get_network_topic(context)
+        # NOTE(vish): Perhaps we should just pass this on to compute and
+        #             let compute communicate with network.
+        network_topic = self.compute_api.get_network_topic(context,
+                                                           internal_id)
         rpc.cast(context,
                  network_topic,
                  {"method": "associate_floating_ip",
@@ -732,23 +739,17 @@ class CloudController(object):
 
     def disassociate_address(self, context, public_ip, **kwargs):
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        network_topic = self._get_network_topic(context)
+        # NOTE(vish): Get the topic from the host name of the network of
+        #             the associated fixed ip.
+        if not floating_ip_ref.get('fixed_ip'):
+            raise exception.ApiError('Address is not associated.')
+        host = floating_ip_ref['fixed_ip']['network']['host']
+        topic = db.queue_get_for(context, FLAGS.network_topic, host)
         rpc.cast(context,
-                 network_topic,
+                 topic,
                  {"method": "disassociate_floating_ip",
                   "args": {"floating_address": floating_ip_ref['address']}})
         return {'disassociateResponse': ["Address disassociated."]}
-
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return db.queue_get_for(context, FLAGS.network_topic, host)
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))

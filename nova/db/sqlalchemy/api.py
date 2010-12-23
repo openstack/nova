@@ -463,6 +463,7 @@ def floating_ip_get_by_address(context, address, session=None):
         session = get_session()
 
     result = session.query(models.FloatingIp).\
+                   options(joinedload_all('fixed_ip.network')).\
                      filter_by(address=address).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -659,13 +660,17 @@ def instance_get(context, instance_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
+                         options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
+                         options(joinedload('volumes')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
+                         options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
+                         options(joinedload('volumes')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
