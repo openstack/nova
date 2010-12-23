@@ -21,7 +21,7 @@
 """Ajax Console Proxy Server"""
 
 from eventlet import greenthread
-from eventlet.green import urllib2  
+from eventlet.green import urllib2
 
 import exceptions
 import logging
@@ -45,9 +45,9 @@ from nova import wsgi
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('ajax_console_idle_timeout', 300, 
+flags.DEFINE_integer('ajax_console_idle_timeout', 300,
                      'Seconds before idle connection destroyed')
- 
+
 
 class AjaxConsoleProxy(object):
     tokens = {}
@@ -67,10 +67,10 @@ class AjaxConsoleProxy(object):
             parsed_url = urlparse.urlparse(req_url)
 
             auth_info = AjaxConsoleProxy.tokens[auth_params['token'][0]]
-            args = auth_info['args'] 
-            auth_info['last_activity'] = time.time() 
+            args = auth_info['args']
+            auth_info['last_activity'] = time.time()
 
-            remote_url = ("http://%s:%s%s?token=%s"% (
+            remote_url = ("http://%s:%s%s?token=%s" % (
                           str(args['host']),
                           str(args['port']),
                           parsed_url.path,
@@ -83,10 +83,10 @@ class AjaxConsoleProxy(object):
             start_response("200 OK", info.dict.items())
             return body
         except (exceptions.KeyError):
-            start_response("401 NOT AUTHORIZED",[])
+            start_response("401 NOT AUTHORIZED", [])
             return "Not Authorized"
         except Exception:
-            start_response("500 ERROR",[])
+            start_response("500 ERROR", [])
             return "Server Error"
 
     def register_listeners(self):
@@ -112,7 +112,7 @@ class AjaxConsoleProxy(object):
             for k in to_delete:
                 del AjaxConsoleProxy.tokens[k]
 
-        utils.LoopingCall(consumer.fetch, auto_ack=True, 
+        utils.LoopingCall(consumer.fetch, auto_ack=True,
                           enable_callbacks=True).start(0.1)
         utils.LoopingCall(delete_expired_tokens).start(1)
 
@@ -124,4 +124,3 @@ if __name__ == '__main__':
     acp.register_listeners()
     server.start(acp, FLAGS.ajax_console_proxy_port, host='0.0.0.0')
     server.wait()
-
