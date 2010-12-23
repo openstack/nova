@@ -104,20 +104,39 @@ class Application(object):
 
 
 class Middleware(Application):
-    """
-    Base WSGI middleware wrapper. These classes require an application to be
+    """Base WSGI middleware.
+    
+    Modelled after Django's middleware this class allows you to 
+    These classes require an application to be
     initialized that will be called next.  By default the middleware will
     simply call its wrapped app, or you can override __call__ to customize its
     behavior.
     """
 
-    def __init__(self, application):  # pylint: disable-msg=W0231
+    def __init__(self, application):
         self.application = application
 
+    def process_request(self, req):
+        """Called on each request.
+
+        If this returns None, the next application down the stack will be
+        executed. If it returns a response then that response will be returned
+        and execution will stop here.
+
+        """
+        return None
+
+    def process_response(self, response):
+        """Do whatever you'd like to the response."""
+        return response
+
     @webob.dec.wsgify
-    def __call__(self, req):  # pylint: disable-msg=W0221
-        """Override to implement middleware behavior."""
-        return self.application
+    def __call__(self, req):
+        response = self.process_request(req)
+        if response:
+            return response
+        response = req.get_response(self.application)
+        return self.process_response(response)
 
 
 class Debug(Middleware):
