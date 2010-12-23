@@ -58,8 +58,8 @@ class VMOps(object):
             raise Exception('Attempted to create non-unique name %s' %
                             instance.name)
 
-        bridge = db.project_get_network(context.get_admin_context(),
-                                      instance.project_id).bridge
+        bridge = db.network_get_by_instance(context.get_admin_context(),
+                                            instance['id'])['bridge']
         network_ref = \
             NetworkHelper.find_network_with_bridge(self._session, bridge)
 
@@ -102,45 +102,6 @@ class VMOps(object):
         if vm is None:
             raise Exception('instance not present %s' % instance_name)
         return vm
-
-    def remove_from_xenstore(self, instance_or_vm, keys):
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        for key in keys:
-            self._session._session.xenapi_request('VM.remove_from_xenstore_data',
-                    (vm, key))
-
-    def read_from_xenstore(self, instance_or_vm, keys=None):
-        """Returns the xenstore data for the specified VM instance as
-        a dict. Accepts an optional list of keys; if the list of keys is 
-        passed, the returned dict is filtered to only return the values
-        for those keys.
-        """
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        ret = self._session._session.xenapi_request('VM.get_xenstore_data', (vm, ))
-        if keys:
-            allkeys = set(ret.keys())
-            badkeys = allkeys.difference(keys)
-            for k in badkeys:
-                ret.pop(k)
-        return ret
-
-    def add_to_xenstore(self, instance_or_vm, mapping):
-        """Takes a dict and adds it to the xenstore record for
-        the given vm instance. Existing data is preserved, but any
-        existing values for the mapping's keys are overwritten.
-        """
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        current_data = self.read_from_xenstore(vm)
-        current_data.update(mapping)
-        self.write_to_xenstore(vm, current_data)
-
-    def write_to_xenstore(self, instance_or_vm, mapping):
-        """Takes a dict and writes it to the xenstore record for
-        the given vm instance. Any existing data is overwritten.
-        """
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        self._session._session.xenapi_request('VM.set_xenstore_data',
-                (vm, mapping))
 
     def reset_root_password(self, instance):
         """Reset the root/admin password on the VM instance"""
@@ -225,3 +186,64 @@ class VMOps(object):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
+
+    def read_from_xenstore(self, instance_or_vm, keys=None):
+        """Returns the xenstore data for the specified VM instance as
+        a dict. Accepts an optional list of keys; if the list of keys is 
+        passed, the returned dict is filtered to only return the values
+        for those keys.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        ret = self._session.call_xenapi_request('VM.get_xenstore_data', (vm, ))
+        if keys:
+            allkeys = set(ret.keys())
+            badkeys = allkeys.difference(keys)
+            for k in badkeys:
+                del ret[k]
+        return ret
+
+    def add_to_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and adds it to the xenstore record for
+        the given vm instance. Existing data is preserved, but any
+        existing values for the mapping's keys are overwritten.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        current_data = self.read_from_xenstore(vm)
+        current_data.update(mapping)
+        self.write_to_xenstore(vm, current_data)
+
+    def write_to_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and writes it to the xenstore record for
+        the given vm instance. Any existing data is overwritten.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        self._session.call_xenapi_request('VM.set_xenstore_data',
+                (vm, mapping))
+
+    def remove_from_xenstore(self, instance_or_vm, key_or_keys):
+        """Takes either a single key or a list of keys and removes
+        them from the xenstore data for the given VM. If the key
+        doesn't exist, the request is ignored.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        if isinstance(key_or_keys, basestring):
+            keys = [key_or_keys]
+        else:
+            keys = key_or_keys
+        for key in keys:
+            self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
+        """Takes either a single key or a list of keys and removes
+        them from the xenstore data for the given VM. If the key
+        doesn't exist, the request is ignored.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        if isinstance(key_or_keys, basestring):
+            keys = [key_or_keys]
+        else:
+            keys = key_or_keys
+        for key in keys:
+            self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
+
+    def clear_xenstore(self, instance_or_vm):
+        """Removes all data from the xenstore record for this VM."""
+        self.write_to_xenstore(instance_or_vm, {})

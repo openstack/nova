@@ -183,6 +183,13 @@ class XenAPISession(object):
             f = f.__getattr__(m)
         return tpool.execute(f, *args)
 
+    def call_xenapi_request(self, method, *args):
+        """Some interactions with dom0, such as interacting with xenstore,
+        require using the xenapi_request method of the session object.
+        This wraps that call on a background thread."""
+        f = self._session.xenapi_request
+        return tpool.execute(f, method, *args)
+
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
         return tpool.execute(_unwrap_plugin_exceptions,

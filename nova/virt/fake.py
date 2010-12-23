@@ -76,6 +76,12 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
+    def init_host(self):
+        """
+        Initialize anything that is necessary for the driver to function
+        """
+        return
+
     def list_instances(self):
         """
         Return the names of all the instances known to the virtualization

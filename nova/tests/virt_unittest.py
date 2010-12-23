@@ -33,6 +33,7 @@ flags.DECLARE('instances_path', 'nova.compute.manager')
 class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
+        self.flags(fake_call=True)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
@@ -88,9 +89,9 @@ class LibvirtConnTestCase(test.TestCase):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
-        network_ref = self.network.get_network(user_context)
-        self.network.set_network_host(context.get_admin_context(),
-                                      network_ref['id'])
+        host = self.network.get_network_host(user_context.elevated())
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             self.project.id)
 
         fixed_ip = {'address':    self.test_ip,
                     'network_id': network_ref['id']}
@@ -338,7 +339,7 @@ class NWFilterTestCase(test.TestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
-        d = self.fw.setup_nwfilters_for_instance(instance)
+        self.fw.setup_base_nwfilters()
+        self.fw.setup_nwfilters_for_instance(instance)
         _ensure_all_called()
         self.teardown_security_group()
-        return d
