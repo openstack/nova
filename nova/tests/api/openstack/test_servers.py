@@ -27,7 +27,6 @@ import nova.api.openstack
 from nova.api.openstack import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
-import nova.image
 import nova.rpc
 from nova.tests.api.openstack import fakes
 
