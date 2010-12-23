@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, String, schema
+from sqlalchemy import Column, Integer, Float, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -151,6 +151,16 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
 
 
+class Certificate(BASE, NovaBase):
+    """Represents a an x509 certificate"""
+    __tablename__ = 'certificates'
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    file_name = Column(String(255))
+
+
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
@@ -224,6 +234,31 @@ class Instance(BASE, NovaBase):
     #def validate_state(self, key, state):
     #    assert(state in ['nostate', 'running', 'blocked', 'paused',
     #                     'shutdown', 'shutoff', 'crashed'])
+
+
+class InstanceDiagnostics(BASE, NovaBase):
+    """Represents a guest VM's diagnostics"""
+    __tablename__ = "instance_diagnostics"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    memory_available = Column(Float)
+    memory_free = Column(Float)
+    cpu_load = Column(Float)
+    disk_read = Column(Float)
+    disk_write = Column(Float)
+    net_tx = Column(Float)
+    net_rx = Column(Float)
+
+
+class InstanceActions(BASE, NovaBase):
+    """Represents a guest VM's actions and results"""
+    __tablename__ = "instance_actions"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    action = Column(String(255))
+    error = Column(Text)
 
 
 class Volume(BASE, NovaBase):
@@ -526,10 +561,11 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
-              FloatingIp, Network, SecurityGroup,
-              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project)  # , Image, Host
+    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Network, SecurityGroup, SecurityGroupIngressRule,
+              SecurityGroupInstanceAssociation, AuthToken, User,
+              Project, Certificate)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

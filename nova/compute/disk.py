@@ -67,12 +67,12 @@ def partition(infile, outfile, local_bytes=0, resize=True,
         execute('resize2fs %s' % infile)
         file_size = FLAGS.minimum_root_size
     elif file_size % sector_size != 0:
-        logging.warn("Input partition size not evenly divisible by"
-                     " sector size: %d / %d", file_size, sector_size)
+        logging.warn(_("Input partition size not evenly divisible by"
+                       " sector size: %d / %d"), file_size, sector_size)
     primary_sectors = file_size / sector_size
     if local_bytes % sector_size != 0:
-        logging.warn("Bytes for local storage not evenly divisible"
-                     " by sector size: %d / %d", local_bytes, sector_size)
+        logging.warn(_("Bytes for local storage not evenly divisible"
+                       " by sector size: %d / %d"), local_bytes, sector_size)
     local_sectors = local_bytes / sector_size
 
     mbr_last = 62  # a
@@ -106,6 +106,13 @@ def partition(infile, outfile, local_bytes=0, resize=True,
                 % (outfile, local_type, local_first, local_last))
 
 
+def extend(image, size, execute):
+    file_size = os.path.getsize(image)
+    if file_size >= size:
+        return
+    return execute('truncate -s size %s' % (image,))
+
+
 def inject_data(image, key=None, net=None, partition=None, execute=None):
     """Injects a ssh key and optionally net data into a disk image.
 
@@ -115,20 +122,30 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
     If partition is not specified it mounts the image as a single partition.
 
     """
-    out, err = execute('sudo losetup -f --show %s' % image)
+    out, err = execute('sudo losetup --find --show %s' % image)
     if err:
-        raise exception.Error('Could not attach image to loopback: %s' % err)
+        raise exception.Error(_('Could not attach image to loopback: %s')
+                              % err)
     device = out.strip()
     try:
         if not partition is None:
             # create partition
             out, err = execute('sudo kpartx -a %s' % device)
             if err:
-                raise exception.Error('Failed to load partition: %s' % err)
+                raise exception.Error(_('Failed to load partition: %s') % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
                                                    partition)
         else:
             mapped_device = device
+
+        # We can only loopback mount raw images. If the device isn't there,
+        # it's normally because it's a .vmdk or a .vdi etc
+        if not os.path.exists(mapped_device):
+            raise exception.Error('Mapped device was not found (we can'
+                                  ' only inject raw disk images): %s' %
+                                  mapped_device)
+
+        # Configure ext2fs so that it doesn't auto-check every N boots
         out, err = execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
 
         tmpdir = tempfile.mkdtemp()
@@ -137,7 +154,8 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
             out, err = execute(
                     'sudo mount %s %s' % (mapped_device, tmpdir))
             if err:
-                raise exception.Error('Failed to mount filesystem: %s' % err)
+                raise exception.Error(_('Failed to mount filesystem: %s')
+                                      % err)
 
             try:
                 if key:
@@ -156,7 +174,7 @@ def inject_data(image, key=None, net=None, partition=None, execute=None):
                 execute('sudo kpartx -d %s' % device)
     finally:
         # remove loopback
-        execute('sudo losetup -d %s' % device)
+        execute('sudo losetup --detach %s' % device)
 
 
 def _inject_key_into_fs(key, fs, execute=None):
@@ -165,7 +183,7 @@ def _inject_key_into_fs(key, fs, execute=None):
     key is an ssh key string.
     fs is the path to the base of the filesystem into which to inject the key.
     """
-    sshdir = os.path.join(os.path.join(fs, 'root'), '.ssh')
+    sshdir = os.path.join(fs, 'root', '.ssh')
     execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
     execute('sudo chown root %s' % sshdir)
     execute('sudo chmod 700 %s' % sshdir)
