@@ -110,6 +110,10 @@ class XenAPIConnection(object):
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
 
+    def init_host(self):
+        """Initialize anything that is necessary for the driver to function"""
+        return
+
     def list_instances(self):
         """List VM instances"""
         return self._vmops.list_instances()
