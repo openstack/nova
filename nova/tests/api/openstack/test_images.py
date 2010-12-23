@@ -227,6 +227,8 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
             if set(x) <= set(y):
                 for k, v in x.iteritems():
                     if x[k] != y[k]:
+                        if x[k] == 'active' and y[k] == 'available':
+                            next
                         return False
                 return True
             return False
