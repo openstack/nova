@@ -402,7 +402,7 @@ class LibvirtConnection(object):
     def get_ajax_console(self, instance):
         def get_open_port():
             start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
-            for i in xrange(0,100): # don't loop forever
+            for i in xrange(0,100):  # don't loop forever
                 port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused

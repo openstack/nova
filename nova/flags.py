@@ -220,7 +220,7 @@ DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
 DEFINE_string('network_topic', 'network', 'the topic network nodes listen on')
-DEFINE_string('ajax_console_proxy_topic', 'ajax_proxy', 
+DEFINE_string('ajax_console_proxy_topic', 'ajax_proxy',
               'the topic ajax proxy nodes listen on')
 DEFINE_string('ajax_console_proxy_url',
               'http://tonbuntu:8000',
