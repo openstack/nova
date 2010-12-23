@@ -253,7 +253,7 @@ else{ /* end IE initialization, try to deal with real browsers now ;-) */
             oDoc.addEventListener("load", _sarissa_XMLDocument_onload, false);
             return oDoc;
         };
-        if(window.XMLDocument){
+        if(false && window.XMLDocument){
             /**
             * <p>Emulate IE's onreadystatechange attribute</p>
             */

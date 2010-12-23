@@ -222,6 +222,9 @@ DEFINE_string('ajax_console_proxy_topic', 'ajax_proxy',
 DEFINE_string('ajax_console_proxy_url',
               'http://tonbuntu:8000',
               'location of ajax console proxy, in the form "http://tonbuntu:8000"')
+DEFINE_string('ajax_console_proxy_port',
+              8000,
+              'port that ajax_console_proxy binds')
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False,

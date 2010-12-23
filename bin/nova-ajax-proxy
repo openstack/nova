@@ -12,101 +12,99 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+import webob.dec
+import webob.exc
+
 from nova import exception
 from nova import flags
 from nova import utils
 from nova import rpc
+from nova import wsgi
 
 import exceptions
 import logging
 import urlparse
 
 FLAGS = flags.FLAGS
-from twisted.internet import reactor
-from twisted.internet import task
-from twisted.web import error, http
-from twisted.web.proxy import Proxy, ProxyRequest
 
 flags.DEFINE_integer('ajax_console_idle_timeout', 300, 
                      'Seconds before idle connection destroyed')
  
-class AjaxConsoleProxyRequest(ProxyRequest):
-    def process(self):
-        if 'referer' in self.received_headers:
-            auth_uri = self.received_headers['referer']
-        else:
-            auth_uri = self.uri
+import eventlet
+from eventlet import greenthread
+from eventlet.green import urllib2  
 
+class AjaxConsoleProxy(object):
+    tokens = {}
+
+    def __call__(self, environ, start_response):
         try:
-            auth_params = urlparse.parse_qs(urlparse.urlparse(auth_uri).query)
-            parsed_uri = urlparse.urlparse(self.uri)
+            req_url = '%s://%s%s?%s' % (environ['wsgi.url_scheme'], environ['HTTP_HOST'], environ['PATH_INFO'], environ['QUERY_STRING'])
+            if 'HTTP_REFERER' in environ:
+                auth_url = environ['HTTP_REFERER']
+            else:
+                auth_url = req_url
 
-            auth_info = auth_params['token'][0]
-            auth_info  = AjaxConsoleProxy.tokens[auth_params['token'][0]]
+            auth_params = urlparse.parse_qs(urlparse.urlparse(auth_url).query)
+            parsed_url = urlparse.urlparse(req_url)
+
+            auth_info = AjaxConsoleProxy.tokens[auth_params['token'][0]]
             args = auth_info['args'] 
             auth_info['last_activity_at'] = time.time() 
 
-            self.uri = ("http://%s:%s%s?token=%s"% (
-                        str(args['host']),
-                        str(args['port']),
-                        parsed_uri.path,
-                        str(args['token'])))
+            remote_url = ("http://%s:%s%s?token=%s"% (
+                          str(args['host']),
+                          str(args['port']),
+                          parsed_url.path,
+                          str(args['token'])))
 
-            ProxyRequest.process(self)
+            opener = urllib2.urlopen(remote_url, environ['wsgi.input'].read())
+            body = opener.read()
+            info = opener.info()
+
+            start_response("200 OK", info.dict.items())
+            return body
         except (exceptions.KeyError):
-            raise exception.NotAuthorized("Unauthorized Request")
+            start_response("401 NOT AUTHORIZED",[])
+            return "Not Authorized"
+        except Exception:
+            start_response("500 ERROR",[])
+            return "Server Error"
 
-class AjaxConsoleProxy(Proxy):
-    #tokens = {}
-    tokens = {'key': {'args':'','last_activity_at':time.time()}}
-    requestFactory = AjaxConsoleProxyRequest
 
-    def start(self):
+    def register_listeners(self):
+        class Callback:
+            def __call__(self, data, message):
+                if data['method'] == 'authorize_ajax_console':
+                    AjaxConsoleProxy.tokens[data['args']['token']] =  \
+                        {'args': data['args'], 'last_activity_at': time.time()}
+
         conn = rpc.Connection.instance(new=True)
-        self.consumer = rpc.TopicConsumer(
+        consumer = rpc.TopicConsumer(
                         connection=conn,
                         topic=FLAGS.ajax_console_proxy_topic)
-        self.consumer.register_callback(self)
+        consumer.register_callback(Callback())
 
-        task.LoopingCall(self.age).start(1.0)
-        task.LoopingCall(self.pollq).start(0.1)
+        def delete_expired_tokens():
+            now = time.time()
+            to_delete = []
+            for k, v in AjaxConsoleProxy.tokens.items():
+                if now - v['last_activity_at'] > FLAGS.ajax_console_idle_timeout:
+                    to_delete.append(k)
 
-        factory = http.HTTPFactory()
-        factory.protocol = AjaxConsoleProxy
-         
-        port = urlparse.urlparse(FLAGS.ajax_console_proxy_url).port
-        reactor.listenTCP(port, factory)
-        reactor.run()
+            for k in to_delete:
+                del AjaxConsoleProxy.tokens[k]
 
-    def age(self):
-        now = time.time()
-        print now
-        to_delete = []
-        for k, v in AjaxConsoleProxy.tokens.items():
-            if now - v['last_activity_at'] > FLAGS.ajax_console_idle_timeout:
-                to_delete.append(k)
-
-        for k in to_delete:
-            print "del"
-            del AjaxConsoleProxy.tokens[k]
-
-    def pollq(self):
-        self.consumer.fetch(auto_ack=True, enable_callbacks=True)
- 
-    def __call__(self, data, message):
-        if data['method'] == 'authorize_ajax_console':
-            AjaxConsoleProxy.tokens[data['args']['token']] = {'args': data['args'], 'born_at': time.time()}
-
+        utils.LoopingCall(consumer.fetch, auto_ack=True, 
+                          enable_callbacks=True).start(0.1)
+        utils.LoopingCall(delete_expired_tokens).start(1)
 
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    server = wsgi.Server()
+    acp = AjaxConsoleProxy()
+    acp.register_listeners()
+    server.start(acp, FLAGS.ajax_console_proxy_port, host='0.0.0.0')
+    server.wait()
 
-    formatter = logging.Formatter('(%(name)s): %(levelname)s %(message)s')
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
-
-    ajaxproxy = AjaxConsoleProxy()
-    ajaxproxy.start()
-     
