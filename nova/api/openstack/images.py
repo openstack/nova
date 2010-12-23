@@ -108,7 +108,7 @@ class Controller(wsgi.Controller):
     def index(self, req):
         """Return all public images in brief"""
         items = self._service.index(req.environ['nova.context'])
-        items = common.limited(images, req)
+        items = common.limited(items, req)
         items = [_entity_inst(item) for item in items]
         return dict(images=items)
 
@@ -118,7 +118,7 @@ class Controller(wsgi.Controller):
             items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
             items = self._service.index(req.environ['nova.context'])
-        items = common.limited(images, req)
+        items = common.limited(items, req)
         items = [_entity_detail(item) for item in items]
         return dict(images=items)
 
