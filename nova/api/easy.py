@@ -41,8 +41,6 @@ from nova import flags
 from nova import utils
 from nova import wsgi
 
-# prxy compute_api in amazon tests
-
 
 EASY_ROUTES = {}
 
