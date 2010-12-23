@@ -41,6 +41,7 @@ class ComputeTestCase(test.TestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
+                   stub_network=True,
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute_api.ComputeAPI()
@@ -126,6 +127,14 @@ class ComputeTestCase(test.TestCase):
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
+
+    def test_pause(self):
+        """Ensure instance can be paused"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.pause_instance(self.context, instance_id)
+        self.compute.unpause_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
 
     def test_reboot(self):
         """Ensure instance can be rebooted"""

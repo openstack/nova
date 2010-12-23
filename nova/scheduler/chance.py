@@ -34,5 +34,5 @@ class ChanceScheduler(driver.Scheduler):
 
         hosts = self.hosts_up(context, topic)
         if not hosts:
-            raise driver.NoValidHost("No hosts found")
+            raise driver.NoValidHost(_("No hosts found"))
         return hosts[int(random.random() * len(hosts))]

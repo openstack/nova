@@ -208,17 +208,13 @@ class AuthManagerTestCase(object):
         #             so it probably belongs in crypto_unittest
         #             but I'm leaving it where I found it.
         with user_and_project_generator(self.manager) as (user, project):
-            # NOTE(todd): Should mention why we must setup controller first
-            #             (somebody please clue me in)
-            cloud_controller = cloud.CloudController()
-            cloud_controller.setup()
-            _key, cert_str = self.manager._generate_x509_cert('test1',
-                                                              'testproj')
+            # NOTE(vish): Setup runs genroot.sh if it hasn't been run
+            cloud.CloudController().setup()
+            _key, cert_str = crypto.generate_x509_cert(user.id, project.id)
             logging.debug(cert_str)
 
-            # Need to verify that it's signed by the right intermediate CA
-            full_chain = crypto.fetch_ca(project_id='testproj', chain=True)
-            int_cert = crypto.fetch_ca(project_id='testproj', chain=False)
+            full_chain = crypto.fetch_ca(project_id=project.id, chain=True)
+            int_cert = crypto.fetch_ca(project_id=project.id, chain=False)
             cloud_cert = crypto.fetch_ca()
             logging.debug("CA chain:\n\n =====\n%s\n\n=====" % full_chain)
             signed_cert = X509.load_cert_string(cert_str)
@@ -227,7 +223,8 @@ class AuthManagerTestCase(object):
             cloud_cert = X509.load_cert_string(cloud_cert)
             self.assertTrue(signed_cert.verify(chain_cert.get_pubkey()))
             self.assertTrue(signed_cert.verify(int_cert.get_pubkey()))
-            if not FLAGS.use_intermediate_ca:
+
+            if not FLAGS.use_project_ca:
                 self.assertTrue(signed_cert.verify(cloud_cert.get_pubkey()))
             else:
                 self.assertFalse(signed_cert.verify(cloud_cert.get_pubkey()))
@@ -333,14 +330,10 @@ class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
         AuthManagerTestCase.__init__(self)
         test.TestCase.__init__(self, *args, **kwargs)
         import nova.auth.fakeldap as fakeldap
-        FLAGS.redis_db = 8
         if FLAGS.flush_db:
-            logging.info("Flushing redis datastore")
-            try:
-                r = fakeldap.Redis.instance()
-                r.flushdb()
-            except:
-                self.skip = True
+            logging.info("Flushing datastore")
+            r = fakeldap.Store.instance()
+            r.flushdb()
 
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
