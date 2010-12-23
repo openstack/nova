@@ -140,15 +140,15 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(context=self.context,
+        output = self.cloud.get_console_output(context=self.context,
                                                      instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
-        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -186,7 +186,7 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         # TODO: check for proper response
         instance_id = rv['reservationSet'][0].keys()[0]
         instance = rv['reservationSet'][0][instance_id][0]
@@ -209,7 +209,7 @@ class CloudTestCase(test.TestCase):
             for instance in reservations[reservations.keys()[0]]:
                 instance_id = instance['instance_id']
                 logging.debug("Terminating instance %s" % instance_id)
-                rv = yield self.compute.terminate_instance(instance_id)
+                rv = self.compute.terminate_instance(instance_id)
 
     def test_instance_update_state(self):
         def instance(num):
