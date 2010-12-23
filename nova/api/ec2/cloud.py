@@ -118,7 +118,8 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in self.compute_api.get_instances(context, project_id):
+        for instance in self.compute_api.get_instances(context,
+                                                       project_id=project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -442,7 +443,8 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context,
+                                                     instance_id=internal_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -541,7 +543,8 @@ class CloudController(object):
         if volume_ref['attach_status'] == "attached":
             raise exception.ApiError(_("Volume is already attached"))
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context,
+                                                     instance_id=internal_id)
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -722,14 +725,15 @@ class CloudController(object):
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_ref = self.compute_api.get_instance(context,
+                                                     instance_id=internal_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
         # NOTE(vish): Perhaps we should just pass this on to compute and
         #             let compute communicate with network.
-        network_topic = self.compute_api.get_network_topic(context,
-                                                           internal_id)
+        network_topic = self.compute_api.get_network_topic(
+                context, instance_id=internal_id)
         rpc.cast(context,
                  network_topic,
                  {"method": "associate_floating_ip",
@@ -754,8 +758,9 @@ class CloudController(object):
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
         instances = self.compute_api.create_instances(context,
-            instance_types.get_by_type(kwargs.get('instance_type', None)),
-            kwargs['image_id'],
+            instance_type=instance_types.get_by_type(
+                    kwargs.get('instance_type', None)),
+            image_id=kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id', None),
@@ -765,7 +770,7 @@ class CloudController(object):
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
-            generate_hostname=internal_id_to_ec2_id)
+            hostname_format='ec2')
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
@@ -775,26 +780,26 @@ class CloudController(object):
         logging.debug("Going to start terminating instances")
         for ec2_id in instance_id:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.delete_instance(context, internal_id)
+            self.compute_api.delete_instance(context, instance_id=internal_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for ec2_id in instance_id:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.reboot(context, internal_id)
+            self.compute_api.reboot(context, instance_id=internal_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.rescue(context, internal_id)
+        self.compute_api.rescue(context, instance_id=internal_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.unrescue(context, internal_id)
+        self.compute_api.unrescue(context, instance_id=internal_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
@@ -805,7 +810,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = self.compute_api.get_instance(context, internal_id)
+            inst = self.compute_api.get_instance(context,
+                                                 instance_id=internal_id)
             db.instance_update(context, inst['id'], kwargs)
         return True
 

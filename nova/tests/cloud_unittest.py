@@ -22,6 +22,7 @@ import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
+import shutil
 import tempfile
 import time
 
@@ -293,6 +294,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('Foo Img', img.metadata['description'])
         self._fake_set_image_description(self.context, 'ami-testing', '')
         self.assertEqual('', img.metadata['description'])
+        shutil.rmtree(pathdir)
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})

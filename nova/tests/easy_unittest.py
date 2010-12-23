@@ -28,7 +28,8 @@ from nova import exception
 from nova import test
 from nova import utils
 from nova.api import easy
-
+from nova.compute import api as compute_api
+from nova.tests import cloud_unittest
 
 class FakeService(object):
     def echo(self, context, data):
@@ -83,3 +84,19 @@ class EasyTestCase(test.TestCase):
         proxy = easy.Proxy(self.router)
         rv = proxy.fake.echo(self.context, data='baz')
         self.assertEqual(rv['data'], 'baz')
+
+
+class EasyCloudTestCase(cloud_unittest.CloudTestCase):
+    def setUp(self):
+        super(EasyCloudTestCase, self).setUp()
+        compute_handle = compute_api.ComputeAPI(self.cloud.network_manager,
+                                                self.cloud.image_service)
+        easy.register_service('compute', compute_handle)
+        self.router = easy.JsonParamsMiddleware(easy.SundayMorning())
+        proxy = easy.Proxy(self.router)
+        self.cloud.compute_api = proxy.compute
+
+    def tearDown(self):
+        super(EasyCloudTestCase, self).tearDown()
+        easy.EASY_ROUTES = {}
+

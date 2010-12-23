@@ -31,7 +31,6 @@ The general flow of a request is:
 
 """
 
-import json
 import urllib
 
 import routes
@@ -39,6 +38,7 @@ import webob
 
 from nova import context
 from nova import flags
+from nova import utils
 from nova import wsgi
 
 # prxy compute_api in amazon tests
@@ -65,7 +65,7 @@ class JsonParamsMiddleware(wsgi.Middleware):
             return
 
         params_json = request.params['json']
-        params_parsed = json.loads(params_json)
+        params_parsed = utils.loads(params_json)
         params = {}
         for k, v in params_parsed.iteritems():
             if k in ('self', 'context'):
@@ -125,7 +125,7 @@ class ServiceWrapper(wsgi.Controller):
         method = getattr(self.service_handle, action)
         
         result = method(context, **params)
-        if type(result) is dict:
+        if type(result) is dict or type(result) is list:
             return self._serialize(result, req)
         else:
             return result
@@ -140,11 +140,11 @@ class Proxy(object):
     def __do_request(self, path, context, **kwargs):
         req = webob.Request.blank(path)
         req.method = 'POST'
-        req.body = urllib.urlencode({'json': json.dumps(kwargs)})
+        req.body = urllib.urlencode({'json': utils.dumps(kwargs)})
         req.environ['openstack.context'] = context
         resp = req.get_response(self.app)
         try:
-            return json.loads(resp.body)
+            return utils.loads(resp.body)
         except Exception:
             return resp.body
 

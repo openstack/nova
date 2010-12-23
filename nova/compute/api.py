@@ -36,10 +36,19 @@ from nova.db import base
 FLAGS = flags.FLAGS
 
 
-def generate_default_hostname(internal_id):
+def id_to_default_hostname(internal_id):
     """Default function to generate a hostname given an instance reference."""
     return str(internal_id)
 
+def id_to_ec2_hostname(internal_id):
+    digits = []
+    while internal_id != 0:
+        internal_id, remainder = divmod(internal_id, 36)
+        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
+    return "i-%s" % ''.join(reversed(digits))
+
+HOSTNAME_FORMATTERS = {'default': id_to_default_hostname,
+                       'ec2': id_to_ec2_hostname}
 
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
@@ -75,7 +84,7 @@ class ComputeAPI(base.Base):
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
                          user_data=None,
-                         generate_hostname=generate_default_hostname):
+                         hostname_format='default'):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
 
@@ -144,6 +153,7 @@ class ComputeAPI(base.Base):
 
         elevated = context.elevated()
         instances = []
+        generate_hostname = HOSTNAME_FORMATTERS[hostname_format]
         logging.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
@@ -177,7 +187,7 @@ class ComputeAPI(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id}})
 
-        return instances
+        return [dict(x.iteritems()) for x in instances]
 
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
@@ -254,7 +264,8 @@ class ComputeAPI(base.Base):
         return self.db.instance_get_all(context)
 
     def get_instance(self, context, instance_id):
-        return self.db.instance_get_by_internal_id(context, instance_id)
+        rv = self.db.instance_get_by_internal_id(context, instance_id)
+        return dict(rv.iteritems())
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""

@@ -21,7 +21,6 @@
 Utility methods for working with WSGI servers
 """
 
-import json
 import logging
 import sys
 from xml.dom import minidom
@@ -35,6 +34,7 @@ import webob
 import webob.dec
 import webob.exc
 
+from nova import utils
 
 logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
 
@@ -322,7 +322,7 @@ class Serializer(object):
         try:
             is_xml = (datastring[0] == '<')
             if not is_xml:
-                return json.loads(datastring)
+                return utils.loads(datastring)
             return self._from_xml(datastring)
         except:
             return None
@@ -355,7 +355,7 @@ class Serializer(object):
             return result
 
     def _to_json(self, data):
-        return json.dumps(data)
+        return utils.dumps(data)
 
     def _to_xml(self, data):
         metadata = self.metadata.get('application/xml', {})
