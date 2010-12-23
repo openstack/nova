@@ -1,3 +1,4 @@
+#!/bin/bash
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -16,39 +17,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# This gets zipped and run on the cloudpipe-managed OpenVPN server
+NAME=$1
+SUBJ=$2
 
-import boto
-from boto.ec2.regioninfo import RegionInfo
-import unittest
+mkdir -p projects/$NAME
+cd projects/$NAME
 
+# generate a server priv key
+openssl genrsa -out server.key 2048
 
-ACCESS_KEY = 'fake'
-SECRET_KEY = 'fake'
-CLC_IP = '127.0.0.1'
-CLC_PORT = 8773
-REGION = 'test'
+# generate a server CSR
+openssl req -new -key server.key -out server.csr -batch -subj "$SUBJ"
 
-
-def get_connection():
-    return boto.connect_ec2(
-        aws_access_key_id=ACCESS_KEY,
-        aws_secret_access_key=SECRET_KEY,
-        is_secure=False,
-        region=RegionInfo(None, REGION, CLC_IP),
-        port=CLC_PORT,
-        path='/services/Cloud',
-        debug=99)
-
-
-class APIIntegrationTests(unittest.TestCase):
-    def test_001_get_all_images(self):
-        conn = get_connection()
-        res = conn.get_all_images()
-
-
-if __name__ == '__main__':
-    unittest.main()
-
-#print conn.get_all_key_pairs()
-#print conn.create_key_pair
-#print conn.create_security_group('name', 'description')
+novauid=`getent passwd nova | awk -F: '{print $3}'`
+if [ ! -z "${novauid}" ] && [ "`id -u`" != "${novauid}" ]; then
+    sudo chown -R nova:nogroup .
+fi

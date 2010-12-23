@@ -22,12 +22,13 @@ import logging
 
 from nova import db
 from nova import context
+from nova import exception
+from nova import utils
 
 from nova.auth.manager import AuthManager
+from nova.compute import power_state
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
-
-XenAPI = None
 
 
 class VMOps(object):
@@ -36,27 +37,28 @@ class VMOps(object):
     """
 
     def __init__(self, session):
-        global XenAPI
-        if XenAPI is None:
-            XenAPI = __import__('XenAPI')
+        self.XenAPI = session.get_imported_xenapi()
         self._session = session
-        # Load XenAPI module in the helper class
-        VMHelper.late_import()
+        VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
-        """ List VM instances """
-        return [self._session.get_xenapi().VM.get_name_label(vm) \
-                for vm in self._session.get_xenapi().VM.get_all()]
+        """List VM instances"""
+        vms = []
+        for vm in self._session.get_xenapi().VM.get_all():
+            rec = self._session.get_xenapi().VM.get_record(vm)
+            if not rec["is_a_template"] and not rec["is_control_domain"]:
+                vms.append(rec["name_label"])
+        return vms
 
     def spawn(self, instance):
-        """ Create VM instance """
+        """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
-            raise Exception('Attempted to create non-unique name %s' %
-                            instance.name)
+            raise exception.Duplicate(_('Attempted to create'
+            ' non-unique name %s') % instance.name)
 
-        bridge = db.project_get_network(context.get_admin_context(),
-                                      instance.project_id).bridge
+        bridge = db.network_get_by_instance(context.get_admin_context(),
+                                            instance['id'])['bridge']
         network_ref = \
             NetworkHelper.find_network_with_bridge(self._session, bridge)
 
@@ -75,22 +77,46 @@ class VMOps(object):
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
-        logging.debug('Starting VM %s...', vm_ref)
+        logging.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        logging.info('Spawning VM %s created %s.', instance.name,
+        logging.info(_('Spawning VM %s created %s.'), instance.name,
                      vm_ref)
 
+        # NOTE(armando): Do we really need to do this in virt?
+        timer = utils.LoopingCall(f=None)
+
+        def _wait_for_boot():
+            try:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
+                if state == power_state.RUNNING:
+                    logging.debug(_('Instance %s: booted'), instance['name'])
+                    timer.stop()
+            except Exception, exc:
+                logging.warn(exc)
+                logging.exception(_('instance %s: failed to boot'),
+                                  instance['name'])
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                timer.stop()
+
+        timer.f = _wait_for_boot
+        return timer.start(interval=0.5, now=True)
+
     def reboot(self, instance):
-        """ Reboot VM instance """
+        """Reboot VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception('instance not present %s' % instance_name)
+            raise exception.NotFound(_('instance not'
+                                       ' found %s') % instance_name)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        self._session.wait_for_task(task)
+        self._session.wait_for_task(instance.id, task)
 
     def destroy(self, instance):
-        """ Destroy VM instance """
+        """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
@@ -101,7 +127,7 @@ class VMOps(object):
         try:
             task = self._session.call_xenapi('Async.VM.hard_shutdown',
                                                    vm)
-            self._session.wait_for_task(task)
+            self._session.wait_for_task(instance.id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
         # Disk clean-up
@@ -109,40 +135,43 @@ class VMOps(object):
             for vdi in vdis:
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
-                    self._session.wait_for_task(task)
+                    self._session.wait_for_task(instance.id, task)
                 except XenAPI.Failure, exc:
                     logging.warn(exc)
+        # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(task)
+            self._session.wait_for_task(instance.id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
 
-    def _wait_with_callback(self, task, callback):
+    def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
-            ret = self._session.wait_for_task(task)
+            ret = self._session.wait_for_task(instance_id, task)
         except XenAPI.Failure, exc:
             logging.warn(exc)
         callback(ret)
 
     def pause(self, instance, callback):
-        """ Pause VM instance """
+        """Pause VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception('instance not present %s' % instance_name)
+            raise exception.NotFound(_('Instance not'
+                                       ' found %s') % instance_name)
         task = self._session.call_xenapi('Async.VM.pause', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def unpause(self, instance, callback):
-        """ Unpause VM instance """
+        """Unpause VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception('instance not present %s' % instance_name)
+            raise exception.NotFound(_('Instance not'
+                                       ' found %s') % instance_name)
         task = self._session.call_xenapi('Async.VM.unpause', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def suspend(self, instance, callback):
         """suspend the specified instance"""
@@ -163,10 +192,11 @@ class VMOps(object):
         self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
-        """ Return data about VM instance """
-        vm = VMHelper.lookup_blocking(self._session, instance_id)
+        """Return data about VM instance"""
+        vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise Exception("get_info: instance not present %s" % instance_id)
+            raise exception.NotFound(_('Instance not'
+                                       ' found %s') % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
@@ -174,12 +204,11 @@ class VMOps(object):
         """Return data about VM diagnostics"""
         vm = VMHelper.lookup(self._session, instance_id)
         if vm is None:
-            raise Exception("get_diagnostics: instance not present %s" % \
-                                                                   instance_id)
+            raise exception.NotFound(_("Instance not found %s") % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 
     def get_console_output(self, instance):
-        """ Return snapshot of console """
+        """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
