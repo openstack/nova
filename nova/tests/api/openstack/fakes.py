@@ -94,7 +94,7 @@ def stub_out_auth(stubs):
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(nova.api.openstack.ratelimiting.RateLimitingMiddleware, self).__init__(app)
+        super(ratelimiting.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
     stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
