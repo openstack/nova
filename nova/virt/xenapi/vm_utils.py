@@ -142,7 +142,9 @@ class VMHelper(HelperBase):
         """Destroy VBD from host database"""
         try:
             task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
-            session.wait_for_task(task)
+            #FIXME(armando): find a solution to missing instance_id
+            #with Josh Kearney
+            session.wait_for_task(0, task)
         except cls.XenAPI.Failure, exc:
             logging.warn(exc)
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
@@ -185,7 +187,9 @@ class VMHelper(HelperBase):
         if use_sr:
             args['add_partition'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(task)
+        #FIXME(armando): find a solution to missing instance_id
+        #with Josh Kearney
+        uuid = session.wait_for_task(0, task)
         return uuid
 
     @classmethod

@@ -49,7 +49,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_password = 'test_pass'
         fakes.stub_out_db_instance_api(self.stubs)
         fake.reset()
-        self.values = {'name': 1,
+        self.values = {'name': 1, 'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
                   'image_id': 1,
@@ -167,7 +167,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_spawn(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1,
+        values = {'name': 1, 'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': 1,

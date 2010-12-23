@@ -116,6 +116,13 @@ class XenAPIConnection(object):
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
 
+    def init_host(self):
+        #FIXME(armando): implement this
+        #NOTE(armando): would we need a method
+        #to call when shutting down the host?
+        #e.g. to do session logout?
+        pass
+
     def list_instances(self):
         """List VM instances"""
         return self._vmops.list_instances()

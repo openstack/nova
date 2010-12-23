@@ -27,21 +27,28 @@ from nova.compute import instance_types
 def stub_out_db_instance_api(stubs):
     """ Stubs out the db API for creating Instances """
 
-    class FakeInstance(object):
-        """ Stubs out the Instance model """
+    class FakeModel(object):
+        """ Stubs out for model """
         def __init__(self, values):
             self.values = values
 
         def __getattr__(self, name):
             return self.values[name]
 
-    def fake_create(values):
+        def __getitem__(self, key):
+            if key in self.values:
+                return self.values[key]
+            else:
+                raise NotImplementedError()
+
+    def fake_instance_create(values):
         """ Stubs out the db.instance_create method """
 
         type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
 
         base_options = {
             'name': values['name'],
+            'id': values['id'],
             'reservation_id': utils.generate_uid('r'),
             'image_id': values['image_id'],
             'kernel_id': values['kernel_id'],
@@ -56,6 +63,13 @@ def stub_out_db_instance_api(stubs):
             'vcpus': type_data['vcpus'],
             'local_gb': type_data['local_gb'],
             }
-        return FakeInstance(base_options)
+        return FakeModel(base_options)
 
-    stubs.Set(db, 'instance_create', fake_create)
+    def fake_network_get_by_instance(context, instance_id):
+        fields = {
+            'bridge': 'xenbr0',
+            }
+        return FakeModel(fields)
+
+    stubs.Set(db, 'instance_create', fake_instance_create)
+    stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
