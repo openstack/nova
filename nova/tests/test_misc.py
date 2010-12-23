@@ -22,13 +22,13 @@ from nova.utils import parse_mailmap, str_dict_replace
 
 class ProjectTestCase(test.TestCase):
     def test_authors_up_to_date(self):
-        if os.path.exists('../.bzr'):
+        if os.path.exists('.bzr'):
             contributors = set()
 
-            mailmap = parse_mailmap('../.mailmap')
+            mailmap = parse_mailmap('.mailmap')
 
             import bzrlib.workingtree
-            tree = bzrlib.workingtree.WorkingTree.open('..')
+            tree = bzrlib.workingtree.WorkingTree.open('.')
             tree.lock_read()
             try:
                 parents = tree.get_parent_ids()
@@ -42,7 +42,7 @@ class ProjectTestCase(test.TestCase):
                             email = author.split(' ')[-1]
                             contributors.add(str_dict_replace(email, mailmap))
 
-                authors_file = open('../Authors', 'r').read()
+                authors_file = open('Authors', 'r').read()
 
                 missing = set()
                 for contributor in contributors:

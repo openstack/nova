@@ -53,39 +53,37 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
-        self.do_test_xml_and_uri(instance_data,
-                                 expect_kernel=False, expect_ramdisk=False)
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=False, expect_ramdisk=False)
 
     def test_xml_and_uri_no_ramdisk(self):
         instance_data = dict(self.test_instance)
         instance_data['kernel_id'] = 'aki-deadbeef'
-        self.do_test_xml_and_uri(instance_data,
-                                 expect_kernel=True, expect_ramdisk=False)
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=True, expect_ramdisk=False)
 
     def test_xml_and_uri_no_kernel(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
-        self.do_test_xml_and_uri(instance_data,
-                                 expect_kernel=False, expect_ramdisk=False)
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=False, expect_ramdisk=False)
 
     def test_xml_and_uri(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
         instance_data['kernel_id'] = 'aki-deadbeef'
-        self.do_test_xml_and_uri(instance_data,
-                                 expect_kernel=True, expect_ramdisk=True)
+        self._check_xml_and_uri(instance_data,
+                                expect_kernel=True, expect_ramdisk=True)
 
     def test_xml_and_uri_rescue(self):
         instance_data = dict(self.test_instance)
         instance_data['ramdisk_id'] = 'ari-deadbeef'
         instance_data['kernel_id'] = 'aki-deadbeef'
-        self.do_test_xml_and_uri(instance_data,
-                                 expect_kernel=True, expect_ramdisk=True,
-                                 rescue=True)
+        self._check_xml_and_uri(instance_data, expect_kernel=True,
+                                expect_ramdisk=True, rescue=True)
 
-    def do_test_xml_and_uri(self, instance,
-                            expect_ramdisk, expect_kernel,
-                            rescue=False):
+    def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
+                           rescue=False):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
