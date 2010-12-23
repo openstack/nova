@@ -71,6 +71,7 @@ from nova.tests.service_unittest import *
 from nova.tests.twistd_unittest import *
 from nova.tests.virt_unittest import *
 from nova.tests.volume_unittest import *
+from nova.tests.xenapi_unittest import *
 
 
 FLAGS = flags.FLAGS
