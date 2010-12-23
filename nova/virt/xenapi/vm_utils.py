@@ -217,6 +217,10 @@ class VMHelper():
 
     @classmethod
     def compile_info(cls, record):
+        logging.info("(VM_UTILS) xenserver vm state -> |%s|",
+                     record['power_state'])
+        logging.info("(VM_UTILS) xenapi power_state -> |%s|",
+                     XENAPI_POWER_STATE[record['power_state']])
         return {'state': XENAPI_POWER_STATE[record['power_state']],
                 'max_mem': long(record['memory_static_max']) >> 10,
                 'mem': long(record['memory_dynamic_max']) >> 10,
