@@ -38,9 +38,12 @@ from nova import fakerabbit
 from nova import flags
 from nova import rpc
 from nova.network import manager as network_manager
+from nova.tests import fake_flags
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_bool('flush_db', True,
+                  'Flush the database before running fake tests')
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 

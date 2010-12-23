@@ -32,7 +32,6 @@ abspath=`dirname "$(cd "${0%/*}" 2>/dev/null; echo "$PWD"/"${0##*/}")"`
 schemapath='/var/opendj/instance/config/schema'
 cp $abspath/openssh-lpk_sun.schema $schemapath/97-openssh-lpk_sun.ldif
 cp $abspath/nova_sun.schema $schemapath/98-nova_sun.ldif
-chown opendj:opendj $schemapath/97-openssh-lpk_sun.ldif
 chown opendj:opendj $schemapath/98-nova_sun.ldif
 
 cat >/etc/ldap/ldap.conf <<LDAP_CONF_EOF
