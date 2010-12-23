@@ -45,7 +45,8 @@ def _entity_detail(inst):
         power_state.NOSTATE: 'build',
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
-        power_state.PAUSED: 'suspended',
+        power_state.SUSPENDED: 'suspended',
+        power_state.PAUSED: 'error',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}

@@ -37,7 +37,7 @@ XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
     'Running': power_state.RUNNING,
     'Paused': power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN,  # FIXME
+    'Suspended': power_state.SUSPENDED,
     'Crashed': power_state.CRASHED}
 
 XenAPI = None
