@@ -87,6 +87,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_string('ajaxterm_portrange',
+                    '10000-12000',
+                    'Range of ports that ajaxterm should randomly try to bind')
 
 
 def get_connection(read_only):
@@ -388,8 +391,9 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def get_ajax_console(self, instance):
         def get_open_port():
+            start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
             for i in xrange(0,100): # don't loop forever
-                port = random.randint(10000, 12000) #TODO - make flag
+                port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
                 cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
