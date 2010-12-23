@@ -192,7 +192,8 @@ class LibvirtConnection(object):
         #               everything has been vetted a bit
         def _wait_for_timer():
             timer_done.wait()
-            self._cleanup(instance)
+            if cleanup:
+                self._cleanup(instance)
             done.send()
 
         greenthread.spawn(_wait_for_timer)
