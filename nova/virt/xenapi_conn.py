@@ -225,13 +225,8 @@ class XenAPISession(object):
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
             action = dict(
-<<<<<<< TREE
-                instance_id=int(instance_id),
+                instance_id=int(id),
                 action=name[0:255],  # Ensure action is never > 255
-=======
-                id=int(id),
-                action=name,
->>>>>>> MERGE-SOURCE
                 error=None)
             if status == "pending":
                 return
