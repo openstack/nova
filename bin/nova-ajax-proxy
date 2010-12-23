@@ -1,8 +1,15 @@
 #!/usr/bin/python
 
+from eventlet import greenthread
+from eventlet.green import urllib2  
+
+import exceptions
+import logging
 import os
 import sys
 import time
+import urlparse
+
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -12,36 +19,28 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-import webob.dec
-import webob.exc
-
-from nova import exception
 from nova import flags
 from nova import utils
 from nova import rpc
 from nova import wsgi
-
-import exceptions
-import logging
-import urlparse
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('ajax_console_idle_timeout', 300, 
                      'Seconds before idle connection destroyed')
  
-import eventlet
-from eventlet import greenthread
-from eventlet.green import urllib2  
 
 class AjaxConsoleProxy(object):
     tokens = {}
 
-    def __call__(self, environ, start_response):
+    def __call__(self, env, start_response):
         try:
-            req_url = '%s://%s%s?%s' % (environ['wsgi.url_scheme'], environ['HTTP_HOST'], environ['PATH_INFO'], environ['QUERY_STRING'])
-            if 'HTTP_REFERER' in environ:
-                auth_url = environ['HTTP_REFERER']
+            req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
+                                        env['HTTP_HOST'],
+                                        env['PATH_INFO'],
+                                        env['QUERY_STRING'])
+            if 'HTTP_REFERER' in env:
+                auth_url = env['HTTP_REFERER']
             else:
                 auth_url = req_url
 
@@ -50,7 +49,7 @@ class AjaxConsoleProxy(object):
 
             auth_info = AjaxConsoleProxy.tokens[auth_params['token'][0]]
             args = auth_info['args'] 
-            auth_info['last_activity_at'] = time.time() 
+            auth_info['last_activity'] = time.time() 
 
             remote_url = ("http://%s:%s%s?token=%s"% (
                           str(args['host']),
@@ -58,7 +57,7 @@ class AjaxConsoleProxy(object):
                           parsed_url.path,
                           str(args['token'])))
 
-            opener = urllib2.urlopen(remote_url, environ['wsgi.input'].read())
+            opener = urllib2.urlopen(remote_url, env['wsgi.input'].read())
             body = opener.read()
             info = opener.info()
 
@@ -77,7 +76,7 @@ class AjaxConsoleProxy(object):
             def __call__(self, data, message):
                 if data['method'] == 'authorize_ajax_console':
                     AjaxConsoleProxy.tokens[data['args']['token']] =  \
-                        {'args': data['args'], 'last_activity_at': time.time()}
+                        {'args': data['args'], 'last_activity': time.time()}
 
         conn = rpc.Connection.instance(new=True)
         consumer = rpc.TopicConsumer(
@@ -89,7 +88,7 @@ class AjaxConsoleProxy(object):
             now = time.time()
             to_delete = []
             for k, v in AjaxConsoleProxy.tokens.items():
-                if now - v['last_activity_at'] > FLAGS.ajax_console_idle_timeout:
+                if now - v['last_activity'] > FLAGS.ajax_console_idle_timeout:
                     to_delete.append(k)
 
             for k in to_delete:
