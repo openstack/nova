@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 def limited(items, req):
     """Return a slice of items according to requested offset and limit.
 
@@ -25,6 +26,7 @@ def limited(items, req):
 
     If limit is not specified, 0, or > 1000, defaults to 1000.
     """
+
     offset = int(req.GET.get('offset', 0))
     limit = int(req.GET.get('limit', 0))
     if not limit:

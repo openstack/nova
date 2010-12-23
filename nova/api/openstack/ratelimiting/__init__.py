@@ -32,6 +32,7 @@ PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
+
 class RateLimitingMiddleware(wsgi.Middleware):
     """Rate limit incoming requests according to the OpenStack rate limits."""
 

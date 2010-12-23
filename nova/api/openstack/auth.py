@@ -34,6 +34,7 @@ from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
+
 class AuthMiddleware(wsgi.Middleware):
     """Authorize the openstack API request or return an HTTP Forbidden."""
 

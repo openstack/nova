@@ -32,7 +32,7 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         raise NotImplementedError
-        
+
     def detail(self, req):
         raise NotImplementedError
 
