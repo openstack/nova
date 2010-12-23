@@ -198,4 +198,5 @@ class Controller(wsgi.Controller):
 
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
-        return {}
+        ctxt = req.environ["nova.context"]
+        return self.compute_api.diagnostics(ctxt, id)

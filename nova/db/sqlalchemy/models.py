@@ -236,15 +236,6 @@ class Instance(BASE, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
-class InstanceDiagnostics(BASE, NovaBase):
-    """Represents a guest VM's diagnostics"""
-    __tablename__ = "instance_diagnostics"
-    id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
-
-    diagnostics = Column(Text)
-
-
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
@@ -555,7 +546,7 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+    models = (Service, Instance, InstanceActions,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,

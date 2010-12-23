@@ -297,6 +297,17 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        if instance_ref["state"] == power_state.RUNNING:
+            logging.debug(_("instance %s: retrieving diagnostics"),
+                instance_ref["internal_id"])
+            return self.driver.get_diagnostics(instance_ref)
+
+    @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()
