@@ -110,10 +110,11 @@ class ZoneSchedulerTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
         rpc.cast(ctxt,
                  'compute.host1',
-                 {'method': 'create_instance', #TODO: check it
-                  'args': {'availability_zone': 'zone1'}})
+                 {'method': 'run_instance',
+                  'args':{'instance_id': 'i-ffffffff',
+                          'availability_zone': 'zone1'}})
         self.mox.ReplayAll()
-        scheduler.create_instance(ctxt, 'compute', availability_zone='zone1')
+        scheduler.run_instance(ctxt, 'compute', instance_id='i-ffffffff', availability_zone='zone1')
 
 
 class SimpleDriverTestCase(test.TestCase):

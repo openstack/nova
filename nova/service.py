@@ -114,7 +114,8 @@ class Service(object):
                                         {'host': self.host,
                                          'binary': self.binary,
                                          'topic': self.topic,
-                                         'report_count': 0})
+                                         'report_count': 0,
+                                         'availability_zone': FLAGS.node_availability_zone})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):

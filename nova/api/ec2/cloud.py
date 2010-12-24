@@ -753,6 +753,10 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
+        placement = kwargs.get('placement')
+        avzone = None
+        if placement is not None:
+            avzone = placement['availability_zone']
         instances = self.compute_api.create_instances(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
             kwargs['image_id'],
@@ -765,7 +769,8 @@ class CloudController(object):
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
-            generate_hostname=internal_id_to_ec2_id)
+            generate_hostname=internal_id_to_ec2_id,
+            availability_zone=avzone)
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 

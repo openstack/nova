@@ -75,7 +75,8 @@ class ComputeAPI(base.Base):
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
                          user_data=None,
-                         generate_hostname=generate_default_hostname):
+                         generate_hostname=generate_default_hostname,
+                         availability_zone=None):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
 
@@ -175,7 +176,8 @@ class ComputeAPI(base.Base):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id}})
+                               "instance_id": instance_id,
+                               "availability_zone": availability_zone}})
 
         return instances
 
