@@ -15,7 +15,7 @@ if [ ! -n "$HOST_IP" ]; then
     # NOTE(vish): This will just get the first ip in the list, so if you
     #             have more than one eth device set up, this will fail, and
     #             you should explicitly set HOST_IP in your environment
-    HOST_IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
+    HOST_IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
 USE_MYSQL=${USE_MYSQL:-0}
@@ -72,7 +72,7 @@ fi
 # You should only have to run this once
 if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-software-properties
-    sudo add-apt-repository ppa:nova-core/ppa
+    sudo add-apt-repository ppa:nova-core/trunk
     sudo apt-get update
     sudo apt-get install -y dnsmasq kpartx kvm gawk iptables ebtables
     sudo apt-get install -y user-mode-linux kvm libvirt-bin

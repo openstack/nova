@@ -19,4 +19,22 @@ from nova import wsgi
 
 
 class Controller(wsgi.Controller):
-    pass
+    """ The Shared IP Groups Controller for the Openstack API """
+
+    def index(self, req):
+        raise NotImplementedError
+
+    def show(self, req, id):
+        raise NotImplementedError
+
+    def update(self, req, id):
+        raise NotImplementedError
+
+    def delete(self, req, id):
+        raise NotImplementedError
+
+    def detail(self, req):
+        raise NotImplementedError
+
+    def create(self, req):
+        raise NotImplementedError

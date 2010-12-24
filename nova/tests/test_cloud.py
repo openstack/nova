@@ -22,22 +22,18 @@ import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
-import StringIO
 import tempfile
 import time
 
 from eventlet import greenthread
-from twisted.internet import defer
-import unittest
-from xml.etree import ElementTree
 
 from nova import context
 from nova import crypto
 from nova import db
 from nova import flags
 from nova import rpc
+from nova import service
 from nova import test
-from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
@@ -53,10 +49,11 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
-class CloudTestCase(test.TrialTestCase):
+class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake', images_path=IMAGES_PATH)
+        self.flags(connection_type='fake',
+                   images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
         logging.getLogger().setLevel(logging.DEBUG)
@@ -64,27 +61,23 @@ class CloudTestCase(test.TrialTestCase):
         # set up our cloud
         self.cloud = cloud.CloudController()
 
-        # set up a service
-        self.compute = utils.import_object(FLAGS.compute_manager)
-        self.compute_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                    topic=FLAGS.compute_topic,
-                                                    proxy=self.compute)
-        self.compute_consumer.attach_to_eventlet()
-        self.network = utils.import_object(FLAGS.network_manager)
-        self.network_consumer = rpc.AdapterConsumer(connection=self.conn,
-                                                    topic=FLAGS.network_topic,
-                                                    proxy=self.network)
-        self.network_consumer.attach_to_eventlet()
+        # set up services
+        self.compute = service.Service.create(binary='nova-compute')
+        self.compute.start()
+        self.network = service.Service.create(binary='nova-network')
+        self.network.start()
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('proj', 'admin', 'proj')
         self.context = context.RequestContext(user=self.user,
-                                                 project=self.project)
+                                              project=self.project)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        self.compute.kill()
+        self.network.kill()
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
@@ -111,12 +104,13 @@ class CloudTestCase(test.TrialTestCase):
                               {'address': address,
                                'host': FLAGS.host})
         self.cloud.allocate_address(self.context)
-        inst = db.instance_create(self.context, {})
+        inst = db.instance_create(self.context, {'host': FLAGS.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
         ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
+        greenthread.sleep(0.3)
         self.cloud.disassociate_address(self.context,
                                         public_ip=address)
         self.cloud.release_address(self.context,
@@ -199,7 +193,7 @@ class CloudTestCase(test.TrialTestCase):
         logging.debug("Need to watch instance %s until it's running..." %
                       instance['instance_id'])
         while True:
-            rv = yield defer.succeed(time.sleep(1))
+            greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
             logging.debug(info['state'])
             if info['state'] == power_state.RUNNING:

@@ -1,0 +1,79 @@
+<domain type='${type}'>
+    <name>${name}</name>
+    <memory>${memory_kb}</memory>
+    <os>
+#if $type == 'uml'
+    #set $disk_prefix = 'ubd'
+    #set $disk_bus = 'uml'
+        <type>uml</type>
+        <kernel>/usr/bin/linux</kernel>
+        <root>/dev/ubda1</root>
+#else
+    #if $type == 'xen'
+        #set $disk_prefix = 'sd'
+        #set $disk_bus = 'scsi'
+            <type>linux</type>
+            <root>/dev/xvda1</root>
+    #else
+        #set $disk_prefix = 'vd'
+        #set $disk_bus = 'virtio'
+            <type>hvm</type>
+	#end if
+    #if $getVar('rescue', False)
+        <kernel>${basepath}/rescue-kernel</kernel>
+        <initrd>${basepath}/rescue-ramdisk</initrd>
+    #else
+        #if $getVar('kernel', None)
+            <kernel>${kernel}</kernel>
+            #if $type == 'xen'
+                <cmdline>ro</cmdline>
+            #else
+                <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
+            #end if
+            #if $getVar('ramdisk', None)
+                <initrd>${ramdisk}</initrd>
+            #end if
+        #else
+            <boot dev="hd" />
+        #end if
+    #end if
+#end if
+    </os>
+    <features>
+        <acpi/>
+    </features>
+    <vcpu>${vcpus}</vcpu>
+    <devices>
+#if $getVar('rescue', False)
+        <disk type='file'>
+            <source file='${basepath}/rescue-disk'/>
+            <target dev='${disk_prefix}a' bus='${disk_bus}'/>
+        </disk>
+        <disk type='file'>
+            <source file='${basepath}/disk'/>
+            <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+        </disk>
+#else
+        <disk type='file'>
+            <source file='${basepath}/disk'/>
+            <target dev='${disk_prefix}a' bus='${disk_bus}'/>
+        </disk>
+#end if
+        <interface type='bridge'>
+            <source bridge='${bridge_name}'/>
+            <mac address='${mac_address}'/>
+            <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
+            <filterref filter="nova-instance-${name}">
+                <parameter name="IP" value="${ip_address}" />
+                <parameter name="DHCPSERVER" value="${dhcp_server}" />
+#if $getVar('extra_params', False)
+                ${extra_params}
+#end if
+            </filterref>
+        </interface>
+        <serial type="file">
+            <source path='${basepath}/console.log'/>
+            <target port='1'/>
+        </serial>
+    </devices>
+</domain>

@@ -15,16 +15,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+import traceback
+
 from webob import exc
 
 from nova import exception
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
+
+
+LOG = logging.getLogger('server')
+LOG.setLevel(logging.DEBUG)
 
 
 def _entity_list(entities):
@@ -91,7 +99,7 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_instances(
             req.environ['nova.context'])
-        limited_list = nova.api.openstack.limited(instance_list, req)
+        limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 
@@ -164,5 +172,27 @@ class Controller(wsgi.Controller):
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
         except:
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def pause(self, req, id):
+        """ Permit Admins to Pause the server. """
+        ctxt = req.environ['nova.context']
+        try:
+            self.compute_api.pause(ctxt, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("Compute.api::pause %s", readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unpause(self, req, id):
+        """ Permit Admins to Unpause the server. """
+        ctxt = req.environ['nova.context']
+        try:
+            self.compute_api.unpause(ctxt, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error("Compute.api::unpause %s", readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
