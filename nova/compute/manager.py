@@ -105,7 +105,7 @@ class ComputeManager(manager.Manager):
         self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host})
+                                {'host': self.host, 'launch_at':self.host})
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
@@ -261,18 +261,19 @@ class ComputeManager(manager.Manager):
         self.db.volume_detached(context, volume_id)
         defer.returnValue(True)
 
-    def get_vcpu_number(self):
-        """Get the number of vcpu on physical computer."""
-        return self.driver.get_vcpu_number()
+    def compareCPU(self, context, xml):
+        """ Check the host cpu is compatible to a cpu given by xml."""
+        logging.warn('good!')
+        return self.driver.compareCPU(xml)
 
-    def get_mem_size(self):
+    def get_memory_mb(self):
         """Get the memory size of physical computer ."""
         meminfo = open('/proc/meminfo').read().split()
         idx = meminfo.index('MemTotal:')
         # transforming kb to mb.
         return int(meminfo[idx + 1]) / 1024
 
-    def get_hdd_size(self):
+    def get_local_gb(self):
         """Get the hdd size of physical computer ."""
         hddinfo = os.statvfs(FLAGS.instances_path)
         return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
@@ -315,8 +316,13 @@ class ComputeManager(manager.Manager):
         self.driver.setup_nwfilters_for_instance(instance_ref)
 
         # 5. bridge settings
+<<<<<<< TREE
         self.network_manager.setup_compute_network(instance_id)
         return True
+=======
+        self.network_manager.setup_compute_network(context, instance_id)
+        return True
+>>>>>>> MERGE-SOURCE
 
     def nwfilter_for_instance_exists(self, context, instance_id):
         """Check nova-instance-instance-xxx filter exists """

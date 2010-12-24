@@ -119,14 +119,21 @@ class Service(object, service.Service):
     def _update_host_ref(self, context, host_ref):
 
         if 0 <= self.manager_class_name.find('ComputeManager'):
-            cpu = self.manager.get_vcpu_number()
-            memory_mb = self.manager.get_mem_size()
-            local_gb = self.manager.get_hdd_size()
+            vcpu = self.manager.driver.get_vcpu_number()
+            memory_mb = self.manager.get_memory_mb()
+            local_gb = self.manager.get_local_gb()
+            hypervisor = self.manager.driver.get_hypervisor_type()
+            version = self.manager.driver.get_hypervisor_version()
+            cpu_xml = self.manager.driver.get_cpu_xml()
+
             db.host_update(context,
                            host_ref['id'],
-                           {'vcpus': cpu,
+                           {'vcpus': vcpu,
                            'memory_mb': memory_mb,
-                           'local_gb': local_gb})
+                           'local_gb': local_gb,
+                           'hypervisor_type': hypervisor,
+                           'hypervisor_version': version,
+                           'cpu_info':cpu_xml })
         return host_ref
 
     def __getattr__(self, key):

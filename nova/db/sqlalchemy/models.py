@@ -147,7 +147,9 @@ class Host(BASE, NovaBase):
     vcpus = Column(Integer, nullable=False, default=-1)
     memory_mb = Column(Integer, nullable=False, default=-1)
     local_gb = Column(Integer, nullable=False, default=-1)
-    #cpuid = Column(Integer, nullable=False)
+    hypervisor_type = Column(String(128))
+    hypervisor_version = Column(Integer, nullable=False, default=-1)
+    cpu_info = Column(String(1024))
     deleted = Column(Boolean, default=False)
     # C: when calling service_create()
     # D: never deleted. instead of deleting cloumn "deleted" is true
@@ -231,6 +233,10 @@ class Instance(BASE, NovaBase):
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
+
+    # To remember at which host a instance booted.
+    # An instance may moved to other host by live migraiton.
+    launch_at = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
