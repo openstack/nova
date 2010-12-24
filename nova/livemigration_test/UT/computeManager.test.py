@@ -1,10 +1,9 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-NOVA_DIR = '/opt/openstack/nova'
-#NOVA_DIR = '/opt/nova-2010.4'
 
 import sys
+import os
 import unittest
 import commands
 import re
@@ -12,6 +11,11 @@ import logging
 
 from mock import Mock
 import twisted
+
+# getting /nova-inst-dir
+NOVA_DIR = os.path.abspath(sys.argv[0])
+for i in range(4):
+    NOVA_DIR = os.path.dirname(NOVA_DIR)
 
 try:
     print
@@ -40,7 +44,7 @@ try:
 
 
 except:
-    print 'set PYTHONPATH to nova-install-dir'
+    print 'set correct NOVA_DIR in this script. '
     raise
 
 

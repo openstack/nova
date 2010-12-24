@@ -1,14 +1,21 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-NOVA_DIR='/opt/nova-2010.2'
+NOVA_DIR='/opt/nova-2010.4'
 
 import sys
+import os
 import unittest
 import commands
 import re
 
 from mock import Mock
+
+# getting /nova-inst-dir
+NOVA_DIR = os.path.abspath(sys.argv[0])
+for i in range(4):
+    NOVA_DIR = os.path.dirname(NOVA_DIR)
+
 
 try : 
     print
@@ -33,7 +40,7 @@ try :
 
 
 except: 
-    print 'set PYTHONPATH to nova-install-dir' 
+    print 'set correct NOVA_DIR in this script. '
     raise
 
 
@@ -42,7 +49,15 @@ class tmpStdout:
         self.buffer = ""
     def write(self,arg):
         self.buffer += arg
+    def flush(self):  
+        self.buffer = ''
+
+class tmpStderr(tmpStdout):
+    def write(self, arg):
+        self.buffer += arg
     def flush(self):
+        pass
+    def realFlush(self):
         self.buffer = ''
 
 
@@ -50,6 +65,8 @@ class NovaManageTestFunctions(unittest.TestCase):
 
     stdout = None
     stdoutBak = None
+    stderr = None
+    stderrBak = None
 
     hostCmds = None
     
@@ -70,6 +87,12 @@ class NovaManageTestFunctions(unittest.TestCase):
             self.__class__.stdout = tmpStdout()
         self.stdoutBak = sys.stdout
         sys.stdout = self.stdout
+
+        # replace stderr for checking nova-manage output
+        if self.stderr is None:
+            self.__class__.stderr = tmpStderr()
+        self.stderrBak = sys.stderr
+        sys.stderr = self.stderr
 
         # prepare test data
         self.setTestData()
@@ -164,7 +187,7 @@ class NovaManageTestFunctions(unittest.TestCase):
         """06: nova-manage host show registerd-host, and no project uses the host"""
 
         dic = {'ret': True, 
-               'phy_resource': {'cpu':1, 'memory_mb':2, 'hdd_gb':3}, 
+               'phy_resource': {'vcpus':1, 'memory_mb':2, 'local_gb':3}, 
                'usage': {}}
         
         rpc.call = Mock(return_value=dic )
@@ -185,9 +208,9 @@ class NovaManageTestFunctions(unittest.TestCase):
            and some projects use the host
         """
         dic = {'ret': True, 
-               'phy_resource': {'cpu':1, 'memory_mb':2, 'hdd_gb':3}, 
-               'usage': {'p1': {'cpu':1, 'memory_mb':2, 'hdd_gb':3},
-                         'p2': {'cpu':1, 'memory_mb':2, 'hdd_gb':3} }}
+               'phy_resource': {'vcpus':1, 'memory_mb':2, 'local_gb':3}, 
+               'usage': {'p1': {'vcpus':1, 'memory_mb':2, 'local_gb':3},
+                         'p2': {'vcpus':1, 'memory_mb':2, 'local_gb':3} }}
         
         rpc.call = Mock(return_value=dic )
         self.hostCmds.show('host1')
@@ -253,13 +276,12 @@ class NovaManageTestFunctions(unittest.TestCase):
         """
         db.host_get_by_name = Mock(return_value = self.host1)
         db.instance_get_by_internal_id = Mock( return_value = self.instance1 )
-        c1 = c2 = False
         try : 
             self.instanceCmds.live_migration('i-12345', 'host1')
-        except SystemExit, e: 
-            c1 = (1 == e.code)
-            c2 = (0 < self.stdout.buffer.find('is not running') )
-        self.assertEqual( c1 and c2 , True )
+        except exception.Invalid, e: 
+            c1 = (0 < e.message.find('is not running') )
+            self.assertTrue(c1, True)
+        return False
 
 
     def test14(self):
@@ -268,13 +290,12 @@ class NovaManageTestFunctions(unittest.TestCase):
         """
         db.host_get_by_name = Mock(return_value = self.host2)
         db.instance_get_by_internal_id = Mock( return_value = self.instance1 )
-        c1 = c2 = False
         try : 
             self.instanceCmds.live_migration('i-12345', 'host2')
-        except SystemExit, e: 
-            c1 = (1 == e.code)
-            c2 = (0 < self.stdout.buffer.find('is not running') )
-        self.assertEqual( c1 and c2 , True )
+        except exception.Invalid, e: 
+            c1 = (0 < e.message.find('is not running') )
+            self.assertTrue(c1, True)
+        return False
 
     def test15(self):
         """15: nova-manage instances live_migration ec2_id host, 
@@ -282,21 +303,31 @@ class NovaManageTestFunctions(unittest.TestCase):
         """
         db.host_get_by_name = Mock(return_value = self.host1)
         db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
-        c1 = c2 = False
         try : 
             self.instanceCmds.live_migration('i-12345', 'host1')
-        except SystemExit, e: 
-            c1 = (2 == e.code)
-            c2 = (0 < self.stdout.buffer.find('is running now') )
-        self.assertEqual( c1 and c2 , True )
+        except exception.Invalid, e: 
+            c1 = ( 0 <= e.message.find('is running now') )
+            self.assertTrue(c1, True)
+        return False
+
 
     def test16(self):
         """16: nova-manage instances live_migration ec2_id host, 
+           rpc.call raises RemoteError because destination doesnt have enough resource.
+        """
+        db.host_get_by_name = Mock(return_value = self.host1)
+        db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
+        rpc.call = Mock(return_value = rpc.RemoteError(TypeError, 'val', 'traceback'))
+        self.assertRaises(rpc.RemoteError, self.instanceCmds.live_migration, 'i-xxx', 'host2' )
+        
+
+    def test17(self):
+        """17: nova-manage instances live_migration ec2_id host, 
            everything goes well, ang gets success messages.
         """
         db.host_get_by_name = Mock(return_value = self.host1)
         db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
-        rpc.cast = Mock(return_value = None)
+        rpc.call = Mock(return_value = None)
 
         self.instanceCmds.live_migration('i-12345', 'host2')
         c1 = (0 <= self.stdout.buffer.find('Finished all procedure') )
@@ -309,6 +340,8 @@ class NovaManageTestFunctions(unittest.TestCase):
         commands.getstatusoutput('rm -rf %s' % self.getNovaManageCopyPath() )
         sys.stdout.flush()
         sys.stdout = self.stdoutBak
+        self.stderr.realFlush()
+        sys.stderr = self.stderrBak
 
 if __name__ == '__main__':
     #unittest.main()

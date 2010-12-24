@@ -73,29 +73,79 @@ class SchedulerManager(manager.Manager):
     def live_migration(self, context, ec2_id, dest):
         """ live migration method"""
 
+        # (masumotok) below pre-checking is followed by 
+        # http://wiki.libvirt.org/page/TodoPreMigrationChecks
+
         # 1. get instance id
         internal_id = cloud.ec2_id_to_internal_id(ec2_id)
         instance_ref = db.instance_get_by_internal_id(context, internal_id)
         instance_id = instance_ref['id']
 
-        # 2. check dst host still has enough capacities
-        if not self.has_enough_resource(context, instance_id, dest):
-            return False
+        # 2. get src host and dst host
+        src = instance_ref['launch_at']
+        shost_ref = db.host_get_by_name(context, src )
+        dhost_ref = db.host_get_by_name(context, dest)
 
-        # 3. change instance_state
+        # 3. dest should be compute
+        services = db.service_get_all_by_topic(context, 'compute')
+        logging.warn('%s' % [service.host for service in services])
+        if dest not in [service.host for service in services] :
+            raise exception.Invalid('%s must be compute node' % dest)
+
+        # 4. check hypervisor is same
+        shypervisor = shost_ref['hypervisor_type'] 
+        dhypervisor = dhost_ref['hypervisor_type']
+        if shypervisor != dhypervisor:
+            msg = 'Different hypervisor type(%s->%s)' % (shypervisor, dhypervisor)
+            raise exception.Invalid(msg)
+        
+        # 5. check hypervisor version 
+        shypervisor = shost_ref['hypervisor_version'] 
+        dhypervisor = dhost_ref['hypervisor_version']
+        if shypervisor > dhypervisor:
+            msg = 'Older hypervisor version(%s->%s)' % (shypervisor, dhypervisor)
+            raise exception.Invalid(msg)
+
+        # 6. check cpuinfo
+        cpuinfo = shost_ref['cpu_info']
+        if str != type(cpuinfo): 
+            msg = 'Unexpected err: no cpu_info for %s found on DB.hosts' % src
+            raise exception.Invalid(msg)
+
+        logging.warn('cpuinfo %s %d' % (cpuinfo, len(cpuinfo)))
+        ret = rpc.call(context,
+                       db.queue_get_for(context, FLAGS.compute_topic, dest),
+                       {"method": 'compareCPU',
+                        "args": {'xml': cpuinfo}})
+
+        if int != type(ret): 
+            raise ret
+
+        if 0 >= ret :
+            msg = '%s doesnt have compatibility to %s(where %s launching at)\n' \
+                % (dest, src, ec2_id)
+            msg += 'result:%d \n' % ret
+            msg += 'Refer to %s'  % \
+                'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+            raise exception.Invalid(msg)
+
+        # 7. check dst host still has enough capacities
+        self.has_enough_resource(context, instance_id, dest)
+
+        # 8. change instance_state
         db.instance_set_state(context,
                               instance_id,
                               power_state.PAUSED,
                               'migrating')
 
-        # 4. request live migration
+        # 9. request live migration
         host = instance_ref['host']
         rpc.cast(context,
                  db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": 'live_migration',
                   "args": {'instance_id': instance_id,
                              'dest': dest}})
-        return True
+
 
     def has_enough_resource(self, context, instance_id, dest):
         """ check if destination host has enough resource for live migration"""
@@ -126,12 +176,10 @@ class SchedulerManager(manager.Manager):
                       (ec2_id, total_cpu, total_mem, total_hdd))
 
         if total_cpu <= vcpus or total_mem <= mem or total_hdd <= hdd:
-            logging.debug('%s doesnt have enough resource for %s' %
-                          (dest, ec2_id))
-            return False
+            msg = '%s doesnt have enough resource for %s' % (dest, ec2_id)
+            raise exception.NotEmpty(msg)
 
         logging.debug('%s has enough resource for %s' % (dest, ec2_id))
-        return True
 
     def show_host_resource(self, context, host, *args):
         """ show the physical/usage resource given by hosts."""

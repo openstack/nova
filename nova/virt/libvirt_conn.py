@@ -44,6 +44,7 @@ Supports KVM, QEMU, UML, and XEN.
 import logging
 import os
 import shutil
+import re
 
 import IPy
 from twisted.internet import defer
@@ -632,8 +633,29 @@ class LibvirtConnection(object):
         return interfaces
 
     def get_vcpu_number(self):
-        """ get vcpu number of physical computer """
+        """ Get vcpu number of physical computer.  """
         return self._conn.getMaxVcpus(None)
+
+    def get_hypervisor_type(self):
+        """ Get hypervisor type """
+        return self._conn.getType()
+
+    def get_hypervisor_version(self):
+        """ Get hypervisor version """
+        return self._conn.getVersion()
+
+    def get_cpu_xml(self): 
+        """ Get cpuinfo information """
+        xmlstr = self._conn.getCapabilities()
+        xml = libxml2.parseDoc(xmlstr)
+        nodes = xml.xpathEval('//cpu')
+        if 1 != len(nodes): 
+            msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' % len(nodes)
+            msg += '\n'+xml.serialize()
+            raise exception.Invalid(msg)
+        cpuxmlstr = re.sub("\n|[ ]+", ' ', nodes[0].serialize())
+        return cpuxmlstr
+
 
     def block_stats(self, instance_name, disk):
         """
@@ -651,13 +673,16 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
+
     def refresh_security_group(self, security_group_id):
         fw = NWFilterFirewall(self._conn)
         fw.ensure_security_group_filter(security_group_id)
 
+
     def setup_nwfilters_for_instance(self, instance):
         nwfilter = NWFilterFirewall(self._conn)
         return nwfilter.setup_nwfilters_for_instance(instance)
+
 
     def nwfilter_for_instance_exists(self, instance_ref):
         try:
@@ -666,6 +691,19 @@ class LibvirtConnection(object):
             return True
         except libvirt.libvirtError:
             return False
+
+
+    def compareCPU(self, xml): 
+        """ 
+           Check the host cpu is compatible to a cpu given by xml.
+           "xml" must be a part of libvirt.openReadonly().getCapabilities().
+           return values follows by virCPUCompareResult.
+           if 0 > return value, do live migration.
+
+           'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+        """
+        return self._conn.compareCPU(xml,0)
+
 
     def live_migration(self, instance_ref, dest):
         uri = FLAGS.live_migration_uri % dest

@@ -456,24 +456,25 @@ class InstanceCommands(object):
 
         if power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']:
-            print 'Instance(%s) is not running' % ec2_id
-            sys.exit(1)
+            raise exception.Invalid('Instance(%s) is not running' % ec2_id)
 
         # 3. the host where instance is running and dst host is not same
         if dest == instance_ref['host'] :
-            print '%s is where %s is running now. choose different host.' \
-                % (dest, ec2_id)
-            sys.exit(2)
+            msg = '%s is where %s is running now. choose other host.' % (dest, ec2_id)
+            raise exception.Invalid(msg)
 
         # 4. live migration
-        rpc.cast(ctxt,
-                  FLAGS.scheduler_topic,
-                  { "method": "live_migration",
-                    "args": {"ec2_id": ec2_id,
-                             "dest":dest}})
+        ret = rpc.call(ctxt,
+                       FLAGS.scheduler_topic,
+                       { "method": "live_migration",
+                       "args": {"ec2_id": ec2_id,
+                                "dest":dest}})
+
+        if None != ret : 
+            raise ret
 
         print 'Finished all procedure. check instance are migrated successfully'
-        print 'chech status by using euca-describe-instances.'
+        print 'check status by using euca-describe-instances.'
 
 
 # this class is created by masumotok
