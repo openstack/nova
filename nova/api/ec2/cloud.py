@@ -31,7 +31,7 @@ import time
 
 from nova import context
 import IPy
-
+import urllib
 from nova import crypto
 from nova import db
 from nova import exception
@@ -307,6 +307,7 @@ class CloudController(object):
             values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
+            cidr_ip = urllib.unquote(cidr_ip).decode()
             IPy.IP(cidr_ip)
             values['cidr'] = cidr_ip
         else:
@@ -635,10 +636,16 @@ class CloudController(object):
                 if instance['fixed_ip']['floating_ips']:
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
+                if instance['fixed_ip']['network'] and FLAGS.use_ipv6:
+                    i['dnsNameV6'] = utils.to_global_ipv6(
+                        instance['fixed_ip']['network']['cidr_v6'],
+                        instance['mac_address'])
+
             i['privateDnsName'] = fixed_addr
             i['publicDnsName'] = floating_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
+
             if context.user.is_admin():
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],

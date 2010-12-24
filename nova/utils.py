@@ -30,6 +30,8 @@ import subprocess
 import socket
 import sys
 from xml.sax import saxutils
+import re
+import netaddr
 
 from twisted.internet.threads import deferToThread
 
@@ -45,10 +47,14 @@ TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 def import_class(import_str):
     """Returns a class from a string including module and class"""
     mod_str, _sep, class_str = import_str.rpartition('.')
+    logging.debug(import_str)
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError):
+        logging.debug(ImportError)
+        logging.debug(ValueError)
+        logging.debug(AttributeError)
         raise exception.NotFound('Class %s cannot be found' % class_str)
 
 
@@ -163,6 +169,39 @@ def get_my_ip():
     except socket.gaierror as ex:
         logging.warn("Couldn't get IP, using 127.0.0.1 %s", ex)
         return "127.0.0.1"
+
+
+def  get_my_linklocal(interface):
+    if  getattr(FLAGS, 'fake_tests', None):
+        return 'fe00::'
+    try:
+        if_str = execute("ifconfig %s" % interface)
+        condition = "\s+inet6\s+addr:\s+([0-9a-f:]+/\d+)\s+Scope:Link"
+        links = [re.search(condition, x) for x in if_str[0].split('\n')]
+        address = [w.group(1) for w in links if w is not None]
+        if address[0] is not None:
+            return address[0]
+        else:
+            return None
+    except RuntimeError as ex:
+        logging.warn("Couldn't get Link Local IP of %s :%s", interface, ex)
+        return None
+
+
+def to_global_ipv6(prefix, mac):
+    mac64 = netaddr.EUI(mac).eui64().words
+    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+    mac64_addr = netaddr.IPAddress(int_addr)
+    maskIP = netaddr.IPNetwork(prefix).ip
+    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+
+
+def to_mac(ipv6_address):
+    address = netaddr.IPAddress(ipv6_address)
+    mask1 = netaddr.IPAddress("::ffff:ffff:ffff:ffff")
+    mask2 = netaddr.IPAddress("::0200:0:0:0")
+    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
+    return ":".join(["%02x" % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def isotime(at=None):

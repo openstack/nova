@@ -240,6 +240,9 @@ def fixed_ip_get_instance(context, address):
     """Get an instance for a fixed ip by address."""
     return IMPL.fixed_ip_get_instance(context, address)
 
+def fixed_ip_get_instance_v6(context, address):
+    return IMPL.fixed_ip_get_instance_v6(context, address)
+
 
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
@@ -297,6 +300,9 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_fixed_address(context, instance_id):
     """Get the fixed ip address of an instance."""
     return IMPL.instance_get_fixed_address(context, instance_id)
+
+def instance_get_fixed_address_v6(context, instance_id):
+    return IMPL.instance_get_fixed_address_v6(context, instance_id)
 
 
 def instance_get_floating_address(context, instance_id):
@@ -475,6 +481,9 @@ def project_get_network(context, project_id):
 
     """
     return IMPL.project_get_network(context, project_id)
+
+def project_get_network_v6(context, project_id):
+    return IMPL.project_get_network_v6(context, project_id)
 
 
 ###################

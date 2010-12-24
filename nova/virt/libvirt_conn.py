@@ -514,6 +514,8 @@ class LibvirtConnection(object):
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
+        #TODO ipv6
+        ra_server = network['ra_server']
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -523,11 +525,13 @@ class LibvirtConnection(object):
                     'bridge_name': network['bridge'],
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
-                    'dhcp_server': dhcp_server}
+                    'dhcp_server': dhcp_server,
+                    'ra_server': ra_server}
         if rescue:
             libvirt_xml = self.rescue_xml % xml_info
         else:
             libvirt_xml = self.libvirt_xml % xml_info
+
         logging.debug('instance %s: finished toXML method', instance['name'])
 
         return libvirt_xml
@@ -701,6 +705,7 @@ class NWFilterFirewall(object):
                             <filterref filter='no-arp-spoofing'/>
                             <filterref filter='allow-dhcp-server'/>
                             <filterref filter='nova-allow-dhcp-server'/>
+                            <filterref filter='nova-allow-ra-server'/>
                             <filterref filter='nova-base-ipv4'/>
                             <filterref filter='nova-base-ipv6'/>
                           </filter>'''
@@ -722,6 +727,14 @@ class NWFilterFirewall(object):
                               </rule>
                             </filter>'''
 
+    nova_ra_filter = '''<filter name='nova-allow-ra-server' chain='root'>
+                            <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
+                              <rule action='accept' direction='inout'
+                                    priority='100'>
+                                <icmpv6 srcipaddr='$RASERVER'/>
+                              </rule>
+                            </filter>'''
+
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
@@ -736,13 +749,13 @@ class NWFilterFirewall(object):
 
     def nova_base_ipv6_filter(self):
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
-        for protocol in ['tcp', 'udp', 'icmp']:
+        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
             for direction, action, priority in [('out', 'accept', 399),
                                                 ('inout', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
-                               <%s-ipv6 />
+                               <%s />
                              </rule>""" % (action, direction,
-                                             priority, protocol)
+                                              priority, protocol)
         retval += '</filter>'
         return retval
 
@@ -750,6 +763,15 @@ class NWFilterFirewall(object):
         retval = "<filter name='nova-project-%s' chain='ipv4'>" % project
         for protocol in ['tcp', 'udp', 'icmp']:
             retval += """<rule action='accept' direction='in' priority='200'>
+                           <%s srcipaddr='%s' srcipmask='%s' />
+                         </rule>""" % (protocol, net, mask)
+        retval += '</filter>'
+        return retval
+
+    def nova_project_filter_v6(self, project, net, mask):
+        retval = "<filter name='nova-project-%s-v6' chain='ipv6'>" % project
+        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
+            retval += """<rule action='accept' direction='inout' priority='200'>
                            <%s srcipaddr='%s' srcipmask='%s' />
                          </rule>""" % (protocol, net, mask)
         retval += '</filter>'
@@ -766,6 +788,11 @@ class NWFilterFirewall(object):
         net = IPy.IP(cidr)
         return str(net.net()), str(net.netmask())
 
+    @staticmethod
+    def _get_ip_version(cidr):
+        net = IPy.IP(cidr)
+        return int(net.version())
+
     @defer.inlineCallbacks
     def setup_nwfilters_for_instance(self, instance):
         """
@@ -777,6 +804,7 @@ class NWFilterFirewall(object):
         yield self._define_filter(self.nova_base_ipv4_filter)
         yield self._define_filter(self.nova_base_ipv6_filter)
         yield self._define_filter(self.nova_dhcp_filter)
+        yield self._define_filter(self.nova_ra_filter)
         yield self._define_filter(self.nova_base_filter)
 
         nwfilter_xml = "<filter name='nova-instance-%s' chain='root'>\n" \
@@ -787,11 +815,21 @@ class NWFilterFirewall(object):
             network_ref = db.project_get_network(context.get_admin_context(),
                                                  instance['project_id'])
             net, mask = self._get_net_and_mask(network_ref['cidr'])
+            if(FLAGS.use_ipv6):
+                net_v6, mask_v6 = self._get_net_and_mask(
+                                           network_ref['cidr_v6'])
             project_filter = self.nova_project_filter(instance['project_id'],
                                                       net, mask)
             yield self._define_filter(project_filter)
-
             nwfilter_xml += "  <filterref filter='nova-project-%s' />\n" % \
+                            instance['project_id']
+            if(FLAGS.use_ipv6):
+                project_filter_v6 = self.nova_project_filter_v6(
+                                                      instance['project_id'],
+                                                      net_v6, mask_v6)
+                yield self._define_filter(project_filter_v6)
+                nwfilter_xml += \
+                            "  <filterref filter='nova-project-%s-v6' />\n" % \
                             instance['project_id']
 
         for security_group in instance.security_groups:
@@ -812,12 +850,21 @@ class NWFilterFirewall(object):
         security_group = db.security_group_get(context.get_admin_context(),
                                                security_group_id)
         rule_xml = ""
+        version = 4
+        v6protocol = {'tcp':'tcp-ipv6', 'udp':'udp-ipv6', 'icmp':'icmpv6'}
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
+                version = self._get_ip_version(rule.cidr)
                 net, mask = self._get_net_and_mask(rule.cidr)
-                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                            (rule.protocol, net, mask)
+                if(FLAGS.use_ipv6 and version == 6):
+                    rule_xml += "<%s " % v6protocol[rule.protocol]
+                    rule_xml += "srcipaddr='%s' " % net
+                    rule_xml += "srcipmask='%s' " % mask
+                else:
+                    rule_xml += "<%s " % rule.protocol
+                    rule_xml += "srcipaddr='%s' " % net
+                    rule_xml += "srcipmask='%s' " % mask
                 if rule.protocol in ['tcp', 'udp']:
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)
@@ -832,6 +879,9 @@ class NWFilterFirewall(object):
 
                 rule_xml += '/>\n'
             rule_xml += "</rule>\n"
-        xml = "<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>" % \
-              (security_group_id, rule_xml,)
+        xml = "<filter name='nova-secgroup-%s' " % security_group_id
+        if(FLAGS.use_ipv6):
+            xml += "chain='root'>%s</filter>" % rule_xml
+        else:
+            xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml

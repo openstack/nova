@@ -53,6 +53,7 @@ flags.DEFINE_string('routing_source_ip', '127.0.0.1',
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
 
+
 DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
 
 
@@ -75,6 +76,11 @@ def init_host():
                   FLAGS.fixed_range)
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
                   {'range': FLAGS.fixed_range})
+    if(FLAGS.use_ipv6):
+        _execute('sudo bash -c ' +
+                 '"echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"')
+        _execute('sudo bash -c ' +
+                 '"echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"')
 
 
 def bind_floating_ip(floating_ip):
@@ -158,6 +164,10 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                  net_attrs['gateway'],
                  net_attrs['broadcast'],
                  net_attrs['netmask']))
+        if(FLAGS.use_ipv6):
+            _execute("sudo ifconfig %s add %s up" % \
+                     (bridge,
+                      net_attrs['cidr_v6']))
     else:
         _execute("sudo ifconfig %s up" % bridge)
     _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
@@ -211,6 +221,50 @@ def update_dhcp(context, network_id):
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
     _execute(command, addl_env=env)
+
+
+def update_ra(context, network_id):
+    network_ref = db.network_get(context, network_id)
+
+    conffile = _ra_file(network_ref['bridge'], 'conf')
+    with open(conffile, 'w') as f:
+        conf_str = """
+interface %s
+{
+   AdvSendAdvert on;
+   MinRtrAdvInterval 3;
+   MaxRtrAdvInterval 10;
+   prefix %s
+   {
+        AdvOnLink on;
+        AdvAutonomous on;
+   };
+};
+""" % (network_ref['bridge'], network_ref['cidr_v6'])
+        f.write(conf_str)
+
+    # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
+    os.chmod(conffile, 0644)
+
+    pid = _ra_pid_for(network_ref['bridge'])
+
+    # if dnsmasq is already running, then tell it to reload
+    if pid:
+        out, _err = _execute('cat /proc/%d/cmdline'
+                             % pid, check_exit_code=False)
+        if conffile in out:
+            try:
+                _execute('sudo kill -HUP %d' % pid)
+                return
+            except Exception as exc:  # pylint: disable-msg=W0703
+                logging.debug("Hupping radvd threw %s", exc)
+        else:
+            logging.debug("Pid %d is stale, relaunching radvd", pid)
+    command = _ra_cmd(network_ref)
+    _execute(command)
+    db.network_update(context, network_id,
+                      {"ra_server":
+                       utils.get_my_linklocal(network_ref['bridge'])})
 
 
 def _host_dhcp(fixed_ip_ref):
@@ -268,6 +322,15 @@ def _dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
+def _ra_cmd(net):
+    """Builds dnsmasq command"""
+    cmd = ['sudo -E radvd',
+#           ' -u nobody',
+           ' -C %s' % _ra_file(net['bridge'], 'conf'),
+           ' -p %s' % _ra_file(net['bridge'], 'pid')]
+    return ''.join(cmd)
+
+
 def _stop_dnsmasq(network):
     """Stops the dnsmasq instance for a given network"""
     pid = _dnsmasq_pid_for(network)
@@ -289,6 +352,16 @@ def _dhcp_file(bridge, kind):
                                               kind))
 
 
+def _ra_file(bridge, kind):
+    """Return path to a pid, leases or conf file for a bridge"""
+
+    if not os.path.exists(FLAGS.networks_path):
+        os.makedirs(FLAGS.networks_path)
+    return os.path.abspath("%s/nova-ra-%s.%s" % (FLAGS.networks_path,
+                                              bridge,
+                                              kind))
+
+
 def _dnsmasq_pid_for(bridge):
     """Returns the pid for prior dnsmasq instance for a bridge
 
@@ -298,6 +371,21 @@ def _dnsmasq_pid_for(bridge):
     """
 
     pid_file = _dhcp_file(bridge, 'pid')
+
+    if os.path.exists(pid_file):
+        with open(pid_file, 'r') as f:
+            return int(f.read())
+
+
+def _ra_pid_for(bridge):
+    """Returns the pid for prior dnsmasq instance for a bridge
+
+    Returns None if no pid file exists
+
+    If machine has rebooted pid might be incorrect (caller should check)
+    """
+
+    pid_file = _ra_file(bridge, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

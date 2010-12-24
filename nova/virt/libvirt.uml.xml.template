@@ -17,6 +17,7 @@
             <filterref filter="nova-instance-%(name)s">
                 <parameter name="IP" value="%(ip_address)s" />
                 <parameter name="DHCPSERVER" value="%(dhcp_server)s" />
+                <parameter name="RASERVER" value="%(ra_server)s" />
             </filterref>
         </interface>
         <console type="file">

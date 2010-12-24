@@ -85,6 +85,10 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
     sudo apt-get install -y python-daemon python-eventlet python-gflags python-tornado python-ipy
     sudo apt-get install -y python-libvirt python-libxml2 python-routes
+#For IPV6
+    sudo apt-get install -y python-netaddr 
+    sudo apt-get install -y radvd
+    
     if [ "$USE_MYSQL" == 1 ]; then
         cat <<MYSQL_PRESEED | debconf-set-selections
 mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
@@ -106,6 +110,8 @@ function screen_it {
 
 if [ "$CMD" == "run" ]; then
     killall dnsmasq
+    #For IPv6
+    killall radvd
     screen -d -m -S nova -t nova
     sleep 1
     if [ "$USE_MYSQL" == 1 ]; then

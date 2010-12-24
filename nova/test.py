@@ -70,7 +70,8 @@ class TrialTestCase(unittest.TestCase):
                                                           FLAGS.fixed_range,
                                                           5, 16,
                                                           FLAGS.vlan_start,
-                                                          FLAGS.vpn_start)
+                                                          FLAGS.vpn_start,
+                                                          FLAGS.fixed_range_v6)
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators

@@ -97,6 +97,27 @@ class NetworkTestCase(test.TrialTestCase):
         self.context.project_id = self.projects[project_num].id
         self.network.deallocate_fixed_ip(self.context, address)
 
+    def test_private_ipv6(self):
+        """Make sure ipv6 is OK"""
+        if FLAGS.use_ipv6:
+            instance_ref = self._create_instance(1)
+            network_ref = db.project_get_network(
+                                                 self.context,
+                                                 self.context.project_id)
+            address_v6 = db.instance_get_fixed_address_v6(
+                                                          self.context,
+                                                          instance_ref['id'])
+            self.assertEqual(instance_ref['mac_address'],
+                             utils.to_mac(address_v6))
+            instance_ref2 = db.fixed_ip_get_instance_v6(
+                                                        self.context,
+                                                        address_v6)
+            self.assertEqual(instance_ref['id'], instance_ref2['id'])
+            self.assertEqual(address_v6,
+                             utils.to_global_ipv6(
+                                                  network_ref['cidr_v6'],
+                                                  instance_ref['mac_address']))
+
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
         # TODO(vish): better way of adding floating ips
