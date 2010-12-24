@@ -19,6 +19,7 @@
 
 # This gets zipped and run on the cloudpipe-managed OpenVPN server
 
+export LC_ALL=C 
 export SUPERVISOR="http://10.255.255.1:8773/cloudpipe"
 export VPN_IP=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}'`
 export BROADCAST=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f3 | awk '{print $1}'`
