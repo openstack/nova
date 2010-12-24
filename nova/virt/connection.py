@@ -66,6 +66,6 @@ def get_connection(read_only=False):
         raise Exception('Unknown connection type "%s"' % t)
 
     if conn is None:
-        logging.error('Failed to open connection to the hypervisor')
+        logging.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
     return conn
