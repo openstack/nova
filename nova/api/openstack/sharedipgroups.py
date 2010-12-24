@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from webob import exc
+
 from nova import wsgi
 
 
@@ -22,19 +24,25 @@ class Controller(wsgi.Controller):
     """ The Shared IP Groups Controller for the Openstack API """
 
     def index(self, req):
-        raise NotImplementedError
+        """ Returns a list of Shared IP Groups for the user """
+        return dict(sharedipgroups=[])
 
     def show(self, req, id):
-        raise NotImplementedError
+        """ Shows in-depth information on a specific Shared IP Group """
+        return dict(sharedipgroup={})
 
     def update(self, req, id):
-        raise NotImplementedError
+        """ You can't update a Shared IP Group """
+        raise faults.Fault(exc.HTTPNotImplemented())
 
     def delete(self, req, id):
-        raise NotImplementedError
+        """ Deletes a Shared IP Group """
+        raise faults.Fault(exc.HTTPNotFound())
 
-    def detail(self, req):
-        raise NotImplementedError
+    def detail(self, req, id):
+        """ Returns a complete list of Shared IP Groups """
+        return dict(sharedipgroups=[]) 
 
     def create(self, req):
-        raise NotImplementedError
+        """ Creates a new Shared IP group """
+        raise faults.Fault(exc.HTTPNotFound())
