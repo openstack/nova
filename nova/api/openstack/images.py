@@ -70,7 +70,6 @@ def _entity_detail(inst):
     except KeyError:
         mapped_inst = _select_keys(inst, mapped_keys.keys())
 
-
     mapped_inst['status'] = status_mapping[mapped_inst['status']]
 
     return mapped_inst
