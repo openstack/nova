@@ -36,7 +36,7 @@ else
     # NOTE(vish): This will just get the first ip in the list, so if you
     #             have more than one eth device set up, this will fail, and
     #             you should explicitly pass in the ip of the instance
-    IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
+    IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
 if [ -n "$3" ]; then

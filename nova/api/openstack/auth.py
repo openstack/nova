@@ -1,3 +1,20 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.import datetime
+
 import datetime
 import hashlib
 import json
@@ -7,29 +24,45 @@ import webob.exc
 import webob.dec
 
 from nova import auth
+from nova import context
 from nova import db
 from nova import flags
 from nova import manager
 from nova import utils
+from nova import wsgi
 from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 
 
-class Context(object):
-    pass
+class AuthMiddleware(wsgi.Middleware):
+    """Authorize the openstack API request or return an HTTP Forbidden."""
 
-
-class BasicApiAuthManager(object):
-    """ Implements a somewhat rudimentary version of OpenStack Auth"""
-
-    def __init__(self, db_driver=None):
+    def __init__(self, application, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
         self.db = utils.import_object(db_driver)
         self.auth = auth.manager.AuthManager()
-        self.context = Context()
-        super(BasicApiAuthManager, self).__init__()
+        super(AuthMiddleware, self).__init__(application)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        if not self.has_authentication(req):
+            return self.authenticate(req)
+
+        user = self.get_user_by_authentication(req)
+
+        if not user:
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        req.environ['nova.context'] = context.RequestContext(user, user)
+        return self.application
+
+    def has_authentication(self, req):
+        return 'X-Auth-Token' in req.headers
+
+    def get_user_by_authentication(self, req):
+        return self.authorize_token(req.headers["X-Auth-Token"])
 
     def authenticate(self, req):
         # Unless the request is explicitly made against /<version>/ don't
@@ -68,15 +101,14 @@ class BasicApiAuthManager(object):
         This method will also remove the token if the timestamp is older than
         2 days ago.
         """
-        token = self.db.auth_get_token(self.context, token_hash)
+        ctxt = context.get_admin_context()
+        token = self.db.auth_get_token(ctxt, token_hash)
         if token:
             delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
-                self.db.auth_destroy_token(self.context, token)
+                self.db.auth_destroy_token(ctxt, token)
             else:
-                #TODO(gundlach): Why not just return dict(id=token.user_id)?
-                user = self.auth.get_user(token.user_id)
-                return {'id': user.id}
+                return self.auth.get_user(token.user_id)
         return None
 
     def _authorize_user(self, username, key, req):
@@ -86,6 +118,7 @@ class BasicApiAuthManager(object):
         key - string API key
         req - webob.Request object
         """
+        ctxt = context.get_admin_context()
         user = self.auth.get_user_from_access_key(key)
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
@@ -97,6 +130,6 @@ class BasicApiAuthManager(object):
             token_dict['server_management_url'] = req.url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
-            token = self.db.auth_create_token(self.context, token_dict)
+            token = self.db.auth_create_token(ctxt, token_dict)
             return token, user
         return None, None

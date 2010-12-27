@@ -21,6 +21,7 @@
 Handle lease database updates from DHCP servers.
 """
 
+import gettext
 import logging
 import os
 import sys
@@ -32,6 +33,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir))
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
+
+gettext.install('nova', unicode=1)
 
 from nova import context
 from nova import db
@@ -107,7 +110,6 @@ def main():
         FLAGS.num_networks = 5
         path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             '..',
-                                            '_trial_temp',
                                             'nova.sqlite'))
         FLAGS.sql_connection = 'sqlite:///%s' % path
     action = argv[1]

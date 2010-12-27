@@ -60,7 +60,12 @@ def stub_instance(id, user_id=1):
                     display_name='server%s' % id)
 
 
+def fake_compute_api(cls, req, id):
+    return True
+
+
 class ServersTest(unittest.TestCase):
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
@@ -81,9 +86,15 @@ class ServersTest(unittest.TestCase):
                        instance_address)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause',
+            fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause',
+            fake_compute_api)
+        self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        FLAGS.allow_admin_api = self.allow_admin
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -209,6 +220,30 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             i += 1
+
+    def test_server_pause(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/pause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_unpause(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/unpause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
 
     def test_server_reboot(self):
         body = dict(server=dict(
