@@ -71,7 +71,7 @@ class Controller(wsgi.Controller):
         ctxt = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         data = {'instance_id': env["image"]["serverId"],
-                'name': env["image"]["name"] }
+                'name': env["image"]["name"]}
         return dict(image=self._service.create(ctxt, data))
 
     def update(self, req, id):

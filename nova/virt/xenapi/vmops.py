@@ -122,7 +122,7 @@ class VMOps(object):
 
     def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance
-      
+
         :param instance: instance to be snapshotted
         :param name: name/label to be given to the snapshot
 
@@ -131,7 +131,7 @@ class VMOps(object):
         1. XAPI-Snapshot: Snapshotting the instance using XenAPI. This
             creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
             Snapshot VHD
-    
+
         2. Wait-for-coalesce: The Snapshot VDI and Instance VDI both point to
             a 'base-copy' VDI.  The base_copy is immutable and may be chained
             with other base_copies.  If chained, the base_copies
@@ -153,14 +153,14 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
             return
-       
+
         try:
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                self._session, instance.id, template_vdi_uuids, name) 
+                self._session, instance.id, template_vdi_uuids, name)
         finally:
             self._destroy(instance, template_vm_ref, shutdown=False)
 
@@ -193,7 +193,7 @@ class VMOps(object):
             try:
                 task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
                 self._session.wait_for_task(instance.id, task)
-            except XenAPI.Failure, exc:
+            except self.XenAPI.Failure, exc:
                 logging.warn(exc)
 
         # Disk clean-up
@@ -202,13 +202,13 @@ class VMOps(object):
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(instance.id, task)
-                except XenAPI.Failure, exc:
+                except self.XenAPI.Failure, exc:
                     logging.warn(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):

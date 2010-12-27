@@ -27,6 +27,7 @@ from xml.dom import minidom
 from eventlet import event
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -205,44 +206,34 @@ class VMHelper(HelperBase):
                       vm_ref, network_ref)
         return vif_ref
 
- 
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
         """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD
         """
-        logging.debug(_("Snapshotting VM %s with label '%s'..."), vm_ref, label)
-        
+        logging.debug(_("Snapshotting VM %s with label '%s'..."),
+                      vm_ref, label)
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
-
-        #TODO(sirp): Make safe_lookup_vdi for assert?
-        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-        if vdi_refs is None:
-            raise Exception(_("No VDIs found for VM %s") % vm_ref)
-        else:
-            num_vdis = len(vdi_refs)
-            if num_vdis != 1:
-                raise Exception(_("Unexpected number of VDIs (%s) found for "
-                                   "VM %s") % (num_vdis, vm_ref)) 
-
-        vdi_ref = vdi_refs[0]
-        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-        vdi_uuid = vdi_rec["uuid"]
-
-        original_parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_uuid = vm_vdi_rec["uuid"]
+        original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vdi_ref, template_vdi_rec = get_vdi_for_vm_safely(
+            session, template_vm_ref)
+
+        template_vdi_uuid = template_vdi_rec["uuid"]
         logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
                       vm_ref)
 
-        sr_ref = vdi_rec["SR"]
+        sr_ref = vm_vdi_rec["SR"]
         parent_uuid = wait_for_vhd_coalesce(
-            session, instance_id, sr_ref, vdi_ref, original_parent_uuid) 
+            session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
-        return template_vm_ref, [vdi_uuid, parent_uuid]
+        return template_vm_ref, [template_vdi_uuid, parent_uuid]
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_name):
@@ -252,7 +243,7 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %s as '%s'"),
                       vdi_uuids, image_name)
 
-        params = {'vdi_uuids': vdi_uuids, 
+        params = {'vdi_uuids': vdi_uuids,
                   'image_name': image_name,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port}
@@ -260,7 +251,6 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'put_vdis', kwargs)
         session.wait_for_task(instance_id, task)
-
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project, type):
@@ -418,7 +408,7 @@ def scan_sr(session, instance_id, sr_ref):
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                           original_parent_uuid):
     """ Spin until the parent VHD is coalesced into its parent VHD
-  
+
     Before coalesce:
         * original_parent_vhd
             * parent_vhd
@@ -440,7 +430,7 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                 parent_uuid, original_parent_uuid)
         else:
             done.send(parent_uuid)
- 
+
     done = event.Event()
     loop = utils.LoopingCall(_poll_vhds)
     loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
@@ -448,3 +438,19 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
     loop.stop()
     return parent_uuid
 
+
+def get_vdi_for_vm_safely(session, vm_ref):
+    """Returns (vdi_ref, vdi_uuid)"""
+    #TODO(sirp): Make safe_lookup_vdi for assert?
+    vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+    if vdi_refs is None:
+        raise Exception(_("No VDIs found for VM %s") % vm_ref)
+    else:
+        num_vdis = len(vdi_refs)
+        if num_vdis != 1:
+            raise Exception(_("Unexpected number of VDIs (%s) found for "
+                               "VM %s") % (num_vdis, vm_ref))
+
+    vdi_ref = vdi_refs[0]
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    return vdi_ref, vdi_rec

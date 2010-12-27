@@ -115,6 +115,7 @@ def stub_out_compute_api_snapshot(stubs):
         return 123
     stubs.Set(nova.compute.api.ComputeAPI, 'snapshot', snapshot)
 
+
 def stub_out_glance(stubs, initial_fixtures=[]):
 
     class FakeParallaxClient:

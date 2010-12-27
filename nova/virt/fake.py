@@ -112,7 +112,6 @@ class FakeConnection(object):
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
 
-
     def snapshot(self, instance, name):
         """
         Snapshots the specified instance.
@@ -126,7 +125,6 @@ class FakeConnection(object):
         Deferred that allows the caller to detect when it is complete.
         """
         pass
-
 
     def reboot(self, instance):
         """
