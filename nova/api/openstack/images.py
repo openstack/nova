@@ -30,11 +30,11 @@ from nova.api.openstack import faults
 FLAGS = flags.FLAGS
 
 
-def _translate_keys(inst):
+def _translate_keys(item):
     """
     Maps key names to Rackspace-like attributes for return
     also pares down attributes to those we want
-    inst is a single item (dict)
+    item is a dict
 
     Note: should be removed when the set of keys expected by the api
     and the set of keys returned by the image service are equivalent
@@ -46,7 +46,7 @@ def _translate_keys(inst):
                    'id': 'imageId',
                    'name': 'imageLocation'}
 
-    mapped_inst = {}
+    mapped_item = {}
     # TODO(tr3buchet):
     # this chunk of code works with s3 and the local image service/glance
     # when we switch to glance/local image service it can be replaced with
@@ -54,40 +54,40 @@ def _translate_keys(inst):
     try:
         for k, v in mapped_keys.iteritems():
             # map s3 fields
-            mapped_inst[k] = inst[v]
+            mapped_item[k] = item[v]
     except KeyError:
         # return only the fields api expects
-        mapped_inst = _filter_keys(inst, mapped_keys.keys())
+        mapped_item = _filter_keys(item, mapped_keys.keys())
 
-    return mapped_inst
+    return mapped_item
 
 
-def _translate_status(inst):
+def _translate_status(item):
     """
     Translates status of image to match current Rackspace api bindings
-    inst is a single item (dict)
+    item is a dict
 
     Note: should be removed when the set of statuses expected by the api
     and the set of statuses returned by the image service are equivalent
 
     """
-    mapped_inst = {}
+    mapped_item = {}
     status_mapping = {
         'pending': 'queued',
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    mapped_inst['status'] = status_mapping[inst['status']]
-    return mapped_inst
+    mapped_item['status'] = status_mapping[item['status']]
+    return mapped_item
 
 
-def _filter_keys(inst, keys):
+def _filter_keys(item, keys):
     """
     Filters all model attributes except for keys
-    inst is a single item (dict)
+    item is a dict
 
     """
-    return dict((k, v) for k, v in inst.iteritems() if k in keys)
+    return dict((k, v) for k, v in item.iteritems() if k in keys)
 
 
 class Controller(wsgi.Controller):
