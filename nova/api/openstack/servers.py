@@ -22,6 +22,7 @@ from webob import exc
 
 from nova import exception
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
 from nova.compute import api as compute_api
@@ -98,7 +99,7 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_instances(
             req.environ['nova.context'])
-        limited_list = nova.api.openstack.limited(instance_list, req)
+        limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
 

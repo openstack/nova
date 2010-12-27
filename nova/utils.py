@@ -29,6 +29,7 @@ import subprocess
 import socket
 import struct
 import sys
+import time
 from xml.sax import saxutils
 
 from eventlet import event
@@ -205,13 +206,51 @@ def get_my_ip():
         return "127.0.0.1"
 
 
+def utcnow():
+    """Overridable version of datetime.datetime.utcnow."""
+    if utcnow.override_time:
+        return utcnow.override_time
+    return datetime.datetime.utcnow()
+
+
+utcnow.override_time = None
+
+
+def utcnow_ts():
+    """Timestamp version of our utcnow function."""
+    return time.mktime(utcnow().timetuple())
+
+
+def set_time_override(override_time=datetime.datetime.utcnow()):
+    """Override utils.utcnow to return a constant time."""
+    utcnow.override_time = override_time
+
+
+def advance_time_delta(timedelta):
+    """Advance overriden time using a datetime.timedelta."""
+    assert(not utcnow.override_time is None)
+    utcnow.override_time += timedelta
+
+
+def advance_time_seconds(seconds):
+    """Advance overriden time by seconds."""
+    advance_time_delta(datetime.timedelta(0, seconds))
+
+
+def clear_time_override():
+    """Remove the overridden time."""
+    utcnow.override_time = None
+
+
 def isotime(at=None):
+    """Returns iso formatted utcnow."""
     if not at:
-        at = datetime.datetime.utcnow()
+        at = utcnow()
     return at.strftime(TIME_FORMAT)
 
 
 def parse_isotime(timestr):
+    """Turn an iso formatted time back into a datetime"""
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
 

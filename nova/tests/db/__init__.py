@@ -1,7 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
-# All Rights Reserved.
+#    Copyright (c) 2010 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,26 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import wsgi
-
-
-class Controller(wsgi.Controller):
-    """ The Shared IP Groups Controller for the Openstack API """
-
-    def index(self, req):
-        raise NotImplementedError
-
-    def show(self, req, id):
-        raise NotImplementedError
-
-    def update(self, req, id):
-        raise NotImplementedError
-
-    def delete(self, req, id):
-        raise NotImplementedError
-
-    def detail(self, req):
-        raise NotImplementedError
-
-    def create(self, req):
-        raise NotImplementedError
+"""
+:mod:`db` -- Stubs for DB API
+=============================
+"""

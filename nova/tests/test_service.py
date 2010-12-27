@@ -30,7 +30,7 @@ from nova import service
 from nova import manager
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
+flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
                     "Manager for testing")
 
 
@@ -52,14 +52,14 @@ class ServiceManagerTestCase(test.TestCase):
         serv = service.Service('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         self.assertRaises(AttributeError, getattr, serv, 'test_method')
 
     def test_message_gets_to_manager(self):
         serv = service.Service('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         self.assertEqual(serv.test_method(), 'manager')
 
@@ -67,7 +67,7 @@ class ServiceManagerTestCase(test.TestCase):
         serv = ExtendedService('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         self.assertEqual(serv.test_method(), 'service')
 
@@ -156,7 +156,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.report_state()
 
@@ -186,7 +186,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.report_state()
         self.assert_(serv.model_disconnected)
@@ -219,7 +219,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.model_disconnected = True
         serv.report_state()
