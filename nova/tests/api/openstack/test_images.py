@@ -240,7 +240,3 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
             else:
                 self.assertEquals(1, 2, "image %s not in fixtures!" %
                                                             str(image))
-
-#        for image in res_dict['images']:
-#            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
-#                              "image %s not in fixtures!" % str(image))

@@ -30,30 +30,18 @@ from nova.api.openstack import faults
 FLAGS = flags.FLAGS
 
 
-def _entity_list(entities):
+def _translate_keys(inst):
     """
-    Coerces a list of images into proper dictionary format
-    entities is a list of entities (dicts)
-
-    """
-    return dict(images=entities)
-
-
-def _entity_detail(inst):
-    """
-    Maps everything to Rackspace-like attributes for return
+    Maps key names to Rackspace-like attributes for return
     also pares down attributes to those we want
-    inst is a single entity (dict)
+    inst is a single item (dict)
+
+    Note: should be removed when the set of keys expected by the api
+    and the set of keys returned by the image service are equivalent
 
     """
-    status_mapping = {
-        'pending': 'queued',
-        'decrypting': 'preparing',
-        'untarring': 'saving',
-        'available': 'active'}
-
     # TODO(tr3buchet): this map is specific to s3 object store,
-    # replace with a list of keys for _select_keys later
+    # replace with a list of keys for _filter_keys later
     mapped_keys = {'status': 'imageState',
                    'id': 'imageId',
                    'name': 'imageLocation'}
@@ -62,32 +50,41 @@ def _entity_detail(inst):
     # TODO(tr3buchet):
     # this chunk of code works with s3 and the local image service/glance
     # when we switch to glance/local image service it can be replaced with
-    # a call to _select_keys, and mapped_keys can be changed to a list
+    # a call to _filter_keys, and mapped_keys can be changed to a list
     try:
         for k, v in mapped_keys.iteritems():
             # map s3 fields
             mapped_inst[k] = inst[v]
     except KeyError:
-        mapped_inst = _select_keys(inst, mapped_keys.keys())
-
-    mapped_inst['status'] = status_mapping[mapped_inst['status']]
+        # return only the fields api expects
+        mapped_inst = _filter_keys(inst, mapped_keys.keys())
 
     return mapped_inst
 
 
-def _entity_inst(inst):
+def _translate_status(inst):
     """
-    Filters all model attributes save for id and name
-    inst is a single entity (dict)
+    Translates status of image to match current Rackspace api bindings
+    inst is a single item (dict)
+
+    Note: should be removed when the set of statuses expected by the api
+    and the set of statuses returned by the image service are equivalent
 
     """
-    return _select_keys(inst, ['id', 'name'])
+    mapped_inst = {}
+    status_mapping = {
+        'pending': 'queued',
+        'decrypting': 'preparing',
+        'untarring': 'saving',
+        'available': 'active'}
+    mapped_inst['status'] = status_mapping[mapped_inst['status']]
+    return mapped_inst
 
 
-def _select_keys(inst, keys):
+def _filter_keys(inst, keys):
     """
     Filters all model attributes except for keys
-    inst is a single entity (dict)
+    inst is a single item (dict)
 
     """
     return dict((k, v) for k, v in inst.iteritems() if k in keys)
@@ -108,7 +105,7 @@ class Controller(wsgi.Controller):
         """Return all public images in brief"""
         items = self._service.index(req.environ['nova.context'])
         items = common.limited(items, req)
-        items = [_entity_inst(item) for item in items]
+        items = [_filter_keys(item, ('id', 'name')) for item in items]
         return dict(images=items)
 
     def detail(self, req):
@@ -118,7 +115,8 @@ class Controller(wsgi.Controller):
         except NotImplementedError:
             items = self._service.index(req.environ['nova.context'])
         items = common.limited(items, req)
-        items = [_entity_detail(item) for item in items]
+        items = [_translate_keys(item) for item in items]
+        items = [_translate_status(item) for item in items]
         return dict(images=items)
 
     def show(self, req, id):
