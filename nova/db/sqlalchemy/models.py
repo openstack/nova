@@ -234,9 +234,9 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
-    # To remember at which host a instance booted.
+    # To remember on which host a instance booted.
     # An instance may moved to other host by live migraiton.
-    launch_at = Column(String(255))
+    launched_on = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such

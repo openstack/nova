@@ -82,7 +82,7 @@ class SchedulerManager(manager.Manager):
         instance_id = instance_ref['id']
 
         # 2. get src host and dst host
-        src = instance_ref['launch_at']
+        src = instance_ref['launched_on']
         shost_ref = db.host_get_by_name(context, src )
         dhost_ref = db.host_get_by_name(context, dest)
 

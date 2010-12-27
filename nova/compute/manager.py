@@ -105,7 +105,7 @@ class ComputeManager(manager.Manager):
         self.network_manager.setup_compute_network(context, instance_id)
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host, 'launch_at':self.host})
+                                {'host': self.host, 'launched_on':self.host})
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
