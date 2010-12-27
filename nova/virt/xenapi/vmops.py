@@ -96,7 +96,30 @@ class VMOps(object):
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         logging.info(_('Spawning VM %s created %s.'), instance.name,
                      vm_ref)
-    
+
+        # NOTE(armando): Do we really need to do this in virt?
+        timer = utils.LoopingCall(f=None)
+
+        def _wait_for_boot():
+            try:
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
+                if state == power_state.RUNNING:
+                    logging.debug(_('Instance %s: booted'), instance['name'])
+                    timer.stop()
+            except Exception, exc:
+                logging.warn(exc)
+                logging.exception(_('instance %s: failed to boot'),
+                                  instance['name'])
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                timer.stop()
+
+        timer.f = _wait_for_boot
+        return timer.start(interval=0.5, now=True)
+
     def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance
       
@@ -142,29 +165,6 @@ class VMOps(object):
             self._destroy(instance, template_vm_ref, shutdown=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
-
-        # NOTE(armando): Do we really need to do this in virt?
-        timer = utils.LoopingCall(f=None)
-
-        def _wait_for_boot():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    logging.debug(_('Instance %s: booted'), instance['name'])
-                    timer.stop()
-            except Exception, exc:
-                logging.warn(exc)
-                logging.exception(_('instance %s: failed to boot'),
-                                  instance['name'])
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
-
-        timer.f = _wait_for_boot
-        return timer.start(interval=0.5, now=True)
 
     def reboot(self, instance):
         """Reboot VM instance"""
