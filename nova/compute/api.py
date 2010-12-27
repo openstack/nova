@@ -40,6 +40,7 @@ def id_to_default_hostname(internal_id):
     """Default function to generate a hostname given an instance reference."""
     return str(internal_id)
 
+
 def id_to_ec2_hostname(internal_id):
     digits = []
     while internal_id != 0:
@@ -47,8 +48,10 @@ def id_to_ec2_hostname(internal_id):
         digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
     return "i-%s" % ''.join(reversed(digits))
 
+
 HOSTNAME_FORMATTERS = {'default': id_to_default_hostname,
                        'ec2': id_to_ec2_hostname}
+
 
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
@@ -63,6 +66,7 @@ class ComputeAPI(base.Base):
         super(ComputeAPI, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
+        """Get the network topic for an instance."""
         try:
             instance = self.db.instance_get_by_internal_id(context,
                                                            instance_id)
@@ -221,6 +225,7 @@ class ComputeAPI(base.Base):
         return self.db.instance_update(context, instance_id, kwargs)
 
     def delete_instance(self, context, instance_id):
+        """Terminate and remove an instance."""
         logging.debug("Going to try and terminate %d" % instance_id)
         try:
             instance = self.db.instance_get_by_internal_id(context,
@@ -264,6 +269,7 @@ class ComputeAPI(base.Base):
         return self.db.instance_get_all(context)
 
     def get_instance(self, context, instance_id):
+        """Get information about a specific instance."""
         rv = self.db.instance_get_by_internal_id(context, instance_id)
         return dict(rv.iteritems())
 

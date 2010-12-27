@@ -31,6 +31,7 @@ from nova.api import easy
 from nova.compute import api as compute_api
 from nova.tests import cloud_unittest
 
+
 class FakeService(object):
     def echo(self, context, data):
         return {'data': data}
@@ -49,7 +50,7 @@ class EasyTestCase(test.TestCase):
                         easy.SundayMorning()))
         self.auth_router = easy.DelegatedAuthMiddleware(self.router)
         self.context = context.RequestContext('user1', 'proj1')
-    
+
     def tearDown(self):
         easy.EASY_ROUTES = {}
 
@@ -61,7 +62,7 @@ class EasyTestCase(test.TestCase):
         data = json.loads(resp.body)
         self.assertEqual(data['user'], 'user1')
         self.assertEqual(data['project'], 'proj1')
-    
+
     def test_json_params(self):
         req = webob.Request.blank('/fake/echo')
         req.environ['openstack.context'] = self.context
@@ -99,4 +100,3 @@ class EasyCloudTestCase(cloud_unittest.CloudTestCase):
     def tearDown(self):
         super(EasyCloudTestCase, self).tearDown()
         easy.EASY_ROUTES = {}
-

@@ -25,7 +25,7 @@ The general flow of a request is:
       (/controller/method)
     - Parameters are parsed from the request and passed to a method on the
       controller as keyword arguments.
-      - Optionally json_body is decoded to provide all the parameters.
+      - Optionally 'json' is decoded to provide all the parameters.
     - Actual work is done and a result is returned.
     - That result is turned into json and returned.
 
@@ -94,7 +94,7 @@ class SundayMorning(wsgi.Router):
     def __init__(self, mapper=None):
         if mapper is None:
             mapper = routes.Mapper()
-        
+
         self._load_registered_routes(mapper)
         super(SundayMorning, self).__init__(mapper=mapper)
 
@@ -103,14 +103,18 @@ class SundayMorning(wsgi.Router):
             mapper.connect('/%s/{action}' % route,
                            controller=ServiceWrapper(EASY_ROUTES[route]))
 
-  
+
 class Reflection(object):
+    """Reflection methods to list available methods."""
     def __init__(self):
         self._methods = {}
+        self._controllers = {}
 
     def _gather_methods(self):
         methods = {}
+        controllers = {}
         for route, handler in EASY_ROUTES.iteritems():
+            controllers[route] = handler.__doc__.split('\n')[0]
             for k in dir(handler):
                 if k.startswith('_'):
                     continue
@@ -120,40 +124,63 @@ class Reflection(object):
 
                 # bunch of ugly formatting stuff
                 argspec = inspect.getargspec(f)
-                args = [x for x in argspec[0] if x != 'self' and x != 'context']
+                args = [x for x in argspec[0]
+                        if x != 'self' and x != 'context']
                 defaults = argspec[3] and argspec[3] or []
                 args_r = list(reversed(args))
                 defaults_r = list(reversed(defaults))
+
                 args_out = []
                 while args_r:
                     if defaults_r:
-                        args_out.append((args_r.pop(0), defaults_r.pop(0)))
+                        args_out.append((args_r.pop(0),
+                                         repr(defaults_r.pop(0))))
                     else:
-                        args_out.append(str(args_r.pop(0)))
+                        args_out.append((str(args_r.pop(0)),))
+
+                # if the method accepts keywords
+                if argspec[2]:
+                    args_out.insert(0, ('**%s' % argspec[2],))
 
                 methods['/%s/%s' % (route, k)] = {
+                        'short_doc': f.__doc__.split('\n')[0],
+                        'doc': f.__doc__,
                         'name': k,
                         'args': list(reversed(args_out))}
-        return methods
+
+        self._methods = methods
+        self._controllers = controllers
+
+    def get_controllers(self, context):
+        """List available controllers."""
+        if not self._controllers:
+            self._gather_methods()
+
+        return self._controllers
 
     def get_methods(self, context):
+        """List available methods."""
         if not self._methods:
-            self._methods = self._gather_methods()
+            self._gather_methods()
 
         method_list = self._methods.keys()
         method_list.sort()
-        return {'methods': method_list}
+        methods = {}
+        for k in method_list:
+            methods[k] = self._methods[k]['short_doc']
+        return methods
 
     def get_method_info(self, context, method):
+        """Get detailed information about a method."""
         if not self._methods:
-            self._methods = self._gather_methods()
+            self._gather_methods()
         return self._methods[method]
 
 
 class ServiceWrapper(wsgi.Controller):
     def __init__(self, service_handle):
         self.service_handle = service_handle
-    
+
     @webob.dec.wsgify
     def __call__(self, req):
         arg_dict = req.environ['wsgiorg.routing_args'][1]
@@ -165,10 +192,10 @@ class ServiceWrapper(wsgi.Controller):
         params = {}
         if 'openstack.params' in req.environ:
             params = req.environ['openstack.params']
-        
+
         # TODO(termie): do some basic normalization on methods
         method = getattr(self.service_handle, action)
-        
+
         result = method(context, **params)
         if type(result) is dict or type(result) is list:
             return self._serialize(result, req)
@@ -181,7 +208,7 @@ class Proxy(object):
     def __init__(self, app, prefix=None):
         self.app = app
         self.prefix = prefix
-    
+
     def __do_request(self, path, context, **kwargs):
         req = webob.Request.blank(path)
         req.method = 'POST'
@@ -196,7 +223,7 @@ class Proxy(object):
     def __getattr__(self, key):
         if self.prefix is None:
             return self.__class__(self.app, prefix=key)
-        
+
         def _wrapper(context, **kwargs):
             return self.__do_request('/%s/%s' % (self.prefix, key),
                                      context,

@@ -105,8 +105,7 @@ class Application(object):
 
 class Middleware(Application):
     """Base WSGI middleware.
-    
-    Modelled after Django's middleware this class allows you to 
+
     These classes require an application to be
     initialized that will be called next.  By default the middleware will
     simply call its wrapped app, or you can override __call__ to customize its

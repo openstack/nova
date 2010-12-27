@@ -386,7 +386,7 @@ def dumps(value):
         return json.dumps(value)
     except TypeError:
         pass
-        
+
     return json.dumps(to_primitive(value))
 
 
