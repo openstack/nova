@@ -71,14 +71,13 @@ def _translate_status(item):
     and the set of statuses returned by the image service are equivalent
 
     """
-    mapped_item = {}
     status_mapping = {
         'pending': 'queued',
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    mapped_item['status'] = status_mapping[item['status']]
-    return mapped_item
+    item['status'] = status_mapping[item['status']]
+    return item
 
 
 def _filter_keys(item, keys):
