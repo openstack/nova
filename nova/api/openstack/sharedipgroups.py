@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova import wsgi
+from nova.api.openstack import faults
 
 
 class Controller(wsgi.Controller):

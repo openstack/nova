@@ -43,6 +43,7 @@ def _entity_list(entities):
 def _entity_detail(inst):
     """ Maps everything to Rackspace-like attributes for return"""
     power_mapping = {
+        None: 'build',
         power_state.NOSTATE: 'build',
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
@@ -153,7 +154,7 @@ class Controller(wsgi.Controller):
 
         try:
             self.compute_api.update_instance(req.environ['nova.context'],
-                                             instance['id'],
+                                             inst_dict['id'],
                                              **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())

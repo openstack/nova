@@ -24,12 +24,14 @@ import nova.image.service
 
 
 class Controller(wsgi.Controller):
+    """ The backup schedule API controller for the Openstack API """
 
     def __init__(self):
         pass
 
     def index(self, req, server_id):
-        return faults.Fault(exc.HTTPNotFound())
+        """ Returns the list of backup schedules for a given instance """
+        return dict(backup_schedules=[])
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows
@@ -37,4 +39,5 @@ class Controller(wsgi.Controller):
         return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, server_id, id):
+        """ Deletes an existing backup schedule """
         return faults.Fault(exc.HTTPNotFound())
