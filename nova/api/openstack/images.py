@@ -77,7 +77,7 @@ def _translate_status(inst):
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    mapped_inst['status'] = status_mapping[mapped_inst['status']]
+    mapped_inst['status'] = status_mapping[inst['status']]
     return mapped_inst
 
 
