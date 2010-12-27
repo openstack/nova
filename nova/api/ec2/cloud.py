@@ -458,7 +458,7 @@ class CloudController(object):
 
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
-                   if volume_id is None or v['ec2_id'] in volume_id]
+                   if volume_id is None or v['id'] in volume_id]
 
         return {'volumeSet': volumes}
 
@@ -471,7 +471,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = volume['ec2_id']
+        v['volumeId'] = volume['id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -527,7 +527,7 @@ class CloudController(object):
         return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
+        volume_ref = db.volume_get(context, volume_id)
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
@@ -553,7 +553,7 @@ class CloudController(object):
                 'volumeId': volume_ref['id']}
 
     def detach_volume(self, context, volume_id, **kwargs):
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
+        volume_ref = db.volume_get(context, volume_id)
         instance_ref = db.volume_get_instance(context.elevated(),
                                               volume_ref['id'])
         if not instance_ref:
@@ -807,7 +807,7 @@ class CloudController(object):
 
     def delete_volume(self, context, volume_id, **kwargs):
         # TODO: return error if not authorized
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
+        volume_ref = db.volume_get(context, volume_id)
         if volume_ref['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
         now = datetime.datetime.utcnow()

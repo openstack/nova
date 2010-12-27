@@ -127,9 +127,9 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
         result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[vol2['ec2_id']])
+                                             volume_id=[vol2['id']])
         self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['ec2_id'])
+        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 

@@ -1285,10 +1285,6 @@ def volume_create(context, values):
 
     session = get_session()
     with session.begin():
-        while volume_ref.ec2_id == None:
-            ec2_id = utils.generate_uid('vol')
-            if not volume_ec2_id_exists(context, ec2_id, session=session):
-                volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
     return volume_ref
 
@@ -1384,41 +1380,6 @@ def volume_get_all_by_project(context, project_id):
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
-
-
-@require_context
-def volume_get_by_ec2_id(context, ec2_id):
-    session = get_session()
-    result = None
-
-    if is_admin_context(context):
-        result = session.query(models.Volume).\
-                         filter_by(ec2_id=ec2_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Volume).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(ec2_id=ec2_id).\
-                         filter_by(deleted=False).\
-                         first()
-    else:
-        raise exception.NotAuthorized()
-
-    if not result:
-        raise exception.NotFound(_('Volume %s not found') % ec2_id)
-
-    return result
-
-
-@require_context
-def volume_ec2_id_exists(context, ec2_id, session=None):
-    if not session:
-        session = get_session()
-
-    return session.query(exists().\
-                   where(models.Volume.id == ec2_id)).\
-                   one()[0]
 
 
 @require_admin_context

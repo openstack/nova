@@ -303,8 +303,11 @@ class InstanceActions(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(12), unique=True)
+    id = Column(GUID, primary_key=True, default=make_uuid)
+
+    @property
+    def name(self):
+        return "vollume-%s" % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -330,10 +333,6 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
-    @property
-    def name(self):
-        return self.ec2_id
-
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project."""
@@ -357,7 +356,7 @@ class ExportDevice(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(GUID, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           backref=backref('export_device', uselist=False),
                           foreign_keys=volume_id,
@@ -373,7 +372,7 @@ class IscsiTarget(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     target_num = Column(Integer)
     host = Column(String(255))
-    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(GUID, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           backref=backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
