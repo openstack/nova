@@ -235,6 +235,7 @@ class SessionBase(object):
         elif '.' in name:
             impl = getattr(self, name.replace('.', '_'))
             if impl is not None:
+
                 def callit(*params):
                     logging.warn('Calling %s %s', name, impl)
                     self._check_session(params)

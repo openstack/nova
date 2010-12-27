@@ -157,7 +157,6 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
-
         if rescue:
             common_checks += [
                 (lambda t: t.findall('./devices/disk/source')[0].get(
