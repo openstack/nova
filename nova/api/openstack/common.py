@@ -15,26 +15,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import wsgi
 
+def limited(items, req):
+    """Return a slice of items according to requested offset and limit.
 
-class Controller(wsgi.Controller):
-    """ The Shared IP Groups Controller for the Openstack API """
+    items - a sliceable
+    req - wobob.Request possibly containing offset and limit GET variables.
+          offset is where to start in the list, and limit is the maximum number
+          of items to return.
 
-    def index(self, req):
-        raise NotImplementedError
+    If limit is not specified, 0, or > 1000, defaults to 1000.
+    """
 
-    def show(self, req, id):
-        raise NotImplementedError
-
-    def update(self, req, id):
-        raise NotImplementedError
-
-    def delete(self, req, id):
-        raise NotImplementedError
-
-    def detail(self, req):
-        raise NotImplementedError
-
-    def create(self, req):
-        raise NotImplementedError
+    offset = int(req.GET.get('offset', 0))
+    limit = int(req.GET.get('limit', 0))
+    if not limit:
+        limit = 1000
+    limit = min(1000, limit)
+    range_end = offset + limit
+    return items[offset:range_end]

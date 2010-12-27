@@ -91,15 +91,16 @@ class ComputeAPI(base.Base):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = self.image_service.show(context, image_id)
-
-            # If kernel_id/ramdisk_id isn't explicitly set in API call
-            # we take the defaults from the image's metadata
             if kernel_id is None:
                 kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', None)
-
-            # Make sure we have access to kernel and ramdisk
+            #No kernel and ramdisk for raw images
+            if kernel_id == str(FLAGS.null_kernel):
+                kernel_id = None
+                ramdisk_id = None
+                logging.debug("Creating a raw instance")
+            # Make sure we have access to kernel and ramdisk (if not raw)
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
