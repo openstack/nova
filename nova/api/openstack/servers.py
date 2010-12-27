@@ -84,7 +84,7 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_translte_keys)
+        return self._items(req, entity_maker=_translate_keys)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
