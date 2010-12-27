@@ -279,7 +279,7 @@ class InstanceDiagnostics(BASE, NovaBase):
     """Represents a guest VM's diagnostics"""
     __tablename__ = "instance_diagnostics"
     id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
+    instance_id = Column(GUID, ForeignKey('instances.id'))
 
     memory_available = Column(Float)
     memory_free = Column(Float)
@@ -294,7 +294,7 @@ class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
     id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
+    instance_id = Column(GUID, ForeignKey('instances.id'))
 
     action = Column(String(255))
     error = Column(Text)
@@ -312,7 +312,7 @@ class Volume(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
-    instance_id = Column(String(32), ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(GUID, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('volumes'),
                             foreign_keys=instance_id,
@@ -385,7 +385,7 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
     id = Column(Integer, primary_key=True)
     security_group_id = Column(Integer, ForeignKey('security_groups.id'))
-    instance_id = Column(String(32), ForeignKey('instances.id'))
+    instance_id = Column(GUID, ForeignKey('instances.id'))
 
 
 class SecurityGroup(BASE, NovaBase):
@@ -505,7 +505,7 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(String(32), ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(GUID, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('fixed_ip', uselist=False),
                             foreign_keys=instance_id,
