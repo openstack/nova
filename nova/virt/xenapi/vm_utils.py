@@ -43,15 +43,31 @@ XENAPI_POWER_STATE = {
     'Crashed': power_state.CRASHED}
 
 
+class ImageType:
+        """
+        Enumeration class for distinguishing different image types
+            0 - kernel/ramdisk image (goes on dom0's filesystem)
+            1 - disk image (local SR, partitioned by objectstore plugin)
+            2 - raw disk image (local SR, NOT partitioned by plugin)
+        """
+
+        KERNEL_RAMDISK = 0
+        DISK = 1
+        DISK_RAW = 2
+
+
 class VMHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
 
     @classmethod
-    def create_vm(cls, session, instance, kernel, ramdisk):
+    def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
-        VM reference."""
+        VM reference.
+        the pv_kernel flag indicates whether the guest is HVM or PV
+        """
+
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
@@ -70,9 +86,9 @@ class VMHelper(HelperBase):
             'actions_after_reboot': 'restart',
             'actions_after_crash': 'destroy',
             'PV_bootloader': '',
-            'PV_kernel': kernel,
-            'PV_ramdisk': ramdisk,
-            'PV_args': 'root=/dev/xvda1',
+            'PV_kernel': '',
+            'PV_ramdisk': '',
+            'PV_args': '',
             'PV_bootloader_args': '',
             'PV_legacy_args': '',
             'HVM_boot_policy': '',
@@ -84,7 +100,25 @@ class VMHelper(HelperBase):
             'user_version': '0',
             'other_config': {},
             }
-        logging.debug(_('Created VM %s...'), instance.name)
+        #Complete VM configuration record according to the image type
+        #non-raw/raw with PV kernel/raw in HVM mode
+        if instance.kernel_id:
+            rec['PV_bootloader'] = ''
+            rec['PV_kernel'] = kernel
+            rec['PV_ramdisk'] = ramdisk
+            rec['PV_args'] = 'root=/dev/xvda1'
+            rec['PV_bootloader_args'] = ''
+            rec['PV_legacy_args'] = ''
+        else:
+            if pv_kernel:
+                rec['PV_args'] = 'noninteractive'
+                rec['PV_bootloader'] = 'pygrub'
+            else:
+                rec['HVM_boot_policy'] = 'BIOS order'
+                rec['HVM_boot_params'] = {'order': 'dc'}
+                rec['platform'] = {'acpi': 'true', 'apic': 'true',
+                                   'pae': 'true', 'viridian': 'true'}
+        logging.debug('Created VM %s...', instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
         logging.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
         return vm_ref
@@ -170,27 +204,45 @@ class VMHelper(HelperBase):
         return vif_ref
 
     @classmethod
-    def fetch_image(cls, session, image, user, project, use_sr):
-        """use_sr: True to put the image as a VDI in an SR, False to place
-        it on dom0's filesystem.  The former is for VM disks, the latter for
-        its kernel and ramdisk (if external kernels are being used).
-        Returns a Deferred that gives the new VDI UUID."""
-
+    def fetch_image(cls, session, image, user, project, type):
+        """
+        type is interpreted as an ImageType instance
+        """
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
-        logging.debug(_("Asking xapi to fetch %s as %s"), url, access)
-        fn = use_sr and 'get_vdi' or 'get_kernel'
+        logging.debug("Asking xapi to fetch %s as %s", url, access)
+        fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
-        if use_sr:
+        args['add_partition'] = 'false'
+        args['raw'] = 'false'
+        if type != ImageType.KERNEL_RAMDISK:
             args['add_partition'] = 'true'
+            if type == ImageType.DISK_RAW:
+                args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         #FIXME(armando): find a solution to missing instance_id
         #with Josh Kearney
         uuid = session.wait_for_task(0, task)
         return uuid
+
+    @classmethod
+    def lookup_image(cls, session, vdi_ref):
+        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        fn = "is_vdi_pv"
+        args = {}
+        args['vdi-ref'] = vdi_ref
+        #TODO: Call proper function in plugin
+        task = session.async_call_plugin('objectstore', fn, args)
+        pv_str = session.wait_for_task(task)
+        if pv_str.lower() == 'true':
+            pv = True
+        elif pv_str.lower() == 'false':
+            pv = False
+        logging.debug("PV Kernel in VDI:%d", pv)
+        return pv
 
     @classmethod
     def lookup(cls, session, i):
