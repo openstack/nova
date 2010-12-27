@@ -238,7 +238,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
                 if _is_equivalent_subset(image, image_fixture):
                     break
             else:
-                self.assertEquals(1, 2, "image %s not in fixtures!" % \
+                self.assertEquals(1, 2, "image %s not in fixtures!" %
                                                             str(image))
 
 #        for image in res_dict['images']:
