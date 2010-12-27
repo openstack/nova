@@ -22,16 +22,24 @@ from nova import wsgi
 from nova.api.openstack import faults
 import nova.image.service
 
+def _entity_inst(inst):
+    """ Coerces the backup schedule into proper dictionary format """
+    return dict(backupSchedule=inst)
 
 class Controller(wsgi.Controller):
     """ The backup schedule API controller for the Openstack API """
+
+    _serialization_metadata = {
+        'application/xml': {
+            'attributes': {
+                'backupSchedule': []}}}
 
     def __init__(self):
         pass
 
     def index(self, req, server_id):
         """ Returns the list of backup schedules for a given instance """
-        return dict(backup_schedules=[])
+        return _entity_inst({})
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows

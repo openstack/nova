@@ -153,8 +153,10 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            self.compute_api.update_instance(req.environ['nova.context'],
-                                             inst_dict['id'],
+            ctxt = req.environ['nova.context']
+            inst_ref = self.compute_api.get_instance(ctxt, id)
+            self.compute_api.update_instance(ctxt,
+                                             id,
                                              **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
