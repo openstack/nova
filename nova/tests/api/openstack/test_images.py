@@ -223,6 +223,20 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
         res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
+        def _is_equivalent_subset(x, y):
+            if set(x) <= set(y):
+                for k, v in x.iteritems():
+                    if x[k] != y[k]:
+                        if x[k] == 'active' and y[k] == 'available':
+                            continue
+                        return False
+                return True
+            return False
+
         for image in res_dict['images']:
-            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
-                              "image %s not in fixtures!" % str(image))
+            for image_fixture in self.IMAGE_FIXTURES:
+                if _is_equivalent_subset(image, image_fixture):
+                    break
+            else:
+                self.assertEquals(1, 2, "image %s not in fixtures!" %
+                                                            str(image))

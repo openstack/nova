@@ -512,9 +512,10 @@ class LibvirtConnection(object):
 
         if FLAGS.allow_project_net_traffic:
             net, mask = _get_net_and_mask(network['cidr'])
-            extra_params = ("<parameter name=\"PROJNET\" value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" value=\"%s\" />\n"
-                           ) % (net, mask)
+            extra_params = ("<parameter name=\"PROJNET\" "
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASK\" "
+                            "value=\"%s\" />\n") % (net, mask)
         else:
             extra_params = "\n"
 
@@ -800,8 +801,8 @@ class NWFilterFirewall(object):
         the base filter are all in place.
         """
 
-        nwfilter_xml = ("<filter name='nova-instance-%s' chain='root'>\n"
-                       ) % instance['name']
+        nwfilter_xml = ("<filter name='nova-instance-%s' "
+                        "chain='root'>\n") % instance['name']
 
         if instance['image_id'] == FLAGS.vpn_image_id:
             nwfilter_xml += "  <filterref filter='nova-vpn' />\n"
@@ -814,8 +815,8 @@ class NWFilterFirewall(object):
         for security_group in instance.security_groups:
             self.ensure_security_group_filter(security_group['id'])
 
-            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' />\n"
-                            ) % security_group['id']
+            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' "
+                             "/>\n") % security_group['id']
         nwfilter_xml += "</filter>"
 
         self._define_filter(nwfilter_xml)
