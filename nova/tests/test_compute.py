@@ -41,6 +41,7 @@ class ComputeTestCase(test.TestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
+                   stub_network=True,
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute_api.ComputeAPI()
