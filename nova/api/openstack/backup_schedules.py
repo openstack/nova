@@ -22,9 +22,11 @@ from nova import wsgi
 from nova.api.openstack import faults
 import nova.image.service
 
+
 def _entity_inst(inst):
     """ Coerces the backup schedule into proper dictionary format """
     return dict(backupSchedule=inst)
+
 
 class Controller(wsgi.Controller):
     """ The backup schedule API controller for the Openstack API """

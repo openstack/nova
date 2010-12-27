@@ -35,13 +35,9 @@ LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
 
 
-def _entity_list(entities):
-    """ Coerces a list of servers into proper dictionary format """
-    return dict(servers=entities)
-
-
-def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return"""
+def _translate_detail_keys(inst):
+    """ Coerces into dictionary format, mapping everything to Rackspace-like
+    attributes for return"""
     power_mapping = {
         None: 'build',
         power_state.NOSTATE: 'build',
@@ -67,8 +63,9 @@ def _entity_detail(inst):
     return dict(server=inst_dict)
 
 
-def _entity_inst(inst):
-    """ Filters all model attributes save for id and name """
+def _translate_keys(inst):
+    """ Coerces into dictionary format, excluding all model attributes
+    save for id and name """
     return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
 
 
@@ -87,29 +84,29 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_entity_inst)
+        return self._items(req, entity_maker=_translte_keys)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_entity_detail)
+        return self._items(req, entity_maker=_translate_detail_keys)
 
     def _items(self, req, entity_maker):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _entity_detail or _entity_inst
+        entity_maker - either _translate_detail_keys or _translate_keys
         """
         instance_list = self.compute_api.get_instances(
             req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
-        return _entity_list(res)
+        return dict(servers=res)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get_instance(
                 req.environ['nova.context'], int(id))
-            return _entity_detail(instance)
+            return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -138,7 +135,7 @@ class Controller(wsgi.Controller):
             description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
-        return _entity_inst(instances[0])
+        return _translate_keys(instances[0])
 
     def update(self, req, id):
         """ Updates the server name or password """
