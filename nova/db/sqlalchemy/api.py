@@ -856,6 +856,15 @@ def instance_action_create(context, values):
     return action_ref
 
 
+@require_context
+def instance_get_actions(context, instance_id):
+    """Return the actions associated to the given instance id"""
+    session = get_session()
+    return session.query(models.InstanceActions).\
+        filter_by(instance_id=instance_id).\
+        all()
+
+
 ###################
 
 
