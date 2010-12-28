@@ -58,10 +58,9 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
-from Cheetah.Template import Template
-
 libvirt = None
 libxml2 = None
+Template = None
 
 
 FLAGS = flags.FLAGS
@@ -88,14 +87,23 @@ flags.DEFINE_bool('allow_project_net_traffic',
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
+    # Cheetah is separate because the unit tests want to load Cheetah,
+    # but not libvirt.
     global libvirt
     global libxml2
     if libvirt is None:
         libvirt = __import__('libvirt')
     if libxml2 is None:
         libxml2 = __import__('libxml2')
+    _late_load_cheetah()
     return LibvirtConnection(read_only)
 
+def _late_load_cheetah():
+    global Template
+    if Template is None:
+        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
+                       -1)
+        Template = t.Template
 
 def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
