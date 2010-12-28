@@ -27,6 +27,9 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 :sql_connection:  string specifying the sqlalchemy connection to use, like:
                   `sqlite:///var/lib/nova/nova.sqlite`.
+
+:enable_new_services:  when adding a new service to the database, is it in the
+                       pool of available hardware (Default: False)
 """
 
 from nova import exception
@@ -37,6 +40,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
+flags.DEFINE_boolean('enable_new_services', False,
+                     'Services to be added to the available pool on create')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
