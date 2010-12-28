@@ -21,17 +21,12 @@ from nova import wsgi
 from nova.api.openstack import faults
 
 
-def _entity_list(entities):
-    """ Coerces a list of shared IP groups into proper dictionary format """
-    return dict(sharedIpGroups=entities)
-
-
-def _entity_inst(inst):
+def _translate_keys(inst):
     """ Coerces a shared IP group instance into proper dictionary format """
     return dict(sharedIpGroup=inst)
 
 
-def _entity_detail(inst):
+def _translate_detail_keys(inst):
     """ Coerces a shared IP group instance into proper dictionary format with
     correctly mapped attributes """
     return dict(sharedIpGroup=inst)
@@ -47,11 +42,11 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of Shared IP Groups for the user """
-        return _entity_list([])
+        return dict(sharedIpGroups=[])
 
     def show(self, req, id):
         """ Shows in-depth information on a specific Shared IP Group """
-        return _entity_inst({})
+        return _translate_keys({})
 
     def update(self, req, id):
         """ You can't update a Shared IP Group """
@@ -63,7 +58,7 @@ class Controller(wsgi.Controller):
 
     def detail(self, req, id):
         """ Returns a complete list of Shared IP Groups """
-        return _entity_detail({})
+        return _translate_detail_keys({})
 
     def create(self, req):
         """ Creates a new Shared IP group """
