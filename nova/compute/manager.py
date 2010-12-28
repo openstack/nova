@@ -307,6 +307,38 @@ class ComputeManager(manager.Manager):
                 instance_ref["internal_id"])
             return self.driver.get_diagnostics(instance_ref)
 
+    def suspend_instance(self, context, instance_id):
+        """suspend the instance with instance_id"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: suspending'),
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context, instance_id,
+                                            power_state.NOSTATE,
+                                            'suspending')
+        self.driver.suspend(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
+    @exception.wrap_exception
+    def resume_instance(self, context, instance_id):
+        """resume the suspended instance with instance_id"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: resuming'), instance_ref['internal_id'])
+        self.db.instance_set_state(context, instance_id,
+                                            power_state.NOSTATE,
+                                            'resuming')
+        self.driver.resume(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""

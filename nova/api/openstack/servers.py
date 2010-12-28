@@ -46,7 +46,8 @@ def _entity_detail(inst):
         power_state.NOSTATE: 'build',
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
-        power_state.PAUSED: 'suspended',
+        power_state.SUSPENDED: 'suspended',
+        power_state.PAUSED: 'error',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}
@@ -182,7 +183,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::pause %s", readable)
+            logging.error(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -193,7 +194,29 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::unpause %s", readable)
+            logging.error(_("Compute.api::unpause %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def suspend(self, req, id):
+        """permit admins to suspend the server"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.suspend(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("compute.api::suspend %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def resume(self, req, id):
+        """permit admins to resume the server from suspend"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.resume(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
