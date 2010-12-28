@@ -21,6 +21,7 @@ function process_option {
     -V|--virtual-env) let always_venv=1; let never_venv=0;;
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
     -f|--force) let force=1;;
+    *) noseargs="$noseargs $1"
   esac
 }
 
@@ -29,15 +30,18 @@ with_venv=tools/with_venv.sh
 always_venv=0
 never_venv=0
 force=0
+noseargs=
 
 for arg in "$@"; do
   process_option $arg
 done
 
+NOSETESTS="nosetests -v $noseargs"
+
 if [ $never_venv -eq 1 ]; then
   # Just run the test suites in current environment
   rm -f nova.sqlite
-  nosetests -v
+  $NOSETESTS
   exit
 fi
 
@@ -49,7 +53,7 @@ fi
 
 if [ -e ${venv} ]; then
   ${with_venv} rm -f nova.sqlite
-  ${with_venv} nosetests -v $@
+  ${with_venv} $NOSETESTS
 else  
   if [ $always_venv -eq 1 ]; then
     # Automatically install the virtualenv
@@ -62,10 +66,10 @@ else
       python tools/install_venv.py
     else
       rm -f nova.sqlite
-      nosetests -v
+      $NOSETESTS
       exit
     fi
   fi
   ${with_venv} rm -f nova.sqlite
-  ${with_venv} nosetests -v $@
+  ${with_venv} $NOSETESTS
 fi
