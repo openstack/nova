@@ -30,7 +30,7 @@ import json
 class Store(object):
     def __init__(self):
         if hasattr(self.__class__, '_instance'):
-            raise Exception('Attempted to instantiate singleton')
+            raise Exception(_('Attempted to instantiate singleton'))
 
     @classmethod
     def instance(cls):
@@ -150,6 +150,9 @@ def _match(key, value, attrs):
     """Match a given key and value against an attribute list."""
     if key not in attrs:
         return False
+    # This is a wild card search. Implemented as all or nothing for now.
+    if value == "*":
+        return True
     if key != "objectclass":
         return value in attrs[key]
     # it is an objectclass check, so check subclasses
