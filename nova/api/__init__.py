@@ -24,6 +24,7 @@ Root WSGI middleware for all API controllers.
 :ec2api_subdomain:  subdomain running the EC2 API (default: ec2)
 
 """
+import logging
 
 import routes
 import webob.dec

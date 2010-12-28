@@ -48,6 +48,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         fakes.stub_out_db_instance_api(self.stubs)
+        stubs.stub_out_get_target(self.stubs)
         fake.reset()
         self.values = {'name': 1, 'id': 1,
                   'project_id': 'fake',

@@ -32,6 +32,7 @@ from nova.auth.manager import AuthManager
 from nova.compute import power_state
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
+from nova.virt.xenapi.vm_utils import ImageType
 
 
 class VMOps(object):
@@ -65,16 +66,30 @@ class VMOps(object):
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
-        vdi_uuid = VMHelper.fetch_image(
-                self._session, instance.image_id, user, project, True)
-        kernel = VMHelper.fetch_image(
-                self._session, instance.kernel_id, user, project, False)
-        ramdisk = VMHelper.fetch_image(
-                self._session, instance.ramdisk_id, user, project, False)
+        #if kernel is not present we must download a raw disk
+        if instance.kernel_id:
+            disk_image_type = ImageType.DISK
+        else:
+            disk_image_type = ImageType.DISK_RAW
+        vdi_uuid = VMHelper.fetch_image(self._session,
+            instance.image_id, user, project, disk_image_type)
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        vm_ref = VMHelper.create_vm(
-                self._session, instance, kernel, ramdisk)
+        #Have a look at the VDI and see if it has a PV kernel
+        pv_kernel = False
+        if not instance.kernel_id:
+            pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
+        kernel = None
+        if instance.kernel_id:
+            kernel = VMHelper.fetch_image(self._session,
+                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+        ramdisk = None
+        if instance.ramdisk_id:
+            ramdisk = VMHelper.fetch_image(self._session,
+                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+        vm_ref = VMHelper.create_vm(self._session,
+                                          instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
+
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
@@ -180,6 +195,26 @@ class VMOps(object):
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm)
         self._wait_with_callback(instance.id, task, callback)
+
+    def suspend(self, instance, callback):
+        """suspend the specified instance"""
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception(_("suspend: instance not present %s") %
+                                                     instance_name)
+        task = self._session.call_xenapi('Async.VM.suspend', vm)
+        self._wait_with_callback(task, callback)
+
+    def resume(self, instance, callback):
+        """resume the specified instance"""
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
+        if vm is None:
+            raise Exception(_("resume: instance not present %s") %
+                                                    instance_name)
+        task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
+        self._wait_with_callback(task, callback)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
