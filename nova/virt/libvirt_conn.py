@@ -280,6 +280,14 @@ class LibvirtConnection(object):
         raise exception.APIError("unpause not supported for libvirt.")
 
     @exception.wrap_exception
+    def suspend(self, instance, callback):
+        raise exception.APIError("suspend not supported for libvirt")
+
+    @exception.wrap_exception
+    def resume(self, instance, callback):
+        raise exception.APIError("resume not supported for libvirt")
+
+    @exception.wrap_exception
     def rescue(self, instance):
         self.destroy(instance, False)
 
