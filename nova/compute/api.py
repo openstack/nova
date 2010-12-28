@@ -53,11 +53,29 @@ class ComputeAPI(base.Base):
         self.image_service = image_service
         super(ComputeAPI, self).__init__(**kwargs)
 
+    def get_network_topic(self, context, instance_id):
+        try:
+            instance = self.db.instance_get_by_internal_id(context,
+                                                           instance_id)
+        except exception.NotFound as e:
+            logging.warning("Instance %d was not found in get_network_topic",
+                            instance_id)
+            raise e
+
+        host = instance['host']
+        if not host:
+            raise exception.Error("Instance %d has no host" % instance_id)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        return rpc.call(context,
+                        topic,
+                        {"method": "get_network_topic", "args": {'fake': 1}})
+
     def create_instances(self, context, instance_type, image_id, min_count=1,
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
                          availability_zone=None,
+                         user_data=None,
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
@@ -74,15 +92,16 @@ class ComputeAPI(base.Base):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = self.image_service.show(context, image_id)
-
-            # If kernel_id/ramdisk_id isn't explicitly set in API call
-            # we take the defaults from the image's metadata
             if kernel_id is None:
                 kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', None)
-
-            # Make sure we have access to kernel and ramdisk
+            #No kernel and ramdisk for raw images
+            if kernel_id == str(FLAGS.null_kernel):
+                kernel_id = None
+                ramdisk_id = None
+                logging.debug("Creating a raw instance")
+            # Make sure we have access to kernel and ramdisk (if not raw)
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
@@ -121,13 +140,14 @@ class ComputeAPI(base.Base):
             'local_gb': type_data['local_gb'],
             'display_name': display_name,
             'display_description': description,
+            'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data,
             'availability_zone': availability_zone}
 
         elevated = context.elevated()
         instances = []
-        logging.debug("Going to run %s instances...", num_instances)
+        logging.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
@@ -152,19 +172,7 @@ class ComputeAPI(base.Base):
             instance = self.update_instance(context, instance_id, **updates)
             instances.append(instance)
 
-            # TODO(vish): This probably should be done in the scheduler
-            #             or in compute as a call.  The network should be
-            #             allocated after the host is assigned and setup
-            #             can happen at the same time.
-            address = self.network_manager.allocate_fixed_ip(context,
-                                                             instance_id,
-                                                             is_vpn)
-            rpc.cast(elevated,
-                     self._get_network_topic(context),
-                     {"method": "setup_fixed_ip",
-                      "args": {"address": address}})
-
-            logging.debug("Casting to scheduler for %s/%s's instance %s",
+            logging.debug(_("Casting to scheduler for %s/%s's instance %s"),
                           context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
@@ -211,12 +219,12 @@ class ComputeAPI(base.Base):
             instance = self.db.instance_get_by_internal_id(context,
                                                            instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found during terminate",
+            logging.warning(_("Instance %d was not found during terminate"),
                             instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning("Instance %d is already being terminated",
+            logging.warning(_("Instance %d is already being terminated"),
                             instance_id)
             return
 
@@ -225,28 +233,6 @@ class ComputeAPI(base.Base):
                              state_description='terminating',
                              state=0,
                              terminated_at=datetime.datetime.utcnow())
-
-        # FIXME(ja): where should network deallocate occur?
-        address = self.db.instance_get_floating_address(context,
-                                                        instance['id'])
-        if address:
-            logging.debug("Disassociating address %s" % address)
-            # NOTE(vish): Right now we don't really care if the ip is
-            #             disassociated.  We may need to worry about
-            #             checking this later.  Perhaps in the scheduler?
-            rpc.cast(context,
-                     self._get_network_topic(context),
-                     {"method": "disassociate_floating_ip",
-                      "args": {"floating_address": address}})
-
-        address = self.db.instance_get_fixed_address(context, instance['id'])
-        if address:
-            logging.debug("Deallocating address %s" % address)
-            # NOTE(vish): Currently, nothing needs to be done on the
-            #             network node until release. If this changes,
-            #             we will need to cast here.
-            self.network_manager.deallocate_fixed_ip(context.elevated(),
-                                                     address)
 
         host = instance['host']
         if host:
@@ -300,6 +286,24 @@ class ComputeAPI(base.Base):
                  {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
+    def suspend(self, context, instance_id):
+        """suspend the instance with instance_id"""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "suspend_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def resume(self, context, instance_id):
+        """resume the instance with instance_id"""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "resume_instance",
+                  "args": {"instance_id": instance['id']}})
+
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -317,14 +321,3 @@ class ComputeAPI(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
-
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return self.db.queue_get_for(context, FLAGS.network_topic, host)

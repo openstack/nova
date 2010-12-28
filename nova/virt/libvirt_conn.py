@@ -40,6 +40,7 @@ import logging
 import os
 import shutil
 
+from eventlet import greenthread
 from eventlet import event
 from eventlet import tpool
 
@@ -96,6 +97,11 @@ def get_connection(read_only):
     return LibvirtConnection(read_only)
 
 
+def _get_net_and_mask(cidr):
+    net = IPy.IP(cidr)
+    return str(net.net()), str(net.netmask())
+
+
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -105,10 +111,13 @@ class LibvirtConnection(object):
         self._wrapped_conn = None
         self.read_only = read_only
 
+    def init_host(self):
+        NWFilterFirewall(self._conn).setup_base_nwfilters()
+
     @property
     def _conn(self):
         if not self._wrapped_conn or not self._test_connection():
-            logging.debug('Connecting to libvirt: %s' % self.libvirt_uri)
+            logging.debug(_('Connecting to libvirt: %s') % self.libvirt_uri)
             self._wrapped_conn = self._connect(self.libvirt_uri,
                                                self.read_only)
         return self._wrapped_conn
@@ -120,7 +129,7 @@ class LibvirtConnection(object):
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
                e.get_error_domain() == libvirt.VIR_FROM_REMOTE:
-                logging.debug('Connection to libvirt broke')
+                logging.debug(_('Connection to libvirt broke'))
                 return False
             raise
 
@@ -183,7 +192,8 @@ class LibvirtConnection(object):
         #               everything has been vetted a bit
         def _wait_for_timer():
             timer_done.wait()
-            self._cleanup(instance)
+            if cleanup:
+                self._cleanup(instance)
             done.send()
 
         greenthread.spawn(_wait_for_timer)
@@ -191,7 +201,7 @@ class LibvirtConnection(object):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        logging.info('instance %s: deleting instance files %s',
+        logging.info(_('instance %s: deleting instance files %s'),
             instance['name'], target)
         if os.path.exists(target):
             shutil.rmtree(target)
@@ -233,7 +243,7 @@ class LibvirtConnection(object):
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
-            raise exception.NotFound("No disk at %s" % mount_device)
+            raise exception.NotFound(_("No disk at %s") % mount_device)
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
@@ -249,10 +259,10 @@ class LibvirtConnection(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug('instance %s: rebooted', instance['name'])
+                    logging.debug(_('instance %s: rebooted'), instance['name'])
                     timer.stop()
             except Exception, exn:
-                logging.error('_wait_for_reboot failed: %s', exn)
+                logging.error(_('_wait_for_reboot failed: %s'), exn)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -268,6 +278,14 @@ class LibvirtConnection(object):
     @exception.wrap_exception
     def unpause(self, instance, callback):
         raise exception.APIError("unpause not supported for libvirt.")
+
+    @exception.wrap_exception
+    def suspend(self, instance, callback):
+        raise exception.APIError("suspend not supported for libvirt")
+
+    @exception.wrap_exception
+    def resume(self, instance, callback):
+        raise exception.APIError("resume not supported for libvirt")
 
     @exception.wrap_exception
     def rescue(self, instance):
@@ -287,10 +305,10 @@ class LibvirtConnection(object):
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(None, instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug('instance %s: rescued', instance['name'])
+                    logging.debug(_('instance %s: rescued'), instance['name'])
                     timer.stop()
             except Exception, exn:
-                logging.error('_wait_for_rescue failed: %s', exn)
+                logging.error(_('_wait_for_rescue failed: %s'), exn)
                 db.instance_set_state(None,
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -315,7 +333,7 @@ class LibvirtConnection(object):
         NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
-        logging.debug("instance %s: is running", instance['name'])
+        logging.debug(_("instance %s: is running"), instance['name'])
 
         timer = utils.LoopingCall(f=None)
 
@@ -325,10 +343,10 @@ class LibvirtConnection(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug('instance %s: booted', instance['name'])
+                    logging.debug(_('instance %s: booted'), instance['name'])
                     timer.stop()
             except:
-                logging.exception('instance %s: failed to boot',
+                logging.exception(_('instance %s: failed to boot'),
                                   instance['name'])
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
@@ -343,7 +361,7 @@ class LibvirtConnection(object):
         virsh_output = virsh_output[0].strip()
 
         if virsh_output.startswith('/dev/'):
-            logging.info('cool, it\'s a device')
+            logging.info(_('cool, it\'s a device'))
             out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
                                      virsh_output, check_exit_code=False)
             return out
@@ -351,7 +369,7 @@ class LibvirtConnection(object):
             return ''
 
     def _append_to_file(self, data, fpath):
-        logging.info('data: %r, fpath: %r' % (data, fpath))
+        logging.info(_('data: %r, fpath: %r') % (data, fpath))
         fp = open(fpath, 'a+')
         fp.write(data)
         return fpath
@@ -393,7 +411,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
-        logging.info('instance %s: Creating image', inst['name'])
+        logging.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
@@ -449,10 +467,10 @@ class LibvirtConnection(object):
                                   'dns': network_ref['dns']}
         if key or net:
             if key:
-                logging.info('instance %s: injecting key into image %s',
+                logging.info(_('instance %s: injecting key into image %s'),
                     inst['name'], inst.image_id)
             if net:
-                logging.info('instance %s: injecting net into image %s',
+                logging.info(_('instance %s: injecting net into image %s'),
                              inst['name'], inst.image_id)
             try:
                 disk.inject_data(basepath('disk-raw'), key, net,
@@ -460,8 +478,8 @@ class LibvirtConnection(object):
                                  execute=execute)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
-                logging.warn('instance %s: ignoring error injecting data'
-                             ' into image %s (%s)',
+                logging.warn(_('instance %s: ignoring error injecting data'
+                               ' into image %s (%s)'),
                              inst['name'], inst.image_id, e)
 
         if inst['kernel_id']:
@@ -488,9 +506,10 @@ class LibvirtConnection(object):
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
-        logging.debug('instance %s: starting toXML method', instance['name'])
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        logging.debug(_('instance %s: starting toXML method'),
+                        instance['name'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         # FIXME(vish): stick this in db
         instance_type = instance['instance_type']
         instance_type = instance_types.INSTANCE_TYPES[instance_type]
@@ -498,6 +517,16 @@ class LibvirtConnection(object):
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
+
+        if FLAGS.allow_project_net_traffic:
+            net, mask = _get_net_and_mask(network['cidr'])
+            extra_params = ("<parameter name=\"PROJNET\" "
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASK\" "
+                            "value=\"%s\" />\n") % (net, mask)
+        else:
+            extra_params = "\n"
+
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
@@ -508,6 +537,7 @@ class LibvirtConnection(object):
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
+                    'extra_params': extra_params,
                     'rescue': rescue}
         if not rescue:
             if instance['kernel_id']:
@@ -519,7 +549,8 @@ class LibvirtConnection(object):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
 
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        logging.debug('instance %s: finished toXML method', instance['name'])
+        logging.debug(_('instance %s: finished toXML method'),
+                        instance['name'])
 
         return xml
 
@@ -527,7 +558,8 @@ class LibvirtConnection(object):
         try:
             virt_dom = self._conn.lookupByName(instance_name)
         except:
-            raise exception.NotFound("Instance %s not found" % instance_name)
+            raise exception.NotFound(_("Instance %s not found")
+                                     % instance_name)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
@@ -713,6 +745,14 @@ class NWFilterFirewall(object):
                               </rule>
                             </filter>'''
 
+    nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
+                           <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
+                           <filterref filter='allow-dhcp-server'/>
+                           <filterref filter='nova-allow-dhcp-server'/>
+                           <filterref filter='nova-base-ipv4'/>
+                           <filterref filter='nova-base-ipv6'/>
+                         </filter>'''
+
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
@@ -737,12 +777,12 @@ class NWFilterFirewall(object):
         retval += '</filter>'
         return retval
 
-    def nova_project_filter(self, project, net, mask):
-        retval = "<filter name='nova-project-%s' chain='ipv4'>" % project
+    def nova_project_filter(self):
+        retval = "<filter name='nova-project' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             retval += """<rule action='accept' direction='in' priority='200'>
-                           <%s srcipaddr='%s' srcipmask='%s' />
-                         </rule>""" % (protocol, net, mask)
+                           <%s srcipaddr='$PROJNET' srcipmask='$PROJMASK' />
+                         </rule>""" % protocol
         retval += '</filter>'
         return retval
 
@@ -753,10 +793,14 @@ class NWFilterFirewall(object):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    @staticmethod
-    def _get_net_and_mask(cidr):
-        net = IPy.IP(cidr)
-        return str(net.net()), str(net.netmask())
+    def setup_base_nwfilters(self):
+        self._define_filter(self.nova_base_ipv4_filter)
+        self._define_filter(self.nova_base_ipv6_filter)
+        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_base_filter)
+        self._define_filter(self.nova_vpn_filter)
+        if FLAGS.allow_project_net_traffic:
+            self._define_filter(self.nova_project_filter)
 
     def setup_nwfilters_for_instance(self, instance):
         """
@@ -765,31 +809,22 @@ class NWFilterFirewall(object):
         the base filter are all in place.
         """
 
-        self._define_filter(self.nova_base_ipv4_filter)
-        self._define_filter(self.nova_base_ipv6_filter)
-        self._define_filter(self.nova_dhcp_filter)
-        self._define_filter(self.nova_base_filter)
+        nwfilter_xml = ("<filter name='nova-instance-%s' "
+                        "chain='root'>\n") % instance['name']
 
-        nwfilter_xml = "<filter name='nova-instance-%s' chain='root'>\n" \
-                       "  <filterref filter='nova-base' />\n" % \
-                       instance['name']
+        if instance['image_id'] == FLAGS.vpn_image_id:
+            nwfilter_xml += "  <filterref filter='nova-vpn' />\n"
+        else:
+            nwfilter_xml += "  <filterref filter='nova-base' />\n"
 
         if FLAGS.allow_project_net_traffic:
-            network_ref = db.project_get_network(context.get_admin_context(),
-                                                 instance['project_id'])
-            net, mask = self._get_net_and_mask(network_ref['cidr'])
-            project_filter = self.nova_project_filter(instance['project_id'],
-                                                      net, mask)
-            self._define_filter(project_filter)
-
-            nwfilter_xml += "  <filterref filter='nova-project-%s' />\n" % \
-                            instance['project_id']
+            nwfilter_xml += "  <filterref filter='nova-project' />\n"
 
         for security_group in instance.security_groups:
             self.ensure_security_group_filter(security_group['id'])
 
-            nwfilter_xml += "  <filterref filter='nova-secgroup-%d' />\n" % \
-                            security_group['id']
+            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' "
+                             "/>\n") % security_group['id']
         nwfilter_xml += "</filter>"
 
         self._define_filter(nwfilter_xml)
@@ -805,7 +840,7 @@ class NWFilterFirewall(object):
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
-                net, mask = self._get_net_and_mask(rule.cidr)
+                net, mask = _get_net_and_mask(rule.cidr)
                 rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
                             (rule.protocol, net, mask)
                 if rule.protocol in ['tcp', 'udp']:

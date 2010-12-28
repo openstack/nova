@@ -73,6 +73,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import context
+from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
@@ -97,46 +98,42 @@ class VpnCommands(object):
         self.manager = manager.AuthManager()
         self.pipe = pipelib.CloudPipe()
 
-    def list(self):
-        """Print a listing of the VPNs for all projects."""
+    def list(self, project=None):
+        """Print a listing of the VPN data for one or all projects.
+
+        args: [project=all]"""
         print "%-12s\t" % 'project',
         print "%-20s\t" % 'ip:port',
+        print "%-20s\t" % 'private_ip',
         print "%s" % 'state'
-        for project in self.manager.get_projects():
+        if project:
+            projects = [self.manager.get_project(project)]
+        else:
+            projects = self.manager.get_projects()
+            # NOTE(vish): This hits the database a lot.  We could optimize
+            #             by getting all networks in one query and all vpns
+            #             in aother query, then doing lookups by project
+        for project in projects:
             print "%-12s\t" % project.name,
-
-            try:
-                s = "%s:%s" % (project.vpn_ip, project.vpn_port)
-            except exception.NotFound:
-                s = "None"
-            print "%-20s\t" % s,
-
-            vpn = self._vpn_for(project.id)
+            ipport = "%s:%s" % (project.vpn_ip, project.vpn_port)
+            print "%-20s\t" % ipport,
+            ctxt = context.get_admin_context()
+            vpn = db.instance_get_project_vpn(ctxt, project.id)
             if vpn:
-                command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                out, _err = utils.execute(command % vpn['private_dns_name'],
-                                          check_exit_code=False)
-                if out.strip() == '0':
-                    net = 'up'
-                else:
-                    net = 'down'
-                print vpn['private_dns_name'],
-                print vpn['node_name'],
-                print vpn['instance_id'],
+                address = None
+                state = 'down'
+                if vpn.get('fixed_ip', None):
+                    address = vpn['fixed_ip']['address']
+                if project.vpn_ip and utils.vpn_ping(project.vpn_ip,
+                                                     project.vpn_port):
+                    state = 'up'
+                print address,
+                print vpn['host'],
+                print vpn['ec2_id'],
                 print vpn['state_description'],
-                print net
-
+                print state
             else:
                 print None
-
-    def _vpn_for(self, project_id):
-        """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all(context.get_admin_context()):
-            if (instance['image_id'] == FLAGS.vpn_image_id
-                and not instance['state_description'] in
-                    ['shutting_down', 'shutdown']
-                and instance['project_id'] == project_id):
-                return instance
 
     def spawn(self):
         """Run all VPNs."""
@@ -149,6 +146,21 @@ class VpnCommands(object):
     def run(self, project_id):
         """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
+
+    def change(self, project_id, ip, port):
+        """Change the ip and port for a vpn.
+
+        args: project, ip, port"""
+        project = self.manager.get_project(project_id)
+        if not project:
+            print 'No project %s' % (project_id)
+            return
+        admin = context.get_admin_context()
+        network_ref = db.project_get_network(admin, project_id)
+        db.network_update(admin,
+                          network_ref['id'],
+                          {'vpn_public_address': ip,
+                           'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -295,6 +307,14 @@ class UserCommands(object):
         else:
             is_admin = False
         self.manager.modify_user(name, access_key, secret_key, is_admin)
+
+    def revoke(self, user_id, project_id=None):
+        """revoke certs for a user
+        arguments: user_id [project_id]"""
+        if project_id:
+            crypto.revoke_certs_by_user_and_project(user_id, project_id)
+        else:
+            crypto.revoke_certs_by_user(user_id)
 
 
 class ProjectCommands(object):

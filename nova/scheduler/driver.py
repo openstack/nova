@@ -63,4 +63,4 @@ class Scheduler(object):
 
     def schedule(self, context, topic, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
-        raise NotImplementedError("Must implement a fallback schedule")
+        raise NotImplementedError(_("Must implement a fallback schedule"))

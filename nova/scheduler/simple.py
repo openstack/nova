@@ -60,7 +60,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         for result in results:
             (service, instance_cores) = result
             if instance_cores + instance_ref['vcpus'] > FLAGS.max_cores:
-                raise driver.NoValidHost("All hosts have too many cores")
+                raise driver.NoValidHost(_("All hosts have too many cores"))
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
@@ -70,7 +70,7 @@ class SimpleScheduler(chance.ChanceScheduler):
                                    {'host': service['host'],
                                     'scheduled_at': now})
                 return service['host']
-        raise driver.NoValidHost("No hosts found")
+        raise driver.NoValidHost(_("No hosts found"))
 
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
@@ -92,7 +92,8 @@ class SimpleScheduler(chance.ChanceScheduler):
         for result in results:
             (service, volume_gigabytes) = result
             if volume_gigabytes + volume_ref['size'] > FLAGS.max_gigabytes:
-                raise driver.NoValidHost("All hosts have too many gigabytes")
+                raise driver.NoValidHost(_("All hosts have too many "
+                                           "gigabytes"))
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
@@ -102,7 +103,7 @@ class SimpleScheduler(chance.ChanceScheduler):
                                  {'host': service['host'],
                                   'scheduled_at': now})
                 return service['host']
-        raise driver.NoValidHost("No hosts found")
+        raise driver.NoValidHost(_("No hosts found"))
 
     def schedule_set_network_host(self, context, *_args, **_kwargs):
         """Picks a host that is up and has the fewest networks."""
@@ -111,7 +112,7 @@ class SimpleScheduler(chance.ChanceScheduler):
         for result in results:
             (service, instance_count) = result
             if instance_count >= FLAGS.max_networks:
-                raise driver.NoValidHost("All hosts have too many networks")
+                raise driver.NoValidHost(_("All hosts have too many networks"))
             if self.service_is_up(service):
                 return service['host']
-        raise driver.NoValidHost("No hosts found")
+        raise driver.NoValidHost(_("No hosts found"))
