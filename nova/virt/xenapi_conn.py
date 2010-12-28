@@ -163,6 +163,10 @@ class XenAPIConnection(object):
         """Return data about VM diagnostics"""
         return self._vmops.get_diagnostics(instance)
 
+    def get_actions(self, instance):
+        """Return VM action history"""
+        return self._vmops.get_actions(instance)
+
     def get_console_output(self, instance):
         """Return snapshot of console"""
         return self._vmops.get_console_output(instance)

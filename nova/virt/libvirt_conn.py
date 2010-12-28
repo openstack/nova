@@ -568,7 +568,10 @@ class LibvirtConnection(object):
                 'cpu_time': cpu_time}
 
     def get_diagnostics(self, instance_name):
-        raise exception.APIError("diagnostics not supported for libvirt")
+        raise exception.APIError("diagnostics are not supported for libvirt")
+
+    def get_actions(self, instance_name):
+        raise exception.APIError("actions are not supported for libvirt")
 
     def get_disks(self, instance_name):
         """

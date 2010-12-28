@@ -94,6 +94,7 @@ class APIRouter(wsgi.Router):
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
             server_members["diagnostics"] = "GET"
+            server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
 

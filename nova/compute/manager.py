@@ -307,6 +307,16 @@ class ComputeManager(manager.Manager):
                 instance_ref["internal_id"])
             return self.driver.get_diagnostics(instance_ref)
 
+    @exception.wrap_exception
+    def get_actions(self, context, instance_id):
+        """Retrieve actions for an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_("instance %s: retrieving actions"),
+            instance_ref["internal_id"])
+        return self.driver.get_actions(instance_ref)
+
     def suspend_instance(self, context, instance_id):
         """suspend the instance with instance_id"""
         context = context.elevated()
