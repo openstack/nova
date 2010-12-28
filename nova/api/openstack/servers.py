@@ -152,7 +152,6 @@ class Controller(wsgi.Controller):
 
         try:
             ctxt = req.environ['nova.context']
-            inst_ref = self.compute_api.get_instance(ctxt, id)
             self.compute_api.update_instance(ctxt,
                                              id,
                                              **update_dict)
