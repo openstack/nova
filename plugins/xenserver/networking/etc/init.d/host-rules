@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# host-rules          Start/Stop the networking host rules
+#
+# chkconfig: 2345 85 15
+# description: Networking Host Rules for Multi Tenancy Protections
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+IPTABLES=/sbin/iptables
+EBTABLES=/sbin/ebtables
+ARPTABLES=/sbin/arptables
+
+iptables-up()
+{
+        $IPTABLES -P FORWARD DROP
+        $IPTABLES -A FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        $IPTABLES -A FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+}
+
+ebtables-up()
+{
+        $EBTABLES -P FORWARD DROP
+        $EBTABLES -A FORWARD -o eth0 -j ACCEPT
+        $EBTABLES -A FORWARD -o eth1 -j ACCEPT
+}
+
+arptables-up()
+{
+        $ARPTABLES -P FORWARD DROP
+        $ARPTABLES -A FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        $ARPTABLES -A FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+}
+
+iptables-down()
+{
+        $IPTABLES -P FORWARD ACCEPT
+        $IPTABLES -D FORWARD -m physdev --physdev-in eth0 -j ACCEPT
+        $IPTABLES -D FORWARD -m physdev --physdev-in eth1 -j ACCEPT
+}
+
+ebtables-down()
+{
+        $EBTABLES -P FORWARD ACCEPT
+        $EBTABLES -D FORWARD -o eth0 -j ACCEPT
+        $EBTABLES -D FORWARD -o eth1 -j ACCEPT
+}
+
+arptables-down()
+{
+        $ARPTABLES -P FORWARD ACCEPT
+        $ARPTABLES -D FORWARD --opcode Request --in-interface eth0 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Reply --in-interface eth0 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Request --in-interface eth1 -j ACCEPT
+        $ARPTABLES -D FORWARD --opcode Reply --in-interface eth1 -j ACCEPT
+}
+
+start()
+{
+        iptables-up
+        ebtables-up
+        arptables-up
+}
+
+stop()
+{
+        iptables-down
+        ebtables-down
+        arptables-down
+}
+
+case "$1" in
+        start)
+                start
+                RETVAL=$?
+                ;;
+        stop)
+                stop
+                RETVAL=$?
+                ;;
+        restart)
+                stop
+                start
+                RETVAL=$?
+                ;;
+        *)
+                echo $"Usage: $0 {start|stop|restart}"
+                exit 1
+                ;;
+esac
+exit $RETVAL
