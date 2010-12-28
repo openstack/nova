@@ -88,9 +88,13 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
         self.stubs.Set(nova.compute.api.ComputeAPI, 'pause',
-            fake_compute_api)
+                       fake_compute_api)
         self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause',
-            fake_compute_api)
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'suspend',
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'resume',
+                       fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
@@ -240,6 +244,30 @@ class ServersTest(unittest.TestCase):
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
         req = webob.Request.blank('/v1.0/servers/1/unpause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_suspend(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/suspend')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_resume(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/resume')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
