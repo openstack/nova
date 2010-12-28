@@ -202,6 +202,9 @@ class FakeConnection(object):
                 'num_cpu': 2,
                 'cpu_time': 0}
 
+    def get_diagnostics(self, instance_name):
+        pass
+
     def list_disks(self, instance_name):
         """
         Return the IDs of all the virtual disks attached to the specified
