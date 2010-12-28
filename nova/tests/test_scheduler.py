@@ -133,6 +133,10 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute2.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
+        db.service_update(self.context, s2['id'], {'disabled': True})
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(0, len(hosts))
         compute1.kill()
@@ -152,10 +156,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(2, len(hosts))
         compute1.kill()
@@ -173,10 +173,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         instance_id1 = self._create_instance()
         compute1.run_instance(self.context, instance_id1)
         instance_id2 = self._create_instance()
@@ -200,10 +196,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         instance_id1 = self._create_instance()
         compute1.run_instance(self.context, instance_id1)
         instance_id2 = self._create_instance(availability_zone='nova:host1')
@@ -225,8 +217,7 @@ class SimpleDriverTestCase(test.TestCase):
         now = datetime.datetime.utcnow()
         delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
         past = now - delta
-        db.service_update(self.context, s1['id'], {'disabled': False,
-                            'updated_at': past})
+        db.service_update(self.context, s1['id'], {'updated_at': past})
         instance_id2 = self._create_instance(availability_zone='nova:host1')
         self.assertRaises(driver.WillNotSchedule,
                           self.scheduler.driver.schedule_run_instance,
@@ -241,7 +232,8 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute1.start()
-        db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
         instance_id2 = self._create_instance(availability_zone='nova:host1')
         host =  self.scheduler.driver.schedule_run_instance(self.context,
                                                             instance_id2)
@@ -261,10 +253,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'compute',
                                    FLAGS.compute_manager)
         compute2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         instance_ids1 = []
         instance_ids2 = []
         for index in xrange(FLAGS.max_cores):
@@ -298,10 +286,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'volume',
                                    FLAGS.volume_manager)
         volume2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-volume')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-volume')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         volume_id1 = self._create_volume()
         volume1.create_volume(self.context, volume_id1)
         volume_id2 = self._create_volume()
@@ -325,10 +309,6 @@ class SimpleDriverTestCase(test.TestCase):
                                    'volume',
                                    FLAGS.volume_manager)
         volume2.start()
-        s1 = db.service_get_by_args(self.context, 'host1', 'nova-volume')
-        s2 = db.service_get_by_args(self.context, 'host2', 'nova-volume')
-        db.service_update(self.context, s1['id'], {'disabled': False})
-        db.service_update(self.context, s2['id'], {'disabled': False})
         volume_ids1 = []
         volume_ids2 = []
         for index in xrange(FLAGS.max_gigabytes):

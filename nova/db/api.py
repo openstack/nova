@@ -29,7 +29,7 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
                   `sqlite:///var/lib/nova/nova.sqlite`.
 
 :enable_new_services:  when adding a new service to the database, is it in the
-                       pool of available hardware (Default: False)
+                       pool of available hardware (Default: True)
 """
 
 from nova import exception
@@ -40,7 +40,7 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
-flags.DEFINE_boolean('enable_new_services', False,
+flags.DEFINE_boolean('enable_new_services', True,
                      'Services to be added to the available pool on create')
 
 

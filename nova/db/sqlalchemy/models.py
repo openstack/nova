@@ -148,7 +148,7 @@ class Service(BASE, NovaBase):
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
-    disabled = Column(Boolean, default=True)
+    disabled = Column(Boolean, default=False)
 
 
 class Certificate(BASE, NovaBase):
