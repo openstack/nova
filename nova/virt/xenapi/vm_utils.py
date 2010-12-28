@@ -211,24 +211,25 @@ class VMHelper(HelperBase):
         """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD
         """
-        logging.debug(_("Snapshotting VM %s with label '%s'..."),
-                      vm_ref, label)
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
+        logging.debug(_("Snapshotting VM %s with label '%s'..."),
+                      vm_ref, label)
+
         vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
+        sr_ref = vm_vdi_rec["SR"]
+
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(instance_id, task)
-        template_vdi_ref, template_vdi_rec = get_vdi_for_vm_safely(
-            session, template_vm_ref)
-
+        template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
+
         logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
                       vm_ref)
 
-        sr_ref = vm_vdi_rec["SR"]
         parent_uuid = wait_for_vhd_coalesce(
             session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
 
@@ -440,8 +441,6 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
 
 
 def get_vdi_for_vm_safely(session, vm_ref):
-    """Returns (vdi_ref, vdi_uuid)"""
-    #TODO(sirp): Make safe_lookup_vdi for assert?
     vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
     if vdi_refs is None:
         raise Exception(_("No VDIs found for VM %s") % vm_ref)
