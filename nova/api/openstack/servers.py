@@ -58,14 +58,15 @@ def checks_lock(function):
                 req = args[2]
             context = req.environ['nova.context']
         except:
-            logging.error(_("CheckLock: argument error"))
+            logging.error(_("CheckLock: argument error: |%s|, |%s|"), args,
+                                                                      kwargs)
+        # if admin or unlocked call function, otherwise 404
+        locked = compute_api.ComputeAPI().get_lock(context, _id)
+        admin = req.environ['nova.context'].is_admin
+        if(admin or not locked):
+            return function(*args, **kwargs)
 
-        # if locked and admin call function, otherwise 404
-        if(compute_api.ComputeAPI().get_lock(context, _id)):
-            if(req.environ['nova.context'].is_admin):
-                function(*args, **kwargs)
-        # return 404
-        return faults.Fault(exc.HTTPUnprocessableEntity())
+        return faults.Fault(exc.HTTPNotFound())
 
     return decorated_function
 
