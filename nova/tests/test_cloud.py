@@ -62,7 +62,7 @@ class CloudTestCase(test.TestCase):
         self.cloud = cloud.CloudController()
 
         # set up services
-        self.compute = service.Service.create(binary='nova-compute')
+        self.compute = service.Service.create(binary='nova-compute', host='host1')
         self.compute.start()
         self.network = service.Service.create(binary='nova-network')
         self.network.start()
@@ -227,6 +227,20 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 logging.debug("Terminating instance %s" % instance_id)
                 rv = yield self.compute.terminate_instance(instance_id)
+
+    def test_describe_instances(self):
+        """Makes sure describe_instances works."""
+        instance1 = db.instance_create(self.context, {'hostname': 'host2'})
+        service1 = db.service_create(self.context, {'host': 'host1',
+                                                    'availability_zone': 'zone1',
+                                                    'topic': "compute"})
+        result = self.cloud.describe_instances(self.context)
+        self.assertEqual(result['reservationSet'][0]\
+                         ['instancesSet'][0]\
+                         ['placement']['availabilityZone'], 'zone1')
+        db.instance_destroy(self.context, instance1['id'])
+        db.service_destroy(self.context, service1['id'])
+
 
     def test_instance_update_state(self):
         def instance(num):

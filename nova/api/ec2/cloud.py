@@ -139,7 +139,10 @@ class CloudController(object):
                       "args": {"security_group_id": security_group.id}})
 
     def _get_availability_zone_by_host(self, context, hostname):
-        return db.service_get_all_compute_by_host(context, hostname)[0]['availability_zone']
+        services = db.service_get_all_compute_by_host(context, hostname)
+        if len(services) > 0:
+            return services[0]['availability_zone']
+        raise Exception(_('No service with hostname: %s' % hostname))
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
@@ -675,7 +678,7 @@ class CloudController(object):
                 r['groupSet'] = self._convert_to_set([], 'groups')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
-            availability_zone = self._get_availability_zone_by_host(ctxt, instance['hostname'])
+            availability_zone = self._get_availability_zone_by_host(context, instance['hostname'])
             i['placement'] = {'availabilityZone': availability_zone}
             reservations[instance['reservation_id']]['instancesSet'].append(i)
 
