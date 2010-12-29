@@ -36,7 +36,7 @@ LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
 
 
-def checks_lock(function):
+def checks_instance_lock(function):
     """
     decorator used for preventing action against locked instances
     unless, of course, you happen to be admin
@@ -58,12 +58,12 @@ def checks_lock(function):
                 req = args[2]
             context = req.environ['nova.context']
         except:
-            logging.error(_("CheckLock: argument error: |%s|, |%s|"), args,
+            logging.error(_("check_lock: argument error: |%s|, |%s|"), args,
                                                                       kwargs)
         # if admin or unlocked call function, otherwise 404
         locked = compute_api.ComputeAPI().get_lock(context, _id)
         admin = req.environ['nova.context'].is_admin
-        if(admin or not locked):
+        if admin or not locked:
             return function(*args, **kwargs)
 
         return faults.Fault(exc.HTTPNotFound())
@@ -138,7 +138,7 @@ class Controller(wsgi.Controller):
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
 
-    @checks_lock
+    @checks_instance_lock
     def show(self, req, id):
         """ Returns server details by server id """
         try:
@@ -148,7 +148,7 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    @checks_lock
+    @checks_instance_lock
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -176,7 +176,7 @@ class Controller(wsgi.Controller):
             key_data=key_pair['public_key'])
         return _translate_keys(instances[0])
 
-    @checks_lock
+    @checks_instance_lock
     def update(self, req, id):
         """ Updates the server name or password """
         inst_dict = self._deserialize(req.body, req)
@@ -198,7 +198,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
 
-    @checks_lock
+    @checks_instance_lock
     def action(self, req, id):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
@@ -259,7 +259,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    @checks_lock
+    @checks_instance_lock
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -271,7 +271,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    @checks_lock
+    @checks_instance_lock
     def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
@@ -283,7 +283,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    @checks_lock
+    @checks_instance_lock
     def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
@@ -295,7 +295,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    @checks_lock
+    @checks_instance_lock
     def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
