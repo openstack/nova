@@ -323,11 +323,11 @@ class ServersTest(unittest.TestCase):
 
     def test_lock(self):
         # part one: stubs it to be locked and test pause
-        def get_locked(context, id):
+        def get_locked(self, context, id):
             return True
 
         # set get to return locked
-        self.stubs.Set(nova.compute, 'get_lock', get_locked)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_locked)
 
         # attempt to pause
         FLAGS.allow_admin_api = True
@@ -344,11 +344,11 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(res.status_int, 404)
 
         # Part two: stubs it to be unlocked and test pause
-        def get_unlocked(context, id):
+        def get_unlocked(self, context, id):
             return False
 
         # set get to return locked
-        self.stubs.Set(nova.compute, 'get_lock', get_unlocked)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_unlocked)
 
         # attempt to pause
         FLAGS.allow_admin_api = True
