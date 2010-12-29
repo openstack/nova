@@ -321,5 +321,49 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(self.server_delete_called, True)
 
 
+    def test_lock(self):
+        # part one: stubs it to be locked and test pause
+        def get_locked(context, id):
+            return True
+
+        # set get to return locked
+        self.stubs.Set(nova.compute, 'get_lock', get_locked)
+
+        # attempt to pause
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/pause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+
+        # expect a 404 since it was locked
+        self.assertEqual(res.status_int, 404)
+
+        # Part two: stubs it to be unlocked and test pause
+        def get_unlocked(context, id):
+            return False
+
+        # set get to return locked
+        self.stubs.Set(nova.compute, 'get_lock', get_unlocked)
+
+        # attempt to pause
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/pause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+
+        # expect a 202 since it was unlocked
+        self.assertEqual(res.status_int, 202)
+
+
 if __name__ == "__main__":
     unittest.main()
