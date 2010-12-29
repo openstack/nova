@@ -232,7 +232,9 @@ class VMOps(object):
         if vm is None:
             raise exception.NotFound(_("Instance not found %s") %
                 instance.name)
-        return db.instance_get_actions(context.get_admin_context(), instance.id)
+        return db.instance_get_actions(
+            context.get_admin_context(),
+            instance.id)
 
     def get_console_output(self, instance):
         """Return snapshot of console"""

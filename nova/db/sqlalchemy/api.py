@@ -865,7 +865,7 @@ def instance_get_actions(context, instance_id):
         filter_by(instance_id=instance_id).\
         all():
         actions[action.action] = action.error
-    return actions 
+    return actions
 
 
 ###################
