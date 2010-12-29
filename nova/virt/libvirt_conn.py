@@ -68,6 +68,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
