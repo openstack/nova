@@ -98,12 +98,14 @@ def get_connection(read_only):
     _late_load_cheetah()
     return LibvirtConnection(read_only)
 
+
 def _late_load_cheetah():
     global Template
     if Template is None:
         t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
                        -1)
         Template = t.Template
+
 
 def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
