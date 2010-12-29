@@ -105,7 +105,7 @@ It is important to know that there are user-specific (sometimes called global) r
 
 For example: A user can access api commands allowed to the netadmin role (like allocate_address) only if he has the user-specific netadmin role AND the project-specific netadmin role.
 
-More information about RBAC can be found in the :ref:`auth`.
+More information about RBAC can be found in :ref:`auth`.
 
 Concept: API
 ------------
@@ -157,13 +157,13 @@ The nova-manage command is used to perform many essential functions for
 administration and ongoing maintenance of nova, such as user creation,
 vpn management, and much more.
 
-See doc:`nova.manage` in the Administration Guide for more details.
+See :ref:`nova.manage` in the Administration Guide for more details.
 
 
 Concept: Flags
 --------------
 
-Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within flag files. When you install Nova packages, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. 
+Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within a flag file. When you install Nova packages for the Austin release, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. In releases beyond Austin which was released in October 2010, all flags are set in nova.conf.  
 
 
 Concept: Plugins
