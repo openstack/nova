@@ -27,23 +27,26 @@ import traceback
 
 
 class ProcessExecutionError(IOError):
+
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
                  description=None):
         if description is None:
-            description = "Unexpected error while running command."
+            description = _("Unexpected error while running command.")
         if exit_code is None:
             exit_code = '-'
-        message = "%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r" % (
-                  description, cmd, exit_code, stdout, stderr)
+        message = _("%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r")\
+                % (description, cmd, exit_code, stdout, stderr)
         IOError.__init__(self, message)
 
 
 class Error(Exception):
+
     def __init__(self, message=None):
         super(Error, self).__init__(message)
 
 
 class ApiError(Error):
+
     def __init__(self, message='Unknown', code='Unknown'):
         self.message = message
         self.code = code
@@ -81,7 +84,7 @@ def wrap_exception(f):
         except Exception, e:
             if not isinstance(e, Error):
                 #exc_type, exc_value, exc_traceback = sys.exc_info()
-                logging.exception('Uncaught exception')
+                logging.exception(_('Uncaught exception'))
                 #logging.error(traceback.extract_stack(exc_traceback))
                 raise Error(str(e))
             raise

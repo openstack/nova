@@ -151,7 +151,7 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.warn("Starting %s node", topic)
+        logging.warn(_("Starting %s node"), topic)
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -163,7 +163,7 @@ class Service(object):
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
-            logging.warn("Service killed that has no database entry")
+            logging.warn(_("Service killed that has no database entry"))
 
     def stop(self):
         for x in self.timers:
@@ -184,8 +184,8 @@ class Service(object):
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
-                logging.debug("The service database object disappeared, "
-                              "Recreating it.")
+                logging.debug(_("The service database object disappeared, "
+                                "Recreating it."))
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
@@ -196,13 +196,13 @@ class Service(object):
             # TODO(termie): make this pattern be more elegant.
             if getattr(self, "model_disconnected", False):
                 self.model_disconnected = False
-                logging.error("Recovered model server connection!")
+                logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable-msg=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
-                logging.exception("model server went away")
+                logging.exception(_("model server went away"))
 
 
 def serve(*services):
@@ -221,7 +221,7 @@ def serve(*services):
     else:
         logging.getLogger().setLevel(logging.WARNING)
 
-    logging.debug("Full set of FLAGS:")
+    logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
         logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
 

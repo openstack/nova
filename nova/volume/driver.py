@@ -73,14 +73,14 @@ class VolumeDriver(object):
                 tries = tries + 1
                 if tries >= FLAGS.num_shell_tries:
                     raise
-                logging.exception("Recovering from a failed execute."
-                                  "Try number %s", tries)
+                logging.exception(_("Recovering from a failed execute."
+                                    "Try number %s"), tries)
                 time.sleep(tries ** 2)
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
-            raise exception.Error("volume group %s doesn't exist"
+            raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
     def create_volume(self, volume):
@@ -205,7 +205,7 @@ class FakeAOEDriver(AOEDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug("FAKE AOE: %s", cmd)
+        logging.debug(_("FAKE AOE: %s"), cmd)
         return (None, None)
 
 
@@ -310,5 +310,5 @@ class FakeISCSIDriver(ISCSIDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug("FAKE ISCSI: %s", cmd)
+        logging.debug(_("FAKE ISCSI: %s"), cmd)
         return (None, None)
