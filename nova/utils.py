@@ -48,7 +48,8 @@ def import_class(import_str):
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError):
+    except (ImportError, ValueError, AttributeError), exc:
+        logging.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
