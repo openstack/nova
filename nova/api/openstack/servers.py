@@ -35,18 +35,16 @@ LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
 
 
-def _entity_list(entities):
-    """ Coerces a list of servers into proper dictionary format """
-    return dict(servers=entities)
-
-
-def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return"""
+def _translate_detail_keys(inst):
+    """ Coerces into dictionary format, mapping everything to Rackspace-like
+    attributes for return"""
     power_mapping = {
+        None: 'build',
         power_state.NOSTATE: 'build',
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
-        power_state.PAUSED: 'suspended',
+        power_state.SUSPENDED: 'suspended',
+        power_state.PAUSED: 'error',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}
@@ -66,8 +64,9 @@ def _entity_detail(inst):
     return dict(server=inst_dict)
 
 
-def _entity_inst(inst):
-    """ Filters all model attributes save for id and name """
+def _translate_keys(inst):
+    """ Coerces into dictionary format, excluding all model attributes
+    save for id and name """
     return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
 
 
@@ -86,29 +85,29 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_entity_inst)
+        return self._items(req, entity_maker=_translate_keys)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_entity_detail)
+        return self._items(req, entity_maker=_translate_detail_keys)
 
     def _items(self, req, entity_maker):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _entity_detail or _entity_inst
+        entity_maker - either _translate_detail_keys or _translate_keys
         """
         instance_list = self.compute_api.get_instances(
             req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
-        return _entity_list(res)
+        return dict(servers=res)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get_instance(
                 req.environ['nova.context'], int(id))
-            return _entity_detail(instance)
+            return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -137,7 +136,7 @@ class Controller(wsgi.Controller):
             description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
-        return _entity_inst(instances[0])
+        return _translate_keys(instances[0])
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -152,8 +151,9 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            self.compute_api.update_instance(req.environ['nova.context'],
-                                             instance['id'],
+            ctxt = req.environ['nova.context']
+            self.compute_api.update_instance(ctxt,
+                                             id,
                                              **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -182,7 +182,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::pause %s", readable)
+            logging.error(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -193,6 +193,28 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::unpause %s", readable)
+            logging.error(_("Compute.api::unpause %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def suspend(self, req, id):
+        """permit admins to suspend the server"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.suspend(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("compute.api::suspend %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def resume(self, req, id):
+        """permit admins to resume the server from suspend"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.resume(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()

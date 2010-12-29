@@ -60,13 +60,11 @@ class VolumeHelper(HelperBase):
                           'port': info['targetPort'],
                           'targetIQN': info['targetIQN'],
                           'chapuser': info['chapuser'],
-                          'chappassword': info['chappassword']
-                          }
+                          'chappassword': info['chappassword']}
             else:
                 record = {'target': info['targetHost'],
                           'port': info['targetPort'],
-                          'targetIQN': info['targetIQN']
-                          }
+                          'targetIQN': info['targetIQN']}
             try:
                 sr_ref = session.get_xenapi().SR.create(
                     session.get_xenapi_host(),
