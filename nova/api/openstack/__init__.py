@@ -22,7 +22,6 @@ WSGI middleware for OpenStack API controllers.
 
 import json
 import time
-import functools
 
 import logging
 import routes

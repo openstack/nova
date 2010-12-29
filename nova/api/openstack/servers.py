@@ -17,6 +17,7 @@
 
 import logging
 import traceback
+import functools
 
 from webob import exc
 
