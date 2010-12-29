@@ -856,6 +856,28 @@ def instance_action_create(context, values):
     return action_ref
 
 
+@require_admin_context
+def instance_set_lock(context, instance_id, lock):
+    """
+    twiddle the locked bit in the db
+    lock is a boolean
+
+    """
+    db.instance_update(context,
+                       instance_id,
+                       {'locked': lock})
+
+
+#@require_admin_context
+#def instance_is_locked(context, instance_id):
+#    """
+#    return the boolean state of (instance with instance_id)'s lock
+#
+#    """
+#    instance_ref = instance_get(context, instance_id)
+#    return instance_ref['locked']
+
+
 ###################
 
 

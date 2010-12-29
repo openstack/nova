@@ -330,6 +330,30 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    def lock_instance(self, context, instance_id):
+        """
+        lock the instance with instance_id
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: locking'), instance_ref['internal_id'])
+        self.db.instance_set_lock(context, instance_id, True)
+
+    @exception.wrap_exception
+    def unlock_instance(self, context, instance_id):
+        """
+        unlock the instance with instance_id
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: unlocking'), instance_ref['internal_id'])
+        self.db.instance_set_lock(context, instance_id, False)
+
+    @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()

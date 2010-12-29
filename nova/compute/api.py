@@ -141,7 +141,8 @@ class ComputeAPI(base.Base):
             'display_description': description,
             'user_data': user_data or '',
             'key_name': key_name,
-            'key_data': key_data}
+            'key_data': key_data,
+            'locked': False}
 
         elevated = context.elevated()
         instances = []
@@ -319,3 +320,35 @@ class ComputeAPI(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
+
+    def lock(self, context, instance_id):
+        """
+        lock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "lock_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unlock(self, context, instance_id):
+        """
+        unlock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unlock_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def get_lock(self, context, instance_id):
+        """
+        return the boolean state of (instance with instance_id)'s lock
+
+        """
+        instance = self.get_instance(context, instance_id)
+        return instance['locked']
