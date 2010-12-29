@@ -320,7 +320,6 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
-
     def test_lock(self):
         # part one: stubs it to be locked and test pause
         def get_locked(self, context, id):
