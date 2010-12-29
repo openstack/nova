@@ -64,9 +64,9 @@ class RateLimitingMiddleware(wsgi.Middleware):
         If the request should be rate limited, return a 413 status with a
         Retry-After header giving the time when the request would succeed.
         """
-        return self.limited_request(req, self.application)
+        return self.rate_limited_request(req, self.application)
 
-    def limited_request(self, req, application):
+    def rate_limited_request(self, req, application):
         """Rate limit the request.
 
         If the request should be rate limited, return a 413 status with a
