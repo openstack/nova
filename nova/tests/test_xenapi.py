@@ -159,6 +159,16 @@ class XenAPIVMTestCase(test.TestCase):
         fake.reset()
         fakes.stub_out_db_instance_api(self.stubs)
         fake.create_network('fake', FLAGS.flat_network_bridge)
+        self.values = {
+            "name": 1,
+            "id": 1,
+            "project_id": self.project.id,
+            "user_id": self.user.id,
+            "image_id": 1,
+            "kernel_id": 2,
+            "ramdisk_id": 3,
+            "instance_type": "m1.large",
+            "mac_address": "aa:bb:cc:dd:ee:ff"}
 
     def test_list_instances_0(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -166,19 +176,19 @@ class XenAPIVMTestCase(test.TestCase):
         instances = conn.list_instances()
         self.assertEquals(instances, [])
 
+    def test_get_diagnostics(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        conn = xenapi_conn.get_connection(False)
+
+        instance = db.instance_create(self.values)
+        conn.spawn(instance)
+
+        conn.get_diagnostics(instance)
+
     def test_spawn(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1, 'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
         conn = xenapi_conn.get_connection(False)
-        instance = db.instance_create(values)
+        instance = db.instance_create(self.values)
         conn.spawn(instance)
 
         def check():

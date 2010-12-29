@@ -102,13 +102,15 @@ class ComputeTestCase(test.TestCase):
 
         instances = db.instance_get_all(context.get_admin_context())
         logging.info(_("Running instances: %s"), instances)
-        self.assertEqual(len(instances), 1)
+
+        instance_count = len(instances)
+        self.assertNotEqual(instance_count, 0)
 
         self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
         logging.info(_("After terminating instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
+        self.assertEqual(instance_count, len(instances) + 1)
 
     def test_run_terminate_timestamps(self):
         """Make sure timestamps are set for launched and destroyed"""
@@ -150,6 +152,16 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
         self.compute.reboot_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_diagnostics(self):
+        """Ensure instance diagnostics are available"""
+        instance_id = self._create_instance()
+        self.compute.get_diagnostics(self.context, instance_id)
+
+    def test_actions(self):
+        """Ensure instance actions are available"""
+        instance_id = self._create_instance()
+        self.compute.get_actions(self.context, instance_id)
 
     def test_console_output(self):
         """Make sure we can get console output from instance"""
