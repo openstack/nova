@@ -150,6 +150,19 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         rv = yield self.cloud.terminate_instances(self.context, [instance_id])
 
+    def test_ajax_console(self):
+        kwargs = {'image_id': image_id }
+        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        instance_id = rv['instancesSet'][0]['instanceId']
+        output = yield self.cloud.get_console_output(context=self.context,
+                                                     instance_id=[instance_id])
+        self.assertEquals(b64decode(output['output']),
+                          'http://fakeajaxconsole.com/?token=FAKETOKEN')
+        # TODO(soren): We need this until we can stop polling in the rpc code
+        #              for unit tests.
+        greenthread.sleep(0.3)
+        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
+
     def test_key_generation(self):
         result = self._create_key('test')
         private_key = result['private_key']
