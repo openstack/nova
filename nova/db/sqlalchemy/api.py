@@ -136,11 +136,11 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all_by_topic(context, topic):
+def service_get_all_by_topic(context, topic, disabled=False):
     session = get_session()
     return session.query(models.Service).\
                    filter_by(deleted=False).\
-                   filter_by(disabled=False).\
+                   filter_by(disabled=disabled).\
                    filter_by(topic=topic).\
                    all()
 
@@ -154,6 +154,16 @@ def _service_get_all_topic_subquery(context, session, topic, subq, label):
                    filter_by(disabled=False).\
                    outerjoin((subq, models.Service.host == subq.c.host)).\
                    order_by(sort_value).\
+                   all()
+
+@require_admin_context
+def service_get_all_compute_by_host(context, host):
+    session = get_session()
+    topic = 'compute'
+    return session.query(models.Service).\
+                   filter_by(host=host).\
+                   filter_by(deleted=False).\
+                   filter_by(topic=topic).\
                    all()
 
 

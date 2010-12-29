@@ -138,6 +138,9 @@ class CloudController(object):
                      {"method": "refresh_security_group",
                       "args": {"security_group_id": security_group.id}})
 
+    def _get_availability_zone_by_host(self, context, hostname):
+        return db.service_get_all_compute_by_host(context, hostname)[0]['availability_zone']
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = db.fixed_ip_get_instance(ctxt, address)
@@ -150,6 +153,7 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
+        availability_zone = self._get_availability_zone_by_host(ctxt, hostname)
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = internal_id_to_ec2_id(instance_ref['internal_id'])
@@ -172,8 +176,7 @@ class CloudController(object):
                 'local-hostname': hostname,
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
-                # TODO(vish): real zone
-                'placement': {'availability-zone': 'nova'},
+                'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
@@ -188,8 +191,20 @@ class CloudController(object):
         return data
 
     def describe_availability_zones(self, context, **kwargs):
-        return {'availabilityZoneInfo': [{'zoneName': 'nova',
-                                          'zoneState': 'available'}]}
+        enabled_services = db.service_get_all_by_topic(context, 'compute')
+        disabled_services = db.service_get_all_by_topic(context, 'compute', True)
+        available_zones = [service.availability_zone for service in enabled_services]
+        not_available_zones = [service.availability_zone for service in disabled_services
+                              and not service['availability_zone'] in available_zones]
+
+        result = []
+        for zone in available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "available"})
+        for zone in not_available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "not available"})
+        return {'availabilityZoneInfo': result}
 
     def describe_regions(self, context, region_name=None, **kwargs):
         if FLAGS.region_list:
@@ -660,6 +675,8 @@ class CloudController(object):
                 r['groupSet'] = self._convert_to_set([], 'groups')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
+            availability_zone = self._get_availability_zone_by_host(ctxt, instance['hostname'])
+            i['placement'] = {'availabilityZone': availability_zone}
             reservations[instance['reservation_id']]['instancesSet'].append(i)
 
         return list(reservations.values())

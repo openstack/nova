@@ -76,10 +76,13 @@ def service_get(context, service_id):
     return IMPL.service_get(context, service_id)
 
 
-def service_get_all_by_topic(context, topic):
+def service_get_all_by_topic(context, topic, disabled=False):
     """Get all compute services for a given topic."""
-    return IMPL.service_get_all_by_topic(context, topic)
+    return IMPL.service_get_all_by_topic(context, topic, disabled)
 
+def service_get_all_compute_by_host(context, host):
+    """Get all compute service for a given host"""
+    return IMPL.service_get_all_compute_by_host(context, host)
 
 def service_get_all_compute_sorted(context):
     """Get all compute services sorted by instance count.

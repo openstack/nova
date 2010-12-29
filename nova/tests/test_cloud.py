@@ -133,6 +133,23 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_describe_availability_zones(self):
+        """Makes sure describe_availability_zones works and filters results."""
+        service1 = db.service_create(self.context, {'host': 'host1_describe_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone1"})
+        service2 = db.service_create(self.context, {'host': 'host2_describe_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone2"})
+        result = self.cloud.describe_availability_zones(self.context)
+        self.assertEqual(len(result['availabilityZoneInfo']), 3)
+        db.service_destroy(self.context, service1['id'])
+        db.service_destroy(self.context, service2['id'])
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
