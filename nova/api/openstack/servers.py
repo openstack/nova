@@ -47,11 +47,11 @@ def checks_lock(function):
 
         # grab args to function
         try:
-            if 'req' is in kwargs:
+            if 'req' in kwargs:
                 req = kwargs['req']
             else:
                 req = args[1]
-            if 'id' is in kwargs:
+            if 'id' in kwargs:
                 _id = kwargs['id']
             else:
                 req = args[2]
