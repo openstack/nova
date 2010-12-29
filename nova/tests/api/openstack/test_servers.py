@@ -340,7 +340,7 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(nova.api.API('os'))
 
         # expect a 404 since it was locked
-        self.assertEqual(res.status_int, 404)
+        self.assertEqual(res.status_int, 405)
 
         # Part two: stubs it to be unlocked and test pause
         def get_unlocked(self, context, id):

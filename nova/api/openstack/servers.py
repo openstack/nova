@@ -66,7 +66,7 @@ def checks_instance_lock(function):
         if admin or not locked:
             return function(*args, **kwargs)
 
-        return faults.Fault(exc.HTTPNotFound())
+        return faults.Fault(exc.HTTPMethodNotAllowed())
 
     return decorated_function
 
@@ -138,7 +138,6 @@ class Controller(wsgi.Controller):
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
 
-    @checks_instance_lock
     def show(self, req, id):
         """ Returns server details by server id """
         try:
