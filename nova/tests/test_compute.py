@@ -175,15 +175,15 @@ class ComputeTestCase(test.TestCase):
         """ensure locked instance cannot be changed"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
-        self.compute.pause_instance(self.context, instance_id)
         self.compute.lock_instance(self.context, instance_id)
 
+        non_admin_context = context.RequestContext(None, None, False, False)
         # pause should raise exception on locked instance
-        self.assertRaises(Exception, self.compute.unpause_instance,
-                                     self.context, instance_id)
+        self.assertRaises(Exception, self.compute.reboot_instance,
+                                     non_admin_context, instance_id)
 
         # test will fail if exception is raised
         self.compute.unlock_instance(self.context, instance_id)
-        self.compute.unpause_instance(self.context, instance_id)
+        self.compute.reboot_instance(non_admin_context, instance_id)
 
         self.compute.terminate_instance(self.context, instance_id)
