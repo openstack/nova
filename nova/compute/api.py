@@ -257,6 +257,15 @@ class ComputeAPI(base.Base):
     def get_instance(self, context, instance_id):
         return self.db.instance_get_by_internal_id(context, instance_id)
 
+    def snapshot(self, context, instance_id, name):
+        """Snapshot the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "snapshot_instance",
+                  "args": {"instance_id": instance['id'], "name": name}})
+
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
