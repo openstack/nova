@@ -47,6 +47,10 @@ def checks_instance_lock(function):
     @functools.wraps(function)
     def decorated_function(*args, **kwargs):
 
+        # assume worst case (have to declare so they are in scope)
+        admin = False
+        locked = True
+
         # grab args to function
         try:
             if 'context' in kwargs:
@@ -60,7 +64,7 @@ def checks_instance_lock(function):
             locked = ComputeAPI().get_lock(context, instance_id)
             admin = context.is_admin
         except:
-            logging.error(_("check_instance_lock: argument error: |%s|, |%s|"),
+            raise Exception(_("check_instance_lock argument error |%s|, |%s|"),
                                                                         args,
                                                                         kwargs)
         # if admin or unlocked call function, otherwise 405
