@@ -550,9 +550,9 @@ class LdapDriver(object):
                   % (uid, FLAGS.ldap_user_subtree))
         if search:
             query = ('%s=%s' % (FLAGS.ldap_user_id_attribute, uid))
-            user = self.__find_objects(FLAGS.ldap_user_subtree, query)
+            user = self.__find_dns(FLAGS.ldap_user_subtree, query)
             if len(user) > 0:
-                userdn = user['dn']
+                userdn = user[0]
         return userdn
 
     def __project_to_dn(self, pid, search=True):
@@ -560,10 +560,10 @@ class LdapDriver(object):
         # By default return a generated DN
         projectdn = ('cn=%s,%s' % (pid, FLAGS.ldap_project_subtree))
         if search:
-            query = ('(&(cn=%s)%s))' % (pid, LdapDriver.project_pattern))
-            project = self.__find_objects(FLAGS.ldap_project_subtree, query)
+            query = ('(&(cn=%s)%s)' % (pid, LdapDriver.project_pattern))
+            project = self.__find_dns(FLAGS.ldap_project_subtree, query)
             if len(project) > 0:
-                projectdn = project['dn']
+                projectdn = project[0]
         return projectdn
 
     @staticmethod
