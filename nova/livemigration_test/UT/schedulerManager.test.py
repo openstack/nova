@@ -55,12 +55,15 @@ class tmpStdout:
 
 class SchedulerTestFunctions(unittest.TestCase):
 
+    manager = None
+
     # 共通の初期化処理
     def setUp(self):
         """common init method. """
 
         self.host = 'openstack2-api'
-        self.manager = SchedulerManager(host=self.host)
+        if self.manager is None: 
+            self.manager = SchedulerManager(host=self.host)
 
         self.setTestData()
         self.setMocks()
@@ -72,6 +75,7 @@ class SchedulerTestFunctions(unittest.TestCase):
         self.host1.__setitem__('vcpus', 5)
         self.host1.__setitem__('memory_mb', 20480)
         self.host1.__setitem__('local_gb', 876)
+        self.host1.__setitem__('cpu_info', 1)
 
         self.host2 = Host()
         self.host2.__setitem__('name', 'host2')
@@ -86,37 +90,43 @@ class SchedulerTestFunctions(unittest.TestCase):
         self.instance1 = Instance()
         for key, val in [ ('id', 1), ('host', 'host1'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ'),
-                          ('vcpus', 3), ('memory_mb', 1024), ('hdd_gb', 5) ]:
+                          ('vcpus', 3), ('memory_mb', 1024), ('local_gb', 5) ]:
             self.instance1.__setitem__(key, val)
 
 
         self.instance2 = Instance()
         for key, val in [ ('id', 2), ('host', 'host1'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ'),
-                          ('vcpus', 3), ('memory_mb', 1024), ('hdd_gb', 5) ]:
+                          ('vcpus', 3), ('memory_mb', 1024), ('local_gb', 5) ]:
             self.instance2.__setitem__(key, val)
 
 
         self.instance3 = Instance()
         for key, val in [ ('id', 3), ('host', 'host1'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ2'),
-                          ('vcpus', 1), ('memory_mb', 1024), ('hdd_gb', 5) ]:
+                          ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 5),
+                          ('internal_id', 123456), ('state', 1), 
+                          ('state_description', 'running') ]:
             self.instance3.__setitem__(key, val)
 
         self.instance4 = Instance()
         for key, val in [ ('id', 4), ('host', 'host2'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ2'),
-                          ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 5) ]:
+                          ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 5),
+                          ('internal_id', 123456), ('state', 0),
+                          ('state_description', 'running') ]:
             self.instance4.__setitem__(key, val)
 
         self.instance5 = Instance()
         for key, val in [ ('id', 5), ('host', 'host2'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ2'),
-                          ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 5) ]:
+                          ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 5),
+                          ('internal_id', 123456), ('state', 1),
+                          ('state_description', 'migrating') ]:
             self.instance5.__setitem__(key, val)
 
         self.instance6 = Instance()
-        for key, val in [ ('id', 6), ('host', 'host1'),   ('hostname', 'i-12345'), 
+        for key, val in [ ('id', 6), ('host', 'host2'),   ('hostname', 'i-12345'), 
                           ('state', power_state.RUNNING), ('project_id', 'testPJ2'),
                           ('vcpus', 3), ('memory_mb', 1024), ('local_gb', 5) ]:
             self.instance6.__setitem__(key, val)
@@ -129,7 +139,8 @@ class SchedulerTestFunctions(unittest.TestCase):
 
         self.instance8 = Instance()
         for key, val in [ ('id', 8), ('host', 'host1'),   ('hostname', 'i-12345'), 
-                          ('state', power_state.RUNNING), ('project_id', 'testPJ2'),
+                          ('state', power_state.RUNNING), 
+                          ('state_description', 'running'),('project_id', 'testPJ2'),
                           ('vcpus', 1), ('memory_mb', 1024), ('local_gb', 866) ]:
             self.instance8.__setitem__(key, val)
 
@@ -138,6 +149,10 @@ class SchedulerTestFunctions(unittest.TestCase):
                           ('topic', 'compute')]:
             self.service1.__setitem__(key, val)
 
+        self.service2 = Service()
+        for key, val in [ ('id', 2), ('host', 'host2'),  ('binary', 'nova-compute'), 
+                          ('topic', 'compute')]:
+            self.service1.__setitem__(key, val)
 
     def setMocks(self): 
         self.ctxt = context.get_admin_context()
@@ -147,10 +162,11 @@ class SchedulerTestFunctions(unittest.TestCase):
         db.instance_get_all_by_host = Mock(return_value = [self.instance4, self.instance5] )
 
         # Mocks for live_migration
-        db.instance_get_by_internal_id = Mock(return_value = self.instance1)
-        # db.host_get_by_name <- defined above.
         db.service_get_all_by_topic = Mock(return_value = [self.service1] )
+        self.manager.service_ip_up = Mock(return_value = True)
         rpc.call = Mock(return_value=1)
+        db.instance_set_state = Mock(return_value = True)
+        self.manager.driver.service_is_up = Mock(return_value = True)
 
     def check_format(self, val): 
         """check result format of show_host_resource """
@@ -259,9 +275,12 @@ class SchedulerTestFunctions(unittest.TestCase):
 
         db.instance_get = Mock(return_value = self.instance6)
         try :
-            self.manager.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
+            self.manager.driver.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
         except exception.NotEmpty, e:
-            c1 = ( 0 < e.message.find('doesnt have enough resource') )
+            # dont do e.message.find(), because the below message is occured.
+            # DeprecationWarning: BaseException.message has been deprecated 
+            # as of Python 2.6
+            c1 = ( 0 < str(e.args).find('doesnt have enough resource') )
             self.assertTrue(c1, True)
         return False
 
@@ -271,9 +290,9 @@ class SchedulerTestFunctions(unittest.TestCase):
 
         db.instance_get = Mock(return_value = self.instance7)
         try :
-            self.manager.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
+            self.manager.driver.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
         except exception.NotEmpty, e:
-            c1 = ( 0 <= e.message.find('doesnt have enough resource') )
+            c1 = ( 0 <= str(e.args).find('doesnt have enough resource') )
             self.assertTrue(c1, True)
         return False
 
@@ -282,9 +301,9 @@ class SchedulerTestFunctions(unittest.TestCase):
 
         db.instance_get = Mock(return_value = self.instance8)
         try :
-            self.manager.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
+            self.manager.driver.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
         except exception.NotEmpty, e:
-            c1 = ( 0 <= e.message.find('doesnt have enough resource') )
+            c1 = ( 0 <= str(e.args).find('doesnt have enough resource') )
             self.assertTrue(c1, True)
         return False
 
@@ -292,7 +311,7 @@ class SchedulerTestFunctions(unittest.TestCase):
     def test08(self):
         """08: everything goes well. (instance_get_all_by_host returns list)"""
 
-        ret= self.manager.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
+        ret= self.manager.driver.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
         self.assertEqual(ret, None)
 
 
@@ -300,7 +319,7 @@ class SchedulerTestFunctions(unittest.TestCase):
         """09: everything goes well(instance_get_all_by_host returns[]). """
 
         db.instance_get_all_by_host = Mock(return_value = [] )
-        ret= self.manager.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
+        ret= self.manager.driver.has_enough_resource(self.ctxt, 'i-12345', 'host1') 
         self.assertEqual(ret, None)
 
 
@@ -308,91 +327,120 @@ class SchedulerTestFunctions(unittest.TestCase):
 
 
     def test10(self):
-        """10: instance_get_by_internal_id issue NotFound. """
+        """10: instance_get issues NotFound. """
 
-        # Mocks for has_enough_resource()
-        db.instance_get = Mock(return_value = self.instance8)
-        # Mocks for live_migration()db.instance_get_by_internal_id
-        # (any Mock is ok here. important mock is all above)
-        db.instance_get_by_internal_id = Mock(side_effect=exception.NotFound("ERR"))
- 
+        db.instance_get = Mock(side_effect=exception.NotFound("ERR"))
         self.assertRaises(exception.NotFound,
-                     self.manager.live_migration,
+                     self.manager.driver.schedule_live_migration,
                      self.ctxt, 
                      'i-12345', 
                      'host1') 
-
 
     def test11(self):
-        """11: get NotFound exception when dest host not found on DB """
+        """11: instance_get issues Unexpected error. """
 
-        db.host_get_by_name = Mock( side_effect=exception.NotFound('ERR') )
-        self.assertRaises(exception.NotFound,
-                     self.manager.live_migration,
+        db.instance_get = Mock(side_effect=TypeError("ERR"))
+        self.assertRaises(TypeError,
+                     self.manager.driver.schedule_live_migration,
                      self.ctxt, 
                      'i-12345', 
                      'host1') 
-
 
     def test12(self):
-        """12: Destination host is not compute node """
-        self.assertRaises(exception.Invalid,
-                     self.manager.live_migration,
-                     self.ctxt, 
-                     'i-12345', 
-                     'host2') 
+        """12: instance state is not power_state.RUNNING. """
 
+        db.instance_get = Mock(return_value=self.instance4)
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host1')
+        except exception.Invalid, e:
+            c1 = (0 <= str(e.args).find('is not running')) 
+            self.assertTrue(c1, True)
+        return False
 
-    # Cannot test the case of hypervisor type difference and hypervisor 
-    # version difference, since we cannot set different mocks to same method..
- 
     def test13(self):
-        """13: rpc.call raises RemoteError(Unexpected error occurs when executing compareCPU) """
-        rpc.call = Mock(return_value = rpc.RemoteError(libvirt.libvirtError, 'val', 'traceback'))
-        self.assertRaises(rpc.RemoteError,
-                     self.manager.live_migration,
-                     self.ctxt, 
-                     'i-12345', 
-                     'host1') 
+        """13: instance state_description is not running. """
+
+        db.instance_get = Mock(return_value=self.instance5)
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host1')
+        except exception.Invalid, e:
+            c1 = (0 <= str(e.args).find('is not running')) 
+            self.assertTrue(c1, True)
+        return False
 
     def test14(self):
-        """14: rpc.call returns 0 (cpu is not compatible between src and dest) """
-        rpc.call = Mock(return_value = 0)
+        """14: dest is not compute node.
+           (dest is not included in the result of db.service_get_all_by_topic)
+        """
         try : 
-            self.manager.live_migration(self.ctxt, 'i-12345', 'host1') 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2')
         except exception.Invalid, e:
-            c1 =  ( 0 <= e.message.find('doesnt have compatibility to'))
+            c1 = (0 <= str(e.args).find('must be compute node')) 
             self.assertTrue(c1, True)
         return False
 
     def test15(self):
-        """15: raise NotEmpty if host doesnt have enough resource. """
+        """ 15: dest is not alive.(service_is up returns False) """
 
-        # Mocks for has_enough_resource()
-        db.instance_get = Mock(return_value = self.instance8)
+        self.manager.driver.service_is_up = Mock(return_value=False)
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2')
+        except exception.Invalid, e:
+            c1 = (0 <= str(e.args).find('is not alive')) 
+            self.assertTrue(c1, True)
+        return False
 
-        # Mocks for live_migration()
-        db.instance_get_by_internal_id = Mock(return_value = self.instance8)
-        db.instance_set_state = Mock(return_value = True)
-        rpc_cast = Mock(return_value = True)
+    # Cannot test the case of hypervisor type difference and hypervisor 
+    # version difference, since we cannot set different mocks to same method..
  
-        try :
-            self.manager.live_migration(self.ctxt, 'i-12345', 'host1') 
-        except exception.NotEmpty, e:
-            c1 = ( 0 <= e.message.find('doesnt have enough resource') )
+    def test16(self):
+        """ 16: stored "cpuinfo" is not string """
+
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2')
+        except exception.Invalid, e:
+            c1 = (0 <= str(e.args).find('Unexpected err') )
             self.assertTrue(c1, True)
         return False
 
 
-    def test16(self):
-        """16: everything goes well. """
+    def test17(self):
+        """17: rpc.call raises RemoteError(Unexpected error occurs when executing compareCPU) """
+        rpc.call = Mock(return_value = rpc.RemoteError(libvirt.libvirtError, 'val', 'traceback'))
+        self.assertRaises(rpc.RemoteError,
+                     self.manager.driver.schedule_live_migration,
+                     self.ctxt, 
+                     'i-12345', 
+                     'host2') 
 
-        db.instance_get_by_internal_id = Mock(return_value = self.instance8)
-        db.instance_set_state = Mock(return_value = True)
-        rpc.cast = Mock(return_value = True)
+    def test18(self):
+        """18: rpc.call returns 0 (cpu is not compatible between src and dest) """
+        rpc.call = Mock(return_value = 0)
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2') 
+        except exception.Invalid, e:
+            c1 =  ( 0 <= str(e.args).find('doesnt have compatibility to'))
+            self.assertTrue(c1, True)
+        return False
 
-        ret= self.manager.live_migration(self.ctxt, 'i-12345', 'host1') 
-        self.assertEqual(ret, None)
+    def test19(self):
+        """19: raise NotEmpty if host doesnt have enough resource. """
+
+        db.instance_get = Mock(return_value = self.instance8)
+        try :
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2') 
+        except exception.NotEmpty, e:
+            c1 = ( 0 <= str(e.args).find('doesnt have enough resource') )
+            self.assertTrue(c1, True)
+        return False
+
+
+    def test20(self):
+        """20: everything goes well. """
+
+        #db.instance_get = Mock(return_value = self.instance8)
+        ret= self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2') 
+        self.assertEqual(ret, self.instance8['host'])
 
 
     def tearDown(self):

@@ -147,7 +147,7 @@
        
 
 3. error checking
-   When live migration fails somehow, error message shows at:
+   When live migration fails somehow, error messages are shown at:
    a. scheduler logfile
    b. source compute node logfile
    c. dest compute node logfile

@@ -256,73 +256,35 @@ class NovaManageTestFunctions(unittest.TestCase):
         self.assertRaises(TypeError, self.instanceCmds.live_migration, 'i-xxx' )
 
     def test11(self):
-        """11: nova-manage instances live_migration ec2_id host, 
-           where hostname is invalid
-        """
-        db.host_get_by_name = Mock( side_effect=exception.NotFound('ERR') )
-        self.assertRaises(exception.NotFound, self.instanceCmds.live_migration, 'i-xxx', 'host1' )
+        """11: nova-manage instances live_migration ec2_id(invalid id) host"""
+
+        db.instance_get_by_internal_id = Mock( side_effect=exception.NotFound('ERR') )
+        try : 
+            self.instanceCmds.live_migration('i-xxx', 'host1')
+        except exception.NotFound, e: 
+            c1 = (0 < str(e.args).find('is not found') )
+            self.assertTrue(c1, True)
+        return False
 
     def test12(self):
-        """12: nova-manage instances live_migration ec2_id(invalid id) host"""
-
-        db.host_get_by_name = Mock(return_value = self.host1)
-        db.instance_get_by_internal_id = Mock( side_effect=exception.NotFound('ERR') )
-
-        self.assertRaises(exception.NotFound, self.instanceCmds.live_migration, 'i-xxx', 'host1' )
+        """12: nova-manage instances live_migration ec2_id host
+           and db.instance_get_by_internal_id raises unexpected exceptioin.
+        """
+        db.instance_get_by_internal_id = Mock( side_effect=TypeError('ERR') )
+        self.assertRaises(TypeError, self.instanceCmds.live_migration, 'i-xxx' )
 
     def test13(self):
         """13: nova-manage instances live_migration ec2_id host, 
-           but instance specifed by ec2 id is not running (state is not power_state.RUNNING)
-        """
-        db.host_get_by_name = Mock(return_value = self.host1)
-        db.instance_get_by_internal_id = Mock( return_value = self.instance1 )
-        try : 
-            self.instanceCmds.live_migration('i-12345', 'host1')
-        except exception.Invalid, e: 
-            c1 = (0 < e.message.find('is not running') )
-            self.assertTrue(c1, True)
-        return False
-
-
-    def test14(self):
-        """14: nova-manage instances live_migration ec2_id host, 
-           but instance specifed by ec2 id is not running (state_description is not running)
-        """
-        db.host_get_by_name = Mock(return_value = self.host2)
-        db.instance_get_by_internal_id = Mock( return_value = self.instance1 )
-        try : 
-            self.instanceCmds.live_migration('i-12345', 'host2')
-        except exception.Invalid, e: 
-            c1 = (0 < e.message.find('is not running') )
-            self.assertTrue(c1, True)
-        return False
-
-    def test15(self):
-        """15: nova-manage instances live_migration ec2_id host, 
-           but instance is running at the same host specifed above, so err should be occured.
-        """
-        db.host_get_by_name = Mock(return_value = self.host1)
-        db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
-        try : 
-            self.instanceCmds.live_migration('i-12345', 'host1')
-        except exception.Invalid, e: 
-            c1 = ( 0 <= e.message.find('is running now') )
-            self.assertTrue(c1, True)
-        return False
-
-
-    def test16(self):
-        """16: nova-manage instances live_migration ec2_id host, 
            rpc.call raises RemoteError because destination doesnt have enough resource.
         """
         db.host_get_by_name = Mock(return_value = self.host1)
         db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
         rpc.call = Mock(return_value = rpc.RemoteError(TypeError, 'val', 'traceback'))
         self.assertRaises(rpc.RemoteError, self.instanceCmds.live_migration, 'i-xxx', 'host2' )
-        
 
-    def test17(self):
-        """17: nova-manage instances live_migration ec2_id host, 
+
+    def test14(self):
+        """14: nova-manage instances live_migration ec2_id host, 
            everything goes well, ang gets success messages.
         """
         db.host_get_by_name = Mock(return_value = self.host1)
@@ -332,7 +294,7 @@ class NovaManageTestFunctions(unittest.TestCase):
         self.instanceCmds.live_migration('i-12345', 'host2')
         c1 = (0 <= self.stdout.buffer.find('Finished all procedure') )
         self.assertEqual( c1, True )
-        
+
 
     def tearDown(self):
         """common terminating method. """

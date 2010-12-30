@@ -47,9 +47,9 @@ topologies.  All of the network commands are issued to a subclass of
 import datetime
 import logging
 import math
+import socket
 
 import IPy
-from twisted.internet import defer
 
 from nova import context
 from nova import db
@@ -57,6 +57,7 @@ from nova import exception
 from nova import flags
 from nova import manager
 from nova import utils
+from nova import rpc
 
 
 FLAGS = flags.FLAGS
@@ -88,6 +89,10 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
                   'Whether to update dhcp when fixed_ip is disassociated')
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
+flags.DEFINE_string('network_host', socket.gethostname(),
+                    'Network host to use for ip allocation in flat modes')
+flags.DEFINE_bool('fake_call', False,
+                  'If True, skip using the queue and make local calls')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -113,10 +118,20 @@ class NetworkManager(manager.Manager):
         ctxt = context.get_admin_context()
         for network in self.db.host_get_networks(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
+        floating_ips = self.db.floating_ip_get_all_by_host(ctxt,
+                                                           self.host)
+        for floating_ip in floating_ips:
+            if floating_ip.get('fixed_ip', None):
+                fixed_address = floating_ip['fixed_ip']['address']
+                # NOTE(vish): The False here is because we ignore the case
+                #             that the ip is already bound.
+                self.driver.bind_floating_ip(floating_ip['address'], False)
+                self.driver.ensure_floating_forward(floating_ip['address'],
+                                                    fixed_address)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
-        logging.debug("setting network host")
+        logging.debug(_("setting network host"))
         host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
@@ -175,10 +190,10 @@ class NetworkManager(manager.Manager):
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error("IP %s leased that isn't associated" %
+            raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s leased to bad mac %s vs %s" %
+            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
                                   (address, instance_ref['mac_address'], mac))
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
@@ -186,7 +201,8 @@ class NetworkManager(manager.Manager):
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip_ref['allocated']:
-            logging.warn("IP %s leased that was already deallocated", address)
+            logging.warn(_("IP %s leased that was already deallocated"),
+                         address)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
@@ -194,13 +210,13 @@ class NetworkManager(manager.Manager):
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error("IP %s released that isn't associated" %
+            raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error("IP %s released from bad mac %s vs %s" %
+            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
                                   (address, instance_ref['mac_address'], mac))
         if not fixed_ip_ref['leased']:
-            logging.warn("IP %s released that was not leased", address)
+            logging.warn(_("IP %s released that was not leased"), address)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': False})
@@ -213,8 +229,8 @@ class NetworkManager(manager.Manager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self.driver.update_dhcp(context, network_ref['id'])
 
-    def get_network(self, context):
-        """Get the network for the current context."""
+    def get_network_host(self, context):
+        """Get the network host for the current context."""
         raise NotImplementedError()
 
     def create_networks(self, context, num_networks, network_size,
@@ -302,10 +318,6 @@ class FlatManager(NetworkManager):
         """Network is created manually."""
         pass
 
-    def setup_fixed_ip(self, context, address):
-        """Currently no setup."""
-        pass
-
     def create_networks(self, context, cidr, num_networks, network_size,
                         *args, **kwargs):
         """Create networks based on parameters."""
@@ -326,14 +338,25 @@ class FlatManager(NetworkManager):
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
 
-    def get_network(self, context):
-        """Get the network for the current context."""
-        # NOTE(vish): To support mutilple network hosts, This could randomly
-        #             select from multiple networks instead of just
-        #             returning the one. It could also potentially be done
-        #             in the scheduler.
-        return self.db.network_get_by_bridge(context,
-                                             FLAGS.flat_network_bridge)
+    def get_network_host(self, context):
+        """Get the network host for the current context."""
+        network_ref = self.db.network_get_by_bridge(context,
+                                                    FLAGS.flat_network_bridge)
+        # NOTE(vish): If the network has no host, use the network_host flag.
+        #             This could eventually be a a db lookup of some sort, but
+        #             a flag is easy to handle for now.
+        host = network_ref['host']
+        if not host:
+            topic = self.db.queue_get_for(context,
+                                          FLAGS.network_topic,
+                                          FLAGS.network_host)
+            if FLAGS.fake_call:
+                return self.set_network_host(context, network_ref['id'])
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+        return host
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
@@ -363,13 +386,18 @@ class FlatDHCPManager(FlatManager):
         if network_ref is None:
             network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.flat_interface,
-                                  network_ref)
+                                  FLAGS.flat_interface)
 
-    def setup_fixed_ip(self, context, address):
+    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Setup dhcp for this network."""
+        address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
+                                                                 instance_id,
+                                                                 *args,
+                                                                 **kwargs)
         network_ref = db.fixed_ip_get_network(context, address)
-        self.driver.update_dhcp(context, network_ref['id'])
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_ref['id'])
+        return address
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool."""
@@ -400,10 +428,9 @@ class VlanManager(NetworkManager):
     instances in its subnet.
     """
 
-    @defer.inlineCallbacks
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
-        yield super(VlanManager, self).periodic_tasks(context)
+        super(VlanManager, self).periodic_tasks(context)
         now = datetime.datetime.utcnow()
         timeout = FLAGS.fixed_ip_disassociate_timeout
         time = now - datetime.timedelta(seconds=timeout)
@@ -411,7 +438,7 @@ class VlanManager(NetworkManager):
                                                            self.host,
                                                            time)
         if num:
-            logging.debug("Dissassociated %s stale fixed ip(s)", num)
+            logging.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -439,34 +466,21 @@ class VlanManager(NetworkManager):
                                                       network_ref['id'],
                                                       instance_id)
         self.db.fixed_ip_update(context, address, {'allocated': True})
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_ref['id'])
         return address
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    def setup_fixed_ip(self, context, address):
-        """Sets forwarding rules and dhcp for fixed ip."""
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        network_ref = self.db.fixed_ip_get_network(context, address)
-        if self.db.instance_is_vpn(context, fixed_ip_ref['instance_id']):
-            self.driver.ensure_vlan_forward(network_ref['vpn_public_address'],
-                                            network_ref['vpn_public_port'],
-                                            network_ref['vpn_private_address'])
-        self.driver.update_dhcp(context, network_ref['id'])
-
-
+    #def setup_compute_network(self, context, instance_id):
     def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
         if network_ref is None:
             network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
-
-    def restart_nets(self):
-        """Ensure the network for each user is enabled."""
-        # TODO(vish): Implement this
-        pass
 
     def create_networks(self, context, cidr, num_networks, network_size,
                         vlan_start, vpn_start):
@@ -494,21 +508,45 @@ class VlanManager(NetworkManager):
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
 
-    def get_network(self, context):
+    def get_network_host(self, context):
         """Get the network for the current context."""
-        return self.db.project_get_network(context.elevated(),
-                                           context.project_id)
+        network_ref = self.db.project_get_network(context.elevated(),
+                                                  context.project_id)
+        # NOTE(vish): If the network has no host, do a call to get an
+        #             available host.  This should be changed to go through
+        #             the scheduler at some point.
+        host = network_ref['host']
+        if not host:
+            if FLAGS.fake_call:
+                return self.set_network_host(context, network_ref['id'])
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+
+        return host
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
         network_ref = self.db.network_get(context, network_id)
-        net = {}
-        net['vpn_public_address'] = FLAGS.vpn_ip
-        db.network_update(context, network_id, net)
+        if not network_ref['vpn_public_address']:
+            net = {}
+            address = FLAGS.vpn_ip
+            net['vpn_public_address'] = address
+            db.network_update(context, network_id, net)
+        else:
+            address = network_ref['vpn_public_address']
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref)
-        self.driver.update_dhcp(context, network_id)
+        # NOTE(vish): only ensure this forward if the address hasn't been set
+        #             manually.
+        if address == FLAGS.vpn_ip:
+            self.driver.ensure_vlan_forward(FLAGS.vpn_ip,
+                                            network_ref['vpn_public_port'],
+                                            network_ref['vpn_private_address'])
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_id)
 
     @property
     def _bottom_reserved_ips(self):

@@ -19,7 +19,7 @@ Installing Nova on Multiple Servers
 ===================================
 
 When you move beyond evaluating the technology and into building an actual
-production environemnt, you will need to know how to configure your datacenter
+production environment, you will need to know how to configure your datacenter
 and how to deploy components across your clusters.  This guide should help you
 through that process.
 
@@ -34,7 +34,6 @@ Requirements for a multi-node installation
 * You need a real database, compatible with SQLAlchemy (mysql, postgresql) There's not a specific reason to choose one over another, it basically depends what you know. MySQL is easier to do High Availability (HA) with, but people may already know Postgres. We should document both configurations, though.
 * For a recommended HA setup, consider a MySQL master/slave replication, with as many slaves as you like, and probably a heartbeat to kick one of the slaves into being a master if it dies.
 * For performance optimization, split reads and writes to the database. MySQL proxy is the easiest way to make this work if running MySQL.
-
 
 Assumptions
 ^^^^^^^^^^^
@@ -69,14 +68,14 @@ Step 1 Use apt-get to get the latest code
 
 It is highly likely that there will be errors when the nova services come up since they are not yet configured. Don't worry, you're only at step 1!
 
-Step 2 Setup configuration files (installed in /etc/nova)
+Step 2 Setup configuration file (installed in /etc/nova)
 ---------------------------------------------------------
 
 Note: CC_ADDR=<the external IP address of your cloud controller>
 
-1. These need to be defined in EACH configuration file
+Nova development has consolidated all .conf files to nova.conf as of November 2010. References to specific .conf files may be ignored.
 
-::
+#. These need to be defined in the nova.conf configuration file::
 
    --sql_connection=mysql://root:nova@$CC_ADDR/nova # location of nova sql db
    --s3_host=$CC_ADDR  # This is where nova is hosting the objectstore service, which
@@ -87,31 +86,14 @@ Note: CC_ADDR=<the external IP address of your cloud controller>
    --ec2_url=http://$CC_ADDR:8773/services/Cloud
    --network_manager=nova.network.manager.FlatManager # simple, no-vlan networking type
 
-
-2. nova-manage specific flags
-
-::
-
    --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
    --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
-
-3. nova-network specific flags
-
-::
-
-   --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
-   --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
-
-4. Create a nova group
-
-::
+#. Create a nova group::
 
    sudo addgroup nova
 
-5. nova-objectstore specific flags < no specific config needed >
-
-Config files should be have their owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
+The Nova config file should have its owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
 
 ::
 
@@ -121,7 +103,7 @@ Config files should be have their owner set to root:nova, and mode set to 0640, 
 Step 3 Setup the sql db
 -----------------------
 
-1. First you 'preseed' (using vishy's :doc:`../quickstart`). Run this as root.
+1. First you 'preseed' (using the Quick Start method :doc:`../quickstart`). Run this as root.
 
 ::
 
@@ -161,7 +143,7 @@ Step 3 Setup the sql db
    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
    SET PASSWORD FOR 'root'@'%' = PASSWORD('nova');
 
-7. branch and install Nova
+7. Branch and install Nova
 
 ::
 
@@ -186,9 +168,7 @@ Step 4 Setup Nova environment
 
 Note: The nova-manage service assumes that the first IP address is your network (like 192.168.0.0), that the 2nd IP is your gateway (192.168.0.1), and that the broadcast is the very last IP in the range you defined (192.168.0.255). If this is not the case you will need to manually edit the sql db 'networks' table.o.
 
-On running this command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. We ended up doing this manually, (update query fired directly in the DB). Is there a better way to mark a network as bridged?
-
-Update: This has been resolved w.e.f 27/10. network is marked as bridged automatically based on the type of n/w manager selected.
+On running this command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. The Network is marked as bridged automatically based on the type of network manager selected.
 
 More networking details to create a network bridge for flat network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -233,7 +213,6 @@ unzip them in your home directory, and add them to your environment::
    echo ". creds/novarc" >> ~/.bashrc
    ~/.bashrc
 
-
 Step 6 Restart all relevant services
 ------------------------------------
 
@@ -249,8 +228,8 @@ Restart relevant nova services::
 
 .. todo:: do we still need the content below?
 
-Bare-metal Provisioning
------------------------
+Bare-metal Provisioning Notes
+-----------------------------
 
 To install the base operating system you can use PXE booting.
 

@@ -19,11 +19,11 @@
 <mordred@inaugust.com> <mordred@hudson>
 <paul@openstack.org> <pvoccio@castor.local>
 <paul@openstack.org> <paul.voccio@rackspace.com>
+<soren.hansen@rackspace.com> <soren@linux2go.dk>
 <todd@ansolabs.com> <todd@lapex>
 <todd@ansolabs.com> <todd@rubidine.com>
 <vishvananda@gmail.com> <vishvananda@yahoo.com>
 <vishvananda@gmail.com> <root@mirror.nasanebula.net>
-# These are from people who failed to set a proper committer
-. <root@tonbuntu>
-. <laner@controller>
-. <root@ubuntu>
+<vishvananda@gmail.com> <root@ubuntu>
+<sleepsonthefloor@gmail.com> <root@tonbuntu>
+<rlane@wikimedia.org> <laner@controller>

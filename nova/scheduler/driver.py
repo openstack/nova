@@ -22,10 +22,14 @@ Scheduler base class that all Schedulers should inherit from
 """
 
 import datetime
+import logging
 
 from nova import db
 from nova import exception
 from nova import flags
+from nova import rpc
+from nova.api.ec2 import cloud
+from nova.compute import power_state
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
@@ -58,4 +62,137 @@ class Scheduler(object):
 
     def schedule(self, context, topic, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
-        raise NotImplementedError("Must implement a fallback schedule")
+        raise NotImplementedError(_("Must implement a fallback schedule"))
+
+    def schedule_live_migration(self, context, instance_id, dest):
+        """ live migration method """
+
+        # Whether instance exists and running
+        # try-catch clause is necessary because only internal_id is shown
+        # when NotFound exception occurs. it isnot understandable to admins.
+        try:
+            instance_ref = db.instance_get(context, instance_id)
+            ec2_id = instance_ref['hostname']
+            internal_id = instance_ref['internal_id']
+        except exception.NotFound, e:
+            msg = _('Unexpected error: instance is not found')
+            e.args += ('\n' + msg, )
+            raise e
+
+        # Checking instance state.
+        if power_state.RUNNING != instance_ref['state'] or \
+           'running' != instance_ref['state_description']:
+            msg = _('Instance(%s) is not running')
+            raise exception.Invalid(msg % ec2_id)
+
+        # Checking destination host exists
+        dhost_ref = db.host_get_by_name(context, dest)
+
+        # Checking whether The host where instance is running
+        # and dest is not same.
+        src = instance_ref['host']
+        if dest == src:
+            msg = _('%s is where %s is running now. choose other host.')
+            raise exception.Invalid(msg % (dest, ec2_id))
+
+        # Checking dest is compute node.
+        services = db.service_get_all_by_topic(context, 'compute')
+        if dest not in [service.host for service in services]:
+            msg = _('%s must be compute node')
+            raise exception.Invalid(msg % dest)
+
+        # Checking dest host is alive.
+        service = [service for service in services if service.host == dest]
+        service = service[0]
+        if not self.service_is_up(service):
+            msg = _('%s is not alive(time synchronize problem?)')
+            raise exception.Invalid(msg % dest)
+
+        # NOTE(masumotok): Below pre-checkings are followed by
+        # http://wiki.libvirt.org/page/TodoPreMigrationChecks
+
+        # Checking hypervisor is same.
+        orighost = instance_ref['launched_on']
+        ohost_ref = db.host_get_by_name(context, orighost)
+
+        otype = ohost_ref['hypervisor_type']
+        dtype = dhost_ref['hypervisor_type']
+        if otype != dtype:
+            msg = _('Different hypervisor type(%s->%s)')
+            raise exception.Invalid(msg % (otype, dtype))
+
+        # Checkng hypervisor version.
+        oversion = ohost_ref['hypervisor_version']
+        dversion = dhost_ref['hypervisor_version']
+        if oversion > dversion:
+            msg = _('Older hypervisor version(%s->%s)')
+            raise exception.Invalid(msg % (oversion, dversion))
+
+        # Checking cpuinfo.
+        cpuinfo = ohost_ref['cpu_info']
+        if str != type(cpuinfo):
+            msg = _('Unexpected err: not found cpu_info for %s on DB.hosts')
+            raise exception.Invalid(msg % orighost)
+
+        ret = rpc.call(context,
+                       db.queue_get_for(context, FLAGS.compute_topic, dest),
+                       {"method": 'compareCPU',
+                        "args": {'xml': cpuinfo}})
+
+        if int != type(ret):
+            raise ret
+
+        if 0 >= ret:
+            u = 'http://libvirt.org/html/libvirt-libvirt.html'
+            u += '#virCPUCompareResult'
+            msg = '%s doesnt have compatibility to %s(where %s launching at)\n'
+            msg += 'result:%d \n'
+            msg += 'Refer to %s'
+            msg = _(msg)
+            raise exception.Invalid(msg % (dest, src, ec2_id, ret, u))
+
+        # Checking dst host still has enough capacities.
+        self.has_enough_resource(context, instance_id, dest)
+
+        # Changing instance_state.
+        db.instance_set_state(context,
+                              instance_id,
+                              power_state.PAUSED,
+                              'migrating')
+
+        # Requesting live migration.
+        return src
+
+    def has_enough_resource(self, context, instance_id, dest):
+        """ Check if destination host has enough resource for live migration"""
+
+        # Getting instance information
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+        vcpus = instance_ref['vcpus']
+        mem = instance_ref['memory_mb']
+        hdd = instance_ref['local_gb']
+
+        # Gettin host information
+        host_ref = db.host_get_by_name(context, dest)
+        total_cpu = int(host_ref['vcpus'])
+        total_mem = int(host_ref['memory_mb'])
+        total_hdd = int(host_ref['local_gb'])
+
+        instances_ref = db.instance_get_all_by_host(context, dest)
+        for i_ref in instances_ref:
+            total_cpu -= int(i_ref['vcpus'])
+            total_mem -= int(i_ref['memory_mb'])
+            total_hdd -= int(i_ref['local_gb'])
+
+        # Checking host has enough information
+        logging.debug('host(%s) remains vcpu:%s mem:%s hdd:%s,' %
+                      (dest, total_cpu, total_mem, total_hdd))
+        logging.debug('instance(%s) has vcpu:%s mem:%s hdd:%s,' %
+                      (ec2_id, vcpus, mem, hdd))
+
+        if total_cpu <= vcpus or total_mem <= mem or total_hdd <= hdd:
+            msg = '%s doesnt have enough resource for %s' % (dest, ec2_id)
+            raise exception.NotEmpty(msg)
+
+        logging.debug(_('%s has enough resource for %s') % (dest, ec2_id))

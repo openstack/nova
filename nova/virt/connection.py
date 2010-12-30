@@ -25,7 +25,7 @@ import sys
 from nova import flags
 from nova.virt import fake
 from nova.virt import libvirt_conn
-from nova.virt import xenapi
+from nova.virt import xenapi_conn
 
 
 FLAGS = flags.FLAGS
@@ -61,11 +61,11 @@ def get_connection(read_only=False):
     elif t == 'libvirt':
         conn = libvirt_conn.get_connection(read_only)
     elif t == 'xenapi':
-        conn = xenapi.get_connection(read_only)
+        conn = xenapi_conn.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 
     if conn is None:
-        logging.error('Failed to open connection to the hypervisor')
+        logging.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
     return conn

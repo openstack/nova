@@ -24,12 +24,16 @@ import webob
 import webob.dec
 
 from nova import auth
-from nova import utils
-from nova import flags
+from nova import context
 from nova import exception as exc
+from nova import flags
+from nova import utils
 import nova.api.openstack.auth
-from nova.image import service
+from nova.api.openstack import auth
+from nova.api.openstack import ratelimiting
 from nova.image import glance
+from nova.image import local
+from nova.image import service
 from nova.tests import fake_flags
 from nova.wsgi import Router
 
@@ -50,15 +54,16 @@ class FakeRouter(Router):
         return res
 
 
-def fake_auth_init(self):
+def fake_auth_init(self, application):
     self.db = FakeAuthDatabase()
     self.context = Context()
     self.auth = FakeAuthManager()
+    self.application = application
 
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
-    req.environ['nova.context'] = dict(user=dict(id=1))
+    req.environ['nova.context'] = context.RequestContext(1, 1)
     if req.body:
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
@@ -67,36 +72,35 @@ def fake_wsgi(self, req):
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db.api, 'key_pair_get_all_by_user',
-        key_pair)
+    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
 
 
 def stub_out_image_service(stubs):
     def fake_image_show(meh, context, id):
         return dict(kernelId=1, ramdiskId=1)
 
-    stubs.Set(nova.image.local.LocalImageService, 'show', fake_image_show)
+    stubs.Set(local.LocalImageService, 'show', fake_image_show)
 
 
 def stub_out_auth(stubs):
     def fake_auth_init(self, app):
         self.application = app
 
-    stubs.Set(nova.api.openstack.AuthMiddleware,
+    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
         '__init__', fake_auth_init)
-    stubs.Set(nova.api.openstack.AuthMiddleware,
+    stubs.Set(nova.api.openstack.auth.AuthMiddleware,
         '__call__', fake_wsgi)
 
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(nova.api.openstack.RateLimitingMiddleware, self).__init__(app)
+        super(ratelimiting.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
@@ -170,6 +174,12 @@ class FakeToken(object):
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+
+
+class FakeRequestContext(object):
+    def __init__(self, user, project, *args, **kwargs):
+        self.user_id = 1
+        self.project_id = 1
 
 
 class FakeAuthDatabase(object):

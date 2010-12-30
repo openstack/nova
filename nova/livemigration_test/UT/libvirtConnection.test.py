@@ -35,7 +35,6 @@ try :
     from nova import flags
     from nova import quota
     from nova import utils
-    from nova import process
     from nova.auth import manager
     from nova.cloudpipe import pipelib
     from nova import rpc
@@ -177,10 +176,11 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
     def test03(self):
         """03: Unexpected exception occurs on finding volume on DB. """
 
-        utils.execute = Mock( side_effect=process.ProcessExecutionError('ERR') )
+        utils.execute = Mock( side_effect=exception.ProcessExecutionError('ERR') )
 
-        self.assertRaises(process.ProcessExecutionError,
-                         self.manager.live_migration,
+        self.assertRaises(exception.ProcessExecutionError,
+                         self.manager._live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host2')
 
@@ -195,6 +195,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
 
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          "dummy string",
                          'host2')
 
@@ -202,7 +203,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         """05: db.instance_get_fixed_address return None"""
 
         db.instance_get_fixed_address  = Mock( return_value=None )
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('fixed_ip is not found'))
         self.assertEqual(c1 and c2, True)
@@ -213,6 +214,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.instance_get_fixed_address  = Mock( side_effect=exception.NotFound('ERR') )
         self.assertRaises(exception.NotFound,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host2')
 
@@ -222,6 +224,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.instance_get_fixed_address  = Mock( side_effect=TypeError('ERR') )
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
 
@@ -231,6 +234,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.fixed_ip_update =  Mock( side_effect=exception.NotFound('ERR') )
         self.assertRaises(exception.NotFound,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
         
@@ -239,6 +243,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.fixed_ip_update =  Mock( side_effect=exception.NotAuthorized('ERR') )
         self.assertRaises(exception.NotAuthorized,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
 
@@ -247,6 +252,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.fixed_ip_update =  Mock( side_effect=TypeError('ERR') )
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
     
@@ -256,6 +262,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.fixed_ip_get_network =  Mock( side_effect=exception.NotFound('ERR') )
         self.assertRaises(exception.NotFound,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
         
@@ -268,6 +275,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.fixed_ip_get_network =  Mock( side_effect=TypeError('ERR') )
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
 
@@ -276,13 +284,14 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.network_update =  Mock( side_effect=TypeError('ERR') )
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
 
     def test14(self):
         """14: db.instance_get_floating_address raises NotFound. """
         db.instance_get_floating_address = Mock(side_effect=exception.NotFound("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('doesnt have floating_ip'))
         self.assertEqual(c1 and c2, True)
@@ -292,7 +301,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         """15: db.instance_get_floating_address returns None. """
 
         db.instance_get_floating_address = Mock( return_value=None )
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('floating_ip is not found'))
         self.assertEqual(c1 and c2, True)
@@ -301,7 +310,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         """16:  db.instance_get_floating_address raises NotFound. """
 
         db.instance_get_floating_address = Mock(side_effect=exception.NotFound("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('doesnt have floating_ip'))
         self.assertEqual(c1 and c2, True)
@@ -309,7 +318,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
     def test17(self):
         """17:  db.instance_get_floating_address raises Unknown exception. """
         db.instance_get_floating_address = Mock(side_effect=TypeError("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('Live migration: Unexpected error'))
         self.assertEqual(c1 and c2, True)
@@ -319,7 +328,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         """18: db.floating_ip_get_by_address raises NotFound """
 
         db.floating_ip_get_by_address = Mock(side_effect=exception.NotFound("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('doesnt have floating_ip'))
         self.assertEqual(c1 and c2, True)
@@ -327,7 +336,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
     def test19(self):
         """19:  db.floating_ip_get_by_address raises Unknown exception. """
         db.floating_ip_get_by_address = Mock(side_effect=TypeError("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('Live migration: Unexpected error'))
         self.assertEqual(c1 and c2, True)
@@ -337,7 +346,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         """20: db.floating_ip_update raises Unknown exception. 
         """
         db.floating_ip_update = Mock(side_effect=TypeError("ERR"))
-        ret = self.manager._post_live_migration(self.instance1, 'host1')
+        ret = self.manager._post_live_migration(self.ctxt, self.instance1, 'host1')
         c1 = (ret == None)
         c2 = (0 <= sys.stderr.buffer.find('Live migration: Unexpected error'))
         self.assertEqual(c1 and c2, True)
@@ -348,6 +357,7 @@ class LibvirtConnectionTestFunctions(unittest.TestCase):
         db.instance_update = Mock(side_effect=TypeError("ERR"))
         self.assertRaises(TypeError,
                          self.manager._post_live_migration,
+                         self.ctxt,
                          self.instance1,
                          'host1')
 

@@ -53,6 +53,7 @@
   CLI interface for nova management.
 """
 
+import gettext
 import logging
 import os
 import sys
@@ -68,20 +69,19 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+gettext.install('nova', unicode=1)
+
 from nova import context
+from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
 from nova import quota
 from nova import utils
 from nova.auth import manager
-from nova.cloudpipe import pipelib
-#added by masumotok
 from nova import rpc
-# added by masumotok
+from nova.cloudpipe import pipelib
 from nova.api.ec2 import cloud
-# added by masumotok
-from nova.compute import power_state
 
 
 
@@ -100,46 +100,42 @@ class VpnCommands(object):
         self.manager = manager.AuthManager()
         self.pipe = pipelib.CloudPipe()
 
-    def list(self):
-        """Print a listing of the VPNs for all projects."""
+    def list(self, project=None):
+        """Print a listing of the VPN data for one or all projects.
+
+        args: [project=all]"""
         print "%-12s\t" % 'project',
         print "%-20s\t" % 'ip:port',
+        print "%-20s\t" % 'private_ip',
         print "%s" % 'state'
-        for project in self.manager.get_projects():
+        if project:
+            projects = [self.manager.get_project(project)]
+        else:
+            projects = self.manager.get_projects()
+            # NOTE(vish): This hits the database a lot.  We could optimize
+            #             by getting all networks in one query and all vpns
+            #             in aother query, then doing lookups by project
+        for project in projects:
             print "%-12s\t" % project.name,
-
-            try:
-                s = "%s:%s" % (project.vpn_ip, project.vpn_port)
-            except exception.NotFound:
-                s = "None"
-            print "%-20s\t" % s,
-
-            vpn = self._vpn_for(project.id)
+            ipport = "%s:%s" % (project.vpn_ip, project.vpn_port)
+            print "%-20s\t" % ipport,
+            ctxt = context.get_admin_context()
+            vpn = db.instance_get_project_vpn(ctxt, project.id)
             if vpn:
-                command = "ping -c1 -w1 %s > /dev/null; echo $?"
-                out, _err = utils.execute(command % vpn['private_dns_name'],
-                                          check_exit_code=False)
-                if out.strip() == '0':
-                    net = 'up'
-                else:
-                    net = 'down'
-                print vpn['private_dns_name'],
-                print vpn['node_name'],
-                print vpn['instance_id'],
+                address = None
+                state = 'down'
+                if vpn.get('fixed_ip', None):
+                    address = vpn['fixed_ip']['address']
+                if project.vpn_ip and utils.vpn_ping(project.vpn_ip,
+                                                     project.vpn_port):
+                    state = 'up'
+                print address,
+                print vpn['host'],
+                print vpn['ec2_id'],
                 print vpn['state_description'],
-                print net
-
+                print state
             else:
                 print None
-
-    def _vpn_for(self, project_id):
-        """Get the VPN instance for a project ID."""
-        for instance in db.instance_get_all(context.get_admin_context()):
-            if (instance['image_id'] == FLAGS.vpn_image_id
-                and not instance['state_description'] in
-                    ['shutting_down', 'shutdown']
-                and instance['project_id'] == project_id):
-                return instance
 
     def spawn(self):
         """Run all VPNs."""
@@ -152,6 +148,21 @@ class VpnCommands(object):
     def run(self, project_id):
         """Start the VPN for a given project."""
         self.pipe.launch_vpn_instance(project_id)
+
+    def change(self, project_id, ip, port):
+        """Change the ip and port for a vpn.
+
+        args: project, ip, port"""
+        project = self.manager.get_project(project_id)
+        if not project:
+            print 'No project %s' % (project_id)
+            return
+        admin = context.get_admin_context()
+        network_ref = db.project_get_network(admin, project_id)
+        db.network_update(admin,
+                          network_ref['id'],
+                          {'vpn_public_address': ip,
+                           'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -299,6 +310,14 @@ class UserCommands(object):
             is_admin = False
         self.manager.modify_user(name, access_key, secret_key, is_admin)
 
+    def revoke(self, user_id, project_id=None):
+        """revoke certs for a user
+        arguments: user_id [project_id]"""
+        if project_id:
+            crypto.revoke_certs_by_user_and_project(user_id, project_id)
+        else:
+            crypto.revoke_certs_by_user(user_id)
+
 
 class ProjectCommands(object):
     """Class for managing projects."""
@@ -366,9 +385,14 @@ class ProjectCommands(object):
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file
         arguments: project_id user_id [filename='nova.zip]"""
-        zip_file = self.manager.get_credentials(user_id, project_id)
-        with open(filename, 'w') as f:
-            f.write(zip_file)
+        try:
+            zip_file = self.manager.get_credentials(user_id, project_id)
+            with open(filename, 'w') as f:
+                f.write(zip_file)
+        except db.api.NoMoreNetworks:
+            print ('No more networks available. If this is a new '
+                   'installation, you need\nto call something like this:\n\n'
+                   '    nova-manage network create 10.0.0.0/8 10 64\n\n')
 
 
 class FloatingIpCommands(object):
@@ -431,7 +455,7 @@ class NetworkCommands(object):
                                     int(network_size), int(vlan_start),
                                     int(vpn_start))
 
-# this class is added by masumotok
+
 class InstanceCommands(object):
     """Class for mangaging VM instances."""
 
@@ -441,43 +465,29 @@ class InstanceCommands(object):
         logging.basicConfig()
         ctxt = context.get_admin_context()
 
-        # 1. whether destination host exists
-        host_ref = db.host_get_by_name(ctxt, dest)
-
-        # 2. whether instance exists and running
-        #    try-catch clause is necessary because only internal_id is shown
-        #    when NotFound exception occurs. it isnot understandable to admins.
-        try :
+        try:
             internal_id = cloud.ec2_id_to_internal_id(ec2_id)
             instance_ref = db.instance_get_by_internal_id(ctxt, internal_id)
-        except exception.NotFound :
-            print 'Not found instance_id(%s (internal_id:%s))' % ( ec2_id, internal_id)
-            raise
+            instance_id = instance_ref['id']
+        except exception.NotFound as e:
+            msg = _('instance(%s) is not found')
+            e.args += (msg % ec2_id,)
+            raise e
 
-        if power_state.RUNNING != instance_ref['state'] or \
-           'running' != instance_ref['state_description']:
-            raise exception.Invalid('Instance(%s) is not running' % ec2_id)
-
-        # 3. the host where instance is running and dst host is not same
-        if dest == instance_ref['host'] :
-            msg = '%s is where %s is running now. choose other host.' % (dest, ec2_id)
-            raise exception.Invalid(msg)
-
-        # 4. live migration
         ret = rpc.call(ctxt,
                        FLAGS.scheduler_topic,
-                       { "method": "live_migration",
-                       "args": {"ec2_id": ec2_id,
-                                "dest":dest}})
+                       {"method": "live_migration",
+                        "args": {"instance_id": instance_id,
+                                "dest": dest,
+                                "topic": FLAGS.compute_topic}})
 
-        if None != ret : 
+        if None != ret:
             raise ret
 
-        print 'Finished all procedure. check instance are migrated successfully'
+        print 'Finished all procedure. Check migrating finishes successfully'
         print 'check status by using euca-describe-instances.'
 
 
-# this class is created by masumotok
 class HostCommands(object):
     """Class for mangaging host(physical nodes)."""
 
@@ -485,17 +495,18 @@ class HostCommands(object):
     def list(self):
         """describe host list."""
 
-        # to supress msg: No handlers could be found for logger "amqplib"
+        # To supress msg: No handlers could be found for logger "amqplib"
         logging.basicConfig()
 
         host_refs = db.host_get_all(context.get_admin_context())
         for host_ref in host_refs:
             print host_ref['name']
 
+
     def show(self, host):
         """describe cpu/memory/hdd info for host."""
 
-        # to supress msg: No handlers could be found for logger "amqplib"
+        # To supress msg: No handlers could be found for logger "amqplib"
         logging.basicConfig()
 
         result = rpc.call(context.get_admin_context(),
@@ -503,41 +514,27 @@ class HostCommands(object):
                          {"method": "show_host_resource",
                           "args": {"host": host}})
 
-        # checing result msg format is necessary, that will have done
+        # Checking result msg format is necessary, that will have done
         # when this feture is included in API.
         if dict != type(result):
             print 'Unexpected error occurs'
-        elif not result['ret'] :
+        elif not result['ret']:
             print '%s' % result['msg']
-        else :
+        else:
             cpu = result['phy_resource']['vcpus']
             mem = result['phy_resource']['memory_mb']
             hdd = result['phy_resource']['local_gb']
 
             print 'HOST\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
-            print '%s\t\t\t%s\t%s\t%s' % ( host,cpu, mem, hdd)
-            for p_id, val in result['usage'].items() :
-                print '%s\t%s\t\t%s\t%s\t%s' % ( host,
+            print '%s\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
+            for p_id, val in result['usage'].items():
+                print '%s\t%s\t\t%s\t%s\t%s' % (host,
                                              p_id,
                                              val['vcpus'],
                                              val['memory_mb'],
                                              val['local_gb'])
 
-    def has_keys(self, dic, keys):
-        not_found = [ key for key in keys if not dict.has_key(key) ]
-        return ( (0 == len(not_found)), not_found )
 
-
-
-# modified by masumotok
-#CATEGORIES = [
-#    ('user', UserCommands),
-#    ('project', ProjectCommands),
-#    ('role', RoleCommands),
-#    ('shell', ShellCommands),
-#    ('vpn', VpnCommands),
-#    ('floating', FloatingIpCommands),
-#    ('network', NetworkCommands)]
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -547,7 +544,7 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('instance', InstanceCommands),
-    ('host',HostCommands)]
+    ('host', HostCommands)]
 
 def lazy_match(name, key_value_tuples):
     """Finds all objects that have a key that case insensitively contains

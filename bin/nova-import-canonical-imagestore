@@ -21,6 +21,7 @@
   Download images from Canonical Image Store
 """
 
+import gettext
 import json
 import os
 import tempfile
@@ -36,6 +37,8 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir))
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
+
+gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import utils

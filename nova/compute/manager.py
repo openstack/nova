@@ -42,11 +42,10 @@ import os
 import time
 
 
-from twisted.internet import defer
-
 from nova import exception
 from nova import flags
 from nova import manager
+from nova import rpc
 from nova import utils
 from nova.compute import power_state
 from nova import rpc
@@ -57,8 +56,10 @@ flags.DEFINE_string('instances_path', '$state_path/instances',
                     'where instances are stored on disk')
 flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
-flags.DEFINE_string('live_migration_timeout', 30,
+flags.DEFINE_string('live_migration_timeout', 10,
                     'Timeout value for pre_live_migration is completed.')
+flags.DEFINE_string('stub_network', False,
+                    'Stub network related code')
 
 
 class ComputeManager(manager.Manager):
@@ -76,6 +77,12 @@ class ComputeManager(manager.Manager):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         super(ComputeManager, self).__init__(*args, **kwargs)
 
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+           standalone service.
+        """
+        self.driver.init_host()
+
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
@@ -87,25 +94,55 @@ class ComputeManager(manager.Manager):
             state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
 
-    @defer.inlineCallbacks
+    def get_network_topic(self, context, **_kwargs):
+        """Retrieves the network host for a project on this host"""
+        # TODO(vish): This method should be memoized. This will make
+        #             the call to get_network_host cheaper, so that
+        #             it can pas messages instead of checking the db
+        #             locally.
+        if FLAGS.stub_network:
+            host = FLAGS.network_host
+        else:
+            host = self.network_manager.get_network_host(context)
+        return self.db.queue_get_for(context,
+                                     FLAGS.network_topic,
+                                     host)
+
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):
         """This call passes stright through to the virtualization driver."""
-        yield self.driver.refresh_security_group(security_group_id)
+        self.driver.refresh_security_group(security_group_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['name'] in self.driver.list_instances():
-            raise exception.Error("Instance has already been created")
-        logging.debug("instance %s: starting...", instance_id)
-        self.network_manager.setup_compute_network(context, instance_id)
+            raise exception.Error(_("Instance has already been created"))
         self.db.instance_update(context,
                                 instance_id,
                                 {'host': self.host, 'launched_on':self.host})
+
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'networking')
+
+        is_vpn = instance_ref['image_id'] == FLAGS.vpn_image_id
+        # NOTE(vish): This could be a cast because we don't do anything
+        #             with the address currently, but I'm leaving it as
+        #             a call to ensure that network setup completes.  We
+        #             will eventually also need to save the address here.
+        if not FLAGS.stub_network:
+            address = rpc.call(context,
+                               self.get_network_topic(context),
+                               {"method": "allocate_fixed_ip",
+                                "args": {"instance_id": instance_id,
+                                         "vpn": is_vpn}})
+
+            self.network_manager.setup_compute_network(context,
+                                                       instance_id)
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
@@ -114,13 +151,13 @@ class ComputeManager(manager.Manager):
                                    'spawning')
 
         try:
-            yield self.driver.spawn(instance_ref)
+            self.driver.spawn(instance_ref)
             now = datetime.datetime.utcnow()
             self.db.instance_update(context,
                                     instance_id,
                                     {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
-            logging.exception("instance %s: Failed to spawn",
+            logging.exception(_("instance %s: Failed to spawn"),
                               instance_ref['name'])
             self.db.instance_set_state(context,
                                        instance_id,
@@ -128,104 +165,167 @@ class ComputeManager(manager.Manager):
 
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
         context = context.elevated()
-        logging.debug("instance %s: terminating", instance_id)
 
         instance_ref = self.db.instance_get(context, instance_id)
+
+        if not FLAGS.stub_network:
+            address = self.db.instance_get_floating_address(context,
+                                                            instance_ref['id'])
+            if address:
+                logging.debug(_("Disassociating address %s") % address)
+                # NOTE(vish): Right now we don't really care if the ip is
+                #             disassociated.  We may need to worry about
+                #             checking this later.
+                rpc.cast(context,
+                         self.get_network_topic(context),
+                         {"method": "disassociate_floating_ip",
+                          "args": {"floating_address": address}})
+
+            address = self.db.instance_get_fixed_address(context,
+                                                         instance_ref['id'])
+            if address:
+                logging.debug(_("Deallocating address %s") % address)
+                # NOTE(vish): Currently, nothing needs to be done on the
+                #             network node until release. If this changes,
+                #             we will need to cast here.
+                self.network_manager.deallocate_fixed_ip(context.elevated(),
+                                                         address)
+
+        logging.debug(_("instance %s: terminating"), instance_id)
+
         volumes = instance_ref.get('volumes', []) or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
-            raise exception.Error('trying to destroy already destroyed'
-                                  ' instance: %s' % instance_id)
-        yield self.driver.destroy(instance_ref)
+            raise exception.Error(_('trying to destroy already destroyed'
+                                    ' instance: %s') % instance_id)
+        self.driver.destroy(instance_ref)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
         self._update_state(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
-            logging.warn('trying to reboot a non-running '
-                         'instance: %s (state: %s excepted: %s)',
+            logging.warn(_('trying to reboot a non-running '
+                           'instance: %s (state: %s excepted: %s)'),
                          instance_ref['internal_id'],
                          instance_ref['state'],
                          power_state.RUNNING)
 
-        logging.debug('instance %s: rebooting', instance_ref['name'])
+        logging.debug(_('instance %s: rebooting'), instance_ref['name'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
-        yield self.driver.reboot(instance_ref)
+        self.network_manager.setup_compute_network(context, instance_id)
+        self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: rescuing',
+        logging.debug(_('instance %s: rescuing'),
                       instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
-        yield self.driver.rescue(instance_ref)
+        self.network_manager.setup_compute_network(context, instance_id)
+        self.driver.rescue(instance_ref)
         self._update_state(context, instance_id)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: unrescuing',
+        logging.debug(_('instance %s: unrescuing'),
                       instance_ref['internal_id'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
                                    'unrescuing')
-        yield self.driver.unrescue(instance_ref)
+        self.driver.unrescue(instance_ref)
         self._update_state(context, instance_id)
+
+    @staticmethod
+    def _update_state_callback(self, context, instance_id, result):
+        """Update instance state when async task completes."""
+        self._update_state(context, instance_id)
+
+    @exception.wrap_exception
+    def pause_instance(self, context, instance_id):
+        """Pause an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: pausing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'pausing')
+        self.driver.pause(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
+    @exception.wrap_exception
+    def unpause_instance(self, context, instance_id):
+        """Unpause a paused instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug('instance %s: unpausing',
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'unpausing')
+        self.driver.unpause(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()
-        logging.debug("instance %s: getting console output", instance_id)
+        logging.debug(_("instance %s: getting console output"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
         return self.driver.get_console_output(instance_ref)
 
-    @defer.inlineCallbacks
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
-        logging.debug("instance %s: attaching volume %s to %s", instance_id,
+        logging.debug(_("instance %s: attaching volume %s to %s"), instance_id,
             volume_id, mountpoint)
         instance_ref = self.db.instance_get(context, instance_id)
-        dev_path = yield self.volume_manager.setup_compute_volume(context,
-                                                                  volume_id)
+        dev_path = self.volume_manager.setup_compute_volume(context,
+                                                            volume_id)
         try:
-            yield self.driver.attach_volume(instance_ref['name'],
-                                            dev_path,
-                                            mountpoint)
+            self.driver.attach_volume(instance_ref['name'],
+                                      dev_path,
+                                      mountpoint)
             self.db.volume_attached(context,
                                     volume_id,
                                     instance_id,
@@ -234,36 +334,35 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            logging.exception("instance %s: attach failed %s, removing",
+            logging.exception(_("instance %s: attach failed %s, removing"),
                               instance_id, mountpoint)
-            yield self.volume_manager.remove_compute_volume(context,
-                                                            volume_id)
+            self.volume_manager.remove_compute_volume(context,
+                                                      volume_id)
             raise exc
-        defer.returnValue(True)
 
-    @defer.inlineCallbacks
+        return True
+
     @exception.wrap_exception
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
         context = context.elevated()
-        logging.debug("instance %s: detaching volume %s",
+        logging.debug(_("instance %s: detaching volume %s"),
                       instance_id,
                       volume_id)
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
         if instance_ref['name'] not in self.driver.list_instances():
-            logging.warn("Detaching volume from unknown instance %s",
+            logging.warn(_("Detaching volume from unknown instance %s"),
                          instance_ref['name'])
         else:
-            yield self.driver.detach_volume(instance_ref['name'],
-                                            volume_ref['mountpoint'])
-        yield self.volume_manager.remove_compute_volume(context, volume_id)
+            self.driver.detach_volume(instance_ref['name'],
+                                      volume_ref['mountpoint'])
+        self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
-        defer.returnValue(True)
+        return True
 
     def compareCPU(self, context, xml):
         """ Check the host cpu is compatible to a cpu given by xml."""
-        logging.warn('good!')
         return self.driver.compareCPU(xml)
 
     def get_memory_mb(self):
@@ -281,7 +380,7 @@ class ComputeManager(manager.Manager):
     def pre_live_migration(self, context, instance_id, dest):
         """Any preparation for live migration at dst host."""
 
-        # 1. getting volume info ( shlf/slot number )
+        # Getting volume info ( shlf/slot number )
         instance_ref = db.instance_get(context, instance_id)
         ec2_id = instance_ref['hostname']
 
@@ -289,40 +388,35 @@ class ComputeManager(manager.Manager):
         try:
             volumes = db.volume_get_by_ec2_id(context, ec2_id)
         except exception.NotFound:
-            logging.debug('%s has no volume.', ec2_id)
+            logging.info(_('%s has no volume.'), ec2_id)
 
         shelf_slots = {}
         for vol in volumes:
             shelf, slot = db.volume_get_shelf_and_blade(context, vol['id'])
             shelf_slots[vol.id] = (shelf, slot)
 
-        # 2. getting fixed ips
+        # Getting fixed ips
         fixed_ip = db.instance_get_fixed_address(context, instance_id)
         if None == fixed_ip:
             exc_type = 'NotFoundError'
-            val = '%s(%s) doesnt have fixed_ip ' % (instance_id, ec2_id)
+            val = _('%s(%s) doesnt have fixed_ip') % (instance_id, ec2_id)
             tb = ''.join(traceback.format_tb(sys.exc_info()[2]))
             raise rpc.RemoteError(exc_type, val, tb)
 
-        # 3. if any volume is mounted, prepare here.
+        # If any volume is mounted, prepare here.
         if 0 != len(shelf_slots):
             pass
 
-        # 4. Creating nova-instance-instance-xxx, this is written to libvirt.xml, 
-        #    and can be seen when executin "virsh nwfiter-list" On destination host,
-        #    this nwfilter is necessary.
-        #    In addition this method is creating security rule ingress rule onto
-        #    destination host.
+        #  Creating nova-instance-instance-xxx, this is written to libvirt.xml,
+        #  and can be seen when executin "virsh nwfiter-list" On destination host,
+        #  this nwfilter is necessary.
+        #  In addition this method is creating security rule ingress rule onto
+        #  destination host.
         self.driver.setup_nwfilters_for_instance(instance_ref)
 
         # 5. bridge settings
-<<<<<<< TREE
-        self.network_manager.setup_compute_network(instance_id)
-        return True
-=======
         self.network_manager.setup_compute_network(context, instance_id)
         return True
->>>>>>> MERGE-SOURCE
 
     def nwfilter_for_instance_exists(self, context, instance_id):
         """Check nova-instance-instance-xxx filter exists """
@@ -332,7 +426,7 @@ class ComputeManager(manager.Manager):
     def live_migration(self, context, instance_id, dest):
         """executes live migration."""
 
-        # 1. ask dest host to preparing live migration.
+        # Asking dest host to preparing live migration.
         compute_topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
         ret = rpc.call(context,
                         compute_topic,
@@ -341,16 +435,16 @@ class ComputeManager(manager.Manager):
                                     'dest': dest}})
 
         if True != ret:
-            logging.error('Live migration failed(err at %s)', dest)
+            logging.error(_('Pre live migration failed(err at %s)'), dest)
             db.instance_set_state(context,
                                   instance_id,
                                   power_state.RUNNING,
                                   'running')
             return
 
-        # waiting for setting up nwfilter(nova-instance-instance-xxx)
+        # Waiting for setting up nwfilter such as, nova-instance-instance-xxx.
         # otherwise, live migration fail.
-        timeout_count = range(FLAGS.live_migration_timeout)
+        timeout_count = range(FLAGS.live_migration_timeout * 2)
         while 0 != len(timeout_count):
             ret = rpc.call(context,
                         compute_topic,
@@ -360,17 +454,14 @@ class ComputeManager(manager.Manager):
                 break
 
             timeout_count.pop()
-            time.sleep(1)
+            time.sleep(0.5)
 
         if not ret:
-            logging.error('Timeout for pre_live_migration at %s', dest)
+            logging.error(_('Timeout for pre_live_migration at %s'), dest)
             return
 
-        # 2. executing live migration
+        # Executing live migration
         # live_migration might raises ProcessExecution error, but
         # nothing must be recovered in this version.
         instance_ref = db.instance_get(context, instance_id)
-        ret = self.driver.live_migration(instance_ref, dest)
-        if not ret:
-            logging.debug('Fail to live migration')
-            return
+        self.driver.live_migration(context, instance_ref, dest)
