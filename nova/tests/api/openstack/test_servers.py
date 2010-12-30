@@ -95,9 +95,9 @@ class ServersTest(unittest.TestCase):
                        fake_compute_api)
         self.stubs.Set(nova.compute.api.ComputeAPI, 'resume',
                        fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, "diagnostics",
+        self.stubs.Set(nova.compute.api.ComputeAPI, "get_diagnostics",
                        fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, "actions",
+        self.stubs.Set(nova.compute.api.ComputeAPI, "get_actions",
                        fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
 
