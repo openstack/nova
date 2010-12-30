@@ -63,7 +63,7 @@ def checks_instance_lock(function):
                 instance_id = args[2]
             locked = ComputeAPI().get_lock(context, instance_id)
             admin = context.is_admin
-        except Excetion as e:
+        except Exception as e:
             logging.error(_("check_instance_lock: arguments: |%s| |%s|"), args,
                                                                         kwargs)
             raise e
