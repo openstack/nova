@@ -47,6 +47,9 @@ def checks_instance_lock(function):
     @functools.wraps(function)
     def decorated_function(*args, **kwargs):
 
+        logging.info(_("check_instance_locks decorating |%s|"), function)
+        logging.info(_("check_instance_locks: arguments: |%s| |%s|"), args,
+                                                                    kwargs)
         # assume worst case (have to declare so they are in scope)
         admin = False
         locked = True
