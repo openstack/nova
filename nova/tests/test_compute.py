@@ -178,12 +178,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.lock_instance(self.context, instance_id)
 
         non_admin_context = context.RequestContext(None, None, False, False)
-        # pause should raise exception on locked instance
-        self.assertRaises(Exception, self.compute.reboot_instance,
-                                     non_admin_context, instance_id)
 
-        # test will fail if exception is raised
+        # decorator for reboot should return False
+        ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
+        self.assertEqual(ret_val, False)
+
+        # decorator for pause should return the result of the function reboot
         self.compute.unlock_instance(self.context, instance_id)
-        self.compute.reboot_instance(non_admin_context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
+        self.assertNotEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)

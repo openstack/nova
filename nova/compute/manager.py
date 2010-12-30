@@ -70,6 +70,7 @@ def checks_instance_lock(function):
         # assume worst case (have to declare so they are in scope)
         admin = False
         locked = True
+        instance_id = False
 
         # grab args to function
         try:
@@ -81,17 +82,20 @@ def checks_instance_lock(function):
                 instance_id = kwargs['instance_id']
             else:
                 instance_id = args[2]
-            locked = args[0].get_locked(context, instance_id)
+            locked = args[0].get_lock(context, instance_id)
             admin = context.is_admin
         except Exception as e:
-            logging.error(_("check_instance_lock: arguments: |%s| |%s|"), args,
+            logging.error(_("check_instance_lock fail! args: |%s| |%s|"), args,
                                                                         kwargs)
             raise e
 
-        # if admin or unlocked call function, otherwise 405
+        # if admin or unlocked call function otherwise log error
         if admin or not locked:
-            return function(*args, **kwargs)
-        raise Exception(_("Instance is locked, cannot execute |%s|"), function)
+            function(*args, **kwargs)
+        else:
+            logging.error(_("Instance |%s| is locked, cannot execute |%s|"),
+                                                      instance_id, function)
+            return False
 
     return decorated_function
 
@@ -405,7 +409,7 @@ class ComputeManager(manager.Manager):
         self.db.instance_update(context, instance_id, {'locked': False})
 
     @exception.wrap_exception
-    def get_locked(self, context, instance_id):
+    def get_lock(self, context, instance_id):
         """
         return the boolean state of (instance with instance_id)'s lock
 
