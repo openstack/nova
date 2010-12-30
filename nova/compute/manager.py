@@ -205,8 +205,8 @@ class ComputeManager(manager.Manager):
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
         self._update_state(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn(_('trying to reboot a non-running '
@@ -220,6 +220,7 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rebooting')
+        self.network_manager.setup_compute_network(context, instance_id)
         self.driver.reboot(instance_ref)
         self._update_state(context, instance_id)
 
@@ -235,6 +236,7 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'rescuing')
+        self.network_manager.setup_compute_network(context, instance_id)
         self.driver.rescue(instance_ref)
         self._update_state(context, instance_id)
 
@@ -289,6 +291,39 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'unpausing')
         self.driver.unpause(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
+    @exception.wrap_exception
+    def suspend_instance(self, context, instance_id):
+        """suspend the instance with instance_id"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: suspending'),
+                      instance_ref['internal_id'])
+        self.db.instance_set_state(context, instance_id,
+                                            power_state.NOSTATE,
+                                            'suspending')
+        self.driver.suspend(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
+
+    @exception.wrap_exception
+    def resume_instance(self, context, instance_id):
+        """resume the suspended instance with instance_id"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: resuming'), instance_ref['internal_id'])
+        self.db.instance_set_state(context, instance_id,
+                                            power_state.NOSTATE,
+                                            'resuming')
+        self.driver.resume(instance_ref,
             lambda result: self._update_state_callback(self,
                                                        context,
                                                        instance_id,
