@@ -117,8 +117,7 @@ class LdapDriver(object):
 
     def get_project(self, pid):
         """Retrieve project by id"""
-        dn = 'cn=%s,%s' % (pid,
-                           FLAGS.ldap_project_subtree)
+        dn = self.__project_to_dn(pid)
         attr = self.__find_object(dn, LdapDriver.project_pattern)
         return self.__to_project(attr)
 
@@ -226,7 +225,8 @@ class LdapDriver(object):
             ('description', [description]),
             (LdapDriver.project_attribute, [manager_dn]),
             ('member', members)]
-        self.conn.add_s('cn=%s,%s' % (name, FLAGS.ldap_project_subtree), attr)
+        dn = self.__project_to_dn(name, search=False)
+        self.conn.add_s(dn, attr)
         return self.__to_project(dict(attr))
 
     def modify_project(self, project_id, manager_uid=None, description=None):
@@ -244,23 +244,22 @@ class LdapDriver(object):
                          manager_dn))
         if description:
             attr.append((self.ldap.MOD_REPLACE, 'description', description))
-        self.conn.modify_s('cn=%s,%s' % (project_id,
-                                         FLAGS.ldap_project_subtree),
-                           attr)
+        dn = self.__project_to_dn(project_id)
+        self.conn.modify_s(dn, attr)
 
     def add_to_project(self, uid, project_id):
         """Add user to project"""
-        dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+        dn = self.__project_to_dn(project_id)
         return self.__add_to_group(uid, dn)
 
     def remove_from_project(self, uid, project_id):
         """Remove user from project"""
-        dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+        dn = self.__project_to_dn(project_id)
         return self.__remove_from_group(uid, dn)
 
     def is_in_project(self, uid, project_id):
         """Check if user is in project"""
-        dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+        dn = self.__project_to_dn(project_id)
         return self.__is_in_group(uid, dn)
 
     def has_role(self, uid, role, project_id=None):
@@ -300,7 +299,7 @@ class LdapDriver(object):
                     roles.append(role)
             return roles
         else:
-            project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+            project_dn = self.__project_to_dn(project_id)
             query = ('(&(&(objectclass=groupOfNames)(!%s))(member=%s))' %
                      (LdapDriver.project_pattern, self.__uid_to_dn(uid)))
             roles = self.__find_objects(project_dn, query)
@@ -333,7 +332,7 @@ class LdapDriver(object):
 
     def delete_project(self, project_id):
         """Delete a project"""
-        project_dn = 'cn=%s,%s' % (project_id, FLAGS.ldap_project_subtree)
+        project_dn = self.__project_to_dn(project_id)
         self.__delete_roles(project_dn)
         self.__delete_group(project_dn)
 
@@ -365,9 +364,10 @@ class LdapDriver(object):
 
     def __get_ldap_user(self, uid):
         """Retrieve LDAP user entry by id"""
-        attr = self.__find_object(self.__uid_to_dn(uid),
-                                  '(objectclass=novaUser)')
-        return attr
+        dn = FLAGS.ldap_user_subtree
+        query = ('(&(%s=%s)(objectclass=novaUser))' %
+                 (FLAGS.ldap_user_id_attribute, uid))
+        return self.__find_object(dn, query)
 
     def __find_object(self, dn, query=None, scope=None):
         """Find an object by dn and query"""
@@ -418,15 +418,13 @@ class LdapDriver(object):
         query = '(objectclass=groupOfNames)'
         return self.__find_object(dn, query) is not None
 
-    @staticmethod
-    def __role_to_dn(role, project_id=None):
+    def __role_to_dn(self, role, project_id=None):
         """Convert role to corresponding dn"""
         if project_id is None:
             return FLAGS.__getitem__("ldap_%s" % role).value
         else:
-            return 'cn=%s,cn=%s,%s' % (role,
-                                       project_id,
-                                       FLAGS.ldap_project_subtree)
+            project_dn = self.__project_to_dn(project_id)
+            return 'cn=%s,%s' % (role, project_dn)
 
     def __create_group(self, group_dn, name, uid,
                        description, member_uids=None):
@@ -532,6 +530,42 @@ class LdapDriver(object):
         for role_dn in self.__find_role_dns(project_dn):
             self.__delete_group(role_dn)
 
+    def __to_project(self, attr):
+        """Convert ldap attributes to Project object"""
+        if attr is None:
+            return None
+        member_dns = attr.get('member', [])
+        return {
+            'id': attr['cn'][0],
+            'name': attr['cn'][0],
+            'project_manager_id':
+                self.__dn_to_uid(attr[LdapDriver.project_attribute][0]),
+            'description': attr.get('description', [None])[0],
+            'member_ids': [self.__dn_to_uid(x) for x in member_dns]}
+
+    def __uid_to_dn(self, uid, search=True):
+        """Convert uid to dn"""
+        # By default return a generated DN
+        userdn = (FLAGS.ldap_user_id_attribute + '=%s,%s'
+                  % (uid, FLAGS.ldap_user_subtree))
+        if search:
+            query = ('%s=%s' % (FLAGS.ldap_user_id_attribute, uid))
+            user = self.__find_objects(FLAGS.ldap_user_subtree, query)
+            if len(user) > 0:
+                userdn = user['dn']
+        return userdn
+
+    def __project_to_dn(self, pid, search=True):
+        """Convert pid to dn"""
+        # By default return a generated DN
+        projectdn = ('cn=%s,%s' % (pid, FLAGS.ldap_project_subtree))
+        if search:
+            query = ('(&(cn=%s)%s))' % (pid, LdapDriver.project_pattern))
+            project = self.__find_objects(FLAGS.ldap_project_subtree, query)
+            if len(project) > 0:
+                projectdn = project['dn']
+        return projectdn
+
     @staticmethod
     def __to_user(attr):
         """Convert ldap attributes to User object"""
@@ -548,30 +582,10 @@ class LdapDriver(object):
         else:
             return None
 
-    def __to_project(self, attr):
-        """Convert ldap attributes to Project object"""
-        if attr is None:
-            return None
-        member_dns = attr.get('member', [])
-        return {
-            'id': attr['cn'][0],
-            'name': attr['cn'][0],
-            'project_manager_id':
-                self.__dn_to_uid(attr[LdapDriver.project_attribute][0]),
-            'description': attr.get('description', [None])[0],
-            'member_ids': [self.__dn_to_uid(x) for x in member_dns]}
-
     @staticmethod
     def __dn_to_uid(dn):
         """Convert user dn to uid"""
         return dn.split(',')[0].split('=')[1]
-
-    @staticmethod
-    def __uid_to_dn(uid):
-        """Convert uid to dn"""
-        return (FLAGS.ldap_user_id_attribute + '=%s,%s'
-                % (uid, FLAGS.ldap_user_subtree))
-
 
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
