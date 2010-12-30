@@ -163,6 +163,14 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.get_actions(self.context, instance_id)
 
+    def test_snapshot(self):
+        """Ensure instance can be snapshotted"""
+        instance_id = self._create_instance()
+        name = "myfakesnapshot"
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.snapshot_instance(self.context, instance_id, name)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_console_output(self):
         """Make sure we can get console output from instance"""
         instance_id = self._create_instance()
