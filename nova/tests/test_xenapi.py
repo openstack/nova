@@ -156,10 +156,11 @@ class XenAPIVMTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
-
-        fake.reset()
-        fakes.stub_out_db_instance_api(self.stubs)
-        fake.create_network('fake', FLAGS.flat_network_bridge)
+        xenapi_fake.reset()
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.get_connection(False)
         self.values = {
             "name": 1,
             "id": 1,
@@ -170,12 +171,6 @@ class XenAPIVMTestCase(test.TestCase):
             "ramdisk_id": 3,
             "instance_type": "m1.large",
             "mac_address": "aa:bb:cc:dd:ee:ff"}
-
-        xenapi_fake.reset()
-        db_fakes.stub_out_db_instance_api(self.stubs)
-        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
@@ -228,11 +223,6 @@ class XenAPIVMTestCase(test.TestCase):
         check()
 
     def test_spawn(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        conn = xenapi_conn.get_connection(False)
-        instance = db.instance_create(self.values)
-        conn.spawn(instance)
-
         instance = self._create_instance()
 
         def check():
@@ -275,15 +265,6 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
-        values = {'name': 1, 'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
-        instance = db.instance_create(values)
+        instance = db.instance_create(self.values)
         self.conn.spawn(instance)
         return instance
