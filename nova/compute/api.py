@@ -23,7 +23,6 @@ Handles all API requests relating to instances (guest vms).
 import datetime
 import logging
 import time
-import functools
 
 from nova import db
 from nova import exception
@@ -35,48 +34,6 @@ from nova.compute import instance_types
 from nova.db import base
 
 FLAGS = flags.FLAGS
-
-
-def checks_instance_lock(function):
-    """
-    decorator used for preventing action against locked instances
-    unless, of course, you happen to be admin
-
-    """
-
-    @functools.wraps(function)
-    def decorated_function(*args, **kwargs):
-
-        logging.info(_("check_instance_locks decorating |%s|"), function)
-        logging.info(_("check_instance_locks: arguments: |%s| |%s|"), args,
-                                                                    kwargs)
-        # assume worst case (have to declare so they are in scope)
-        admin = False
-        locked = True
-
-        # grab args to function
-        try:
-            if 'context' in kwargs:
-                context = kwargs['context']
-            else:
-                context = args[1]
-            if 'instance_id' in kwargs:
-                instance_id = kwargs['instance_id']
-            else:
-                instance_id = args[2]
-            locked = ComputeAPI().get_lock(context, instance_id)
-            admin = context.is_admin
-        except Exception as e:
-            logging.error(_("check_instance_lock: arguments: |%s| |%s|"), args,
-                                                                        kwargs)
-            raise e
-
-        # if admin or unlocked call function, otherwise 405
-        if admin or not locked:
-            return function(*args, **kwargs)
-        raise Exception(_("Instance is locked, cannot execute |%s|"), function)
-
-    return decorated_function
 
 
 def generate_default_hostname(internal_id):
@@ -241,7 +198,6 @@ class ComputeAPI(base.Base):
                       'project_id': context.project_id}
             db.security_group_create(context, values)
 
-    @checks_instance_lock
     def update_instance(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
@@ -256,7 +212,6 @@ class ComputeAPI(base.Base):
         """
         return self.db.instance_update(context, instance_id, kwargs)
 
-    @checks_instance_lock
     def delete_instance(self, context, instance_id):
         logging.debug("Going to try and terminate %d" % instance_id)
         try:
@@ -303,7 +258,6 @@ class ComputeAPI(base.Base):
     def get_instance(self, context, instance_id):
         return self.db.instance_get_by_internal_id(context, instance_id)
 
-    @checks_instance_lock
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -313,7 +267,6 @@ class ComputeAPI(base.Base):
                  {"method": "reboot_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def pause(self, context, instance_id):
         """Pause the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -323,7 +276,6 @@ class ComputeAPI(base.Base):
                  {"method": "pause_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -333,7 +285,6 @@ class ComputeAPI(base.Base):
                  {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -343,7 +294,6 @@ class ComputeAPI(base.Base):
                  {"method": "suspend_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -353,7 +303,6 @@ class ComputeAPI(base.Base):
                  {"method": "resume_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -363,7 +312,6 @@ class ComputeAPI(base.Base):
                  {"method": "rescue_instance",
                   "args": {"instance_id": instance['id']}})
 
-    @checks_instance_lock
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
