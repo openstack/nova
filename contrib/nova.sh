@@ -78,6 +78,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
     sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
     sudo apt-get install -y lvm2 iscsitarget open-iscsi
+    sudo apt-get install -y socat
     echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
