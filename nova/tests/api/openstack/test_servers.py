@@ -320,34 +320,6 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
-    def test_lock(self):
-        FLAGS.allow_admin_api = True
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/pause')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-
-        # part one: stubs it to be locked and attempt pause expecting exception
-        def get_locked(self, context, id):
-            return True
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_locked)
-
-        # pause should raise exception on locked instance
-        self.assertRaises(Exception, req.get_response, nova.api.API('os'))
-
-        # Part two: stubs it to be unlocked and attempt pause expecting success
-        def get_unlocked(self, context, id):
-            return False
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_unlocked)
-
-        res = req.get_response(nova.api.API('os'))
-
-        # expecting no exception, test will fail if exception is raised
-        res = req.get_response(nova.api.API('os'))
-
 
 if __name__ == "__main__":
     unittest.main()
