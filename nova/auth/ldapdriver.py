@@ -587,6 +587,7 @@ class LdapDriver(object):
         """Convert user dn to uid"""
         return dn.split(',')[0].split('=')[1]
 
+
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
