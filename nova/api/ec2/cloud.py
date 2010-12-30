@@ -138,7 +138,7 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        instance_ref = db.fixed_ip_get_instance(ctxt, address)
+        instance_ref = self.compute_api.get(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
@@ -555,13 +555,9 @@ class CloudController(object):
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, reservation_id=None):
+    def _format_instances(self, context, **kwargs):
         reservations = {}
-        if reservation_id:
-            instances = db.instance_get_all_by_reservation(context,
-                                                           reservation_id)
-        else:
-            instances = self.compute_api.get(context)
+        instances = self.compute_api.get(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -747,8 +743,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2_id_to_id(ec2_id)
-            inst = self.compute_api.get(context, instance_id)
-            db.instance_update(context, inst['id'], kwargs)
+            self.compute_api.update(context, instance_id, **kwargs)
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):

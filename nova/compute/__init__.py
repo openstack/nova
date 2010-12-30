@@ -243,12 +243,18 @@ class API(base.Base):
         else:
             self.db.instance_destroy(context, instance['id'])
 
-    def get(self, context, instance_id=None, project_id=None):
-        """Get one or more instances, possibly filtered by project
-        ID or user ID. If there is no filter and the context is
+    def get(self, context, instance_id=None, project_id=None,
+            reservation_id=None, fixed_ip=None):
+        """Get one or more instances, possibly filtered by one of the
+        given parameters. If there is no filter and the context is
         an admin, it will retreive all instances in the system."""
         if instance_id is not None:
             return self.db.instance_get_by_id(context, instance_id)
+        if reservation_id is not None:
+            return self.db.instance_get_all_by_reservation(context,
+                                                           reservation_id)
+        if fixed_ip is not None:
+            return self.db.fixed_ip_get_instance(context, fixed_ip)
         if project_id or not context.is_admin:
             if not context.project:
                 return self.db.instance_get_all_by_user(context,
