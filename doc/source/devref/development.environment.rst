@@ -93,7 +93,7 @@ Then you can do cleaning work or hack hack hack with a branched named cleaning.
 Contributing Your Work
 ----------------------
 
-Once your work is complete you may wish to contribute it to the project.  Add your name and email address to the `Authors` file (as well as the `.mailmap` file if you use multiple email addresses), and push the branch to Launchpad::
+Once your work is complete you may wish to contribute it to the project.  Add your name and email address to the `Authors` file, and also to the `.mailmap` file if you use multiple email addresses. Your contributions can not be merged into trunk unless you are listed in the Authors file.  Now, push the branch to Launchpad::
 
     bzr push lp:~launchpaduserid/nova/cleaning
 
