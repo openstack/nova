@@ -313,7 +313,6 @@ class Executor(wsgi.Application):
             resp.body = str(result)
             return resp
 
-
     def _error(self, req, code, message):
         logging.error("%s: %s", code, message)
         resp = webob.Response()
@@ -324,6 +323,7 @@ class Executor(wsgi.Application):
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>?</RequestID></Response>' % (code, message))
         return resp
+
 
 class Versions(wsgi.Application):
 
@@ -344,23 +344,28 @@ class Versions(wsgi.Application):
         ]
         return ''.join('%s\n' % v for v in versions)
 
+
 def authenticate_factory(global_args, **local_args):
     def authenticator(app):
         return Authenticate(app)
     return authenticator
+
 
 def router_factory(global_args, **local_args):
     def router(app):
         return Router(app)
     return router
 
+
 def authorizer_factory(global_args, **local_args):
     def authorizer(app):
         return Authorizer(app)
     return authorizer
 
+
 def executor_factory(global_args, **local_args):
     return Executor()
+
 
 def versions_factory(global_args, **local_args):
     return Versions()

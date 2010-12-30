@@ -80,5 +80,6 @@ class MetadataRequestHandler(object):
             raise webob.exc.HTTPNotFound()
         return self.print_data(data)
 
+
 def metadata_factory(global_args, **local_args):
     return MetadataRequestHandler()

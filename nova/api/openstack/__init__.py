@@ -129,5 +129,6 @@ class Versions(wsgi.Application):
 def router_factory(global_cof, **local_conf):
     return APIRouter()
 
+
 def versions_factory(global_conf, **local_conf):
     return Versions()
