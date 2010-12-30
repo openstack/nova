@@ -84,12 +84,12 @@ def run_app(paste_config_file):
     config = load_configuration(paste_config_file)
     LOG.debug(_("Configuration: %r"), config)
     server = wsgi.Server()
-    ip = config.get('host', None)
+    ip = config.get('host', '0.0.0.0')
     for api in API_ENDPOINTS:
         port = config.get("%s_port" % api, None)
         if not port:
             continue
-        host = config.get("%s_host" % api, None) or ip or '0.0.0.0'
+        host = config.get("%s_host" % api, ip)
         launch_api(configfile, api, server, port, host)
     LOG.debug(_("All api servers launched, now waiting"))
     server.wait()
