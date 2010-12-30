@@ -339,7 +339,7 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
 
         logging.debug(_('instance %s: locking'), instance_ref['internal_id'])
-        self.db.instance_set_lock(context, instance_id, True)
+        self.db.instance_update(context, instance_id, {'locked': True})
 
     @exception.wrap_exception
     def unlock_instance(self, context, instance_id):
@@ -351,7 +351,7 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
 
         logging.debug(_('instance %s: unlocking'), instance_ref['internal_id'])
-        self.db.instance_set_lock(context, instance_id, False)
+        self.db.instance_update(context, instance_id, {'locked': False})
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
