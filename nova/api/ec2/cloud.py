@@ -36,7 +36,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import quota
+from nova import network
 from nova import rpc
 from nova import utils
 from nova import volume
@@ -87,11 +87,10 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self.network_manager = utils.import_object(FLAGS.network_manager)
         self.image_service = utils.import_object(FLAGS.image_service)
+        self.network_api = network.API()
         self.volume_api = volume.API()
-        self.compute_api = compute.API(self.network_manager,
-                                       self.image_service,
+        self.compute_api = compute.API(self.image_service, self.network_api,
                                        self.volume_api)
         self.setup()
 
@@ -629,64 +628,20 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
-        # check quota
-        if quota.allowed_floating_ips(context, 1) < 1:
-            logging.warn(_("Quota exceeeded for %s, tried to allocate "
-                           "address"),
-                         context.project_id)
-            raise quota.QuotaError(_("Address quota exceeded. You cannot "
-                                   "allocate any more addresses"))
-        # NOTE(vish): We don't know which network host should get the ip
-        #             when we allocate, so just send it to any one.  This
-        #             will probably need to move into a network supervisor
-        #             at some point.
-        public_ip = rpc.call(context,
-                             FLAGS.network_topic,
-                             {"method": "allocate_floating_ip",
-                              "args": {"project_id": context.project_id}})
+        public_ip = self.network_api.allocate_floating_ip(context)
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): We don't know which network host should get the ip
-        #             when we deallocate, so just send it to any one.  This
-        #             will probably need to move into a network supervisor
-        #             at some point.
-        rpc.cast(context,
-                 FLAGS.network_topic,
-                 {"method": "deallocate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address']}})
+        self.network_api.release_floating_ip(context, public_ip)
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance_id = ec2_id_to_id(instance_id)
-        instance_ref = self.compute_api.get(context, instance_id)
-        fixed_address = db.instance_get_fixed_address(context,
-                                                      instance_ref['id'])
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): Perhaps we should just pass this on to compute and
-        #             let compute communicate with network.
-        network_topic = self.compute_api.get_network_topic(context,
-                                                           instance_id)
-        rpc.cast(context,
-                 network_topic,
-                 {"method": "associate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address'],
-                           "fixed_address": fixed_address}})
+        self.compute_api.associate_floating_ip(context, instance_id, public_ip)
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): Get the topic from the host name of the network of
-        #             the associated fixed ip.
-        if not floating_ip_ref.get('fixed_ip'):
-            raise exception.ApiError('Address is not associated.')
-        host = floating_ip_ref['fixed_ip']['network']['host']
-        topic = db.queue_get_for(context, FLAGS.network_topic, host)
-        rpc.cast(context,
-                 topic,
-                 {"method": "disassociate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address']}})
+        self.network_api.disassociate_floating_ip(context, public_ip)
         return {'disassociateResponse': ["Address disassociated."]}
 
     def run_instances(self, context, **kwargs):

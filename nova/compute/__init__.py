@@ -27,6 +27,7 @@ import time
 from nova import db
 from nova import exception
 from nova import flags
+from nova import network
 from nova import quota
 from nova import rpc
 from nova import utils
@@ -45,14 +46,14 @@ def generate_default_hostname(instance_id):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, network_manager=None, image_service=None,
-                 volume_api=None, **kwargs):
-        if not network_manager:
-            network_manager = utils.import_object(FLAGS.network_manager)
-        self.network_manager = network_manager
+    def __init__(self, image_service=None, network_api=None, volume_api=None,
+                 **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
+        if not network_api:
+            network_api = network.API()
+        self.network_api = network_api
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
@@ -83,8 +84,9 @@ class API(base.Base):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
+        type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count,
-                                                instance_type)
+                                                type_data['vcpus'])
         if num_instances < min_count:
             logging.warn("Quota exceeeded for %s, tried to run %s instances",
                          context.project_id, min_count)
@@ -127,7 +129,6 @@ class API(base.Base):
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,
@@ -336,3 +337,8 @@ class API(base.Base):
                   "args": {"instance_id": instance['id'],
                            "volume_id": volume_id}})
         return instance
+
+    def associate_floating_ip(self, context, instance_id, address):
+        instance = self.get(context, instance_id)
+        self.network_api.associate_floating_ip(context, address,
+                                               instance['fixed_ip'])
