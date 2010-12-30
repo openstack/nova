@@ -110,6 +110,12 @@ def stub_out_networking(stubs):
     stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
 
 
+def stub_out_compute_api_snapshot(stubs):
+    def snapshot(self, context, instance_id, name):
+        return 123
+    stubs.Set(nova.compute.api.ComputeAPI, 'snapshot', snapshot)
+
+
 def stub_out_glance(stubs, initial_fixtures=[]):
 
     class FakeParallaxClient:
@@ -211,6 +217,9 @@ class FakeAuthManager(object):
         for k, v in FakeAuthManager.auth_data.iteritems():
             if v.id == uid:
                 return v
+        return None
+
+    def get_project(self, pid):
         return None
 
     def get_user_from_access_key(self, key):
