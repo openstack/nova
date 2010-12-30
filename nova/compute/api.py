@@ -63,9 +63,11 @@ def checks_instance_lock(function):
                 instance_id = args[2]
             locked = ComputeAPI().get_lock(context, instance_id)
             admin = context.is_admin
-        except:
+        except Excetion as e:
             logging.error(_("check_instance_lock: arguments: |%s| |%s|"), args,
                                                                         kwargs)
+            raise e
+
         # if admin or unlocked call function, otherwise 405
         if admin or not locked:
             return function(*args, **kwargs)
