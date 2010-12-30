@@ -222,9 +222,9 @@ class Controller(wsgi.Controller):
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.diagnostics(ctxt, id)
+        return self.compute_api.get_diagnostics(ctxt, id)
 
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.actions(ctxt, id)
+        return self.compute_api.get_actions(ctxt, id)
