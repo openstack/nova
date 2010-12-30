@@ -175,17 +175,17 @@ class ComputeTestCase(test.TestCase):
         """ensure locked instance cannot be changed"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
-        self.compute.lock_instance(self.context, instance_id)
 
         non_admin_context = context.RequestContext(None, None, False, False)
 
-        # decorator for reboot should return False
+        # decorator should return False (fail) with locked nonadmin context
+        self.compute.lock_instance(self.context, instance_id)
         ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
         self.assertEqual(ret_val, False)
 
-        # decorator for pause should return the result of the function reboot
+        # decorator should return None (success) with unlocked nonadmin context
         self.compute.unlock_instance(self.context, instance_id)
         ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
-        self.assertNotEqual(ret_val, None)
+        self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
