@@ -411,8 +411,7 @@ class ComputeManager(manager.Manager):
 
         """
         context = context.elevated()
-        logging.debug(_('instance %s: getting locked'),
-                      instance_ref['internal_id'])
+        logging.debug(_('instance %s: getting locked state'), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
 
