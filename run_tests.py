@@ -65,4 +65,4 @@ if __name__ == '__main__':
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c)
-    sys.exit(core.run(config=c, testRunner=runner))
+    sys.exit(not core.run(config=c, testRunner=runner))
