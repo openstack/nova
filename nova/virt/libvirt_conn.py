@@ -583,9 +583,6 @@ class LibvirtConnection(object):
     def get_diagnostics(self, instance_name):
         raise exception.APIError("diagnostics are not supported for libvirt")
 
-    def get_actions(self, instance_name):
-        raise exception.APIError("actions are not supported for libvirt")
-
     def get_disks(self, instance_name):
         """
         Note that this function takes an instance name, not an Instance, so

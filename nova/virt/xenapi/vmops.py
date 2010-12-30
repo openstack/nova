@@ -226,16 +226,6 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 
-    def get_actions(self, instance):
-        """Return VM action history"""
-        vm = VMHelper.lookup(self._session, instance.name)
-        if vm is None:
-            raise exception.NotFound(_("Instance not found %s") %
-                instance.name)
-        return db.instance_get_actions(
-            context.get_admin_context(),
-            instance.id)
-
     def get_console_output(self, instance):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!

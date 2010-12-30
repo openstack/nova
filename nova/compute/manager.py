@@ -299,7 +299,6 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this server."""
-        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref["state"] == power_state.RUNNING:
@@ -310,12 +309,13 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def get_actions(self, context, instance_id):
         """Retrieve actions for an instance on this server."""
-        context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
         logging.debug(_("instance %s: retrieving actions"),
             instance_ref["internal_id"])
-        return self.driver.get_actions(instance_ref)
+        return self.db.instance_get_actions(
+            context,
+            instance_id)
 
     def suspend_instance(self, context, instance_id):
         """suspend the instance with instance_id"""
