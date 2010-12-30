@@ -321,47 +321,32 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(self.server_delete_called, True)
 
     def test_lock(self):
-        # part one: stubs it to be locked and test pause
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/pause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+
+        # part one: stubs it to be locked and attempt pause expecting exception
         def get_locked(self, context, id):
             return True
-
-        # set get to return locked
         self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_locked)
 
-        # attempt to pause
-        FLAGS.allow_admin_api = True
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/pause')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(nova.api.API('os'))
+        # pause should raise exception on locked instance
+        self.assertRaises(Exception, req.get_response, nova.api.API('os'))
 
-        # expect a 404 since it was locked
-        self.assertEqual(res.status_int, 405)
-
-        # Part two: stubs it to be unlocked and test pause
+        # Part two: stubs it to be unlocked and attempt pause expecting success
         def get_unlocked(self, context, id):
             return False
-
-        # set get to return locked
         self.stubs.Set(nova.compute.api.ComputeAPI, 'get_lock', get_unlocked)
 
-        # attempt to pause
-        FLAGS.allow_admin_api = True
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/pause')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
         res = req.get_response(nova.api.API('os'))
 
-        # expect a 202 since it was unlocked
-        self.assertEqual(res.status_int, 202)
+        # expecting no exception, test will fail if exception is raised
+        res = req.get_response(nova.api.API('os'))
 
 
 if __name__ == "__main__":
