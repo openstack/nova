@@ -38,12 +38,12 @@ from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import api as compute_api
 from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 InvalidInputException = exception.InvalidInputException
 
@@ -89,8 +89,10 @@ class CloudController(object):
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.image_service = utils.import_object(FLAGS.image_service)
+        self.volume_api = volume.API()
         self.compute_api = compute_api.ComputeAPI(self.network_manager,
-                                                  self.image_service)
+                                                  self.image_service,
+                                                  self.volume_api)
         self.setup()
 
     def __str__(self):
@@ -451,15 +453,10 @@ class CloudController(object):
                 "output": base64.b64encode(output)}
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
-        if context.user.is_admin():
-            volumes = db.volume_get_all(context)
-        else:
-            volumes = db.volume_get_all_by_project(context, context.project_id)
-
+        volumes = self.volume_api.get(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
                    if volume_id is None or v['id'] in volume_id]
-
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
@@ -498,95 +495,17 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, size, **kwargs):
-        # check quota
-        if quota.allowed_volumes(context, 1, size) < 1:
-            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
-                         context.project_id, size)
-            raise quota.QuotaError("Volume quota exceeded. You cannot "
-                                   "create a volume of size %s" % size)
-        vol = {}
-        vol['size'] = size
-        vol['user_id'] = context.user.id
-        vol['project_id'] = context.project_id
-        vol['availability_zone'] = FLAGS.storage_availability_zone
-        vol['status'] = "creating"
-        vol['attach_status'] = "detached"
-        vol['display_name'] = kwargs.get('display_name')
-        vol['display_description'] = kwargs.get('display_description')
-        volume_ref = db.volume_create(context, vol)
-
-        rpc.cast(context,
-                 FLAGS.scheduler_topic,
-                 {"method": "create_volume",
-                  "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume_ref['id']}})
-
+        volume = self.volume_api.create(context, size,
+                                        kwargs.get('display_name'),
+                                        kwargs.get('display_description'))
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
         return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
-    def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume_ref = db.volume_get(context, volume_id)
-        if not re.match("^/dev/[a-z]d[a-z]+$", device):
-            raise exception.ApiError(_("Invalid device specified: %s. "
-                                     "Example device: /dev/vdb") % device)
-        # TODO(vish): abstract status checking?
-        if volume_ref['status'] != "available":
-            raise exception.ApiError(_("Volume status must be available"))
-        if volume_ref['attach_status'] == "attached":
-            raise exception.ApiError(_("Volume is already attached"))
-        instance_id = ec2_id_to_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, instance_id)
-        host = instance_ref['host']
-        rpc.cast(context,
-                 db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "attach_volume",
-                  "args": {"volume_id": volume_ref['id'],
-                           "instance_id": instance_ref['id'],
-                           "mountpoint": device}})
-        return {'attachTime': volume_ref['attach_time'],
-                'device': volume_ref['mountpoint'],
-                'instanceId': instance_ref['id'],
-                'requestId': context.request_id,
-                'status': volume_ref['attach_status'],
-                'volumeId': volume_ref['id']}
-
-    def detach_volume(self, context, volume_id, **kwargs):
-        volume_ref = db.volume_get(context, volume_id)
-        instance_ref = db.volume_get_instance(context.elevated(),
-                                              volume_ref['id'])
-        if not instance_ref:
-            raise exception.ApiError(_("Volume isn't attached to anything!"))
-        # TODO(vish): abstract status checking?
-        if volume_ref['status'] == "available":
-            raise exception.ApiError(_("Volume is already detached"))
-        try:
-            host = instance_ref['host']
-            rpc.cast(context,
-                     db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "detach_volume",
-                      "args": {"instance_id": instance_ref['id'],
-                               "volume_id": volume_ref['id']}})
-        except exception.NotFound:
-            # If the instance doesn't exist anymore,
-            # then we need to call detach blind
-            db.volume_detached(context)
-        instance_id = instance_ref['id']
-        ec2_id = id_to_ec2_id(instance_id)
-        return {'attachTime': volume_ref['attach_time'],
-                'device': volume_ref['mountpoint'],
-                'instanceId': instance_id,
-                'requestId': context.request_id,
-                'status': volume_ref['attach_status'],
-                'volumeId': volume_ref['id']}
-
-    def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
-            return None
-        if not isinstance(lst, list):
-            lst = [lst]
-        return [{label: x} for x in lst]
+    def delete_volume(self, context, volume_id, **kwargs):
+        self.volume_api.delete(context, volume_id)
+        return True
 
     def update_volume(self, context, volume_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
@@ -595,8 +514,35 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            db.volume_update(context, volume_id, kwargs)
+            self.volume_api.update(context, volume_id, kwargs)
         return True
+
+    def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        self.compute_api.attach_volume(context, instance_id, volume_id, device)
+        volume = self.volume_api.get(context, volume_id)
+        return {'attachTime': volume['attach_time'],
+                'device': volume['mountpoint'],
+                'instanceId': instance_id,
+                'requestId': context.request_id,
+                'status': volume['attach_status'],
+                'volumeId': volume_id}
+
+    def detach_volume(self, context, volume_id, **kwargs):
+        volume = self.volume_api.get(context, volume_id)
+        instance = self.compute_api.detach_volume(context, volume_id)
+        return {'attachTime': volume['attach_time'],
+                'device': volume['mountpoint'],
+                'instanceId': id_to_ec2_id(instance['id']),
+                'requestId': context.request_id,
+                'status': volume['attach_status'],
+                'volumeId': volume_id}
+
+    def _convert_to_set(self, lst, label):
+        if lst == None or lst == []:
+            return None
+        if not isinstance(lst, list):
+            lst = [lst]
+        return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
@@ -803,21 +749,6 @@ class CloudController(object):
             instance_id = ec2_id_to_id(ec2_id)
             inst = self.compute_api.get_instance(context, instance_id)
             db.instance_update(context, inst['id'], kwargs)
-        return True
-
-    def delete_volume(self, context, volume_id, **kwargs):
-        # TODO: return error if not authorized
-        volume_ref = db.volume_get(context, volume_id)
-        if volume_ref['status'] != "available":
-            raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
-        db.volume_update(context, volume_ref['id'], {'status': 'deleting',
-                                                     'terminated_at': now})
-        host = volume_ref['host']
-        rpc.cast(context,
-                 db.queue_get_for(context, FLAGS.volume_topic, host),
-                            {"method": "delete_volume",
-                             "args": {"volume_id": volume_ref['id']}})
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):

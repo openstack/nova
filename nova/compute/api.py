@@ -30,6 +30,7 @@ from nova import flags
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import instance_types
 from nova.db import base
 
@@ -44,13 +45,17 @@ def generate_default_hostname(instance_id):
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, network_manager=None, image_service=None, **kwargs):
+    def __init__(self, network_manager=None, image_service=None,
+                 volume_api=None, **kwargs):
         if not network_manager:
             network_manager = utils.import_object(FLAGS.network_manager)
         self.network_manager = network_manager
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
+        if not volume_api:
+            volume_api = volume.API()
+        self.volume_api = volume_api
         super(ComputeAPI, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
@@ -298,3 +303,30 @@ class ComputeAPI(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
                   "args": {"instance_id": instance['id']}})
+
+    def attach_volume(self, context, instance_id, volume_id, device):
+        if not re.match("^/dev/[a-z]d[a-z]+$", device):
+            raise exception.ApiError(_("Invalid device specified: %s. "
+                                     "Example device: /dev/vdb") % device)
+        self.volume_api.check_attach(context, volume_id)
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"volume_id": volume_id,
+                           "instance_id": instance_id,
+                           "mountpoint": device}})
+
+    def detach_volume(self, context, volume_id):
+        instance = self.db.volume_get_instance(context.elevated(), volume_id)
+        if not instance:
+            raise exception.ApiError(_("Volume isn't attached to anything!"))
+        self.volume_api.check_detach(context, volume_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "detach_volume",
+                  "args": {"instance_id": instance['id'],
+                           "volume_id": volume_id}})
+        return instance

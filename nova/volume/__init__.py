@@ -17,15 +17,84 @@
 #    under the License.
 
 """
-:mod:`nova.volume` -- Nova Block Storage
-=====================================================
-
-.. automodule:: nova.volume
-   :platform: Unix
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
+Handles all requests relating to volumes.
 """
+
+import datetime
+import logging
+
+from nova import db
+from nova import exception
+from nova import flags
+from nova import quota
+from nova import rpc
+from nova.db import base
+
+FLAGS = flags.FLAGS
+flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
+
+
+class API(base.Base):
+    """API for interacting with the volume manager."""
+
+    def create(self, context, size, name, description):
+        if quota.allowed_volumes(context, 1, size) < 1:
+            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
+                         context.project_id, size)
+            raise quota.QuotaError("Volume quota exceeded. You cannot "
+                                   "create a volume of size %s" % size)
+
+        options = {
+            'size': size,
+            'user_id': context.user.id,
+            'project_id': context.project_id,
+            'availability_zone': FLAGS.storage_availability_zone,
+            'status': "creating",
+            'attach_status': "detached",
+            'display_name': name,
+            'display_description': description}
+
+        volume = self.db.volume_create(context, options)
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "create_volume",
+                  "args": {"topic": FLAGS.volume_topic,
+                           "volume_id": volume['id']}})
+        return volume
+
+    def delete(self, context, volume_id):
+        volume = self.db.volume_get(context, volume_id)
+        if volume['status'] != "available":
+            raise exception.ApiError(_("Volume status must be available"))
+        now = datetime.datetime.utcnow()
+        self.db.volume_update(context, volume_id, {'status': 'deleting',
+                                                   'terminated_at': now})
+        host = volume['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.volume_topic, host),
+                 {"method": "delete_volume",
+                  "args": {"volume_id": volume_id}})
+
+    def update(self, context, volume_id, fields):
+        self.db.volume_update(context, volume_id, fields)
+
+    def get(self, context, volume_id=None):
+        if volume_id is not None:
+            return self.db.volume_get(context, volume_id)
+        if context.user.is_admin():
+            return self.db.volume_get_all(context)
+        return self.db.volume_get_all_by_project(context, context.project_id)
+
+    def check_attach(self, context, volume_id):
+        volume = self.db.volume_get(context, volume_id)
+        # TODO(vish): abstract status checking?
+        if volume['status'] != "available":
+            raise exception.ApiError(_("Volume status must be available"))
+        if volume['attach_status'] == "attached":
+            raise exception.ApiError(_("Volume is already attached"))
+
+    def check_detach(self, context, volume_id):
+        volume = self.db.volume_get(context, volume_id)
+        # TODO(vish): abstract status checking?
+        if volume['status'] == "available":
+            raise exception.ApiError(_("Volume is already detached"))
