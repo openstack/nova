@@ -22,6 +22,7 @@ Tests For Compute
 import datetime
 import logging
 
+from nova import compute
 from nova import context
 from nova import db
 from nova import exception
@@ -29,7 +30,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.compute import api as compute_api
 
 
 FLAGS = flags.FLAGS
@@ -44,7 +44,7 @@ class ComputeTestCase(test.TestCase):
                    stub_network=True,
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
-        self.compute_api = compute_api.ComputeAPI()
+        self.compute_api = compute.API()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
@@ -72,7 +72,7 @@ class ComputeTestCase(test.TestCase):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
-            ref = self.compute_api.create_instances(self.context,
+            ref = self.compute_api.create(self.context,
                 FLAGS.default_instance_type, None, **instance)
             try:
                 self.assertNotEqual(ref[0].display_name, None)
@@ -80,13 +80,13 @@ class ComputeTestCase(test.TestCase):
                 db.instance_destroy(self.context, ref[0]['id'])
 
     def test_create_instance_associates_security_groups(self):
-        """Make sure create_instances associates security groups"""
+        """Make sure create associates security groups"""
         values = {'name': 'default',
                   'description': 'default',
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute_api.create_instances(self.context,
+        ref = self.compute_api.create(self.context,
             FLAGS.default_instance_type, None, security_group=['default'])
         try:
             self.assertEqual(len(ref[0]['security_groups']), 1)

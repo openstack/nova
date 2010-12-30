@@ -31,6 +31,7 @@ import os
 from nova import context
 import IPy
 
+from nova import compute
 from nova import crypto
 from nova import db
 from nova import exception
@@ -39,7 +40,6 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import volume
-from nova.compute import api as compute_api
 from nova.compute import instance_types
 
 
@@ -90,9 +90,9 @@ class CloudController(object):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.image_service = utils.import_object(FLAGS.image_service)
         self.volume_api = volume.API()
-        self.compute_api = compute_api.ComputeAPI(self.network_manager,
-                                                  self.image_service,
-                                                  self.volume_api)
+        self.compute_api = compute.API(self.network_manager,
+                                       self.image_service,
+                                       self.volume_api)
         self.setup()
 
     def __str__(self):
@@ -116,7 +116,7 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in self.compute_api.get_instances(context, project_id):
+        for instance in self.compute_api.get(context, project_id=project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -440,7 +440,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
-        instance_ref = self.compute_api.get_instance(context, instance_id)
+        instance_ref = self.compute_api.get(context, instance_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -561,7 +561,7 @@ class CloudController(object):
             instances = db.instance_get_all_by_reservation(context,
                                                            reservation_id)
         else:
-            instances = self.compute_api.get_instances(context)
+            instances = self.compute_api.get(context)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -664,7 +664,7 @@ class CloudController(object):
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
         instance_id = ec2_id_to_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, instance_id)
+        instance_ref = self.compute_api.get(context, instance_id)
         fixed_address = db.instance_get_fixed_address(context,
                                                       instance_ref['id'])
         floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
@@ -695,7 +695,7 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
-        instances = self.compute_api.create_instances(context,
+        instances = self.compute_api.create(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
             kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
@@ -703,7 +703,7 @@ class CloudController(object):
             kernel_id=kwargs.get('kernel_id', None),
             ramdisk_id=kwargs.get('ramdisk_id'),
             display_name=kwargs.get('display_name'),
-            description=kwargs.get('display_description'),
+            display_description=kwargs.get('display_description'),
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
@@ -717,7 +717,7 @@ class CloudController(object):
         logging.debug("Going to start terminating instances")
         for ec2_id in instance_id:
             instance_id = ec2_id_to_id(ec2_id)
-            self.compute_api.delete_instance(context, instance_id)
+            self.compute_api.delete(context, instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
@@ -747,7 +747,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2_id_to_id(ec2_id)
-            inst = self.compute_api.get_instance(context, instance_id)
+            inst = self.compute_api.get(context, instance_id)
             db.instance_update(context, inst['id'], kwargs)
         return True
 

@@ -86,10 +86,8 @@ class ServersTest(unittest.TestCase):
                        instance_address)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause',
-            fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause',
-            fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'pause', fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'unpause', fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
@@ -100,7 +98,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['id'], '1')
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):

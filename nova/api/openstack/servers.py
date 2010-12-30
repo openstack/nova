@@ -20,12 +20,12 @@ import traceback
 
 from webob import exc
 
+from nova import compute
 from nova import exception
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
-from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
@@ -81,7 +81,7 @@ class Controller(wsgi.Controller):
                            "status", "progress"]}}}
 
     def __init__(self):
-        self.compute_api = compute_api.ComputeAPI()
+        self.compute_api = compute.API()
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -97,8 +97,7 @@ class Controller(wsgi.Controller):
 
         entity_maker - either _entity_detail or _entity_inst
         """
-        instance_list = self.compute_api.get_instances(
-            req.environ['nova.context'])
+        instance_list = self.compute_api.get(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return _entity_list(res)
@@ -106,8 +105,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.get_instance(
-                req.environ['nova.context'], int(id))
+            instance = self.compute_api.get(req.environ['nova.context'], id)
             return _entity_detail(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -115,8 +113,7 @@ class Controller(wsgi.Controller):
     def delete(self, req, id):
         """ Destroys a server """
         try:
-            self.compute_api.delete_instance(req.environ['nova.context'],
-                int(id))
+            self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
@@ -129,12 +126,12 @@ class Controller(wsgi.Controller):
 
         key_pair = auth_manager.AuthManager.get_key_pairs(
             req.environ['nova.context'])[0]
-        instances = self.compute_api.create_instances(
+        instances = self.compute_api.create(
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             env['server']['imageId'],
             display_name=env['server']['name'],
-            description=env['server']['name'],
+            display_description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
         return _entity_inst(instances[0])
@@ -152,9 +149,8 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            self.compute_api.update_instance(req.environ['nova.context'],
-                                             instance['id'],
-                                             **update_dict)
+            self.compute_api.update(req.environ['nova.context'], id,
+                                    **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
