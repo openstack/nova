@@ -25,7 +25,7 @@ import nova.image.service
 
 from nova.api.openstack import common
 from nova.api.openstack import faults
-
+from nova.compute import api as compute_api
 
 FLAGS = flags.FLAGS
 
@@ -127,11 +127,11 @@ class Controller(wsgi.Controller):
         raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
-        ctxt = req.environ['nova.context']
+        context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
-        data = {'instance_id': env["image"]["serverId"],
-                'name': env["image"]["name"]}
-        return dict(image=self._service.create(ctxt, data))
+        instance_id = env["image"]["serverId"]
+        name = env["image"]["name"]
+        return compute_api.ComputeAPI().snapshot(context, instance_id, name)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that

@@ -203,10 +203,6 @@ class GlanceImageService(nova.image.service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        instance_id = data["instance_id"]
-        name = data["name"]
-        compute_api.ComputeAPI().snapshot(context, instance_id, name)
-        # FIXME(sirp): This needs to be reworked for new-style glance
         return self.parallax.add_image_metadata(data)
 
     def update(self, context, image_id, data):
