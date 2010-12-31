@@ -61,8 +61,8 @@ class VMOps(object):
         """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
-            msg = _('Attempted to create non-unique name %s') % instance.name)
-            raise exception.Duplicate(
+            msg = _('Attempted to create non-unique name %s') % instance.name
+            raise exception.Duplicate(msg)
 
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']

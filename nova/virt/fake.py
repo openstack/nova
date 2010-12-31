@@ -138,7 +138,7 @@ class FakeConnection(object):
         """
         pass
 
-    def reset_root_password(self, instance):
+    def reset_root_password(self, instance, new_pass):
         """
         Reset the root password on the specified instance.
 

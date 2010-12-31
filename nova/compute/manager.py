@@ -36,6 +36,7 @@ terminating it.
 
 import datetime
 import logging
+import random
 import string
 
 from nova import exception
@@ -247,7 +248,7 @@ class ComputeManager(manager.Manager):
         self.driver.snapshot(instance_ref, name)
 
     @exception.wrap_exception
-    def reset_root_password(self, context, instance_id):
+    def reset_root_password(self, context, instance_id, new_pass=None):
         """Reset the root/admin password for  an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -264,8 +265,9 @@ class ComputeManager(manager.Manager):
                 instance_ref['name'])
         self.db.instance_set_state(context, instance_id,
                 power_state.NOSTATE, 'resetting_password')
-        #### TODO: (dabo) not sure how we will implement this yet.
-        new_pass = self._generate_password(12)
+        if new_pass is None:
+            # Generate a random, 12-character password
+            new_pass = self._generate_password(12)
         self.driver.reset_root_password(instance_ref, new_pass)
         self._update_state(context, instance_id)
 
