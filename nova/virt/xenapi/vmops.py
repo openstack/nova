@@ -268,11 +268,12 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
-    def get_diagnostics(self, instance_id):
+    def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
-        vm = VMHelper.lookup(self._session, instance_id)
+        vm = VMHelper.lookup(self._session, instance.name)
         if vm is None:
-            raise exception.NotFound(_("Instance not found %s") % instance_id)
+            raise exception.NotFound(_("Instance not found %s") %
+                instance.name)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 

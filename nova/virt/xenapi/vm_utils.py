@@ -347,6 +347,10 @@ class VMHelper(HelperBase):
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
+        except (cls.XenAPI.Failure, KeyError) as e:
+            return {"Unable to retrieve diagnostics": e}
+
+        try:
             diags = {}
             xml = get_rrd(host_ip, record["uuid"])
             if xml:
