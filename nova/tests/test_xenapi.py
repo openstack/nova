@@ -180,9 +180,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         conn = xenapi_conn.get_connection(False)
 
-        instance = db.instance_create(self.values)
-        conn.spawn(instance)
-
+        instance = self._create_instance()
         conn.get_diagnostics(instance)
 
     def test_instance_snapshot(self):
