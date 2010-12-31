@@ -239,9 +239,9 @@ class API(base.Base):
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "terminate_instance",
-                      "args": {"instance_id": instance['id']}})
+                      "args": {"instance_id": instance_id}})
         else:
-            self.db.instance_destroy(context, instance['id'])
+            self.db.instance_destroy(context, instance_id)
 
     def get(self, context, instance_id=None, project_id=None,
             reservation_id=None, fixed_ip=None):
@@ -265,6 +265,15 @@ class API(base.Base):
             project_id)
         return self.db.instance_get_all(context)
 
+    def snapshot(self, context, instance_id, name):
+        """Snapshot the given instance."""
+        instance = self.get(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "snapshot_instance",
+                  "args": {"instance_id": instance_id, "name": name}})
+
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         instance = self.get(context, instance_id)
@@ -272,7 +281,7 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "reboot_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
@@ -281,7 +290,7 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "pause_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
@@ -290,7 +299,38 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unpause_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
+
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for the given instance."""
+        instance = self.get(context, instance_id)
+        host = instance["host"]
+        return rpc.call(context,
+            self.db.queue_get_for(context, FLAGS.compute_topic, host),
+            {"method": "get_diagnostics",
+             "args": {"instance_id": instance_id}})
+
+    def get_actions(self, context, instance_id):
+        """Retrieve actions for the given instance."""
+        return self.db.instance_get_actions(context, instance_id)
+
+    def suspend(self, context, instance_id):
+        """suspend the instance with instance_id"""
+        instance = self.get(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "suspend_instance",
+                  "args": {"instance_id": instance_id}})
+
+    def resume(self, context, instance_id):
+        """resume the instance with instance_id"""
+        instance = self.get(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "resume_instance",
+                  "args": {"instance_id": instance_id}})
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
@@ -299,7 +339,7 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "rescue_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
@@ -308,7 +348,7 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

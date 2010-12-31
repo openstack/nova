@@ -112,6 +112,20 @@ class FakeConnection(object):
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
 
+    def snapshot(self, instance, name):
+        """
+        Snapshots the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The second parameter is the name of the snapshot.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+        """
+        pass
+
     def reboot(self, instance):
         """
         Reboot the specified instance.
@@ -145,6 +159,18 @@ class FakeConnection(object):
     def unpause(self, instance, callback):
         """
         Unpause the specified instance.
+        """
+        pass
+
+    def suspend(self, instance, callback):
+        """
+        suspend the specified instance
+        """
+        pass
+
+    def resume(self, instance, callback):
+        """
+        resume the specified instance
         """
         pass
 
@@ -189,6 +215,9 @@ class FakeConnection(object):
                 'mem': 0,
                 'num_cpu': 2,
                 'cpu_time': 0}
+
+    def get_diagnostics(self, instance_name):
+        pass
 
     def list_disks(self, instance_name):
         """
