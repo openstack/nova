@@ -20,7 +20,10 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import json
 import logging
+import os
 import random
+import subprocess
+import tempfile
 import uuid
 
 from nova import db
@@ -138,14 +141,38 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
         self._session.wait_for_task(instance.id, task)
 
-    def reset_root_password(self, instance):
-        """Reset the root/admin password on the VM instance"""
-        self.add_to_param_xenstore(instance, "reset_root_password", "requested")
-        self.add_to_param_xenstore(instance, "TEST", "OMG!")
-        import time
-        self.add_to_param_xenstore(instance, "timestamp", time.ctime())
-
-
+    def reset_root_password(self, instance, new_pass):
+        """Reset the root/admin password on the VM instance. This is
+        done via an agent running on the VM. Communication between
+        nova and the agent is done via writing xenstore records. Since
+        communication is done over the XenAPI RPC calls, we need to
+        encrypt the password. We're using a simple Diffie-Hellman class
+        instead of the more advanced one in M2Crypto for compatibility
+        with the agent code.
+        """
+        # Need to uniquely identify this request.
+        transaction_id = str(uuid.uuid4())
+        # The simple Diffie-Hellman class is used to manage key exchange.
+        dh = SimpleDH()
+        args = {'id': transaction_id, 'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', args)
+        resp_dict = json.loads(resp)
+        # Successful return code from key_init is 'D0'
+        if resp_dict['returncode'] != 'D0':
+            # There was some sort of error
+            raise RuntimeError(resp_dict['message'])
+        agent_pub = int(resp_dict['message'])
+        dh.compute_shared(agent_pub)
+        enc_pass = dh.encrypt(new_pass)
+        # Send the encrypted password
+        args['enc_pass'] = enc_pass
+        resp = self._make_agent_call('password', instance, '', args)
+        resp_dict = json.loads(resp)
+        # Successful return code from password is '0'
+        if resp_dict['returncode'] != '0':
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
+        
     def destroy(self, instance):
         """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
@@ -159,7 +186,7 @@ class VMOps(object):
             task = self._session.call_xenapi('Async.VM.hard_shutdown',
                                                    vm)
             self._session.wait_for_task(instance.id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
         # Disk clean-up
         if vdis:
@@ -167,20 +194,20 @@ class VMOps(object):
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(instance.id, task)
-                except XenAPI.Failure, exc:
+                except self.XenAPI.Failure, exc:
                     logging.warn(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
             ret = self._session.wait_for_task(instance_id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
         callback(ret)
 
@@ -235,27 +262,119 @@ class VMOps(object):
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
 
-    def dh_keyinit(self, instance):
-        """Initiates a Diffie-Hellman (or, more precisely, a
-        Diffie-Hellman-Merkle) key exchange with the agent. It will
-        compute one side of the exchange and write it to xenstore.
-        When a response is received, it will then compute the shared
-        secret key, which is returned.
-        NOTE: the base and prime are pre-set; this may change in
-        the future.
+    def list_from_xenstore(self, vm, path):
+        """Runs the xenstore-ls command to get a listing of all records
+        from 'path' downward. Returns a dict with the sub-paths as keys,
+        and the value stored in those paths as values. If nothing is 
+        found at that path, returns None.
         """
-        base = 5
-        prime = 162259276829213363391578010288127
-        secret_int = random.randint(100,1000)
-        val = (base ** secret_int) % prime
-        msgname = str(uuid.uuid4())
-        key = "/data/host/%s" % msgname
-        self.add_to_param_xenstore(instance, key=key,
-                value={"name": "keyinit", "value": val})
+        ret = self._make_xenstore_call('list_records', vm, path)
+        try:
+            return json.loads(ret)
+        except ValueError:
+            # Not a valid JSON value
+            return ret
 
+    def read_from_xenstore(self, vm, path):
+        """Returns the value stored in the xenstore record for the given VM
+        at the specified location. A XenAPIPlugin.PluginError will be raised
+        if any error is encountered in the read process.
+        """
+        try:
+            ret = self._make_xenstore_call('read_record', vm, path,
+                    {'ignore_missing_path': 'True'})
+        except self.XenAPI.Failure, e:
+            print "XENERR", e
+            return None
+        except StandardError, e:
+            print "ERR", type(e), e, e.msg
+            return None
+        try:
+            return json.loads(ret)
+        except ValueError:
+            # Not a JSON object
+            if ret == "None":
+                # Can't marshall None over RPC calls.
+                return None
+            return ret
+
+    def write_to_xenstore(self, vm, path, value):
+        """Writes the passed value to the xenstore record for the given VM
+        at the specified location. A XenAPIPlugin.PluginError will be raised
+        if any error is encountered in the write process.
+        """
+        return self._make_xenstore_call('write_record', vm, path, {'value': json.dumps(value)})
+
+    def clear_xenstore(self, vm, path):
+        """Deletes the VM's xenstore record for the specified path.
+        If there is no such record, the request is ignored.
+        """
+        self._make_xenstore_call('delete_record', vm, path)
+
+    def _make_xenstore_call(self, method, vm, path, addl_args={}):
+        """Abstracts out the interaction with the xenstore xenapi plugin."""
+        return self._make_plugin_call('xenstore.py', method=method, vm=vm, path=path,
+                addl_args=addl_args)
+
+    def _make_agent_call(self, method, vm, path, addl_args={}):
+        """Abstracts out the interaction with the agent xenapi plugin."""
+        return self._make_plugin_call('agent.py', method=method, vm=vm, path=path,
+                addl_args=addl_args)
+
+    def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
+        vm = self._get_vm_opaque_ref(vm)
+        rec = self._session.get_xenapi().VM.get_record(vm)
+        args = {'dom_id': rec['domid'], 'path': path}
+        args.update(addl_args)
+        # If the 'testing_mode' attribute is set, add that to the args.
+        if getattr(self, 'testing_mode', False):
+            args['testing_mode'] = 'true'
+        try:
+            task = self._session.async_call_plugin(plugin, method, args)
+            ret = self._session.wait_for_task(0, task)
+        except self.XenAPI.Failure, e:
+            raise RuntimeError("%s" % e.details[-1])
+        return ret
+
+    def add_to_xenstore(self, vm, path, key, value):
+        """Adds the passed key/value pair to the xenstore record for
+        the given VM at the specified location. A XenAPIPlugin.PluginError
+        will be raised if any error is encountered in the write process.
+        """
+        current = self.read_from_xenstore(vm, path)
+        current[key] = value
+        self.write_to_xenstore(vm, path, current)
+
+    def remove_from_xenstore(self, vm, path, key_or_keys):
+        """Takes either a single key or a list of keys and removes
+        them from the xenstoreirecord data for the given VM.
+        If the key doesn't exist, the request is ignored.
+        """
+        current = self.list_from_xenstore(vm, path)
+        if not current:
+            return
+        if isinstance(key_or_keys, basestring):
+            keys = [key_or_keys]
+        else:
+            keys = key_or_keys
+        keys.sort(lambda x,y: cmp(y.count('/'), x.count('/')))
+        for key in keys:
+            if path:
+                keypath = "%s/%s" % (path, key)
+            else:
+                keypath = key
+            self._make_xenstore_call('delete_record', vm, keypath)
+
+
+    ########################################################################
+    ###### The following methods interact with the xenstore parameter 
+    ###### record, not the live xenstore. They were created before I
+    ###### knew the difference, and are left in here in case they prove
+    ###### to be useful.
+    ########################################################################
     def read_partial_from_param_xenstore(self, instance_or_vm, key_prefix):
-        """Returns a dict of all the keys in the xenstore for the given instance
-        that begin with the key_prefix.
+        """Returns a dict of all the keys in the xenstore parameter record
+        for the given instance that begin with the key_prefix.
         """
         data = self.read_from_param_xenstore(instance_or_vm)
         badkeys = [k for k in data.keys()
@@ -265,8 +384,8 @@ class VMOps(object):
         return data
 
     def read_from_param_xenstore(self, instance_or_vm, keys=None):
-        """Returns the xenstore data for the specified VM instance as
-        a dict. Accepts an optional key or list of keys; if a value for 'keys' 
+        """Returns the xenstore parameter record data for the specified VM instance
+        as a dict. Accepts an optional key or list of keys; if a value for 'keys' 
         is passed, the returned dict is filtered to only return the values
         for those keys.
         """
@@ -286,9 +405,9 @@ class VMOps(object):
         return ret
 
     def add_to_param_xenstore(self, instance_or_vm, key, val):
-        """Takes a key/value pair and adds it to the xenstore record
-        for the given vm instance. If the key exists in xenstore, it is
-        overwritten"""
+        """Takes a key/value pair and adds it to the xenstore parameter
+        record for the given vm instance. If the key exists in xenstore,
+        it is overwritten"""
         vm = self._get_vm_opaque_ref(instance_or_vm)
         self.remove_from_param_xenstore(instance_or_vm, key)
         jsonval = json.dumps(val)
@@ -297,27 +416,16 @@ class VMOps(object):
 
     def write_to_param_xenstore(self, instance_or_vm, mapping):
         """Takes a dict and writes each key/value pair to the xenstore
-        record for the given vm instance. Any existing data for those
-        keys is overwritten.
+        parameter record for the given vm instance. Any existing data for
+        those keys is overwritten.
         """
         for k, v in mapping.iteritems():
             self.add_to_param_xenstore(instance_or_vm, k, v)
 
     def remove_from_param_xenstore(self, instance_or_vm, key_or_keys):
         """Takes either a single key or a list of keys and removes
-        them from the xenstore data for the given VM. If the key
-        doesn't exist, the request is ignored.
-        """
-        vm = self._get_vm_opaque_ref(instance_or_vm)
-        if isinstance(key_or_keys, basestring):
-            keys = [key_or_keys]
-        else:
-            keys = key_or_keys
-        for key in keys:
-            self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
-        """Takes either a single key or a list of keys and removes
-        them from the xenstore data for the given VM. If the key
-        doesn't exist, the request is ignored.
+        them from the xenstore parameter record data for the given VM.
+        If the key doesn't exist, the request is ignored.
         """
         vm = self._get_vm_opaque_ref(instance_or_vm)
         if isinstance(key_or_keys, basestring):
@@ -328,5 +436,85 @@ class VMOps(object):
             self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
 
     def clear_param_xenstore(self, instance_or_vm):
-        """Removes all data from the xenstore record for this VM."""
+        """Removes all data from the xenstore parameter record for this VM."""
         self.write_to_param_xenstore(instance_or_vm, {})
+    ########################################################################
+
+
+def _runproc(cmd):
+    pipe = subprocess.PIPE
+    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe, stderr=pipe, close_fds=True)
+
+class SimpleDH(object):
+    """This class wraps all the functionality needed to implement
+    basic Diffie-Hellman-Merkle key exchange in Python. It features
+    intelligent defaults for the prime and base numbers needed for the
+    calculation, while allowing you to supply your own. It requires that
+    the openssl binary be installed on the system on which this is run,
+    as it uses that to handle the encryption and decryption. If openssl
+    is not available, a RuntimeError will be raised.
+    """
+#    def __init__(self, prime=None, base=None):
+#        """You can specify the values for prime and base if you wish;
+#        otherwise, reasonable default values will be used.
+#        """
+#        if prime is None:
+#            self._prime = 162259276829213363391578010288127
+#        else:
+#            self._prime = prime
+#        if base is None:
+#            self._base = 5
+#        else:
+#            self._base = base
+#        self._secret = random.randint(5000, 15000)
+#        self._shared = self._public = None
+    def __init__(self, prime=None, base=None, secret=None):
+        """You can specify the values for prime and base if you wish;
+        otherwise, reasonable default values will be used.
+        """
+        if prime is None:
+            self._prime = 162259276829213363391578010288127
+        else:
+            self._prime = prime
+        if base is None:
+            self._base = 5
+        else:
+            self._base = base
+        if secret is None:
+            self._secret = random.randint(5000, 15000)
+        else:
+            self._secret = secret
+        self._shared = self._public = None
+
+    def get_public(self):
+        self._public = (self._base ** self._secret) % self._prime
+        return self._public
+
+    def compute_shared(self, other):
+        self._shared = (other ** self._secret) % self._prime
+        return self._shared
+
+    def _run_ssl(self, text, which):
+        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
+                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        if which.lower()[0] == 'd':
+            dec_flag = ' -d'
+        else:
+            dec_flag = ''
+        fd, tmpfile = tempfile.mkstemp()
+        os.close(fd)
+        file(tmpfile, 'w').write(text)
+        shared = self._shared
+        cmd = base_cmd % locals()
+        proc = _runproc(cmd)
+        proc.wait()
+        err = proc.stderr.read()
+        if err:
+            raise RuntimeError(_('OpenSSL error: %s') % err)
+        return proc.stdout.read()
+
+    def encrypt(self, text):
+        return self._run_ssl(text, 'enc')
+
+    def decrypt(self, text):
+        return self._run_ssl(text, 'dec')

@@ -135,9 +135,9 @@ class XenAPIConnection(object):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
-    def reset_root_password(self, instance):
+    def reset_root_password(self, instance, new_pass):
         """Reset the root/admin password on the VM instance"""
-        self._vmops.reset_root_password(instance)
+        self._vmops.reset_root_password(instance, new_pass)
 
     def destroy(self, instance):
         """Destroy VM instance"""
@@ -264,7 +264,19 @@ class XenAPISession(object):
                     status,
                     error_info))
                 done.send_exception(self.XenAPI.Failure(error_info))
-            db.instance_action_create(context.get_admin_context(), action)
+
+            #db.instance_action_create(context.get_admin_context(), action)
+            import sqlalchemy
+            from sqlalchemy.exc import IntegrityError as IntegrityError
+            try:
+                db.instance_action_create(context.get_admin_context(), action)
+            except IntegrityError:
+                # Some methods don't pass unique IDs, so the call to 
+                # instance_action_create() will raise IntegrityErrors. Rather
+                # than bomb out, I'm explicitly silencing them so that the 
+                # code can continue to work until they fix that method.
+                pass
+
         except self.XenAPI.Failure, exc:
             logging.warn(exc)
             done.send_exception(*sys.exc_info())
