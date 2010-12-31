@@ -275,16 +275,16 @@ class XenAPISession(object):
                     error_info))
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
-#             import sqlalchemy
-#             from sqlalchemy.exc import IntegrityError as IntegrityError
-#             try:
-#                 db.instance_action_create(context.get_admin_context(), action)
-#             except IntegrityError:
-#                 # Some methods don't pass unique IDs, so the call to 
-#                 # instance_action_create() will raise IntegrityErrors. Rather
-#                 # than bomb out, I'm explicitly silencing them so that the 
-#                 # code can continue to work until they fix that method.
-#                 pass
+#           import sqlalchemy
+#           from sqlalchemy.exc import IntegrityError as IntegrityError
+#           try:
+#               db.instance_action_create(context.get_admin_context(), action)
+#           except IntegrityError:
+#               # Some methods don't pass unique IDs, so the call to
+#               # instance_action_create() will raise IntegrityErrors. Rather
+#               # than bomb out, I'm explicitly silencing them so that the
+#               # code can continue to work until they fix that method.
+#               pass
 
         except self.XenAPI.Failure, exc:
             logging.warn(exc)

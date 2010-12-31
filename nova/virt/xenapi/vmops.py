@@ -61,12 +61,13 @@ class VMOps(object):
         """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
-            raise exception.Duplicate(_('Attempted to create non-unique name %s')
-            		% instance.name)
+            msg = _('Attempted to create non-unique name %s') % instance.name)
+            raise exception.Duplicate(
 
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
-        network_ref = NetworkHelper.find_network_with_bridge(self._session, bridge)
+        network_ref = NetworkHelper.find_network_with_bridge(self._session,
+                bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
@@ -222,7 +223,7 @@ class VMOps(object):
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
-        
+
     def destroy(self, instance):
         """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
@@ -321,7 +322,7 @@ class VMOps(object):
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
         from 'path' downward. Returns a dict with the sub-paths as keys,
-        and the value stored in those paths as values. If nothing is 
+        and the value stored in those paths as values. If nothing is
         found at that path, returns None.
         """
         ret = self._make_xenstore_call('list_records', vm, path)
@@ -355,7 +356,8 @@ class VMOps(object):
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the write process.
         """
-        return self._make_xenstore_call('write_record', vm, path, {'value': json.dumps(value)})
+        return self._make_xenstore_call('write_record', vm, path,
+                {'value': json.dumps(value)})
 
     def clear_xenstore(self, vm, path):
         """Deletes the VM's xenstore record for the specified path.
@@ -365,13 +367,13 @@ class VMOps(object):
 
     def _make_xenstore_call(self, method, vm, path, addl_args={}):
         """Handles calls to the xenstore xenapi plugin."""
-        return self._make_plugin_call('xenstore.py', method=method, vm=vm, path=path,
-                addl_args=addl_args)
+        return self._make_plugin_call('xenstore.py', method=method, vm=vm,
+                path=path, addl_args=addl_args)
 
     def _make_agent_call(self, method, vm, path, addl_args={}):
         """Abstracts out the interaction with the agent xenapi plugin."""
-        return self._make_plugin_call('agent.py', method=method, vm=vm, path=path,
-                addl_args=addl_args)
+        return self._make_plugin_call('agent.py', method=method, vm=vm,
+                path=path, addl_args=addl_args)
 
     def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
         """Abstracts out the process of calling a method of a xenapi plugin.
@@ -416,7 +418,7 @@ class VMOps(object):
             keys = [key_or_keys]
         else:
             keys = key_or_keys
-        keys.sort(lambda x,y: cmp(y.count('/'), x.count('/')))
+        keys.sort(lambda x, y: cmp(y.count('/'), x.count('/')))
         for key in keys:
             if path:
                 keypath = "%s/%s" % (path, key)
@@ -424,9 +426,8 @@ class VMOps(object):
                 keypath = key
             self._make_xenstore_call('delete_record', vm, keypath)
 
-
     ########################################################################
-    ###### The following methods interact with the xenstore parameter 
+    ###### The following methods interact with the xenstore parameter
     ###### record, not the live xenstore. They were created before I
     ###### knew the difference, and are left in here in case they prove
     ###### to be useful. They all have '_param' added to their method
@@ -444,13 +445,14 @@ class VMOps(object):
         return data
 
     def read_from_param_xenstore(self, instance_or_vm, keys=None):
-        """Returns the xenstore parameter record data for the specified VM instance
-        as a dict. Accepts an optional key or list of keys; if a value for 'keys' 
-        is passed, the returned dict is filtered to only return the values
-        for those keys.
+        """Returns the xenstore parameter record data for the specified VM
+        instance as a dict. Accepts an optional key or list of keys; if a
+        value for 'keys' is passed, the returned dict is filtered to only
+        return the values for those keys.
         """
         vm = self._get_vm_opaque_ref(instance_or_vm)
-        data = self._session.call_xenapi_request('VM.get_xenstore_data', (vm, ))
+        data = self._session.call_xenapi_request('VM.get_xenstore_data',
+                (vm, ))
         ret = {}
         if keys is None:
             keys = data.keys()
@@ -493,7 +495,8 @@ class VMOps(object):
         else:
             keys = key_or_keys
         for key in keys:
-            self._session.call_xenapi_request('VM.remove_from_xenstore_data', (vm, key))
+            self._session.call_xenapi_request('VM.remove_from_xenstore_data',
+                    (vm, key))
 
     def clear_param_xenstore(self, instance_or_vm):
         """Removes all data from the xenstore parameter record for this VM."""
@@ -503,7 +506,9 @@ class VMOps(object):
 
 def _runproc(cmd):
     pipe = subprocess.PIPE
-    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe, stderr=pipe, close_fds=True)
+    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
+
 
 class SimpleDH(object):
     """This class wraps all the functionality needed to implement
@@ -514,23 +519,12 @@ class SimpleDH(object):
     as it uses that to handle the encryption and decryption. If openssl
     is not available, a RuntimeError will be raised.
     """
-#    def __init__(self, prime=None, base=None):
-#        """You can specify the values for prime and base if you wish;
-#        otherwise, reasonable default values will be used.
-#        """
-#        if prime is None:
-#            self._prime = 162259276829213363391578010288127
-#        else:
-#            self._prime = prime
-#        if base is None:
-#            self._base = 5
-#        else:
-#            self._base = base
-#        self._secret = random.randint(5000, 15000)
-#        self._shared = self._public = None
     def __init__(self, prime=None, base=None, secret=None):
         """You can specify the values for prime and base if you wish;
-        otherwise, reasonable default values will be used.
+        otherwise, reasonable default values will be used. You may also
+        specify the integer value for 'secret', but this should only be
+        done while testing when you need reproducible values. Otherwise,
+        any security benefits are lost.
         """
         if prime is None:
             self._prime = 162259276829213363391578010288127
