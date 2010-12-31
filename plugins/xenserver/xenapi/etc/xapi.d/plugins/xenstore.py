@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 OpenStack LLC.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
