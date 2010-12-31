@@ -161,27 +161,14 @@ class XenAPIVMTestCase(test.TestCase):
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.get_connection(False)
-        self.values = {
-            "name": 1,
-            "id": 1,
-            "project_id": self.project.id,
-            "user_id": self.user.id,
-            "image_id": 1,
-            "kernel_id": 2,
-            "ramdisk_id": 3,
-            "instance_type": "m1.large",
-            "mac_address": "aa:bb:cc:dd:ee:ff"}
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
         self.assertEquals(instances, [])
 
     def test_get_diagnostics(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        conn = xenapi_conn.get_connection(False)
-
         instance = self._create_instance()
-        conn.get_diagnostics(instance)
+        self.conn.get_diagnostics(instance)
 
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)
@@ -263,6 +250,15 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
-        instance = db.instance_create(self.values)
+        values = {'name': 1, 'id': 1,
+                  'project_id': self.project.id,
+                  'user_id': self.user.id,
+                  'image_id': 1,
+                  'kernel_id': 2,
+                  'ramdisk_id': 3,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff'
+                  }
+        instance = db.instance_create(values)
         self.conn.spawn(instance)
         return instance
