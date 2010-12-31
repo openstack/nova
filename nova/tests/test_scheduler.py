@@ -33,6 +33,7 @@ from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class TestDriver(driver.Scheduler):
