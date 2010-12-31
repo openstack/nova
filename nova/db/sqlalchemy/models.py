@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, Float, String, schema
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -260,21 +260,6 @@ class Instance(BASE, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
-class InstanceDiagnostics(BASE, NovaBase):
-    """Represents a guest VM's diagnostics"""
-    __tablename__ = "instance_diagnostics"
-    id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
-
-    memory_available = Column(Float)
-    memory_free = Column(Float)
-    cpu_load = Column(Float)
-    disk_read = Column(Float)
-    disk_write = Column(Float)
-    net_tx = Column(Float)
-    net_rx = Column(Float)
-
-
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
@@ -476,7 +461,7 @@ class AuthToken(BASE, NovaBase):
     """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(String(255))
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
@@ -585,10 +570,11 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
-              FloatingIp, Network, SecurityGroup,
-              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project, Host)  # , Image
+    models = (Service, Instance, InstanceActions,
+              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Network, SecurityGroup, SecurityGroupIngressRule,
+              SecurityGroupInstanceAssociation, AuthToken, User,
+              Project, Certificate, Host)  # , Image
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

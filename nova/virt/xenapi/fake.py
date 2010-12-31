@@ -55,6 +55,8 @@ import datetime
 import logging
 import uuid
 
+from pprint import pformat
+
 from nova import exception
 
 
@@ -62,6 +64,10 @@ _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
             'PBD', 'VDI', 'VIF', 'VM', 'task']
 
 _db_content = {}
+
+
+def log_db_contents(msg=None):
+    logging.debug(_("%s: _db_content => %s"), msg or "", pformat(_db_content))
 
 
 def reset():
@@ -93,6 +99,24 @@ def create_vm(name_label, status,
         })
 
 
+def destroy_vm(vm_ref):
+    vm_rec = _db_content['VM'][vm_ref]
+
+    vbd_refs = vm_rec['VBDs']
+    for vbd_ref in vbd_refs:
+        destroy_vbd(vbd_ref)
+
+    del _db_content['VM'][vm_ref]
+
+
+def destroy_vbd(vbd_ref):
+    del _db_content['VBD'][vbd_ref]
+
+
+def destroy_vdi(vdi_ref):
+    del _db_content['VDI'][vdi_ref]
+
+
 def create_vdi(name_label, read_only, sr_ref, sharable):
     return _create_object('VDI', {
         'name_label': name_label,
@@ -107,6 +131,23 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
         'sm_config': {},
         'VBDs': {},
         })
+
+
+def create_vbd(vm_ref, vdi_ref):
+    vbd_rec = {'VM': vm_ref, 'VDI': vdi_ref}
+    vbd_ref = _create_object('VBD', vbd_rec)
+    after_VBD_create(vbd_ref, vbd_rec)
+    return vbd_ref
+
+
+def after_VBD_create(vbd_ref, vbd_rec):
+    """Create backref from VM to VBD when VBD is created"""
+    vm_ref = vbd_rec['VM']
+    vm_rec = _db_content['VM'][vm_ref]
+    vm_rec['VBDs'] = [vbd_ref]
+
+    vm_name_label = _db_content['VM'][vm_ref]['name_label']
+    vbd_rec['vm_name_label'] = vm_name_label
 
 
 def create_pbd(config, sr_ref, attached):
@@ -235,6 +276,7 @@ class SessionBase(object):
         elif '.' in name:
             impl = getattr(self, name.replace('.', '_'))
             if impl is not None:
+
                 def callit(*params):
                     logging.warn('Calling %s %s', name, impl)
                     self._check_session(params)
@@ -276,11 +318,12 @@ class SessionBase(object):
             self._check_arg_count(params, 2)
             return get_record(cls, params[1])
 
-        if (func == 'get_by_name_label' or
-            func == 'get_by_uuid'):
+        if func in ('get_by_name_label', 'get_by_uuid'):
             self._check_arg_count(params, 2)
+            return_singleton = (func == 'get_by_uuid')
             return self._get_by_field(
-                _db_content[cls], func[len('get_by_'):], params[1])
+                _db_content[cls], func[len('get_by_'):], params[1],
+                return_singleton=return_singleton)
 
         if len(params) == 2:
             field = func[len('get_'):]
@@ -323,6 +366,13 @@ class SessionBase(object):
         (cls, _) = name.split('.')
         ref = is_sr_create and \
             _create_sr(cls, params) or _create_object(cls, params[1])
+
+        # Call hook to provide any fixups needed (ex. creating backrefs)
+        try:
+            globals()["after_%s_create" % cls](ref, params[1])
+        except KeyError:
+            pass
+
         obj = get_record(cls, ref)
 
         # Add RO fields
@@ -358,11 +408,18 @@ class SessionBase(object):
             raise Failure(['MESSAGE_PARAMETER_COUNT_MISMATCH',
                                   expected, actual])
 
-    def _get_by_field(self, recs, k, v):
+    def _get_by_field(self, recs, k, v, return_singleton):
         result = []
         for ref, rec in recs.iteritems():
             if rec.get(k) == v:
                 result.append(ref)
+
+        if return_singleton:
+            try:
+                return result[0]
+            except IndexError:
+                return None
+
         return result
 
 

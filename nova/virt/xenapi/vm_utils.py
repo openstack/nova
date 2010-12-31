@@ -20,11 +20,14 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import pickle
 import urllib
 from xml.dom import minidom
 
+from eventlet import event
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -39,8 +42,21 @@ XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
     'Running': power_state.RUNNING,
     'Paused': power_state.PAUSED,
-    'Suspended': power_state.SHUTDOWN,  # FIXME
+    'Suspended': power_state.SUSPENDED,
     'Crashed': power_state.CRASHED}
+
+
+class ImageType:
+        """
+        Enumeration class for distinguishing different image types
+            0 - kernel/ramdisk image (goes on dom0's filesystem)
+            1 - disk image (local SR, partitioned by objectstore plugin)
+            2 - raw disk image (local SR, NOT partitioned by plugin)
+        """
+
+        KERNEL_RAMDISK = 0
+        DISK = 1
+        DISK_RAW = 2
 
 
 class VMHelper(HelperBase):
@@ -49,9 +65,12 @@ class VMHelper(HelperBase):
     """
 
     @classmethod
-    def create_vm(cls, session, instance, kernel, ramdisk):
+    def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
-        VM reference."""
+        VM reference.
+        the pv_kernel flag indicates whether the guest is HVM or PV
+        """
+
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
@@ -70,9 +89,9 @@ class VMHelper(HelperBase):
             'actions_after_reboot': 'restart',
             'actions_after_crash': 'destroy',
             'PV_bootloader': '',
-            'PV_kernel': kernel,
-            'PV_ramdisk': ramdisk,
-            'PV_args': 'root=/dev/xvda1',
+            'PV_kernel': '',
+            'PV_ramdisk': '',
+            'PV_args': '',
             'PV_bootloader_args': '',
             'PV_legacy_args': '',
             'HVM_boot_policy': '',
@@ -84,7 +103,25 @@ class VMHelper(HelperBase):
             'user_version': '0',
             'other_config': {},
             }
-        logging.debug(_('Created VM %s...'), instance.name)
+        #Complete VM configuration record according to the image type
+        #non-raw/raw with PV kernel/raw in HVM mode
+        if instance.kernel_id:
+            rec['PV_bootloader'] = ''
+            rec['PV_kernel'] = kernel
+            rec['PV_ramdisk'] = ramdisk
+            rec['PV_args'] = 'root=/dev/xvda1'
+            rec['PV_bootloader_args'] = ''
+            rec['PV_legacy_args'] = ''
+        else:
+            if pv_kernel:
+                rec['PV_args'] = 'noninteractive'
+                rec['PV_bootloader'] = 'pygrub'
+            else:
+                rec['HVM_boot_policy'] = 'BIOS order'
+                rec['HVM_boot_params'] = {'order': 'dc'}
+                rec['platform'] = {'acpi': 'true', 'apic': 'true',
+                                   'pae': 'true', 'viridian': 'true'}
+        logging.debug('Created VM %s...', instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
         logging.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
         return vm_ref
@@ -170,27 +207,90 @@ class VMHelper(HelperBase):
         return vif_ref
 
     @classmethod
-    def fetch_image(cls, session, image, user, project, use_sr):
-        """use_sr: True to put the image as a VDI in an SR, False to place
-        it on dom0's filesystem.  The former is for VM disks, the latter for
-        its kernel and ramdisk (if external kernels are being used).
-        Returns a Deferred that gives the new VDI UUID."""
+    def create_snapshot(cls, session, instance_id, vm_ref, label):
+        """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+        Snapshot VHD
+        """
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+        logging.debug(_("Snapshotting VM %s with label '%s'..."),
+                      vm_ref, label)
 
+        vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_uuid = vm_vdi_rec["uuid"]
+        sr_ref = vm_vdi_rec["SR"]
+
+        original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
+
+        task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
+        template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
+        template_vdi_uuid = template_vdi_rec["uuid"]
+
+        logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
+                      vm_ref)
+
+        parent_uuid = wait_for_vhd_coalesce(
+            session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
+
+        #TODO(sirp): we need to assert only one parent, not parents two deep
+        return template_vm_ref, [template_vdi_uuid, parent_uuid]
+
+    @classmethod
+    def upload_image(cls, session, instance_id, vdi_uuids, image_name):
+        """ Requests that the Glance plugin bundle the specified VDIs and
+        push them into Glance using the specified human-friendly name.
+        """
+        logging.debug(_("Asking xapi to upload %s as '%s'"),
+                      vdi_uuids, image_name)
+
+        params = {'vdi_uuids': vdi_uuids,
+                  'image_name': image_name,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port}
+
+        kwargs = {'params': pickle.dumps(params)}
+        task = session.async_call_plugin('glance', 'put_vdis', kwargs)
+        session.wait_for_task(instance_id, task)
+
+    @classmethod
+    def fetch_image(cls, session, instance_id, image, user, project, type):
+        """
+        type is interpreted as an ImageType instance
+        """
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
-        logging.debug(_("Asking xapi to fetch %s as %s"), url, access)
-        fn = use_sr and 'get_vdi' or 'get_kernel'
+        logging.debug("Asking xapi to fetch %s as %s", url, access)
+        fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = user.secret
-        if use_sr:
+        args['add_partition'] = 'false'
+        args['raw'] = 'false'
+        if type != ImageType.KERNEL_RAMDISK:
             args['add_partition'] = 'true'
+            if type == ImageType.DISK_RAW:
+                args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        #FIXME(armando): find a solution to missing instance_id
-        #with Josh Kearney
-        uuid = session.wait_for_task(0, task)
+        uuid = session.wait_for_task(instance_id, task)
         return uuid
+
+    @classmethod
+    def lookup_image(cls, session, vdi_ref):
+        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        fn = "is_vdi_pv"
+        args = {}
+        args['vdi-ref'] = vdi_ref
+        #TODO: Call proper function in plugin
+        task = session.async_call_plugin('objectstore', fn, args)
+        pv_str = session.wait_for_task(task)
+        if pv_str.lower() == 'true':
+            pv = True
+        elif pv_str.lower() == 'false':
+            pv = False
+        logging.debug("PV Kernel in VDI:%d", pv)
+        return pv
 
     @classmethod
     def lookup(cls, session, i):
@@ -231,6 +331,10 @@ class VMHelper(HelperBase):
     @classmethod
     def compile_info(cls, record):
         """Fill record with VM status information"""
+        logging.info(_("(VM_UTILS) xenserver vm state -> |%s|"),
+                     record['power_state'])
+        logging.info(_("(VM_UTILS) xenapi power_state -> |%s|"),
+                     XENAPI_POWER_STATE[record['power_state']])
         return {'state': XENAPI_POWER_STATE[record['power_state']],
                 'max_mem': long(record['memory_static_max']) >> 10,
                 'mem': long(record['memory_dynamic_max']) >> 10,
@@ -243,6 +347,10 @@ class VMHelper(HelperBase):
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
+        except (cls.XenAPI.Failure, KeyError) as e:
+            return {"Unable to retrieve diagnostics": e}
+
+        try:
             diags = {}
             xml = get_rrd(host_ip, record["uuid"])
             if xml:
@@ -269,3 +377,87 @@ def get_rrd(host, uuid):
         return xml.read()
     except IOError:
         return None
+
+
+#TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
+# use that implmenetation
+def get_vhd_parent(session, vdi_rec):
+    """
+    Returns the VHD parent of the given VDI record, as a (ref, rec) pair.
+    Returns None if we're at the root of the tree.
+    """
+    if 'vhd-parent' in vdi_rec['sm_config']:
+        parent_uuid = vdi_rec['sm_config']['vhd-parent']
+        #NOTE(sirp): changed xenapi -> get_xenapi()
+        parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
+        parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
+        #NOTE(sirp): changed log -> logging
+        logging.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
+        return parent_ref, parent_rec
+    else:
+        return None
+
+
+def get_vhd_parent_uuid(session, vdi_ref):
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    ret = get_vhd_parent(session, vdi_rec)
+    if ret:
+        parent_ref, parent_rec = ret
+        return parent_rec["uuid"]
+    else:
+        return None
+
+
+def scan_sr(session, instance_id, sr_ref):
+    logging.debug(_("Re-scanning SR %s"), sr_ref)
+    task = session.call_xenapi('Async.SR.scan', sr_ref)
+    session.wait_for_task(instance_id, task)
+
+
+def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
+                          original_parent_uuid):
+    """ Spin until the parent VHD is coalesced into its parent VHD
+
+    Before coalesce:
+        * original_parent_vhd
+            * parent_vhd
+                snapshot
+
+    Atter coalesce:
+        * parent_vhd
+            snapshot
+    """
+    #TODO(sirp): we need to timeout this req after a while
+
+    def _poll_vhds():
+        scan_sr(session, instance_id, sr_ref)
+        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        if original_parent_uuid and (parent_uuid != original_parent_uuid):
+            logging.debug(
+                _("Parent %s doesn't match original parent %s, "
+                  "waiting for coalesce..."),
+                parent_uuid, original_parent_uuid)
+        else:
+            done.send(parent_uuid)
+
+    done = event.Event()
+    loop = utils.LoopingCall(_poll_vhds)
+    loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
+    parent_uuid = done.wait()
+    loop.stop()
+    return parent_uuid
+
+
+def get_vdi_for_vm_safely(session, vm_ref):
+    vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+    if vdi_refs is None:
+        raise Exception(_("No VDIs found for VM %s") % vm_ref)
+    else:
+        num_vdis = len(vdi_refs)
+        if num_vdis != 1:
+            raise Exception(_("Unexpected number of VDIs (%s) found for "
+                               "VM %s") % (num_vdis, vm_ref))
+
+    vdi_ref = vdi_refs[0]
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    return vdi_ref, vdi_rec
