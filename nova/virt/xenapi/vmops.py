@@ -304,10 +304,6 @@ class VMOps(object):
             ret = self._make_xenstore_call('read_record', vm, path,
                     {'ignore_missing_path': 'True'})
         except self.XenAPI.Failure, e:
-            print "XENERR", e
-            return None
-        except StandardError, e:
-            print "ERR", type(e), e, e.msg
             return None
         try:
             return json.loads(ret)
