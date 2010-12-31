@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -83,6 +84,10 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
+flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
+                   5.0,
+                   'The interval used for polling of coalescing vhds.'
+                   '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -131,6 +136,10 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance """
+        self._vmops.snapshot(instance, name)
+
     def reboot(self, instance):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
@@ -174,8 +183,8 @@ class XenAPIConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach volume storage to VM instance"""
         return self._volumeops.attach_volume(instance_name,
-                                             device_path,
-                                             mountpoint)
+                                               device_path,
+                                               mountpoint)
 
     def detach_volume(self, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
@@ -210,9 +219,10 @@ class XenAPISession(object):
         return tpool.execute(f, *args)
 
     def call_xenapi_request(self, method, *args):
-        """Some interactions with dom0, such as interacting with xenstore,
-        require using the xenapi_request method of the session object.
-        This wraps that call on a background thread."""
+        """Some interactions with dom0, such as interacting with xenstore's
+        param record, require using the xenapi_request method of the session
+        object. This wraps that call on a background thread.
+        """
         f = self._session.xenapi_request
         return tpool.execute(f, method, *args)
 
@@ -243,7 +253,7 @@ class XenAPISession(object):
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
             action = dict(
-                id=int(id),
+                instance_id=int(id),
                 action=name,
                 error=None)
             if status == "pending":
@@ -264,18 +274,17 @@ class XenAPISession(object):
                     status,
                     error_info))
                 done.send_exception(self.XenAPI.Failure(error_info))
-
-            #db.instance_action_create(context.get_admin_context(), action)
-            import sqlalchemy
-            from sqlalchemy.exc import IntegrityError as IntegrityError
-            try:
-                db.instance_action_create(context.get_admin_context(), action)
-            except IntegrityError:
-                # Some methods don't pass unique IDs, so the call to 
-                # instance_action_create() will raise IntegrityErrors. Rather
-                # than bomb out, I'm explicitly silencing them so that the 
-                # code can continue to work until they fix that method.
-                pass
+            db.instance_action_create(context.get_admin_context(), action)
+#             import sqlalchemy
+#             from sqlalchemy.exc import IntegrityError as IntegrityError
+#             try:
+#                 db.instance_action_create(context.get_admin_context(), action)
+#             except IntegrityError:
+#                 # Some methods don't pass unique IDs, so the call to 
+#                 # instance_action_create() will raise IntegrityErrors. Rather
+#                 # than bomb out, I'm explicitly silencing them so that the 
+#                 # code can continue to work until they fix that method.
+#                 pass
 
         except self.XenAPI.Failure, exc:
             logging.warn(exc)

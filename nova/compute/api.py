@@ -55,9 +55,8 @@ class ComputeAPI(base.Base):
 
     def get_network_topic(self, context, instance_id):
         try:
-            instance = self.db.instance_get_by_internal_id(context,
-                                                           instance_id)
-        except exception.NotFound as e:
+            instance = self.get_instance(context, instance_id)
+        except exception.NotFound, e:
             logging.warning("Instance %d was not found in get_network_topic",
                             instance_id)
             raise e
@@ -215,7 +214,7 @@ class ComputeAPI(base.Base):
         logging.debug("Going to try and terminate %d" % instance_id)
         try:
             instance = self.get_instance(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound, e:
             logging.warning(_("Instance %d was not found during terminate"),
                             instance_id)
             raise e
@@ -265,6 +264,10 @@ class ComputeAPI(base.Base):
                  {"method": method,
                   "args": {"instance_id": instance['id']}})
 
+    def snapshot(self, context, instance_id, name):
+        """Snapshot the given instance."""
+        self._cast_compute_message("snapshot_instance", context, instance_id)
+
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message("reboot_instance", context, instance_id)
@@ -306,14 +309,3 @@ class ComputeAPI(base.Base):
     def reset_root_password(self, context, instance_id):
         """Reset the root/admin pw for the given instance."""
         self._cast_compute_message("reset_root_password", context, instance_id)
-
-    def _get_network_topic(self, context):
-        """Retrieves the network host for a project"""
-        network_ref = self.network_manager.get_network(context)
-        host = network_ref['host']
-        if not host:
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return self.db.queue_get_for(context, FLAGS.network_topic, host)

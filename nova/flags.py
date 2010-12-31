@@ -212,6 +212,8 @@ DEFINE_list('region_list',
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
+DEFINE_integer('glance_port', 9292, 'glance port')
+DEFINE_string('glance_host', utils.get_my_ip(), 'glance host')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', utils.get_my_ip(), 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', utils.get_my_ip(), 's3 dmz ip (for instances)')
@@ -239,6 +241,7 @@ DEFINE_string('cc_dmz', utils.get_my_ip(), 'internal ip of api server')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_suffix', '/services/Cloud', 'suffix for ec2')
 
+DEFINE_string('default_project', 'openstack', 'default project for openstack')
 DEFINE_string('default_image', 'ami-11111',
               'default image to use, testing only')
 DEFINE_string('default_instance_type', 'm1.small',
