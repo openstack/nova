@@ -151,11 +151,6 @@ class ComputeTestCase(test.TestCase):
         self.compute.reboot_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_diagnostics(self):
-        """Ensure instance diagnostics are available"""
-        instance_id = self._create_instance()
-        self.compute.get_diagnostics(self.context, instance_id)
-
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
