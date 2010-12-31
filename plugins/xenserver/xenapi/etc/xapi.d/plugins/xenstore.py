@@ -29,8 +29,8 @@ import subprocess
 
 import XenAPIPlugin
 
-from pluginlib_nova import *
-configure_logging("xenstore")
+import pluginlib_nova as pluginlib
+pluginlib.configure_logging("xenstore")
 
 
 def read_record(self, arg_dict):
@@ -43,7 +43,7 @@ def read_record(self, arg_dict):
     cmd = "xenstore-read /local/domain/%(dom_id)s/%(path)s" % arg_dict
     try:
         return _run_command(cmd).rstrip("\n")
-    except PluginError, e:
+    except pluginlib.PluginError, e:
         if arg_dict.get("ignore_missing_path", False):
             cmd = "xenstore-exists /local/domain/%(dom_id)s/%(path)s; echo $?" % arg_dict
             ret = _run_command(cmd).strip()
@@ -76,7 +76,7 @@ def list_records(self, arg_dict):
     cmd = cmd.rstrip("/")
     try:
         recs = _run_command(cmd)
-    except PluginError, e:
+    except pluginlib.PluginError, e:
         if "No such file or directory" in "%s" % e:
             # Path doesn't exist.
             return json.dumps({})
@@ -146,7 +146,7 @@ def _run_command(cmd):
     proc.wait()
     err = proc.stderr.read()
     if err:
-        raise PluginError(err)
+        raise pluginlib.PluginError(err)
     return proc.stdout.read()
 
 
