@@ -103,13 +103,13 @@ class ComputeManager(manager.Manager):
     def refresh_security_group_rules(self, context,
                                      security_group_id, **_kwargs):
         """This call passes straight through to the virtualization driver."""
-        yield self.driver.refresh_security_group_rules(security_group_id)
+        return self.driver.refresh_security_group_rules(security_group_id)
 
     @exception.wrap_exception
     def refresh_security_group_members(self, context,
                                        security_group_id, **_kwargs):
         """This call passes straight through to the virtualization driver."""
-        yield self.driver.refresh_security_group_members(security_group_id)
+        return self.driver.refresh_security_group_members(security_group_id)
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
