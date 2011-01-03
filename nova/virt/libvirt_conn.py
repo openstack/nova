@@ -366,7 +366,7 @@ class LibvirtConnection(object):
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
-        logging.debug(_("instance %s: is running", instance['name']))
+        logging.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
 
         timer = utils.LoopingCall(f=None)
