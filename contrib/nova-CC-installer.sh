@@ -19,7 +19,7 @@
 # and a lot of input from the fine folks in #openstack on irc.freenode.net!
 
 # Please contact script maintainers for questions, comments, or concerns:
-# Wayne  ->  wayne.walls@rackspace.com
+# Wayne  ->  wayne@openstack.org
 # Jordan ->  jordan@openstack.org
 
 # This script is intended to be ran on a fresh install on Ubuntu 10.04 64-bit.  Once ran with 
@@ -28,7 +28,7 @@
 # to reach out to script maintainers for anything that can be done better.  I'm pretty new to this scripting business 
 # so I'm sure there is room for improvement!
 
-#Usage:  bash nova-CC-installer
+#Usage:  bash nova-CC-installer.sh
 
 #This is a Linux check
 if [ `uname -a | grep -i linux | wc -l` -lt 1 ]; then
@@ -193,10 +193,13 @@ done;
 echo
 echo " RabbitMQ Host IP set as \"$RABBIT_IP\""
 
-echo "There is an issue bypassing the rabbit package splash screen, so installing here and allowing you to proceed"
+echo "There is an issue bypassing the rabbit package splash screen, so installing here and allowing you to proceed.   There is currenly no \
+way to background/preseed this, so it will output to terminal..."
+
 echo
-sleep 2
-apt-get -y install rabbitmq-server &>> $LOGFILE
+sleep 5
+apt-get -y install rabbitmq-server 
+echo
 
 #Configuring Cloud Controller Host IP
 set -o nounset
@@ -268,7 +271,6 @@ echo
 
 echo "Nova Network Setup"
 echo "##################"
-sleep 1
 
 echo
 
@@ -302,7 +304,8 @@ echo "Step 4:  Creating a project for Nova"
 
 echo "You will choose an admin for the project, and also name the project here. \
 Also, you will build out the network configuration for the project."
-sleep 5
+sleep 1
+echo
 
 read -p "Nova project user name:" NOVA_PROJECT_USER
 read -p "Nova project name:" NOVA_PROJECT
@@ -378,7 +381,8 @@ install_package ${REQUIRED_PACKAGES}
 add-apt-repository ppa:nova-core/ppa &>> $LOGFILE
 add-apt-repository ppa:nova-core/trunk &>> $LOGFILE
 apt-get update &>> $LOGFILE
-REQUIRED_PACKAGES="mysql-server bzr nova-common nova-doc python-mysqldb python-greenlet python-nova nova-api nova-network nova-objectstore nova-scheduler nova-compute unzip vim euca2ools dnsmasq open-iscsi kpartx kvm gawk iptables ebtables user-mode-linux kvm libvirt-bin screen iscsitarget euca2ools vlan curl python-twisted python-sqlalchemy python-mox python-greenlet python-carrot python-daemon python-eventlet python-gflags python-libvirt python-libxml2 python-routes"
+REQUIRED_PACKAGES="mysql-server bzr nova-common nova-doc nova-api nova-network nova-objectstore nova-scheduler nova-compute unzip vim euca2ools dnsmasq open-iscsi kpartx gawk iptables ebtables user-mode-linux kvm libvirt-bin screen iscsitarget vlan curl python-twisted python-sqlalchemy python-mox python-greenlet python-carrot python-daemon python-eventlet python-gflags python-libvirt python-libxml2 python-routes python-mysqldb python-greenlet python-nova"
+#REQUIRED_PACKAGES="mysql-server bzr nova-common nova-doc python-mysqldb python-greenlet python-nova nova-api nova-network nova-objectstore nova-scheduler nova-compute unzip vim euca2ools dnsmasq open-iscsi kpartx kvm gawk iptables ebtables user-mode-linux kvm libvirt-bin screen iscsitarget euca2ools vlan curl python-twisted python-sqlalchemy python-mox python-greenlet python-carrot python-daemon python-eventlet python-gflags python-libvirt python-libxml2 python-routes"
 install_package ${REQUIRED_PACKAGES}
 
 echo "Finalizing mySQL setup"
@@ -458,13 +462,13 @@ echo "...done..."
 
 echo "######################################################################"
 echo "#You /MUST/ re-source your 'novarc' to use the API commands since the#" 
-echo "##script cannot pass the source information out of its own process###"
+echo "##script cannot pass the source information out of it's own process###"
 echo "######################################################################"
 
 #Only one dnsmasq process starts, supposed to two running at different priorities.  This fixes that...possible bug.
 killall dnsmasq
 service nova-network restart &>> $LOGFILE
 
-#Needed to KVM to initialize...bug report filed, will add tracking later
-chmod -R 777 /dev
-echo "Directory '/dev' is 777'd due to kvm not having write access and VMs fall into qemu mode" &>> $LOGFILE
+#Needed for KVM to initialize, VMs run in qemu mode otherwise and is very slow
+chgrp kvm /dev/kvm
+chmod g+rwx /dev/kvm
