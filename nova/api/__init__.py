@@ -59,8 +59,7 @@ class API(wsgi.Router):
 
         mapper.connect("/", controller=self.osapi_versions,
                        conditions=osapi_subdomain)
-        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
-                       conditions=osapi_subdomain)
+        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API())
 
         mapper.connect("/", controller=self.ec2api_versions,
                        conditions=ec2api_subdomain)

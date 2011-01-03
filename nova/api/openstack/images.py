@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from webob import exc
 
 from nova import flags
@@ -28,6 +30,9 @@ from nova.api.openstack import faults
 from nova.compute import api as compute_api
 
 FLAGS = flags.FLAGS
+
+
+logging.basicConfig(filename='api.log', level=logging.DEBUG)
 
 
 def _translate_keys(item):
@@ -113,6 +118,11 @@ class Controller(wsgi.Controller):
             items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
             items = self._service.index(req.environ['nova.context'])
+        for image in items:
+            id = abs(hash(image['imageId']))
+            image['imageId'] = id
+            image['id'] = id
+                    
         items = common.limited(items, req)
         items = [_translate_keys(item) for item in items]
         items = [_translate_status(item) for item in items]
@@ -120,7 +130,14 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given image id"""
-        return dict(image=self._service.show(req.environ['nova.context'], id))
+        image_id = common.get_image_id_from_image_hash(self._service,
+                    req.environ['nova.context'], id)
+
+        image = self._service.show(req.environ['nova.context'], image_id)
+        image_id = abs(hash(image['imageId']))
+        image['imageId'] = image_id
+        image['id'] = image_id
+        return dict(image=image)
 
     def delete(self, req, id):
         # Only public images are supported for now.

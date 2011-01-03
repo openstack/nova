@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import exception
+
 
 def limited(items, req):
     """Return a slice of items according to requested offset and limit.
@@ -34,3 +36,17 @@ def limited(items, req):
     limit = min(1000, limit)
     range_end = offset + limit
     return items[offset:range_end]
+
+
+def get_image_id_from_image_hash(image_service, context, image_hash):
+    try:
+        items = image_service.detail(context)
+    except NotImplementedError:
+        items = image_service.index(context)
+    for image in items:
+        image_id = image['imageId']
+        if abs(hash(image_id)) == int(image_hash):
+            return image_id
+    raise exception.NotFound(image_hash)
+
+

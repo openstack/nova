@@ -15,7 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 import time
+
 from webob import exc
 
 from nova import wsgi
@@ -41,13 +43,16 @@ class Controller(wsgi.Controller):
 
     def index(self, req, server_id):
         """ Returns the list of backup schedules for a given instance """
+        logging.debug("INDEX")
         return _translate_keys({})
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows
         both create and update through a POST """
-        return faults.Fault(exc.HTTPNotFound())
+        logging.debug("CREATE")
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def delete(self, req, server_id, id):
         """ Deletes an existing backup schedule """
-        return faults.Fault(exc.HTTPNotFound())
+        logging.debug("DELETE")
+        return faults.Fault(exc.HTTPNotImplemented())

@@ -102,6 +102,7 @@ class ComputeAPI(base.Base):
                 ramdisk_id = None
                 logging.debug("Creating a raw instance")
             # Make sure we have access to kernel and ramdisk (if not raw)
+            logging.debug("KERNEL=%s, RAMDISK=%s" % (kernel_id, ramdisk_id))
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
