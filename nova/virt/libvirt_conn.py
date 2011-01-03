@@ -135,6 +135,9 @@ class LibvirtConnection(object):
         else:
             self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
+    def init_host(self):
+        pass
+
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
             logging.debug(_('Connecting to libvirt: %s') % self.libvirt_uri)
