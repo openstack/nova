@@ -87,7 +87,7 @@ flags.DEFINE_bool('allow_project_net_traffic',
                   'Whether to allow in project network traffic')
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
-                    'Firewall driver (defaults to nwfilter)')
+                    'Firewall driver (defaults to iptables)')
 
 
 def get_connection(read_only):
