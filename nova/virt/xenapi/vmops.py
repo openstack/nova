@@ -271,7 +271,7 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
-    def get_diagnostics(self, instance_id):
+    def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
         vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)

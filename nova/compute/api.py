@@ -293,6 +293,20 @@ class ComputeAPI(base.Base):
                  {"method": "unpause_instance",
                   "args": {"instance_id": instance['id']}})
 
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance["host"]
+        return rpc.call(context,
+            self.db.queue_get_for(context, FLAGS.compute_topic, host),
+            {"method": "get_diagnostics",
+             "args": {"instance_id": instance["id"]}})
+
+    def get_actions(self, context, instance_id):
+        """Retrieve actions for the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        return self.db.instance_get_actions(context, instance["id"])
+
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
         instance = self.db.instance_get_by_internal_id(context, instance_id)

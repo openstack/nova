@@ -168,9 +168,9 @@ class XenAPIConnection(object):
         """Return data about VM instance"""
         return self._vmops.get_info(instance_id)
 
-    def get_diagnostics(self, instance_id):
+    def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
-        return self._vmops.get_diagnostics(instance_id)
+        return self._vmops.get_diagnostics(instance)
 
     def get_console_output(self, instance):
         """Return snapshot of console"""
@@ -250,7 +250,7 @@ class XenAPISession(object):
             status = self._session.xenapi.task.get_status(task)
             action = dict(
                 instance_id=int(id),
-                action=name,
+                action=name[0:255],  # Ensure action is never > 255
                 error=None)
             if status == "pending":
                 return
