@@ -927,18 +927,11 @@ class NWFilterFirewall(FirewallDriver):
         ctxt = context.get_admin_context()
 
         if FLAGS.allow_project_net_traffic:
-            network_ref = db.project_get_network(ctxt, instance['project_id'])
-            net, mask = _get_net_and_mask(network_ref['cidr'])
-
-            project_filter = self.nova_project_filter(instance['project_id'],
-                                                      net, mask)
-            self._define_filter(project_filter)
-
-            instance_secgroup_filter_children += [('nova-project-%s' %
-                                                       instance['project_id'])]
+            instance_filter_children += ['nova-project']
 
         for security_group in db.security_group_get_by_instance(ctxt,
                                                                instance['id']):
+
             self.refresh_security_group_rules(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
