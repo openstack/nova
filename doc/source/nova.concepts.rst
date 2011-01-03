@@ -75,8 +75,8 @@ Nova is built on a shared-nothing, messaging-based architecture. All of the majo
 
 To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
 
-The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>`_. 
-
+    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>`_.
+    
 Concept: Storage
 ----------------
 
