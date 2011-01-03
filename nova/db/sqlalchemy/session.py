@@ -36,8 +36,8 @@ def get_session(autocommit=True, expire_on_commit=False):
     global _MAKER
     if not _MAKER:
         if not _ENGINE:
-            _ENGINE = create_engine(FLAGS.sql_connection, 
-                                    pool_recycle=FLAGS.sql_idle_timeout, 
+            _ENGINE = create_engine(FLAGS.sql_connection,
+                                    pool_recycle=FLAGS.sql_idle_timeout,
                                     echo=False)
         _MAKER = (sessionmaker(bind=_ENGINE,
                                 autocommit=autocommit,
