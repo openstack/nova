@@ -12,6 +12,7 @@ import qweb
 import string, subprocess, uuid
 
 global g_server
+TIMEOUT=300
 
 class Terminal:
     def __init__(self,width=80,height=24):
@@ -434,7 +435,7 @@ class Multiplex:
         t=time.time()
         for i in self.proc.keys():
             t0=self.proc[i]['time']
-            if (t-t0)>120:
+            if (t-t0)>TIMEOUT:
                 try:
                     os.close(i)
                     os.kill(self.proc[i]['pid'],signal.SIGTERM)
@@ -465,7 +466,7 @@ class Multiplex:
         while self.run():
             fds=self.fds()
             i,o,e=select.select(fds, [], [], 1.0)
-            if time.time() - self.lastActivity > 120:
+            if time.time() - self.lastActivity > TIMEOUT:
                 global g_server
                 g_server.shutdown()
             for fd in i:
