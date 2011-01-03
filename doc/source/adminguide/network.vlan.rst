@@ -91,11 +91,10 @@ These do NOT have IP addresses in the host to protect host access.
 Compute nodes have iptables/ebtables entries created per project and
 instance to protect against IP/MAC address spoofing and ARP poisoning.
 
-The network assignment to a project, and IP address assignment to a VM instance, are triggered when a user starts to run a VM instance. When running a VM instance, a user needs to specify a project for the instances, and the security groups (described in Security Groups) when the instance wants to join. If this is the first instance to be created for the project, then Nova (the cloud controller) needs to find a network controller to be the network host for the project; it then sets up a private network by finding an unused VLAN id, an unused subnet, and then the controller assigns them to the project, it also assigns a name to the project's Linux bridge, and allocating a private IP within the project's subnet for the new instance.
+The network assignment to a project, and IP address assignment to a VM instance, are triggered when a user starts to run a VM instance. When running a VM instance, a user needs to specify a project for the instances, and the security groups (described in Security Groups) when the instance wants to join. If this is the first instance to be created for the project, then Nova (the cloud controller) needs to find a network controller to be the network host for the project; it then sets up a private network by finding an unused VLAN id, an unused subnet, and then the controller assigns them to the project, it also assigns a name to the project's Linux bridge (br100 stored in the Nova database), and allocating a private IP within the project's subnet for the new instance.
 
 If the instance the user wants to start is not the project's first, a subnet and a VLAN must have already been assigned to the project; therefore the system needs only to find an available IP address within the subnet and assign it to the new starting instance. If there is no private IP available within the subnet, an exception will be raised to the cloud controller, and the VM creation cannot proceed.
 
-.. todo:: insert the name of the Linux bridge, is it always named bridge?
 
 External Infrastructure
 -----------------------

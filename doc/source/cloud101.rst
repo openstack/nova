@@ -87,4 +87,5 @@ A hybrid cloud can be a deployment model, as a composition of both public and pr
 Work in the Clouds
 ------------------
 
-.. todo:: What people have done/sample projects
+What have people done with cloud computing? Cloud computing can help with large-scale computing needs or can lead consolidation efforts by virtualizing servers to make more use of existing hardware (and possibly release old hardware from service.) People also use cloud computing for collaboration because of the high availability through networked computers. Productivity suites for word processing, number crunching, and email communications, and more are also available through cloud computing. Cloud computing also avails additional storage to the cloud user, avoiding the need for additional hard drives on your desktop and enabling access to large, huge data storage capacity online in the cloud.
+
