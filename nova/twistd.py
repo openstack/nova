@@ -43,7 +43,7 @@ else:
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('logdir',  None, 'directory to keep log files in '
+flags.DEFINE_string('logdir', None, 'directory to keep log files in '
                                      '(will be prepended to $logfile)')
 
 
@@ -208,7 +208,7 @@ def stop(pidfile):
         pid = None
 
     if not pid:
-        message = "pidfile %s does not exist. Daemon not running?\n"
+        message = _("pidfile %s does not exist. Daemon not running?\n")
         sys.stderr.write(message % pidfile)
         # Not an error in a restart
         return
@@ -229,7 +229,7 @@ def stop(pidfile):
 
 
 def serve(filename):
-    logging.debug("Serving %s" % filename)
+    logging.debug(_("Serving %s") % filename)
     name = os.path.basename(filename)
     OptionsClass = WrapTwistedOptions(TwistdServerOptions)
     options = OptionsClass()
@@ -284,7 +284,7 @@ def serve(filename):
     else:
         logging.getLogger().setLevel(logging.WARNING)
 
-    logging.debug("Full set of FLAGS:")
+    logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
         logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
 

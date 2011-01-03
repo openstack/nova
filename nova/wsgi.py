@@ -270,7 +270,7 @@ class Serializer(object):
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
-        req = webob.Request(environ)
+        req = webob.Request.blank('', environ)
         suffix = req.path_info.split('.')[-1].lower()
         if suffix == 'json':
             self.handler = self._to_json

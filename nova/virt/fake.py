@@ -25,8 +25,6 @@ semantics of real hypervisor connections.
 
 """
 
-from twisted.internet import defer
-
 from nova import exception
 from nova.compute import power_state
 
@@ -78,6 +76,12 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
+    def init_host(self):
+        """
+        Initialize anything that is necessary for the driver to function
+        """
+        return
+
     def list_instances(self):
         """
         Return the names of all the instances known to the virtualization
@@ -107,7 +111,20 @@ class FakeConnection(object):
         fake_instance = FakeInstance()
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
-        return defer.succeed(None)
+
+    def snapshot(self, instance, name):
+        """
+        Snapshots the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The second parameter is the name of the snapshot.
+
+        The work will be done asynchronously.  This function returns a
+        Deferred that allows the caller to detect when it is complete.
+        """
+        pass
 
     def reboot(self, instance):
         """
@@ -119,19 +136,43 @@ class FakeConnection(object):
         The work will be done asynchronously.  This function returns a
         Deferred that allows the caller to detect when it is complete.
         """
-        return defer.succeed(None)
+        pass
 
     def rescue(self, instance):
         """
         Rescue the specified instance.
         """
-        return defer.succeed(None)
+        pass
 
     def unrescue(self, instance):
         """
         Unrescue the specified instance.
         """
-        return defer.succeed(None)
+        pass
+
+    def pause(self, instance, callback):
+        """
+        Pause the specified instance.
+        """
+        pass
+
+    def unpause(self, instance, callback):
+        """
+        Unpause the specified instance.
+        """
+        pass
+
+    def suspend(self, instance, callback):
+        """
+        suspend the specified instance
+        """
+        pass
+
+    def resume(self, instance, callback):
+        """
+        resume the specified instance
+        """
+        pass
 
     def destroy(self, instance):
         """
@@ -144,7 +185,6 @@ class FakeConnection(object):
         Deferred that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
-        return defer.succeed(None)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach the disk at device_path to the instance at mountpoint"""
@@ -167,13 +207,17 @@ class FakeConnection(object):
         knowledge of the instance
         """
         if instance_name not in self.instances:
-            raise exception.NotFound("Instance %s Not Found" % instance_name)
+            raise exception.NotFound(_("Instance %s Not Found")
+                                     % instance_name)
         i = self.instances[instance_name]
         return {'state': i._state,
                 'max_mem': 0,
                 'mem': 0,
                 'num_cpu': 2,
                 'cpu_time': 0}
+
+    def get_diagnostics(self, instance_name):
+        pass
 
     def list_disks(self, instance_name):
         """
@@ -247,5 +291,6 @@ class FakeConnection(object):
 
 
 class FakeInstance(object):
+
     def __init__(self):
         self._state = power_state.NOSTATE

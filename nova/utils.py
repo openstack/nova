@@ -21,24 +21,24 @@ System-level utilities and helper functions.
 """
 
 import datetime
-import functools
 import inspect
 import logging
 import os
 import random
 import subprocess
 import socket
+import struct
 import sys
+import time
 from xml.sax import saxutils
 
-from twisted.internet.threads import deferToThread
+from eventlet import event
+from eventlet import greenthread
 
 from nova import exception
-from nova import flags
 from nova.exception import ProcessExecutionError
 
 
-FLAGS = flags.FLAGS
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -48,8 +48,9 @@ def import_class(import_str):
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError):
-        raise exception.NotFound('Class %s cannot be found' % class_str)
+    except (ImportError, ValueError, AttributeError), exc:
+        logging.debug(_('Inner Exception: %s'), exc)
+        raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
 def import_object(import_str):
@@ -62,8 +63,53 @@ def import_object(import_str):
         return cls()
 
 
+def vpn_ping(address, port, timeout=0.05, session_id=None):
+    """Sends a vpn negotiation packet and returns the server session.
+
+    Returns False on a failure. Basic packet structure is below.
+
+    Client packet (14 bytes)::
+     0 1      8 9  13
+    +-+--------+-----+
+    |x| cli_id |?????|
+    +-+--------+-----+
+    x = packet identifier 0x38
+    cli_id = 64 bit identifier
+    ? = unknown, probably flags/padding
+
+    Server packet (26 bytes)::
+     0 1      8 9  13 14    21 2225
+    +-+--------+-----+--------+----+
+    |x| srv_id |?????| cli_id |????|
+    +-+--------+-----+--------+----+
+    x = packet identifier 0x40
+    cli_id = 64 bit identifier
+    ? = unknown, probably flags/padding
+    bit 9 was 1 and the rest were 0 in testing
+    """
+    if session_id is None:
+        session_id = random.randint(0, 0xffffffffffffffff)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    data = struct.pack("!BQxxxxxx", 0x38, session_id)
+    sock.sendto(data, (address, port))
+    sock.settimeout(timeout)
+    try:
+        received = sock.recv(2048)
+    except socket.timeout:
+        return False
+    finally:
+        sock.close()
+    fmt = "!BQxxxxxQxxxx"
+    if len(received) != struct.calcsize(fmt):
+        print struct.calcsize(fmt)
+        return False
+    (identifier, server_sess, client_sess) = struct.unpack(fmt, received)
+    if identifier == 0x40 and client_sess == session_id:
+        return server_sess
+
+
 def fetchfile(url, target):
-    logging.debug("Fetching %s" % url)
+    logging.debug(_("Fetching %s") % url)
 #    c = pycurl.Curl()
 #    fp = open(target, "wb")
 #    c.setopt(c.URL, url)
@@ -75,7 +121,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug("Running cmd: %s", cmd)
+    logging.debug(_("Running cmd (subprocess): %s"), cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -88,13 +134,17 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug("Result was %s" % (obj.returncode))
+        logging.debug(_("Result was %s") % (obj.returncode))
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
                                         stdout=stdout,
                                         stderr=stderr,
                                         cmd=cmd)
+    # NOTE(termie): this appears to be necessary to let the subprocess call
+    #               clean something up in between calls, without it two
+    #               execute calls in a row hangs the second one
+    greenthread.sleep(0)
     return result
 
 
@@ -122,14 +172,8 @@ def debug(arg):
 
 
 def runthis(prompt, cmd, check_exit_code=True):
-    logging.debug("Running %s" % (cmd))
-    exit_code = subprocess.call(cmd.split(" "))
-    logging.debug(prompt % (exit_code))
-    if check_exit_code and exit_code != 0:
-        raise ProcessExecutionError(exit_code=exit_code,
-                                    stdout=None,
-                                    stderr=None,
-                                    cmd=cmd)
+    logging.debug(_("Running %s") % (cmd))
+    rv, err = execute(cmd, check_exit_code=check_exit_code)
 
 
 def generate_uid(topic, size=8):
@@ -152,8 +196,6 @@ def last_octet(address):
 
 def get_my_ip():
     """Returns the actual ip of the local machine."""
-    if getattr(FLAGS, 'fake_tests', None):
-        return '127.0.0.1'
     try:
         csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         csock.connect(('8.8.8.8', 80))
@@ -161,17 +203,55 @@ def get_my_ip():
         csock.close()
         return addr
     except socket.gaierror as ex:
-        logging.warn("Couldn't get IP, using 127.0.0.1 %s", ex)
+        logging.warn(_("Couldn't get IP, using 127.0.0.1 %s"), ex)
         return "127.0.0.1"
 
 
+def utcnow():
+    """Overridable version of datetime.datetime.utcnow."""
+    if utcnow.override_time:
+        return utcnow.override_time
+    return datetime.datetime.utcnow()
+
+
+utcnow.override_time = None
+
+
+def utcnow_ts():
+    """Timestamp version of our utcnow function."""
+    return time.mktime(utcnow().timetuple())
+
+
+def set_time_override(override_time=datetime.datetime.utcnow()):
+    """Override utils.utcnow to return a constant time."""
+    utcnow.override_time = override_time
+
+
+def advance_time_delta(timedelta):
+    """Advance overriden time using a datetime.timedelta."""
+    assert(not utcnow.override_time is None)
+    utcnow.override_time += timedelta
+
+
+def advance_time_seconds(seconds):
+    """Advance overriden time by seconds."""
+    advance_time_delta(datetime.timedelta(0, seconds))
+
+
+def clear_time_override():
+    """Remove the overridden time."""
+    utcnow.override_time = None
+
+
 def isotime(at=None):
+    """Returns iso formatted utcnow."""
     if not at:
-        at = datetime.datetime.utcnow()
+        at = utcnow()
     return at.strftime(TIME_FORMAT)
 
 
 def parse_isotime(timestr):
+    """Turn an iso formatted time back into a datetime"""
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
 
@@ -205,7 +285,7 @@ class LazyPluggable(object):
         if not self.__backend:
             backend_name = self.__pivot.value
             if backend_name not in self.__backends:
-                raise exception.Error('Invalid backend: %s' % backend_name)
+                raise exception.Error(_('Invalid backend: %s') % backend_name)
 
             backend = self.__backends[backend_name]
             if type(backend) == type(tuple()):
@@ -224,10 +304,41 @@ class LazyPluggable(object):
         return getattr(backend, key)
 
 
-def deferredToThread(f):
-    def g(*args, **kwargs):
-        return deferToThread(f, *args, **kwargs)
-    return g
+class LoopingCall(object):
+    def __init__(self, f=None, *args, **kw):
+        self.args = args
+        self.kw = kw
+        self.f = f
+        self._running = False
+
+    def start(self, interval, now=True):
+        self._running = True
+        done = event.Event()
+
+        def _inner():
+            if not now:
+                greenthread.sleep(interval)
+            try:
+                while self._running:
+                    self.f(*self.args, **self.kw)
+                    greenthread.sleep(interval)
+            except Exception:
+                logging.exception('in looping call')
+                done.send_exception(*sys.exc_info())
+                return
+
+            done.send(True)
+
+        self.done = done
+
+        greenthread.spawn(_inner)
+        return self.done
+
+    def stop(self):
+        self._running = False
+
+    def wait(self):
+        return self.done.wait()
 
 
 def xhtml_escape(value):

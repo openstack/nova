@@ -6,6 +6,7 @@ keys
 networks
 nova.sqlite
 CA/cacert.pem
+CA/crl.pem
 CA/index.txt*
 CA/openssl.cnf
 CA/serial*

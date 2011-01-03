@@ -23,12 +23,25 @@ from nova.api.openstack import faults
 import nova.image.service
 
 
+def _translate_keys(inst):
+    """ Coerces the backup schedule into proper dictionary format """
+    return dict(backupSchedule=inst)
+
+
 class Controller(wsgi.Controller):
+    """ The backup schedule API controller for the Openstack API """
+
+    _serialization_metadata = {
+        'application/xml': {
+            'attributes': {
+                'backupSchedule': []}}}
+
     def __init__(self):
         pass
 
     def index(self, req, server_id):
-        return faults.Fault(exc.HTTPNotFound())
+        """ Returns the list of backup schedules for a given instance """
+        return _translate_keys({})
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows
@@ -36,4 +49,5 @@ class Controller(wsgi.Controller):
         return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, server_id, id):
+        """ Deletes an existing backup schedule """
         return faults.Fault(exc.HTTPNotFound())

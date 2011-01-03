@@ -56,11 +56,16 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1):
-    return Instance(id=id + 123456, state=0, image_id=10, user_id=user_id,
+    return Instance(id=int(id) + 123456, state=0, image_id=10, user_id=user_id,
                     display_name='server%s' % id, internal_id=id)
 
 
+def fake_compute_api(cls, req, id):
+    return True
+
+
 class ServersTest(unittest.TestCase):
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
@@ -82,9 +87,23 @@ class ServersTest(unittest.TestCase):
                        instance_address)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause',
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause',
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'suspend',
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, 'resume',
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, "get_diagnostics",
+                       fake_compute_api)
+        self.stubs.Set(nova.compute.api.ComputeAPI, "get_actions",
+                       fake_compute_api)
+        self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        FLAGS.allow_admin_api = self.allow_admin
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -210,6 +229,66 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             i += 1
+
+    def test_server_pause(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/pause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_unpause(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/unpause')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_suspend(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/suspend')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_resume(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/resume')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(nova.api.API('os'))
+        self.assertEqual(res.status_int, 202)
+
+    def test_server_diagnostics(self):
+        req = webob.Request.blank("/v1.0/servers/1/diagnostics")
+        req.method = "GET"
+        res = req.get_response(nova.api.API("os"))
+        self.assertEqual(res.status_int, 404)
+
+    def test_server_actions(self):
+        req = webob.Request.blank("/v1.0/servers/1/actions")
+        req.method = "GET"
+        res = req.get_response(nova.api.API("os"))
+        self.assertEqual(res.status_int, 404)
 
     def test_server_reboot(self):
         body = dict(server=dict(

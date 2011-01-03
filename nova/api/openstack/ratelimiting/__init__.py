@@ -1,3 +1,20 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.import datetime
+
 """Rate limiting of arbitrary actions."""
 
 import httplib
@@ -6,12 +23,91 @@ import urllib
 import webob.dec
 import webob.exc
 
+from nova import wsgi
+from nova.api.openstack import faults
 
 # Convenience constants for the limits dictionary passed to Limiter().
 PER_SECOND = 1
 PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
+
+
+class RateLimitingMiddleware(wsgi.Middleware):
+    """Rate limit incoming requests according to the OpenStack rate limits."""
+
+    def __init__(self, application, service_host=None):
+        """Create a rate limiting middleware that wraps the given application.
+
+        By default, rate counters are stored in memory.  If service_host is
+        specified, the middleware instead relies on the ratelimiting.WSGIApp
+        at the given host+port to keep rate counters.
+        """
+        if not service_host:
+            #TODO(gundlach): These limits were based on limitations of Cloud
+            #Servers.  We should revisit them in Nova.
+            self.limiter = Limiter(limits={
+                    'DELETE': (100, PER_MINUTE),
+                    'PUT': (10, PER_MINUTE),
+                    'POST': (10, PER_MINUTE),
+                    'POST servers': (50, PER_DAY),
+                    'GET changes-since': (3, PER_MINUTE),
+                })
+        else:
+            self.limiter = WSGIAppProxy(service_host)
+        super(RateLimitingMiddleware, self).__init__(application)
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Rate limit the request.
+
+        If the request should be rate limited, return a 413 status with a
+        Retry-After header giving the time when the request would succeed.
+        """
+        return self.rate_limited_request(req, self.application)
+
+    def rate_limited_request(self, req, application):
+        """Rate limit the request.
+
+        If the request should be rate limited, return a 413 status with a
+        Retry-After header giving the time when the request would succeed.
+        """
+        action_name = self.get_action_name(req)
+        if not action_name:
+            # Not rate limited
+            return application
+        delay = self.get_delay(action_name,
+            req.environ['nova.context'].user_id)
+        if delay:
+            # TODO(gundlach): Get the retry-after format correct.
+            exc = webob.exc.HTTPRequestEntityTooLarge(
+                    explanation=('Too many requests.'),
+                    headers={'Retry-After': time.time() + delay})
+            raise faults.Fault(exc)
+        return application
+
+    def get_delay(self, action_name, username):
+        """Return the delay for the given action and username, or None if
+        the action would not be rate limited.
+        """
+        if action_name == 'POST servers':
+            # "POST servers" is a POST, so it counts against "POST" too.
+            # Attempt the "POST" first, lest we are rate limited by "POST" but
+            # use up a precious "POST servers" call.
+            delay = self.limiter.perform("POST", username=username)
+            if delay:
+                return delay
+        return self.limiter.perform(action_name, username=username)
+
+    def get_action_name(self, req):
+        """Return the action name for this request."""
+        if req.method == 'GET' and 'changes-since' in req.GET:
+            return 'GET changes-since'
+        if req.method == 'POST' and req.path_info.startswith('/servers'):
+            return 'POST servers'
+        if req.method in ['PUT', 'POST', 'DELETE']:
+            return req.method
+        return None
 
 
 class Limiter(object):
