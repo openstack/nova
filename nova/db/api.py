@@ -383,6 +383,11 @@ def instance_action_create(context, values):
     return IMPL.instance_action_create(context, values)
 
 
+def instance_get_actions(context, instance_id):
+    """Get instance actions by instance id."""
+    return IMPL.instance_get_actions(context, instance_id)
+
+
 ###################
 
 

@@ -93,6 +93,8 @@ class APIRouter(wsgi.Router):
             logging.debug("Including admin operations in API.")
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
+            server_members["diagnostics"] = "GET"
+            server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
 
@@ -100,7 +102,7 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'},
                         member=server_members)
 
-        mapper.resource("backup_schedule", "backup_schedules",
+        mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))

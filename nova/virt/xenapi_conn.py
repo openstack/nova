@@ -83,6 +83,10 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc).  Used only if '
                    'connection_type=xenapi.')
+flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
+                   5.0,
+                   'The interval used for polling of coalescing vhds.'
+                   '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -131,6 +135,10 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance """
+        self._vmops.snapshot(instance, name)
+
     def reboot(self, instance):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
@@ -159,9 +167,9 @@ class XenAPIConnection(object):
         """Return data about VM instance"""
         return self._vmops.get_info(instance_id)
 
-    def get_diagnostics(self, instance_id):
+    def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
-        return self._vmops.get_diagnostics(instance_id)
+        return self._vmops.get_diagnostics(instance)
 
     def get_console_output(self, instance):
         """Return snapshot of console"""
@@ -233,8 +241,8 @@ class XenAPISession(object):
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
             action = dict(
-                id=int(id),
-                action=name,
+                instance_id=int(id),
+                action=name[0:255],  # Ensure action is never > 255
                 error=None)
             if status == "pending":
                 return

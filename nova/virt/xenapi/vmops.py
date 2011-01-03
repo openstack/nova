@@ -70,7 +70,7 @@ class VMOps(object):
             disk_image_type = ImageType.DISK
         else:
             disk_image_type = ImageType.DISK_RAW
-        vdi_uuid = VMHelper.fetch_image(self._session,
+        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
             instance.image_id, user, project, disk_image_type)
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         #Have a look at the VDI and see if it has a PV kernel
@@ -79,11 +79,11 @@ class VMOps(object):
             pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
         kernel = None
         if instance.kernel_id:
-            kernel = VMHelper.fetch_image(self._session,
+            kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
         ramdisk = None
         if instance.ramdisk_id:
-            ramdisk = VMHelper.fetch_image(self._session,
+            ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
@@ -120,6 +120,52 @@ class VMOps(object):
         timer.f = _wait_for_boot
         return timer.start(interval=0.5, now=True)
 
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance
+
+        :param instance: instance to be snapshotted
+        :param name: name/label to be given to the snapshot
+
+        Steps involved in a XenServer snapshot:
+
+        1. XAPI-Snapshot: Snapshotting the instance using XenAPI. This
+            creates: Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+            Snapshot VHD
+
+        2. Wait-for-coalesce: The Snapshot VDI and Instance VDI both point to
+            a 'base-copy' VDI.  The base_copy is immutable and may be chained
+            with other base_copies.  If chained, the base_copies
+            coalesce together, so, we must wait for this coalescing to occur to
+            get a stable representation of the data on disk.
+
+        3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
+            that will bundle the VHDs together and then push the bundle into
+            Glance.
+        """
+
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+
+        logging.debug(_("Starting snapshot for VM %s"), instance)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+
+        label = "%s-snapshot" % instance.name
+        try:
+            template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
+                self._session, instance.id, vm_ref, label)
+        except self.XenAPI.Failure, exc:
+            logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
+            return
+
+        try:
+            # call plugin to ship snapshot off to glance
+            VMHelper.upload_image(
+                self._session, instance.id, template_vdi_uuids, name)
+        finally:
+            self._destroy(instance, template_vm_ref, shutdown=False)
+
+        logging.debug(_("Finished snapshot and upload for VM %s"), instance)
+
     def reboot(self, instance):
         """Reboot VM instance"""
         instance_name = instance.name
@@ -133,31 +179,36 @@ class VMOps(object):
     def destroy(self, instance):
         """Destroy VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
+        return self._destroy(instance, vm, shutdown=True)
+
+    def _destroy(self, instance, vm, shutdown=True):
+        """ Destroy VM instance """
         if vm is None:
             # Don't complain, just return.  This lets us clean up instances
             # that have already disappeared from the underlying platform.
             return
         # Get the VDIs related to the VM
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
-        try:
-            task = self._session.call_xenapi('Async.VM.hard_shutdown',
-                                                   vm)
-            self._session.wait_for_task(instance.id, task)
-        except XenAPI.Failure, exc:
-            logging.warn(exc)
+        if shutdown:
+            try:
+                task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+                self._session.wait_for_task(instance.id, task)
+            except self.XenAPI.Failure, exc:
+                logging.warn(exc)
+
         # Disk clean-up
         if vdis:
             for vdi in vdis:
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(instance.id, task)
-                except XenAPI.Failure, exc:
+                except self.XenAPI.Failure, exc:
                     logging.warn(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):
@@ -217,11 +268,12 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
-    def get_diagnostics(self, instance_id):
+    def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
-        vm = VMHelper.lookup(self._session, instance_id)
+        vm = VMHelper.lookup(self._session, instance.name)
         if vm is None:
-            raise exception.NotFound(_("Instance not found %s") % instance_id)
+            raise exception.NotFound(_("Instance not found %s") %
+                instance.name)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 
