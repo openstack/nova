@@ -259,7 +259,8 @@ class IptablesFirewallTestCase(test.TestCase):
                                           'project_id': 'fake'})
         ip = '10.11.12.13'
 
-        network_ref = self.network.get_network(self.context)
+        network_ref = db.project_get_network(self.context,
+                                             'fake')
 
         fixed_ip = {'address': ip,
                     'network_id': network_ref['id']}
@@ -428,6 +429,7 @@ class NWFilterTestCase(test.TestCase):
                                        self.security_group.id)
         instance = db.instance_get(self.context, inst_id)
 
+        self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
