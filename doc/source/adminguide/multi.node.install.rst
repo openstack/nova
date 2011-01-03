@@ -46,12 +46,12 @@ Assumptions
 Step 1 Use apt-get to get the latest code
 -----------------------------------------
 
-1. Setup Nova PPA with https://launchpad.net/~nova-core/+archive/ppa.
+1. Setup Nova PPA with https://launchpad.net/~nova-core/+archive/trunk.
 
 ::
     
     sudo apt-get install python-software-properties
-    sudo add-apt-repository ppa:nova-core/ppa
+    sudo add-apt-repository ppa:nova-core/trunk
 	
 2. Run update.
 
