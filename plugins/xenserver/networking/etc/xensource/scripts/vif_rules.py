@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""
+This script is used to configure iptables, ebtables, and arptables rules on
+XenServer hosts.
+"""
+
+import os
+import subprocess
+import sys
+
+# This is written to Python 2.4, since that is what is available on XenServer
+import simplejson as json
+
+
+def main(dom_id, command, only_this_vif=None):
+    xsls = execute("/usr/bin/xenstore-ls /local/domain/%s/vm-data/networking" \
+                  % dom_id, True)
+    macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
+
+    for mac in macs:
+        xsr = "/usr/bin/xenstore-read /local/domain/%s/vm-data/networking/%s"
+        xsread = execute(xsr % (dom_id, mac), True)
+        data = json.loads(xsread)
+        for ip in data['ips']:
+            if data["label"] == "public":
+                vif = "vif%s.0" % dom_id
+            else:
+                vif = "vif%s.1" % dom_id
+
+            if (only_this_vif is None) or (vif == only_this_vif):
+                params = dict(IP=ip['ip'], VIF=vif, MAC=data['mac'])
+                apply_ebtables_rules(command, params)
+                apply_arptables_rules(command, params)
+                apply_iptables_rules(command, params)
+
+
+def execute(command, return_stdout=False):
+    devnull = open(os.devnull, 'w')
+    proc = subprocess.Popen(command, shell=True, close_fds=True,
+                            stdout=subprocess.PIPE, stderr=devnull)
+    devnull.close()
+    if return_stdout:
+        return proc.stdout.read()
+    else:
+        return None
+
+# A note about adding rules:
+#   Whenever we add any rule to iptables, arptables or ebtables we first
+#   delete the same rule to ensure the rule only exists once.
+
+
+def apply_iptables_rules(command, params):
+    iptables = lambda rule: execute("/sbin/iptables %s" % rule)
+
+    iptables("-D FORWARD -m physdev --physdev-in %(VIF)s -s %(IP)s \
+              -j ACCEPT" % params)
+    if command == 'online':
+        iptables("-A FORWARD -m physdev --physdev-in %(VIF)s -s %(IP)s \
+                  -j ACCEPT" % params)
+
+
+def apply_arptables_rules(command, params):
+    arptables = lambda rule: execute("/sbin/arptables %s" % rule)
+
+    arptables("-D FORWARD --opcode Request --in-interface %(VIF)s \
+               --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+    arptables("-D FORWARD --opcode Reply --in-interface %(VIF)s \
+               --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+    if command == 'online':
+        arptables("-A FORWARD --opcode Request --in-interface %(VIF)s \
+                  --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+        arptables("-A FORWARD --opcode Reply --in-interface %(VIF)s \
+                  --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+
+
+def apply_ebtables_rules(command, params):
+    ebtables = lambda rule: execute("/sbin/ebtables %s" % rule)
+
+    ebtables("-D FORWARD -p 0806 -o %(VIF)s --arp-ip-dst %(IP)s -j ACCEPT" %
+             params)
+    ebtables("-D FORWARD -p 0800 -o %(VIF)s --ip-dst %(IP)s -j ACCEPT" %
+             params)
+    if command == 'online':
+        ebtables("-A FORWARD -p 0806 -o %(VIF)s --arp-ip-dst %(IP)s \
+                  -j ACCEPT" % params)
+        ebtables("-A FORWARD -p 0800 -o %(VIF)s --ip-dst %(IP)s \
+                  -j ACCEPT" % params)
+
+    ebtables("-D FORWARD -s ! %(MAC)s -i %(VIF)s -j DROP" % params)
+    if command == 'online':
+        ebtables("-I FORWARD 1 -s ! %(MAC)s -i %(VIF)s -j DROP" % params)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print "usage: %s dom_id online|offline [vif]" % \
+               os.path.basename(sys.argv[0])
+        sys.exit(1)
+    else:
+        dom_id, command = sys.argv[1:3]
+        vif = len(sys.argv) == 4 and sys.argv[3] or None
+        main(dom_id, command, vif)
