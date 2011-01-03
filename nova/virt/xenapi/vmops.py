@@ -281,3 +281,8 @@ class VMOps(object):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
+
+    def get_ajax_console(self, instance):
+        """Return link to instance's ajax console"""
+        # TODO: implement this!
+        return 'http://fakeajaxconsole/fake_url'
