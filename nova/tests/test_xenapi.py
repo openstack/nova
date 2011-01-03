@@ -166,6 +166,10 @@ class XenAPIVMTestCase(test.TestCase):
         instances = self.conn.list_instances()
         self.assertEquals(instances, [])
 
+    def test_get_diagnostics(self):
+        instance = self._create_instance()
+        self.conn.get_diagnostics(instance)
+
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)
         instance = self._create_instance()
@@ -253,7 +257,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'kernel_id': 2,
                   'ramdisk_id': 3,
                   'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff'
                   }
         instance = db.instance_create(values)
         self.conn.spawn(instance)
