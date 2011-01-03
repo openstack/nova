@@ -83,8 +83,9 @@ class API(base.Base):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
+        type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count,
-                                                instance_type)
+                                                type_data['vcpus'])
         if num_instances < min_count:
             logging.warn("Quota exceeeded for %s, tried to run %s instances",
                          context.project_id, min_count)
@@ -127,7 +128,6 @@ class API(base.Base):
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,

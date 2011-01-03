@@ -78,14 +78,14 @@ class QuotaTestCase(test.TestCase):
 
     def test_quota_overrides(self):
         """Make sure overriding a projects quotas works"""
-        num_instances = quota.allowed_instances(self.context, 100, 'm1.small')
+        num_instances = quota.allowed_instances(self.context, 100, 1)
         self.assertEqual(num_instances, 2)
         db.quota_create(self.context, {'project_id': self.project.id,
                                        'instances': 10})
-        num_instances = quota.allowed_instances(self.context, 100, 'm1.small')
+        num_instances = quota.allowed_instances(self.context, 100, 1)
         self.assertEqual(num_instances, 4)
         db.quota_update(self.context, self.project.id, {'cores': 100})
-        num_instances = quota.allowed_instances(self.context, 100, 'm1.small')
+        num_instances = quota.allowed_instances(self.context, 100, 1)
         self.assertEqual(num_instances, 10)
         db.quota_destroy(self.context, self.project.id)
 
