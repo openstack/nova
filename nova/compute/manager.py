@@ -225,6 +225,27 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    def snapshot_instance(self, context, instance_id, name):
+        """Snapshot an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        #NOTE(sirp): update_state currently only refreshes the state field
+        # if we add is_snapshotting, we will need this refreshed too,
+        # potentially?
+        self._update_state(context, instance_id)
+
+        logging.debug(_('instance %s: snapshotting'), instance_ref['name'])
+        if instance_ref['state'] != power_state.RUNNING:
+            logging.warn(_('trying to snapshot a non-running '
+                           'instance: %s (state: %s excepted: %s)'),
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
+
+        self.driver.snapshot(instance_ref, name)
+
+    @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
@@ -297,6 +318,15 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for an instance on this server."""
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        if instance_ref["state"] == power_state.RUNNING:
+            logging.debug(_("instance %s: retrieving diagnostics"),
+                instance_ref["internal_id"])
+            return self.driver.get_diagnostics(instance_ref)
+
     def suspend_instance(self, context, instance_id):
         """suspend the instance with instance_id"""
         context = context.elevated()

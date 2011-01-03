@@ -35,6 +35,7 @@ from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class TestDriver(driver.Scheduler):
@@ -235,8 +236,8 @@ class SimpleDriverTestCase(test.TestCase):
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
         db.service_update(self.context, s1['id'], {'disabled': True})
         instance_id2 = self._create_instance(availability_zone='nova:host1')
-        host =  self.scheduler.driver.schedule_run_instance(self.context,
-                                                            instance_id2)
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
         self.assertEqual('host1', host)
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()

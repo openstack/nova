@@ -77,21 +77,20 @@ Nova development has consolidated all .conf files to nova.conf as of November 20
 
 #. These need to be defined in the nova.conf configuration file::
 
-   --sql_connection=mysql://root:nova@$CC_ADDR/nova # location of nova sql db
-   --s3_host=$CC_ADDR  # This is where nova is hosting the objectstore service, which
-                       # will contain the VM images and buckets
-   --rabbit_host=$CC_ADDR # This is where the rabbit AMQP messaging service is hosted
-   --cc_host=$CC_ADDR     # This is where the the nova-api service lives
-   --verbose              # Optional but very helpful during initial setup
-   --ec2_url=http://$CC_ADDR:8773/services/Cloud
-   --network_manager=nova.network.manager.FlatManager # simple, no-vlan networking type
-
-   --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
-   --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
+        --sql_connection=mysql://root:nova@$CC_ADDR/nova # location of nova sql db
+        --s3_host=$CC_ADDR  # This is where Nova is hosting the objectstore service, which
+                            # will contain the VM images and buckets
+        --rabbit_host=$CC_ADDR # This is where the rabbit AMQP messaging service is hosted
+        --cc_host=$CC_ADDR     # This is where the the nova-api service lives
+        --verbose              # Optional but very helpful during initial setup
+        --ec2_url=http://$CC_ADDR:8773/services/Cloud
+        --network_manager=nova.network.manager.FlatManager # simple, no-vlan networking type
+        --fixed_range=<network/prefix>   # ip network to use for VM guests, ex 192.168.2.64/26
+        --network_size=<# of addrs>      # number of ip addrs to use for VM guests, ex 64
 
 #. Create a nova group::
 
-   sudo addgroup nova
+        sudo addgroup nova
 
 The Nova config file should have its owner set to root:nova, and mode set to 0640, since they contain your MySQL server's root password.
 

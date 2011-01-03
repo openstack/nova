@@ -55,7 +55,8 @@ class AuthMiddleware(wsgi.Middleware):
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        req.environ['nova.context'] = context.RequestContext(user, user)
+        project = self.auth.get_project(FLAGS.default_project)
+        req.environ['nova.context'] = context.RequestContext(user, project)
         return self.application
 
     def has_authentication(self, req):

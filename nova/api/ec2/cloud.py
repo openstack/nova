@@ -213,7 +213,8 @@ class CloudController(object):
         for host in hosts:
             rv['availabilityZoneInfo'].append({'zoneName': '|- %s' % host,
                                                'zoneState': ''})
-            hsvcs = [service for service in services if service['host'] == host]
+            hsvcs = [service for service in services \
+                     if service['host'] == host]
             for svc in hsvcs:
                 delta = now - (svc['updated_at'] or svc['created_at'])
                 alive = (delta.seconds <= FLAGS.service_down_time)

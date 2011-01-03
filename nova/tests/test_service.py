@@ -97,6 +97,7 @@ class ServiceFlagsTestCase(test.TestCase):
         db.service_destroy(context.get_admin_context(), app.service_id)
         self.assert_(ref['disabled'])
 
+
 class ServiceTestCase(test.TestCase):
     """Test cases for Services"""
 
