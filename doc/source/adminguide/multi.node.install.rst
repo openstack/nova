@@ -45,29 +45,33 @@ Assumptions
   
  
 Step 1 - Use apt-get to get the latest code
------------------------------------------
- 
-1. Setup Nova PPA with https://launchpad.net/~nova-core/+archive/trunk.  The ‘python-software-properties’ package is a pre-requisite for setting up the nova package repo:
- 
+-------------------------------------------
+
+1. Setup Nova PPA with https://launchpad.net/~nova-core/+archive/trunk. The ‘python-software-properties’ package is a pre-requisite for setting up the nova package repo:
+
 ::
-   
-apt-get -y install python-software-properties
-add-apt-repository ppa:nova-core/trunk
- 
-2. Update apt-get:
- 
+    
+    sudo apt-get install python-software-properties
+    sudo add-apt-repository ppa:nova-core/trunk
+	
+2. Run update.
+
 ::
-   
-apt-get update
- 
-3. Install nova-packages (dependencies should be automatically installed).
- 
+    
+    sudo apt-get update
+
+3. Install nova-pkgs (dependencies should be automatically installed).
+
 ::
- 
-apt-get -y install bzr nova-common nova-doc python-mysqldb python-greenlet python-nova nova-api nova-network nova-objectstore nova-scheduler nova-compute unzip vim euca2ools rabbitmq-server dnsmasq open-iscsi kpartx kvm gawk iptables ebtables user-mode-linux kvm libvirt-bin screen iscsitarget euca2ools vlan curl python-twisted python-sqlalchemy python-mox python-greenlet python-carrot python-daemon python-eventlet python-gflags python-libvirt python-libxml2 python-routes
- 
-Step 2 – Setting up nova.conf  (installed in /etc/nova)
----------------------------------------------------------
+
+    sudo apt-get install python-greenlet
+    sudo apt-get install nova-common nova-doc python-nova nova-api nova-network nova-objectstore nova-scheduler
+
+It is highly likely that there will be errors when the nova services come up since they are not yet configured. Don't worry, you're only at step 1!
+
+Step 2 Setup configuration file (installed in /etc/nova)
+--------------------------------------------------------
+
 1.  Nova development has consolidated all config files to nova.conf as of November 2010.   There is a default set of options that are already configured in nova.conf:
  
 ::
@@ -133,7 +137,7 @@ chown -R root:nova /etc/nova
 chmod 644 /etc/nova/nova.conf
  
 Step 3 - Setup the SQL DB (MySQL for this setup)
------------------------
+------------------------------------------------
  
 1. First you 'preseed' to bypass all the installation prompts
 ::

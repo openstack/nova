@@ -33,6 +33,7 @@ flags.DECLARE('instances_path', 'nova.compute.manager')
 class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
+        libvirt_conn._late_load_cheetah()
         self.flags(fake_call=True)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
@@ -157,7 +158,6 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
-
         if rescue:
             common_checks += [
                 (lambda t: t.findall('./devices/disk/source')[0].get(

@@ -101,13 +101,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info("Running instances: %s", instances)
+        logging.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
         self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info("After terminating instances: %s", instances)
+        logging.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
     def test_run_terminate_timestamps(self):
@@ -136,11 +136,27 @@ class ComputeTestCase(test.TestCase):
         self.compute.unpause_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_suspend(self):
+        """ensure instance can be suspended"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.suspend_instance(self.context, instance_id)
+        self.compute.resume_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_reboot(self):
         """Ensure instance can be rebooted"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.compute.reboot_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_snapshot(self):
+        """Ensure instance can be snapshotted"""
+        instance_id = self._create_instance()
+        name = "myfakesnapshot"
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.snapshot_instance(self.context, instance_id, name)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_console_output(self):

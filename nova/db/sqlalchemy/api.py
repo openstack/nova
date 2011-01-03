@@ -236,6 +236,8 @@ def service_get_by_args(context, host, binary):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
+    if not FLAGS.enable_new_services:
+        service_ref.disabled = True
     service_ref.save()
     return service_ref
 
@@ -854,6 +856,18 @@ def instance_action_create(context, values):
     with session.begin():
         action_ref.save(session=session)
     return action_ref
+
+
+@require_admin_context
+def instance_get_actions(context, instance_id):
+    """Return the actions associated to the given instance id"""
+    session = get_session()
+    actions = {}
+    for action in session.query(models.InstanceActions).\
+        filter_by(instance_id=instance_id).\
+        all():
+        actions[action.action] = action.error
+    return actions
 
 
 ###################

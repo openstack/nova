@@ -72,8 +72,8 @@ RPC Casts
 
 The diagram below the message flow during an rp.cast operation: 
 
-    1. a Topic Publisher is instantiated to send the message request to the queuing system.
-    2. once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic') and passed to the Worker in charge of the task.
+    1. A Topic Publisher is instantiated to send the message request to the queuing system.
+    2. Once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic') and passed to the Worker in charge of the task.
 
 .. image:: /images/rabbit/flow2.png
    :width: 60%

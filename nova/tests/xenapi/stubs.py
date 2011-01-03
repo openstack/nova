@@ -18,12 +18,61 @@
 
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
+from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import vm_utils
+
+
+def stubout_instance_snapshot(stubs):
+    @classmethod
+    def fake_fetch_image(cls, session, instance_id, image, user, project,
+                         type):
+        # Stubout wait_for_task
+        def fake_wait_for_task(self, id, task):
+            class FakeEvent:
+
+                def send(self, value):
+                    self.rv = value
+
+                def wait(self):
+                    return self.rv
+
+            done = FakeEvent()
+            self._poll_task(id, task, done)
+            rv = done.wait()
+            return rv
+
+        stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task',
+                  fake_wait_for_task)
+
+        from nova.virt.xenapi.fake import create_vdi
+        name_label = "instance-%s" % instance_id
+        #TODO: create fake SR record
+        sr_ref = "fakesr"
+        vdi_ref = create_vdi(name_label=name_label, read_only=False,
+                             sr_ref=sr_ref, sharable=False)
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        vdi_uuid = vdi_rec['uuid']
+        return vdi_uuid
+
+    stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
+
+    def fake_parse_xmlrpc_value(val):
+        return val
+
+    stubs.Set(xenapi_conn, '_parse_xmlrpc_value', fake_parse_xmlrpc_value)
+
+    def fake_wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
+                              original_parent_uuid):
+        #TODO(sirp): Should we actually fake out the data here
+        return "fakeparent"
+
+    stubs.Set(vm_utils, 'wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
 
 
 def stubout_session(stubs, cls):
-    """ Stubs out two methods from XenAPISession """
+    """Stubs out two methods from XenAPISession"""
     def fake_import(self):
-        """ Stubs out get_imported_xenapi of XenAPISession """
+        """Stubs out get_imported_xenapi of XenAPISession"""
         fake_module = 'nova.virt.xenapi.fake'
         from_list = ['fake']
         return __import__(fake_module, globals(), locals(), from_list, -1)
@@ -32,6 +81,14 @@ def stubout_session(stubs, cls):
                        lambda s, url: cls(url))
     stubs.Set(xenapi_conn.XenAPISession, 'get_imported_xenapi',
                        fake_import)
+
+
+def stub_out_get_target(stubs):
+    """Stubs out _get_target in volume_utils"""
+    def fake_get_target(volume_id):
+        return (None, None)
+
+    stubs.Set(volume_utils, '_get_target', fake_get_target)
 
 
 class FakeSessionForVMTests(fake.SessionBase):
@@ -53,6 +110,24 @@ class FakeSessionForVMTests(fake.SessionBase):
         vm['power_state'] = 'Running'
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
+
+    def VM_snapshot(self, session_ref, vm_ref, label):
+        status = "Running"
+        template_vm_ref = fake.create_vm(label, status, is_a_template=True,
+            is_control_domain=False)
+
+        sr_ref = "fakesr"
+        template_vdi_ref = fake.create_vdi(label, read_only=True,
+            sr_ref=sr_ref, sharable=False)
+
+        template_vbd_ref = fake.create_vbd(template_vm_ref, template_vdi_ref)
+        return template_vm_ref
+
+    def VDI_destroy(self, session_ref, vdi_ref):
+        fake.destroy_vdi(vdi_ref)
+
+    def VM_destroy(self, session_ref, vm_ref):
+        fake.destroy_vm(vm_ref)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):
