@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from webob import exc
 
 from nova import flags
@@ -26,6 +28,7 @@ import nova.image.service
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.compute import api as compute_api
+
 
 FLAGS = flags.FLAGS
 
@@ -89,6 +92,12 @@ def _filter_keys(item, keys):
     return dict((k, v) for k, v in item.iteritems() if k in keys)
 
 
+def _convert_image_id_to_hash(image):
+    image_id = abs(hash(image['imageId']))
+    image['imageId'] = image_id
+    image['id'] = image_id
+
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
@@ -113,6 +122,9 @@ class Controller(wsgi.Controller):
             items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
             items = self._service.index(req.environ['nova.context'])
+        for image in items:
+            _convert_image_id_to_hash(image)
+                    
         items = common.limited(items, req)
         items = [_translate_keys(item) for item in items]
         items = [_translate_status(item) for item in items]
@@ -120,7 +132,12 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given image id"""
-        return dict(image=self._service.show(req.environ['nova.context'], id))
+        image_id = common.get_image_id_from_image_hash(self._service,
+                    req.environ['nova.context'], id)
+
+        image = self._service.show(req.environ['nova.context'], image_id)
+        _convert_image_id_to_hash(image)
+        return dict(image=image)
 
     def delete(self, req, id):
         # Only public images are supported for now.

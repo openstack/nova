@@ -51,6 +51,10 @@ flags.DEFINE_string('os_api_ratelimiting',
     'nova.api.openstack.ratelimiting.RateLimitingMiddleware',
     'Default ratelimiting implementation for the Openstack API')
 
+flags.DEFINE_string('os_krm_mapping_file',
+    'krm_mapping.json',
+    'Location of OpenStack Flavor/OS:EC2 Kernel/Ramdisk/Machine JSON file.')
+
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
@@ -109,7 +113,7 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'})
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
-        mapper.resource("sharedipgroup", "sharedipgroups",
+        mapper.resource("shared_ip_group", "shared_ip_groups",
                         controller=sharedipgroups.Controller())
 
         super(APIRouter, self).__init__(mapper)

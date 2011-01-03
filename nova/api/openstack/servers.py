@@ -15,13 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import logging
 import traceback
 
 from webob import exc
 
 from nova import exception
+from nova import flags
 from nova import wsgi
+from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
@@ -33,6 +36,9 @@ import nova.api.openstack
 
 LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
+
+
+FLAGS = flags.FLAGS
 
 
 def _translate_detail_keys(inst):
@@ -81,6 +87,7 @@ class Controller(wsgi.Controller):
 
     def __init__(self):
         self.compute_api = compute_api.ComputeAPI()
+        self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -120,6 +127,18 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
+    def _get_kernel_ramdisk_from_image(self, image_id):
+        mapping_filename = FLAGS.os_krm_mapping_file
+
+        with open(mapping_filename) as f:
+            mapping = json.load(f)
+            if mapping.has_key(image_id):
+                return mapping[image_id]
+
+        raise exception.NotFound(
+            _("No entry for image '%s' in mapping file '%s'") % 
+                (image_id, mapping_filename))
+
     def create(self, req):
         """ Creates a new server for a given user """
         env = self._deserialize(req.body, req)
@@ -128,10 +147,15 @@ class Controller(wsgi.Controller):
 
         key_pair = auth_manager.AuthManager.get_key_pairs(
             req.environ['nova.context'])[0]
+        image_id = common.get_image_id_from_image_hash(self._image_service,
+            req.environ['nova.context'], env['server']['imageId'])
+        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(image_id)
         instances = self.compute_api.create_instances(
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
-            env['server']['imageId'],
+            image_id,
+            kernel_id = kernel_id,
+            ramdisk_id = ramdisk_id,
             display_name=env['server']['name'],
             description=env['server']['name'],
             key_name=key_pair['name'],
@@ -163,6 +187,7 @@ class Controller(wsgi.Controller):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
         input_dict = self._deserialize(req.body, req)
+        #TODO(sandy): rebuild/resize not supported.
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
