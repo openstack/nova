@@ -827,7 +827,7 @@ class NWFilterFirewall(object):
         return retval
 
     def nova_project_filter_v6(self):
-        retval = "<filter name='nova-project-v6' chain='ipv6'>" % project
+        retval = "<filter name='nova-project-v6' chain='ipv6'>"
         for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
             retval += """<rule action='accept' direction='in' priority='200'>
                            <%s srcipaddr='$PROJNETV6'
