@@ -22,7 +22,6 @@ No fan-out support yet.
 """
 
 import json
-import logging
 import sys
 import time
 import traceback
@@ -36,13 +35,12 @@ from nova import context
 from nova import exception
 from nova import fakerabbit
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 
 FLAGS = flags.FLAGS
-
-LOG = logging.getLogger('amqplib')
-LOG.setLevel(logging.DEBUG)
+LOG = logging.getLogger('nova.rpc')
 
 
 class Connection(carrot_connection.BrokerConnection):
@@ -91,14 +89,14 @@ class Consumer(messaging.Consumer):
                 self.failed_connection = False
                 break
             except:  # Catching all because carrot sucks
-                logging.exception(_("AMQP server on %s:%d is unreachable."
-                    " Trying again in %d seconds.") % (
-                    FLAGS.rabbit_host,
-                    FLAGS.rabbit_port,
-                    FLAGS.rabbit_retry_interval))
+                LOG.exception(_("AMQP server on %s:%d is unreachable."
+                                " Trying again in %d seconds.") % (
+                                FLAGS.rabbit_host,
+                                FLAGS.rabbit_port,
+                                FLAGS.rabbit_retry_interval))
                 self.failed_connection = True
         if self.failed_connection:
-            logging.exception(_("Unable to connect to AMQP server"
+            LOG.exception(_("Unable to connect to AMQP server"
                 " after %d tries. Shutting down.") % FLAGS.rabbit_max_retries)
             sys.exit(1)
 
@@ -116,14 +114,14 @@ class Consumer(messaging.Consumer):
                 self.declare()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
             if self.failed_connection:
-                logging.error(_("Reconnected to queue"))
+                LOG.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
         #             exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:
-                logging.exception(_("Failed to fetch message from queue"))
+                LOG.exception(_("Failed to fetch message from queue"))
                 self.failed_connection = True
 
     def attach_to_eventlet(self):
@@ -242,8 +240,8 @@ def msg_reply(msg_id, reply=None, failure=None):
     if failure:
         message = str(failure[1])
         tb = traceback.format_exception(*failure)
-        logging.error(_("Returning exception %s to caller"), message)
-        logging.error(tb)
+        LOG.error(_("Returning exception %s to caller"), message)
+        LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
     conn = Connection.instance(True)
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)

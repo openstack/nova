@@ -19,23 +19,23 @@
 Tests for Volume Code.
 
 """
-import logging
 
 from nova import context
 from nova import exception
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.volume')
 
 
 class VolumeTestCase(test.TestCase):
     """Test Case for volumes."""
 
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(VolumeTestCase, self).setUp()
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.flags(connection_type='fake')
@@ -159,7 +159,7 @@ class VolumeTestCase(test.TestCase):
                                                           volume_id)
             self.assert_(iscsi_target not in targets)
             targets.append(iscsi_target)
-            logging.debug("Target %s allocated", iscsi_target)
+            LOG.debug(_("Target %s allocated"), iscsi_target)
         total_slots = FLAGS.iscsi_num_targets
         for _index in xrange(total_slots):
             volume_id = self._create_volume()

@@ -22,7 +22,6 @@ and as a WSGI layer
 
 import json
 import datetime
-import logging
 import unittest
 
 import stubout

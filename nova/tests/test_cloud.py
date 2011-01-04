@@ -18,7 +18,6 @@
 
 from base64 import b64decode
 import json
-import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
@@ -31,6 +30,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
@@ -41,6 +41,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.cloud')
 
 # Temp dirs for working with image attributes through the cloud controller
 # (stole this from objectstore_unittest.py)
@@ -56,7 +57,6 @@ class CloudTestCase(test.TestCase):
                    images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
-        logging.getLogger().setLevel(logging.DEBUG)
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -178,7 +178,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances(self):
         if FLAGS.connection_type == 'fake':
-            logging.debug("Can't test instances without a real virtual env.")
+            LOG.debug(_("Can't test instances without a real virtual env."))
             return
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -190,25 +190,25 @@ class CloudTestCase(test.TestCase):
         # TODO: check for proper response
         instance_id = rv['reservationSet'][0].keys()[0]
         instance = rv['reservationSet'][0][instance_id][0]
-        logging.debug("Need to watch instance %s until it's running..." %
-                      instance['instance_id'])
+        LOG.debug(_("Need to watch instance %s until it's running..."),
+                  instance['instance_id'])
         while True:
             greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
-            logging.debug(info['state'])
+            LOG.debug(info['state'])
             if info['state'] == power_state.RUNNING:
                 break
         self.assert_(rv)
 
-        if connection_type != 'fake':
+        if FLAGS.connection_type != 'fake':
             time.sleep(45)  # Should use boto for polling here
         for reservations in rv['reservationSet']:
             # for res_id in reservations.keys():
-            #     logging.debug(reservations[res_id])
+            #     LOG.debug(reservations[res_id])
             # for instance in reservations[res_id]:
             for instance in reservations[reservations.keys()[0]]:
                 instance_id = instance['instance_id']
-                logging.debug("Terminating instance %s" % instance_id)
+                LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = yield self.compute.terminate_instance(instance_id)
 
     def test_instance_update_state(self):

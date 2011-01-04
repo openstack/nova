@@ -50,7 +50,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
 """
 
-import logging
 import sys
 import xmlrpclib
 
@@ -61,8 +60,13 @@ from nova import context
 from nova import db
 from nova import utils
 from nova import flags
+from nova import log as logging
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
+
+
+LOG = logging.getLogger("nova.virt.xenapi")
+
 
 FLAGS = flags.FLAGS
 
@@ -248,7 +252,7 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                logging.info(_("Task [%s] %s status: success    %s") % (
+                LOG.info(_("Task [%s] %s status: success    %s") % (
                     name,
                     task,
                     result))
@@ -256,7 +260,7 @@ class XenAPISession(object):
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                logging.warn(_("Task [%s] %s status: %s    %s") % (
+                LOG.warn(_("Task [%s] %s status: %s    %s") % (
                     name,
                     task,
                     status,
@@ -264,7 +268,7 @@ class XenAPISession(object):
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.warn(exc)
             done.send_exception(*sys.exc_info())
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
@@ -272,7 +276,7 @@ class XenAPISession(object):
         try:
             return func(*args, **kwargs)
         except self.XenAPI.Failure, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
                 exc.details[2] == 'Failure'):
@@ -285,7 +289,7 @@ class XenAPISession(object):
             else:
                 raise
         except xmlrpclib.ProtocolError, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             raise
 
 

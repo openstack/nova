@@ -55,8 +55,8 @@
 
 import datetime
 import gettext
-import logging
 import os
+import re
 import sys
 import time
 
@@ -77,6 +77,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import utils
 from nova.auth import manager
@@ -499,6 +500,15 @@ class ServiceCommands(object):
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
 
+class LogCommands(object):
+    def request(self, request_id, logfile='/var/log/nova.log'):
+        """Show all fields in the log for the given request.  Assumes you
+        haven't changed the log format too much.
+        ARGS: request_id [logfile]"""
+        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
+        print re.sub('#012', "\n", "\n".join(lines))
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -507,7 +517,8 @@ CATEGORIES = [
     ('vpn', VpnCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
-    ('service', ServiceCommands)]
+    ('service', ServiceCommands),
+    ('log', LogCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -546,9 +557,7 @@ def main():
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
 
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
+    logging._set_log_levels()
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"

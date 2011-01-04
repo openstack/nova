@@ -45,7 +45,6 @@ topologies.  All of the network commands are issued to a subclass of
 """
 
 import datetime
-import logging
 import math
 import socket
 
@@ -55,11 +54,13 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import manager
 from nova import utils
 from nova import rpc
 
 
+LOG = logging.getLogger("nova.networkmanager")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
@@ -131,7 +132,7 @@ class NetworkManager(manager.Manager):
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
-        logging.debug(_("setting network host"))
+        LOG.debug(_("setting network host"))
         host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
@@ -186,7 +187,7 @@ class NetworkManager(manager.Manager):
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
-        logging.debug("Leasing IP %s", address)
+        LOG.debug(_("Leasing IP %s"), address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
@@ -201,12 +202,11 @@ class NetworkManager(manager.Manager):
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip_ref['allocated']:
-            logging.warn(_("IP %s leased that was already deallocated"),
-                         address)
+            LOG.warn(_("IP %s leased that was already deallocated"), address)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        logging.debug("Releasing IP %s", address)
+        LOG.debug("Releasing IP %s", address)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
@@ -216,7 +216,7 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s released from bad mac %s vs %s") %
                                   (address, instance_ref['mac_address'], mac))
         if not fixed_ip_ref['leased']:
-            logging.warn(_("IP %s released that was not leased"), address)
+            LOG.warn(_("IP %s released that was not leased"), address)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': False})
@@ -437,7 +437,7 @@ class VlanManager(NetworkManager):
                                                            self.host,
                                                            time)
         if num:
-            logging.debug(_("Dissassociated %s stale fixed ip(s)"), num)
+            LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a

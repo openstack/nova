@@ -22,7 +22,6 @@ manage pid files and support syslogging.
 """
 
 import gflags
-import logging
 import os
 import signal
 import sys
@@ -34,6 +33,7 @@ from twisted.python import runtime
 from twisted.python import usage
 
 from nova import flags
+from nova import log as logging
 
 
 if runtime.platformType == "win32":
@@ -234,22 +234,12 @@ def serve(filename):
     OptionsClass = WrapTwistedOptions(TwistdServerOptions)
     options = OptionsClass()
     argv = options.parseOptions()
-    logging.getLogger('amqplib').setLevel(logging.WARN)
     FLAGS.python = filename
     FLAGS.no_save = True
     if not FLAGS.pidfile:
         FLAGS.pidfile = '%s.pid' % name
     elif FLAGS.pidfile.endswith('twistd.pid'):
         FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
-    # NOTE(vish): if we're running nodaemon, redirect the log to stdout
-    if FLAGS.nodaemon and not FLAGS.logfile:
-        FLAGS.logfile = "-"
-    if not FLAGS.logfile:
-        FLAGS.logfile = '%s.log' % name
-    elif FLAGS.logfile.endswith('twistd.log'):
-        FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
-    if FLAGS.logdir:
-        FLAGS.logfile = os.path.join(FLAGS.logdir, FLAGS.logfile)
     if not FLAGS.prefix:
         FLAGS.prefix = name
     elif FLAGS.prefix.endswith('twisted'):
@@ -270,19 +260,10 @@ def serve(filename):
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
 
-    formatter = logging.Formatter(
-        '(%(name)s): %(levelname)s %(message)s')
-    handler = logging.StreamHandler(log.StdioOnnaStick())
-    handler.setFormatter(formatter)
-    logging.getLogger().addHandler(handler)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
+    logging.basicConfig()
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
         logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
 
+    logging.audit(_("Starting %s"), name)
     twistd.runApp(options)

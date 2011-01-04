@@ -22,7 +22,6 @@ Utility methods for working with WSGI servers
 """
 
 import json
-import logging
 import sys
 from xml.dom import minidom
 
@@ -35,18 +34,23 @@ import webob
 import webob.dec
 import webob.exc
 
+from nova import log as logging
 
+
+# TODO(todd): should this just piggyback the handler for root logger
+#             since we usually log to syslog, but changes if not daemonzied?
 logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
-
 
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     def __init__(self, threads=1000):
+        logging.basicConfig()
         self.pool = eventlet.GreenPool(threads)
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
         """Run a WSGI server with the given application."""
+        logging.audit("Starting %s on %s:%s", sys.argv[0], host, port)
         socket = eventlet.listen((host, port), backlog=backlog)
         self.pool.spawn_n(self._run, application, socket)
 

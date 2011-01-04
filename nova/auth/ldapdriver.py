@@ -24,11 +24,11 @@ other backends by creating another class that exposes the same
 public methods.
 """
 
-import logging
 import sys
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 
 
 FLAGS = flags.FLAGS
@@ -64,6 +64,9 @@ flags.DEFINE_string('ldap_netadmin',
     'cn=netadmins,ou=Groups,dc=example,dc=com', 'cn for NetAdmins')
 flags.DEFINE_string('ldap_developer',
     'cn=developers,ou=Groups,dc=example,dc=com', 'cn for Developers')
+
+
+LOG = logging.getLogger("nova.ldapdriver")
 
 
 # TODO(vish): make an abstract base class with the same public methods
@@ -502,7 +505,7 @@ class LdapDriver(object):
         try:
             self.conn.modify_s(group_dn, attr)
         except self.ldap.OBJECT_CLASS_VIOLATION:
-            logging.debug(_("Attempted to remove the last member of a group. "
+            LOG.debug(_("Attempted to remove the last member of a group. "
                             "Deleting the group at %s instead."), group_dn)
             self.__delete_group(group_dn)
 

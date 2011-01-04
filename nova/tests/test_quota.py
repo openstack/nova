@@ -16,11 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-
 from nova import context
 from nova import db
-from nova import exception
 from nova import flags
 from nova import quota
 from nova import test
@@ -34,7 +31,6 @@ FLAGS = flags.FLAGS
 
 class QuotaTestCase(test.TestCase):
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
                    quota_instances=2,
