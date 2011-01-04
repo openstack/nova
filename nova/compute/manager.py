@@ -372,7 +372,7 @@ class ComputeManager(manager.Manager):
     def get_ajax_console(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()
-        logging.debug("instance %s: getting ajax console", instance_id)
+        logging.debug(_("instance %s: getting ajax console"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
         return self.driver.get_ajax_console(instance_ref)

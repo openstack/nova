@@ -26,7 +26,7 @@ from nova import exception
 
 FLAGS = flags.FLAGS
 INSTANCE_TYPES = {
-    'm1.tiny': dict(memory_mb=128, vcpus=1, local_gb=0, flavorid=1),
+    'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
     'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
     'm1.medium': dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3),
     'm1.large': dict(memory_mb=8192, vcpus=4, local_gb=80, flavorid=4),

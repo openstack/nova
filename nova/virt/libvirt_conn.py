@@ -438,7 +438,7 @@ class LibvirtConnection(object):
                 stdout, stderr = utils.execute(cmd)
                 if stdout.strip() == 'free':
                     return port
-            raise Exception('Unable to find an open port')
+            raise Exception(_('Unable to find an open port'))
 
         def get_pty_for_instance(instance_name):
             virt_dom = self._conn.lookupByName(instance_name)
@@ -452,7 +452,6 @@ class LibvirtConnection(object):
 
         port = get_open_port()
         token = str(uuid.uuid4())
-
         host = instance['host']
 
         ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(instance['name'])
@@ -462,8 +461,6 @@ class LibvirtConnection(object):
 
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
-        #return 'http://%s/?token=%s&host=%s&port=%s' \
-        #       % (FLAGS.console_dmz, token, host, port)
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
