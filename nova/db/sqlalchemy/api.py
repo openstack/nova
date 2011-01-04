@@ -19,7 +19,6 @@
 Implementation of SQLAlchemy backend.
 """
 
-import uuid
 import warnings
 
 from nova import db
@@ -741,9 +740,6 @@ def instance_get_project_vpn(context, project_id):
 @require_context
 def instance_get_by_id(context, instance_id):
     session = get_session()
-
-    if type(instance_id) is int:
-        instance_id = uuid.UUID(int=instance_id).hex
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
