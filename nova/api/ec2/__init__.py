@@ -29,6 +29,7 @@ import webob.exc
 from nova import context
 from nova import exception
 from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
 from nova.api.ec2 import admin
@@ -157,6 +158,31 @@ class Authenticate(wsgi.Middleware):
         return self.application
 
 
+class Requestify(wsgi.Middleware):
+
+    def __init__(self, app, controller_name):
+        super(Requestify, self).__init__(app)
+        self.controller = utils.import_class(controller_name)()
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
+                    'SignatureVersion', 'Version', 'Timestamp']
+        args = dict(req.params)
+        try:
+            # Raise KeyError if omitted
+            action = req.params['Action']
+            for non_arg in non_args:
+                # Remove, but raise KeyError if omitted
+                args.pop(non_arg)
+        except:
+            raise webob.exc.HTTPBadRequest()
+        api_request = apirequest.APIRequest(self.controller, action)
+        req.environ['ec2.request'] = api_request
+        req.environ['ec2.action_args'] = args
+        return self.application
+
+
 class Router(wsgi.Middleware):
 
     """Add ec2.'controller', .'action', and .'action_args' to WSGI environ."""
@@ -256,10 +282,9 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller_name = req.environ['ec2.controller'].__class__.__name__
-        action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action,
-                                                               ['none'])
+        controller = req.environ['ec2.request'].controller.__class__.__name__
+        action = req.environ['ec2.request'].action
+        allowed_roles = self.action_roles[controller].get(action, ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
@@ -289,11 +314,8 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller = req.environ['ec2.controller']
-        action = req.environ['ec2.action']
         args = req.environ['ec2.action_args']
-
-        api_request = apirequest.APIRequest(controller, action)
+        api_request = req.environ['ec2.request']
         result = None
         try:
             result = api_request.send(context, **args)
@@ -369,3 +391,8 @@ def executor_factory(global_args, **local_args):
 
 def versions_factory(global_args, **local_args):
     return Versions()
+
+def requestify_factory(global_args, **local_args):
+    def requestifier(app):
+        return Requestify(app, local_args['controller'])
+    return requestifier
