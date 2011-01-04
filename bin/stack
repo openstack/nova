@@ -17,7 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""CLI for the Easy API."""
+"""CLI for the Direct API."""
 
 import eventlet
 eventlet.monkey_patch()
@@ -42,10 +42,10 @@ from nova import utils
 
 
 FLAGS = gflags.FLAGS
-gflags.DEFINE_string('host', '127.0.0.1', 'Easy API host')
-gflags.DEFINE_integer('port', 8001, 'Easy API host')
-gflags.DEFINE_string('user', 'user1', 'Easy API username')
-gflags.DEFINE_string('project', 'proj1', 'Easy API project')
+gflags.DEFINE_string('host', '127.0.0.1', 'Direct API host')
+gflags.DEFINE_integer('port', 8001, 'Direct API host')
+gflags.DEFINE_string('user', 'user1', 'Direct API username')
+gflags.DEFINE_string('project', 'proj1', 'Direct API project')
 
 
 USAGE = """usage: stack [options] <controller> <method> [arg1=value arg2=value]
