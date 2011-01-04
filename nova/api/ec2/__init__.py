@@ -21,7 +21,6 @@ Starting point for routing EC2 requests.
 """
 
 import logging
-import routes
 import webob
 import webob.dec
 import webob.exc
@@ -32,8 +31,6 @@ from nova import flags
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import admin
-from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
@@ -41,8 +38,6 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean('use_forwarded_for', False,
                      'Treat X-Forwarded-For as the canonical remote address. '
                      'Only enable this if you have a sanitizing proxy.')
-flags.DEFINE_boolean('use_lockout', False,
-                     'Whether or not to use lockout middleware.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
@@ -55,15 +50,6 @@ flags.DEFINE_list('lockout_memcached_servers', None,
 
 _log = logging.getLogger("api")
 _log.setLevel(logging.DEBUG)
-
-
-class API(wsgi.Middleware):
-    """Routing for all EC2 API requests."""
-
-    def __init__(self):
-        self.application = Authenticate(Router(Authorizer(Executor())))
-        if FLAGS.use_lockout:
-            self.application = Lockout(self.application)
 
 
 class Lockout(wsgi.Middleware):
@@ -177,51 +163,8 @@ class Requestify(wsgi.Middleware):
                 args.pop(non_arg)
         except:
             raise webob.exc.HTTPBadRequest()
-        api_request = apirequest.APIRequest(self.controller, action)
+        api_request = apirequest.APIRequest(self.controller, action, args)
         req.environ['ec2.request'] = api_request
-        req.environ['ec2.action_args'] = args
-        return self.application
-
-
-class Router(wsgi.Middleware):
-
-    """Add ec2.'controller', .'action', and .'action_args' to WSGI environ."""
-
-    def __init__(self, application):
-        super(Router, self).__init__(application)
-        self.map = routes.Mapper()
-        self.map.connect("/{controller_name}/")
-        self.controllers = dict(Cloud=cloud.CloudController(),
-                                Admin=admin.AdminController())
-
-    @webob.dec.wsgify
-    def __call__(self, req):
-        # Obtain the appropriate controller and action for this request.
-        try:
-            match = self.map.match(req.path_info)
-            controller_name = match['controller_name']
-            controller = self.controllers[controller_name]
-        except:
-            raise webob.exc.HTTPNotFound()
-        non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
-                    'SignatureVersion', 'Version', 'Timestamp']
-        args = dict(req.params)
-        try:
-            # Raise KeyError if omitted
-            action = req.params['Action']
-            for non_arg in non_args:
-                # Remove, but raise KeyError if omitted
-                args.pop(non_arg)
-        except:
-            raise webob.exc.HTTPBadRequest()
-
-        _log.debug(_('action: %s') % action)
-        for key, value in args.items():
-            _log.debug(_('arg: %s\t\tval: %s') % (key, value))
-
-        # Success!
-        req.environ['ec2.controller'] = controller
-        req.environ['ec2.action'] = action
         req.environ['ec2.action_args'] = args
         return self.application
 
@@ -314,13 +257,11 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        args = req.environ['ec2.action_args']
         api_request = req.environ['ec2.request']
         result = None
         try:
-            result = api_request.send(context, **args)
+            result = api_request.invoke(context)
         except exception.ApiError as ex:
-
             if ex.code:
                 return self._error(req, ex.code, ex.message)
             else:
@@ -373,12 +314,6 @@ def authenticate_factory(global_args, **local_args):
     return authenticator
 
 
-def router_factory(global_args, **local_args):
-    def router(app):
-        return Router(app)
-    return router
-
-
 def authorizer_factory(global_args, **local_args):
     def authorizer(app):
         return Authorizer(app)
@@ -396,3 +331,8 @@ def requestify_factory(global_args, **local_args):
     def requestifier(app):
         return Requestify(app, local_args['controller'])
     return requestifier
+
+def lockout_factory(global_args, **local_args):
+    def locksmith(app):
+        return Lockout(app)
+    return locksmith
