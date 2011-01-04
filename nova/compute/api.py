@@ -204,7 +204,7 @@ class ComputeAPI(base.Base):
         """Updates the instance in the datastore.
 
         :param context: The security context
-        :param instance_id: internal_id of the instance to update
+        :param instance_id: ID of the instance to update
         :param kwargs: All additional keyword args are treated
                        as data fields of the instance to be
                        updated
@@ -212,8 +212,7 @@ class ComputeAPI(base.Base):
         :retval None
 
         """
-        instance = self.get_instance(context, instance_id)
-        return self.db.instance_update(context, instance.id, kwargs)
+        return self.db.instance_update(context, instance_id, kwargs)
 
     def delete_instance(self, context, instance_id):
         logging.debug("Going to try and terminate %d" % instance_id)
