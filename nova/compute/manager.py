@@ -216,7 +216,7 @@ class ComputeManager(manager.Manager):
                   instance_id, context=context)
 
         if instance_ref['state'] != power_state.RUNNING:
-            .warn(_('trying to reboot a non-running '
+            LOG.warn(_('trying to reboot a non-running '
                      'instance: %s (state: %s excepted: %s)'),
                      instance_ref['internal_id'],
                      instance_ref['state'],
