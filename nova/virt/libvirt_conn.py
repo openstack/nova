@@ -550,7 +550,7 @@ class LibvirtConnection(object):
                             "<parameter name=\"PROJNETV6\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % (net, mask,net_v6,mask_v6)
+                            "value=\"%s\" />\n") % (net, mask, net_v6, mask_v6)
         else:
             extra_params = "\n"
 
@@ -777,7 +777,6 @@ class NWFilterFirewall(object):
                               </rule>
                             </filter>'''
 
-
     nova_ra_filter = '''<filter name='nova-allow-ra-server' chain='root'>
                             <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
                               <rule action='accept' direction='inout'
@@ -786,7 +785,6 @@ class NWFilterFirewall(object):
                               </rule>
                             </filter>'''
 
-
     nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
                            <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
                            <filterref filter='allow-dhcp-server'/>
@@ -794,7 +792,6 @@ class NWFilterFirewall(object):
                            <filterref filter='nova-base-ipv4'/>
                            <filterref filter='nova-base-ipv6'/>
                          </filter>'''
-
 
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
@@ -832,8 +829,9 @@ class NWFilterFirewall(object):
     def nova_project_filter_v6(self):
         retval = "<filter name='nova-project-v6' chain='ipv6'>" % project
         for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
-            retval += """<rule action='accept' direction='inout' priority='200'>
-                           <%s srcipaddr='$PROJNETV6' srcipmask='$PROJMASKV6' />
+            retval += """<rule action='accept' direction='in' priority='200'>
+                           <%s srcipaddr='$PROJNETV6'
+                               srcipmask='$PROJMASKV6' />
                          </rule>""" % (protocol)
         retval += '</filter>'
         return retval
@@ -872,7 +870,7 @@ class NWFilterFirewall(object):
         if FLAGS.allow_project_net_traffic:
             nwfilter_xml += "  <filterref filter='nova-project' />\n"
             if(FLAGS.use_ipv6):
-                 nwfilter_xml += "  <filterref filter='nova-project-v6' />\n"
+                nwfilter_xml += "  <filterref filter='nova-project-v6' />\n"
 
         for security_group in instance.security_groups:
             self.ensure_security_group_filter(security_group['id'])
@@ -892,7 +890,7 @@ class NWFilterFirewall(object):
                                                security_group_id)
         rule_xml = ""
         version = 4
-        v6protocol = {'tcp':'tcp-ipv6', 'udp':'udp-ipv6', 'icmp':'icmpv6'}
+        v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
@@ -904,7 +902,6 @@ class NWFilterFirewall(object):
                 else:
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
                                 (rule.protocol, net, mask)
-                  
                 if rule.protocol in ['tcp', 'udp']:
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)
