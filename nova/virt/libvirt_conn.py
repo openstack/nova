@@ -114,6 +114,9 @@ def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
     return str(net.net()), str(net.netmask())
 
+def _get_ip_version(cidr):
+        net = IPy.IP(cidr)
+        return int(net.version())
 
 class LibvirtConnection(object):
 
@@ -484,7 +487,8 @@ class LibvirtConnection(object):
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
                                   'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns']}
+                                  'dns': network_ref['dns'],
+                                  'ra_server': network_ref['ra_server']}
         if key or net:
             if key:
                 logging.info(_('instance %s: injecting key into image %s'),
@@ -541,8 +545,8 @@ class LibvirtConnection(object):
 
         if FLAGS.allow_project_net_traffic:
             net, mask = _get_net_and_mask(network['cidr'])
-            net_v6, mask_v6 = self._get_net_and_mask(
-                                           network_ref['cidr_v6'])
+            net_v6, mask_v6 = _get_net_and_mask(
+                                           network['cidr_v6'])
             extra_params = ("<parameter name=\"PROJNET\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASK\" "
@@ -894,7 +898,7 @@ class NWFilterFirewall(object):
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
-                version = self._get_ip_version(rule.cidr)
+                version = _get_ip_version(rule.cidr)
                 net, mask = _get_net_and_mask(rule.cidr)
                 if(FLAGS.use_ipv6 and version == 6):
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
