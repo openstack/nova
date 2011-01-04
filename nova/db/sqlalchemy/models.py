@@ -262,6 +262,8 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    availability_zone = Column(String(255))
+
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))

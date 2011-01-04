@@ -185,8 +185,45 @@ class CloudController(object):
         return data
 
     def describe_availability_zones(self, context, **kwargs):
+        if ('zone_name' in kwargs and
+            'verbose' in kwargs['zone_name'] and
+            context.is_admin):
+            return self._describe_availability_zones_verbose(context,
+                                                             **kwargs)
+        else:
+            return self._describe_availability_zones(context, **kwargs)
+
+    def _describe_availability_zones(self, context, **kwargs):
         return {'availabilityZoneInfo': [{'zoneName': 'nova',
                                           'zoneState': 'available'}]}
+
+    def _describe_availability_zones_verbose(self, context, **kwargs):
+        rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
+                                        'zoneState': 'available'}]}
+
+        services = db.service_get_all(context)
+        now = db.get_time()
+        hosts = []
+        for host in [service['host'] for service in services]:
+            if not host in hosts:
+                hosts.append(host)
+        for host in hosts:
+            rv['availabilityZoneInfo'].append({'zoneName': '|- %s' % host,
+                                               'zoneState': ''})
+            hsvcs = [service for service in services \
+                     if service['host'] == host]
+            for svc in hsvcs:
+                delta = now - (svc['updated_at'] or svc['created_at'])
+                alive = (delta.seconds <= FLAGS.service_down_time)
+                art = (alive and ":-)") or "XXX"
+                active = 'enabled'
+                if svc['disabled']:
+                    active = 'disabled'
+                rv['availabilityZoneInfo'].append({
+                        'zoneName': '| |- %s' % svc['binary'],
+                        'zoneState': '%s %s %s' % (active, art,
+                                                   svc['updated_at'])})
+        return rv
 
     def describe_regions(self, context, region_name=None, **kwargs):
         if FLAGS.region_list:
@@ -658,6 +695,8 @@ class CloudController(object):
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
+            availability_zone=kwargs.get('placement', {}).get(
+                                  'AvailabilityZone'),
             generate_hostname=id_to_ec2_id)
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])

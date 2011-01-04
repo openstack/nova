@@ -249,15 +249,16 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
-        values = {'name': 1, 'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff'
-                  }
+        values = {
+            'name': 1,
+            'id': 1,
+            'project_id': self.project.id,
+            'user_id': self.user.id,
+            'image_id': 1,
+            'kernel_id': 2,
+            'ramdisk_id': 3,
+            'instance_type': 'm1.large',
+            'mac_address': 'aa:bb:cc:dd:ee:ff'}
         instance = db.instance_create(values)
         self.conn.spawn(instance)
         return instance
