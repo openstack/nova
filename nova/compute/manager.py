@@ -52,8 +52,7 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
 
-
-LOG = logging.getLogger('nova.computemanager')
+LOG = logging.getLogger('nova.compute.manager')
 
 
 class ComputeManager(manager.Manager):
@@ -114,7 +113,8 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
-        LOG.debug(_("instance %s: starting..."), instance_id)
+        LOG.audit(_("instance %s//%s: starting..."),
+                  instance_ref['internal_id'], instance_id, context=context)
         self.db.instance_update(context,
                                 instance_id,
                                 {'host': self.host})
@@ -152,8 +152,9 @@ class ComputeManager(manager.Manager):
                                     instance_id,
                                     {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
-            LOG.exception(_("instance %s: Failed to spawn"),
-                          instance_ref['name'])
+            LOG.exception(_("instance %s//%s: Failed to spawn"),
+                          instance_ref['internal_id'], instance_id,
+                          context=context)
             self.db.instance_set_state(context,
                                        instance_id,
                                        power_state.SHUTDOWN)
@@ -193,8 +194,6 @@ class ComputeManager(manager.Manager):
                 self.network_manager.deallocate_fixed_ip(context.elevated(),
                                                          address)
 
-        LOG.debug(_("instance %s: terminating"), instance_id, context=context)
-
         volumes = instance_ref.get('volumes', []) or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
@@ -217,14 +216,13 @@ class ComputeManager(manager.Manager):
                   instance_id, context=context)
 
         if instance_ref['state'] != power_state.RUNNING:
-            LOG.warn(_('trying to reboot a non-running '
+            .warn(_('trying to reboot a non-running '
                      'instance: %s (state: %s excepted: %s)'),
                      instance_ref['internal_id'],
                      instance_ref['state'],
                      power_state.RUNNING,
                      context=context)
 
-        LOG.debug(_('instance %s: rebooting'), instance_ref['name'])
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -244,13 +242,14 @@ class ComputeManager(manager.Manager):
         # potentially?
         self._update_state(context, instance_id)
 
-        logging.debug(_('instance %s: snapshotting'), instance_ref['name'])
+        LOG.audit(_('instance %s//%s: snapshotting'),
+                  instance_ref['internal_id'], instance_id, context=context)
         if instance_ref['state'] != power_state.RUNNING:
-            logging.warn(_('trying to snapshot a non-running '
-                           'instance: %s (state: %s excepted: %s)'),
-                         instance_ref['internal_id'],
-                         instance_ref['state'],
-                         power_state.RUNNING)
+            LOG.warn(_('trying to snapshot a non-running '
+                       'instance: %s//%s (state: %s excepted: %s)'),
+                     instance_ref['internal_id'], instance_id,
+                     instance_ref['state'],
+                     power_state.RUNNING)
 
         self.driver.snapshot(instance_ref, name)
 
@@ -259,9 +258,8 @@ class ComputeManager(manager.Manager):
         """Rescue an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-
-        LOG.audit(_('instance %s: rescuing'), instance_ref['internal_id'],
-                  context=context)
+        LOG.audit(_('instance %s//%s: rescuing'), instance_ref['internal_id'],
+                  instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -276,8 +274,8 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        LOG.audit(_('instance %s: unrescuing'), instance_ref['internal_id'],
-                    context=context)
+        LOG.audit(_('instance %s//%s: unrescuing'),
+                  instance_ref['internal_id'], instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -295,9 +293,8 @@ class ComputeManager(manager.Manager):
         """Pause an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-
-        LOG.debug(_('instance %s: pausing'), instance_ref['internal_id'],
-                  context=context)
+        LOG.audit(_('instance %s//%s: pausing'), instance_ref['internal_id'],
+                  instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -313,9 +310,8 @@ class ComputeManager(manager.Manager):
         """Unpause a paused instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-
-        LOG.debug(_('instance %s: unpausing'), instance_ref['internal_id'],
-                  context=context)
+        LOG.audit(_('instance %s//%s: unpausing'),
+                  instance_ref['internal_id'], instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -332,8 +328,9 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref["state"] == power_state.RUNNING:
-            logging.debug(_("instance %s: retrieving diagnostics"),
-                instance_ref["internal_id"])
+            LOG.audit(_("instance %s//%s: retrieving diagnostics"),
+                      instance_ref["internal_id"], instance_id,
+                      context=context)
             return self.driver.get_diagnostics(instance_ref)
 
     @exception.wrap_exception
@@ -342,8 +339,8 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: suspending'),
-                      instance_ref['internal_id'])
+        LOG.audit(_('instance %s//%s: suspending'),
+                  instance_ref['internal_id'], instance_id, context=context)
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'suspending')
@@ -359,7 +356,8 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: resuming'), instance_ref['internal_id'])
+        LOG.audit(_('instance %s//%s: resuming'), instance_ref['internal_id'],
+                  instance_id, context=context)
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'resuming')
@@ -374,18 +372,18 @@ class ComputeManager(manager.Manager):
         """Send the console output for an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("Get console output instance %s//%s"),
+        LOG.audit(_("Get console output for instance %s//%s"),
                   instance_ref['internal_id'], instance_id, context=context)
-
         return self.driver.get_console_output(instance_ref)
 
     @exception.wrap_exception
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
-        LOG.audit(_("instance %s: attaching volume %s to %s"), instance_id,
-                  volume_id, mountpoint, context=context)
         instance_ref = self.db.instance_get(context, instance_id)
+        LOG.audit(_("instance %s//%s: attaching volume %s to %s"),
+                  instance_ref['internal_id'], instance_id,
+                  volume_id, mountpoint, context=context)
         dev_path = self.volume_manager.setup_compute_volume(context,
                                                             volume_id)
         try:
@@ -400,8 +398,9 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            LOG.exception(_("instance %s: attach failed %s, removing"),
-                          instance_id, mountpoint, context=context)
+            LOG.exception(_("instance %s//%s: attach failed %s, removing"),
+                          instance_ref['internal_id'], instance_id,
+                          mountpoint, context=context)
             self.volume_manager.remove_compute_volume(context,
                                                       volume_id)
             raise exc
@@ -418,8 +417,8 @@ class ComputeManager(manager.Manager):
                   volume_id, volume_ref['mountpoint'],
                   instance_ref['internal_id'], instance_id, context=context)
         if instance_ref['name'] not in self.driver.list_instances():
-            LOG.warn(_("Detaching volume from unknown instance %s"),
-                     instance_ref['name'], context=context)
+            LOG.warn(_("Detaching volume from unknown instance %s//%s"),
+                     instance_ref['internal_id'], instance_id, context=context)
         else:
             self.driver.detach_volume(instance_ref['name'],
                                       volume_ref['mountpoint'])

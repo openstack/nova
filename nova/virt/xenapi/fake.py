@@ -244,7 +244,7 @@ class SessionBase(object):
             full_params = (self._session,) + params
             meth = getattr(self, methodname, None)
             if meth is None:
-                LOG.debug('Raising NotImplemented')
+                LOG.debug(_('Raising NotImplemented'))
                 raise NotImplementedError(
                     _('xenapi.fake does not have an implementation for %s') %
                     methodname)

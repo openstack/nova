@@ -36,10 +36,10 @@ import webob.exc
 
 from nova import log as logging
 
-
 # TODO(todd): should this just piggyback the handler for root logger
 #             since we usually log to syslog, but changes if not daemonzied?
 logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
+
 
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""

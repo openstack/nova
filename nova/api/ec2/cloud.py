@@ -609,7 +609,7 @@ class CloudController(object):
                 'volumeId': volume_ref['id']}
 
     def detach_volume(self, context, volume_id, **kwargs):
-        LOG.audit("Detach volume %s", volume_id, context=context)
+        LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume_ref = db.volume_get_by_ec2_id(context, volume_id)
         instance_ref = db.volume_get_instance(context.elevated(),
                                               volume_ref['id'])
@@ -893,7 +893,7 @@ class CloudController(object):
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
-        LOG.audit("De-registering image %s", image_id, context=context)
+        LOG.audit(_("De-registering image %s"), image_id, context=context)
         self.image_service.deregister(context, image_id)
         return {'imageId': image_id}
 

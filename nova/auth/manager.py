@@ -70,8 +70,7 @@ flags.DEFINE_string('credential_rc_file', '%src',
 flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
 
-
-LOG = logging.getLogger('nova.authmanager')
+LOG = logging.getLogger('nova.auth.manager')
 
 
 class AuthBase(object):

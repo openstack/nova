@@ -134,7 +134,7 @@ def get_context(request):
                                           headers=request.getAllHeaders(),
                                           check_type='s3')
         rv = context.RequestContext(user, project)
-        LOG.audit("Authenticated request", context=rv)
+        LOG.audit(_("Authenticated request"), context=rv)
         return rv
     except exception.Error as ex:
         LOG.debug(_("Authentication Failure: %s"), ex)

@@ -65,7 +65,6 @@ flags.DEFINE_string('ldap_netadmin',
 flags.DEFINE_string('ldap_developer',
     'cn=developers,ou=Groups,dc=example,dc=com', 'cn for Developers')
 
-
 LOG = logging.getLogger("nova.ldapdriver")
 
 
@@ -506,7 +505,7 @@ class LdapDriver(object):
             self.conn.modify_s(group_dn, attr)
         except self.ldap.OBJECT_CLASS_VIOLATION:
             LOG.debug(_("Attempted to remove the last member of a group. "
-                            "Deleting the group at %s instead."), group_dn)
+                        "Deleting the group at %s instead."), group_dn)
             self.__delete_group(group_dn)
 
     def __remove_from_all(self, uid):

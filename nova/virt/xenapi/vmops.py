@@ -33,6 +33,7 @@ from nova.virt.xenapi.vm_utils import ImageType
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
+
 class VMOps(object):
     """
     Management class for VM-related tasks

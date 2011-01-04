@@ -89,7 +89,7 @@ RRD_VALUES = {
 utcnow = datetime.datetime.utcnow
 
 
-LOG = logging.getLogger('nova.instancemonitor')
+LOG = logging.getLogger('nova.compute.monitor')
 
 
 def update_rrd(instance, name, data):

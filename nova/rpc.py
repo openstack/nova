@@ -96,8 +96,9 @@ class Consumer(messaging.Consumer):
                                 FLAGS.rabbit_retry_interval))
                 self.failed_connection = True
         if self.failed_connection:
-            LOG.exception(_("Unable to connect to AMQP server"
-                " after %d tries. Shutting down.") % FLAGS.rabbit_max_retries)
+            LOG.exception(_("Unable to connect to AMQP server "
+                            "after %d tries. Shutting down."),
+                          FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):

@@ -62,9 +62,7 @@ libvirt = None
 libxml2 = None
 Template = None
 
-
-LOG =  logging.getLogger('nova.virt.libvirt_conn')
-
+LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
 # TODO(vish): These flags should probably go into a shared location
@@ -380,7 +378,7 @@ class LibvirtConnection(object):
         return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):
-        LOG.info('virsh said: %r', virsh_output)
+        LOG.info(_('virsh said: %r'), virsh_output)
         virsh_output = virsh_output[0].strip()
 
         if virsh_output.startswith('/dev/'):
@@ -400,7 +398,7 @@ class LibvirtConnection(object):
     def _dump_file(self, fpath):
         fp = open(fpath, 'r+')
         contents = fp.read()
-        LOG.info('Contents: %r', contents)
+        LOG.info(_('Contents of file %s: %r'), fpath, contents)
         return contents
 
     @exception.wrap_exception
@@ -529,7 +527,7 @@ class LibvirtConnection(object):
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
-        LOG.debug('instance %s: starting toXML method', instance['name'])
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         network = db.project_get_network(context.get_admin_context(),
                                          instance['project_id'])
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])

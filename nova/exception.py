@@ -24,6 +24,7 @@ Nova-type exceptions. SHOULD include dedicated exception logging.
 from nova import log as logging
 LOG = logging.getLogger('nova.exception')
 
+
 class ProcessExecutionError(IOError):
 
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,

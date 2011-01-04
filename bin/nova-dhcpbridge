@@ -49,16 +49,13 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 
-
-LOG = logging.getLogger('nova-dhcpbridge')
-if FLAGS.verbose:
-    LOG.setLevel(logging.DEBUG)
+LOG = logging.getLogger('nova.dhcpbridge')
 
 
 def add_lease(mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
-        LOG.debug("leasing ip")
+        LOG.debug(_("leasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.lease_fixed_ip(context.get_admin_context(),
                                        mac,
@@ -73,14 +70,14 @@ def add_lease(mac, ip_address, _hostname, _interface):
 
 def old_lease(mac, ip_address, hostname, interface):
     """Update just as add lease."""
-    LOG.debug("Adopted old lease or got a change of mac/hostname")
+    LOG.debug(_("Adopted old lease or got a change of mac/hostname"))
     add_lease(mac, ip_address, hostname, interface)
 
 
 def del_lease(mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
-        LOG.debug("releasing ip")
+        LOG.debug(_("releasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.release_fixed_ip(context.get_admin_context(),
                                          mac,
@@ -123,8 +120,8 @@ def main():
         mac = argv[2]
         ip = argv[3]
         hostname = argv[4]
-        LOG.debug("Called %s for mac %s with ip %s and "
-                  "hostname %s on interface %s",
+        LOG.debug(_("Called %s for mac %s with ip %s and "
+                    "hostname %s on interface %s"),
                   action, mac, ip, hostname, interface)
         globals()[action + '_lease'](mac, ip, hostname, interface)
     else:

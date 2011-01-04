@@ -130,7 +130,7 @@ class Lockout(wsgi.Middleware):
         failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
         if failures >= FLAGS.lockout_attempts:
-            detail = "Too many failed authentications."
+            detail = _("Too many failed authentications.")
             raise webob.exc.HTTPForbidden(detail=detail)
         res = req.get_response(self.application)
         if res.status_int == 403:
@@ -139,12 +139,13 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
             elif failures >= FLAGS.lockout_attempts:
-                LOG.warn('Access key %s has had %d failed authentications'
-                         ' and will be locked out for %d minutes.',
+                LOG.warn(_('Access key %s has had %d failed authentications'
+                           ' and will be locked out for %d minutes.'),
                          access_key, failures, FLAGS.lockout_minutes)
                 self.mc.set(failures_key, str(failures),
                             time=FLAGS.lockout_minutes * 60)
         return res
+
 
 class Authenticate(wsgi.Middleware):
 
@@ -297,8 +298,9 @@ class Authorizer(wsgi.Middleware):
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
-            LOG.audit("Unauthorized request for controller=%s and action=%s",
-                      controller_name, action, context=context)
+            LOG.audit(_("Unauthorized request for controller=%s "
+                        "and action=%s"), controller_name, action,
+                      context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
@@ -337,7 +339,7 @@ class Executor(wsgi.Application):
             LOG.info(_('NotFound raised: %s'), str(ex),  context=context)
             return self._error(req, context, type(ex).__name__, str(ex))
         except exception.ApiError as ex:
-            LOG.exception('ApiError raised', context=context)
+            LOG.exception(_('ApiError raised: %s'), str(ex), context=context)
             if ex.code:
                 return self._error(req, context, ex.code, str(ex))
             else:

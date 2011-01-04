@@ -77,7 +77,6 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import quota
 from nova import utils
 from nova.auth import manager
@@ -557,7 +556,6 @@ def main():
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
 
-    logging._set_log_levels()
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"

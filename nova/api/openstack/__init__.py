@@ -83,7 +83,7 @@ class APIRouter(wsgi.Router):
 
         server_members = {'action': 'POST'}
         if FLAGS.allow_admin_api:
-            LOG.debug("Including admin operations in API.")
+            LOG.debug(_("Including admin operations in API."))
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
             server_members["diagnostics"] = "GET"

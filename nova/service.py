@@ -209,9 +209,6 @@ def serve(*services):
     FLAGS(sys.argv)
     logging.basicConfig()
 
-    # TODO(todd): make this pigggyback the flag-based level override method
-    logging.getLogger('amqplib').setLevel(logging.WARN)
-
     if not services:
         services = [Service.create()]
 
