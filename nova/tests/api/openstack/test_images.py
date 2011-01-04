@@ -50,7 +50,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         num_images = len(self.service.index(self.context))
@@ -67,7 +67,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         num_images = len(self.service.index(self.context))
@@ -87,7 +87,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         id = self.service.create(self.context, fixture)
@@ -105,13 +105,13 @@ class BaseImageServiceTests(object):
                      'updated': None,
                      'created': None,
                      'status': None,
-                     'serverId': None,
+                     'instance_id': None,
                      'progress': None},
                     {'name': 'test image 2',
                      'updated': None,
                      'created': None,
                      'status': None,
-                     'serverId': None,
+                     'instance_id': None,
                      'progress': None}]
 
         num_images = len(self.service.index(self.context))
@@ -155,6 +155,7 @@ class GlanceImageServiceTest(unittest.TestCase,
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(None, None)
@@ -223,6 +224,20 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
         res = req.get_response(nova.api.API('os'))
         res_dict = json.loads(res.body)
 
+        def _is_equivalent_subset(x, y):
+            if set(x) <= set(y):
+                for k, v in x.iteritems():
+                    if x[k] != y[k]:
+                        if x[k] == 'active' and y[k] == 'available':
+                            continue
+                        return False
+                return True
+            return False
+
         for image in res_dict['images']:
-            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
-                              "image %s not in fixtures!" % str(image))
+            for image_fixture in self.IMAGE_FIXTURES:
+                if _is_equivalent_subset(image, image_fixture):
+                    break
+            else:
+                self.assertEquals(1, 2, "image %s not in fixtures!" %
+                                                            str(image))

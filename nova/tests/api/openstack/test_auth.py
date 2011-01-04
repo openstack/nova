@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+        self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
@@ -131,7 +131,7 @@ class Test(unittest.TestCase):
 class TestLimiter(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+        self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}

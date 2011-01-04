@@ -19,7 +19,6 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 
 import logging
 import os
-import signal
 
 # TODO(ja): does the definition of network_path belong here?
 
@@ -46,34 +45,82 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-flags.DEFINE_integer('cc_port', 8773, 'cloud controller port')
-flags.DEFINE_string('routing_source_ip', '127.0.0.1',
+flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
 
-
-DEFAULT_PORTS = [("tcp", 80), ("tcp", 22), ("udp", 1194), ("tcp", 443)]
+flags.DEFINE_string('dns_server', None,
+                    'if set, uses specific dns server for dnsmasq')
+flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
+                    'dmz range that should be accepted')
 
 
 def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_host, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.cc_dmz, FLAGS.cc_port))
 
 
 def init_host():
     """Basic networking setup goes here"""
+
+    if FLAGS.use_nova_chains:
+        _execute("sudo iptables -N nova_input", check_exit_code=False)
+        _execute("sudo iptables -D %s -j nova_input" % FLAGS.input_chain,
+                 check_exit_code=False)
+        _execute("sudo iptables -A %s -j nova_input" % FLAGS.input_chain)
+
+        _execute("sudo iptables -N nova_forward", check_exit_code=False)
+        _execute("sudo iptables -D FORWARD -j nova_forward",
+                 check_exit_code=False)
+        _execute("sudo iptables -A FORWARD -j nova_forward")
+
+        _execute("sudo iptables -N nova_output", check_exit_code=False)
+        _execute("sudo iptables -D OUTPUT -j nova_output",
+                 check_exit_code=False)
+        _execute("sudo iptables -A OUTPUT -j nova_output")
+
+        _execute("sudo iptables -t nat -N nova_prerouting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -D PREROUTING -j nova_prerouting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -A PREROUTING -j nova_prerouting")
+
+        _execute("sudo iptables -t nat -N nova_postrouting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -D POSTROUTING -j nova_postrouting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -A POSTROUTING -j nova_postrouting")
+
+        _execute("sudo iptables -t nat -N nova_snatting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -D POSTROUTING -j nova_snatting",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -A POSTROUTING -j nova_snatting")
+
+        _execute("sudo iptables -t nat -N nova_output", check_exit_code=False)
+        _execute("sudo iptables -t nat -D OUTPUT -j nova_output",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -A OUTPUT -j nova_output")
+    else:
+        # NOTE(vish): This makes it easy to ensure snatting rules always
+        #             come after the accept rules in the postrouting chain
+        _execute("sudo iptables -t nat -N SNATTING",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -D POSTROUTING -j SNATTING",
+                 check_exit_code=False)
+        _execute("sudo iptables -t nat -A POSTROUTING -j SNATTING")
+
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    _confirm_rule("POSTROUTING", "-t nat -s %s "
+    _confirm_rule("SNATTING", "-t nat -s %s "
              "-j SNAT --to-source %s"
-             % (FLAGS.fixed_range, FLAGS.routing_source_ip))
+             % (FLAGS.fixed_range, FLAGS.routing_source_ip), append=True)
 
-    _confirm_rule("POSTROUTING", "-t nat -s %s -j MASQUERADE" %
-                  FLAGS.fixed_range)
+    _confirm_rule("POSTROUTING", "-t nat -s %s -d %s -j ACCEPT" %
+                  (FLAGS.fixed_range, FLAGS.dmz_cidr))
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
                   {'range': FLAGS.fixed_range})
     if(FLAGS.use_ipv6):
@@ -83,10 +130,11 @@ def init_host():
                  '"echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"')
 
 
-def bind_floating_ip(floating_ip):
+def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface"""
     _execute("sudo ip addr add %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface))
+                                             FLAGS.public_interface),
+             check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
@@ -108,27 +156,16 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
     _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
-    _confirm_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
+    _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
-    # TODO(joshua): Get these from the secgroup datastore entries
-    _confirm_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
-                           % (fixed_ip))
-    for (protocol, port) in DEFAULT_PORTS:
-        _confirm_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
-            % (fixed_ip, protocol, port))
 
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
     _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
-    _remove_rule("POSTROUTING", "-t nat -s %s -j SNAT --to %s"
+    _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))
-    _remove_rule("FORWARD", "-d %s -p icmp -j ACCEPT"
-                          % (fixed_ip))
-    for (protocol, port) in DEFAULT_PORTS:
-        _remove_rule("FORWARD", "-d %s -p %s --dport %s -j ACCEPT"
-                              % (fixed_ip, protocol, port))
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
@@ -141,7 +178,7 @@ def ensure_vlan(vlan_num):
     """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
-        logging.debug("Starting VLAN inteface %s", interface)
+        logging.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
@@ -151,7 +188,7 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug("Starting Bridge interface for %s", interface)
+        logging.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
@@ -170,6 +207,15 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                       net_attrs['cidr_v6']))
     else:
         _execute("sudo ifconfig %s up" % bridge)
+    if FLAGS.use_nova_chains:
+        (out, err) = _execute("sudo iptables -N nova_forward",
+                              check_exit_code=False)
+        if err != 'iptables: Chain already exists.\n':
+            # NOTE(vish): chain didn't exist link chain
+            _execute("sudo iptables -D FORWARD -j nova_forward",
+                     check_exit_code=False)
+            _execute("sudo iptables -A FORWARD -j nova_forward")
+
     _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
     _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
 
@@ -212,9 +258,9 @@ def update_dhcp(context, network_id):
                 _execute('sudo kill -HUP %d' % pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
-                logging.debug("Hupping dnsmasq threw %s", exc)
+                logging.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
-            logging.debug("Pid %d is stale, relaunching dnsmasq", pid)
+            logging.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
@@ -290,13 +336,17 @@ def _device_exists(device):
     return not err
 
 
-def _confirm_rule(chain, cmd):
+def _confirm_rule(chain, cmd, append=False):
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()
+    if append:
+        loc = "-A"
+    else:
+        loc = "-I"
     _execute("sudo iptables --delete %s %s" % (chain, cmd),
              check_exit_code=False)
-    _execute("sudo iptables -I %s %s" % (chain, cmd))
+    _execute("sudo iptables %s %s %s" % (loc, chain, cmd))
 
 
 def _remove_rule(chain, cmd):
@@ -319,6 +369,8 @@ def _dnsmasq_cmd(net):
            ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
+    if FLAGS.dns_server:
+        cmd.append(' -h -R --server=%s' % FLAGS.dns_server)
     return ''.join(cmd)
 
 
@@ -339,7 +391,7 @@ def _stop_dnsmasq(network):
         try:
             _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug("Killing dnsmasq threw %s", exc)
+            logging.debug(_("Killing dnsmasq threw %s"), exc)
 
 
 def _dhcp_file(bridge, kind):

@@ -27,6 +27,9 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 :sql_connection:  string specifying the sqlalchemy connection to use, like:
                   `sqlite:///var/lib/nova/nova.sqlite`.
+
+:enable_new_services:  when adding a new service to the database, is it in the
+                       pool of available hardware (Default: True)
 """
 
 from nova import exception
@@ -37,6 +40,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
+flags.DEFINE_boolean('enable_new_services', True,
+                     'Services to be added to the available pool on create')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -125,6 +130,45 @@ def service_update(context, service_id, values):
 
     """
     return IMPL.service_update(context, service_id, values)
+
+
+###################
+
+
+def certificate_create(context, values):
+    """Create a certificate from the values dictionary."""
+    return IMPL.certificate_create(context, values)
+
+
+def certificate_destroy(context, certificate_id):
+    """Destroy the certificate or raise if it does not exist."""
+    return IMPL.certificate_destroy(context, certificate_id)
+
+
+def certificate_get_all_by_project(context, project_id):
+    """Get all certificates for a project."""
+    return IMPL.certificate_get_all_by_project(context, project_id)
+
+
+def certificate_get_all_by_user(context, user_id):
+    """Get all certificates for a user."""
+    return IMPL.certificate_get_all_by_user(context, user_id)
+
+
+def certificate_get_all_by_user_and_project(context, user_id, project_id):
+    """Get all certificates for a user and project."""
+    return IMPL.certificate_get_all_by_user_and_project(context,
+                                                        user_id,
+                                                        project_id)
+
+
+def certificate_update(context, certificate_id, values):
+    """Set the given properties on an certificate and update it.
+
+    Raises NotFound if service does not exist.
+
+    """
+    return IMPL.service_update(context, certificate_id, values)
 
 
 ###################
@@ -310,6 +354,11 @@ def instance_get_floating_address(context, instance_id):
     return IMPL.instance_get_floating_address(context, instance_id)
 
 
+def instance_get_project_vpn(context, project_id):
+    """Get a vpn instance by project or return None."""
+    return IMPL.instance_get_project_vpn(context, project_id)
+
+
 def instance_get_by_internal_id(context, internal_id):
     """Get an instance by internal id."""
     return IMPL.instance_get_by_internal_id(context, internal_id)
@@ -338,6 +387,16 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
+
+
+def instance_action_create(context, values):
+    """Create an instance action from the values dictionary."""
+    return IMPL.instance_action_create(context, values)
+
+
+def instance_get_actions(context, instance_id):
+    """Get instance actions by instance id."""
+    return IMPL.instance_get_actions(context, instance_id)
 
 
 ###################
@@ -474,12 +533,14 @@ def network_update(context, network_id, values):
 ###################
 
 
-def project_get_network(context, project_id):
+def project_get_network(context, project_id, associate=True):
     """Return the network associated with the project.
 
-    Raises NotFound if no such network can be found.
+    If associate is true, it will attempt to associate a new
+    network if one is not found, otherwise it returns None.
 
     """
+
     return IMPL.project_get_network(context, project_id)
 
 def project_get_network_v6(context, project_id):

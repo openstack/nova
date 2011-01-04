@@ -151,6 +151,16 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
 
 
+class Certificate(BASE, NovaBase):
+    """Represents a an x509 certificate"""
+    __tablename__ = 'certificates'
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    file_name = Column(String(255))
+
+
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
@@ -210,6 +220,8 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    availability_zone = Column(String(255))
+
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
@@ -224,6 +236,16 @@ class Instance(BASE, NovaBase):
     #def validate_state(self, key, state):
     #    assert(state in ['nostate', 'running', 'blocked', 'paused',
     #                     'shutdown', 'shutoff', 'crashed'])
+
+
+class InstanceActions(BASE, NovaBase):
+    """Represents a guest VM's actions and results"""
+    __tablename__ = "instance_actions"
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'))
+
+    action = Column(String(255))
+    error = Column(Text)
 
 
 class Volume(BASE, NovaBase):
@@ -421,7 +443,7 @@ class AuthToken(BASE, NovaBase):
     """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(String(255))
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
@@ -530,10 +552,11 @@ def register_models():
     it will never need to be called explicitly elsewhere.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, Volume, ExportDevice, IscsiTarget, FixedIp,
-              FloatingIp, Network, SecurityGroup,
-              SecurityGroupIngressRule, SecurityGroupInstanceAssociation,
-              AuthToken, User, Project)  # , Image, Host
+    models = (Service, Instance, InstanceActions,
+              Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
+              Network, SecurityGroup, SecurityGroupIngressRule,
+              SecurityGroupInstanceAssociation, AuthToken, User,
+              Project, Certificate)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

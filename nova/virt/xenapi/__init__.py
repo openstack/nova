@@ -13,3 +13,18 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+"""
+:mod:`xenapi` -- Nova support for XenServer and XCP through XenAPI
+==================================================================
+"""
+
+
+class HelperBase(object):
+    """
+    The base for helper classes. This adds the XenAPI class attribute
+    """
+    XenAPI = None
+
+    def __init__(self):
+        return

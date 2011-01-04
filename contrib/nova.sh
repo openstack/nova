@@ -15,7 +15,7 @@ if [ ! -n "$HOST_IP" ]; then
     # NOTE(vish): This will just get the first ip in the list, so if you
     #             have more than one eth device set up, this will fail, and
     #             you should explicitly set HOST_IP in your environment
-    HOST_IP=`ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
+    HOST_IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
 USE_MYSQL=${USE_MYSQL:-0}

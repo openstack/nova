@@ -1,0 +1,51 @@
+#!/bin/bash
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# This gets zipped and run on the cloudpipe-managed OpenVPN server
+
+export LC_ALL=C 
+export VPN_IP=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $$1}'`
+export BROADCAST=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f3 | awk '{print $$1}'`
+export DHCP_MASK=`ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f4 | awk '{print $$1}'`
+export GATEWAY=`netstat -r | grep default | cut -d' ' -f10`
+
+DHCP_LOWER=`echo $$BROADCAST | awk -F. '{print $$1"."$$2"."$$3"." $$4 - ${num_vpn} }'`
+DHCP_UPPER=`echo $$BROADCAST | awk -F. '{print $$1"."$$2"."$$3"." $$4 - 1 }'`
+
+# generate a server DH
+openssl dhparam -out /etc/openvpn/dh1024.pem 1024
+
+cp crl.pem /etc/openvpn/
+cp server.key /etc/openvpn/
+cp ca.crt /etc/openvpn/
+cp server.crt /etc/openvpn/
+# Customize the server.conf.template
+cd /etc/openvpn
+
+sed -e s/VPN_IP/$$VPN_IP/g server.conf.template > server.conf
+sed -i -e s/DHCP_SUBNET/$$DHCP_MASK/g server.conf
+sed -i -e s/DHCP_LOWER/$$DHCP_LOWER/g server.conf
+sed -i -e s/DHCP_UPPER/$$DHCP_UPPER/g server.conf
+sed -i -e s/max-clients\ 1/max-clients\ 10/g server.conf
+
+echo "push \"route ${dmz_net} ${dmz_mask} $$GATEWAY\"" >> server.conf
+echo "duplicate-cn" >> server.conf
+echo "crl-verify /etc/openvpn/crl.pem" >> server.conf
+
+/etc/init.d/openvpn start

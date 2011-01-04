@@ -37,6 +37,11 @@ class NoValidHost(exception.Error):
     pass
 
 
+class WillNotSchedule(exception.Error):
+    """The specified host is not up or doesn't exist."""
+    pass
+
+
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""
 
@@ -58,4 +63,4 @@ class Scheduler(object):
 
     def schedule(self, context, topic, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
-        raise NotImplementedError("Must implement a fallback schedule")
+        raise NotImplementedError(_("Must implement a fallback schedule"))
