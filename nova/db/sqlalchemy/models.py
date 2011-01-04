@@ -20,17 +20,13 @@ SQLAlchemy models for nova data.
 """
 
 import datetime
-import uuid
 
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.types import TypeDecorator, CHAR
 
 from nova.db.sqlalchemy.session import get_session
 
@@ -41,46 +37,6 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 BASE = declarative_base()
-
-
-def make_uuid():
-    return uuid.uuid1().hex
-
-
-class GUID(TypeDecorator):
-    """Platform-independent GUID type.
-
-    Uses Postgresql's UUID type, otherwise uses
-    CHAR(32), storing as stringified hex values.
-
-    """
-    impl = CHAR
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(UUID())
-        else:
-            return dialect.type_descriptor(CHAR(32))
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == 'postgresql':
-            return str(value)
-        else:
-            if isinstance(value, int):
-                return "%.32x" % uuid.UUID(int=value)
-            elif not isinstance(value, uuid.UUID):
-                return "%.32x" % uuid.UUID(value)
-            else:
-                # hexstring
-                return "%.32x" % value
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        else:
-            return uuid.UUID(value).hex
 
 
 class NovaBase(object):
@@ -208,11 +164,11 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    id = Column(GUID, primary_key=True, default=make_uuid)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
-        return "instance-%s" % self.id
+        return "instance-%08x" % self.id
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))
@@ -284,7 +240,7 @@ class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
     id = Column(Integer, primary_key=True)
-    instance_id = Column(GUID, ForeignKey('instances.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
 
     action = Column(String(255))
     error = Column(Text)
@@ -293,11 +249,11 @@ class InstanceActions(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(GUID, primary_key=True, default=make_uuid)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
-        return "vollume-%s" % self.id
+        return "volume-%08x" % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -305,7 +261,7 @@ class Volume(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
-    instance_id = Column(GUID, ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('volumes'),
                             foreign_keys=instance_id,
@@ -346,7 +302,7 @@ class ExportDevice(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     shelf_id = Column(Integer)
     blade_id = Column(Integer)
-    volume_id = Column(GUID, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           backref=backref('export_device', uselist=False),
                           foreign_keys=volume_id,
@@ -362,7 +318,7 @@ class IscsiTarget(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     target_num = Column(Integer)
     host = Column(String(255))
-    volume_id = Column(GUID, ForeignKey('volumes.id'), nullable=True)
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           backref=backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
@@ -374,7 +330,7 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase):
     __tablename__ = 'security_group_instance_association'
     id = Column(Integer, primary_key=True)
     security_group_id = Column(Integer, ForeignKey('security_groups.id'))
-    instance_id = Column(GUID, ForeignKey('instances.id'))
+    instance_id = Column(Integer, ForeignKey('instances.id'))
 
 
 class SecurityGroup(BASE, NovaBase):
@@ -494,7 +450,7 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(GUID, ForeignKey('instances.id'), nullable=True)
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('fixed_ip', uselist=False),
                             foreign_keys=instance_id,

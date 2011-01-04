@@ -202,6 +202,9 @@ class VolumeHelper(HelperBase):
 
 def _get_volume_id(path):
     """Retrieve the volume id from device_path"""
+    # If we have the ID and not a path, just return it.
+    if isinstance(path, int):
+        return path
     # n must contain at least the volume_id
     # /vol- is for remote volumes
     # -vol- is for local volumes
