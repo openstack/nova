@@ -43,11 +43,25 @@ from nova import utils
 from nova import wsgi
 
 
-EASY_ROUTES = {}
+ROUTES = {}
 
 
 def register_service(path, handle):
-    EASY_ROUTES[path] = handle
+    ROUTES[path] = handle
+
+
+class Router(wsgi.Router):
+    def __init__(self, mapper=None):
+        if mapper is None:
+            mapper = routes.Mapper()
+
+        self._load_registered_routes(mapper)
+        super(Router, self).__init__(mapper=mapper)
+
+    def _load_registered_routes(self, mapper):
+        for route in ROUTES:
+            mapper.connect('/%s/{action}' % route,
+                           controller=ServiceWrapper(ROUTES[route]))
 
 
 class DelegatedAuthMiddleware(wsgi.Middleware):
@@ -76,7 +90,7 @@ class JsonParamsMiddleware(wsgi.Middleware):
         request.environ['openstack.params'] = params
 
 
-class ReqParamsMiddleware(wsgi.Middleware):
+class PostParamsMiddleware(wsgi.Middleware):
     def process_request(self, request):
         params_parsed = request.params
         params = {}
@@ -90,20 +104,6 @@ class ReqParamsMiddleware(wsgi.Middleware):
         request.environ['openstack.params'] = params
 
 
-class SundayMorning(wsgi.Router):
-    def __init__(self, mapper=None):
-        if mapper is None:
-            mapper = routes.Mapper()
-
-        self._load_registered_routes(mapper)
-        super(SundayMorning, self).__init__(mapper=mapper)
-
-    def _load_registered_routes(self, mapper):
-        for route in EASY_ROUTES:
-            mapper.connect('/%s/{action}' % route,
-                           controller=ServiceWrapper(EASY_ROUTES[route]))
-
-
 class Reflection(object):
     """Reflection methods to list available methods."""
     def __init__(self):
@@ -113,7 +113,7 @@ class Reflection(object):
     def _gather_methods(self):
         methods = {}
         controllers = {}
-        for route, handler in EASY_ROUTES.iteritems():
+        for route, handler in ROUTES.iteritems():
             controllers[route] = handler.__doc__.split('\n')[0]
             for k in dir(handler):
                 if k.startswith('_'):
@@ -204,7 +204,7 @@ class ServiceWrapper(wsgi.Controller):
 
 
 class Proxy(object):
-    """Pretend an Easy API endpoint is an object."""
+    """Pretend a Direct API endpoint is an object."""
     def __init__(self, app, prefix=None):
         self.app = app
         self.prefix = prefix

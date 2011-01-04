@@ -37,25 +37,25 @@ gettext.install('nova', unicode=1)
 from nova import flags
 from nova import utils
 from nova import wsgi
-from nova.api import easy
+from nova.api import direct
 from nova.compute import api as compute_api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('easy_port', 8001, 'Easy API port')
-flags.DEFINE_string('easy_host', '0.0.0.0', 'Easy API host')
+flags.DEFINE_integer('direct_port', 8001, 'Direct API port')
+flags.DEFINE_string('direct_host', '0.0.0.0', 'Direct API host')
 
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
 
-    easy.register_service('compute', compute_api.ComputeAPI())
-    easy.register_service('reflect', easy.Reflection())
-    router = easy.SundayMorning()
-    with_json = easy.JsonParamsMiddleware(router)
-    with_req = easy.ReqParamsMiddleware(with_json)
-    with_auth = easy.DelegatedAuthMiddleware(with_req)
+    direct.register_service('compute', compute_api.ComputeAPI())
+    direct.register_service('reflect', direct.Reflection())
+    router = direct.Router()
+    with_json = direct.JsonParamsMiddleware(router)
+    with_req = direct.PostParamsMiddleware(with_json)
+    with_auth = direct.DelegatedAuthMiddleware(with_req)
 
     server = wsgi.Server()
-    server.start(with_auth, FLAGS.easy_port, host=FLAGS.easy_host)
+    server.start(with_auth, FLAGS.direct_port, host=FLAGS.direct_host)
     server.wait()

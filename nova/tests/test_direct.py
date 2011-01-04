@@ -16,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for Easy API."""
+"""Tests for Direct API."""
 
 import json
 import logging
@@ -27,7 +27,7 @@ from nova import context
 from nova import exception
 from nova import test
 from nova import utils
-from nova.api import easy
+from nova.api import direct
 from nova.compute import api as compute_api
 from nova.tests import cloud_unittest
 
@@ -41,18 +41,18 @@ class FakeService(object):
                 'project': context.project_id}
 
 
-class EasyTestCase(test.TestCase):
+class DirectTestCase(test.TestCase):
     def setUp(self):
-        super(EasyTestCase, self).setUp()
-        easy.register_service('fake', FakeService())
-        self.router = easy.ReqParamsMiddleware(
-                easy.JsonParamsMiddleware(
-                        easy.SundayMorning()))
-        self.auth_router = easy.DelegatedAuthMiddleware(self.router)
+        super(DirectTestCase, self).setUp()
+        direct.register_service('fake', FakeService())
+        self.router = direct.PostParamsMiddleware(
+                direct.JsonParamsMiddleware(
+                        direct.Router()))
+        self.auth_router = direct.DelegatedAuthMiddleware(self.router)
         self.context = context.RequestContext('user1', 'proj1')
 
     def tearDown(self):
-        easy.EASY_ROUTES = {}
+        direct.ROUTES = {}
 
     def test_delegated_auth(self):
         req = webob.Request.blank('/fake/context')
@@ -82,21 +82,21 @@ class EasyTestCase(test.TestCase):
         self.assertEqual(resp_parsed['data'], 'foo')
 
     def test_proxy(self):
-        proxy = easy.Proxy(self.router)
+        proxy = direct.Proxy(self.router)
         rv = proxy.fake.echo(self.context, data='baz')
         self.assertEqual(rv['data'], 'baz')
 
 
-class EasyCloudTestCase(cloud_unittest.CloudTestCase):
+class DirectCloudTestCase(cloud_unittest.CloudTestCase):
     def setUp(self):
-        super(EasyCloudTestCase, self).setUp()
+        super(DirectCloudTestCase, self).setUp()
         compute_handle = compute_api.ComputeAPI(self.cloud.network_manager,
                                                 self.cloud.image_service)
-        easy.register_service('compute', compute_handle)
-        self.router = easy.JsonParamsMiddleware(easy.SundayMorning())
-        proxy = easy.Proxy(self.router)
+        direct.register_service('compute', compute_handle)
+        self.router = direct.JsonParamsMiddleware(direct.Router())
+        proxy = direct.Proxy(self.router)
         self.cloud.compute_api = proxy.compute
 
     def tearDown(self):
-        super(EasyCloudTestCase, self).tearDown()
-        easy.EASY_ROUTES = {}
+        super(DirectCloudTestCase, self).tearDown()
+        direct.ROUTES = {}
