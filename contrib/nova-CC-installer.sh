@@ -23,7 +23,7 @@
 # Jordan ->  jordan@openstack.org
 
 # This script is intended to be ran on a fresh install on Ubuntu 10.04 64-bit.  Once ran with 
-# the appropiate varibles, will produce a fully functioning Nova Cloud Contoller.  I am working on 
+# the appropriate variables, will produce a fully functioning Nova Cloud Controller.  I am working on 
 # getting this working on all flavors of Ubuntu, and eventually RPM based distros.  Please feel free 
 # to reach out to script maintainers for anything that can be done better.  I'm pretty new to this scripting business 
 # so I'm sure there is room for improvement!
@@ -61,7 +61,7 @@ touch /var/log/nova/nova-install.log
 echo "Nova Cloud Controller install script v1.0"
 echo
 echo "Setting up the Nova cloud controller is a multi-step process.  After you seed information, \
-the script will take over and finish off the install for you.  Full log of commands will be availible at \
+the script will take over and finish off the install for you.  Full log of commands will be available at \
 /var/log/nova/nova-install.log"
 
 read -p "Press any key to continue..." -n1 -s 
@@ -193,7 +193,7 @@ done;
 echo
 echo " RabbitMQ Host IP set as \"$RABBIT_IP\""
 
-echo "There is an issue bypassing the rabbit package splash screen, so installing here and allowing you to proceed.   There is currenly no \
+echo "There is an issue bypassing the rabbit package splash screen, so installing here and allowing you to proceed.   There is currently no \
 way to background/preseed this, so it will output to terminal..."
 
 echo
@@ -329,7 +329,7 @@ break;
 done;
 
 while true; do
-read -p "How many availible IPs per project network:" IPS_PER_NETWORK
+read -p "How many available IPs per project network:" IPS_PER_NETWORK
 if [ ! "$( echo $IPS_PER_NETWORK | egrep '^[0-9]{1,9}$' )" ];
 then echo "You have not entered amount of IPs"
 continue
@@ -469,6 +469,12 @@ echo "######################################################################"
 killall dnsmasq
 service nova-network restart &>> $LOGFILE
 
-#Needed for KVM to initialize, VMs run in qemu mode otherwise and is very slow
+#Needed for KVM to initialize, or VMs will run in qemu mode and is very slow
 chgrp kvm /dev/kvm
 chmod g+rwx /dev/kvm
+
+echo "The next thing you are going to want to do it get a VM to test with.  You can find a test VM how-to, and read more about custom image creation at "http://nova.openstack.org/adminguide/multi.node.install.html" and "http://wiki.openstack.org/GettingImages"
+echo
+echo "If you run into any problems, please feel free to contact the script maintainers.  You can also get assistance by stopping by irc.freenode.net (#openstack), sending a message to the OpenStack mailing list (openstack@lists.launchpad.net), or posting at "https://answers.launchpad.net/openstack"
+echo
+echo "Enjoy your new private cloud!"

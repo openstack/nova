@@ -38,7 +38,7 @@ Requirements for a multi-node installation
 * For performance optimization, split reads and writes to the database. MySQL proxy is the easiest way to make this work if running MySQL.
  
 Assumptions
-------------------------------------
+-----------
  
 * Networking is configured between/through the physical machines on a single subnet.
 * Installation and execution are both performed by ROOT user.
@@ -126,42 +126,38 @@ The following code can be cut and paste, and edited to your setup:
 2. Create a “nova” group, and set permissions:
  
 ::
- 
-addgroup nova
+    addgroup nova
  
 The Nova config file should have its owner set to root:nova, and mode set to 0644, since they contain your MySQL server's root password.
  
 ::
-  
-chown -R root:nova /etc/nova
-chmod 644 /etc/nova/nova.conf
+    chown -R root:nova /etc/nova
+    chmod 644 /etc/nova/nova.conf
  
 Step 3 - Setup the SQL DB (MySQL for this setup)
 ------------------------------------------------
  
 1. First you 'preseed' to bypass all the installation prompts
+
 ::
- 
-bash
-MYSQL_PASS=nova
-cat <<MYSQL_PRESEED | debconf-set-selections
-mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
-mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
-mysql-server-5.1 mysql-server/start_on_boot boolean true
-MYSQL_PRESEED
+    bash
+    MYSQL_PASS=nova
+    cat <<MYSQL_PRESEED | debconf-set-selections
+    mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
+    mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
+    mysql-server-5.1 mysql-server/start_on_boot boolean true
+    MYSQL_PRESEED
  
 2. Install MySQL:
  
 ::
- 
-apt-get install -y mysql-server
+    apt-get install -y mysql-server
  
 3. Edit /etc/mysql/my.cnf to change ‘bind-address’ from localhost to any:
  
 ::
- 
-sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
-service mysql restart
+    sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/my.cnf
+    service mysql restart
  
 3.  Network Configuration
  
@@ -170,7 +166,6 @@ If you use FlatManager (as opposed to VlanManager that we set) as your network m
 Nova defaults to a bridge device named 'br100'. This needs to be created and somehow integrated into YOUR network. To keep things as simple as possible, have all the VM guests on the same network as the VM hosts (the compute nodes). To do so, set the compute node's external IP address to be on the bridge and add eth0 to that bridge. To do this, edit your network interfaces config to look like the following
  
 ::
- 
    < begin /etc/network/interfaces >
    # The loopback network interface
    auto lo
@@ -186,47 +181,42 @@ Nova defaults to a bridge device named 'br100'. This needs to be created and som
           bridge_fd       0
    < end /etc/network/interfaces >
  
- 
 Next, restart networking to apply the changes::
  
-sudo /etc/init.d/networking restart
- 
+    sudo /etc/init.d/networking restart
+
 4. MySQL DB configuration:
  
 Create NOVA database:  
  
 ::
- 
-mysql -uroot -p$MYSQL_PASS -e 'CREATE DATABASE nova;'
+    mysql -uroot -p$MYSQL_PASS -e 'CREATE DATABASE nova;'
  
  
 Update the DB to include user 'root'@'%' with super user privileges
  
 ::
- 
-mysql -uroot -p$MYSQL_PASS -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;"
+    mysql -uroot -p$MYSQL_PASS -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;"
  
 Set mySQL root password
  
 ::
- 
-mysql -uroot -p$MYSQL_PASS -e "SET PASSWORD FOR 'root'@'%' = PASSWORD('$MYSQL_PASS');"
+    mysql -uroot -p$MYSQL_PASS -e "SET PASSWORD FOR 'root'@'%' = PASSWORD('$MYSQL_PASS');"
  
  
 Step 4 - Setup Nova environment
------------------------------
+-------------------------------
  
 ::
+    /usr/bin/python /usr/bin/nova-manage user admin <user_name>
+    /usr/bin/python /usr/bin/nova-manage project create <project_name> <user_name>
+    /usr/bin/python /usr/bin/nova-manage network create <project-network> <number-of-networks-in-project> <IPs in project>
  
-/usr/bin/python /usr/bin/nova-manage user admin <user_name>
-/usr/bin/python /usr/bin/nova-manage project create <project_name> <user_name>
-/usr/bin/python /usr/bin/nova-manage network create <project-network> <number-of-networks-in-project> <IPs in project>
- 
-Here is an example of what this looks like with real data:
- 
-/usr/bin/python /usr/bin/nova-manage user admin dub
-/usr/bin/python /usr/bin/nova-manage project create dubproject dub
-/usr/bin/python /usr/bin/nova-manage network create 192.168.0.0/24 1 255
+Here is an example of what this looks like with real data::
+
+    /usr/bin/python /usr/bin/nova-manage user admin dub
+    /usr/bin/python /usr/bin/nova-manage project create dubproject dub
+    /usr/bin/python /usr/bin/nova-manage network create 192.168.0.0/24 1 255
  
 (I chose a /24 since that falls inside my /12 range I set in ‘fixed-range’ in nova.conf.  Currently, there can only be one network, and I am using the max IP’s available in a  /24.  You can choose to use any valid amount that you would like.)
  
@@ -241,62 +231,117 @@ Step 5 - Create Nova certs
 1.  Generate the certs as a zip file.  These are the certs you will use to launch instances, bundle images, and all the other assorted api functions:
  
 ::
- 
-mkdir –p /root/creds
-/usr/bin/python /usr/bin/nova-manage project zipfile $NOVA_PROJECT $NOVA_PROJECT_USER /root/creds/novacreds.zip
+    mkdir –p /root/creds
+    /usr/bin/python /usr/bin/nova-manage project zipfile $NOVA_PROJECT $NOVA_PROJECT_USER /root/creds/novacreds.zip
  
 2.  Unzip them in your home directory, and add them to your environment:
  
 ::
- 
-unzip /root/creds/novacreds.zip -d /root/creds/ 
-cat /root/creds/novarc >> ~/.bashrc
-source ~/.bashrc
- 
+    unzip /root/creds/novacreds.zip -d /root/creds/ 
+    cat /root/creds/novarc >> ~/.bashrc
+    source ~/.bashrc
+
 Step 6 - Restart all relevant services
-------------------------------------
+--------------------------------------
+
 Restart all six services in total, just to cover the entire spectrum:
  
 ::
  
-libvirtd restart; service nova-network restart; service nova-compute restart; service nova-api restart; service nova-objectstore restart; service nova-scheduler restart
+    libvirtd restart; service nova-network restart; service nova-compute restart; service nova-api restart; service nova-objectstore restart; service nova-scheduler restart
 
 Step 7 - Closing steps, and cleaning up:
-------------------------------------
+----------------------------------------
 
 One of the most commonly missed configuration areas is not allowing the proper access to VMs. Use the 'euca-authorize' command to enable access.  Below, you will find the commands to allow 'ping' and 'ssh' to your VMs:
 
 ::
 
-euca-authorize -P icmp -t -1:-1 default
-euca-authorize -P tcp -p 22 default
+    euca-authorize -P icmp -t -1:-1 default
+    euca-authorize -P tcp -p 22 default
 
 Another common issue is you cannot ping or SSH your instances after issusing the 'euca-authorize' commands.  Something to look at is the amount of 'dnsmasq' processes that are running.  If you have a running instance, check to see that TWO 'dnsmasq' processes are running.  If not, perform the following:
 
 ::
 
-killall dnsmasq
-service nova-network restart
+    killall dnsmasq
+    service nova-network restart
 
 Step 8 – Testing the installation
-------------------------------------
+---------------------------------
 
 You can then use `euca2ools` to test some items:
  
 ::
- 
-euca-describe-images
-euca-describe-instances
+
+    euca-describe-images
+    euca-describe-instances
  
 If you have issues with the API key, you may need to re-source your creds file:
  
 ::
- 
-. /root/creds/novarc
+
+    . /root/creds/novarc
  
 If you don’t get any immediate errors, you’re successfully making calls to your cloud!
  
-The next thing you are going to need is an image to test.  There will soon be an update on how to capture an image and use it as a bootable AMI so you can ping, ssh, show instances spinning up, etc.
- 
+Step 9 -- Spinning up a VM for testing 
+--------------------------------------
+(This excerpt is from Thierry Carrez's blog, with reference to http://wiki.openstack.org/GettingImages.) 
+
+The image that you will use here will be a ttylinux image, so this is a limited function server. You will be able to ping and SSH to this instance, but it is in no way a full production VM.  
+
+UPDATE: Due to `bug 661159 <https://bugs.launchpad.net/nova/+bug/661159>`_, we can’t use images without ramdisks yet, so we can’t use the classic Ubuntu cloud images from http://uec-images.ubuntu.com/releases/ yet. For the sake of this tutorial, we’ll use the `ttylinux images from Scott Moser instead <http://smoser.brickies.net/ubuntu/ttylinux-uec/>`_.
+
+Download the image, and publish to your bucket:
+
+::
+
+    image="ttylinux-uec-amd64-12.1_2.6.35-22_1.tar.gz"
+    wget http://smoser.brickies.net/ubuntu/ttylinux-uec/$image
+    uec-publish-tarball $image mybucket
+
+This will output three references, an "emi", an "eri" and an "eki."  (Image, ramdisk, and kernel)  The emi is the one we use to launch instances, so take note of this.
+
+Create a keypair to SSH to the server:
+
+::
+
+    euca-add-keypair mykey > mykey.priv
+
+    chmod 0600 mykey.priv
+
+Boot your instance:
+
+::
+
+    euca-run-instances $emi -k mykey -t m1.tiny 
+
+($emi is replaced with the output from the previous command)
+
+Checking status, and confirming communication:
+
+Once you have booted the instance, you can check the status the the `euca-describe-instances` command.  Here you can view the instance ID, IP, and current status of the VM.  
+
+::
+
+    euca-describe-instances
+
+Once in a "running" state, you can use your SSH key connect:
+
+::
+
+    ssh -i mykey.priv root@$ipaddress
+
+When you are ready to terminate the instance, you may do so with the `euca-terminate-instances` command:
+
+::
+
+    euca-terminate-instances $instance-id
+
+You can determine the instance-id with `euca-describe-instances`, and the format is "i-" with a series of letter and numbers following:  e.g. i-a4g9d.
+
+For more information in creating you own custom (production ready) instance images, please visit http://wiki.openstack.org/GettingImages for more information!
+
 Enjoy your new private cloud, and play responsibly!
 
