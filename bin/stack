@@ -139,7 +139,7 @@ if __name__ == '__main__':
     method = args.pop(0)
     params = {}
     for x in args:
-        key, value = args.split('=', 1)
+        key, value = x.split('=', 1)
         params[key] = value
 
     pprint.pprint(do_request(controller, method, params))
