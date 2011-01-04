@@ -114,6 +114,10 @@ def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
     return str(net.net()), str(net.netmask())
 
+def _get_net_and_prefixlen(cidr):
+    net = IPy.IP(cidr)
+    return str(net.net()), str(net.prefixlen())
+
 def _get_ip_version(cidr):
         net = IPy.IP(cidr)
         return int(net.version())
@@ -354,6 +358,7 @@ class LibvirtConnection(object):
                               power_state.NOSTATE,
                               'launching')
         NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
+
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
         logging.debug(_("instance %s: is running"), instance['name'])
@@ -545,7 +550,7 @@ class LibvirtConnection(object):
 
         if FLAGS.allow_project_net_traffic:
             net, mask = _get_net_and_mask(network['cidr'])
-            net_v6, mask_v6 = _get_net_and_mask(
+            net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
             extra_params = ("<parameter name=\"PROJNET\" "
                             "value=\"%s\" />\n"
@@ -554,7 +559,7 @@ class LibvirtConnection(object):
                             "<parameter name=\"PROJNETV6\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % (net, mask, net_v6, mask_v6)
+                            "value=\"%s\" />\n") % (net, mask, net_v6, prefixlen_v6)
         else:
             extra_params = "\n"
 
@@ -882,7 +887,7 @@ class NWFilterFirewall(object):
             nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' "
                              "/>\n") % security_group['id']
         nwfilter_xml += "</filter>"
-
+        logging.debug(nwfilter_xml)
         self._define_filter(nwfilter_xml)
 
     def ensure_security_group_filter(self, security_group_id):
@@ -899,11 +904,12 @@ class NWFilterFirewall(object):
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
                 version = _get_ip_version(rule.cidr)
-                net, mask = _get_net_and_mask(rule.cidr)
                 if(FLAGS.use_ipv6 and version == 6):
+                    net, prefixlen = _get_net_and_prefixlen(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (v6protocol[rrule.protocol], net, mask)
+                                (v6protocol[rrule.protocol], net, prefixlen)
                 else:
+                    net, mask = _get_net_and_mask(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
                                 (rule.protocol, net, mask)
                 if rule.protocol in ['tcp', 'udp']:

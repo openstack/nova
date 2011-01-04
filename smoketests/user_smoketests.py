@@ -193,7 +193,7 @@ class InstanceTests(UserSmokeTestCase):
                 else:
                     break
             else:
-                self.fail('could not ssh to instance')
+                self.fail('could not ssh to instance v6')
 
     def test_006_can_allocate_elastic_ip(self):
         result = self.conn.allocate_address()

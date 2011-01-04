@@ -211,8 +211,6 @@ def get_my_ip():
 
 
 def  get_my_linklocal(interface):
-    if  getattr(FLAGS, 'fake_tests', None):
-        return 'fe00::'
     try:
         if_str = execute("ifconfig %s" % interface)
         condition = "\s+inet6\s+addr:\s+([0-9a-f:]+/\d+)\s+Scope:Link"
@@ -224,7 +222,7 @@ def  get_my_linklocal(interface):
             return None
     except RuntimeError as ex:
         logging.warn("Couldn't get Link Local IP of %s :%s", interface, ex)
-        return None
+        return 'fe00::'
 
 
 def to_global_ipv6(prefix, mac):
