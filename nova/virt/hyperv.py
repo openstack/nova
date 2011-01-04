@@ -112,7 +112,7 @@ class HyperVConnection(object):
 
     def init_host(self):
         #FIXME(chiradeep): implement this
-        logging.debug('In init host')
+        logging.debug(_('In init host'))
         pass
 
     def list_instances(self):
@@ -125,7 +125,7 @@ class HyperVConnection(object):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
-            raise exception.Duplicate('Attempted to create duplicate name %s' %
+            raise exception.Duplicate(_('Attempt to create duplicate vm %s') %
                             instance.name)
 
         user = manager.AuthManager().get_user(instance['user_id'])
@@ -142,11 +142,11 @@ class HyperVConnection(object):
             self._create_disk(instance['name'], vhdfile)
             self._create_nic(instance['name'], instance['mac_address'])
 
-            logging.debug('Starting VM %s ', instance.name)
+            logging.debug(_('Starting VM %s '), instance.name)
             self._set_vm_state(instance['name'], 'Enabled')
-            logging.info('Started VM %s ', instance.name)
+            logging.info(_('Started VM %s '), instance.name)
         except Exception as exn:
-            logging.error('spawn vm failed: %s', exn)
+            logging.error(_('spawn vm failed: %s'), exn)
             self.destroy(instance)
 
     def _create_vm(self, instance):
@@ -163,9 +163,9 @@ class HyperVConnection(object):
             success = (ret_val == 0)
 
         if not success:
-            raise Exception('Failed to create VM %s', instance.name)
+            raise Exception(_('Failed to create VM %s'), instance.name)
 
-        logging.debug('Created VM %s...', instance.name)
+        logging.debug(_('Created VM %s...'), instance.name)
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance.name)[0]
 
         vmsettings = vm.associators(
@@ -182,7 +182,7 @@ class HyperVConnection(object):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                                         vm.path_(), [memsetting.GetText_(1)])
-        logging.debug('Set memory for vm %s...', instance.name)
+        logging.debug(_('Set memory for vm %s...'), instance.name)
         procsetting = vmsetting.associators(
                           wmi_result_class='Msvm_ProcessorSettingData')[0]
         vcpus = long(instance['vcpus'])
@@ -192,11 +192,11 @@ class HyperVConnection(object):
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                                         vm.path_(), [procsetting.GetText_(1)])
-        logging.debug('Set vcpus for vm %s...', instance.name)
+        logging.debug(_('Set vcpus for vm %s...'), instance.name)
 
     def _create_disk(self, vm_name, vhdfile):
         """Create a disk and attach it to the vm"""
-        logging.debug("Creating disk for %s by attaching disk file %s",
+        logging.debug(_('Creating disk for %s by attaching disk file %s'),
                         vm_name, vhdfile)
         #Find the IDE controller for the vm.
         vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
@@ -221,10 +221,10 @@ class HyperVConnection(object):
         #Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(diskdrive, vm)
         if new_resources is None:
-            raise Exception('Failed to add diskdrive to VM %s',
+            raise Exception(_('Failed to add diskdrive to VM %s'),
                                              vm_name)
         diskdrive_path = new_resources[0]
-        logging.debug("New disk drive path is %s", diskdrive_path)
+        logging.debug(_('New disk drive path is %s'), diskdrive_path)
         #Find the default VHD disk object.
         vhddefault = self._conn.query(
                 "SELECT * FROM Msvm_ResourceAllocationSettingData \
@@ -241,13 +241,13 @@ class HyperVConnection(object):
         #Add the new vhd object as a virtual hard disk to the vm.
         new_resources = self._add_virt_resource(vhddisk, vm)
         if new_resources is None:
-            raise Exception('Failed to add vhd file to VM %s',
+            raise Exception(_('Failed to add vhd file to VM %s'),
                                              vm_name)
-        logging.info("Created disk for %s ", vm_name)
+        logging.info(_('Created disk for %s'), vm_name)
 
     def _create_nic(self, vm_name, mac):
         """Create a (emulated) nic and attach it to the vm"""
-        logging.debug("Creating nic for %s ", vm_name)
+        logging.debug(_('Creating nic for %s '), vm_name)
         #Find the vswitch that is connected to the physical nic.
         vms = self._conn.Msvm_ComputerSystem(ElementName=vm_name)
         extswitch = self._find_external_network()
@@ -266,10 +266,10 @@ class HyperVConnection(object):
         (new_port, ret_val) = switch_svc.CreateSwitchPort(vm_name, vm_name,
                                             "", extswitch.path_())
         if ret_val != 0:
-            logging.error("Failed creating a new port on the external vswitch")
-            raise Exception('Failed creating port for %s',
+            logging.error(_('Failed creating a port on the external vswitch'))
+            raise Exception(_('Failed creating port for %s'),
                                              vm_name)
-        logging.debug("Created switch port %s on switch %s",
+        logging.debug(_("Created switch port %s on switch %s"),
                         vm_name, extswitch.path_())
         #Connect the new nic to the new port.
         new_nic_data.Connection = [new_port]
@@ -279,9 +279,9 @@ class HyperVConnection(object):
         #Add the new nic to the vm.
         new_resources = self._add_virt_resource(new_nic_data, vm)
         if new_resources is None:
-            raise Exception('Failed to add nic to VM %s',
+            raise Exception(_('Failed to add nic to VM %s'),
                                              vm_name)
-        logging.info("Created nic for %s ", vm_name)
+        logging.info(_("Created nic for %s "), vm_name)
 
     def _add_virt_resource(self, res_setting_data, target_vm):
         """Add a new resource (disk/nic) to the VM"""
@@ -314,9 +314,9 @@ class HyperVConnection(object):
             time.sleep(0.1)
             job = self._conn.Msvm_ConcreteJob(InstanceID=inst_id)[0]
         if job.JobState != WMI_JOB_STATE_COMPLETED:
-            logging.debug("WMI job failed: %s", job.ErrorSummaryDescription)
+            logging.debug(_("WMI job failed: %s"), job.ErrorSummaryDescription)
             return False
-        logging.debug("WMI job succeeded: %s, Elapsed=%s ", job.Description,
+        logging.debug(_("WMI job succeeded: %s, Elapsed=%s "), job.Description,
                       job.ElapsedTime)
         return True
 
@@ -352,7 +352,7 @@ class HyperVConnection(object):
 
     def destroy(self, instance):
         """Destroy the VM. Also destroy the associated VHD disk files"""
-        logging.debug("Got request to destroy vm %s", instance.name)
+        logging.debug(_("Got request to destroy vm %s"), instance.name)
         vm = self._lookup(instance.name)
         if vm is None:
             return
@@ -377,13 +377,13 @@ class HyperVConnection(object):
         elif ret_val == 0:
             success = True
         if not success:
-            raise Exception('Failed to destroy vm %s' % instance.name)
+            raise Exception(_('Failed to destroy vm %s') % instance.name)
         #Delete associated vhd disk files.
         for disk in diskfiles:
             vhdfile = self._cim_conn.CIM_DataFile(Name=disk)
             for vf in vhdfile:
                 vf.Delete()
-                logging.debug("Deleted disk %s vm %s", vhdfile, instance.name)
+                logging.debug(_("Del: disk %s vm %s"), vhdfile, instance.name)
 
     def get_info(self, instance_id):
         """Get information about the VM"""
@@ -399,8 +399,8 @@ class HyperVConnection(object):
         summary_info = vs_man_svc.GetSummaryInformation(
                                        [4, 100, 103, 105], settings_paths)[1]
         info = summary_info[0]
-        logging.debug("Got Info for vm %s: state=%s, mem=%s, num_cpu=%s, \
-                    cpu_time=%s", instance_id,
+        logging.debug(_("Got Info for vm %s: state=%s, mem=%s, num_cpu=%s, \
+                    cpu_time=%s"), instance_id,
                     str(HYPERV_POWER_STATE[info.EnabledState]),
                     str(info.MemoryUsage),
                     str(info.NumberOfProcessors),
@@ -418,7 +418,7 @@ class HyperVConnection(object):
         if n == 0:
             return None
         elif n > 1:
-            raise Exception('duplicate name found: %s' % i)
+            raise Exception(_('duplicate name found: %s') % i)
         else:
             return vms[0].ElementName
 
@@ -438,12 +438,12 @@ class HyperVConnection(object):
             #already in the state requested
             success = True
         if success:
-            logging.info("Successfully changed vm state of %s to %s",
+            logging.info(_("Successfully changed vm state of %s to %s"),
                                 vm_name, req_state)
         else:
-            logging.error("Failed to change vm state of %s to %s",
+            logging.error(_("Failed to change vm state of %s to %s"),
                                 vm_name, req_state)
-            raise Exception("Failed to change vm state of %s to %s",
+            raise Exception(_("Failed to change vm state of %s to %s"),
                                         vm_name, req_state)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
