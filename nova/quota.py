@@ -53,7 +53,7 @@ def get_quota(context, project_id):
     return rval
 
 
-def allowed_instances(context, num_instances, cores_per_instance):
+def allowed_instances(context, num_instances, instance_type):
     """Check quota and return min(num_instances, allowed_instances)"""
     project_id = context.project_id
     context = context.elevated()
@@ -62,9 +62,9 @@ def allowed_instances(context, num_instances, cores_per_instance):
     quota = get_quota(context, project_id)
     allowed_instances = quota['instances'] - used_instances
     allowed_cores = quota['cores'] - used_cores
-    num_cores = num_instances * cores_per_instance
+    num_cores = num_instances * instance_type['vcpus']
     allowed_instances = min(allowed_instances,
-                            int(allowed_cores // cores_per_instance))
+                            int(allowed_cores // instance_type['vcpus']))
     return min(num_instances, allowed_instances)
 
 
