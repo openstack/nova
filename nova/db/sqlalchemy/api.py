@@ -236,6 +236,8 @@ def service_get_by_args(context, host, binary):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
+    if not FLAGS.enable_new_services:
+        service_ref.disabled = True
     service_ref.save()
     return service_ref
 
@@ -856,6 +858,18 @@ def instance_action_create(context, values):
     return action_ref
 
 
+@require_admin_context
+def instance_get_actions(context, instance_id):
+    """Return the actions associated to the given instance id"""
+    session = get_session()
+    actions = {}
+    for action in session.query(models.InstanceActions).\
+        filter_by(instance_id=instance_id).\
+        all():
+        actions[action.action] = action.error
+    return actions
+
+
 ###################
 
 
@@ -1175,11 +1189,13 @@ def iscsi_target_create_safe(context, values):
 ###################
 
 
+@require_admin_context
 def auth_destroy_token(_context, token):
     session = get_session()
     session.delete(token)
 
 
+@require_admin_context
 def auth_get_token(_context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken).\
@@ -1190,6 +1206,7 @@ def auth_get_token(_context, token_hash):
     return tk
 
 
+@require_admin_context
 def auth_create_token(_context, token):
     tk = models.AuthToken()
     tk.update(token)

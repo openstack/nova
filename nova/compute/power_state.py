@@ -26,6 +26,7 @@ PAUSED = 0x03
 SHUTDOWN = 0x04
 SHUTOFF = 0x05
 CRASHED = 0x06
+SUSPENDED = 0x07
 
 
 def name(code):
@@ -36,5 +37,6 @@ def name(code):
         PAUSED: 'paused',
         SHUTDOWN: 'shutdown',
         SHUTOFF: 'shutdown',
-        CRASHED: 'crashed'}
+        CRASHED: 'crashed',
+        SUSPENDED: 'suspended'}
     return d[code]

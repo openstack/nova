@@ -87,6 +87,7 @@ class ComputeAPI(base.Base):
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
+                         availability_zone=None,
                          user_data=None,
                          hostname_format='default'):
         """Create the number of instances requested if quote and
@@ -104,15 +105,16 @@ class ComputeAPI(base.Base):
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
             image = self.image_service.show(context, image_id)
-
-            # If kernel_id/ramdisk_id isn't explicitly set in API call
-            # we take the defaults from the image's metadata
             if kernel_id is None:
                 kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', None)
-
-            # Make sure we have access to kernel and ramdisk
+            #No kernel and ramdisk for raw images
+            if kernel_id == str(FLAGS.null_kernel):
+                kernel_id = None
+                ramdisk_id = None
+                logging.debug("Creating a raw instance")
+            # Make sure we have access to kernel and ramdisk (if not raw)
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
@@ -153,7 +155,8 @@ class ComputeAPI(base.Base):
             'display_description': description,
             'user_data': user_data or '',
             'key_name': key_name,
-            'key_data': key_data}
+            'key_data': key_data,
+            'availability_zone': availability_zone}
 
         elevated = context.elevated()
         instances = []
@@ -273,6 +276,15 @@ class ComputeAPI(base.Base):
         rv = self.db.instance_get_by_internal_id(context, instance_id)
         return dict(rv.iteritems())
 
+    def snapshot(self, context, instance_id, name):
+        """Snapshot the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "snapshot_instance",
+                  "args": {"instance_id": instance['id'], "name": name}})
+
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
@@ -298,6 +310,38 @@ class ComputeAPI(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unpause_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance["host"]
+        return rpc.call(context,
+            self.db.queue_get_for(context, FLAGS.compute_topic, host),
+            {"method": "get_diagnostics",
+             "args": {"instance_id": instance["id"]}})
+
+    def get_actions(self, context, instance_id):
+        """Retrieve actions for the given instance."""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        return self.db.instance_get_actions(context, instance["id"])
+
+    def suspend(self, context, instance_id):
+        """suspend the instance with instance_id"""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "suspend_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def resume(self, context, instance_id):
+        """resume the instance with instance_id"""
+        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "resume_instance",
                   "args": {"instance_id": instance['id']}})
 
     def rescue(self, context, instance_id):

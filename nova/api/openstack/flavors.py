@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova.api.openstack import faults
+from nova.api.openstack import common
 from nova.compute import instance_types
 from nova import wsgi
 import nova.api.openstack
@@ -39,7 +40,7 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
-        items = nova.api.openstack.limited(items, req)
+        items = common.limited(items, req)
         return dict(flavors=items)
 
     def show(self, req, id):

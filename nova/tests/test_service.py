@@ -22,6 +22,8 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import rpc
@@ -30,7 +32,7 @@ from nova import service
 from nova import manager
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("fake_manager", "nova.tests.service_unittest.FakeManager",
+flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
                     "Manager for testing")
 
 
@@ -52,14 +54,14 @@ class ServiceManagerTestCase(test.TestCase):
         serv = service.Service('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         self.assertRaises(AttributeError, getattr, serv, 'test_method')
 
     def test_message_gets_to_manager(self):
         serv = service.Service('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         self.assertEqual(serv.test_method(), 'manager')
 
@@ -67,9 +69,33 @@ class ServiceManagerTestCase(test.TestCase):
         serv = ExtendedService('test',
                                'test',
                                'test',
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         self.assertEqual(serv.test_method(), 'service')
+
+
+class ServiceFlagsTestCase(test.TestCase):
+    def test_service_enabled_on_create_based_on_flag(self):
+        self.flags(enable_new_services=True)
+        host = 'foo'
+        binary = 'nova-fake'
+        app = service.Service.create(host=host, binary=binary)
+        app.start()
+        app.stop()
+        ref = db.service_get(context.get_admin_context(), app.service_id)
+        db.service_destroy(context.get_admin_context(), app.service_id)
+        self.assert_(not ref['disabled'])
+
+    def test_service_disabled_on_create_based_on_flag(self):
+        self.flags(enable_new_services=False)
+        host = 'foo'
+        binary = 'nova-fake'
+        app = service.Service.create(host=host, binary=binary)
+        app.start()
+        app.stop()
+        ref = db.service_get(context.get_admin_context(), app.service_id)
+        db.service_destroy(context.get_admin_context(), app.service_id)
+        self.assert_(ref['disabled'])
 
 
 class ServiceTestCase(test.TestCase):
@@ -156,7 +182,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.report_state()
 
@@ -186,7 +212,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.report_state()
         self.assert_(serv.model_disconnected)
@@ -219,7 +245,7 @@ class ServiceTestCase(test.TestCase):
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.service_unittest.FakeManager')
+                               'nova.tests.test_service.FakeManager')
         serv.start()
         serv.model_disconnected = True
         serv.report_state()
