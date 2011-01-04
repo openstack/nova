@@ -60,7 +60,9 @@ def _fetch_image_no_curl(url, path, headers):
         while 1:
             data = urlfile.read(chunk)
             if not data:
-                break f.write(data) 
+                break
+            f.write(data)
+
     urlopened = urllib2.urlopen(request)
     urlretrieve(urlopened, path)
     logging.debug("Finished retreving %s -- placed in %s", url, path)
@@ -68,7 +70,6 @@ def _fetch_image_no_curl(url, path, headers):
 
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
-
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
     # a web client.
@@ -88,6 +89,7 @@ def _fetch_s3_image(image, path, user, project):
         cmd = ['/usr/bin/curl', '--fail', '--silent', url]
         for (k, v) in headers.iteritems():
             cmd += ['-H', '%s: %s' % (k, v)]
+
         cmd += ['-o', path]
         cmd_out = ' '.join(cmd)
         return utils.execute(cmd_out)

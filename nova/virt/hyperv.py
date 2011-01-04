@@ -64,8 +64,6 @@ import os
 import logging
 import time
 
-from twisted.internet import defer
-
 from nova import exception
 from nova import flags
 from nova.auth import manager
@@ -112,16 +110,20 @@ class HyperVConnection(object):
         self._conn = wmi.WMI(moniker='//./root/virtualization')
         self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 
+    def init_host(self):
+        #FIXME(chiradeep): implement this
+        logging.debug('In init host')
+        pass
+
     def list_instances(self):
         """ Return the names of all the instances known to Hyper-V. """
         vms = [v.ElementName \
                 for v in self._conn.Msvm_ComputerSystem(['ElementName'])]
         return vms
 
-    @defer.inlineCallbacks
     def spawn(self, instance):
         """ Create a new VM and start it."""
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is not None:
             raise exception.Duplicate('Attempted to create duplicate name %s' %
                             instance.name)
@@ -130,18 +132,18 @@ class HyperVConnection(object):
         project = manager.AuthManager().get_project(instance['project_id'])
         #Fetch the file, assume it is a VHD file.
         base_vhd_filename = os.path.join(FLAGS.instances_path,
-                                         instance['str_id'])
+                                         instance.name)
         vhdfile = "%s.vhd" % (base_vhd_filename)
-        yield images.fetch(instance['image_id'], vhdfile, user, project)
+        images.fetch(instance['image_id'], vhdfile, user, project)
 
         try:
-            yield self._create_vm(instance)
+            self._create_vm(instance)
 
-            yield self._create_disk(instance['name'], vhdfile)
-            yield self._create_nic(instance['name'], instance['mac_address'])
+            self._create_disk(instance['name'], vhdfile)
+            self._create_nic(instance['name'], instance['mac_address'])
 
             logging.debug('Starting VM %s ', instance.name)
-            yield self._set_vm_state(instance['name'], 'Enabled')
+            self._set_vm_state(instance['name'], 'Enabled')
             logging.info('Started VM %s ', instance.name)
         except Exception as exn:
             logging.error('spawn vm failed: %s', exn)
@@ -341,21 +343,19 @@ class HyperVConnection(object):
                     wmi_obj.Properties_.Item(prop).Value
         return newinst
 
-    @defer.inlineCallbacks
     def reboot(self, instance):
         """Reboot the specified instance."""
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is None:
             raise exception.NotFound('instance not present %s' % instance.name)
         self._set_vm_state(instance.name, 'Reboot')
 
-    @defer.inlineCallbacks
     def destroy(self, instance):
         """Destroy the VM. Also destroy the associated VHD disk files"""
         logging.debug("Got request to destroy vm %s", instance.name)
-        vm = yield self._lookup(instance.name)
+        vm = self._lookup(instance.name)
         if vm is None:
-            defer.returnValue(None)
+            return
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance.name)[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         #Stop the VM first.
