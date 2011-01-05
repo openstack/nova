@@ -327,10 +327,12 @@ def executor_factory(global_args, **local_args):
 def versions_factory(global_args, **local_args):
     return Versions()
 
+
 def requestify_factory(global_args, **local_args):
     def requestifier(app):
         return Requestify(app, local_args['controller'])
     return requestifier
+
 
 def lockout_factory(global_args, **local_args):
     def locksmith(app):
