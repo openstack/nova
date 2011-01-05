@@ -33,6 +33,7 @@ from nova.compute import api as compute_api
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class ComputeTestCase(test.TestCase):
