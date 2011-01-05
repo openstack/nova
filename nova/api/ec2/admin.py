@@ -183,4 +183,3 @@ class AdminController(object):
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
         return host_dict(db.host_get(name))
-

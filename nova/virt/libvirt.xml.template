@@ -72,7 +72,7 @@
             </filterref>
         </interface>
 
-        <!-- The order is significant here.  File is first -->
+        <!-- The order is significant here.  File must be defined first -->
         <serial type="file">
             <source path='${basepath}/console.log'/>
             <target port='1'/>

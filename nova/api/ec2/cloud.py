@@ -774,8 +774,6 @@ class CloudController(object):
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
-    def run_instances2(self, context, **kwargs):
-        return self.run_instances(context, kwargs)
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""

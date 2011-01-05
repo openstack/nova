@@ -26,20 +26,6 @@ import httplib
 from nova import flags
 from boto.ec2.regioninfo import RegionInfo
 
-class ConsoleInfo(object):
-    def __init__(self, connection=None, endpoint=None):
-        self.connection = connection
-        self.endpoint = endpoint
-
-    def startElement(self, name, attrs, connection):
-        return None
-
-    def endElement(self, name, value, connection):
-        if name == 'url':
-            self.url = str(value)
-        if name == 'kind':
-            self.url = str(value)
-
 FLAGS = flags.FLAGS
 
 DEFAULT_CLC_URL = 'http://127.0.0.1:8773'
@@ -389,13 +375,3 @@ class NovaAdminClient(object):
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
-
-    def create_console(self, instance_id, kind='ajax'):
-        """
-        Create a console
-        """
-        console = self.apiconn.get_object('CreateConsole', {'Kind': kind, 'InstanceId': instance_id}, ConsoleInfo)
-
-        if console.url != None:
-            return console
-
