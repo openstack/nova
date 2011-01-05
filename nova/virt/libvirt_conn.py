@@ -118,28 +118,38 @@ def _get_net_and_mask(cidr):
     return str(net.net()), str(net.netmask())
 
 
-def wrap_cow_image(key):
+def wrap_image_cache(key):
+    """Decorator for a method that creates an image to store it in cache.
+
+    This wrapper will save the image into a common store and create a
+    copy for use by the hypervisor.
+
+    The underlying method should be called with kwargs and specify
+    a kwarg of target representing where the image will be saved. The
+    key argument to the wrapper defines which kwarg of the underlying
+    method to use as the filename of the base image.  The filename needs
+    to be unique to a given image.
+
+    If kwargs['cow'] is True, it will make a CoW image instead of a copy.
+    """
     def _decorator(retrieve_fn):
         def _wrap(*args, **kwargs):
             target = kwargs['target']
             if not os.path.exists(target):
-                if FLAGS.use_cow_images:
-                    base_dir = os.path.join(FLAGS.instances_path, '_base')
-                    if not os.path.exists(base_dir):
-                        os.mkdir(base_dir)
-                        os.chmod(base_dir, 0777)
-                    base = os.path.join(base_dir, str(kwargs[key]))
-                    if not os.path.exists(base):
-                        kwargs['target'] = base
-                        retrieve_fn(*args, **kwargs)
-                    if kwargs.get('cow'):
-                        utils.execute('qemu-img create -f qcow2 -o '
-                                      'cluster_size=2M,backing_file=%s %s'
-                                      % (base, target))
-                    else:
-                        utils.execute('cp %s %s' % (base, target))
-                else:
+                base_dir = os.path.join(FLAGS.instances_path, '_base')
+                if not os.path.exists(base_dir):
+                    os.mkdir(base_dir)
+                    os.chmod(base_dir, 0777)
+                base = os.path.join(base_dir, str(kwargs[key]))
+                if not os.path.exists(base):
+                    kwargs['target'] = base
                     retrieve_fn(*args, **kwargs)
+                if kwargs.get('cow'):
+                    utils.execute('qemu-img create -f qcow2 -o '
+                                  'cluster_size=2M,backing_file=%s %s'
+                                  % (base, target))
+                else:
+                    utils.execute('cp %s %s' % (base, target))
         _wrap.func_name = retrieve_fn.func_name
         return _wrap
     return _decorator
@@ -447,36 +457,21 @@ class LibvirtConnection(object):
 
         return self._dump_file(fpath)
 
-    def _get_image(self, retrieve_fn, key, target, *args, **kwargs):
-        if not os.path.exists(target):
-            if FLAGS.use_cow_images:
-                base_dir = os.path.join(FLAGS.instances_path, '_base')
-                if not os.path.exists(base_dir):
-                    os.mkdir(base_dir)
-                    os.chmod(base_dir, 0777)
-                base = os.path.join(base_dir, kwargs[key])
-                if not os.path.exists(base):
-                    retrieve_fn(target=base, *args, **kwargs)
-                utils.execute('qemu-img create -f qcow2 -o '
-                              'cluster_size=2M,backing_file=%s %s'
-                              % (base, target))
-            else:
-                retrieve_fn(target=base, *args, **kwargs)
-
-    @wrap_cow_image('image_id')
+    @wrap_image_cache('image_id')
     def _fetch_image(self, target, image_id, user, project,
-                     size=None, **kwargs):
+                     size=None, cow=False):
+        """Grab image and optionally attempt to resize it"""
         images.fetch(image_id, target, user, project)
-        # TODO(vish): resize filesystem
         if size:
             disk.extend(target, size)
 
-    @wrap_cow_image('local_gb')
-    def _create_local(self, target, local_gb):
+    @wrap_image_cache('local_gb')
+    def _create_local(self, target, local_gb, cow=False):
+        """Create a blank image of specified size"""
         last_mb = local_gb * 1024 - 1
-        utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
+        utils.execute('dd if=/dev/zero of=%s bs=1M count=1 '
                       'seek=%s' % (target, last_mb))
-        # TODO(vish): format disk
+        # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
@@ -528,12 +523,13 @@ class LibvirtConnection(object):
                           user=user,
                           project=project,
                           size=size,
-                          cow=True)
+                          cow=FLAGS.use_cow_images)
         type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
 
         if type_data['local_gb']:
             self._create_local(target=basepath('local'),
-                               local_gb=type_data['local_gb'])
+                               local_gb=type_data['local_gb'],
+                               cow=FLAGS.use_cow_images)
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -564,7 +560,8 @@ class LibvirtConnection(object):
                              inst['name'], inst.image_id)
             try:
                 disk.inject_data(basepath('disk'), key, net,
-                                 partition=target_partition)
+                                 partition=target_partition,
+                                 nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 logging.exception('test')

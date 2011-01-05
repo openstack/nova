@@ -107,13 +107,15 @@ def partition(infile, outfile, local_bytes=0, resize=True, local_type='ext2'):
 
 
 def extend(image, size):
+    """Increase image to size"""
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
+    # TODO(vish): attempt to resize filesystem
     return utils.execute('truncate -s %s %s' % (size, image))
 
 
-def inject_data(image, key=None, net=None, partition=None):
+def inject_data(image, key=None, net=None, partition=None, nbd=False):
     """Injects a ssh key and optionally net data into a disk image.
 
     it will mount the image as a fully partitioned disk and attempt to inject
@@ -122,7 +124,7 @@ def inject_data(image, key=None, net=None, partition=None):
     If partition is not specified it mounts the image as a single partition.
 
     """
-    device = _link_device(image)
+    device = _link_device(image, nbd)
     try:
         if not partition is None:
             # create partition
@@ -169,11 +171,12 @@ def inject_data(image, key=None, net=None, partition=None):
                 # remove partitions
                 utils.execute('sudo kpartx -d %s' % device)
     finally:
-        _unlink_device(image, device)
+        _unlink_device(device, nbd)
 
 
-def _link_device(image):
-    if FLAGS.use_cow_images:
+def _link_device(image, nbd):
+    """Link image to device using loopback or nbd"""
+    if nbd:
         device = _allocate_device()
         utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
         return device
@@ -185,8 +188,9 @@ def _link_device(image):
         return out.strip()
 
 
-def _unlink_device(device):
-    if FLAGS.use_cow_images:
+def _unlink_device(device, nbd):
+    """Unlink image from device using loopback or nbd"""
+    if nbd:
         utils.execute('sudo qemu-nbd -d %s' % device)
         _free_device(device)
     else:
