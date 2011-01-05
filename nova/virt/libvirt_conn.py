@@ -490,13 +490,16 @@ class LibvirtConnection(object):
         if network_ref['injected']:
             admin_context = context.get_admin_context()
             address = db.instance_get_fixed_address(admin_context, inst['id'])
+            ra_server =  network_ref['ra_server']
+            if not ra_server:
+                 ra_server = "fd00::"
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
                                   'broadcast': network_ref['broadcast'],
                                   'dns': network_ref['dns'],
-                                  'ra_server': network_ref['ra_server']}
+                                  'ra_server': ra_server}
         if key or net:
             if key:
                 logging.info(_('instance %s: injecting key into image %s'),
@@ -550,12 +553,14 @@ class LibvirtConnection(object):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
-
+        if not ra_server:
+             ra_server = 'fd00::'
         if FLAGS.allow_project_net_traffic:
-            net, mask = _get_net_and_mask(network['cidr'])
-            net_v6, prefixlen_v6 = _get_net_and_prefixlen(
+            if FLAGS.use_ipv6:
+                net, mask = _get_net_and_mask(network['cidr'])
+                net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
-            extra_params = ("<parameter name=\"PROJNET\" "
+                extra_params = ("<parameter name=\"PROJNET\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASK\" "
                             "value=\"%s\" />\n"
@@ -564,6 +569,13 @@ class LibvirtConnection(object):
                             "<parameter name=\"PROJMASKV6\" "
                             "value=\"%s\" />\n") % \
                               (net, mask, net_v6, prefixlen_v6)
+            else:
+                net, mask = _get_net_and_mask(network['cidr'])
+                extra_params = ("<parameter name=\"PROJNET\" "
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASK\" "
+                            "value=\"%s\" />\n") % \
+                              (net, mask)
         else:
             extra_params = "\n"
 
@@ -860,12 +872,14 @@ class NWFilterFirewall(object):
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
-        self._define_filter(self.nova_ra_filter)
+        if FLAGS.use_ipv6:
+            self._define_filter(self.nova_ra_filter)
         self._define_filter(self.nova_base_filter)
         self._define_filter(self.nova_vpn_filter)
         if FLAGS.allow_project_net_traffic:
             self._define_filter(self.nova_project_filter)
-            self._define_filter(self.nova_project_filter_v6)
+            if FLAGS.use_ipv6:
+                self._define_filter(self.nova_project_filter_v6)
 
     def setup_nwfilters_for_instance(self, instance):
         """
