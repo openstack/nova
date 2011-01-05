@@ -50,7 +50,7 @@ def _translate_detail_keys(inst):
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
         power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'error',
+        power_state.PAUSED: 'paused',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}
