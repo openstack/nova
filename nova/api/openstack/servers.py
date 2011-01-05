@@ -152,9 +152,10 @@ class Controller(wsgi.Controller):
 
         try:
             ctxt = req.environ['nova.context']
-            self.compute_api.update_instance(ctxt,
-                                             id,
-                                             **update_dict)
+            # The ID passed in is actually the internal_id of the
+            # instance, not the value of the id column in the DB.
+            instance = self.compute_api.get_instance(ctxt, id)
+            self.compute_api.update_instance(ctxt, instance.id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()

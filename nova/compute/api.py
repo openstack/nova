@@ -257,7 +257,7 @@ class ComputeAPI(base.Base):
     def get_instance(self, context, instance_id):
         return self.db.instance_get_by_internal_id(context, instance_id)
 
-    def _cast_compute_message(method, context, instance_id):
+    def _cast_compute_message(self, method, context, instance_id):
         """Generic handler for RPC calls."""
         instance = self.get_instance(context, instance_id)
         host = instance['host']

@@ -130,12 +130,18 @@ class VMOps(object):
         """Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
+        vm = None
         try:
-            instance_name = instance_or_vm.name
-            vm = VMHelper.lookup(self._session, instance_name)
+            if instance_or_vm.startswith("OpaqueRef:"):
+                # Got passed an opaque ref; return it
+                return instance_or_vm
+            else:
+                # Must be the instance name
+                instance_name = instance_or_vm
         except AttributeError:
-            # A vm opaque ref was passed
-            vm = instance_or_vm
+            # Not a string; must be a vm instance
+            instance_name = instance_or_vm.name
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception(_('Instance not present %s') % instance_name)
         return vm
@@ -201,6 +207,9 @@ class VMOps(object):
         instead of the more advanced one in M2Crypto for compatibility
         with the agent code.
         """
+
+        logging.error("ZZZZ RESET PASS CALLED")
+
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
@@ -291,7 +300,7 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
         self._wait_with_callback(task, callback)
 
-    def get_info(self, instance_id):
+    def get_info(self, instance):
         """Return data about VM instance"""
         vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)

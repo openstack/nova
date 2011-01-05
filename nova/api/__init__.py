@@ -59,13 +59,23 @@ class API(wsgi.Router):
 
         mapper.connect("/", controller=self.osapi_versions,
                        conditions=osapi_subdomain)
-        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
-                       conditions=osapi_subdomain)
+        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API())
 
         mapper.connect("/", controller=self.ec2api_versions,
                        conditions=ec2api_subdomain)
         mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
                        conditions=ec2api_subdomain)
+
+#        mapper.connect("/", controller=self.osapi_versions,
+#                       conditions=osapi_subdomain)
+#        mapper.connect("/v1.0/{path_info:.*}", controller=openstack.API(),
+#                       conditions=osapi_subdomain)
+#
+#        mapper.connect("/", controller=self.ec2api_versions,
+#                       conditions=ec2api_subdomain)
+#        mapper.connect("/services/{path_info:.*}", controller=ec2.API(),
+#                       conditions=ec2api_subdomain)
+
         mrh = metadatarequesthandler.MetadataRequestHandler()
         for s in ['/latest',
                   '/2009-04-04',
