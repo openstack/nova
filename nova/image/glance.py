@@ -24,7 +24,6 @@ import urlparse
 
 import webob.exc
 
-from nova.compute import api as compute_api
 from nova import utils
 from nova import flags
 from nova import exception

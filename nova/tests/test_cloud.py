@@ -106,7 +106,7 @@ class CloudTestCase(test.TestCase):
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {'host': FLAGS.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
@@ -127,9 +127,9 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
         result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[vol2['ec2_id']])
+                                             volume_id=[vol2['id']])
         self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['ec2_id'])
+        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
@@ -296,7 +296,7 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get(self.context, inst['id'])
