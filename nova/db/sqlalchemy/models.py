@@ -545,7 +545,8 @@ def register_models():
     """Register Models and create metadata.
 
     Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
-    it will never need to be called explicitly elsewhere.
+    it will never need to be called explicitly elsewhere unless the
+    connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
     models = (Service, Instance, InstanceActions,
