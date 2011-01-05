@@ -360,6 +360,7 @@ class ComputeManager(manager.Manager):
                 instance_ref["internal_id"])
             return self.driver.get_diagnostics(instance_ref)
 
+    @exception.wrap_exception
     def suspend_instance(self, context, instance_id):
         """suspend the instance with instance_id"""
         context = context.elevated()

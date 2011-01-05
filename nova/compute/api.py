@@ -73,6 +73,7 @@ class ComputeAPI(base.Base):
                          max_count=1, kernel_id=None, ramdisk_id=None,
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
+                         availability_zone=None,
                          user_data=None,
                          generate_hostname=generate_default_hostname):
         """Create the number of instances requested if quote and
@@ -140,7 +141,8 @@ class ComputeAPI(base.Base):
             'display_description': description,
             'user_data': user_data or '',
             'key_name': key_name,
-            'key_data': key_data}
+            'key_data': key_data,
+            'availability_zone': availability_zone}
 
         elevated = context.elevated()
         instances = []
