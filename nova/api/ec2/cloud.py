@@ -119,7 +119,8 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in self.compute_api.get(context, project_id=project_id):
+        for instance in self.compute_api.get_all(context,
+                                                 project_id=project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -141,7 +142,7 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        instance_ref = self.compute_api.get(ctxt, fixed_ip=address)
+        instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
@@ -493,7 +494,7 @@ class CloudController(object):
                 "output": base64.b64encode(output)}
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
-        volumes = self.volume_api.get(context)
+        volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
                    if volume_id is None or v['id'] in volume_id]
@@ -597,7 +598,7 @@ class CloudController(object):
 
     def _format_instances(self, context, **kwargs):
         reservations = {}
-        instances = self.compute_api.get(context, **kwargs)
+        instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:

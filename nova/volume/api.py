@@ -63,7 +63,7 @@ class API(base.Base):
         return volume
 
     def delete(self, context, volume_id):
-        volume = self.db.volume_get(context, volume_id)
+        volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
         now = datetime.datetime.utcnow()
@@ -78,15 +78,16 @@ class API(base.Base):
     def update(self, context, volume_id, fields):
         self.db.volume_update(context, volume_id, fields)
 
-    def get(self, context, volume_id=None):
-        if volume_id is not None:
-            return self.db.volume_get(context, volume_id)
+    def get(self, context, volume_id):
+        return self.db.volume_get(context, volume_id)
+
+    def get_all(self, context):
         if context.user.is_admin():
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
 
     def check_attach(self, context, volume_id):
-        volume = self.db.volume_get(context, volume_id)
+        volume = self.get(context, volume_id)
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
@@ -94,7 +95,7 @@ class API(base.Base):
             raise exception.ApiError(_("Volume is already attached"))
 
     def check_detach(self, context, volume_id):
-        volume = self.db.volume_get(context, volume_id)
+        volume = self.get(context, volume_id)
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
             raise exception.ApiError(_("Volume is already detached"))

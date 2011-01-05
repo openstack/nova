@@ -96,7 +96,7 @@ class Controller(wsgi.Controller):
 
         entity_maker - either _translate_detail_keys or _translate_keys
         """
-        instance_list = self.compute_api.get(req.environ['nova.context'])
+        instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
