@@ -454,7 +454,7 @@ class LibvirtConnection(object):
         token = str(uuid.uuid4())
         host = instance['host']
 
-        ajaxterm_cmd = 'socat - %s' % get_pty_for_instance(instance['name'])
+        ajaxterm_cmd = 'sudo socat - %s' % get_pty_for_instance(instance['name'])
 
         cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
             % (utils.novadir(), ajaxterm_cmd, token, port)
