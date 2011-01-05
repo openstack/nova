@@ -85,6 +85,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_bool('use_cow_images',
+                  True,
+                  'Whether to use cow images')
 
 
 def get_connection(read_only):
@@ -418,19 +421,50 @@ class LibvirtConnection(object):
 
         return self._dump_file(fpath)
 
+    def _get_image(self, image_id, target, user, project, size=None):
+        if not os.path.exists(target):
+            if FLAGS.use_cow_images:
+                base = os.path.join(FLAGS.instances_path, '_base')
+                if not os.path.exists(base):
+                    images.fetch(image_id, base, user, project)
+                if size:
+                    # TODO(vish): Attempt to resize the filesystem
+                    disk.extend(base, size)
+                utils.execute('qemu-img create -f qcow2 -o '
+                              'cluster_size=2M,backing_file=%s %s'
+                              % (base, target))
+            else:
+                images.fetch(image_id, target, user, project)
+                if size:
+                    # TODO(vish): Attempt to resize the filesystem
+                    disk.extend(target, size)
+
+    def _get_local(self, local_gb, target):
+        if not os.path.exists(target):
+            last_mb = local_gb * 1024 - 1
+            if FLAGS.use_cow_images:
+                base = os.path.join(FLAGS.instances_path, '_base')
+                if not os.path.exists(base):
+                    utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
+                                  'seek=%s' % (base, last_mb))
+                utils.execute('qemu-img create -f qcow2 -o '
+                              'cluster_size=2M,backing_file=%s %s'
+                              % (base, target))
+            else:
+                utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
+                              'seek=%s' % (base, last_mb))
+
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
-        basepath = lambda fname = '', prefix = prefix: os.path.join(
-                                                 FLAGS.instances_path,
-                                                 inst['name'],
-                                                 prefix + fname)
+        def basepath(fname='', prefix=prefix):
+            return os.path.join(FLAGS.instances_path,
+                                inst['name'],
+                                prefix + fname)
 
         # ensure directories exist and are writable
         utils.execute('mkdir -p %s' % basepath(prefix=''))
         utils.execute('chmod 0777 %s' % basepath(prefix=''))
 
-        # TODO(termie): these are blocking calls, it would be great
-        #               if they weren't.
         logging.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
@@ -447,23 +481,26 @@ class LibvirtConnection(object):
             disk_images = {'image_id': inst['image_id'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
-        if not os.path.exists(basepath('disk')):
-            images.fetch(inst.image_id, basepath('disk-raw'), user,
-                         project)
 
-        if inst['kernel_id']:
-            if not os.path.exists(basepath('kernel')):
-                images.fetch(inst['kernel_id'], basepath('kernel'),
-                             user, project)
-            if inst['ramdisk_id']:
-                if not os.path.exists(basepath('ramdisk')):
-                    images.fetch(inst['ramdisk_id'], basepath('ramdisk'),
-                                 user, project)
+        if disk_images['kernel_id']:
+            self._get_image(disk_images['kernel_id'], basepath('kernel'),
+                           user, project)
+            if disk_images['ramdisk_id']:
+                self._get_image(disk_images['ramdisk_id'], basepath('ramdisk'),
+                               user, project)
 
-        def execute(cmd, process_input=None, check_exit_code=True):
-            return utils.execute(cmd=cmd,
-                                 process_input=process_input,
-                                 check_exit_code=check_exit_code)
+
+        size = FLAGS.minimum_root_size
+        if not FLAGS.use_cow_images:
+            if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+                size = None
+
+        self._get_image(disk_images['image_id'], basepath('disk'),
+                       user, project, size)
+
+        type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
+        self._get_local(type_data['local_gb'], basepath('local'),
+                       user, project, size)
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -493,33 +530,13 @@ class LibvirtConnection(object):
                 logging.info(_('instance %s: injecting net into image %s'),
                              inst['name'], inst.image_id)
             try:
-                disk.inject_data(basepath('disk-raw'), key, net,
-                                 partition=target_partition,
-                                 execute=execute)
+                disk.inject_data(basepath('disk'), key, net,
+                                 partition=target_partition)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 logging.warn(_('instance %s: ignoring error injecting data'
                                ' into image %s (%s)'),
                              inst['name'], inst.image_id, e)
-
-        if inst['kernel_id']:
-            if os.path.exists(basepath('disk')):
-                utils.execute('rm -f %s' % basepath('disk'))
-
-        local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
-                                                    ['local_gb']
-                                                    * 1024 * 1024 * 1024)
-
-        resize = True
-        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
-            resize = False
-
-        if inst['kernel_id']:
-            disk.partition(basepath('disk-raw'), basepath('disk'),
-                           local_bytes, resize, execute=execute)
-        else:
-            os.rename(basepath('disk-raw'), basepath('disk'))
-            disk.extend(basepath('disk'), local_bytes, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo chown root %s' % basepath('disk'))
@@ -558,7 +575,8 @@ class LibvirtConnection(object):
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
                     'extra_params': extra_params,
-                    'rescue': rescue}
+                    'rescue': rescue,
+                    'local': instance_type['local_gb']}
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

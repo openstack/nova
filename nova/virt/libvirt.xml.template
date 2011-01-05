@@ -58,6 +58,12 @@
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}a' bus='${disk_bus}'/>
         </disk>
+    #if $getVar('local', False)
+        <disk type='file'>
+            <source file='${basepath}/local'/>
+            <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+        </disk>
+    #end if
 #end if
         <interface type='bridge'>
             <source bridge='${bridge_name}'/>
