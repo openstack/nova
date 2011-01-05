@@ -240,16 +240,14 @@ def serve(filename):
     if not FLAGS.pidfile:
         FLAGS.pidfile = '%s.pid' % name
     elif FLAGS.pidfile.endswith('twistd.pid'):
-        FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid',
-                                              '%s.pid' % name)
+        FLAGS.pidfile = FLAGS.pidfile.replace('twistd.pid', '%s.pid' % name)
     # NOTE(vish): if we're running nodaemon, redirect the log to stdout
     if FLAGS.nodaemon and not FLAGS.logfile:
         FLAGS.logfile = "-"
     if not FLAGS.logfile:
         FLAGS.logfile = '%s.log' % name
     elif FLAGS.logfile.endswith('twistd.log'):
-        FLAGS.logfile = FLAGS.logfile.replace('twistd.log',
-                                              '%s.log' % name)
+        FLAGS.logfile = FLAGS.logfile.replace('twistd.log', '%s.log' % name)
     if FLAGS.logdir:
         FLAGS.logfile = os.path.join(FLAGS.logdir, FLAGS.logfile)
     if not FLAGS.prefix:

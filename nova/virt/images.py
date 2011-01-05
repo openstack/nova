@@ -70,6 +70,7 @@ def _fetch_image_no_curl(url, path, headers):
 
 def _fetch_s3_image(image, path, user, project):
     url = image_url(image)
+
     # This should probably move somewhere else, like e.g. a download_as
     # method on User objects and at the same time get rewritten to use
     # a web client.
