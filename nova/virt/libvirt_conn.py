@@ -118,6 +118,32 @@ def _get_net_and_mask(cidr):
     return str(net.net()), str(net.netmask())
 
 
+def wrap_cow_image(key):
+    def _decorator(retrieve_fn):
+        def _wrap(*args, **kwargs):
+            target = kwargs['target']
+            if not os.path.exists(target):
+                if FLAGS.use_cow_images:
+                    base_dir = os.path.join(FLAGS.instances_path, '_base')
+                    if not os.path.exists(base_dir):
+                        os.mkdir(base_dir)
+                        os.chmod(base_dir, 0777)
+                    base = os.path.join(base_dir, str(kwargs[key]))
+                    if not os.path.exists(base):
+                        kwargs['target'] = base
+                        retrieve_fn(*args, **kwargs)
+                    if kwargs.get('cow'):
+                        utils.execute('qemu-img create -f qcow2 -o '
+                                      'cluster_size=2M,backing_file=%s %s'
+                                      % (base, target))
+                    else:
+                        utils.execute('cp %s %s' % (base, target))
+                else:
+                    retrieve_fn(*args, **kwargs)
+        _wrap.func_name = retrieve_fn.func_name
+        return _wrap
+    return _decorator
+
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -421,38 +447,36 @@ class LibvirtConnection(object):
 
         return self._dump_file(fpath)
 
-    def _get_image(self, image_id, target, user, project, size=None):
+    def _get_image(self, retrieve_fn, key, target, *args, **kwargs):
         if not os.path.exists(target):
             if FLAGS.use_cow_images:
-                base = os.path.join(FLAGS.instances_path, '_base')
+                base_dir = os.path.join(FLAGS.instances_path, '_base')
+                if not os.path.exists(base_dir):
+                    os.mkdir(base_dir)
+                    os.chmod(base_dir, 0777)
+                base = os.path.join(base_dir, kwargs[key])
                 if not os.path.exists(base):
-                    images.fetch(image_id, base, user, project)
-                if size:
-                    # TODO(vish): Attempt to resize the filesystem
-                    disk.extend(base, size)
+                    retrieve_fn(target=base, *args, **kwargs)
                 utils.execute('qemu-img create -f qcow2 -o '
                               'cluster_size=2M,backing_file=%s %s'
                               % (base, target))
             else:
-                images.fetch(image_id, target, user, project)
-                if size:
-                    # TODO(vish): Attempt to resize the filesystem
-                    disk.extend(target, size)
+                retrieve_fn(target=base, *args, **kwargs)
 
-    def _get_local(self, local_gb, target):
-        if not os.path.exists(target):
-            last_mb = local_gb * 1024 - 1
-            if FLAGS.use_cow_images:
-                base = os.path.join(FLAGS.instances_path, '_base')
-                if not os.path.exists(base):
-                    utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
-                                  'seek=%s' % (base, last_mb))
-                utils.execute('qemu-img create -f qcow2 -o '
-                              'cluster_size=2M,backing_file=%s %s'
-                              % (base, target))
-            else:
-                utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
-                              'seek=%s' % (base, last_mb))
+    @wrap_cow_image('image_id')
+    def _fetch_image(self, target, image_id, user, project,
+                     size=None, **kwargs):
+        images.fetch(image_id, target, user, project)
+        # TODO(vish): resize filesystem
+        if size:
+            disk.extend(target, size)
+
+    @wrap_cow_image('local_gb')
+    def _create_local(self, target, local_gb):
+        last_mb = local_gb * 1024 - 1
+        utils.execute('dd if=/dev/zero of=%s bs=1M count=1'
+                      'seek=%s' % (target, last_mb))
+        # TODO(vish): format disk
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
@@ -483,11 +507,15 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            self._get_image(disk_images['kernel_id'], basepath('kernel'),
-                           user, project)
+            self._fetch_image(target=basepath('kernel'),
+                              image_id=disk_images['kernel_id'],
+                              user=user,
+                              project=project)
             if disk_images['ramdisk_id']:
-                self._get_image(disk_images['ramdisk_id'], basepath('ramdisk'),
-                               user, project)
+                self._fetch_image(target=basepath('ramdisk'),
+                                  image_id=disk_images['ramdisk_id'],
+                                  user=user,
+                                  project=project)
 
 
         size = FLAGS.minimum_root_size
@@ -495,12 +523,17 @@ class LibvirtConnection(object):
             if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
                 size = None
 
-        self._get_image(disk_images['image_id'], basepath('disk'),
-                       user, project, size)
-
+        self._fetch_image(target=basepath('disk'),
+                          image_id=disk_images['image_id'],
+                          user=user,
+                          project=project,
+                          size=size,
+                          cow=True)
         type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
-        self._get_local(type_data['local_gb'], basepath('local'),
-                       user, project, size)
+
+        if type_data['local_gb']:
+            self._create_local(target=basepath('local'),
+                               local_gb=type_data['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -534,6 +567,7 @@ class LibvirtConnection(object):
                                  partition=target_partition)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
+                logging.exception('test')
                 logging.warn(_('instance %s: ignoring error injecting data'
                                ' into image %s (%s)'),
                              inst['name'], inst.image_id, e)
@@ -563,6 +597,10 @@ class LibvirtConnection(object):
                             "value=\"%s\" />\n") % (net, mask)
         else:
             extra_params = "\n"
+        if FLAGS.use_cow_images:
+            driver_type = 'qcow2'
+        else:
+            driver_type = 'raw'
 
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
@@ -576,7 +614,8 @@ class LibvirtConnection(object):
                     'dhcp_server': dhcp_server,
                     'extra_params': extra_params,
                     'rescue': rescue,
-                    'local': instance_type['local_gb']}
+                    'local': instance_type['local_gb'],
+                    'driver_type': driver_type}
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

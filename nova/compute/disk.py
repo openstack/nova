@@ -110,7 +110,7 @@ def extend(image, size):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    return utils.execute('truncate -s size %s' % (image,))
+    return utils.execute('truncate -s %s %s' % (size, image))
 
 
 def inject_data(image, key=None, net=None, partition=None):
@@ -175,7 +175,8 @@ def inject_data(image, key=None, net=None, partition=None):
 def _link_device(image):
     if FLAGS.use_cow_images:
         device = _allocate_device()
-        utils.execute('sudo qemu-nbd --connect=%s %s' % (device, image))
+        utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
+        return device
     else:
         out, err = utils.execute('sudo losetup --find --show %s' % image)
         if err:
@@ -184,9 +185,9 @@ def _link_device(image):
         return out.strip()
 
 
-def _unlink_device(image, device):
+def _unlink_device(device):
     if FLAGS.use_cow_images:
-        utils.execute('sudo qemu-nbd --disconnect %s' % image)
+        utils.execute('sudo qemu-nbd -d %s' % device)
         _free_device(device)
     else:
         utils.execute('sudo losetup --detach %s' % device)
