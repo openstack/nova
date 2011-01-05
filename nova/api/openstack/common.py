@@ -47,8 +47,8 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
     """
 
     # FIX(sandy): This is terribly inefficient. It pulls all images
-    # from objectstore in order to find the match. ObjectStore 
-    # should have a numeric counterpart to the string ID. 
+    # from objectstore in order to find the match. ObjectStore
+    # should have a numeric counterpart to the string ID.
     try:
         items = image_service.detail(context)
     except NotImplementedError:

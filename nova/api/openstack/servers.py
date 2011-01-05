@@ -132,11 +132,11 @@ class Controller(wsgi.Controller):
 
         with open(mapping_filename) as f:
             mapping = json.load(f)
-            if mapping.has_key(image_id):
+            if image_id in mapping:
                 return mapping[image_id]
 
         raise exception.NotFound(
-            _("No entry for image '%s' in mapping file '%s'") % 
+            _("No entry for image '%s' in mapping file '%s'") %
                 (image_id, mapping_filename))
 
     def create(self, req):
@@ -154,8 +154,8 @@ class Controller(wsgi.Controller):
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             image_id,
-            kernel_id = kernel_id,
-            ramdisk_id = ramdisk_id,
+            kernel_id=kernel_id,
+            ramdisk_id=ramdisk_id,
             display_name=env['server']['name'],
             description=env['server']['name'],
             key_name=key_pair['name'],

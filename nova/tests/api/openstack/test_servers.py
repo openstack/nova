@@ -145,7 +145,7 @@ class ServersTest(unittest.TestCase):
 
         def image_id_from_hash(*args, **kwargs):
             return 2
-            
+
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
@@ -155,9 +155,9 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
-        self.stubs.Set(nova.api.openstack.servers.Controller, 
+        self.stubs.Set(nova.api.openstack.servers.Controller,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
-        self.stubs.Set(nova.api.openstack.common, 
+        self.stubs.Set(nova.api.openstack.common,
             "get_image_id_from_image_hash", image_id_from_hash)
 
         body = dict(server=dict(

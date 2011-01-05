@@ -361,7 +361,8 @@ class VMHelper(HelperBase):
                         ref = node.childNodes
                         # Name and Value
                         if len(ref) > 6:
-                            diags[ref[0].firstChild.data] = ref[6].firstChild.data
+                            diags[ref[0].firstChild.data] = \
+                                ref[6].firstChild.data
             return diags
         except cls.XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}

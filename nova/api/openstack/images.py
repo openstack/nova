@@ -124,7 +124,7 @@ class Controller(wsgi.Controller):
             items = self._service.index(req.environ['nova.context'])
         for image in items:
             _convert_image_id_to_hash(image)
-                    
+
         items = common.limited(items, req)
         items = [_translate_keys(item) for item in items]
         items = [_translate_status(item) for item in items]
