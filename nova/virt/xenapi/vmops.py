@@ -315,11 +315,7 @@ class VMOps(object):
         found at that path, returns None.
         """
         ret = self._make_xenstore_call('list_records', vm, path)
-        try:
-            return json.loads(ret)
-        except ValueError:
-            # Not a valid JSON value
-            return ret
+        return json.loads(ret)
 
     def read_from_xenstore(self, vm, path):
         """Returns the value stored in the xenstore record for the given VM
@@ -331,14 +327,11 @@ class VMOps(object):
                     {'ignore_missing_path': 'True'})
         except self.XenAPI.Failure, e:
             return None
-        try:
-            return json.loads(ret)
-        except ValueError:
-            # Not a JSON object
-            if ret == "None":
-                # Can't marshall None over RPC calls.
-                return None
-            return ret
+        ret = json.loads(ret)
+        if ret == "None":
+            # Can't marshall None over RPC calls.
+            return None
+        return ret
 
     def write_to_xenstore(self, vm, path, value):
         """Writes the passed value to the xenstore record for the given VM

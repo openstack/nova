@@ -34,10 +34,17 @@ import pluginlib_nova as pluginlib
 pluginlib.configure_logging("xenstore")
 
 
+def jsonify(fnc):
+    def wrapper(*args, **kwargs):
+        return json.dumps(fnc(*args, **kwargs))
+    return wrapper
+
+
+@jsonify
 def read_record(self, arg_dict):
     """Returns the value stored at the given path for the given dom_id.
-    These must be encoded as key/value pairs in arg_dict. You can 
-    optinally include a key 'ignore_missing_path'; if this is present 
+    These must be encoded as key/value pairs in arg_dict. You can
+    optinally include a key 'ignore_missing_path'; if this is present
     and boolean True, attempting to read a non-existent path will return
     the string 'None' instead of raising an exception.
     """
@@ -46,16 +53,21 @@ def read_record(self, arg_dict):
         return _run_command(cmd).rstrip("\n")
     except pluginlib.PluginError, e:
         if arg_dict.get("ignore_missing_path", False):
-            cmd = "xenstore-exists /local/domain/%(dom_id)s/%(path)s; echo $?" % arg_dict
+            cmd = "xenstore-exists /local/domain/%(dom_id)s/%(path)s; echo $?"
+            cmd = cmd % arg_dict
             ret = _run_command(cmd).strip()
             # If the path exists, the cmd should return "0"
             if ret != "0":
-                # No such path, so ignore the error
-                return "None" 
+                # No such path, so ignore the error and return the
+                # string 'None', since None can't be marshalled
+                # over RPC.
+                return "None"
         # Either we shouldn't ignore path errors, or another
         # error was hit. Re-raise.
         raise
 
+
+@jsonify
 def write_record(self, arg_dict):
     """Writes to xenstore at the specified path. If there is information
     already stored in that location, it is overwritten. As in read_record,
@@ -63,10 +75,13 @@ def write_record(self, arg_dict):
     you must specify a 'value' key, whose value must be a string. Typically,
     you can json-ify more complex values and store the json output.
     """
-    cmd = "xenstore-write /local/domain/%(dom_id)s/%(path)s '%(value)s'" % arg_dict
+    cmd = "xenstore-write /local/domain/%(dom_id)s/%(path)s '%(value)s'"
+    cmd = cmd % arg_dict
     _run_command(cmd)
     return arg_dict["value"]
 
+
+@jsonify
 def list_records(self, arg_dict):
     """Returns all the stored data at or below the given path for the
     given dom_id. The data is returned as a json-ified dict, with the
@@ -80,7 +95,8 @@ def list_records(self, arg_dict):
     except pluginlib.PluginError, e:
         if "No such file or directory" in "%s" % e:
             # Path doesn't exist.
-            return json.dumps({})
+            return {}
+        return str(e)
         raise
     base_path = arg_dict["path"]
     paths = _paths_from_ls(recs)
@@ -96,14 +112,17 @@ def list_records(self, arg_dict):
         except ValueError:
             val = rec
         ret[path] = val
-    return json.dumps(ret)
+    return ret
 
+
+@jsonify
 def delete_record(self, arg_dict):
     """Just like it sounds: it removes the record for the specified
     VM and the specified path from xenstore.
     """
     cmd = "xenstore-rm /local/domain/%(dom_id)s/%(path)s" % arg_dict
     return _run_command(cmd)
+
 
 def _paths_from_ls(recs):
     """The xenstore-ls command returns a listing that isn't terribly
@@ -137,13 +156,15 @@ def _paths_from_ls(recs):
         last_nm = barename
     return ret
 
+
 def _run_command(cmd):
     """Abstracts out the basics of issuing system commands. If the command
     returns anything in stderr, a PluginError is raised with that information.
     Otherwise, the output from stdout is returned.
     """
     pipe = subprocess.PIPE
-    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe, stderr=pipe, close_fds=True)
+    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
     proc.wait()
     err = proc.stderr.read()
     if err:
