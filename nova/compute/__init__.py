@@ -16,17 +16,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-:mod:`nova.compute` -- Compute Nodes using LibVirt
-=====================================================
-
-.. automodule:: nova.compute
-   :platform: Unix
-   :synopsis: Thin wrapper around libvirt for VM mgmt.
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
-"""
+from nova.compute.api import API

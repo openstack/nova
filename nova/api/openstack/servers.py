@@ -20,12 +20,12 @@ import traceback
 
 from webob import exc
 
+from nova import compute
 from nova import exception
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
-from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
@@ -51,7 +51,7 @@ def _translate_detail_keys(inst):
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='internal_id')
+        flavorId='instance_type', name='display_name', id='id')
 
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
@@ -67,7 +67,7 @@ def _translate_detail_keys(inst):
 def _translate_keys(inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
-    return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
+    return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
@@ -80,7 +80,7 @@ class Controller(wsgi.Controller):
                            "status", "progress"]}}}
 
     def __init__(self):
-        self.compute_api = compute_api.ComputeAPI()
+        self.compute_api = compute.API()
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -96,8 +96,7 @@ class Controller(wsgi.Controller):
 
         entity_maker - either _translate_detail_keys or _translate_keys
         """
-        instance_list = self.compute_api.get_instances(
-            req.environ['nova.context'])
+        instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
@@ -105,8 +104,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.get_instance(
-                req.environ['nova.context'], int(id))
+            instance = self.compute_api.get(req.environ['nova.context'], id)
             return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -114,8 +112,7 @@ class Controller(wsgi.Controller):
     def delete(self, req, id):
         """ Destroys a server """
         try:
-            self.compute_api.delete_instance(req.environ['nova.context'],
-                int(id))
+            self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
@@ -128,12 +125,12 @@ class Controller(wsgi.Controller):
 
         key_pair = auth_manager.AuthManager.get_key_pairs(
             req.environ['nova.context'])[0]
-        instances = self.compute_api.create_instances(
+        instances = self.compute_api.create(
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             env['server']['imageId'],
             display_name=env['server']['name'],
-            description=env['server']['name'],
+            display_description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
         return _translate_keys(instances[0])
@@ -151,10 +148,8 @@ class Controller(wsgi.Controller):
             update_dict['display_name'] = inst_dict['server']['name']
 
         try:
-            ctxt = req.environ['nova.context']
-            self.compute_api.update_instance(ctxt,
-                                             id,
-                                             **update_dict)
+            self.compute_api.update(req.environ['nova.context'], id,
+                                    **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
@@ -218,3 +213,13 @@ class Controller(wsgi.Controller):
             logging.error(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
+
+    def diagnostics(self, req, id):
+        """Permit Admins to retrieve server diagnostics."""
+        ctxt = req.environ["nova.context"]
+        return self.compute_api.get_diagnostics(ctxt, id)
+
+    def actions(self, req, id):
+        """Permit Admins to retrieve server actions."""
+        ctxt = req.environ["nova.context"]
+        return self.compute_api.get_actions(ctxt, id)

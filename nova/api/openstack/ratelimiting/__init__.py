@@ -219,3 +219,9 @@ class WSGIAppProxy(object):
             # No delay
             return None
         return float(resp.getheader('X-Wait-Seconds'))
+
+
+def ratelimit_factory(global_conf, **local_conf):
+    def rl(app):
+        return RateLimitingMiddleware(app)
+    return rl

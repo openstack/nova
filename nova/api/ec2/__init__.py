@@ -294,10 +294,9 @@ class Executor(wsgi.Application):
         args = req.environ['ec2.action_args']
 
         api_request = apirequest.APIRequest(controller, action)
+        result = None
         try:
             result = api_request.send(context, **args)
-            req.headers['Content-Type'] = 'text/xml'
-            return result
         except exception.ApiError as ex:
 
             if ex.code:
@@ -307,6 +306,12 @@ class Executor(wsgi.Application):
         # TODO(vish): do something more useful with unknown exceptions
         except Exception as ex:
             return self._error(req, type(ex).__name__, str(ex))
+        else:
+            resp = webob.Response()
+            resp.status = 200
+            resp.headers['Content-Type'] = 'text/xml'
+            resp.body = str(result)
+            return resp
 
     def _error(self, req, code, message):
         logging.error("%s: %s", code, message)
@@ -318,3 +323,49 @@ class Executor(wsgi.Application):
                      '<Message>%s</Message></Error></Errors>'
                      '<RequestID>?</RequestID></Response>' % (code, message))
         return resp
+
+
+class Versions(wsgi.Application):
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Respond to a request for all EC2 versions."""
+        # available api versions
+        versions = [
+            '1.0',
+            '2007-01-19',
+            '2007-03-01',
+            '2007-08-29',
+            '2007-10-10',
+            '2007-12-15',
+            '2008-02-01',
+            '2008-09-01',
+            '2009-04-04',
+        ]
+        return ''.join('%s\n' % v for v in versions)
+
+
+def authenticate_factory(global_args, **local_args):
+    def authenticator(app):
+        return Authenticate(app)
+    return authenticator
+
+
+def router_factory(global_args, **local_args):
+    def router(app):
+        return Router(app)
+    return router
+
+
+def authorizer_factory(global_args, **local_args):
+    def authorizer(app):
+        return Authorizer(app)
+    return authorizer
+
+
+def executor_factory(global_args, **local_args):
+    return Executor()
+
+
+def versions_factory(global_args, **local_args):
+    return Versions()
