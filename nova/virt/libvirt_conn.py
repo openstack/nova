@@ -118,43 +118,6 @@ def _get_net_and_mask(cidr):
     return str(net.net()), str(net.netmask())
 
 
-def wrap_image_cache(key):
-    """Decorator for a method that creates an image to store it in cache.
-
-    This wrapper will save the image into a common store and create a
-    copy for use by the hypervisor.
-
-    The underlying method should be called with kwargs and specify
-    a kwarg of target representing where the image will be saved. The
-    key argument to the wrapper defines which kwarg of the underlying
-    method to use as the filename of the base image.  The filename needs
-    to be unique to a given image.
-
-    If kwargs['cow'] is True, it will make a CoW image instead of a copy.
-    """
-    def _decorator(retrieve_fn):
-        def _wrap(*args, **kwargs):
-            target = kwargs['target']
-            if not os.path.exists(target):
-                base_dir = os.path.join(FLAGS.instances_path, '_base')
-                if not os.path.exists(base_dir):
-                    os.mkdir(base_dir)
-                    os.chmod(base_dir, 0777)
-                base = os.path.join(base_dir, str(kwargs[key]))
-                if not os.path.exists(base):
-                    kwargs['target'] = base
-                    retrieve_fn(*args, **kwargs)
-                if kwargs.get('cow'):
-                    utils.execute('qemu-img create -f qcow2 -o '
-                                  'cluster_size=2M,backing_file=%s %s'
-                                  % (base, target))
-                else:
-                    utils.execute('cp %s %s' % (base, target))
-        _wrap.func_name = retrieve_fn.func_name
-        return _wrap
-    return _decorator
-
-
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -458,16 +421,42 @@ class LibvirtConnection(object):
 
         return self._dump_file(fpath)
 
-    @wrap_image_cache('image_id')
-    def _fetch_image(self, target, image_id, user, project,
-                     size=None, cow=False):
+    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+        """Wrapper to cache a method that creates an image.
+
+        This wrapper will save the image into a common store and create a
+        copy for use by the hypervisor.
+
+        The underlying method should specify a kwarg of target representing
+        where the image will be saved.
+
+        fname is used as the filename of the base image.  The filename needs
+        to be fname to a given image.
+
+        If cow is True, it will make a CoW image instead of a copy.
+        """
+        if not os.path.exists(target):
+            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            if not os.path.exists(base_dir):
+                os.mkdir(base_dir)
+                os.chmod(base_dir, 0777)
+            base = os.path.join(base_dir, fname)
+            if not os.path.exists(base):
+                fn(target=base, *args, **kwargs)
+            if cow:
+                utils.execute('qemu-img create -f qcow2 -o '
+                              'cluster_size=2M,backing_file=%s %s'
+                              % (base, target))
+            else:
+                utils.execute('cp %s %s' % (base, target))
+
+    def _fetch_image(self, target, image_id, user, project, size=None):
         """Grab image and optionally attempt to resize it"""
         images.fetch(image_id, target, user, project)
         if size:
             disk.extend(target, size)
 
-    @wrap_image_cache('local_gb')
-    def _create_local(self, target, local_gb, cow=False):
+    def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
         last_mb = local_gb * 1024 - 1
         utils.execute('dd if=/dev/zero of=%s bs=1M count=1 '
@@ -503,33 +492,42 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            self._fetch_image(target=basepath('kernel'),
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('kernel'),
+                              fname=disk_images['kernel_id'],
                               image_id=disk_images['kernel_id'],
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
-                self._fetch_image(target=basepath('ramdisk'),
+                self._cache_image(fn=self._fetch_image,
+                                  target=basepath('ramdisk'),
+                                  fname=disk_images['ramdisk_id'],
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
 
+        root_fname = disk_images['image_id']
         size = FLAGS.minimum_root_size
-        if not FLAGS.use_cow_images:
-            if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
-                size = None
+        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+            size = None
+            root_fname += "_sm"
 
-        self._fetch_image(target=basepath('disk'),
+        self._cache_image(fn=self._fetch_image,
+                          target=basepath('disk'),
+                          fname=root_fname,
+                          cow=FLAGS.use_cow_images,
                           image_id=disk_images['image_id'],
                           user=user,
                           project=project,
-                          size=size,
-                          cow=FLAGS.use_cow_images)
+                          size=size)
         type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
 
         if type_data['local_gb']:
-            self._create_local(target=basepath('local'),
-                               local_gb=type_data['local_gb'],
-                               cow=FLAGS.use_cow_images)
+            self._cache_image(fn=self._create_local,
+                              target=basepath('local'),
+                              fname="local_%s" % type_data['local_gb'],
+                              cow=FLAGS.use_cow_images,
+                              local_gb=type_data['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first

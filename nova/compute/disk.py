@@ -25,6 +25,7 @@ Includes injection of SSH PGP keys into authorized_keys file.
 import logging
 import os
 import tempfile
+import time
 
 from nova import exception
 from nova import flags
@@ -111,8 +112,10 @@ def extend(image, size):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    # TODO(vish): attempt to resize filesystem
-    return utils.execute('truncate -s %s %s' % (size, image))
+    utils.execute('truncate -s %s %s' % (size, image))
+    # NOTE(vish): attempts to resize filesystem
+    utils.execute('e2fsck -fp %s' % image, check_exit_code=False)
+    utils.execute('resize2fs %s' % image, check_exit_code=False)
 
 
 def inject_data(image, key=None, net=None, partition=None, nbd=False):
@@ -179,6 +182,9 @@ def _link_device(image, nbd):
     if nbd:
         device = _allocate_device()
         utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
+        # NOTE(vish): this forks into another process, so give it a chance
+        #             to set up before continuuing
+        time.sleep(1)
         return device
     else:
         out, err = utils.execute('sudo losetup --find --show %s' % image)
