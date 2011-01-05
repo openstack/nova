@@ -27,10 +27,6 @@ from nova.virt import hyperv
 
 FLAGS = flags.FLAGS
 FLAGS.connection_type = 'hyperv'
-# Redis is probably not  running on Hyper-V host.
-# Change this to the actual Redis host
-FLAGS.redis_host = '127.0.0.1'
-
 
 class HyperVTestCase(test.TrialTestCase):
     """Test cases for the Hyper-V driver"""
