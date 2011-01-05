@@ -173,6 +173,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
+         'imageId': '23g2ogk23k4hhkk4k42l',
          'name': 'public image #1',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
@@ -182,6 +183,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'status': 'available',
          'image_type': 'kernel'},
         {'id': 'slkduhfas73kkaskgdas',
+         'imageId': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
