@@ -892,7 +892,6 @@ class NWFilterFirewall(object):
             nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' "
                              "/>\n") % security_group['id']
         nwfilter_xml += "</filter>"
-        logging.debug(nwfilter_xml)
         self._define_filter(nwfilter_xml)
 
     def ensure_security_group_filter(self, security_group_id):
