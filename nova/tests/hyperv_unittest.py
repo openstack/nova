@@ -19,31 +19,36 @@ Tests For Hyper-V driver
 
 import random
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
-
+from nova.auth import manager
 from nova.virt import hyperv
 
 FLAGS = flags.FLAGS
 FLAGS.connection_type = 'hyperv'
 
 
-class HyperVTestCase(test.TrialTestCase):
+class HyperVTestCase(test.TestCase):
     """Test cases for the Hyper-V driver"""
-    def setUp(self):  # pylint: disable-msg=C0103
-        pass
+    def setUp(self):
+        super(HyperVTestCase, self).setUp()
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake',
+                                             admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.context = context.RequestContext(self.user, self.project)
 
     def test_create_destroy(self):
         """Create a VM and destroy it"""
         instance = {'internal_id': random.randint(1, 1000000),
                      'memory_mb': '1024',
                      'mac_address': '02:12:34:46:56:67',
-                     'vcpu': 2,
+                     'vcpus': 2,
                      'project_id': 'fake',
                      'instance_type': 'm1.small'}
-
-        instance_ref = db.instance_create(None, instance)
+        instance_ref = db.instance_create(self.context, instance)
 
         conn = hyperv.get_connection(False)
         conn._create_vm(instance_ref)  # pylint: disable-msg=W0212
@@ -60,5 +65,7 @@ class HyperVTestCase(test.TrialTestCase):
                       if n == instance_ref['name']]
         self.assertTrue(len(found) == 0)
 
-    def tearDown(self):  # pylint: disable-msg=C0103
-        pass
+    def tearDown(self):
+        super(HyperVTestCase, self).tearDown()
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
