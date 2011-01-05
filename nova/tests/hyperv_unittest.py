@@ -28,6 +28,7 @@ from nova.virt import hyperv
 FLAGS = flags.FLAGS
 FLAGS.connection_type = 'hyperv'
 
+
 class HyperVTestCase(test.TrialTestCase):
     """Test cases for the Hyper-V driver"""
     def setUp(self):  # pylint: disable-msg=C0103
