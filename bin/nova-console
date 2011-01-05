@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright (c) 2010 Openstack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,7 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Combined starter script for Nova services."""
+"""Starter script for Nova Console Proxy."""
 
 import eventlet
 eventlet.monkey_patch()
@@ -36,34 +35,10 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
-from nova import api
-from nova import flags
 from nova import service
 from nova import utils
-from nova import wsgi
-
-
-FLAGS = flags.FLAGS
-flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
-flags.DEFINE_string('osapi_host', '0.0.0.0', 'OpenStack API host')
-flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
-flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
-
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    FLAGS(sys.argv)
-
-    compute = service.Service.create(binary='nova-compute')
-    network = service.Service.create(binary='nova-network')
-#    volume = service.Service.create(binary='nova-volume')
-    scheduler = service.Service.create(binary='nova-scheduler')
-    #objectstore = service.Service.create(binary='nova-objectstore')
-
-#    service.serve(compute, network, volume, scheduler)
-    service.serve(compute, network, scheduler)
-
-    server = wsgi.Server()
-    server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
-    server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
-    server.wait()
+    service.serve()
+    service.wait()

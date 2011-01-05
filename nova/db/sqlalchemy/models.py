@@ -553,6 +553,27 @@ class FloatingIp(BASE, NovaBase):
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
+class ConsolePool(BASE, NovaBase):
+    """Represents pool of consoles on the same physical node."""
+    __tablename__ = 'console_pools'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    username = Column(String(255))
+    password = Column(String(255))
+    console_type = Column(String(255))
+    host = Column(String(255))
+    compute_host = Column(String(255))
+
+class Console(BASE, NovaBase):
+    """Represents a console session for an instance."""
+    __tablename__ = 'consoles'
+    id = Column(Integer, primary_key=True)
+    instance_name = Column(String(255))
+    instance_id = Column(Integer)
+    password = Column(String(255))
+    port = Column(Integer,nullable=True)
+    pool_id = Column(Integer, ForeignKey('console_pools.id'))
+    pool = relationship(ConsolePool, backref=backref('consoles'))
 
 def register_models():
     """Register Models and create metadata.
@@ -565,7 +586,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate)  # , Image, Host
+              Project, Certificate, ConsolePool, Console)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

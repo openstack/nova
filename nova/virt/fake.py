@@ -272,6 +272,11 @@ class FakeConnection(object):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT'
 
+    def get_console_pool_info(self, console_type):
+        return  {'address' : '127.0.0.1',
+                 'username' : 'fakeuser',
+                 'password' : 'fakepassword'}
+
 
 class FakeInstance(object):
 

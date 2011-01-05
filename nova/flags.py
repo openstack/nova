@@ -216,6 +216,7 @@ DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', utils.get_my_ip(), 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', utils.get_my_ip(), 's3 dmz ip (for instances)')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
+DEFINE_string('console_topic', 'console', 'the topic console proxy nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
 DEFINE_string('volume_topic', 'volume', 'the topic volume nodes listen on')
@@ -263,6 +264,8 @@ DEFINE_string('sql_connection',
 
 DEFINE_string('compute_manager', 'nova.compute.manager.ComputeManager',
               'Manager for compute')
+DEFINE_string('console_manager', 'nova.console.manager.ConsoleProxyManager',
+              'Manager for console proxy')
 DEFINE_string('network_manager', 'nova.network.manager.VlanManager',
               'Manager for network')
 DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
