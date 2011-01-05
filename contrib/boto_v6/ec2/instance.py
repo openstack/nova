@@ -25,9 +25,13 @@ class ReservationV6(Reservation):
 class InstanceV6(Instance):
     def __init__(self, connection=None):
         Instance.__init__(self, connection)
-        self.public_dns_name_v6 = None
+        self.dns_name_v6 = None
 
     def endElement(self, name, value, connection):
         Instance.endElement(self, name, value, connection)
         if name == 'dnsNameV6':
             self.dns_name_v6 = value
+
+    def _update(self, updated):
+        self.__dict__.update(updated.__dict__)
+        self.dns_name_v6 = updated.dns_name_v6
