@@ -37,9 +37,15 @@ import webob.exc
 from nova import log as logging
 
 
-class NullWsgiLogger(object):
-    def write(*args):
-        pass
+class WritableLogger(object):
+    """A thin wrapper that responds to `write` and logs."""
+
+    def __init__(self, logger, level=logging.DEBUG):
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
 
 
 class Server(object):
@@ -64,8 +70,9 @@ class Server(object):
 
     def _run(self, application, socket):
         """Start a WSGI server in a new green thread."""
+        logger = logging.getLogger('eventlet.wsgi.server')
         eventlet.wsgi.server(socket, application, custom_pool=self.pool,
-                             log=NullWsgiLogger())
+                             log=WritableLogger(logger))
 
 
 class Application(object):

@@ -67,7 +67,7 @@ flags.DEFINE_string('logging_exception_prefix',
 flags.DEFINE_list('default_log_levels',
                   ['amqplib=WARN',
                    'sqlalchemy=WARN',
-                   'audit=INFO'],
+                   'eventlet.wsgi.server=WARN'],
                   'list of logger=LEVEL pairs')
 
 flags.DEFINE_bool('use_syslog', False, 'output to syslog')
