@@ -162,13 +162,18 @@ class InstanceTests(UserSmokeTestCase):
                 'ping -c1 %s' % self.data['private_ip'])
             if status == 0:
                 break
-            if FLAGS.use_ipv6:
+        else:
+            self.fail('could not ping instance')
+
+        if FLAGS.use_ipv6:
+            for x in xrange(120):
+            # ping waits for 1 second
                 status, output = commands.getstatusoutput(
                     'ping6 -c1 %s' % self.data['ip_v6'])
                 if status == 0:
                     break
-        else:
-            self.fail('could not ping instance')
+            else:
+                self.fail('could not ping instance')
 
     def test_005_can_ssh_to_private_ip(self):
         for x in xrange(30):

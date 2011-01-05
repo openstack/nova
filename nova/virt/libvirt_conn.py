@@ -912,7 +912,7 @@ class NWFilterFirewall(object):
                 if(FLAGS.use_ipv6 and version == 6):
                     net, prefixlen = _get_net_and_prefixlen(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (v6protocol[rrule.protocol], net, prefixlen)
+                                (v6protocol[rule.protocol], net, prefixlen)
                 else:
                     net, mask = _get_net_and_mask(rule.cidr)
                     rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
