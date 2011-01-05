@@ -154,6 +154,7 @@ def wrap_image_cache(key):
         return _wrap
     return _decorator
 
+
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -511,7 +512,6 @@ class LibvirtConnection(object):
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
-
 
         size = FLAGS.minimum_root_size
         if not FLAGS.use_cow_images:

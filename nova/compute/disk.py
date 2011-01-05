@@ -199,6 +199,7 @@ def _unlink_device(device, nbd):
 
 _DEVICES = ['/dev/nbd%s' % i for i in xrange(16)]
 
+
 def _allocate_device():
     # NOTE(vish): This assumes no other processes are using nbd devices.
     #             It will race cause a race condition if multiple
