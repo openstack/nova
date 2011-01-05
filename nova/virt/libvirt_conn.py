@@ -114,13 +114,16 @@ def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
     return str(net.net()), str(net.netmask())
 
+
 def _get_net_and_prefixlen(cidr):
     net = IPy.IP(cidr)
     return str(net.net()), str(net.prefixlen())
 
+
 def _get_ip_version(cidr):
         net = IPy.IP(cidr)
         return int(net.version())
+
 
 class LibvirtConnection(object):
 
@@ -559,7 +562,8 @@ class LibvirtConnection(object):
                             "<parameter name=\"PROJNETV6\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % (net, mask, net_v6, prefixlen_v6)
+                            "value=\"%s\" />\n") % \
+                              (net, mask, net_v6, prefixlen_v6)
         else:
             extra_params = "\n"
 
@@ -838,7 +842,8 @@ class NWFilterFirewall(object):
     def nova_project_filter_v6(self):
         retval = "<filter name='nova-project-v6' chain='ipv6'>"
         for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
-            retval += """<rule action='accept' direction='in' priority='200'>
+            retval += """<rule action='accept' direction='inout'
+                                                   priority='200'>
                            <%s srcipaddr='$PROJNETV6'
                                srcipmask='$PROJMASKV6' />
                          </rule>""" % (protocol)
