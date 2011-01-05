@@ -36,9 +36,10 @@ import webob.exc
 
 from nova import log as logging
 
-# TODO(todd): should this just piggyback the handler for root logger
-#             since we usually log to syslog, but changes if not daemonzied?
-logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
+
+class NullWsgiLogger(object):
+    def write(*args):
+        pass
 
 
 class Server(object):
@@ -63,7 +64,8 @@ class Server(object):
 
     def _run(self, application, socket):
         """Start a WSGI server in a new green thread."""
-        eventlet.wsgi.server(socket, application, custom_pool=self.pool)
+        eventlet.wsgi.server(socket, application, custom_pool=self.pool,
+                             log=NullWsgiLogger())
 
 
 class Application(object):
