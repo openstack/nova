@@ -221,7 +221,7 @@ def  get_my_linklocal(interface):
         else:
             return None
     except RuntimeError as ex:
-        logging.warn("Couldn't get Link Local IP of %s :%s", interface, ex)
+        logging.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
         return 'fe00::'
 
 
