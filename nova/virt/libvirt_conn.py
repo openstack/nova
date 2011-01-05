@@ -490,9 +490,9 @@ class LibvirtConnection(object):
         if network_ref['injected']:
             admin_context = context.get_admin_context()
             address = db.instance_get_fixed_address(admin_context, inst['id'])
-            ra_server =  network_ref['ra_server']
+            ra_server = network_ref['ra_server']
             if not ra_server:
-                 ra_server = "fd00::"
+                ra_server = "fd00::"
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
                                   'netmask': network_ref['netmask'],
@@ -554,7 +554,7 @@ class LibvirtConnection(object):
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
         if not ra_server:
-             ra_server = 'fd00::'
+            ra_server = 'fd00::'
         if FLAGS.allow_project_net_traffic:
             if FLAGS.use_ipv6:
                 net, mask = _get_net_and_mask(network['cidr'])
