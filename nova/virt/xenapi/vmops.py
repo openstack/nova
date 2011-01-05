@@ -215,7 +215,7 @@ class VMOps(object):
         ret = None
         try:
             ret = self._session.wait_for_task(instance_id, task)
-        except XenAPI.Failure, exc:
+        except self.XenAPI.Failure, exc:
             logging.warn(exc)
         callback(ret)
 
