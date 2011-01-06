@@ -61,13 +61,11 @@ class API(base.Base):
 
     def get_network_topic(self, context, instance_id):
         try:
-<<<<<<< TREE
             instance = self.get_instance(context, instance_id)
+            # TODO (dabo) Need to verify whether an internal_id or a db id
+            # id being passed; use get_instance or get, respectively.
+            #instance = self.get(context, instance_id)
         except exception.NotFound, e:
-=======
-            instance = self.get(context, instance_id)
-        except exception.NotFound as e:
->>>>>>> MERGE-SOURCE
             logging.warning("Instance %d was not found in get_network_topic",
                             instance_id)
             raise e
