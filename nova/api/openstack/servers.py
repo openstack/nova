@@ -156,10 +156,7 @@ class Controller(wsgi.Controller):
             except exception.TimeoutException, e:
                 return exc.HTTPRequestTimeout()
         try:
-            # The ID passed in is actually the internal_id of the
-            # instance, not the value of the id column in the DB.
-            instance = self.compute_api.get_instance(ctxt, id)
-            self.compute_api.update(ctxt, instance.id, **update_dict)
+            self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
@@ -232,4 +229,4 @@ class Controller(wsgi.Controller):
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.get_actions(ctxt, id_val)
+        return self.compute_api.get_actions(ctxt, id)

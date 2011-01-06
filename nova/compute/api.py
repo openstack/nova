@@ -217,7 +217,7 @@ class API(base.Base):
         return self.db.instance_update(context, instance_id, kwargs)
 
     def delete(self, context, instance_id):
-        logging.debug('Going to try and terminate %s' % instance_id)
+        logging.debug('Going to try to terminate %s' % instance_id)
         try:
             instance = self.get_instance(context, instance_id)
         except exception.NotFound, e:
