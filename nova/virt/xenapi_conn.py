@@ -189,9 +189,9 @@ class XenAPIConnection(object):
 
     def get_console_pool_info(self, console_type):
         xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
-        return  {'address' : xs_url.netloc,
-                 'username' : FLAGS.xenapi_connection_username,
-                 'password' : FLAGS.xenapi_connection_password}
+        return  {'address': xs_url.netloc,
+                 'username': FLAGS.xenapi_connection_username,
+                 'password': FLAGS.xenapi_connection_password}
 
 
 class XenAPISession(object):

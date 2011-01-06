@@ -112,10 +112,8 @@ class ComputeManager(manager.Manager):
                                      FLAGS.network_topic,
                                      host)
 
-
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
-
 
     @exception.wrap_exception
     def refresh_security_group(self, context, security_group_id, **_kwargs):

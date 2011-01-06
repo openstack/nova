@@ -22,6 +22,7 @@ Fake ConsoleProxy driver for tests.
 from nova import exception
 from nova.console import driver
 
+
 class FakeConsoleProxy(driver.ConsoleProxy):
     """Fake ConsoleProxy driver."""
 
@@ -56,4 +57,3 @@ class FakeConsoleProxy(driver.ConsoleProxy):
     def fix_console_password(self, password):
         """Trim password to length, and any other massaging"""
         return password
-

@@ -85,8 +85,3 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
-
-#    def detail(self, req, id):
-#        """ Returns a complete list of consoles for this instance"""
-#        return _translate_detail_keys({})
-

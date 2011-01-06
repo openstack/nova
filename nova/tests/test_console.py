@@ -89,12 +89,12 @@ class ConsoleTestCase(test.TestCase):
         self.assertEqual(pool['id'], pool2['id'])
 
     def test_get_pool_does_not_create_new_pool_if_exists(self):
-        pool_info = {'address' : '127.0.0.1',
-                     'username' : 'test',
-                     'password' : '1234pass',
-                     'host' : self.console.host,
-                     'console_type' : self.console.driver.console_type,
-                     'compute_host' : 'sometesthostname' }
+        pool_info = {'address': '127.0.0.1',
+                     'username': 'test',
+                     'password': '1234pass',
+                     'host': self.console.host,
+                     'console_type': self.console.driver.console_type,
+                     'compute_host': 'sometesthostname'}
         new_pool = db.console_pool_create(self.context, pool_info)
         pool = self.console.get_pool_for_instance_host(self.context,
                                                        'sometesthostname')
@@ -107,16 +107,16 @@ class ConsoleTestCase(test.TestCase):
         pool = db.console_pool_get_by_host_type(self.context,
                                                 instance['host'],
                                                 self.console.host,
-                                                self.console.driver.console_type)
+                                            self.console.driver.console_type)
 
-        console_instances =  [con['instance_id'] for con in pool.consoles]
+        console_instances = [con['instance_id'] for con in pool.consoles]
         self.assert_(instance_id in console_instances)
 
     def test_add_console_does_not_duplicate(self):
         instance_id = self._create_instance()
         cons1 = self.console.add_console(self.context, instance_id)
         cons2 = self.console.add_console(self.context, instance_id)
-        self.assertEqual(cons1,cons2)
+        self.assertEqual(cons1, cons2)
 
     def test_remove_console(self):
         instance_id = self._create_instance()
@@ -127,4 +127,3 @@ class ConsoleTestCase(test.TestCase):
                           db.console_get,
                           self.context,
                           console_id)
-

@@ -51,12 +51,13 @@ flags.DEFINE_integer('console_xvp_multiplex_port',
                      "port for XVP to multiplex VNC connections on")
 FLAGS = flags.FLAGS
 
+
 class XVPConsoleProxy(driver.ConsoleProxy):
     """Sets up XVP config, and manages xvp daemon"""
 
     def __init__(self):
         self.xvpconf_template = open(FLAGS.console_xvp_conf_template).read()
-        self.host = FLAGS.host #default, set by manager.
+        self.host = FLAGS.host  # default, set by manager.
         super(XVPConsoleProxy, self).__init__()
 
     @property
@@ -93,8 +94,8 @@ class XVPConsoleProxy(driver.ConsoleProxy):
 
     def _rebuild_xvp_conf(self, context):
         logging.debug("Rebuilding xvp conf")
-        pools = [ pool for pool in 
-                  db.console_pool_get_all_by_host_type(context, self.host,
+        pools = [pool for pool in
+                 db.console_pool_get_all_by_host_type(context, self.host,
                                                        self.console_type)
                   if pool['consoles']]
         if not pools:
@@ -103,7 +104,7 @@ class XVPConsoleProxy(driver.ConsoleProxy):
             return
         conf_data = {'multiplex_port': FLAGS.console_xvp_multiplex_port,
                      'pools': pools,
-                     'pass_encode' : self.fix_console_password }
+                     'pass_encode': self.fix_console_password}
         config = str(Template(self.xvpconf_template, searchList=[conf_data]))
         self._write_conf(config)
         self._xvp_restart()
@@ -119,7 +120,7 @@ class XVPConsoleProxy(driver.ConsoleProxy):
         if not pid:
             return
         try:
-            os.kill(pid,signal.SIGTERM)
+            os.kill(pid, signal.SIGTERM)
         except OSError:
             #if it's already not running, no problem.
             pass
@@ -129,7 +130,7 @@ class XVPConsoleProxy(driver.ConsoleProxy):
             return
         logging.debug("Starting xvp")
         try:
-            utils.execute('xvp -p %s -c %s -l %s' % 
+            utils.execute('xvp -p %s -c %s -l %s' %
                           (FLAGS.console_xvp_pid,
                            FLAGS.console_xvp_conf,
                            FLAGS.console_xvp_log))
@@ -160,7 +161,7 @@ class XVPConsoleProxy(driver.ConsoleProxy):
         if not pid:
             return False
         try:
-            os.kill(pid,0)
+            os.kill(pid, 0)
         except OSError:
             return False
         return True
@@ -187,7 +188,4 @@ class XVPConsoleProxy(driver.ConsoleProxy):
         #xvp will blow up on passwords that are too long (mdragon)
         password = password[:maxlen]
         out, err = utils.execute('xvp %s' % flag, process_input=password)
-        #p = subprocess.Popen(['xvp', flag], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        #out,err = p.communicate(password)
         return out.strip()
-

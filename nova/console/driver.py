@@ -43,7 +43,7 @@ class ConsoleProxy(object):
 
     def generate_password(self, length=8):
         """Returns random console password"""
-        return os.urandom(length*2).encode('base64')[:length]
+        return os.urandom(length * 2).encode('base64')[:length]
 
     def get_port(self, context):
         """get available port for consoles that need one"""
@@ -56,4 +56,3 @@ class ConsoleProxy(object):
     def fix_console_password(self, password):
         """Trim password to length, and any other massaging"""
         return password
-

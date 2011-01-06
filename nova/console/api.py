@@ -29,6 +29,7 @@ from nova import rpc
 
 FLAGS = flags.FLAGS
 
+
 class ConsoleAPI(base.Base):
     """API for spining up or down console proxy connections"""
 
@@ -69,7 +70,6 @@ class ConsoleAPI(base.Base):
                  self._get_console_topic(context, instance['host']),
                  {"method": "add_console",
                   "args": {"instance_id": instance['id']}})
-
 
     def _get_console_topic(self, context, instance_host):
         topic = self.db.queue_get_for(context,

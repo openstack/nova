@@ -1835,9 +1835,11 @@ def console_pool_get(context, pool_id):
                      filter_by(id=pool_id).\
                      first()
     if not result:
-        raise exception.NotFound(_("No console pool with id %(pool_id)s") % {'pool_id': pool_id})
+        raise exception.NotFound(_("No console pool with id %(pool_id)s") %
+                                 {'pool_id': pool_id})
 
     return result
+
 
 def console_pool_get_by_host_type(context, compute_host, host,
                                   console_type):
@@ -1853,9 +1855,9 @@ def console_pool_get_by_host_type(context, compute_host, host,
         raise exception.NotFound(_('No console pool of type %(type)s '
                                    'for compute host %(compute_host)s '
                                    'on proxy host %(host)s') %
-                                   {'type' : console_type,
-                                    'compute_host' : compute_host,
-                                    'host' : host})
+                                   {'type': console_type,
+                                    'compute_host': compute_host,
+                                    'host': host})
     return result
 
 
@@ -1875,12 +1877,14 @@ def console_create(context, values):
     console.save()
     return console
 
+
 def console_delete(context, console_id):
     session = get_session()
     with session.begin():
-        # consoles are meant to be transient. (mdragon) 
+        # consoles are meant to be transient. (mdragon)
         session.execute('delete from consoles '
                         'where id=:id', {'id': console_id})
+
 
 def console_get_by_pool_instance(context, pool_id, instance_id):
     session = get_session()
@@ -1891,10 +1895,11 @@ def console_get_by_pool_instance(context, pool_id, instance_id):
                    first()
     if not result:
         raise exception.NotFound(_('No console for instance %(instance_id)s '
-                                 'in pool %(pool_id)s') % 
+                                 'in pool %(pool_id)s') %
                                  {'instance_id': instance_id,
                                   'pool_id': pool_id})
     return result
+
 
 def console_get_all_by_instance(context, instance_id):
     session = get_session()
@@ -1903,6 +1908,7 @@ def console_get_all_by_instance(context, instance_id):
                    options(joinedload('pool')).\
                    all()
     return results
+
 
 def console_get(context, console_id, instance_id=None):
     session = get_session()
@@ -1914,7 +1920,5 @@ def console_get(context, console_id, instance_id=None):
     if not result:
         idesc = _(" on instance %(instance_id)s") if instance_id else ""
         raise exception.NotFound(_("No console with id %(instance)s") %
-                                  {'instance' : idesc})
+                                  {'instance': idesc})
     return result
-
-

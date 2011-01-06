@@ -35,9 +35,10 @@ flags.DEFINE_string('console_driver',
 flags.DEFINE_boolean('stub_compute', False,
                      'Stub calls to compute worker for tests')
 
+
 class ConsoleProxyManager(manager.Manager):
 
-    """ Sets up and tears down any proxy connections needed for accessing 
+    """ Sets up and tears down any proxy connections needed for accessing
         instance consoles securely"""
 
     def __init__(self, console_driver=None, *args, **kwargs):
@@ -51,8 +52,8 @@ class ConsoleProxyManager(manager.Manager):
         self.driver.init_host()
 
     @exception.wrap_exception
-    def add_console(self, context, instance_id, password = None,
-                    port = None, **kwargs):
+    def add_console(self, context, instance_id, password=None,
+                    port=None, **kwargs):
         instance = self.db.instance_get(context, instance_id)
         host = instance['host']
         name = instance['name']
@@ -67,10 +68,10 @@ class ConsoleProxyManager(manager.Manager):
                 password = self.driver.generate_password()
             if not port:
                 port = self.driver.get_port(context)
-            console_data = {'instance_name' : name,
-                            'instance_id' : instance_id,
-                            'password' : password,
-                            'pool_id' : pool['id']}
+            console_data = {'instance_name': name,
+                            'instance_id': instance_id,
+                            'password': password,
+                            'pool_id': pool['id']}
             if port:
                 console_data['port'] = port
             console = self.db.console_create(context, console_data)
@@ -84,11 +85,10 @@ class ConsoleProxyManager(manager.Manager):
         except exception.NotFound:
             logging.debug(_('Tried to remove non-existant console '
                             '%(console_id)s.') %
-                            {'console_id' : console_id})
+                            {'console_id': console_id})
             return
         self.db.console_delete(context, console_id)
         self.driver.teardown_console(context, console)
-
 
     def get_pool_for_instance_host(self, context, instance_host):
         context = context.elevated()
@@ -103,9 +103,9 @@ class ConsoleProxyManager(manager.Manager):
             #               compute worker's flagfile, at least for
             #               xenserver. Thus we ned to ask.
             if FLAGS.stub_compute:
-                pool_info = {'address' : '127.0.0.1',
-                             'username' : 'test',
-                             'password' : '1234pass'}
+                pool_info = {'address': '127.0.0.1',
+                             'username': 'test',
+                             'password': '1234pass'}
             else:
                 pool_info = rpc.call(context,
                                  self.db.queue_get_for(context,
@@ -120,5 +120,3 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)
         return pool
-
-
