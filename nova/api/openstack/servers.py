@@ -222,4 +222,5 @@ class Controller(wsgi.Controller):
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.get_actions(ctxt, id)
+        items = self.compute_api.get_actions(ctxt, id)
+        return dict(actions=items)

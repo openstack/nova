@@ -316,7 +316,14 @@ class API(base.Base):
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
-        return self.db.instance_get_actions(context, instance_id)
+        items = self.db.instance_get_actions(context, instance_id)
+        actions = []
+        for item in items:
+            actions.append(dict(
+                date=str(item[0]),
+                action=item[1],
+                error=item[2]))
+        return actions
 
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
