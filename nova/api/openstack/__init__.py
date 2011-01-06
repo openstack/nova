@@ -39,7 +39,7 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import ratelimiting
 from nova.api.openstack import servers
-from nova.api.openstack import sharedipgroups
+from nova.api.openstack import shared_ip_groups
 
 
 FLAGS = flags.FLAGS
@@ -114,7 +114,7 @@ class APIRouter(wsgi.Router):
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
         mapper.resource("shared_ip_group", "shared_ip_groups",
-                        controller=sharedipgroups.Controller())
+                        controller=shared_ip_groups.Controller())
 
         super(APIRouter, self).__init__(mapper)
 
