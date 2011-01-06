@@ -190,7 +190,7 @@ class ComputeAPI(base.Base):
         """
         try:
             db.security_group_get_by_name(context, context.project_id,
-                                          'default')
+                    'default')
         except exception.NotFound:
             values = {'name': 'default',
                       'description': 'default',
@@ -258,70 +258,54 @@ class ComputeAPI(base.Base):
         return self.db.instance_get_by_internal_id(context, instance_id)
 
     def _cast_compute_message(self, method, context, instance_id):
-        """Generic handler for RPC calls."""
+        """Generic handler for RPC calls to compute."""
         instance = self.get_instance(context, instance_id)
         host = instance['host']
         rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": method,
-                  "args": {"instance_id": instance['id']}})
+                self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                {'method': method, 'args': {'instance_id': instance['id']}})
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance."""
-        self._cast_compute_message("snapshot_instance", context, instance_id)
+        self._cast_compute_message('snapshot_instance', context, instance_id)
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
-        self._cast_compute_message("reboot_instance", context, instance_id)
+        self._cast_compute_message('reboot_instance', context, instance_id)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
-        self._cast_compute_message("pause_instance", context, instance_id)
+        self._cast_compute_message('pause_instance', context, instance_id)
 
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
-        self._cast_compute_message("unpause_instance", context, instance_id)
+        self._cast_compute_message('unpause_instance', context, instance_id)
 
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance["host"]
-        return rpc.call(context,
-            self.db.queue_get_for(context, FLAGS.compute_topic, host),
-            {"method": "get_diagnostics",
-             "args": {"instance_id": instance["id"]}})
+        self._cast_compute_message('get_diagnostics', context, instance_id)
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
-        return self.db.instance_get_actions(context, instance["id"])
+        return self.db.instance_get_actions(context, instance['id'])
 
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "suspend_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message('suspend_instance', context, instance_id)
 
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "resume_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message('resume_instance', context, instance_id)
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        self._cast_compute_message("rescue_instance", context, instance_id)
+        self._cast_compute_message('rescue_instance', context, instance_id)
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        self._cast_compute_message("unrescue_instance", context, instance_id)
+        self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def reset_root_password(self, context, instance_id):
-        """Reset the root/admin pw for the given instance."""
-        self._cast_compute_message("reset_root_password", context, instance_id)
+    def set_admin_password(self, context, instance_id):
+        """Set the root/admin password for the given instance."""
+        self._cast_compute_message('set_admin_password', context, instance_id)

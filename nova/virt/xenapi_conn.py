@@ -144,9 +144,9 @@ class XenAPIConnection(object):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
-    def reset_root_password(self, instance, new_pass):
-        """Reset the root/admin password on the VM instance"""
-        self._vmops.reset_root_password(instance, new_pass)
+    def set_admin_password(self, instance, new_pass):
+        """Set the root/admin password on the VM instance"""
+        self._vmops.set_admin_password(instance, new_pass)
 
     def destroy(self, instance):
         """Destroy VM instance"""

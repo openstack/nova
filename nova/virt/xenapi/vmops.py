@@ -198,17 +198,16 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
         self._session.wait_for_task(instance.id, task)
 
-    def reset_root_password(self, instance, new_pass):
-        """Reset the root/admin password on the VM instance. This is
-        done via an agent running on the VM. Communication between
-        nova and the agent is done via writing xenstore records. Since
-        communication is done over the XenAPI RPC calls, we need to
-        encrypt the password. We're using a simple Diffie-Hellman class
-        instead of the more advanced one in M2Crypto for compatibility
-        with the agent code.
+    def set_admin_password(self, instance, new_pass):
+        """Set the root/admin password on the VM instance. This is done via
+        an agent running on the VM. Communication between nova and the agent
+        is done via writing xenstore records. Since communication is done over
+        the XenAPI RPC calls, we need to encrypt the password. We're using a
+        simple Diffie-Hellman class instead of the more advanced one in
+        M2Crypto for compatibility with the agent code.
         """
 
-        logging.error("ZZZZ RESET PASS CALLED")
+        logging.error("ZZZZ SET PASS CALLED")
 
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
@@ -219,7 +218,8 @@ class VMOps(object):
         resp_dict = json.loads(resp)
         # Successful return code from key_init is 'D0'
         if resp_dict['returncode'] != 'D0':
-            # There was some sort of error
+            # There was some sort of error; the message will contain
+            # a description of the error.
             raise RuntimeError(resp_dict['message'])
         agent_pub = int(resp_dict['message'])
         dh.compute_shared(agent_pub)
