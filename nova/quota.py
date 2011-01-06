@@ -22,7 +22,6 @@ Quotas for instances, volumes, and floating ips
 from nova import db
 from nova import exception
 from nova import flags
-from nova.compute import instance_types
 
 FLAGS = flags.FLAGS
 
@@ -63,10 +62,9 @@ def allowed_instances(context, num_instances, instance_type):
     quota = get_quota(context, project_id)
     allowed_instances = quota['instances'] - used_instances
     allowed_cores = quota['cores'] - used_cores
-    type_cores = instance_types.INSTANCE_TYPES[instance_type]['vcpus']
-    num_cores = num_instances * type_cores
+    num_cores = num_instances * instance_type['vcpus']
     allowed_instances = min(allowed_instances,
-                            int(allowed_cores // type_cores))
+                            int(allowed_cores // instance_type['vcpus']))
     return min(num_instances, allowed_instances)
 
 
