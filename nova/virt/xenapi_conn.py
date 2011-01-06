@@ -170,6 +170,9 @@ class XenAPIConnection(object):
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
+
+        logging.error("ZZZZ conn get_info id=%s" % instance_id)
+
         return self._vmops.get_info(instance_id)
 
     def get_diagnostics(self, instance):

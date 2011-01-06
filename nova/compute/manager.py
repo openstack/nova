@@ -83,7 +83,8 @@ class ComputeManager(manager.Manager):
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         try:
-            info = self.driver.get_info(instance_ref['name'])
+            #info = self.driver.get_info(instance_ref['name'])
+            info = self.driver.get_info(instance_ref)
             state = info['state']
         except exception.NotFound:
             state = power_state.NOSTATE
@@ -259,7 +260,7 @@ class ComputeManager(manager.Manager):
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn('trying to reset the password on a non-running '
                     'instance: %s (state: %s expected: %s)',
-                    instance_ref['internal_id'],
+                    instance_ref['id'],
                     instance_ref['state'],
                     power_state.RUNNING)
 

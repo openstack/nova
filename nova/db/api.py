@@ -358,6 +358,11 @@ def instance_get_by_id(context, instance_id):
     return IMPL.instance_get_by_id(context, instance_id)
 
 
+def instance_get_by_internal_id(context, internal_id):
+    """Get an instance by internal id."""
+    return IMPL.instance_get_by_internal_id(context, internal_id)
+
+
 def instance_is_vpn(context, instance_id):
     """True if instance is a vpn."""
     return IMPL.instance_is_vpn(context, instance_id)

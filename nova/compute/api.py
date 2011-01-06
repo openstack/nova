@@ -62,9 +62,6 @@ class API(base.Base):
     def get_network_topic(self, context, instance_id):
         try:
             instance = self.get_instance(context, instance_id)
-            # TODO (dabo) Need to verify whether an internal_id or a db id
-            # id being passed; use get_instance or get, respectively.
-            #instance = self.get(context, instance_id)
         except exception.NotFound, e:
             logging.warning("Instance %d was not found in get_network_topic",
                             instance_id)
@@ -223,10 +220,6 @@ class API(base.Base):
         logging.debug('Going to try and terminate %s' % instance_id)
         try:
             instance = self.get_instance(context, instance_id)
-            #TODO: (dabo) resolve that this is the correct call: 
-            # get_instance vs. get. Depends on whether we get an internal_id 
-            # or an actual db id.
-            #instance = self.get(context, instance_id)
         except exception.NotFound, e:
             logging.warning(_('Instance % was not found during terminate'),
                     instance_id)
@@ -252,7 +245,7 @@ class API(base.Base):
         else:
             self.db.instance_destroy(context, instance_id)
 
-    def get(self, context, instance_id):
+    def get_instance(self, context, instance_id):
         """Get a single instance with the given ID."""
         return self.db.instance_get_by_id(context, instance_id)
 
@@ -275,9 +268,6 @@ class API(base.Base):
             return self.db.instance_get_all_by_project(context,
             project_id)
         return self.db.instance_get_all(context)
-
-    def get_instance(self, context, instance_id):
-        return self.db.instance_get_by_internal_id(context, instance_id)
 
     def _cast_compute_message(self, method, context, instance_id):
         """Generic handler for RPC calls to compute."""
@@ -309,7 +299,7 @@ class API(base.Base):
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.db.instance_get_by_id(context, instance_id)
         return self.db.instance_get_actions(context, instance['id'])
 
     def suspend(self, context, instance_id):
@@ -337,7 +327,7 @@ class API(base.Base):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
         self.volume_api.check_attach(context, volume_id)
-        instance = self.get(context, instance_id)
+        instance = self.get_instance(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -360,6 +350,6 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
-        instance = self.get(context, instance_id)
+        instance = self.get_instance(context, instance_id)
         self.network_api.associate_floating_ip(context, address,
                                                instance['fixed_ip'])

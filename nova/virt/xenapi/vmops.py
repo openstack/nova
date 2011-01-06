@@ -130,17 +130,21 @@ class VMOps(object):
         """Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
+        logging.error("ZZZZ opaq instance_or_vm=%s" % instance_or_vm)
         vm = None
         try:
             if instance_or_vm.startswith("OpaqueRef:"):
+                logging.error("ZZZZ opaq startswith")
                 # Got passed an opaque ref; return it
                 return instance_or_vm
             else:
                 # Must be the instance name
+                logging.error("ZZZZ opaq inst name")
                 instance_name = instance_or_vm
         except AttributeError:
             # Not a string; must be a vm instance
             instance_name = instance_or_vm.name
+            logging.error("ZZZZ opaq instance, name=%s" % instance_name)
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception(_('Instance not present %s') % instance_name)
@@ -302,6 +306,9 @@ class VMOps(object):
 
     def get_info(self, instance):
         """Return data about VM instance"""
+
+        logging.error("ZZZZ get_info instance=%s" % instance)
+
         vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)

@@ -592,7 +592,7 @@ class CloudController(object):
         return {'reservationSet': self._format_instances(context)}
 
     def _format_run_instances(self, context, reservation_id):
-        i = self._format_instances(context, reservation_id)
+        i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 

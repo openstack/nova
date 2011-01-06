@@ -104,7 +104,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
+            instance = self.compute_api.get_instance(req.environ['nova.context'], id)
             return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -142,8 +142,10 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         update_dict = {}
+        func = None
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            func = self.compute_api.set_admin_password
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
 
@@ -152,9 +154,15 @@ class Controller(wsgi.Controller):
             # The ID passed in is actually the internal_id of the
             # instance, not the value of the id column in the DB.
             instance = self.compute_api.get_instance(ctxt, id)
-            self.compute_api.update_instance(ctxt, instance.id, **update_dict)
+            self.compute_api.update(ctxt, instance.id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
+        logging.error("ZZZZ func=%s" % func)
+        logging.error("ZZZZ UPD=%s" % id)
+
+        if func:
+            func(ctxt, id)
         return exc.HTTPNoContent()
 
     def action(self, req, id):
@@ -225,4 +233,4 @@ class Controller(wsgi.Controller):
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.get_actions(ctxt, id)
+        return self.compute_api.get_actions(ctxt, id_val)
