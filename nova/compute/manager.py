@@ -62,39 +62,25 @@ def checks_instance_lock(function):
     """
 
     @functools.wraps(function)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(self, context, instance_id, *args, **kwargs):
 
-        logging.info(_("check_instance_locks decorating |%s|"), function)
-        logging.info(_("check_instance_locks: arguments: |%s| |%s|"), args,
-                                                                    kwargs)
-        # assume worst case (have to declare so they are in scope)
-        admin = False
-        locked = True
-        instance_id = False
-
-        # grab args to function
-        try:
-            if 'context' in kwargs:
-                context = kwargs['context']
-            else:
-                context = args[1]
-            if 'instance_id' in kwargs:
-                instance_id = kwargs['instance_id']
-            else:
-                instance_id = args[2]
-            locked = args[0].get_lock(context, instance_id)
-            admin = context.is_admin
-        except Exception as e:
-            logging.error(_("check_instance_lock fail! args: |%s| |%s|"), args,
-                                                                        kwargs)
-            raise e
+        logging.info(_("check_instance_lock: decorating: |%s|"), function)
+        logging.info(_("check_instance_lock: arguments: |%s| |%s| |%s|"),
+                                                                   self,
+                                                                   context,
+                                                                   instance_id)
+        unlocked = not self.get_lock(context, instance_id)
+        admin = context.is_admin
+        logging.info(_("check_instance_lock: locked: |%s|"), locked)
+        logging.info(_("check_instance_lock: admin: |%s|"), admin)
 
         # if admin or unlocked call function otherwise log error
-        if admin or not locked:
+        if admin or unlocked:
+            logging.info(_("check_instance_lock: executing: |%s|"), function)
             function(*args, **kwargs)
         else:
-            logging.error(_("Instance |%s| is locked, cannot execute |%s|"),
-                                                      instance_id, function)
+            logging.error(_("check_instance_lock: not executing |%s|"),
+                                                              function)
             return False
 
     return decorated_function
