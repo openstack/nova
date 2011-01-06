@@ -164,11 +164,13 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return "instance-%08x" % self.id
 
     admin_pass = Column(String(255))
-
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -179,10 +181,6 @@ class Instance(BASE, NovaBase):
     @property
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
-
-    @property
-    def name(self):
-        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
@@ -251,8 +249,11 @@ class InstanceActions(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(12), unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return "volume-%08x" % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -277,10 +278,6 @@ class Volume(BASE, NovaBase):
 
     display_name = Column(String(255))
     display_description = Column(String(255))
-
-    @property
-    def name(self):
-        return self.ec2_id
 
 
 class Quota(BASE, NovaBase):
@@ -545,7 +542,8 @@ def register_models():
     """Register Models and create metadata.
 
     Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
-    it will never need to be called explicitly elsewhere.
+    it will never need to be called explicitly elsewhere unless the
+    connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
     models = (Service, Instance, InstanceActions,

@@ -45,6 +45,7 @@ class PluginError(Exception):
     def __init__(self, *args):
         Exception.__init__(self, *args)
 
+
 class ArgumentError(PluginError):
     """Raised when required arguments are missing, argument values are invalid,
     or incompatible arguments are given.
@@ -67,6 +68,7 @@ def ignore_failure(func, *args, **kwargs):
 
 ARGUMENT_PATTERN = re.compile(r'^[a-zA-Z0-9_:\.\-,]+$')
 
+
 def validate_exists(args, key, default=None):
     """Validates that a string argument to a RPC method call is given, and
     matches the shell-safe regex, with an optional default value in case it
@@ -76,20 +78,24 @@ def validate_exists(args, key, default=None):
     """
     if key in args:
         if len(args[key]) == 0:
-            raise ArgumentError('Argument %r value %r is too short.' % (key, args[key]))
+            raise ArgumentError('Argument %r value %r is too short.' %
+                    (key, args[key]))
         if not ARGUMENT_PATTERN.match(args[key]):
-            raise ArgumentError('Argument %r value %r contains invalid characters.' % (key, args[key]))
+            raise ArgumentError('Argument %r value %r contains invalid '
+                    'characters.' % (key, args[key]))
         if args[key][0] == '-':
-            raise ArgumentError('Argument %r value %r starts with a hyphen.' % (key, args[key]))
+            raise ArgumentError('Argument %r value %r starts with a hyphen.'
+                    % (key, args[key]))
         return args[key]
     elif default is not None:
         return default
     else:
         raise ArgumentError('Argument %s is required.' % key)
 
+
 def validate_bool(args, key, default=None):
-    """Validates that a string argument to a RPC method call is a boolean string,
-    with an optional default value in case it does not exist.
+    """Validates that a string argument to a RPC method call is a boolean
+    string, with an optional default value in case it does not exist.
 
     Returns the python boolean value.
     """
@@ -99,7 +105,9 @@ def validate_bool(args, key, default=None):
     elif value.lower() == 'false':
         return False
     else:
-        raise ArgumentError("Argument %s may not take value %r. Valid values are ['true', 'false']." % (key, value))
+        raise ArgumentError("Argument %s may not take value %r. "
+                "Valid values are ['true', 'false']." % (key, value))
+
 
 def exists(args, key):
     """Validates that a freeform string argument to a RPC method call is given.
@@ -109,6 +117,7 @@ def exists(args, key):
         return args[key]
     else:
         raise ArgumentError('Argument %s is required.' % key)
+
 
 def optional(args, key):
     """If the given key is in args, return the corresponding value, otherwise
@@ -122,13 +131,14 @@ def get_this_host(session):
 
 def get_domain_0(session):
     this_host_ref = get_this_host(session)
-    expr = 'field "is_control_domain" = "true" and field "resident_on" = "%s"' % this_host_ref
+    expr = 'field "is_control_domain" = "true" and field "resident_on" = "%s"'
+    expr = expr % this_host_ref
     return session.xenapi.VM.get_all_records_where(expr).keys()[0]
 
 
 def create_vdi(session, sr_ref, name_label, virtual_size, read_only):
     vdi_ref = session.xenapi.VDI.create(
-        { 'name_label': name_label,
+         {'name_label': name_label,
           'name_description': '',
           'SR': sr_ref,
           'virtual_size': str(virtual_size),
@@ -138,7 +148,7 @@ def create_vdi(session, sr_ref, name_label, virtual_size, read_only):
           'xenstore_data': {},
           'other_config': {},
           'sm_config': {},
-          'tags': [] })
+          'tags': []})
     logging.debug('Created VDI %s (%s, %s, %s) on %s.', vdi_ref, name_label,
                   virtual_size, read_only, sr_ref)
     return vdi_ref
