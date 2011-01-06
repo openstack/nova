@@ -546,6 +546,7 @@ class ConsolePool(BASE, NovaBase):
     username = Column(String(255))
     password = Column(String(255))
     console_type = Column(String(255))
+    public_hostname = Column(String(255))
     host = Column(String(255))
     compute_host = Column(String(255))
 

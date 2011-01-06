@@ -23,15 +23,24 @@ from nova.console import api as console_api
 from nova.api.openstack import faults
 
 
-def _translate_keys(inst):
+def _translate_keys(cons):
     """Coerces a console instance into proper dictionary format """
-    return dict(console=inst)
+    pool = cons['pool']
+    info = {'id': cons['id'],
+            'console_type': pool['console_type']}
+    return dict(console=info)
 
 
-def _translate_detail_keys(inst):
+def _translate_detail_keys(cons):
     """Coerces a console instance into proper dictionary format with
     correctly mapped attributes """
-    return dict(console=inst)
+    pool = cons['pool']
+    info = {'id': cons['id'],
+            'console_type': pool['console_type'],
+            'password': cons['password'],
+            'port': cons['port'],
+            'host': pool['public_hostname']}
+    return dict(console=info)
 
 
 class Controller(wsgi.Controller):

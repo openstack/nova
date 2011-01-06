@@ -19,8 +19,9 @@
 Console Proxy Service
 """
 
-import logging
 import functools
+import logging
+import socket
 
 from nova import exception
 from nova import flags
@@ -34,6 +35,9 @@ flags.DEFINE_string('console_driver',
                     'Driver to use for the console proxy')
 flags.DEFINE_boolean('stub_compute', False,
                      'Stub calls to compute worker for tests')
+flags.DEFINE_string('console_public_hostname',
+                    socket.gethostname(),
+                    'Publicly visable name for this console host')
 
 
 class ConsoleProxyManager(manager.Manager):
@@ -116,6 +120,7 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host
+            pool_info['public_hostname'] = FLAGS.console_public_hostname
             pool_info['console_type'] = self.driver.console_type
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)
