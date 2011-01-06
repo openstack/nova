@@ -63,9 +63,19 @@ class Server(object):
 
 
 class Application(object):
-# TODO(gundlach): I think we should toss this class, now that it has no
-# purpose.
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
+
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Used for paste app factories in paste.deploy config fles."""
+        rv = cls()
+        for k,v in local_config.iteritems():
+            if hasattr(rv, k):
+                setattr(rv, k, v)
+            else:
+                logging.debug(_("Unknown local config option %s for %s"),
+                              k, cls)
+        return rv
 
     def __call__(self, environ, start_response):
         r"""Subclasses will probably want to implement __call__ like this:
@@ -110,6 +120,20 @@ class Middleware(Application):
     simply call its wrapped app, or you can override __call__ to customize its
     behavior.
     """
+
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Used for paste app factories in paste.deploy config fles."""
+        def _factory(app):
+            rv = cls(app)
+            for k,v in local_config.iteritems():
+                if hasattr(rv, k):
+                    setattr(rv, k, v)
+                else:
+                    logging.debug(_("Unknown local config option %s for %s"),
+                                  k, cls)
+            return rv
+        return _factory
 
     def __init__(self, application):  # pylint: disable-msg=W0231
         self.application = application
