@@ -130,21 +130,17 @@ class VMOps(object):
         """Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
-        logging.error("ZZZZ opaq instance_or_vm=%s" % instance_or_vm)
         vm = None
         try:
             if instance_or_vm.startswith("OpaqueRef:"):
-                logging.error("ZZZZ opaq startswith")
                 # Got passed an opaque ref; return it
                 return instance_or_vm
             else:
                 # Must be the instance name
-                logging.error("ZZZZ opaq inst name")
                 instance_name = instance_or_vm
         except AttributeError:
             # Not a string; must be a vm instance
             instance_name = instance_or_vm.name
-            logging.error("ZZZZ opaq instance, name=%s" % instance_name)
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception(_('Instance not present %s') % instance_name)
@@ -210,9 +206,6 @@ class VMOps(object):
         simple Diffie-Hellman class instead of the more advanced one in
         M2Crypto for compatibility with the agent code.
         """
-
-        logging.error("ZZZZ SET PASS CALLED")
-
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
@@ -306,9 +299,6 @@ class VMOps(object):
 
     def get_info(self, instance):
         """Return data about VM instance"""
-
-        logging.error("ZZZZ get_info instance=%s" % instance)
-
         vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
@@ -370,13 +360,14 @@ class VMOps(object):
 
     def _make_agent_call(self, method, vm, path, addl_args={}):
         """Abstracts out the interaction with the agent xenapi plugin."""
-        return self._make_plugin_call('agent.py', method=method, vm=vm,
+        return self._make_plugin_call('agent', method=method, vm=vm,
                 path=path, addl_args=addl_args)
 
     def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
         """Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
+        instance_id = vm.id
         vm = self._get_vm_opaque_ref(vm)
         rec = self._session.get_xenapi().VM.get_record(vm)
         args = {'dom_id': rec['domid'], 'path': path}
@@ -386,9 +377,14 @@ class VMOps(object):
             args['testing_mode'] = 'true'
         try:
             task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(0, task)
+            ret = self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, e:
-            raise RuntimeError("%s" % e.details[-1])
+            err_trace = e.details[-1]
+            err_msg = err_trace.splitlines()[-1]
+            if 'TIMEOUT:' in err_msg:
+                raise exception.TimeoutException(err_msg)
+            else:
+                raise RuntimeError("%s" % e.details[-1])
         return ret
 
     def add_to_xenstore(self, vm, path, key, value):

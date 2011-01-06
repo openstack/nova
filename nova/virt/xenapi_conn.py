@@ -170,9 +170,6 @@ class XenAPIConnection(object):
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
-
-        logging.error("ZZZZ conn get_info id=%s" % instance_id)
-
         return self._vmops.get_info(instance_id)
 
     def get_diagnostics(self, instance):
@@ -251,7 +248,8 @@ class XenAPISession(object):
 
     def _poll_task(self, id, task, done):
         """Poll the given XenAPI task, and fire the given action if we
-        get a result."""
+        get a result.
+        """
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
@@ -278,16 +276,6 @@ class XenAPISession(object):
                     error_info))
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
-#           import sqlalchemy
-#           from sqlalchemy.exc import IntegrityError as IntegrityError
-#           try:
-#               db.instance_action_create(context.get_admin_context(), action)
-#           except IntegrityError:
-#               # Some methods don't pass unique IDs, so the call to
-#               # instance_action_create() will raise IntegrityErrors. Rather
-#               # than bomb out, I'm explicitly silencing them so that the
-#               # code can continue to work until they fix that method.
-#               pass
 
         except self.XenAPI.Failure, exc:
             logging.warn(exc)

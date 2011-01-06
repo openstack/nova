@@ -77,6 +77,10 @@ class InvalidInputException(Error):
     pass
 
 
+class TimeoutException(Error):
+    pass
+
+
 def wrap_exception(f):
     def _wrap(*args, **kw):
         try:

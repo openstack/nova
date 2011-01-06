@@ -83,7 +83,6 @@ class ComputeManager(manager.Manager):
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         try:
-            #info = self.driver.get_info(instance_ref['name'])
             info = self.driver.get_info(instance_ref)
             state = info['state']
         except exception.NotFound:
@@ -266,8 +265,6 @@ class ComputeManager(manager.Manager):
 
         logging.debug('instance %s: setting admin password',
                 instance_ref['name'])
-        self.db.instance_set_state(context, instance_id,
-                power_state.NOSTATE, 'setting_password')
         if new_pass is None:
             # Generate a random password
             new_pass = self._generate_password(FLAGS.password_length)

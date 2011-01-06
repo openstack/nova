@@ -42,8 +42,15 @@ AGENT_TIMEOUT = 30
 PRETEND_SECRET = 11111
 
 
+def jsonify(fnc):
+    def wrapper(*args, **kwargs):
+        return json.dumps(fnc(*args, **kwargs))
+    return wrapper
+
+
 class TimeoutError(StandardError):
     pass
+
 
 class SimpleDH(object):
     """This class wraps all the functionality needed to implement
@@ -138,6 +145,8 @@ def _run_command(cmd):
         raise PluginError(err)
     return proc.stdout.read()
 
+
+@jsonify
 def key_init(self, arg_dict):
     """Handles the Diffie-Hellman key exchange with the agent to
     establish the shared secret key used to encrypt/decrypt sensitive
@@ -152,7 +161,7 @@ def key_init(self, arg_dict):
         pretend = SimpleDH(secret=PRETEND_SECRET)
         shared = pretend.compute_shared(pub)
         # Simulate the agent's response
-        ret = '{ "returncode": "D0", "message": "%s", "shared": "%s" }' % (pretend.get_public(), shared)
+        ret = {"returncode": "D0", "message": "%s", "shared": "%s"} % (pretend.get_public(), shared)
         return ret
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
@@ -162,6 +171,8 @@ def key_init(self, arg_dict):
         raise PluginError("%s" % e)
     return resp
 
+
+@jsonify
 def password(self, arg_dict):
     """Writes a request to xenstore that tells the agent to set
     the root password for the given VM. The password should be 
@@ -176,7 +187,7 @@ def password(self, arg_dict):
         pretend = SimpleDH(secret=PRETEND_SECRET)
         pretend.compute_shared(pub)
         pw = pretend.decrypt(enc_pass)
-        ret = '{ "returncode": "0", "message": "%s" }' % pw
+        ret = {"returncode": "0", "message": "%s"} % pw
         return ret
     arg_dict["value"] = json.dumps({"name": "password", "value": enc_pass})
     request_id = arg_dict["id"]
@@ -187,6 +198,7 @@ def password(self, arg_dict):
     except TimeoutError, e:
         raise PluginError("%s" % e)
     return resp
+
 
 def _wait_for_agent(self, request_id, arg_dict):
     """Periodically checks xenstore for a response from the agent.
@@ -205,10 +217,12 @@ def _wait_for_agent(self, request_id, arg_dict):
             # First, delete the request record
             arg_dict["path"] = "data/host/%s" % request_id
             xenstore.delete_record(self, arg_dict)
-            raise TimeoutError("No response from agent within %s seconds." %
+            raise TimeoutError("TIMEOUT: No response from agent within %s seconds." %
                     AGENT_TIMEOUT)
         ret = xenstore.read_record(self, arg_dict)
-        if ret != "None":
+        # Note: the response for None with be a string that includes
+        # double quotes.
+        if ret != '"None"':
             # The agent responded
             return ret
         else:
