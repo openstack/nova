@@ -215,7 +215,7 @@ class ComputeManager(manager.Manager):
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn(_('trying to reboot a non-running '
                            'instance: %s (state: %s excepted: %s)'),
-                         instance_ref['internal_id'],
+                         instance_id,
                          instance_ref['state'],
                          power_state.RUNNING)
 
@@ -243,7 +243,7 @@ class ComputeManager(manager.Manager):
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn(_('trying to snapshot a non-running '
                            'instance: %s (state: %s excepted: %s)'),
-                         instance_ref['internal_id'],
+                         instance_id,
                          instance_ref['state'],
                          power_state.RUNNING)
 
@@ -286,8 +286,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: rescuing'),
-                      instance_ref['internal_id'])
+        logging.debug(_('instance %s: rescuing'), instance_id)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -302,8 +301,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: unrescuing'),
-                      instance_ref['internal_id'])
+        logging.debug(_('instance %s: unrescuing'), instance_id)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -322,8 +320,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: pausing',
-                      instance_ref['internal_id'])
+        logging.debug('instance %s: pausing', instance_id)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -340,8 +337,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug('instance %s: unpausing',
-                      instance_ref['internal_id'])
+        logging.debug('instance %s: unpausing', instance_id)
         self.db.instance_set_state(context,
                                    instance_id,
                                    power_state.NOSTATE,
@@ -359,7 +355,7 @@ class ComputeManager(manager.Manager):
 
         if instance_ref["state"] == power_state.RUNNING:
             logging.debug(_("instance %s: retrieving diagnostics"),
-                instance_ref["internal_id"])
+                          instance_id)
             return self.driver.get_diagnostics(instance_ref)
 
     @exception.wrap_exception
@@ -368,8 +364,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: suspending'),
-                      instance_ref['internal_id'])
+        logging.debug(_('instance %s: suspending'), instance_id)
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'suspending')
@@ -385,7 +380,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
-        logging.debug(_('instance %s: resuming'), instance_ref['internal_id'])
+        logging.debug(_('instance %s: resuming'), instance_id)
         self.db.instance_set_state(context, instance_id,
                                             power_state.NOSTATE,
                                             'resuming')
