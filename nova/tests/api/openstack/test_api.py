@@ -50,7 +50,6 @@ class APITest(unittest.TestCase):
             exc = webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
             return faults.Fault(exc)
 
-
         #api.application = succeed
         api = self._wsgi_app(succeed)
         resp = Request.blank('/').get_response(api)
