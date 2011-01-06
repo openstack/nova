@@ -34,24 +34,19 @@ import logging.handlers
 import traceback
 
 from nova import flags
-# TODO(todd): fix after version.py merge
-# from nova import version
+from nova import version
 
 
 FLAGS = flags.FLAGS
 
-# TODO(todd): fix after version.py merge
-# '(%(name)s %(nova_version)s): %(levelname)s '
 flags.DEFINE_string('logging_context_format_string',
-                    '(%(name)s): %(levelname)s '
+                    '(%(name)s %(nova_version)s): %(levelname)s '
                     '[%(request_id)s %(user)s '
                     '%(project)s] %(message)s',
                     'format string to use for log messages')
 
-# TODO(todd): fix after version.py merge
-# '(%(name)s %(nova_version)s): %(levelname)s [N/A] '
 flags.DEFINE_string('logging_default_format_string',
-                    '(%(name)s): %(levelname)s [N/A] '
+                    '(%(name)s %(nova_version)s): %(levelname)s [N/A] '
                     '%(message)s',
                     'format string to use for log messages')
 
@@ -163,8 +158,7 @@ class NovaLogger(logging.Logger):
             extra = {}
         if context:
             extra.update(_dictify_context(context))
-        # TODO(todd): fix after version.py merge
-        #extra.update({"nova_version": version.string_with_vcs()})
+        extra.update({"nova_version": version.string_with_vcs()})
         logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):
