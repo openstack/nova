@@ -77,7 +77,7 @@ def checks_instance_lock(function):
         # if admin or unlocked call function otherwise log error
         if admin or not locked:
             logging.info(_("check_instance_lock: executing: |%s|"), function)
-            function(*args, **kwargs)
+            function(self, context, isntance_id, *args, **kwargs)
         else:
             logging.error(_("check_instance_lock: not executing |%s|"),
                                                               function)
