@@ -29,9 +29,9 @@ from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import xenapi_conn
-from nova.virt.xenapi import fake
+from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
-from nova.tests.db import fakes
+from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 
 FLAGS = flags.FLAGS
@@ -47,9 +47,9 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.target_host = '127.0.0.1'
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
-        fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
-        fake.reset()
+        xenapi_fake.reset()
         self.values = {'name': 1, 'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
@@ -79,11 +79,11 @@ class XenAPIVolumeTestCase(test.TestCase):
         helper = volume_utils.VolumeHelper
         helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
-        info = helper.parse_volume_info(vol['ec2_id'], '/dev/sdc')
-        label = 'SR-%s' % vol['ec2_id']
+        info = helper.parse_volume_info(vol['id'], '/dev/sdc')
+        label = 'SR-%s' % vol['id']
         description = 'Test-SR'
         sr_ref = helper.create_iscsi_storage(session, info, label, description)
-        srs = fake.get_all('SR')
+        srs = xenapi_fake.get_all('SR')
         self.assertEqual(sr_ref, srs[0])
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
@@ -97,7 +97,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
                           helper.parse_volume_info,
-                          vol['ec2_id'],
+                          vol['id'],
                           '/dev/sd')
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
@@ -107,17 +107,16 @@ class XenAPIVolumeTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = db.instance_create(self.values)
-        fake.create_vm(instance.name, 'Running')
-        result = conn.attach_volume(instance.name, volume['ec2_id'],
-                                    '/dev/sdc')
+        xenapi_fake.create_vm(instance.name, 'Running')
+        result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
         def check():
             # check that the VM has a VBD attached to it
             # Get XenAPI reference for the VM
-            vms = fake.get_all('VM')
+            vms = xenapi_fake.get_all('VM')
             # Get XenAPI record for VBD
-            vbds = fake.get_all('VBD')
-            vbd = fake.get_record('VBD', vbds[0])
+            vbds = xenapi_fake.get_all('VBD')
+            vbd = xenapi_fake.get_record('VBD', vbds[0])
             vm_ref = vbd['VM']
             self.assertEqual(vm_ref, vms[0])
 
@@ -130,11 +129,11 @@ class XenAPIVolumeTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = db.instance_create(self.values)
-        fake.create_vm(instance.name, 'Running')
+        xenapi_fake.create_vm(instance.name, 'Running')
         self.assertRaises(Exception,
                           conn.attach_volume,
                           instance.name,
-                          volume['ec2_id'],
+                          volume['id'],
                           '/dev/sdc')
 
     def tearDown(self):
@@ -156,41 +155,70 @@ class XenAPIVMTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
-        fake.reset()
-        fakes.stub_out_db_instance_api(self.stubs)
-        fake.create_network('fake', FLAGS.flat_network_bridge)
+        xenapi_fake.reset()
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        conn = xenapi_conn.get_connection(False)
-        instances = conn.list_instances()
+        instances = self.conn.list_instances()
         self.assertEquals(instances, [])
 
-    def test_spawn(self):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1, 'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
-        conn = xenapi_conn.get_connection(False)
-        instance = db.instance_create(values)
-        conn.spawn(instance)
+    def test_get_diagnostics(self):
+        instance = self._create_instance()
+        self.conn.get_diagnostics(instance)
+
+    def test_instance_snapshot(self):
+        stubs.stubout_instance_snapshot(self.stubs)
+        instance = self._create_instance()
+
+        name = "MySnapshot"
+        template_vm_ref = self.conn.snapshot(instance, name)
+
+        def ensure_vm_was_torn_down():
+            vm_labels = []
+            for vm_ref in xenapi_fake.get_all('VM'):
+                vm_rec = xenapi_fake.get_record('VM', vm_ref)
+                if not vm_rec["is_control_domain"]:
+                    vm_labels.append(vm_rec["name_label"])
+
+            self.assertEquals(vm_labels, [1])
+
+        def ensure_vbd_was_torn_down():
+            vbd_labels = []
+            for vbd_ref in xenapi_fake.get_all('VBD'):
+                vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
+                vbd_labels.append(vbd_rec["vm_name_label"])
+
+            self.assertEquals(vbd_labels, [1])
+
+        def ensure_vdi_was_torn_down():
+            for vdi_ref in xenapi_fake.get_all('VDI'):
+                vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
+                name_label = vdi_rec["name_label"]
+                self.assert_(not name_label.endswith('snapshot'))
 
         def check():
-            instances = conn.list_instances()
+            ensure_vm_was_torn_down()
+            ensure_vbd_was_torn_down()
+            ensure_vdi_was_torn_down()
+
+        check()
+
+    def test_spawn(self):
+        instance = self._create_instance()
+
+        def check():
+            instances = self.conn.list_instances()
             self.assertEquals(instances, [1])
 
             # Get Nova record for VM
-            vm_info = conn.get_info(1)
+            vm_info = self.conn.get_info(1)
 
             # Get XenAPI record for VM
-            vms = fake.get_all('VM')
-            vm = fake.get_record('VM', vms[0])
+            vms = xenapi_fake.get_all('VM')
+            vm = xenapi_fake.get_record('VM', vms[0])
 
             # Check that m1.large above turned into the right thing.
             instance_type = instance_types.INSTANCE_TYPES['m1.large']
@@ -218,3 +246,19 @@ class XenAPIVMTestCase(test.TestCase):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         self.stubs.UnsetAll()
+
+    def _create_instance(self):
+        """Creates and spawns a test instance"""
+        values = {
+            'name': 1,
+            'id': 1,
+            'project_id': self.project.id,
+            'user_id': self.user.id,
+            'image_id': 1,
+            'kernel_id': 2,
+            'ramdisk_id': 3,
+            'instance_type': 'm1.large',
+            'mac_address': 'aa:bb:cc:dd:ee:ff'}
+        instance = db.instance_create(values)
+        self.conn.spawn(instance)
+        return instance

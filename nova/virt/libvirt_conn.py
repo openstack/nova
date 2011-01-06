@@ -260,6 +260,13 @@ class LibvirtConnection(object):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance """
+        raise NotImplementedError(
+            _("Instance snapshotting is not supported for libvirt"
+              "at this time"))
+
+    @exception.wrap_exception
     def reboot(self, instance):
         self.destroy(instance, False)
         xml = self.to_xml(instance)
@@ -579,6 +586,9 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def get_diagnostics(self, instance_name):
+        raise exception.APIError("diagnostics are not supported for libvirt")
 
     def get_disks(self, instance_name):
         """
