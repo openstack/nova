@@ -19,6 +19,8 @@
 Tests For Scheduler
 """
 
+import datetime
+
 from nova import context
 from nova import db
 from nova import flags
@@ -33,6 +35,7 @@ from nova.scheduler import driver
 
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class TestDriver(driver.Scheduler):
@@ -94,7 +97,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
 
-    def _create_instance(self):
+    def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
         inst['image_id'] = 'ami-test'
@@ -105,6 +108,7 @@ class SimpleDriverTestCase(test.TestCase):
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst['vcpus'] = 1
+        inst['availability_zone'] = kwargs.get('availability_zone', None)
         return db.instance_create(self.context, inst)['id']
 
     def _create_volume(self):
@@ -113,9 +117,33 @@ class SimpleDriverTestCase(test.TestCase):
         vol['image_id'] = 'ami-test'
         vol['reservation_id'] = 'r-fakeres'
         vol['size'] = 1
+        vol['availability_zone'] = 'test'
         return db.volume_create(self.context, vol)['id']
 
-    def test_hosts_are_up(self):
+    def test_doesnt_report_disabled_hosts_as_up(self):
+        """Ensures driver doesn't find hosts before they are enabled"""
+        # NOTE(vish): constructing service without create method
+        #             because we are going to use it without queue
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
+        db.service_update(self.context, s2['id'], {'disabled': True})
+        hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
+        self.assertEqual(0, len(hosts))
+        compute1.kill()
+        compute2.kill()
+
+    def test_reports_enabled_hosts_as_up(self):
         """Ensures driver can find the hosts that are up"""
         # NOTE(vish): constructing service without create method
         #             because we are going to use it without queue
@@ -130,7 +158,7 @@ class SimpleDriverTestCase(test.TestCase):
                                    FLAGS.compute_manager)
         compute2.start()
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
-        self.assertEqual(len(hosts), 2)
+        self.assertEqual(2, len(hosts))
         compute1.kill()
         compute2.kill()
 
@@ -156,6 +184,63 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id2)
         compute1.kill()
         compute2.kill()
+
+    def test_specific_host_gets_instance(self):
+        """Ensures if you set availability_zone it launches on that zone"""
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        instance_id1 = self._create_instance()
+        compute1.run_instance(self.context, instance_id1)
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
+        self.assertEqual('host1', host)
+        compute1.terminate_instance(self.context, instance_id1)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+        compute2.kill()
+
+    def test_wont_sechedule_if_specified_host_is_down(self):
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        now = datetime.datetime.utcnow()
+        delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
+        past = now - delta
+        db.service_update(self.context, s1['id'], {'updated_at': past})
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        self.assertRaises(driver.WillNotSchedule,
+                          self.scheduler.driver.schedule_run_instance,
+                          self.context,
+                          instance_id2)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+
+    def test_will_schedule_on_disabled_host_if_specified(self):
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
+        self.assertEqual('host1', host)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
 
     def test_too_many_cores(self):
         """Ensures we don't go over max cores"""

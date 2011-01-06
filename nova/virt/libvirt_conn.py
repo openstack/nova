@@ -58,10 +58,9 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 
-from Cheetah.Template import Template
-
 libvirt = None
 libxml2 = None
+Template = None
 
 
 FLAGS = flags.FLAGS
@@ -69,6 +68,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -88,13 +90,24 @@ flags.DEFINE_bool('allow_project_net_traffic',
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
     # libraries when not using libvirt.
+    # Cheetah is separate because the unit tests want to load Cheetah,
+    # but not libvirt.
     global libvirt
     global libxml2
     if libvirt is None:
         libvirt = __import__('libvirt')
     if libxml2 is None:
         libxml2 = __import__('libxml2')
+    _late_load_cheetah()
     return LibvirtConnection(read_only)
+
+
+def _late_load_cheetah():
+    global Template
+    if Template is None:
+        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
+                       -1)
+        Template = t.Template
 
 
 def _get_net_and_mask(cidr):
@@ -245,6 +258,13 @@ class LibvirtConnection(object):
         if not xml:
             raise exception.NotFound(_("No disk at %s") % mount_device)
         virt_dom.detachDevice(xml)
+
+    @exception.wrap_exception
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance """
+        raise NotImplementedError(
+            _("Instance snapshotting is not supported for libvirt"
+              "at this time"))
 
     @exception.wrap_exception
     def reboot(self, instance):
@@ -566,6 +586,9 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def get_diagnostics(self, instance_name):
+        raise exception.APIError("diagnostics are not supported for libvirt")
 
     def get_disks(self, instance_name):
         """

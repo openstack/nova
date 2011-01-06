@@ -20,11 +20,14 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import logging
+import pickle
 import urllib
 from xml.dom import minidom
 
+from eventlet import event
 from nova import exception
 from nova import flags
+from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -204,7 +207,54 @@ class VMHelper(HelperBase):
         return vif_ref
 
     @classmethod
-    def fetch_image(cls, session, image, user, project, type):
+    def create_snapshot(cls, session, instance_id, vm_ref, label):
+        """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+        Snapshot VHD
+        """
+        #TODO(sirp): Add quiesce and VSS locking support when Windows support
+        # is added
+        logging.debug(_("Snapshotting VM %s with label '%s'..."),
+                      vm_ref, label)
+
+        vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_uuid = vm_vdi_rec["uuid"]
+        sr_ref = vm_vdi_rec["SR"]
+
+        original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
+
+        task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
+        template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
+        template_vdi_uuid = template_vdi_rec["uuid"]
+
+        logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
+                      vm_ref)
+
+        parent_uuid = wait_for_vhd_coalesce(
+            session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
+
+        #TODO(sirp): we need to assert only one parent, not parents two deep
+        return template_vm_ref, [template_vdi_uuid, parent_uuid]
+
+    @classmethod
+    def upload_image(cls, session, instance_id, vdi_uuids, image_name):
+        """ Requests that the Glance plugin bundle the specified VDIs and
+        push them into Glance using the specified human-friendly name.
+        """
+        logging.debug(_("Asking xapi to upload %s as '%s'"),
+                      vdi_uuids, image_name)
+
+        params = {'vdi_uuids': vdi_uuids,
+                  'image_name': image_name,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port}
+
+        kwargs = {'params': pickle.dumps(params)}
+        task = session.async_call_plugin('glance', 'put_vdis', kwargs)
+        session.wait_for_task(instance_id, task)
+
+    @classmethod
+    def fetch_image(cls, session, instance_id, image, user, project, type):
         """
         type is interpreted as an ImageType instance
         """
@@ -223,9 +273,7 @@ class VMHelper(HelperBase):
             if type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        #FIXME(armando): find a solution to missing instance_id
-        #with Josh Kearney
-        uuid = session.wait_for_task(0, task)
+        uuid = session.wait_for_task(instance_id, task)
         return uuid
 
     @classmethod
@@ -299,6 +347,10 @@ class VMHelper(HelperBase):
         try:
             host = session.get_xenapi_host()
             host_ip = session.get_xenapi().host.get_record(host)["address"]
+        except (cls.XenAPI.Failure, KeyError) as e:
+            return {"Unable to retrieve diagnostics": e}
+
+        try:
             diags = {}
             xml = get_rrd(host_ip, record["uuid"])
             if xml:
@@ -325,3 +377,87 @@ def get_rrd(host, uuid):
         return xml.read()
     except IOError:
         return None
+
+
+#TODO(sirp): This code comes from XS5.6 pluginlib.py, we should refactor to
+# use that implmenetation
+def get_vhd_parent(session, vdi_rec):
+    """
+    Returns the VHD parent of the given VDI record, as a (ref, rec) pair.
+    Returns None if we're at the root of the tree.
+    """
+    if 'vhd-parent' in vdi_rec['sm_config']:
+        parent_uuid = vdi_rec['sm_config']['vhd-parent']
+        #NOTE(sirp): changed xenapi -> get_xenapi()
+        parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
+        parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
+        #NOTE(sirp): changed log -> logging
+        logging.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
+        return parent_ref, parent_rec
+    else:
+        return None
+
+
+def get_vhd_parent_uuid(session, vdi_ref):
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    ret = get_vhd_parent(session, vdi_rec)
+    if ret:
+        parent_ref, parent_rec = ret
+        return parent_rec["uuid"]
+    else:
+        return None
+
+
+def scan_sr(session, instance_id, sr_ref):
+    logging.debug(_("Re-scanning SR %s"), sr_ref)
+    task = session.call_xenapi('Async.SR.scan', sr_ref)
+    session.wait_for_task(instance_id, task)
+
+
+def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
+                          original_parent_uuid):
+    """ Spin until the parent VHD is coalesced into its parent VHD
+
+    Before coalesce:
+        * original_parent_vhd
+            * parent_vhd
+                snapshot
+
+    Atter coalesce:
+        * parent_vhd
+            snapshot
+    """
+    #TODO(sirp): we need to timeout this req after a while
+
+    def _poll_vhds():
+        scan_sr(session, instance_id, sr_ref)
+        parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
+        if original_parent_uuid and (parent_uuid != original_parent_uuid):
+            logging.debug(
+                _("Parent %s doesn't match original parent %s, "
+                  "waiting for coalesce..."),
+                parent_uuid, original_parent_uuid)
+        else:
+            done.send(parent_uuid)
+
+    done = event.Event()
+    loop = utils.LoopingCall(_poll_vhds)
+    loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
+    parent_uuid = done.wait()
+    loop.stop()
+    return parent_uuid
+
+
+def get_vdi_for_vm_safely(session, vm_ref):
+    vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+    if vdi_refs is None:
+        raise Exception(_("No VDIs found for VM %s") % vm_ref)
+    else:
+        num_vdis = len(vdi_refs)
+        if num_vdis != 1:
+            raise Exception(_("Unexpected number of VDIs (%s) found for "
+                               "VM %s") % (num_vdis, vm_ref))
+
+    vdi_ref = vdi_refs[0]
+    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+    return vdi_ref, vdi_rec

@@ -78,21 +78,15 @@ class ConsoleProxyManager(manager.Manager):
         return console['id']
 
     @exception.wrap_exception
-    def remove_console(self, context, instance_id, **_kwargs):
-        instance = self.db.instance_get(context, instance_id)
-        host = instance['host']
-        pool = self.get_pool_for_instance_host(context, host)
+    def remove_console(self, context, console_id, **_kwargs):
         try:
-            console = self.db.console_get_by_pool_instance(context,
-                                                           pool['id'],
-                                                           instance_id)
+            console = self.db.console_get(context, console_id)
         except exception.NotFound:
-            logging.debug(_('Tried to remove non-existant console in pool '
-                            '%(pool_id)s for instance %(instance_id)s.' %
-                            {'instance_id' : instance_id,
-                             'pool_id' : pool['id']}))
+            logging.debug(_('Tried to remove non-existant console '
+                            '%(console_id)s.') %
+                            {'console_id' : console_id})
             return
-        self.db.console_delete(context, console['id'])
+        self.db.console_delete(context, console_id)
         self.driver.teardown_console(context, console)
 
 

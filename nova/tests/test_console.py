@@ -120,15 +120,11 @@ class ConsoleTestCase(test.TestCase):
 
     def test_remove_console(self):
         instance_id = self._create_instance()
-        self.console.add_console(self.context, instance_id)
-        self.console.remove_console(self.context, instance_id)
+        console_id = self.console.add_console(self.context, instance_id)
+        self.console.remove_console(self.context, console_id)
 
-        instance = db.instance_get(self.context, instance_id)
-        pool = db.console_pool_get_by_host_type(self.context,
-                                                instance['host'],
-                                                self.console.host,
-                                                self.console.driver.console_type)
-
-        console_instances =  [con['instance_id'] for con in pool.consoles]
-        self.assert_(instance_id not in console_instances)
+        self.assertRaises(exception.NotFound,
+                          db.console_get,
+                          self.context,
+                          console_id)
 

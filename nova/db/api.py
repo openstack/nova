@@ -27,6 +27,9 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 :sql_connection:  string specifying the sqlalchemy connection to use, like:
                   `sqlite:///var/lib/nova/nova.sqlite`.
+
+:enable_new_services:  when adding a new service to the database, is it in the
+                       pool of available hardware (Default: True)
 """
 
 from nova import exception
@@ -37,6 +40,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
+flags.DEFINE_boolean('enable_new_services', True,
+                     'Services to be added to the available pool on create')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -381,6 +386,11 @@ def instance_add_security_group(context, instance_id, security_group_id):
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     return IMPL.instance_action_create(context, values)
+
+
+def instance_get_actions(context, instance_id):
+    """Get instance actions by instance id."""
+    return IMPL.instance_get_actions(context, instance_id)
 
 
 ###################
@@ -923,5 +933,13 @@ def console_delete(context, console_id):
 def console_get_by_pool_instance(context, pool_id, instance_id):
     """Get console entry for a given instance and pool."""
     return IMPL.console_get_by_pool_instance(context, pool_id, instance_id)
+
+def console_get_all_by_instance(context, instance_id):
+    """Get consoles for a given instance."""
+    return IMPL.console_get_all_by_instance(context, instance_id)
+
+def console_get(context, console_id, instance_id=None):
+    """Get a specific console (possibly on a given instance)."""
+    return IMPL.console_get(context, console_id, instance_id)
 
 

@@ -36,6 +36,7 @@ terminating it.
 
 import datetime
 import logging
+import socket
 
 from nova import exception
 from nova import flags
@@ -51,6 +52,9 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
+flags.DEFINE_string('console_host', socket.gethostname(),
+                    'Console proxy host to use to connect to instances on'
+                    'this host.')
 
 
 class ComputeManager(manager.Manager):
@@ -84,6 +88,15 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
+
+    def get_console_topic(self, context, **_kwargs):
+        """Retrieves the console host for a project on this host
+           Currently this is just set in the flags for each compute
+           host."""
+        #TODO(mdragon): perhaps make this variable by console_type?
+        return self.db.queue_get_for(context,
+                                     FLAGS.console_topic,
+                                     FLAGS.console_host)
 
     def get_network_topic(self, context, **_kwargs):
         """Retrieves the network host for a project on this host"""
@@ -230,6 +243,27 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    def snapshot_instance(self, context, instance_id, name):
+        """Snapshot an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        #NOTE(sirp): update_state currently only refreshes the state field
+        # if we add is_snapshotting, we will need this refreshed too,
+        # potentially?
+        self._update_state(context, instance_id)
+
+        logging.debug(_('instance %s: snapshotting'), instance_ref['name'])
+        if instance_ref['state'] != power_state.RUNNING:
+            logging.warn(_('trying to snapshot a non-running '
+                           'instance: %s (state: %s excepted: %s)'),
+                         instance_ref['internal_id'],
+                         instance_ref['state'],
+                         power_state.RUNNING)
+
+        self.driver.snapshot(instance_ref, name)
+
+    @exception.wrap_exception
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
@@ -300,6 +334,16 @@ class ComputeManager(manager.Manager):
                                                        context,
                                                        instance_id,
                                                        result))
+
+    @exception.wrap_exception
+    def get_diagnostics(self, context, instance_id):
+        """Retrieve diagnostics for an instance on this server."""
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        if instance_ref["state"] == power_state.RUNNING:
+            logging.debug(_("instance %s: retrieving diagnostics"),
+                instance_ref["internal_id"])
+            return self.driver.get_diagnostics(instance_ref)
 
     @exception.wrap_exception
     def suspend_instance(self, context, instance_id):

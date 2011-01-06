@@ -236,6 +236,8 @@ def service_get_by_args(context, host, binary):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
+    if not FLAGS.enable_new_services:
+        service_ref.disabled = True
     service_ref.save()
     return service_ref
 
@@ -854,6 +856,18 @@ def instance_action_create(context, values):
     with session.begin():
         action_ref.save(session=session)
     return action_ref
+
+
+@require_admin_context
+def instance_get_actions(context, instance_id):
+    """Return the actions associated to the given instance id"""
+    session = get_session()
+    actions = {}
+    for action in session.query(models.InstanceActions).\
+        filter_by(instance_id=instance_id).\
+        all():
+        actions[action.action] = action.error
+    return actions
 
 
 ###################
@@ -1941,6 +1955,27 @@ def console_get_by_pool_instance(context, pool_id, instance_id):
                                  'in pool %(pool_id)s') % 
                                  {'instance_id': instance_id,
                                   'pool_id': pool_id})
+    return result
+
+def console_get_all_by_instance(context, instance_id):
+    session = get_session()
+    results = session.query(models.Console).\
+                   filter_by(instance_id=instance_id).\
+                   options(joinedload('pool')).\
+                   all()
+    return results
+
+def console_get(context, console_id, instance_id=None):
+    session = get_session()
+    query = session.query(models.Console).\
+                    filter_by(id=console_id)
+    if instance_id:
+        query = query.filter_by(instance_id=instance_id)
+    result = query.options(joinedload('pool')).first()
+    if not result:
+        idesc = _(" on instance %(instance_id)s") if instance_id else ""
+        raise exception.NotFound(_("No console with id %(instance)s") %
+                                  {'instance' : idesc})
     return result
 
 
