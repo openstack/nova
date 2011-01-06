@@ -74,7 +74,6 @@ flags.DEFINE_bool('use_syslog', False, 'output to syslog')
 flags.DEFINE_string('logfile', None, 'output to named file')
 
 
-
 # A list of things we want to replicate from logging.
 # levels
 CRITICAL = logging.CRITICAL
@@ -112,7 +111,7 @@ def _dictify_context(context):
         return None
     if not isinstance(context, dict) \
     and getattr(context, 'to_dict', None):
-       context = context.to_dict()
+        context = context.to_dict()
     return context
 
 
