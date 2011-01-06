@@ -27,6 +27,9 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 :sql_connection:  string specifying the sqlalchemy connection to use, like:
                   `sqlite:///var/lib/nova/nova.sqlite`.
+
+:enable_new_services:  when adding a new service to the database, is it in the
+                       pool of available hardware (Default: True)
 """
 
 from nova import exception
@@ -37,6 +40,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
+flags.DEFINE_boolean('enable_new_services', True,
+                     'Services to be added to the available pool on create')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -348,9 +353,9 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
-def instance_get_by_internal_id(context, internal_id):
-    """Get an instance by internal id."""
-    return IMPL.instance_get_by_internal_id(context, internal_id)
+def instance_get_by_id(context, instance_id):
+    """Get an instance by id."""
+    return IMPL.instance_get_by_id(context, instance_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -381,6 +386,11 @@ def instance_add_security_group(context, instance_id, security_group_id):
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     return IMPL.instance_action_create(context, values)
+
+
+def instance_get_actions(context, instance_id):
+    """Get instance actions by instance id."""
+    return IMPL.instance_get_actions(context, instance_id)
 
 
 ###################
@@ -709,7 +719,7 @@ def security_group_get_all(context):
 
 
 def security_group_get(context, security_group_id):
-    """Get security group by its internal id."""
+    """Get security group by its id."""
     return IMPL.security_group_get(context, security_group_id)
 
 

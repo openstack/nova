@@ -24,10 +24,13 @@ import inspect
 import logging
 import os
 import sys
+import time
 
 from eventlet import event
 from eventlet import greenthread
 from eventlet import greenpool
+
+from sqlalchemy.exc import OperationalError
 
 from nova import context
 from nova import db
@@ -35,6 +38,7 @@ from nova import exception
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -203,6 +207,14 @@ class Service(object):
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
+
+                try:
+                    models.register_models()
+                except OperationalError:
+                    logging.exception(_("Data store is unreachable."
+                        " Trying again in %d seconds.") %
+                            FLAGS.sql_retry_interval)
+                    time.sleep(FLAGS.sql_retry_interval)
 
 
 def serve(*services):

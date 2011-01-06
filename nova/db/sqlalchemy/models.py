@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, Float, String, schema
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -164,11 +164,13 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return "instance-%08x" % self.id
 
     admin_pass = Column(String(255))
-
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -179,10 +181,6 @@ class Instance(BASE, NovaBase):
     @property
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
-
-    @property
-    def name(self):
-        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
@@ -220,6 +218,8 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    availability_zone = Column(String(255))
+
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
@@ -238,21 +238,6 @@ class Instance(BASE, NovaBase):
     #                     'shutdown', 'shutoff', 'crashed'])
 
 
-class InstanceDiagnostics(BASE, NovaBase):
-    """Represents a guest VM's diagnostics"""
-    __tablename__ = "instance_diagnostics"
-    id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
-
-    memory_available = Column(Float)
-    memory_free = Column(Float)
-    cpu_load = Column(Float)
-    disk_read = Column(Float)
-    disk_write = Column(Float)
-    net_tx = Column(Float)
-    net_rx = Column(Float)
-
-
 class InstanceActions(BASE, NovaBase):
     """Represents a guest VM's actions and results"""
     __tablename__ = "instance_actions"
@@ -266,8 +251,11 @@ class InstanceActions(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(12), unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return "volume-%08x" % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -292,10 +280,6 @@ class Volume(BASE, NovaBase):
 
     display_name = Column(String(255))
     display_description = Column(String(255))
-
-    @property
-    def name(self):
-        return self.ec2_id
 
 
 class Quota(BASE, NovaBase):
@@ -454,7 +438,7 @@ class AuthToken(BASE, NovaBase):
     """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(String(255))
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
@@ -560,10 +544,11 @@ def register_models():
     """Register Models and create metadata.
 
     Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
-    it will never need to be called explicitly elsewhere.
+    it will never need to be called explicitly elsewhere unless the
+    connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+    models = (Service, Instance, InstanceActions,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
