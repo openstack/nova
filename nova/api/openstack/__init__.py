@@ -20,8 +20,6 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-import time
-
 import logging
 import routes
 import traceback
@@ -29,15 +27,12 @@ import webob.dec
 import webob.exc
 import webob
 
-from nova import context
 from nova import flags
-from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import flavors
 from nova.api.openstack import images
-from nova.api.openstack import ratelimiting
 from nova.api.openstack import servers
 from nova.api.openstack import sharedipgroups
 
@@ -47,6 +42,19 @@ flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
 
+
+class FaultWrapper(wsgi.Middleware):
+    """Calls down the middleware stack, making exceptions into faults."""
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        try:
+            return req.get_response(self.application)
+        except Exception as ex:
+            logging.warn(_("Caught error: %s") % str(ex))
+            logging.error(traceback.format_exc())
+            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            return faults.Fault(exc)
 
 class APIRouter(wsgi.Router):
     """
@@ -105,3 +113,9 @@ def router_factory(global_cof, **local_conf):
 
 def versions_factory(global_conf, **local_conf):
     return Versions()
+
+
+def fault_wrapper_factory(global_conf, **local_conf):
+    def fwrap(app):
+        return FaultWrapper(app)
+    return fwrap
