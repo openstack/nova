@@ -19,7 +19,6 @@
 Implementation of SQLAlchemy backend.
 """
 
-import random
 import warnings
 
 from nova import db
@@ -236,6 +235,8 @@ def service_get_by_args(context, host, binary):
 def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
+    if not FLAGS.enable_new_services:
+        service_ref.disabled = True
     service_ref.save()
     return service_ref
 
@@ -604,30 +605,18 @@ def fixed_ip_update(context, address, values):
 ###################
 
 
-#TODO(gundlach): instance_create and volume_create are nearly identical
-#and should be refactored.  I expect there are other copy-and-paste
-#functions between the two of them as well.
-
-
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
 
     context - request context object
     values - dict containing column values.
-             'internal_id' is auto-generated and should not be specified.
     """
     instance_ref = models.Instance()
     instance_ref.update(values)
 
     session = get_session()
     with session.begin():
-        while instance_ref.internal_id == None:
-            # Instances have integer internal ids.
-            internal_id = random.randint(0, 2 ** 31 - 1)
-            if not instance_internal_id_exists(context, internal_id,
-                                               session=session):
-                instance_ref.internal_id = internal_id
         instance_ref.save(session=session)
     return instance_ref
 
@@ -749,35 +738,26 @@ def instance_get_project_vpn(context, project_id):
 
 
 @require_context
-def instance_get_by_internal_id(context, internal_id):
+def instance_get_by_id(context, instance_id):
     session = get_session()
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
-                         filter_by(internal_id=internal_id).\
+                         filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
                          filter_by(project_id=context.project_id).\
-                         filter_by(internal_id=internal_id).\
+                         filter_by(id=instance_id).\
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound(_('Instance %s not found') % (internal_id))
+        raise exception.NotFound(_('Instance %s not found') % (instance_id))
 
     return result
-
-
-@require_context
-def instance_internal_id_exists(context, internal_id, session=None):
-    if not session:
-        session = get_session()
-    return session.query(exists().\
-                         where(models.Instance.internal_id == internal_id)).\
-                   one()[0]
 
 
 @require_context
@@ -1315,10 +1295,6 @@ def volume_create(context, values):
 
     session = get_session()
     with session.begin():
-        while volume_ref.ec2_id == None:
-            ec2_id = utils.generate_uid('vol')
-            if not volume_ec2_id_exists(context, ec2_id, session=session):
-                volume_ref.ec2_id = ec2_id
         volume_ref.save(session=session)
     return volume_ref
 
@@ -1414,41 +1390,6 @@ def volume_get_all_by_project(context, project_id):
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
-
-
-@require_context
-def volume_get_by_ec2_id(context, ec2_id):
-    session = get_session()
-    result = None
-
-    if is_admin_context(context):
-        result = session.query(models.Volume).\
-                         filter_by(ec2_id=ec2_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Volume).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(ec2_id=ec2_id).\
-                         filter_by(deleted=False).\
-                         first()
-    else:
-        raise exception.NotAuthorized()
-
-    if not result:
-        raise exception.NotFound(_('Volume %s not found') % ec2_id)
-
-    return result
-
-
-@require_context
-def volume_ec2_id_exists(context, ec2_id, session=None):
-    if not session:
-        session = get_session()
-
-    return session.query(exists().\
-                   where(models.Volume.id == ec2_id)).\
-                   one()[0]
 
 
 @require_admin_context
