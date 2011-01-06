@@ -1918,7 +1918,7 @@ def console_get(context, console_id, instance_id=None):
         query = query.filter_by(instance_id=instance_id)
     result = query.options(joinedload('pool')).first()
     if not result:
-        idesc = _(" on instance %(instance_id)s") if instance_id else ""
-        raise exception.NotFound(_("No console with id %(instance)s") %
-                                  {'instance': idesc})
+        idesc = (_("on instance %s") % instance_id)  if instance_id else ""
+        raise exception.NotFound(_("No console with id %(console_id)s %(instance)s") %
+                                  {'instance': idesc, 'console_id': console_id})
     return result

@@ -36,20 +36,16 @@ class ConsoleAPI(base.Base):
     def __init__(self, **kwargs):
         super(ConsoleAPI, self).__init__(**kwargs)
 
-    def get_consoles(self, context, instance_internal_id):
-        instance = self.db.instance_get_by_internal_id(context,
-                                                       instance_internal_id)
-        return self.db.console_get_all_by_instance(context, instance['id'])
+    def get_consoles(self, context, instance_id):
+        return self.db.console_get_all_by_instance(context, instance_id)
 
-    def get_console(self, context, instance_internal_id, console_id):
-        return self.db.console_get(context, console_id, instance_internal_id)
+    def get_console(self, context, instance_id, console_id):
+        return self.db.console_get(context, console_id, instance_id)
 
-    def delete_console(self, context, instance_internal_id, console_id):
-        instance = self.db.instance_get_by_internal_id(context,
-                                                       instance_internal_id)
+    def delete_console(self, context, instance_id, console_id):
         console = self.db.console_get(context,
                                       console_id,
-                                      instance['id'])
+                                      instance_id)
         pool = console['pool']
         rpc.cast(context,
                  self.db.queue_get_for(context,
@@ -58,9 +54,8 @@ class ConsoleAPI(base.Base):
                  {"method": "remove_console",
                   "args": {"console_id": console['id']}})
 
-    def create_console(self, context, instance_internal_id):
-        instance = self.db.instance_get_by_internal_id(context,
-                                                       instance_internal_id)
+    def create_console(self, context, instance_id):
+        instance = self.db.instance_get(context, instance_id)
         #NOTE(mdragon): If we wanted to return this the console info
         #               here, as we would need to do a call.
         #               They can just do an index later to fetch
@@ -69,7 +64,7 @@ class ConsoleAPI(base.Base):
         rpc.cast(context,
                  self._get_console_topic(context, instance['host']),
                  {"method": "add_console",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def _get_console_topic(self, context, instance_host):
         topic = self.db.queue_get_for(context,

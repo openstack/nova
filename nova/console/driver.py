@@ -19,6 +19,8 @@
 ConsoleProxy base class that all ConsoleProxies should inherit from
 """
 
+import os
+
 from nova import exception
 
 
