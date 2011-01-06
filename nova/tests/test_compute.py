@@ -180,12 +180,12 @@ class ComputeTestCase(test.TestCase):
 
         # decorator should return False (fail) with locked nonadmin context
         self.compute.lock_instance(self.context, instance_id)
-        ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, False)
 
         # decorator should return None (success) with unlocked nonadmin context
         self.compute.unlock_instance(self.context, instance_id)
-        ret_val = self.compute.reboot_instance(non_admin_context,instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
