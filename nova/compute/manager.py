@@ -69,13 +69,13 @@ def checks_instance_lock(function):
                                                                    self,
                                                                    context,
                                                                    instance_id)
-        unlocked = not self.get_lock(context, instance_id)
+        locked = self.get_lock(context, instance_id)
         admin = context.is_admin
         logging.info(_("check_instance_lock: locked: |%s|"), locked)
         logging.info(_("check_instance_lock: admin: |%s|"), admin)
 
         # if admin or unlocked call function otherwise log error
-        if admin or unlocked:
+        if admin or not locked:
             logging.info(_("check_instance_lock: executing: |%s|"), function)
             function(*args, **kwargs)
         else:
