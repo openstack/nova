@@ -56,6 +56,7 @@ class FaultWrapper(wsgi.Middleware):
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
 
+
 class APIRouter(wsgi.Router):
     """
     Routes requests on the OpenStack API to the appropriate controller
