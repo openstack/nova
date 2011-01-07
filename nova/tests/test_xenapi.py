@@ -79,8 +79,8 @@ class XenAPIVolumeTestCase(test.TestCase):
         helper = volume_utils.VolumeHelper
         helper.XenAPI = session.get_imported_xenapi()
         vol = self._create_volume()
-        info = helper.parse_volume_info(vol['ec2_id'], '/dev/sdc')
-        label = 'SR-%s' % vol['ec2_id']
+        info = helper.parse_volume_info(vol['id'], '/dev/sdc')
+        label = 'SR-%s' % vol['id']
         description = 'Test-SR'
         sr_ref = helper.create_iscsi_storage(session, info, label, description)
         srs = xenapi_fake.get_all('SR')
@@ -97,7 +97,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         # oops, wrong mount point!
         self.assertRaises(volume_utils.StorageError,
                           helper.parse_volume_info,
-                          vol['ec2_id'],
+                          vol['id'],
                           '/dev/sd')
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
@@ -108,8 +108,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         volume = self._create_volume()
         instance = db.instance_create(self.values)
         xenapi_fake.create_vm(instance.name, 'Running')
-        result = conn.attach_volume(instance.name, volume['ec2_id'],
-                                    '/dev/sdc')
+        result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
         def check():
             # check that the VM has a VBD attached to it
@@ -134,7 +133,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.assertRaises(Exception,
                           conn.attach_volume,
                           instance.name,
-                          volume['ec2_id'],
+                          volume['id'],
                           '/dev/sdc')
 
     def tearDown(self):
@@ -250,15 +249,16 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
-        values = {'name': 1, 'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff'
-                  }
+        values = {
+            'name': 1,
+            'id': 1,
+            'project_id': self.project.id,
+            'user_id': self.user.id,
+            'image_id': 1,
+            'kernel_id': 2,
+            'ramdisk_id': 3,
+            'instance_type': 'm1.large',
+            'mac_address': 'aa:bb:cc:dd:ee:ff'}
         instance = db.instance_create(values)
         self.conn.spawn(instance)
         return instance
