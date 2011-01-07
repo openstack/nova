@@ -469,12 +469,13 @@ echo "######################################################################"
 killall dnsmasq
 service nova-network restart &>> $LOGFILE
 
-#Needed for KVM to initialize, or VMs will run in qemu mode and is very slow
+#Needed for KVM to initialize, VMs run in qemu mode otherwise and is very slow
 chgrp kvm /dev/kvm
 chmod g+rwx /dev/kvm
+echo
+echo 'The next thing you are going to want to do it get a VM to test with.  You can find a test VM how-to, and read more about custom image creation at "http://nova.openstack.org/adminguide/multi.node.install.html" and "http://wiki.openstack.org/GettingImages'
+echo
+echo 'Enjoy your new private cloud!'
 
-echo "The next thing you are going to want to do it get a VM to test with.  You can find a test VM how-to, and read more about custom image creation at "http://nova.openstack.org/adminguide/multi.node.install.html" and "http://wiki.openstack.org/GettingImages"
-echo
-echo "If you run into any problems, please feel free to contact the script maintainers.  You can also get assistance by stopping by irc.freenode.net (#openstack), sending a message to the OpenStack mailing list (openstack@lists.launchpad.net), or posting at "https://answers.launchpad.net/openstack"
-echo
-echo "Enjoy your new private cloud!"
+#If you run into any problems, please feel free to contact the script maintainers. 
+#You can also get assistance by stopping by irc.freenode.net - #openstack, sending a message to the OpenStack Users maillist - openstack@lists.launchpad.net, or posting at "https://answers.launchpad.net/openstack"

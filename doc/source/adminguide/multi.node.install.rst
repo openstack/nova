@@ -274,8 +274,6 @@ Step 9 - Spinning up a VM for testing
 
 The image that you will use here will be a ttylinux image, so this is a limited function server. You will be able to ping and SSH to this instance, but it is in no way a full production VM.  
 
-UPDATE: Due to `bug 661159 <https://bugs.launchpad.net/nova/+bug/661159>`_, we can’t use images without ramdisks yet, so we can’t use the classic Ubuntu cloud images from http://uec-images.ubuntu.com/releases/ yet. For the sake of this tutorial, we’ll use the `ttylinux images from Scott Moser instead <http://smoser.brickies.net/ubuntu/ttylinux-uec/>`_.
-
 Download the image, and publish to your bucket:
 
 ::
