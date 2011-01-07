@@ -89,7 +89,7 @@ def _fetch_s3_image(image, path, user, project):
     else:
         cmd = ['/usr/bin/curl', '--fail', '--silent', url]
         for (k, v) in headers.iteritems():
-            cmd += ['-H', '%s: %s' % (k, v)]
+            cmd += ['-H', '\'%s: %s\'' % (k, v)]
 
         cmd += ['-o', path]
         cmd_out = ' '.join(cmd)
