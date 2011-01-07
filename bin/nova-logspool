@@ -28,7 +28,6 @@ import sys
 
 
 class Request(object):
-    
     def __init__(self):
         self.time = ""
         self.host = ""
@@ -66,6 +65,7 @@ class Request(object):
         return {'traceback': self.trace, 'message': self.message,
                 'host': self.host, 'env': self.env, 'logger': self.logger,
                 'request_id': self.request_id}
+
 
 class LogReader(object):
     def __init__(self, filename):
