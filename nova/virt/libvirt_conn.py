@@ -68,6 +68,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -255,6 +258,13 @@ class LibvirtConnection(object):
         if not xml:
             raise exception.NotFound(_("No disk at %s") % mount_device)
         virt_dom.detachDevice(xml)
+
+    @exception.wrap_exception
+    def snapshot(self, instance, name):
+        """ Create snapshot from a running VM instance """
+        raise NotImplementedError(
+            _("Instance snapshotting is not supported for libvirt"
+              "at this time"))
 
     @exception.wrap_exception
     def reboot(self, instance):
@@ -576,6 +586,9 @@ class LibvirtConnection(object):
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def get_diagnostics(self, instance_name):
+        raise exception.APIError("diagnostics are not supported for libvirt")
 
     def get_disks(self, instance_name):
         """

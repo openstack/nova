@@ -17,15 +17,14 @@
 
 from webob import exc
 
+from nova import compute
 from nova import flags
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
-import nova.image.service
-
 from nova.api.openstack import common
 from nova.api.openstack import faults
-
+import nova.image.service
 
 FLAGS = flags.FLAGS
 
@@ -127,9 +126,11 @@ class Controller(wsgi.Controller):
         raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
-        # Only public images are supported for now, so a request to
-        # make a backup of a server cannot be supproted.
-        raise faults.Fault(exc.HTTPNotFound())
+        context = req.environ['nova.context']
+        env = self._deserialize(req.body, req)
+        instance_id = env["image"]["serverId"]
+        name = env["image"]["name"]
+        return compute.API().snapshot(context, instance_id, name)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that

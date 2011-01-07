@@ -22,6 +22,8 @@ Unit Tests for remote procedure calls using queue
 
 import mox
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import rpc
@@ -72,6 +74,30 @@ class ServiceManagerTestCase(test.TestCase):
         self.assertEqual(serv.test_method(), 'service')
 
 
+class ServiceFlagsTestCase(test.TestCase):
+    def test_service_enabled_on_create_based_on_flag(self):
+        self.flags(enable_new_services=True)
+        host = 'foo'
+        binary = 'nova-fake'
+        app = service.Service.create(host=host, binary=binary)
+        app.start()
+        app.stop()
+        ref = db.service_get(context.get_admin_context(), app.service_id)
+        db.service_destroy(context.get_admin_context(), app.service_id)
+        self.assert_(not ref['disabled'])
+
+    def test_service_disabled_on_create_based_on_flag(self):
+        self.flags(enable_new_services=False)
+        host = 'foo'
+        binary = 'nova-fake'
+        app = service.Service.create(host=host, binary=binary)
+        app.start()
+        app.stop()
+        ref = db.service_get(context.get_admin_context(), app.service_id)
+        db.service_destroy(context.get_admin_context(), app.service_id)
+        self.assert_(ref['disabled'])
+
+
 class ServiceTestCase(test.TestCase):
     """Test cases for Services"""
 
@@ -112,8 +138,7 @@ class ServiceTestCase(test.TestCase):
         service_ref = {'host': host,
                        'binary': binary,
                        'report_count': 0,
-                       'id': 1,
-                       'availability_zone': 'nova'}
+                       'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
                                        host,
@@ -143,8 +168,8 @@ class ServiceTestCase(test.TestCase):
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
-                          'id': 1,
-                          'availability_zone': 'nova'}
+                          'availability_zone': 'nova',
+                          'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
                                       host,
@@ -177,8 +202,8 @@ class ServiceTestCase(test.TestCase):
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
-                          'id': 1,
-                          'availability_zone': 'nova'}
+                          'availability_zone': 'nova',
+                          'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
                                       host,
@@ -210,8 +235,8 @@ class ServiceTestCase(test.TestCase):
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
-                          'id': 1,
-                          'availability_zone': 'nova'}
+                          'availability_zone': 'nova',
+                          'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
                                       host,
