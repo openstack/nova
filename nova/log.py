@@ -157,7 +157,7 @@ class NovaLogger(logging.Logger):
             extra = {}
         if context:
             extra.update(_dictify_context(context))
-        extra.update({"nova_version": version.string_with_vcs()})
+        extra.update({"nova_version": version.version_string_with_vcs()})
         logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):
