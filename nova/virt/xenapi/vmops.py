@@ -138,8 +138,9 @@ class VMOps(object):
             else:
                 # Must be the instance name
                 instance_name = instance_or_vm
-        except AttributeError:
+        except (AttributeError, KeyError):
             # Not a string; must be a vm instance
+            # Note the the KeyError will only happen with fakes.py
             instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
@@ -297,9 +298,12 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
         self._wait_with_callback(task, callback)
 
-    def get_info(self, instance):
+    def get_info(self, instance_id):
         """Return data about VM instance"""
-        vm = self._get_vm_opaque_ref(instance)
+        vm = VMHelper.lookup(self._session, instance_id)
+        if vm is None:
+            raise exception.NotFound(_('Instance not'
+                                       ' found %s') % instance_id)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
