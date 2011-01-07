@@ -285,6 +285,7 @@ class ComputeManager(manager.Manager):
         self.driver.snapshot(instance_ref, name)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
         """Set the root/admin password for an instance on this server."""
         context = context.elevated()

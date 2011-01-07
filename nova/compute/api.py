@@ -239,8 +239,8 @@ class API(base.Base):
 
         host = instance['host']
         if host:
-            self._cast_compute_message('terminate_instance', context,
-                    instance_id)
+            self._cast_compute_message('snapshot_instance', context,
+                    instance_id, host)
         else:
             self.db.instance_destroy(context, instance_id)
 
@@ -268,12 +268,13 @@ class API(base.Base):
             project_id)
         return self.db.instance_get_all(context)
 
-    def _cast_compute_message(self, method, context, instance_id):
+    def _cast_compute_message(self, method, context, instance_id, host=None):
         """Generic handler for RPC calls to compute."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
+        if not host:
+            instance = self.get(context, instance_id)
+            host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        kwargs = {'method': method, 'args': {'instance_id': instance['id']}}
+        kwargs = {'method': method, 'args': {'instance_id': instance_id}}
         rpc.cast(context, queue, kwargs)
 
     def snapshot(self, context, instance_id, name):

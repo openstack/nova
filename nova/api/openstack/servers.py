@@ -144,17 +144,14 @@ class Controller(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        func = None
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            func = self.compute_api.set_admin_password
-        if 'name' in inst_dict['server']:
-            update_dict['display_name'] = inst_dict['server']['name']
-        if func:
             try:
-                func(ctxt, id)
+                self.compute_api.set_admin_password(ctxt, id)
             except exception.TimeoutException, e:
                 return exc.HTTPRequestTimeout()
+        if 'name' in inst_dict['server']:
+            update_dict['display_name'] = inst_dict['server']['name']
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
