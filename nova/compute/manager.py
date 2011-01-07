@@ -37,7 +37,6 @@ terminating it.
 import datetime
 import random
 import string
->>>>>>> MERGE-SOURCE
 import functools
 
 from nova import exception
