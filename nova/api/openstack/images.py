@@ -17,15 +17,14 @@
 
 from webob import exc
 
+from nova import compute
 from nova import flags
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
-import nova.image.service
-
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.compute import api as compute_api
+import nova.image.service
 
 FLAGS = flags.FLAGS
 

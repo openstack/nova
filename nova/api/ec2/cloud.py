@@ -31,19 +31,19 @@ import os
 from nova import context
 import IPy
 
+from nova import compute
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import quota
+from nova import network
 from nova import rpc
 from nova import utils
-from nova.compute import api as compute_api
+from nova import volume
 from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
-flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
 InvalidInputException = exception.InvalidInputException
 
@@ -71,16 +71,16 @@ def _gen_key(context, user_id, key_name):
     return {'private_key': private_key, 'fingerprint': fingerprint}
 
 
-def ec2_id_to_internal_id(ec2_id):
-    """Convert an ec2 ID (i-[base 36 number]) to an internal id (int)"""
+def ec2_id_to_id(ec2_id):
+    """Convert an ec2 ID (i-[base 36 number]) to an instance id (int)"""
     return int(ec2_id[2:], 36)
 
 
-def internal_id_to_ec2_id(internal_id):
-    """Convert an internal ID (int) to an ec2 ID (i-[base 36 number])"""
+def id_to_ec2_id(instance_id):
+    """Convert an instance ID (int) to an ec2 ID (i-[base 36 number])"""
     digits = []
-    while internal_id != 0:
-        internal_id, remainder = divmod(internal_id, 36)
+    while instance_id != 0:
+        instance_id, remainder = divmod(instance_id, 36)
         digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
     return "i-%s" % ''.join(reversed(digits))
 
@@ -91,10 +91,11 @@ class CloudController(object):
  sent to the other nodes.
 """
     def __init__(self):
-        self.network_manager = utils.import_object(FLAGS.network_manager)
         self.image_service = utils.import_object(FLAGS.image_service)
-        self.compute_api = compute_api.ComputeAPI(self.network_manager,
-                                                  self.image_service)
+        self.network_api = network.API()
+        self.volume_api = volume.API()
+        self.compute_api = compute.API(self.image_service, self.network_api,
+                                       self.volume_api)
         self.setup()
 
     def __str__(self):
@@ -118,7 +119,8 @@ class CloudController(object):
 
     def _get_mpi_data(self, context, project_id):
         result = {}
-        for instance in self.compute_api.get_instances(context, project_id):
+        for instance in self.compute_api.get_all(context,
+                                                 project_id=project_id):
             if instance['fixed_ip']:
                 line = '%s slots=%d' % (instance['fixed_ip']['address'],
                                         instance['vcpus'])
@@ -140,7 +142,7 @@ class CloudController(object):
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
-        instance_ref = db.fixed_ip_get_instance(ctxt, address)
+        instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
@@ -152,7 +154,7 @@ class CloudController(object):
         hostname = instance_ref['hostname']
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
-        ec2_id = internal_id_to_ec2_id(instance_ref['internal_id'])
+        ec2_id = id_to_ec2_id(instance_ref['id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -478,8 +480,8 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
-        internal_id = ec2_id_to_internal_id(ec2_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
+        instance_id = ec2_id_to_id(ec2_id)
+        instance_ref = self.compute_api.get(context, instance_id)
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
                                      instance_ref['host']),
@@ -492,27 +494,22 @@ class CloudController(object):
                 "output": base64.b64encode(output)}
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
-        if context.user.is_admin():
-            volumes = db.volume_get_all(context)
-        else:
-            volumes = db.volume_get_all_by_project(context, context.project_id)
-
+        volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
-                   if volume_id is None or v['ec2_id'] in volume_id]
-
+                   if volume_id is None or v['id'] in volume_id]
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
         instance_ec2_id = None
         instance_data = None
         if volume.get('instance', None):
-            internal_id = volume['instance']['internal_id']
-            instance_ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_id = volume['instance']['id']
+            instance_ec2_id = id_to_ec2_id(instance_id)
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = volume['ec2_id']
+        v['volumeId'] = volume['id']
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -539,95 +536,17 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, size, **kwargs):
-        # check quota
-        if quota.allowed_volumes(context, 1, size) < 1:
-            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
-                         context.project_id, size)
-            raise quota.QuotaError("Volume quota exceeded. You cannot "
-                                   "create a volume of size %s" % size)
-        vol = {}
-        vol['size'] = size
-        vol['user_id'] = context.user.id
-        vol['project_id'] = context.project_id
-        vol['availability_zone'] = FLAGS.storage_availability_zone
-        vol['status'] = "creating"
-        vol['attach_status'] = "detached"
-        vol['display_name'] = kwargs.get('display_name')
-        vol['display_description'] = kwargs.get('display_description')
-        volume_ref = db.volume_create(context, vol)
-
-        rpc.cast(context,
-                 FLAGS.scheduler_topic,
-                 {"method": "create_volume",
-                  "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume_ref['id']}})
-
+        volume = self.volume_api.create(context, size,
+                                        kwargs.get('display_name'),
+                                        kwargs.get('display_description'))
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
         return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
-    def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
-        if not re.match("^/dev/[a-z]d[a-z]+$", device):
-            raise exception.ApiError(_("Invalid device specified: %s. "
-                                     "Example device: /dev/vdb") % device)
-        # TODO(vish): abstract status checking?
-        if volume_ref['status'] != "available":
-            raise exception.ApiError(_("Volume status must be available"))
-        if volume_ref['attach_status'] == "attached":
-            raise exception.ApiError(_("Volume is already attached"))
-        internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
-        host = instance_ref['host']
-        rpc.cast(context,
-                 db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "attach_volume",
-                  "args": {"volume_id": volume_ref['id'],
-                           "instance_id": instance_ref['id'],
-                           "mountpoint": device}})
-        return {'attachTime': volume_ref['attach_time'],
-                'device': volume_ref['mountpoint'],
-                'instanceId': instance_ref['id'],
-                'requestId': context.request_id,
-                'status': volume_ref['attach_status'],
-                'volumeId': volume_ref['id']}
-
-    def detach_volume(self, context, volume_id, **kwargs):
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
-        instance_ref = db.volume_get_instance(context.elevated(),
-                                              volume_ref['id'])
-        if not instance_ref:
-            raise exception.ApiError(_("Volume isn't attached to anything!"))
-        # TODO(vish): abstract status checking?
-        if volume_ref['status'] == "available":
-            raise exception.ApiError(_("Volume is already detached"))
-        try:
-            host = instance_ref['host']
-            rpc.cast(context,
-                     db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "detach_volume",
-                      "args": {"instance_id": instance_ref['id'],
-                               "volume_id": volume_ref['id']}})
-        except exception.NotFound:
-            # If the instance doesn't exist anymore,
-            # then we need to call detach blind
-            db.volume_detached(context)
-        internal_id = instance_ref['internal_id']
-        ec2_id = internal_id_to_ec2_id(internal_id)
-        return {'attachTime': volume_ref['attach_time'],
-                'device': volume_ref['mountpoint'],
-                'instanceId': internal_id,
-                'requestId': context.request_id,
-                'status': volume_ref['attach_status'],
-                'volumeId': volume_ref['id']}
-
-    def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
-            return None
-        if not isinstance(lst, list):
-            lst = [lst]
-        return [{label: x} for x in lst]
+    def delete_volume(self, context, volume_id, **kwargs):
+        self.volume_api.delete(context, volume_id)
+        return True
 
     def update_volume(self, context, volume_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
@@ -636,8 +555,35 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            db.volume_update(context, volume_id, kwargs)
+            self.volume_api.update(context, volume_id, kwargs)
         return True
+
+    def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        self.compute_api.attach_volume(context, instance_id, volume_id, device)
+        volume = self.volume_api.get(context, volume_id)
+        return {'attachTime': volume['attach_time'],
+                'device': volume['mountpoint'],
+                'instanceId': instance_id,
+                'requestId': context.request_id,
+                'status': volume['attach_status'],
+                'volumeId': volume_id}
+
+    def detach_volume(self, context, volume_id, **kwargs):
+        volume = self.volume_api.get(context, volume_id)
+        instance = self.compute_api.detach_volume(context, volume_id)
+        return {'attachTime': volume['attach_time'],
+                'device': volume['mountpoint'],
+                'instanceId': id_to_ec2_id(instance['id']),
+                'requestId': context.request_id,
+                'status': volume['attach_status'],
+                'volumeId': volume_id}
+
+    def _convert_to_set(self, lst, label):
+        if lst == None or lst == []:
+            return None
+        if not isinstance(lst, list):
+            lst = [lst]
+        return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
@@ -646,24 +592,20 @@ class CloudController(object):
         return {'reservationSet': self._format_instances(context)}
 
     def _format_run_instances(self, context, reservation_id):
-        i = self._format_instances(context, reservation_id)
+        i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, reservation_id=None):
+    def _format_instances(self, context, **kwargs):
         reservations = {}
-        if reservation_id:
-            instances = db.instance_get_all_by_reservation(context,
-                                                           reservation_id)
-        else:
-            instances = self.compute_api.get_instances(context)
+        instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
-            internal_id = instance['internal_id']
-            ec2_id = internal_id_to_ec2_id(internal_id)
+            instance_id = instance['id']
+            ec2_id = id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
             i['imageId'] = instance['image_id']
             i['instanceState'] = {
@@ -716,8 +658,8 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                internal_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
-                ec2_id = internal_id_to_ec2_id(internal_id)
+                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
             if context.user.is_admin():
@@ -728,69 +670,25 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
-        # check quota
-        if quota.allowed_floating_ips(context, 1) < 1:
-            logging.warn(_("Quota exceeeded for %s, tried to allocate "
-                           "address"),
-                         context.project_id)
-            raise quota.QuotaError(_("Address quota exceeded. You cannot "
-                                   "allocate any more addresses"))
-        # NOTE(vish): We don't know which network host should get the ip
-        #             when we allocate, so just send it to any one.  This
-        #             will probably need to move into a network supervisor
-        #             at some point.
-        public_ip = rpc.call(context,
-                             FLAGS.network_topic,
-                             {"method": "allocate_floating_ip",
-                              "args": {"project_id": context.project_id}})
+        public_ip = self.network_api.allocate_floating_ip(context)
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): We don't know which network host should get the ip
-        #             when we deallocate, so just send it to any one.  This
-        #             will probably need to move into a network supervisor
-        #             at some point.
-        rpc.cast(context,
-                 FLAGS.network_topic,
-                 {"method": "deallocate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address']}})
+        self.network_api.release_floating_ip(context, public_ip)
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        internal_id = ec2_id_to_internal_id(instance_id)
-        instance_ref = self.compute_api.get_instance(context, internal_id)
-        fixed_address = db.instance_get_fixed_address(context,
-                                                      instance_ref['id'])
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): Perhaps we should just pass this on to compute and
-        #             let compute communicate with network.
-        network_topic = self.compute_api.get_network_topic(context,
-                                                           internal_id)
-        rpc.cast(context,
-                 network_topic,
-                 {"method": "associate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address'],
-                           "fixed_address": fixed_address}})
+        instance_id = ec2_id_to_id(instance_id)
+        self.compute_api.associate_floating_ip(context, instance_id, public_ip)
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
-        floating_ip_ref = db.floating_ip_get_by_address(context, public_ip)
-        # NOTE(vish): Get the topic from the host name of the network of
-        #             the associated fixed ip.
-        if not floating_ip_ref.get('fixed_ip'):
-            raise exception.ApiError('Address is not associated.')
-        host = floating_ip_ref['fixed_ip']['network']['host']
-        topic = db.queue_get_for(context, FLAGS.network_topic, host)
-        rpc.cast(context,
-                 topic,
-                 {"method": "disassociate_floating_ip",
-                  "args": {"floating_address": floating_ip_ref['address']}})
+        self.network_api.disassociate_floating_ip(context, public_ip)
         return {'disassociateResponse': ["Address disassociated."]}
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
-        instances = self.compute_api.create_instances(context,
+        instances = self.compute_api.create(context,
             instance_types.get_by_type(kwargs.get('instance_type', None)),
             kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
@@ -798,13 +696,13 @@ class CloudController(object):
             kernel_id=kwargs.get('kernel_id', None),
             ramdisk_id=kwargs.get('ramdisk_id'),
             display_name=kwargs.get('display_name'),
-            description=kwargs.get('display_description'),
+            display_description=kwargs.get('display_description'),
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
                                   'AvailabilityZone'),
-            generate_hostname=internal_id_to_ec2_id)
+            generate_hostname=id_to_ec2_id)
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
@@ -813,27 +711,27 @@ class CloudController(object):
         instance_id is a kwarg so its name cannot be modified."""
         logging.debug("Going to start terminating instances")
         for ec2_id in instance_id:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.delete_instance(context, internal_id)
+            instance_id = ec2_id_to_id(ec2_id)
+            self.compute_api.delete(context, instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         for ec2_id in instance_id:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            self.compute_api.reboot(context, internal_id)
+            instance_id = ec2_id_to_id(ec2_id)
+            self.compute_api.reboot(context, instance_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.rescue(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        self.compute_api.rescue(context, instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        internal_id = ec2_id_to_internal_id(instance_id)
-        self.compute_api.unrescue(context, internal_id)
+        instance_id = ec2_id_to_id(instance_id)
+        self.compute_api.unrescue(context, instance_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
@@ -843,24 +741,8 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            internal_id = ec2_id_to_internal_id(ec2_id)
-            inst = self.compute_api.get_instance(context, internal_id)
-            db.instance_update(context, inst['id'], kwargs)
-        return True
-
-    def delete_volume(self, context, volume_id, **kwargs):
-        # TODO: return error if not authorized
-        volume_ref = db.volume_get_by_ec2_id(context, volume_id)
-        if volume_ref['status'] != "available":
-            raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
-        db.volume_update(context, volume_ref['id'], {'status': 'deleting',
-                                                     'terminated_at': now})
-        host = volume_ref['host']
-        rpc.cast(context,
-                 db.queue_get_for(context, FLAGS.volume_topic, host),
-                            {"method": "delete_volume",
-                             "args": {"volume_id": volume_ref['id']}})
+            instance_id = ec2_id_to_id(ec2_id)
+            self.compute_api.update(context, instance_id, **kwargs)
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):
