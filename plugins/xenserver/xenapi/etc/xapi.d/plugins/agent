@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2010 Citrix Systems, Inc.
-# Copyright 2010 United States Government as represented by the
+# Copyright (c) 2011 Citrix Systems, Inc.
+# Copyright 2011 OpenStack LLC.
+# Copyright 2011 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 #
@@ -138,7 +139,8 @@ def _run_command(cmd):
     Otherwise, the output from stdout is returned.
     """
     pipe = subprocess.PIPE
-    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe, stderr=pipe, close_fds=True)
+    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
     proc.wait()
     err = proc.stderr.read()
     if err:

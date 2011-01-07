@@ -156,8 +156,6 @@ class Controller(wsgi.Controller):
             except exception.TimeoutException, e:
                 return exc.HTTPRequestTimeout()
         try:
-            # The ID passed in is actually the internal_id of the
-            # instance, not the value of the id column in the DB.
             instance = self.compute_api.get(ctxt, id)
             self.compute_api.update(ctxt, instance.id, **update_dict)
         except exception.NotFound:

@@ -516,6 +516,12 @@ class SimpleDH(object):
     the openssl binary be installed on the system on which this is run,
     as it uses that to handle the encryption and decryption. If openssl
     is not available, a RuntimeError will be raised.
+
+    Please note that nova already uses the M2Crypto library for most
+    cryptographic functions, and that it includes a Diffie-Hellman
+    implementation. However, that is a much more complex implementation,
+    and is not compatible with the DH algorithm that the agent uses. Hence
+    the need for this 'simple' version.
     """
     def __init__(self, prime=None, base=None, secret=None):
         """You can specify the values for prime and base if you wish;

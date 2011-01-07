@@ -276,7 +276,6 @@ class XenAPISession(object):
                     error_info))
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
-
         except self.XenAPI.Failure, exc:
             logging.warn(exc)
             done.send_exception(*sys.exc_info())

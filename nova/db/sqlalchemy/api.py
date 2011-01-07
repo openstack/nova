@@ -670,29 +670,6 @@ def instance_get(context, instance_id, session=None):
     return result
 
 
-@require_context
-def instance_get_by_internal_id(context, internal_id):
-    session = get_session()
-
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload('security_groups')).\
-                         filter_by(internal_id=internal_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload('security_groups')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(internal_id=internal_id).\
-                         filter_by(deleted=False).\
-                         first()
-    if not result:
-        raise exception.NotFound(_('Instance %s not found') % (internal_id))
-
-    return result
-
-
 @require_admin_context
 def instance_get_all(context):
     session = get_session()
