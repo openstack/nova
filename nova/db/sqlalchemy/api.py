@@ -650,7 +650,6 @@ def instance_get(context, instance_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          filter_by(id=instance_id).\
@@ -659,7 +658,6 @@ def instance_get(context, instance_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          filter_by(project_id=context.project_id).\

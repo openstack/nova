@@ -24,7 +24,6 @@ import datetime
 import logging
 import time
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -210,7 +209,7 @@ class API(base.Base):
     def trigger_security_group_rules_refresh(self, context, security_group_id):
         """Called when a rule is added to or removed from a security_group"""
 
-        security_group = db.security_group_get(context, security_group_id)
+        security_group = self.db.security_group_get(context, security_group_id)
 
         hosts = set()
         for instance in security_group['instances']:
@@ -232,7 +231,8 @@ class API(base.Base):
         # First, we get the security group rules that reference this group as
         # the grantee..
         security_group_rules = \
-                db.security_group_rule_get_by_security_group_grantee(context,
+                self.db.security_group_rule_get_by_security_group_grantee(
+                                                                     context,
                                                                      group_id)
 
         # ..then we distill the security groups to which they belong..
