@@ -19,16 +19,17 @@
 """
 SQLAlchemy database backend
 """
-import logging
 import time
 
 from sqlalchemy.exc import OperationalError
 
 from nova import flags
+from nova import log as logging
 from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.db.sqlalchemy')
 
 
 for i in xrange(FLAGS.sql_max_retries):
@@ -39,6 +40,6 @@ for i in xrange(FLAGS.sql_max_retries):
         models.register_models()
         break
     except OperationalError:
-        logging.exception(_("Data store %s is unreachable."
-                            " Trying again in %d seconds.") %
-                          (FLAGS.sql_connection, FLAGS.sql_retry_interval))
+        LOG.exception(_("Data store %s is unreachable."
+                        " Trying again in %d seconds."),
+                      FLAGS.sql_connection, FLAGS.sql_retry_interval)

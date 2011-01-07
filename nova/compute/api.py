@@ -21,12 +21,12 @@ Handles all requests relating to instances (guest vms).
 """
 
 import datetime
-import logging
 import time
 
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import network
 from nova import quota
 from nova import rpc
@@ -36,6 +36,7 @@ from nova.compute import instance_types
 from nova.db import base
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.compute.api')
 
 
 def generate_default_hostname(instance_id):
@@ -63,13 +64,13 @@ class API(base.Base):
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found in get_network_topic",
-                            instance_id)
+            LOG.warning(_("Instance %d was not found in get_network_topic"),
+                        instance_id)
             raise e
 
         host = instance['host']
         if not host:
-            raise exception.Error("Instance %d has no host" % instance_id)
+            raise exception.Error(_("Instance %d has no host") % instance_id)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         return rpc.call(context,
                         topic,
@@ -88,10 +89,10 @@ class API(base.Base):
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
-            logging.warn("Quota exceeeded for %s, tried to run %s instances",
-                         context.project_id, min_count)
-            raise quota.QuotaError("Instance quota exceeded. You can only "
-                                   "run %s more instances of this type." %
+            LOG.warn(_("Quota exceeeded for %s, tried to run %s instances"),
+                     context.project_id, min_count)
+            raise quota.QuotaError(_("Instance quota exceeded. You can only "
+                                     "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
         is_vpn = image_id == FLAGS.vpn_image_id
@@ -105,7 +106,7 @@ class API(base.Base):
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
                 ramdisk_id = None
-                logging.debug("Creating a raw instance")
+                LOG.debug(_("Creating a raw instance"))
             # Make sure we have access to kernel and ramdisk (if not raw)
             if kernel_id:
                 self.image_service.show(context, kernel_id)
@@ -152,7 +153,7 @@ class API(base.Base):
 
         elevated = context.elevated()
         instances = []
-        logging.debug(_("Going to run %s instances..."), num_instances)
+        LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
@@ -176,7 +177,7 @@ class API(base.Base):
             instance = self.update(context, instance_id, **updates)
             instances.append(instance)
 
-            logging.debug(_("Casting to scheduler for %s/%s's instance %s"),
+            LOG.debug(_("Casting to scheduler for %s/%s's instance %s"),
                           context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
@@ -218,17 +219,17 @@ class API(base.Base):
         return self.db.instance_update(context, instance_id, kwargs)
 
     def delete(self, context, instance_id):
-        logging.debug("Going to try and terminate %s" % instance_id)
+        LOG.debug(_("Going to try and terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound as e:
-            logging.warning(_("Instance %s was not found during terminate"),
-                            instance_id)
+            LOG.warning(_("Instance %d was not found during terminate"),
+                        instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning(_("Instance %s is already being terminated"),
-                            instance_id)
+            LOG.warning(_("Instance %d is already being terminated"),
+                        instance_id)
             return
 
         self.update(context,

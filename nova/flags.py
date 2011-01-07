@@ -29,8 +29,6 @@ import sys
 
 import gflags
 
-from nova import utils
-
 
 class FlagValues(gflags.FlagValues):
     """Extension of gflags.FlagValues that allows undefined and runtime flags.
@@ -213,10 +211,10 @@ DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('glance_port', 9292, 'glance port')
-DEFINE_string('glance_host', utils.get_my_ip(), 'glance host')
+DEFINE_string('glance_host', '127.0.0.1', 'glance host')
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_string('s3_host', utils.get_my_ip(), 's3 host (for infrastructure)')
-DEFINE_string('s3_dmz', utils.get_my_ip(), 's3 dmz ip (for instances)')
+DEFINE_string('s3_host', '127.0.0.1', 's3 host (for infrastructure)')
+DEFINE_string('s3_dmz', '127.0.0.1', 's3 dmz ip (for instances)')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
@@ -236,8 +234,8 @@ DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_string('ec2_prefix', 'http', 'prefix for ec2')
-DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-DEFINE_string('cc_dmz', utils.get_my_ip(), 'internal ip of api server')
+DEFINE_string('cc_host', '127.0.0.1', 'ip of api server')
+DEFINE_string('cc_dmz', '127.0.0.1', 'internal ip of api server')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_suffix', '/services/Cloud', 'suffix for ec2')
 
