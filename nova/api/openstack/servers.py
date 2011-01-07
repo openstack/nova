@@ -170,6 +170,50 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def lock(self, req, id):
+        """
+        lock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("Compute.api::lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unlock(self, req, id):
+        """
+        unlock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.unlock(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("Compute.api::unlock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def get_lock(self, req, id):
+        """
+        return the boolean state of (instance with id)'s lock
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.get_lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            logging.error(_("Compute.api::get_lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
