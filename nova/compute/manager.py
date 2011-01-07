@@ -38,6 +38,7 @@ import datetime
 import logging
 import random
 import string
+import functools
 
 from nova import exception
 from nova import flags
@@ -55,6 +56,38 @@ flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
 flags.DEFINE_integer('password_length', 12,
                     'Length of generated admin passwords')
+
+
+def checks_instance_lock(function):
+    """
+    decorator used for preventing action against locked instances
+    unless, of course, you happen to be admin
+
+    """
+
+    @functools.wraps(function)
+    def decorated_function(self, context, instance_id, *args, **kwargs):
+
+        logging.info(_("check_instance_lock: decorating: |%s|"), function)
+        logging.info(_("check_instance_lock: arguments: |%s| |%s| |%s|"),
+                                                                   self,
+                                                                   context,
+                                                                   instance_id)
+        locked = self.get_lock(context, instance_id)
+        admin = context.is_admin
+        logging.info(_("check_instance_lock: locked: |%s|"), locked)
+        logging.info(_("check_instance_lock: admin: |%s|"), admin)
+
+        # if admin or unlocked call function otherwise log error
+        if admin or not locked:
+            logging.info(_("check_instance_lock: executing: |%s|"), function)
+            function(self, context, instance_id, *args, **kwargs)
+        else:
+            logging.error(_("check_instance_lock: not executing |%s|"),
+                                                              function)
+            return False
+
+    return decorated_function
 
 
 class ComputeManager(manager.Manager):
@@ -162,6 +195,7 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
         context = context.elevated()
@@ -206,6 +240,7 @@ class ComputeManager(manager.Manager):
         self.db.instance_destroy(context, instance_id)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this server."""
         context = context.elevated()
@@ -279,6 +314,7 @@ class ComputeManager(manager.Manager):
         return "".join([random.choice(chrs) for i in xrange(length)])
 
     @exception.wrap_exception
+    @checks_instance_lock
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
@@ -294,6 +330,7 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def unrescue_instance(self, context, instance_id):
         """Rescue an instance on this server."""
         context = context.elevated()
@@ -313,6 +350,7 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this server."""
         context = context.elevated()
@@ -330,6 +368,7 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    @checks_instance_lock
     def unpause_instance(self, context, instance_id):
         """Unpause a paused instance on this server."""
         context = context.elevated()
@@ -357,8 +396,12 @@ class ComputeManager(manager.Manager):
             return self.driver.get_diagnostics(instance_ref)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def suspend_instance(self, context, instance_id):
-        """suspend the instance with instance_id"""
+        """
+        suspend the instance with instance_id
+
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -373,8 +416,12 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    @checks_instance_lock
     def resume_instance(self, context, instance_id):
-        """resume the suspended instance with instance_id"""
+        """
+        resume the suspended instance with instance_id
+
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -389,6 +436,41 @@ class ComputeManager(manager.Manager):
                                                        result))
 
     @exception.wrap_exception
+    def lock_instance(self, context, instance_id):
+        """
+        lock the instance with instance_id
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: locking'), instance_id)
+        self.db.instance_update(context, instance_id, {'locked': True})
+
+    @exception.wrap_exception
+    def unlock_instance(self, context, instance_id):
+        """
+        unlock the instance with instance_id
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        logging.debug(_('instance %s: unlocking'), instance_id)
+        self.db.instance_update(context, instance_id, {'locked': False})
+
+    @exception.wrap_exception
+    def get_lock(self, context, instance_id):
+        """
+        return the boolean state of (instance with instance_id)'s lock
+
+        """
+        context = context.elevated()
+        logging.debug(_('instance %s: getting locked state'), instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+        return instance_ref['locked']
+
+    @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
         context = context.elevated()
@@ -398,6 +480,7 @@ class ComputeManager(manager.Manager):
         return self.driver.get_console_output(instance_ref)
 
     @exception.wrap_exception
+    @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
         context = context.elevated()
@@ -427,6 +510,7 @@ class ComputeManager(manager.Manager):
         return True
 
     @exception.wrap_exception
+    @checks_instance_lock
     def detach_volume(self, context, instance_id, volume_id):
         """Detach a volume from an instance."""
         context = context.elevated()

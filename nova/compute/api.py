@@ -147,6 +147,7 @@ class API(base.Base):
             'user_data': user_data or '',
             'key_name': key_name,
             'key_data': key_data,
+            'locked': False,
             'availability_zone': availability_zone}
 
         elevated = context.elevated()
@@ -321,6 +322,38 @@ class API(base.Base):
     def set_admin_password(self, context, instance_id):
         """Set the root/admin password for the given instance."""
         self._cast_compute_message('set_admin_password', context, instance_id)
+
+    def lock(self, context, instance_id):
+        """
+        lock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "lock_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def unlock(self, context, instance_id):
+        """
+        unlock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unlock_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def get_lock(self, context, instance_id):
+        """
+        return the boolean state of (instance with instance_id)'s lock
+
+        """
+        instance = self.get_instance(context, instance_id)
+        return instance['locked']
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
