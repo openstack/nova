@@ -80,7 +80,8 @@ class VolumeDriver(object):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+        out, err = self._execute("sudo vgs")
+        if not FLAGS.volume_group in out:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
