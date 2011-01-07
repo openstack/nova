@@ -35,7 +35,8 @@ Contributing Code
 
 To contribute code, sign up for a Launchpad account and sign a contributor license agreement,
 available on the `OpenStack Wiki <http://wiki.openstack.org/CLA>`_. Once the CLA is signed you 
-can contribute code through the Bazaar version control system which is related to your Launchpad account.
+can contribute code through the Bazaar version control system which is related to your Launchpad 
+account.  See the :doc:`devref/development.environment` page to get started.
 
 #openstack on Freenode IRC Network
 ----------------------------------

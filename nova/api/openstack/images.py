@@ -17,15 +17,14 @@
 
 from webob import exc
 
+from nova import compute
 from nova import flags
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
-import nova.image.service
-
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.compute import api as compute_api
+import nova.image.service
 
 FLAGS = flags.FLAGS
 
@@ -131,7 +130,7 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req)
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-        return compute_api.ComputeAPI().snapshot(context, instance_id, name)
+        return compute.API().snapshot(context, instance_id, name)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that
