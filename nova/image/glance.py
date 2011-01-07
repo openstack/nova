@@ -89,7 +89,7 @@ class ParallaxClient(object):
         """
         try:
             c = self.connection_type(self.netloc, self.port)
-            c.request("GET", "images/detail")
+            c.request("GET", "/images/detail")
             res = c.getresponse()
             if res.status == 200:
                 # Parallax returns a JSONified dict(images=image_list)
@@ -108,12 +108,12 @@ class ParallaxClient(object):
         """
         try:
             c = self.connection_type(self.netloc, self.port)
-            c.request("GET", "images/%s" % image_id)
+            c.request("HEAD", "/images/%s" % image_id)
             res = c.getresponse()
             if res.status == 200:
-                # Parallax returns a JSONified dict(image=image_info)
-                data = json.loads(res.read())['image']
-                return data
+                # TODO(ewanmellor): Temporary hack!  We should be parsing
+                # the response from Glance properly.
+                return { 'url': '/images/%s' % image_id }
             else:
                 # TODO(jaypipes): log the error?
                 return None
@@ -146,7 +146,7 @@ class ParallaxClient(object):
         try:
             c = self.connection_type(self.netloc, self.port)
             body = json.dumps(image_metadata)
-            c.request("PUT", "images/%s" % image_id, body)
+            c.request("PUT", "/images/%s" % image_id, body)
             res = c.getresponse()
             return res.status == 200
         finally:
@@ -158,7 +158,7 @@ class ParallaxClient(object):
         """
         try:
             c = self.connection_type(self.netloc, self.port)
-            c.request("DELETE", "images/%s" % image_id)
+            c.request("DELETE", "/images/%s" % image_id)
             res = c.getresponse()
             return res.status == 200
         finally:
