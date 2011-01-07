@@ -344,8 +344,8 @@ class VMHelper(HelperBase):
             cls._lookup_image_objectstore(session, vdi_ref)
         return
 
-    @classmethod 
-    def _lookup_image_objectstore(cls,session,vdi_ref):
+    @classmethod
+    def _lookup_image_objectstore(cls, session, vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
         fn = "is_vdi_pv"
         args = {}
@@ -360,25 +360,25 @@ class VMHelper(HelperBase):
         logging.debug("PV Kernel in VDI:%d", pv)
         return pv
 
-    @classmethod 
-    def _lookup_image_glance(cls,session,vdi_ref):
+    @classmethod
+    def _lookup_image_glance(cls, session, vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
-        
+
         def is_vdi_pv(dev):
             logging.debug("Running pygrub against %s", dev)
             output = os.popen('pygrub -qn /dev/%s' % dev)
             pv = False
             for line in output.readlines():
                 #try to find kernel string
-                m = re.search('(?<=kernel:)/.*(?:>)',line)
+                m = re.search('(?<=kernel:)/.*(?:>)', line)
                 if m:
-                    if m.group(0).find('xen')!=-1:
+                    if m.group(0).find('xen') != -1:
                         pv = True
-            logging.debug("PV:%d",pv)
+            logging.debug("PV:%d", pv)
             return pv
         pv = with_vdi_attached_here(session, vdi_ref, False, is_vdi_pv)
         return pv
-     
+
     @classmethod
     def lookup(cls, session, i):
         """Look the instance i up, and returns it if available"""

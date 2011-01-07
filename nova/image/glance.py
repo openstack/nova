@@ -113,7 +113,7 @@ class ParallaxClient(object):
             if res.status == 200:
                 # TODO(ewanmellor): Temporary hack!  We should be parsing
                 # the response from Glance properly.
-                return { 'url': '/images/%s' % image_id }
+                return {'url': '/images/%s' % image_id}
             else:
                 # TODO(jaypipes): log the error?
                 return None
