@@ -249,6 +249,7 @@ class CloudController(object):
                                                             FLAGS.cc_host,
                                                             FLAGS.cc_port,
                                                             FLAGS.ec2_suffix)}]
+        return {'regionInfo': regions}
 
     def describe_snapshots(self,
                            context,
