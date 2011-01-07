@@ -135,12 +135,29 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
+def service_get_all(context, disabled=False):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=disabled).\
+                   all()
+
+@require_admin_context
 def service_get_all_by_topic(context, topic):
     session = get_session()
     return session.query(models.Service).\
                    filter_by(deleted=False).\
                    filter_by(disabled=False).\
                    filter_by(topic=topic).\
+                   all()
+
+
+@require_admin_context
+def service_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(host=host).\
                    all()
 
 

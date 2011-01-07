@@ -133,6 +133,25 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+
+    def test_describe_availability_zones(self):
+        """Makes sure describe_availability_zones works and filters results."""
+        service1 = db.service_create(self.context, {'host': 'host1_describe_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone1"})
+        service2 = db.service_create(self.context, {'host': 'host2_describe_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone2"})
+        result = self.cloud.describe_availability_zones(self.context)
+        self.assertEqual(len(result['availabilityZoneInfo']), 3)
+        db.service_destroy(self.context, service1['id'])
+        db.service_destroy(self.context, service2['id'])
+
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -212,6 +231,21 @@ class CloudTestCase(test.TestCase):
                 logging.debug("Terminating instance %s" % instance_id)
                 rv = self.compute.terminate_instance(instance_id)
 
+
+    def test_describe_instances(self):
+        """Makes sure describe_instances works."""
+        instance1 = db.instance_create(self.context, {'host': 'host2'})
+        service1 = db.service_create(self.context, {'host': 'host2',
+                                                    'availability_zone': 'zone1',
+                                                    'topic': "compute"})
+        result = self.cloud.describe_instances(self.context)
+        self.assertEqual(result['reservationSet'][0]\
+                         ['instancesSet'][0]\
+                         ['placement']['availabilityZone'], 'zone1')
+        db.instance_destroy(self.context, instance1['id'])
+        db.service_destroy(self.context, service1['id'])
+
+        
     def test_instance_update_state(self):
         def instance(num):
             return {
@@ -260,6 +294,7 @@ class CloudTestCase(test.TestCase):
         #for i in xrange(4):
         #    data = self.cloud.get_metadata(instance(i)['private_dns_name'])
         #    self.assert_(data['meta-data']['ami-id'] == 'ami-%s' % i)
+
 
     @staticmethod
     def _fake_set_image_description(ctxt, image_id, description):

@@ -21,6 +21,7 @@ Tests For Scheduler
 
 import datetime
 
+from mox import IgnoreArg
 from nova import context
 from nova import db
 from nova import flags
@@ -75,6 +76,48 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         scheduler.named_method(ctxt, 'topic', num=7)
 
+
+class ZoneSchedulerTestCase(test.TestCase):
+    """Test case for zone scheduler"""
+    def setUp(self):
+        super(ZoneSchedulerTestCase, self).setUp()
+        self.flags(scheduler_driver='nova.scheduler.zone.ZoneScheduler')
+
+    def _create_service_model(self, **kwargs):
+        service = db.sqlalchemy.models.Service()
+        service.host = kwargs['host']
+        service.disabled = False
+        service.deleted = False
+        service.report_count = 0
+        service.binary = 'nova-compute'
+        service.topic = 'compute'
+        service.id = kwargs['id']
+        service.availability_zone = kwargs['zone']
+        service.created_at = datetime.datetime.utcnow()
+        return service
+
+
+    def test_with_two_zones(self):
+        scheduler = manager.SchedulerManager()
+        ctxt = context.get_admin_context()
+        service_list =  [
+                        self._create_service_model(id=1, host='host1', zone='zone1'),
+                        self._create_service_model(id=2, host='host2', zone='zone2'),
+                        self._create_service_model(id=3, host='host3', zone='zone2'),
+                        self._create_service_model(id=4, host='host4', zone='zone2'),
+                        self._create_service_model(id=5, host='host5', zone='zone2')
+                        ]
+        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
+        db.service_get_all_by_topic(IgnoreArg(), IgnoreArg()).AndReturn(service_list)
+        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
+        rpc.cast(ctxt,
+                 'compute.host1',
+                 {'method': 'run_instance',
+                  'args':{'instance_id': 'i-ffffffff',
+                          'availability_zone': 'zone1'}})
+        self.mox.ReplayAll()
+        scheduler.run_instance(ctxt, 'compute', instance_id='i-ffffffff', availability_zone='zone1')
+        
 
 class SimpleDriverTestCase(test.TestCase):
     """Test case for simple driver"""

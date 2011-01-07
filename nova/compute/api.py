@@ -181,7 +181,8 @@ class API(base.Base):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id}})
+                               "instance_id": instance_id,
+                               "availability_zone": availability_zone}})
 
         return instances
 

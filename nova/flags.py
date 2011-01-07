@@ -285,6 +285,5 @@ DEFINE_string('image_service', 'nova.image.s3.S3ImageService',
 DEFINE_string('host', socket.gethostname(),
               'name of this node')
 
-# UNUSED
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
