@@ -106,7 +106,7 @@ class CloudTestCase(test.TestCase):
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {'host': FLAGS.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
@@ -127,9 +127,9 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
         result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[vol2['ec2_id']])
+                                             volume_id=[vol2['id']])
         self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['ec2_id'])
+        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
@@ -140,15 +140,16 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
+        print rv
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(context=self.context,
+        output = self.cloud.get_console_output(context=self.context,
                                                      instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
-        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -186,7 +187,7 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         # TODO: check for proper response
         instance_id = rv['reservationSet'][0].keys()[0]
         instance = rv['reservationSet'][0][instance_id][0]
@@ -209,7 +210,7 @@ class CloudTestCase(test.TestCase):
             for instance in reservations[reservations.keys()[0]]:
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
-                rv = yield self.compute.terminate_instance(instance_id)
+                rv = self.compute.terminate_instance(instance_id)
 
     def test_instance_update_state(self):
         def instance(num):
@@ -296,7 +297,7 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
-        ec2_id = cloud.internal_id_to_ec2_id(inst['internal_id'])
+        ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get(self.context, inst['id'])

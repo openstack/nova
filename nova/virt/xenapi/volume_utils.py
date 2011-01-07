@@ -198,15 +198,19 @@ class VolumeHelper(HelperBase):
             return -1
 
 
-def _get_volume_id(path):
+def _get_volume_id(path_or_id):
     """Retrieve the volume id from device_path"""
+    # If we have the ID and not a path, just return it.
+    if isinstance(path_or_id, int):
+        return path_or_id
     # n must contain at least the volume_id
     # /vol- is for remote volumes
     # -vol- is for local volumes
     # see compute/manager->setup_compute_volume
-    volume_id = path[path.find('/vol-') + 1:]
-    if volume_id == path:
-        volume_id = path[path.find('-vol-') + 1:].replace('--', '-')
+    volume_id = path_or_id[path_or_id.find('/vol-') + 1:]
+    if volume_id == path_or_id:
+        volume_id = path_or_id[path_or_id.find('-vol-') + 1:]
+        volume_id = volume_id.replace('--', '-')
     return volume_id
 
 

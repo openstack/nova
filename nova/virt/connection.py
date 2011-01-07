@@ -26,6 +26,7 @@ from nova import log as logging
 from nova.virt import fake
 from nova.virt import libvirt_conn
 from nova.virt import xenapi_conn
+from nova.virt import hyperv
 
 
 LOG = logging.getLogger("nova.virt.connection")
@@ -63,6 +64,8 @@ def get_connection(read_only=False):
         conn = libvirt_conn.get_connection(read_only)
     elif t == 'xenapi':
         conn = xenapi_conn.get_connection(read_only)
+    elif t == 'hyperv':
+        conn = hyperv.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 

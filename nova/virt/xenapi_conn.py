@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,15 +20,15 @@ A connection to XenServer or Xen Cloud Platform.
 
 The concurrency model for this class is as follows:
 
-All XenAPI calls are on a thread (using t.i.t.deferToThread, via the decorator
-deferredToThread).  They are remote calls, and so may hang for the usual
-reasons.  They should not be allowed to block the reactor thread.
+All XenAPI calls are on a green thread (using eventlet's "tpool"
+thread pool). They are remote calls, and so may hang for the usual
+reasons.
 
 All long-running XenAPI calls (VM.start, VM.reboot, etc) are called async
-(using XenAPI.VM.async_start etc).  These return a task, which can then be
-polled for completion.  Polling is handled using reactor.callLater.
+(using XenAPI.VM.async_start etc). These return a task, which can then be
+polled for completion.
 
-This combination of techniques means that we don't block the reactor thread at
+This combination of techniques means that we don't block the main thread at
 all, and at the same time we don't hold lots of threads waiting for
 long-running operations.
 
@@ -85,7 +86,7 @@ flags.DEFINE_string('xenapi_connection_password',
 flags.DEFINE_float('xenapi_task_poll_interval',
                    0.5,
                    'The interval used for polling of remote tasks '
-                   '(Async.VM.start, etc).  Used only if '
+                   '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
@@ -217,6 +218,14 @@ class XenAPISession(object):
             f = f.__getattr__(m)
         return tpool.execute(f, *args)
 
+    def call_xenapi_request(self, method, *args):
+        """Some interactions with dom0, such as interacting with xenstore's
+        param record, require using the xenapi_request method of the session
+        object. This wraps that call on a background thread.
+        """
+        f = self._session.xenapi_request
+        return tpool.execute(f, method, *args)
+
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
         return tpool.execute(self._unwrap_plugin_exceptions,
@@ -226,7 +235,6 @@ class XenAPISession(object):
     def wait_for_task(self, id, task):
         """Return the result of the given task. The task is polled
         until it completes."""
-
         done = event.Event()
         loop = utils.LoopingCall(self._poll_task, id, task, done)
         loop.start(FLAGS.xenapi_task_poll_interval, now=True)
@@ -239,7 +247,7 @@ class XenAPISession(object):
         return self.XenAPI.Session(url)
 
     def _poll_task(self, id, task, done):
-        """Poll the given XenAPI task, and fire the given Deferred if we
+        """Poll the given XenAPI task, and fire the given action if we
         get a result."""
         try:
             name = self._session.xenapi.task.get_name_label(task)
@@ -294,7 +302,7 @@ class XenAPISession(object):
 
 
 def _parse_xmlrpc_value(val):
-    """Parse the given value as if it were an XML-RPC value.  This is
+    """Parse the given value as if it were an XML-RPC value. This is
     sometimes used as the format for the task.result field."""
     if not val:
         return val
