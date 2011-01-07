@@ -263,7 +263,7 @@ class ComputeAPI(base.Base):
         """Snapshot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
         host = instance['host']
-        
+
         image_service = utils.import_object(FLAGS.image_service)
 
         data = {'name': name, 'is_public': True}

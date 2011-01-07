@@ -26,17 +26,19 @@ import webob.exc
 
 from nova import flags
 from nova import exception
+from nova import utils
 import nova.image.service
 
 FLAGS = flags.FLAGS
+
+GlanceClient = utils.import_class('glance.client.Client')
 
 
 class GlanceImageService(nova.image.service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
     def __init__(self):
-        from glance.client import Client #TODO(sirp): lazy-import glance
-        self.client = Client(FLAGS.glance_host, FLAGS.glance_port)
+        self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
 
     def index(self, context):
         """

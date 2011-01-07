@@ -76,7 +76,14 @@ def _translate_status(item):
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    item['status'] = status_mapping[item['status']]
+    try:
+        item['status'] = status_mapping[item['status']]
+    except KeyError:
+        # TODO(sirp): Performing translation of status (if necessary) here for
+        # now. Perhaps this should really be done in EC2 API and
+        # S3ImageService
+        pass
+
     return item
 
 
@@ -115,8 +122,7 @@ class Controller(wsgi.Controller):
             items = self._service.index(req.environ['nova.context'])
         items = common.limited(items, req)
         items = [_translate_keys(item) for item in items]
-        #TODO(sirp): removing for glance
-        #items = [_translate_status(item) for item in items]
+        items = [_translate_status(item) for item in items]
         return dict(images=items)
 
     def show(self, req, id):
@@ -132,11 +138,10 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req)
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-        
+
         image_meta = compute_api.ComputeAPI().snapshot(
             context, instance_id, name)
 
-        #TODO(sirp): need to map Glance attrs to OpenStackAPI attrs
         return dict(image=image_meta)
 
     def update(self, req, id):
