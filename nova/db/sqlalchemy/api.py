@@ -840,15 +840,9 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Return the actions associated to the given instance id"""
     session = get_session()
-    actions = []
-    for action in session.query(models.InstanceActions).\
+    return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
-        all():
-        actions.append(dict(
-            created_at=action.created_at,
-            action=action.action,
-            error=action.error))
-    return actions
+        all()
 
 
 ###################
