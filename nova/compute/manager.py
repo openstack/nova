@@ -225,7 +225,7 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
-    def snapshot_instance(self, context, instance_id, name):
+    def snapshot_instance(self, context, instance_id, image_id):
         """Snapshot an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -243,7 +243,7 @@ class ComputeManager(manager.Manager):
                          instance_ref['state'],
                          power_state.RUNNING)
 
-        self.driver.snapshot(instance_ref, name)
+        self.driver.snapshot(instance_ref, image_id)
 
     @exception.wrap_exception
     def rescue_instance(self, context, instance_id):

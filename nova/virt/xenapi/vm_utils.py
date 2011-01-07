@@ -237,15 +237,15 @@ class VMHelper(HelperBase):
         return template_vm_ref, [template_vdi_uuid, parent_uuid]
 
     @classmethod
-    def upload_image(cls, session, instance_id, vdi_uuids, image_name):
+    def upload_image(cls, session, instance_id, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
-        logging.debug(_("Asking xapi to upload %s as '%s'"),
-                      vdi_uuids, image_name)
+        logging.debug(_("Asking xapi to upload %s as ID %s"),
+                      vdi_uuids, image_id)
 
         params = {'vdi_uuids': vdi_uuids,
-                  'image_name': image_name,
+                  'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port}
 
@@ -427,9 +427,16 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
         * parent_vhd
             snapshot
     """
-    #TODO(sirp): we need to timeout this req after a while
+    max_attempts = FLAGS.xenapi_vhd_coalesce_max_attempts
+    attempts = {'counter': 0}
 
     def _poll_vhds():
+        attempts['counter'] += 1
+        if attempts['counter'] > max_attempts:
+            msg = (_("VHD coalesce attempts exceeded (%d > %d), giving up...")
+                   % (attempts['counter'], max_attempts))
+            raise exception.Error(msg)
+
         scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
@@ -438,13 +445,12 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                   "waiting for coalesce..."),
                 parent_uuid, original_parent_uuid)
         else:
-            done.send(parent_uuid)
+            # Breakout of the loop (normally) and return the parent_uuid
+            raise utils.LoopingCallDone(parent_uuid)
 
-    done = event.Event()
     loop = utils.LoopingCall(_poll_vhds)
     loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
-    parent_uuid = done.wait()
-    loop.stop()
+    parent_uuid = loop.wait()
     return parent_uuid
 
 

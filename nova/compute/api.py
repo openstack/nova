@@ -263,10 +263,18 @@ class ComputeAPI(base.Base):
         """Snapshot the given instance."""
         instance = self.db.instance_get_by_internal_id(context, instance_id)
         host = instance['host']
+        
+        image_service = utils.import_object(FLAGS.image_service)
+
+        data = {'name': name, 'is_public': True}
+        image_meta = image_service.create(context, data)
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "snapshot_instance",
-                  "args": {"instance_id": instance['id'], "name": name}})
+                  "args": {"instance_id": instance['id'],
+                           "image_id": image_meta['id']}})
+
+        return image_meta
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""

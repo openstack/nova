@@ -115,7 +115,8 @@ class Controller(wsgi.Controller):
             items = self._service.index(req.environ['nova.context'])
         items = common.limited(items, req)
         items = [_translate_keys(item) for item in items]
-        items = [_translate_status(item) for item in items]
+        #TODO(sirp): removing for glance
+        #items = [_translate_status(item) for item in items]
         return dict(images=items)
 
     def show(self, req, id):
@@ -131,7 +132,12 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req)
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-        return compute_api.ComputeAPI().snapshot(context, instance_id, name)
+        
+        image_meta = compute_api.ComputeAPI().snapshot(
+            context, instance_id, name)
+
+        #TODO(sirp): need to map Glance attrs to OpenStackAPI attrs
+        return dict(image=image_meta)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that

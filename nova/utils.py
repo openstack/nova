@@ -304,6 +304,19 @@ class LazyPluggable(object):
         return getattr(backend, key)
 
 
+class LoopingCallDone(Exception):
+    """The poll-function passed to LoopingCall can raise this exception to
+    break out of the loop normally. This is somewhat analogous to StopIteration.
+
+    An optional return-value can be included as the argument to the exception;
+    this return-value will be returned by LoopingCall.wait()
+    """
+
+    def __init__(self, retvalue=True):
+        """:param retvalue: Value that LoopingCall.wait() should return"""
+        self.retvalue = retvalue
+
+
 class LoopingCall(object):
     def __init__(self, f=None, *args, **kw):
         self.args = args
@@ -322,12 +335,15 @@ class LoopingCall(object):
                 while self._running:
                     self.f(*self.args, **self.kw)
                     greenthread.sleep(interval)
+            except LoopingCallDone, e:
+                self.stop()
+                done.send(e.retvalue)
             except Exception:
                 logging.exception('in looping call')
                 done.send_exception(*sys.exc_info())
                 return
-
-            done.send(True)
+            else:
+                done.send(True)
 
         self.done = done
 
