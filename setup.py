@@ -58,7 +58,7 @@ class local_sdist(sdist):
         sdist.run(self)
 
 setup(name='nova',
-      version=version.canonical_version(),
+      version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
