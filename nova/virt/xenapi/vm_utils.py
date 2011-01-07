@@ -343,6 +343,14 @@ class VMHelper(HelperBase):
 
     @classmethod
     def lookup_image(cls, session, vdi_ref):
+        if FLAGS.xenapi_image_service == 'glance':
+            cls.lookup_image_glance(session, vdi_ref)
+        else:
+            cls.lookup_image_objectstore(session, vdi_ref)
+        return
+
+    @classmethod 
+    def _lookup_image_objectstore(cls,session,vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
         fn = "is_vdi_pv"
         args = {}
@@ -357,6 +365,25 @@ class VMHelper(HelperBase):
         logging.debug("PV Kernel in VDI:%d", pv)
         return pv
 
+    @classmethod 
+    def _lookup_image_glance(cls,session,vdi_ref):
+        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        
+        def is_vdi_pv(dest):
+            logging.debug("Running pygrub against %s",dest)
+            output=os.popen('pygrub -qn %s' % dest)
+            pv=False
+            for line in output.readlines():
+                #try to find kernel string
+                m=re.search('(?<=kernel:)/.*(?:>)',line)
+                if m:
+                    if m.group(0).find('xen')!=-1:
+                        pv=True
+            logging.debug("PV:%d",pv)
+            return pv 
+        pv=with_vdi_attached_here(session, vdi_ref, False, is_vdi_pv)
+        return pv
+     
     @classmethod
     def lookup(cls, session, i):
         """Look the instance i up, and returns it if available"""
