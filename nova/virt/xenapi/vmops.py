@@ -137,13 +137,17 @@ class VMOps(object):
                 return instance_or_vm
             else:
                 # Must be the instance name
-                instance_name = instance_or_vm
-        except AttributeError:
-            # Not a string; must be a vm instance
-            instance_name = instance_or_vm.name
-        vm = VMHelper.lookup(self._session, instance_name)
+                instance = instance_or_vm
+        except (AttributeError, KeyError):
+            # Note the the KeyError will only happen with fakes.py
+            # Not a string; must be an ID or a vm instance
+            if isinstance(instance_or_vm, (int, long)):
+                instance = instance_or_vm
+            else:
+                instance = instance_or_vm.name
+        vm = VMHelper.lookup(self._session, instance)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance_name)
+            raise Exception(_('Instance not present %s') % instance)
         return vm
 
     def snapshot(self, instance, name):

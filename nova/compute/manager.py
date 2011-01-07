@@ -289,8 +289,6 @@ class ComputeManager(manager.Manager):
         """Set the root/admin password for an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        self._update_state(context, instance_id)
-
         if instance_ref['state'] != power_state.RUNNING:
             logging.warn('trying to reset the password on a non-running '
                     'instance: %s (state: %s expected: %s)',
@@ -303,6 +301,7 @@ class ComputeManager(manager.Manager):
         if new_pass is None:
             # Generate a random password
             new_pass = self._generate_password(FLAGS.password_length)
+
         self.driver.set_admin_password(instance_ref, new_pass)
         self._update_state(context, instance_id)
 

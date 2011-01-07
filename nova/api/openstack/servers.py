@@ -104,7 +104,7 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.get_instance(
+            instance = self.compute_api.get(
                     req.environ['nova.context'], id)
             return _translate_detail_keys(instance)
         except exception.NotFound:
@@ -158,7 +158,7 @@ class Controller(wsgi.Controller):
         try:
             # The ID passed in is actually the internal_id of the
             # instance, not the value of the id column in the DB.
-            instance = self.compute_api.get_instance(ctxt, id)
+            instance = self.compute_api.get(ctxt, id)
             self.compute_api.update(ctxt, instance.id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())

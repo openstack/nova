@@ -61,7 +61,7 @@ class API(base.Base):
 
     def get_network_topic(self, context, instance_id):
         try:
-            instance = self.get_instance(context, instance_id)
+            instance = self.get(context, instance_id)
         except exception.NotFound, e:
             logging.warning("Instance %d was not found in get_network_topic",
                             instance_id)
@@ -220,7 +220,7 @@ class API(base.Base):
     def delete(self, context, instance_id):
         logging.debug('Going to try and terminate %s' % instance_id)
         try:
-            instance = self.get_instance(context, instance_id)
+            instance = self.get(context, instance_id)
         except exception.NotFound, e:
             logging.warning(_('Instance % was not found during terminate'),
                     instance_id)
@@ -246,7 +246,7 @@ class API(base.Base):
         else:
             self.db.instance_destroy(context, instance_id)
 
-    def get_instance(self, context, instance_id):
+    def get(self, context, instance_id):
         """Get a single instance with the given ID."""
         return self.db.instance_get_by_id(context, instance_id)
 
@@ -272,7 +272,7 @@ class API(base.Base):
 
     def _cast_compute_message(self, method, context, instance_id):
         """Generic handler for RPC calls to compute."""
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -328,7 +328,7 @@ class API(base.Base):
         lock the instance with instance_id
 
         """
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -340,7 +340,7 @@ class API(base.Base):
         unlock the instance with instance_id
 
         """
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -352,7 +352,7 @@ class API(base.Base):
         return the boolean state of (instance with instance_id)'s lock
 
         """
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         return instance['locked']
 
     def attach_volume(self, context, instance_id, volume_id, device):
@@ -360,7 +360,7 @@ class API(base.Base):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
         self.volume_api.check_attach(context, volume_id)
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -383,6 +383,6 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
-        instance = self.get_instance(context, instance_id)
+        instance = self.get(context, instance_id)
         self.network_api.associate_floating_ip(context, address,
                                                instance['fixed_ip'])
