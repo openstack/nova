@@ -50,16 +50,16 @@ XENAPI_POWER_STATE = {
 
 
 class ImageType:
-        """
-        Enumeration class for distinguishing different image types
-            0 - kernel/ramdisk image (goes on dom0's filesystem)
-            1 - disk image (local SR, partitioned by objectstore plugin)
-            2 - raw disk image (local SR, NOT partitioned by plugin)
-        """
+    """
+    Enumeration class for distinguishing different image types
+        0 - kernel/ramdisk image (goes on dom0's filesystem)
+        1 - disk image (local SR, partitioned by objectstore plugin)
+        2 - raw disk image (local SR, NOT partitioned by plugin)
+    """
 
-        KERNEL_RAMDISK = 0
-        DISK = 1
-        DISK_RAW = 2
+    KERNEL_RAMDISK = 0
+    DISK = 1
+    DISK_RAW = 2
 
 
 class VMHelper(HelperBase):
