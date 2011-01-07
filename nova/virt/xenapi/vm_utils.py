@@ -23,6 +23,7 @@ import glance.client
 import logging
 import os
 import pickle
+import re
 import urllib
 from xml.dom import minidom
 
@@ -339,10 +340,9 @@ class VMHelper(HelperBase):
     @classmethod
     def lookup_image(cls, session, vdi_ref):
         if FLAGS.xenapi_image_service == 'glance':
-            cls._lookup_image_glance(session, vdi_ref)
+            return cls._lookup_image_glance(session, vdi_ref)
         else:
-            cls._lookup_image_objectstore(session, vdi_ref)
-        return
+            return cls._lookup_image_objectstore(session, vdi_ref)
 
     @classmethod
     def _lookup_image_objectstore(cls, session, vdi_ref):
@@ -367,17 +367,15 @@ class VMHelper(HelperBase):
         def is_vdi_pv(dev):
             logging.debug("Running pygrub against %s", dev)
             output = os.popen('pygrub -qn /dev/%s' % dev)
-            pv = False
             for line in output.readlines():
                 #try to find kernel string
                 m = re.search('(?<=kernel:)/.*(?:>)', line)
-                if m:
-                    if m.group(0).find('xen') != -1:
-                        pv = True
-            logging.debug("PV:%d", pv)
-            return pv
-        pv = with_vdi_attached_here(session, vdi_ref, False, is_vdi_pv)
-        return pv
+                if m and m.group(0).find('xen') != -1:
+                    logging.debug("Found Xen kernel %s" % m.group(0))
+                    return True
+            logging.debug("No Xen kernel found.  Booting HVM.")
+            return False
+        return with_vdi_attached_here(session, vdi_ref, True, is_vdi_pv)
 
     @classmethod
     def lookup(cls, session, i):
