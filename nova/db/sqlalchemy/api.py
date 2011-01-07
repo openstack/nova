@@ -845,7 +845,7 @@ def instance_get_actions(context, instance_id):
         filter_by(instance_id=instance_id).\
         all():
         actions.append(dict(
-            date=action.created_at,
+            created_at=action.created_at,
             action=action.action,
             error=action.error))
     return actions

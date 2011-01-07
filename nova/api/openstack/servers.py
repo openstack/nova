@@ -226,5 +226,5 @@ class Controller(wsgi.Controller):
         # TODO(jk0): Do not do pre-serialization here once the default
         # serializer is updated
         for item in items:
-            item["date"] = str(item["date"])
+            item["created_at"] = str(item["created_at"])
         return dict(actions=items)
