@@ -19,6 +19,7 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
+import glance
 import logging
 import pickle
 import urllib
@@ -44,6 +45,8 @@ XENAPI_POWER_STATE = {
     'Paused': power_state.PAUSED,
     'Suspended': power_state.SUSPENDED,
     'Crashed': power_state.CRASHED}
+
+BUFSIZE = 65536
 
 
 class ImageType:
@@ -207,6 +210,25 @@ class VMHelper(HelperBase):
         return vif_ref
 
     @classmethod
+    def create_vdi(cls, session, sr_ref, name_label, virtual_size, read_only):
+        """Create a VDI record and returns its reference."""
+        vdi_ref = session.xenapi.VDI.create(
+             {'name_label': name_label,
+              'name_description': '',
+              'SR': sr_ref,
+              'virtual_size': str(virtual_size),
+              'type': 'User',
+              'sharable': False,
+              'read_only': read_only,
+              'xenstore_data': {},
+              'other_config': {},
+              'sm_config': {},
+              'tags': []})
+        logging.debug(_('Created VDI %s (%s, %s, %s) on %s.'), vdi_ref,
+                      name_label, virtual_size, read_only, sr_ref)
+        return vdi_ref
+
+    @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
         """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD
@@ -257,9 +279,52 @@ class VMHelper(HelperBase):
     def fetch_image(cls, session, instance_id, image, user, project, type):
         """
         type is interpreted as an ImageType instance
+        Related flags:
+            xenapi_image_service = ['glance', 'objectstore']
+            glance_address = 'address for glance services'
+            glance_port = 'port for glance services'
         """
-        url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
+
+        if FLAGS.xenapi_image_service == 'glance':
+            cls._fetch_image_glance(session, instance_id, image, access, type)
+        else:
+            cls._fetch_image_objectstore(session, instance_id, image, access,
+                                         type)
+
+    #### raw_image=validate_bool(args, 'raw', 'false')
+    #### add_partition = validate_bool(args, 'add_partition', 'false')
+
+    @classmethod
+    def _fetch_image_glance(cls, session, instance_id, image, access, type):
+        sr = find_sr(session)
+        if sr is None:
+            raise exception.NotFound('Cannot find SR to write VDI to')
+
+        c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+
+        raise exception.NotFound("DAM")
+
+        meta, image_file = c.get_image(image)
+        vdi_size = meta['size']
+
+        vdi = create_vdi(session, sr, _('Glance image %s') % image, vdi_size,
+                         False)
+
+        def stream(dev):
+            with open('/dev/%s' % dev, 'wb') as f:
+                while True:
+                    buf = image_file.read(BUFSIZE)
+                    if not buf:
+                        break
+                    f.write(buf)
+        with_vdi_attached_here(session, vdi, False, stream)
+        return session.xenapi.VDI.get_uuid(vdi)
+
+    @classmethod
+    def _fetch_image_objectstore(cls, session, instance_id, image, access,
+                                 type):
+        url = images.image_url(image)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
@@ -461,3 +526,94 @@ def get_vdi_for_vm_safely(session, vm_ref):
     vdi_ref = vdi_refs[0]
     vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
     return vdi_ref, vdi_rec
+
+
+def find_sr(session):
+    host = get_this_host(session)
+    srs = session.xenapi.SR.get_all()
+    for sr in srs:
+        sr_rec = session.xenapi.SR.get_record(sr)
+        if not ('i18n-key' in sr_rec['other_config'] and
+                sr_rec['other_config']['i18n-key'] == 'local-storage'):
+            continue
+        for pbd in sr_rec['PBDs']:
+            pbd_rec = session.xenapi.PBD.get_record(pbd)
+            if pbd_rec['host'] == host:
+                return sr
+    return None
+
+
+def with_vdi_attached_here(session, vdi, read_only, f):
+    this_vm_ref = get_this_vm_ref(session)
+    vbd_rec = {}
+    vbd_rec['VM'] = this_vm_ref
+    vbd_rec['VDI'] = vdi
+    vbd_rec['userdevice'] = 'autodetect'
+    vbd_rec['bootable'] = False
+    vbd_rec['mode'] = read_only and 'RO' or 'RW'
+    vbd_rec['type'] = 'disk'
+    vbd_rec['unpluggable'] = True
+    vbd_rec['empty'] = False
+    vbd_rec['other_config'] = {}
+    vbd_rec['qos_algorithm_type'] = ''
+    vbd_rec['qos_algorithm_params'] = {}
+    vbd_rec['qos_supported_algorithms'] = []
+    logging.debug(_('Creating VBD for VDI %s ... '), vdi)
+    vbd = session.xenapi.VBD.create(vbd_rec)
+    logging.debug(_('Creating VBD for VDI %s done.'), vdi)
+    try:
+        logging.debug(_('Plugging VBD %s ... '), vbd)
+        session.xenapi.VBD.plug(vbd)
+        logging.debug(_('Plugging VBD %s done.'), vbd)
+        return f(session.xenapi.VBD.get_device(vbd))
+    finally:
+        logging.debug(_('Destroying VBD for VDI %s ... '), vdi)
+        vbd_unplug_with_retry(session, vbd)
+        ignore_failure(session.xenapi.VBD.destroy, vbd)
+        logging.debug(_('Destroying VBD for VDI %s done.'), vdi)
+
+
+def vbd_unplug_with_retry(session, vbd):
+    """Call VBD.unplug on the given VBD, with a retry if we get
+    DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
+    seeing the device still in use, even when all processes using the device
+    should be dead."""
+    while True:
+        try:
+            session.xenapi.VBD.unplug(vbd)
+            logging.debug(_('VBD.unplug successful first time.'))
+            return
+        except XenAPI.Failure, e:
+            if (len(e.details) > 0 and
+                e.details[0] == 'DEVICE_DETACH_REJECTED'):
+                logging.debug(_('VBD.unplug rejected: retrying...'))
+                time.sleep(1)
+            elif (len(e.details) > 0 and
+                  e.details[0] == 'DEVICE_ALREADY_DETACHED'):
+                logging.debug(_('VBD.unplug successful eventually.'))
+                return
+            else:
+                logging.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
+                              e)
+                return
+
+
+def ignore_failure(func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except XenAPI.Failure, e:
+        logging.error(_('Ignoring XenAPI.Failure %s'), e)
+        return None
+
+
+def get_this_host(session):
+    return session.xenapi.session.get_this_host(session.handle)
+
+
+def get_this_vm_uuid():
+    with file('/sys/hypervisor/uuid') as f:
+        return f.readline().strip()
+
+
+def get_this_vm_ref(session):
+    return session.xenapi.VM.get_by_uuid(get_this_vm_uuid())
