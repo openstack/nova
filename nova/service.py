@@ -211,9 +211,10 @@ class Service(object):
                 try:
                     models.register_models()
                 except OperationalError:
-                    logging.exception(_("Data store is unreachable."
-                        " Trying again in %d seconds.") %
-                            FLAGS.sql_retry_interval)
+                    logging.exception(_("Data store %s is unreachable."
+                                        " Trying again in %d seconds.") %
+                                      (FLAGS.sql_connection,
+                                       FLAGS.sql_retry_interval))
                     time.sleep(FLAGS.sql_retry_interval)
 
 

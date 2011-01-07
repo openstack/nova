@@ -192,6 +192,7 @@ class AdapterConsumer(TopicConsumer):
             if msg_id:
                 msg_reply(msg_id, rval, None)
         except Exception as e:
+            logging.exception("Exception during message handling")
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return

@@ -40,5 +40,6 @@ for i in xrange(FLAGS.sql_max_retries):
         models.register_models()
         break
     except OperationalError:
-        LOG.exception(_("Data store is unreachable."
-            " Trying again in %d seconds."), FLAGS.sql_retry_interval)
+        LOG.exception(_("Data store %s is unreachable."
+                        " Trying again in %d seconds."),
+                      FLAGS.sql_connection, FLAGS.sql_retry_interval)
