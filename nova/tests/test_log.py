@@ -35,15 +35,16 @@ class RootLoggerTestCase(test.TrialTestCase):
 
     def test_handles_context_kwarg(self):
         self.log.info("foo", context=_fake_context())
-        self.assert_(True) # didn't raise exception
+        self.assert_(True)  # didn't raise exception
 
     def test_module_level_methods_handle_context_arg(self):
         log.info("foo", context=_fake_context())
-        self.assert_(True) # didn't raise exception
+        self.assert_(True)  # didn't raise exception
 
     def test_module_level_audit_handles_context_arg(self):
         log.audit("foo", context=_fake_context())
-        self.assert_(True) # didn't raise exception
+        self.assert_(True)  # didn't raise exception
+
 
 class NovaFormatterTestCase(test.TrialTestCase):
     def setUp(self):
@@ -76,6 +77,7 @@ class NovaFormatterTestCase(test.TrialTestCase):
         self.log.debug("baz")
         self.assertEqual("NOCTXT: baz --DBG\n", self.stream.getvalue())
 
+
 class NovaLoggerTestCase(test.TrialTestCase):
     def setUp(self):
         super(NovaLoggerTestCase, self).setUp()
@@ -92,6 +94,7 @@ class NovaLoggerTestCase(test.TrialTestCase):
     def test_child_log_has_level_of_parent_flag(self):
         l = log.getLogger('nova-test.foo')
         self.assertEqual(log.AUDIT, l.level)
+
 
 class VerboseLoggerTestCase(test.TrialTestCase):
     def setUp(self):
