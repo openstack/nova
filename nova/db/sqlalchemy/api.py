@@ -844,7 +844,10 @@ def instance_get_actions(context, instance_id):
     for action in session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
         all():
-        actions.append((action.created_at, action.action, action.error))
+        actions.append(dict(
+            date=action.created_at,
+            action=action.action,
+            error=action.error))
     return actions
 
 

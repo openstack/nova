@@ -223,4 +223,8 @@ class Controller(wsgi.Controller):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
         items = self.compute_api.get_actions(ctxt, id)
+        # TODO(jk0): Do not do pre-serialization here once the default
+        # serializer is updated
+        for item in items:
+            item["date"] = str(item["date"])
         return dict(actions=items)
