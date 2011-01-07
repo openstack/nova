@@ -72,7 +72,7 @@ class DirectTestCase(test.TestCase):
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
-    def test_req_params(self):
+    def test_post_params(self):
         req = webob.Request.blank('/fake/echo')
         req.environ['openstack.context'] = self.context
         req.method = 'POST'

@@ -93,8 +93,10 @@ class CloudController(object):
     def __init__(self):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.image_service = utils.import_object(FLAGS.image_service)
-        self.compute_api = compute_api.ComputeAPI(self.network_manager,
-                                                  self.image_service)
+        self.compute_api = compute_api.ComputeAPI(
+                network_manager=self.network_manager,
+                image_service=self.image_service,
+                hostname_factory=internal_id_to_ec2_id)
         self.setup()
 
     def __str__(self):
@@ -807,7 +809,6 @@ class CloudController(object):
             key_name=kwargs.get('key_name'),
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
-            hostname_format='ec2',
             availability_zone=kwargs.get('placement', {}).get(
                                   'AvailabilityZone'))
         return self._format_run_instances(context,

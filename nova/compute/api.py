@@ -41,28 +41,18 @@ def id_to_default_hostname(internal_id):
     return str(internal_id)
 
 
-def id_to_ec2_hostname(internal_id):
-    digits = []
-    while internal_id != 0:
-        internal_id, remainder = divmod(internal_id, 36)
-        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
-    return "i-%s" % ''.join(reversed(digits))
-
-
-HOSTNAME_FORMATTERS = {'default': id_to_default_hostname,
-                       'ec2': id_to_ec2_hostname}
-
-
 class ComputeAPI(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, network_manager=None, image_service=None, **kwargs):
+    def __init__(self, network_manager=None, image_service=None,
+                 hostname_factory=id_to_default_hostname, **kwargs):
         if not network_manager:
             network_manager = utils.import_object(FLAGS.network_manager)
         self.network_manager = network_manager
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
+        self.hostname_factory = hostname_factory
         super(ComputeAPI, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
@@ -88,8 +78,7 @@ class ComputeAPI(base.Base):
                          display_name='', description='', key_name=None,
                          key_data=None, security_group='default',
                          availability_zone=None,
-                         user_data=None,
-                         hostname_format='default'):
+                         user_data=None):
         """Create the number of instances requested if quote and
         other arguments check out ok."""
 
@@ -160,7 +149,6 @@ class ComputeAPI(base.Base):
 
         elevated = context.elevated()
         instances = []
-        generate_hostname = HOSTNAME_FORMATTERS[hostname_format]
         logging.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
@@ -179,7 +167,7 @@ class ComputeAPI(base.Base):
                                                     security_group_id)
 
             # Set sane defaults if not specified
-            updates = dict(hostname=generate_hostname(internal_id))
+            updates = dict(hostname=self.hostname_factory(internal_id))
             if 'display_name' not in instance:
                 updates['display_name'] = "Server %s" % internal_id
 
