@@ -46,7 +46,6 @@ Utility class for parsing signed AMI manifests.
 import base64
 import hashlib
 import hmac
-import logging
 import urllib
 
 # NOTE(vish): for new boto
@@ -54,7 +53,11 @@ import boto
 # NOTE(vish): for old boto
 import boto.utils
 
+from nova import log as logging
 from nova.exception import Error
+
+
+LOG = logging.getLogger('nova.signer')
 
 
 class Signer(object):
@@ -120,7 +123,7 @@ class Signer(object):
 
     def _calc_signature_2(self, params, verb, server_string, path):
         """Generate AWS signature version 2 string."""
-        logging.debug('using _calc_signature_2')
+        LOG.debug('using _calc_signature_2')
         string_to_sign = '%s\n%s\n%s\n' % (verb, server_string, path)
         if self.hmac_256:
             current_hmac = self.hmac_256
@@ -136,13 +139,13 @@ class Signer(object):
             val = urllib.quote(val, safe='-_~')
             pairs.append(urllib.quote(key, safe='') + '=' + val)
         qs = '&'.join(pairs)
-        logging.debug('query string: %s', qs)
+        LOG.debug('query string: %s', qs)
         string_to_sign += qs
-        logging.debug('string_to_sign: %s', string_to_sign)
+        LOG.debug('string_to_sign: %s', string_to_sign)
         current_hmac.update(string_to_sign)
         b64 = base64.b64encode(current_hmac.digest())
-        logging.debug('len(b64)=%d', len(b64))
-        logging.debug('base64 encoded digest: %s', b64)
+        LOG.debug('len(b64)=%d', len(b64))
+        LOG.debug('base64 encoded digest: %s', b64)
         return b64
 
 

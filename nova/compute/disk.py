@@ -22,14 +22,15 @@ Includes injection of SSH PGP keys into authorized_keys file.
 
 """
 
-import logging
 import os
 import tempfile
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 
 
+LOG = logging.getLogger('nova.compute.disk')
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
@@ -67,12 +68,12 @@ def partition(infile, outfile, local_bytes=0, resize=True,
         execute('resize2fs %s' % infile)
         file_size = FLAGS.minimum_root_size
     elif file_size % sector_size != 0:
-        logging.warn(_("Input partition size not evenly divisible by"
-                       " sector size: %d / %d"), file_size, sector_size)
+        LOG.warn(_("Input partition size not evenly divisible by"
+                   " sector size: %d / %d"), file_size, sector_size)
     primary_sectors = file_size / sector_size
     if local_bytes % sector_size != 0:
-        logging.warn(_("Bytes for local storage not evenly divisible"
-                       " by sector size: %d / %d"), local_bytes, sector_size)
+        LOG.warn(_("Bytes for local storage not evenly divisible"
+                   " by sector size: %d / %d"), local_bytes, sector_size)
     local_sectors = local_bytes / sector_size
 
     mbr_last = 62  # a

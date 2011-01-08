@@ -17,7 +17,6 @@
 #    under the License.
 
 import unittest
-import logging
 import webob
 
 from nova import context

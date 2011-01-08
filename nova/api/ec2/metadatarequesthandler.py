@@ -18,15 +18,15 @@
 
 """Metadata request handler."""
 
-import logging
-
 import webob.dec
 import webob.exc
 
+from nova import log as logging
 from nova import flags
 from nova.api.ec2 import cloud
 
 
+LOG = logging.getLogger('nova.api.ec2.metadata')
 FLAGS = flags.FLAGS
 
 
@@ -72,8 +72,7 @@ class MetadataRequestHandler(object):
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         meta_data = cc.get_metadata(remote_address)
         if meta_data is None:
-            logging.error(_('Failed to get metadata for ip: %s') %
-                          remote_address)
+            LOG.error(_('Failed to get metadata for ip: %s'), remote_address)
             raise webob.exc.HTTPNotFound()
         data = self.lookup(req.path_info, meta_data)
         if data is None:

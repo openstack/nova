@@ -12,3 +12,4 @@ CA/openssl.cnf
 CA/serial*
 CA/newcerts/*.pem
 CA/private/cakey.pem
+nova/vcsversion.py
