@@ -30,11 +30,11 @@ from nova import rpc
 FLAGS = flags.FLAGS
 
 
-class ConsoleAPI(base.Base):
+class API(base.Base):
     """API for spining up or down console proxy connections"""
 
     def __init__(self, **kwargs):
-        super(ConsoleAPI, self).__init__(**kwargs)
+        super(API, self).__init__(**kwargs)
 
     def get_consoles(self, context, instance_id):
         return self.db.console_get_all_by_instance(context, instance_id)

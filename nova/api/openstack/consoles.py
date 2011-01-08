@@ -17,9 +17,9 @@
 
 from webob import exc
 
+from nova import console
 from nova import exception
 from nova import wsgi
-from nova.console import api as console_api
 from nova.api.openstack import faults
 
 
@@ -52,7 +52,7 @@ class Controller(wsgi.Controller):
                 'console': []}}}
 
     def __init__(self):
-        self.console_api = console_api.ConsoleAPI()
+        self.console_api = console.API()
         super(Controller, self).__init__()
 
     def index(self, req, server_id):
