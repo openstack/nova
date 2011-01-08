@@ -49,7 +49,7 @@ def _translate_detail_keys(inst):
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}
     inst_dict = {}
-    print inst
+
     mapped_keys = dict(status='state', imageId='image_id',
         flavorId='instance_type', name='display_name', id='id')
 
