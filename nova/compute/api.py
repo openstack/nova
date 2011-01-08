@@ -253,11 +253,7 @@ class API(base.Base):
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
         rv = self.db.instance_get_by_id(context, instance_id)
-        d = dict(rv.iteritems())
-        # TODO(termie): this is ugly but required because the db layer returns
-        #               models rather than dicts and the models support
-        #               properties that are 'backreferences'
-        return d
+        return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):

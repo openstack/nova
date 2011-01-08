@@ -101,7 +101,3 @@ class DirectCloudTestCase(test_cloud.CloudTestCase):
     def tearDown(self):
         super(DirectCloudTestCase, self).tearDown()
         direct.ROUTES = {}
-
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
