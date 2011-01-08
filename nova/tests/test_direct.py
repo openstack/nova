@@ -23,13 +23,13 @@ import logging
 
 import webob
 
+from nova import compute
 from nova import context
 from nova import exception
 from nova import test
 from nova import utils
 from nova.api import direct
-from nova.compute import api as compute_api
-from nova.tests import cloud_unittest
+from nova.tests import test_cloud
 
 
 class FakeService(object):
@@ -87,11 +87,12 @@ class DirectTestCase(test.TestCase):
         self.assertEqual(rv['data'], 'baz')
 
 
-class DirectCloudTestCase(cloud_unittest.CloudTestCase):
+class DirectCloudTestCase(test_cloud.CloudTestCase):
     def setUp(self):
         super(DirectCloudTestCase, self).setUp()
-        compute_handle = compute_api.ComputeAPI(self.cloud.network_manager,
-                                                self.cloud.image_service)
+        compute_handle = compute.API(image_service=self.cloud.image_service,
+                                     network_api=self.cloud.network_api,
+                                     volume_api=self.cloud.volume_api)
         direct.register_service('compute', compute_handle)
         self.router = direct.JsonParamsMiddleware(direct.Router())
         proxy = direct.Proxy(self.router)
@@ -100,3 +101,7 @@ class DirectCloudTestCase(cloud_unittest.CloudTestCase):
     def tearDown(self):
         super(DirectCloudTestCase, self).tearDown()
         direct.ROUTES = {}
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()
