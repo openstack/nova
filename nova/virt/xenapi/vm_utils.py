@@ -49,6 +49,11 @@ XENAPI_POWER_STATE = {
     'Crashed': power_state.CRASHED}
 
 
+SECTOR_SIZE = 512
+MBR_SIZE_SECTORS = 63
+MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
+
+
 class ImageType:
     """
     Enumeration class for distinguishing different image types
@@ -293,9 +298,6 @@ class VMHelper(HelperBase):
             return cls._fetch_image_objectstore(session, instance_id, image,
                                                 access, type)
 
-    #### raw_image=validate_bool(args, 'raw', 'false')
-    #### add_partition = validate_bool(args, 'add_partition', 'false')
-
     @classmethod
     def _fetch_image_glance(cls, session, instance_id, image, access, typ):
         sr = find_sr(session)
@@ -305,15 +307,27 @@ class VMHelper(HelperBase):
         c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
 
         meta, image_file = c.get_image(image)
-        vdi_size = meta['size']
+        virtual_size = meta['size']
+
+        vdi_size = virtual_size
+        if typ == ImageType.DISK:
+            # Make room for MBR.
+            vdi_size += MBR_SIZE_BYTES
 
         vdi = cls.create_vdi(session, sr, _('Glance image %s') % image,
                              vdi_size, False)
 
         def stream(dev):
+            offset = 0
+            if typ == ImageType.DISK:
+                offset = MBR_SIZE_BYTES
+                _write_partition(virtual_size, dev)
+
             with open('/dev/%s' % dev, 'wb') as f:
+                f.seek(offset)
                 for chunk in image_file:
                     f.write(chunk)
+
         with_vdi_attached_here(session, vdi, False, stream)
         return session.get_xenapi().VDI.get_uuid(vdi)
 
@@ -633,3 +647,24 @@ def get_this_vm_uuid():
 
 def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
+
+
+def _write_partition(virtual_size, dev):
+    dest = '/dev/%s' % dev
+    mbr_last = MBR_SIZE_SECTORS - 1
+    primary_first = MBR_SIZE_SECTORS
+    primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
+
+    logging.debug('Writing partition table %d %d to %s...',
+                  primary_first, primary_last, dest)
+
+    def execute(cmd, process_input=None, check_exit_code=True):
+        return utils.execute(cmd=cmd,
+                             process_input=process_input,
+                             check_exit_code=check_exit_code)
+
+    execute('parted --script %s mklabel msdos' % dest)
+    execute('parted --script %s mkpart primary %ds %ds' %
+            (dest, primary_first, primary_last))
+
+    logging.debug('Writing partition table %s done.', dest)
