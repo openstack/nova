@@ -61,8 +61,9 @@ copyright = u'2010, United States Government as represented by the Administrator
 # built documents.
 #
 from nova import version as nova_version
+#import nova.version
 # The full version, including alpha/beta/rc tags.
-release = nova_version.version()
+release = nova_version.version_string()
 # The short X.Y version.
 version = nova_version.canonical_version_string()
 
