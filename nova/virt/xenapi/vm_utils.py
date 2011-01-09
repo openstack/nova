@@ -307,7 +307,7 @@ class VMHelper(HelperBase):
         c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
 
         meta, image_file = c.get_image(image)
-        virtual_size = meta['size']
+        virtual_size = int(meta['size'])
 
         vdi_size = virtual_size
         if typ == ImageType.DISK:
@@ -585,6 +585,7 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
+    logging.debug("read_only: %s",str(read_only))
     vbd_rec['type'] = 'disk'
     vbd_rec['unpluggable'] = True
     vbd_rec['empty'] = False
