@@ -25,7 +25,6 @@ datastore.
 import base64
 import datetime
 import IPy
-import re
 import os
 
 from nova import compute
@@ -35,7 +34,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import network
 from nova import rpc
 from nova import utils
@@ -132,15 +130,6 @@ class CloudController(object):
                 else:
                     result[key] = [line]
         return result
-
-    def _trigger_refresh_security_group(self, context, security_group):
-        nodes = set([instance['host'] for instance in security_group.instances
-                       if instance['host'] is not None])
-        for node in nodes:
-            rpc.cast(context,
-                     '%s.%s' % (FLAGS.compute_topic, node),
-                     {"method": "refresh_security_group",
-                      "args": {"security_group_id": security_group.id}})
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
@@ -249,6 +238,7 @@ class CloudController(object):
                                                             FLAGS.cc_host,
                                                             FLAGS.cc_port,
                                                             FLAGS.ec2_suffix)}]
+        return {'regionInfo': regions}
 
     def describe_snapshots(self,
                            context,
@@ -418,7 +408,8 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(context, security_group)
+                self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
                 return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
@@ -443,7 +434,8 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(context, security_group)
+        self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
 
         return True
 
@@ -602,19 +594,24 @@ class CloudController(object):
         return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context)
+        return self._format_describe_instances(context, **kwargs)
 
-    def _format_describe_instances(self, context):
-        return {'reservationSet': self._format_instances(context)}
+    def _format_describe_instances(self, context, **kwargs):
+        return {'reservationSet': self._format_instances(context, **kwargs)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, **kwargs):
+    def _format_instances(self, context, instance_id=None, **kwargs):
         reservations = {}
-        instances = self.compute_api.get_all(context, **kwargs)
+        # NOTE(vish): instance_id is an optional list of ids to filter by
+        if instance_id:
+            instance_id = [ec2_id_to_id(x) for x in instance_id]
+            instances = [self.compute_api.get(context, x) for x in instance_id]
+        else:
+            instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
