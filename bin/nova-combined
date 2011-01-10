@@ -60,8 +60,7 @@ if __name__ == '__main__':
     scheduler = service.Service.create(binary='nova-scheduler')
     #objectstore = service.Service.create(binary='nova-objectstore')
 
-    #service.serve(compute, network, volume, scheduler)
-    service.serve(compute, network, scheduler)
+    service.serve(compute, network, volume, scheduler)
 
     server = wsgi.Server()
     server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
