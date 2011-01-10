@@ -133,15 +133,6 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
-    def _trigger_refresh_security_group(self, context, security_group):
-        nodes = set([instance['host'] for instance in security_group.instances
-                       if instance['host'] is not None])
-        for node in nodes:
-            rpc.cast(context,
-                     '%s.%s' % (FLAGS.compute_topic, node),
-                     {"method": "refresh_security_group",
-                      "args": {"security_group_id": security_group.id}})
-
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -419,7 +410,8 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(context, security_group)
+                self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
                 return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
@@ -444,7 +436,8 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(context, security_group)
+        self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
 
         return True
 
