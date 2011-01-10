@@ -57,14 +57,25 @@ class local_sdist(sdist):
                 changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
 
+nova_cmdclass= { 'sdist': local_sdist,
+                 'build_sphinx' : local_BuildDoc }
+
+try:
+  from babel.messages import frontend as babel
+  nova_cmdclass['compile_catalog'] = babel.compile_catalog
+  nova_cmdclass['extract_messages'] = babel.extract_messages
+  nova_cmdclass['init_catalog'] = babel.init_catalog
+  nova_cmdclass['update_catalog'] = babel.update_catalog
+except:
+  pass
+
 setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass={ 'sdist': local_sdist,
-                 'build_sphinx' : local_BuildDoc },
+      cmdclass=nova_cmdclass,
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
