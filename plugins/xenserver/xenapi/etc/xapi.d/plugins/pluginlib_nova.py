@@ -154,7 +154,7 @@ def create_vdi(session, sr_ref, name_label, virtual_size, read_only):
     return vdi_ref
 
 
-def with_vdi_in_dom0(session, vdi, read_only, f):
+def with_vdi_in_dom0(session, vdi, read_only, f,args=None):
     dom0 = get_domain_0(session)
     vbd_rec = {}
     vbd_rec['VM'] = dom0
@@ -176,7 +176,7 @@ def with_vdi_in_dom0(session, vdi, read_only, f):
         logging.debug('Plugging VBD %s ... ', vbd)
         session.xenapi.VBD.plug(vbd)
         logging.debug('Plugging VBD %s done.', vbd)
-        return f(session.xenapi.VBD.get_device(vbd))
+        return f(session.xenapi.VBD.get_device(vbd),args)
     finally:
         logging.debug('Destroying VBD for VDI %s ... ', vdi)
         vbd_unplug_with_retry(session, vbd)

@@ -52,7 +52,7 @@ XENAPI_POWER_STATE = {
 SECTOR_SIZE = 512
 MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
-
+KERNEL_DIR = '/boot/guest'
 
 class ImageType:
     """
@@ -299,7 +299,7 @@ class VMHelper(HelperBase):
                                                 access, type)
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access, typ):
+    def _fetch_image_glance(cls, session, instance_id, image, access, type):
         sr = find_sr(session)
         if sr is None:
             raise exception.NotFound('Cannot find SR to write VDI to')
@@ -310,7 +310,8 @@ class VMHelper(HelperBase):
         virtual_size = int(meta['size'])
 
         vdi_size = virtual_size
-        if typ == ImageType.DISK:
+        logging.debug("Size for image %s:%d",image,virtual_size)
+        if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
 
@@ -319,7 +320,7 @@ class VMHelper(HelperBase):
 
         def stream(dev):
             offset = 0
-            if typ == ImageType.DISK:
+            if type == ImageType.DISK:
                 offset = MBR_SIZE_BYTES
                 _write_partition(virtual_size, dev)
 
@@ -329,7 +330,18 @@ class VMHelper(HelperBase):
                     f.write(chunk)
 
         with_vdi_attached_here(session, vdi, False, stream)
-        return session.get_xenapi().VDI.get_uuid(vdi)
+        if (type==ImageType.KERNEL_RAMDISK):
+            #we need to invoke a plugin for copying VDI's content into proper path
+            fn = "copy_kernel_vdi"
+            args = {}
+            args['vdi-ref'] = vdi
+            args['image-size']=str(vdi_size)
+            task = session.async_call_plugin('glance', fn, args)
+            filename=session.wait_for_task(instance_id,task)
+            #TODO(salvatore-orlando): remove the VDI as it is not needed anymore
+            return filename
+        else:
+            return session.get_xenapi().VDI.get_uuid(vdi)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
@@ -364,7 +376,6 @@ class VMHelper(HelperBase):
         fn = "is_vdi_pv"
         args = {}
         args['vdi-ref'] = vdi_ref
-        #TODO: Call proper function in plugin
         task = session.async_call_plugin('objectstore', fn, args)
         pv_str = session.wait_for_task(task)
         if pv_str.lower() == 'true':
