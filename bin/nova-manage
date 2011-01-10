@@ -333,7 +333,7 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         self.manager.create_project(name, project_manager, description)
 
-    def modify(self, name, project_manaber, description=None):
+    def modify(self, name, project_manager, description=None):
         """Modifies a project
         arguments: name project_manager [description]"""
         self.manager.modify_project(name, project_manager, description)
