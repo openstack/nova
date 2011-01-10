@@ -15,13 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import traceback
 
 from webob import exc
 
 from nova import compute
 from nova import exception
+from nova import log as logging
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
@@ -181,7 +181,7 @@ class Controller(wsgi.Controller):
             self.compute_api.lock(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::lock %s"), readable)
+            LOG.exception(_("Compute.api::lock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -196,7 +196,7 @@ class Controller(wsgi.Controller):
             self.compute_api.unlock(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::unlock %s"), readable)
+            LOG.exception(_("Compute.api::unlock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -210,7 +210,7 @@ class Controller(wsgi.Controller):
             self.compute_api.get_lock(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::get_lock %s"), readable)
+            LOG.exception(_("Compute.api::get_lock %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -221,7 +221,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::pause %s"), readable)
+            LOG.exception(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -232,7 +232,7 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::unpause %s"), readable)
+            LOG.exception(_("Compute.api::unpause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -243,7 +243,7 @@ class Controller(wsgi.Controller):
             self.compute_api.suspend(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("compute.api::suspend %s"), readable)
+            LOG.exception(_("compute.api::suspend %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -254,7 +254,7 @@ class Controller(wsgi.Controller):
             self.compute_api.resume(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("compute.api::resume %s"), readable)
+            LOG.exception(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 

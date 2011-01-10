@@ -22,7 +22,6 @@ Handle lease database updates from DHCP servers.
 """
 
 import gettext
-import logging
 import os
 import sys
 
@@ -39,6 +38,7 @@ gettext.install('nova', unicode=1)
 from nova import context
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova.network import linux_net
@@ -49,11 +49,13 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
 
+LOG = logging.getLogger('nova.dhcpbridge')
+
 
 def add_lease(mac, ip_address, _hostname, _interface):
     """Set the IP that was assigned by the DHCP server."""
     if FLAGS.fake_rabbit:
-        logging.debug("leasing ip")
+        LOG.debug(_("leasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.lease_fixed_ip(context.get_admin_context(),
                                        mac,
@@ -68,14 +70,14 @@ def add_lease(mac, ip_address, _hostname, _interface):
 
 def old_lease(mac, ip_address, hostname, interface):
     """Update just as add lease."""
-    logging.debug("Adopted old lease or got a change of mac/hostname")
+    LOG.debug(_("Adopted old lease or got a change of mac/hostname"))
     add_lease(mac, ip_address, hostname, interface)
 
 
 def del_lease(mac, ip_address, _hostname, _interface):
     """Called when a lease expires."""
     if FLAGS.fake_rabbit:
-        logging.debug("releasing ip")
+        LOG.debug(_("releasing ip"))
         network_manager = utils.import_object(FLAGS.network_manager)
         network_manager.release_fixed_ip(context.get_admin_context(),
                                          mac,
@@ -100,6 +102,7 @@ def main():
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
+    logging.basicConfig()
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
@@ -117,9 +120,9 @@ def main():
         mac = argv[2]
         ip = argv[3]
         hostname = argv[4]
-        logging.debug("Called %s for mac %s with ip %s and "
-                      "hostname %s on interface %s",
-                      action, mac, ip, hostname, interface)
+        LOG.debug(_("Called %s for mac %s with ip %s and "
+                    "hostname %s on interface %s"),
+                  action, mac, ip, hostname, interface)
         globals()[action + '_lease'](mac, ip, hostname, interface)
     else:
         print init_leases(interface)

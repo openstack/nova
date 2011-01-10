@@ -21,7 +21,6 @@ Generic Node baseclass for all workers that run on hosts
 """
 
 import inspect
-import logging
 import os
 import sys
 import time
@@ -35,10 +34,10 @@ from sqlalchemy.exc import OperationalError
 from nova import context
 from nova import db
 from nova import exception
+from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -155,7 +154,7 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.warn(_("Starting %s node"), topic)
+        logging.audit(_("Starting %s node"), topic)
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -209,6 +208,10 @@ class Service(object):
                 logging.exception(_("model server went away"))
 
                 try:
+                    # NOTE(vish): This is late-loaded to make sure that the
+                    #             database is not created before flags have
+                    #             been loaded.
+                    from nova.db.sqlalchemy import models
                     models.register_models()
                 except OperationalError:
                     logging.exception(_("Data store %s is unreachable."
@@ -219,20 +222,14 @@ class Service(object):
 
 
 def serve(*services):
-    argv = FLAGS(sys.argv)
+    FLAGS(sys.argv)
+    logging.basicConfig()
 
     if not services:
         services = [Service.create()]
 
     name = '_'.join(x.binary for x in services)
-    logging.debug("Serving %s" % name)
-
-    logging.getLogger('amqplib').setLevel(logging.WARN)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
+    logging.debug(_("Serving %s"), name)
 
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:

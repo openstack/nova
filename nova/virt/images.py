@@ -21,7 +21,6 @@
 Handling of VM disk images.
 """
 
-import logging
 import os.path
 import shutil
 import sys
@@ -30,6 +29,7 @@ import urllib2
 import urlparse
 
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth import manager
 from nova.auth import signer
@@ -39,6 +39,8 @@ from nova.objectstore import image
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('use_s3', True,
                   'whether to get images from s3 or use local copy')
+
+LOG = logging.getLogger('nova.virt.images')
 
 
 def fetch(image, path, user, project):
@@ -65,7 +67,7 @@ def _fetch_image_no_curl(url, path, headers):
 
     urlopened = urllib2.urlopen(request)
     urlretrieve(urlopened, path)
-    logging.debug(_("Finished retreving %s -- placed in %s"), url, path)
+    LOG.debug(_("Finished retreving %s -- placed in %s"), url, path)
 
 
 def _fetch_s3_image(image, path, user, project):
@@ -89,7 +91,7 @@ def _fetch_s3_image(image, path, user, project):
     else:
         cmd = ['/usr/bin/curl', '--fail', '--silent', url]
         for (k, v) in headers.iteritems():
-            cmd += ['-H', '%s: %s' % (k, v)]
+            cmd += ['-H', '\'%s: %s\'' % (k, v)]
 
         cmd += ['-o', path]
         cmd_out = ' '.join(cmd)
