@@ -139,17 +139,19 @@ class VMOps(object):
                 return instance_or_vm
             else:
                 # Must be the instance name
-                instance = instance_or_vm
+                instance_name = instance_or_vm
         except (AttributeError, KeyError):
             # Note the the KeyError will only happen with fakes.py
             # Not a string; must be an ID or a vm instance
             if isinstance(instance_or_vm, (int, long)):
-                instance = instance_or_vm
+                ctx = context.get_admin_context()
+                instance_obj = db.instance_get_by_id(ctx, instance_or_vm)
+                instance_name = instance_obj.name
             else:
-                instance = instance_or_vm.name
-        vm = VMHelper.lookup(self._session, instance)
+                instance_name = instance_or_vm.name
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance)
+            raise Exception(_('Instance not present %s') % instance_name)
         return vm
 
     def snapshot(self, instance, name):
@@ -378,9 +380,6 @@ class VMOps(object):
         rec = self._session.get_xenapi().VM.get_record(vm)
         args = {'dom_id': rec['domid'], 'path': path}
         args.update(addl_args)
-        # If the 'testing_mode' attribute is set, add that to the args.
-        if getattr(self, 'testing_mode', False):
-            args['testing_mode'] = 'true'
         try:
             task = self._session.async_call_plugin(plugin, method, args)
             ret = self._session.wait_for_task(instance_id, task)

@@ -297,7 +297,7 @@ class API(base.Base):
 
         host = instance['host']
         if host:
-            self._cast_compute_message('snapshot_instance', context,
+            self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
         else:
             self.db.instance_destroy(context, instance_id)
