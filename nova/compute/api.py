@@ -416,13 +416,13 @@ class API(base.Base):
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
 
-        instance_ref = db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
 
         output = rpc.call(context,
                           '%s.%s' % (FLAGS.compute_topic,
-                                     instance_ref['host']),
+                                     instance['host']),
                           {'method': 'get_ajax_console',
-                           'args': {'instance_id': instance_ref['id']}})
+                           'args': {'instance_id': instance['id']}})
 
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',

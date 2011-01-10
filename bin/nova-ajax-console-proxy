@@ -24,6 +24,7 @@ from eventlet import greenthread
 from eventlet.green import urllib2
 
 import exceptions
+import gettext
 import logging
 import os
 import sys
@@ -38,15 +39,22 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+gettext.install('nova', unicode=1)
+
 from nova import flags
-from nova import utils
+from nova import log as logging
 from nova import rpc
+from nova import utils
 from nova import wsgi
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('ajax_console_idle_timeout', 300,
                      'Seconds before idle connection destroyed')
+
+LOG = logging.getLogger('nova.ajax_console_proxy')
+LOG.setLevel(logging.DEBUG)
+LOG.addHandler(logging.StreamHandler())
 
 
 class AjaxConsoleProxy(object):
@@ -83,6 +91,9 @@ class AjaxConsoleProxy(object):
             start_response("200 OK", info.dict.items())
             return body
         except (exceptions.KeyError):
+            if env['PATH_INFO'] != '/favicon.ico':
+                LOG.audit("Unauthorized request %s, %s"
+                          % (req_url, str(env)))
             start_response("401 NOT AUTHORIZED", [])
             return "Not Authorized"
         except Exception:

@@ -500,7 +500,7 @@ class CloudController(object):
 
     def get_ajax_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id[0]
-        internal_id = ec2_id_to_internal_id(ec2_id)
+        internal_id = ec2_id_to_id(ec2_id)
         return self.compute_api.get_ajax_console(context, internal_id)
 
     def describe_volumes(self, context, volume_id=None, **kwargs):

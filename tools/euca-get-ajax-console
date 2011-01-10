@@ -32,9 +32,10 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+import boto
 import nova
+from boto.ec2.connection import EC2Connection
 from euca2ools import Euca2ool, InstanceValidationError, Util, ConnectionFailed
-from nova.boto_extensions import *
 
 usage_string = """
 Retrieves a url to an ajax console terminal
@@ -48,6 +49,51 @@ instance_id: unique identifier for the instance show the console output for.
 OPTIONAL PARAMETERS
 
 """
+
+
+# This class extends boto to add AjaxConsole functionality
+class NovaEC2Connection(EC2Connection):
+
+    def get_ajax_console(self, instance_id):
+        """
+        Retrieves a console connection for the specified instance.
+
+        :type instance_id: string
+        :param instance_id: The instance ID of a running instance on the cloud.
+
+        :rtype: :class:`AjaxConsole`
+        """
+
+        class AjaxConsole:
+            def __init__(self, parent=None):
+                self.parent = parent
+                self.instance_id = None
+                self.url = None
+
+            def startElement(self, name, attrs, connection):
+                return None
+
+            def endElement(self, name, value, connection):
+                if name == 'instanceId':
+                    self.instance_id = value
+                elif name == 'url':
+                    self.url = value
+                else:
+                    setattr(self, name, value)
+
+        params = {}
+        self.build_list_params(params, [instance_id], 'InstanceId')
+        return self.get_object('GetAjaxConsole', params, AjaxConsole)
+    pass
+
+
+def override_connect_ec2(aws_access_key_id=None,
+                         aws_secret_access_key=None, **kwargs):
+    return NovaEC2Connection(aws_access_key_id,
+                             aws_secret_access_key, **kwargs)
+
+# override boto's connect_ec2 method, so that we can use NovaEC2Connection
+boto.connect_ec2 = override_connect_ec2
 
 
 def usage(status=1):
