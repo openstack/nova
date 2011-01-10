@@ -133,6 +133,23 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_describe_instances(self):
+        """Makes sure describe_instances works and filters results."""
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a'})
+        inst2 = db.instance_create(self.context, {'reservation_id': 'a'})
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 2)
+        instance_id = cloud.id_to_ec2_id(inst2['id'])
+        result = self.cloud.describe_instances(self.context,
+                                             instance_id=[instance_id])
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        self.assertEqual(result['instancesSet'][0]['instanceId'],
+                         instance_id)
+        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst2['id'])
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -141,7 +158,6 @@ class CloudTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
-        print rv
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
                                                      instance_id=[instance_id])
