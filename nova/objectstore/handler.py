@@ -39,7 +39,6 @@ S3 client with this module::
 
 import datetime
 import json
-import logging
 import multiprocessing
 import os
 import urllib
@@ -54,12 +53,14 @@ from twisted.web import static
 from nova import context
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth import manager
 from nova.objectstore import bucket
 from nova.objectstore import image
 
 
+LOG = logging.getLogger('nova.objectstore.handler')
 FLAGS = flags.FLAGS
 flags.DEFINE_string('s3_listen_host', '', 'Host to listen on.')
 
@@ -132,9 +133,11 @@ def get_context(request):
                                           request.uri,
                                           headers=request.getAllHeaders(),
                                           check_type='s3')
-        return context.RequestContext(user, project)
+        rv = context.RequestContext(user, project)
+        LOG.audit(_("Authenticated request"), context=rv)
+        return rv
     except exception.Error as ex:
-        logging.debug(_("Authentication Failure: %s"), ex)
+        LOG.debug(_("Authentication Failure: %s"), ex)
         raise exception.NotAuthorized()
 
 
@@ -176,7 +179,7 @@ class S3(ErrorHandlingResource):
 
     def render_GET(self, request):  # pylint: disable-msg=R0201
         """Renders the GET request for a list of buckets as XML"""
-        logging.debug('List of buckets requested')
+        LOG.debug(_('List of buckets requested'), context=request.context)
         buckets = [b for b in bucket.Bucket.all() \
                    if b.is_authorized(request.context)]
 
@@ -203,7 +206,7 @@ class BucketResource(ErrorHandlingResource):
 
     def render_GET(self, request):
         "Returns the keys for the bucket resource"""
-        logging.debug("List keys for bucket %s", self.name)
+        LOG.debug(_("List keys for bucket %s"), self.name)
 
         try:
             bucket_object = bucket.Bucket(self.name)
@@ -211,6 +214,8 @@ class BucketResource(ErrorHandlingResource):
             return error.NoResource(message="No such bucket").render(request)
 
         if not bucket_object.is_authorized(request.context):
+            LOG.audit(_("Unauthorized attempt to access bucket %s"),
+                      self.name, context=request.context)
             raise exception.NotAuthorized()
 
         prefix = get_argument(request, "prefix", u"")
@@ -227,8 +232,8 @@ class BucketResource(ErrorHandlingResource):
 
     def render_PUT(self, request):
         "Creates the bucket resource"""
-        logging.debug(_("Creating bucket %s"), self.name)
-        logging.debug("calling bucket.Bucket.create(%r, %r)",
+        LOG.debug(_("Creating bucket %s"), self.name)
+        LOG.debug("calling bucket.Bucket.create(%r, %r)",
                       self.name,
                       request.context)
         bucket.Bucket.create(self.name, request.context)
@@ -237,10 +242,12 @@ class BucketResource(ErrorHandlingResource):
 
     def render_DELETE(self, request):
         """Deletes the bucket resource"""
-        logging.debug(_("Deleting bucket %s"), self.name)
+        LOG.debug(_("Deleting bucket %s"), self.name)
         bucket_object = bucket.Bucket(self.name)
 
         if not bucket_object.is_authorized(request.context):
+            LOG.audit(_("Unauthorized attempt to delete bucket %s"),
+                      self.name, context=request.context)
             raise exception.NotAuthorized()
 
         bucket_object.delete()
@@ -261,11 +268,12 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug(_("Getting object: %s / %s"),
-                      self.bucket.name,
-                      self.name)
+        LOG.debug(_("Getting object: %s / %s"), self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
+            LOG.audit(_("Unauthorized attempt to get object %s from bucket "
+                        "%s"), self.name, self.bucket.name,
+                      context=request.context)
             raise exception.NotAuthorized()
 
         obj = self.bucket[urllib.unquote(self.name)]
@@ -281,11 +289,12 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        logging.debug(_("Putting object: %s / %s"),
-                      self.bucket.name,
-                      self.name)
+        LOG.debug(_("Putting object: %s / %s"), self.bucket.name, self.name)
 
         if not self.bucket.is_authorized(request.context):
+            LOG.audit(_("Unauthorized attempt to upload object %s to bucket "
+                        "%s"),
+                      self.name, self.bucket.name, context=request.context)
             raise exception.NotAuthorized()
 
         key = urllib.unquote(self.name)
@@ -302,11 +311,13 @@ class ObjectResource(ErrorHandlingResource):
         authorized to delete the object.
         """
 
-        logging.debug(_("Deleting object: %s / %s"),
-                      self.bucket.name,
-                      self.name)
+        LOG.debug(_("Deleting object: %s / %s"), self.bucket.name, self.name,
+                  context=request.context)
 
         if not self.bucket.is_authorized(request.context):
+            LOG.audit("Unauthorized attempt to delete object %s from "
+                      "bucket %s", self.name, self.bucket.name,
+                      context=request.context)
             raise exception.NotAuthorized()
 
         del self.bucket[urllib.unquote(self.name)]
@@ -379,13 +390,21 @@ class ImagesResource(resource.Resource):
         image_path = os.path.join(FLAGS.images_path, image_id)
         if not image_path.startswith(FLAGS.images_path) or \
            os.path.exists(image_path):
+            LOG.audit(_("Not authorized to upload image: invalid directory "
+                        "%s"),
+                      image_path, context=request.context)
             raise exception.NotAuthorized()
 
         bucket_object = bucket.Bucket(image_location.split("/")[0])
 
         if not bucket_object.is_authorized(request.context):
+            LOG.audit(_("Not authorized to upload image: unauthorized "
+                      "bucket %s"), bucket_object.name,
+                      context=request.context)
             raise exception.NotAuthorized()
 
+        LOG.audit(_("Starting image upload: %s"), image_id,
+                  context=request.context)
         p = multiprocessing.Process(target=image.Image.register_aws_image,
                 args=(image_id, image_location, request.context))
         p.start()
@@ -398,17 +417,21 @@ class ImagesResource(resource.Resource):
         image_id = get_argument(request, 'image_id', u'')
         image_object = image.Image(image_id)
         if not image_object.is_authorized(request.context):
-            logging.debug(_("not authorized for render_POST in images"))
+            LOG.audit(_("Not authorized to update attributes of image %s"),
+                      image_id, context=request.context)
             raise exception.NotAuthorized()
 
         operation = get_argument(request, 'operation', u'')
         if operation:
             # operation implies publicity toggle
-            logging.debug(_("handling publicity toggle"))
-            image_object.set_public(operation == 'add')
+            newstatus = (operation == 'add')
+            LOG.audit(_("Toggling publicity flag of image %s %r"), image_id,
+                      newstatus, context=request.context)
+            image_object.set_public(newstatus)
         else:
             # other attributes imply update
-            logging.debug(_("update user fields"))
+            LOG.audit(_("Updating user fields on image %s"), image_id,
+                     context=request.context)
             clean_args = {}
             for arg in request.args.keys():
                 clean_args[arg] = request.args[arg][0]
@@ -421,9 +444,12 @@ class ImagesResource(resource.Resource):
         image_object = image.Image(image_id)
 
         if not image_object.is_authorized(request.context):
+            LOG.audit(_("Unauthorized attempt to delete image %s"),
+                      image_id, context=request.context)
             raise exception.NotAuthorized()
 
         image_object.delete()
+        LOG.audit(_("Deleted image: %s"), image_id, context=request.context)
 
         request.setResponseCode(204)
         return ''

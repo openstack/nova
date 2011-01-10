@@ -20,15 +20,15 @@ Drivers for volumes.
 
 """
 
-import logging
-import os
 import time
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 
+LOG = logging.getLogger("nova.volume.driver")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
@@ -73,13 +73,15 @@ class VolumeDriver(object):
                 tries = tries + 1
                 if tries >= FLAGS.num_shell_tries:
                     raise
-                logging.exception(_("Recovering from a failed execute."
-                                    "Try number %s"), tries)
+                LOG.exception(_("Recovering from a failed execute.  "
+                                "Try number %s"), tries)
                 time.sleep(tries ** 2)
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+        out, err = self._execute("sudo vgs --noheadings -o name")
+        volume_groups = out.split()
+        if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
@@ -205,7 +207,7 @@ class FakeAOEDriver(AOEDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug(_("FAKE AOE: %s"), cmd)
+        LOG.debug(_("FAKE AOE: %s"), cmd)
         return (None, None)
 
 
@@ -310,5 +312,5 @@ class FakeISCSIDriver(ISCSIDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug(_("FAKE ISCSI: %s"), cmd)
+        LOG.debug(_("FAKE ISCSI: %s"), cmd)
         return (None, None)

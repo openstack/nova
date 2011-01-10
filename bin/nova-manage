@@ -53,9 +53,10 @@
   CLI interface for nova management.
 """
 
+import datetime
 import gettext
-import logging
 import os
+import re
 import sys
 import time
 
@@ -452,6 +453,61 @@ class NetworkCommands(object):
                                     int(network_size), int(vlan_start),
                                     int(vpn_start))
 
+
+class ServiceCommands(object):
+    """Enable and disable running services"""
+
+    def list(self, host=None, service=None):
+        """Show a list of all running services. Filter by host & service name.
+        args: [host] [service]"""
+        ctxt = context.get_admin_context()
+        now = datetime.datetime.utcnow()
+        services = db.service_get_all(ctxt)
+        if host:
+            services = [s for s in services if s['host'] == host]
+        if service:
+            services = [s for s in services if s['binary'] == service]
+        for svc in services:
+            delta = now - (svc['updated_at'] or svc['created_at'])
+            alive = (delta.seconds <= 15)
+            art = (alive and ":-)") or "XXX"
+            active = 'enabled'
+            if svc['disabled']:
+                active = 'disabled'
+            print "%-10s %-10s %-8s %s %s" % (svc['host'], svc['binary'],
+                                              active, art,
+                                              svc['updated_at'])
+
+    def enable(self, host, service):
+        """Enable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': False})
+
+    def disable(self, host, service):
+        """Disable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': True})
+
+
+class LogCommands(object):
+    def request(self, request_id, logfile='/var/log/nova.log'):
+        """Show all fields in the log for the given request.  Assumes you
+        haven't changed the log format too much.
+        ARGS: request_id [logfile]"""
+        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
+        print re.sub('#012', "\n", "\n".join(lines))
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -459,7 +515,9 @@ CATEGORIES = [
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
     ('floating', FloatingIpCommands),
-    ('network', NetworkCommands)]
+    ('network', NetworkCommands),
+    ('service', ServiceCommands),
+    ('log', LogCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -497,9 +555,6 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     script_name = argv.pop(0)
     if len(argv) < 1:

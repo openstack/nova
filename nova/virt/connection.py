@@ -19,15 +19,17 @@
 
 """Abstraction of the underlying virtualization API."""
 
-import logging
 import sys
 
 from nova import flags
+from nova import log as logging
 from nova.virt import fake
 from nova.virt import libvirt_conn
 from nova.virt import xenapi_conn
+from nova.virt import hyperv
 
 
+LOG = logging.getLogger("nova.virt.connection")
 FLAGS = flags.FLAGS
 
 
@@ -62,10 +64,12 @@ def get_connection(read_only=False):
         conn = libvirt_conn.get_connection(read_only)
     elif t == 'xenapi':
         conn = xenapi_conn.get_connection(read_only)
+    elif t == 'hyperv':
+        conn = hyperv.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 
     if conn is None:
-        logging.error(_('Failed to open connection to the hypervisor'))
+        LOG.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
     return conn
