@@ -47,7 +47,7 @@ def stubout_instance_snapshot(stubs):
         stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task',
                   fake_wait_for_task)
 
-        stubs.Set(xenapi_conn.XenAPISession, 'stop_loop', fake_loop)
+        stubs.Set(xenapi_conn.XenAPISession, '_stop_loop', fake_loop)
 
         from nova.virt.xenapi.fake import create_vdi
         name_label = "instance-%s" % instance_id

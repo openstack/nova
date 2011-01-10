@@ -243,7 +243,8 @@ class XenAPISession(object):
         self.loop.stop()
         return rv
 
-    def stop_loop(self):
+    def _stop_loop(self):
+        """Stop polling for task to finish."""
         #NOTE(sandy-walsh) Had to break this call out to support unit tests.
         if self.loop:
             self.loop.stop()
@@ -284,7 +285,7 @@ class XenAPISession(object):
         except self.XenAPI.Failure, exc:
             LOG.warn(exc)
             done.send_exception(*sys.exc_info())
-        self.stop_loop()
+        self._stop_loop()
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details"""
