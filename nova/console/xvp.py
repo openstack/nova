@@ -32,7 +32,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
-from nova.console import driver
 
 flags.DEFINE_string('console_xvp_conf_template',
                     utils.abspath('console/xvp.conf.template'),
@@ -52,7 +51,7 @@ flags.DEFINE_integer('console_xvp_multiplex_port',
 FLAGS = flags.FLAGS
 
 
-class XVPConsoleProxy(driver.ConsoleProxy):
+class XVPConsoleProxy(object):
     """Sets up XVP config, and manages xvp daemon"""
 
     def __init__(self):
@@ -91,6 +90,10 @@ class XVPConsoleProxy(driver.ConsoleProxy):
     def fix_console_password(self, password):
         """Trim password to length, and encode"""
         return self._xvp_encrypt(password)
+
+    def generate_password(self, length=8):
+        """Returns random console password"""
+        return os.urandom(length * 2).encode('base64')[:length]
 
     def _rebuild_xvp_conf(self, context):
         logging.debug("Rebuilding xvp conf")

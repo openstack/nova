@@ -20,10 +20,9 @@ Fake ConsoleProxy driver for tests.
 """
 
 from nova import exception
-from nova.console import driver
 
 
-class FakeConsoleProxy(driver.ConsoleProxy):
+class FakeConsoleProxy(object):
     """Fake ConsoleProxy driver."""
 
     @property
