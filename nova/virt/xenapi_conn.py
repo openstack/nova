@@ -244,7 +244,7 @@ class XenAPISession(object):
         return rv
 
     def stop_loop(self):
-        # Had to break this call out to support unit tests.
+        #NOTE(sandy-walsh) Had to break this call out to support unit tests.
         if self.loop:
             self.loop.stop()
 
