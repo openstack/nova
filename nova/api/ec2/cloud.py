@@ -613,11 +613,12 @@ class CloudController(object):
 
     def _format_instances(self, context, instance_id=None, **kwargs):
         reservations = {}
-        instances = self.compute_api.get_all(context, **kwargs)
         # NOTE(vish): instance_id is an optional list of ids to filter by
         if instance_id:
             instance_id = [ec2_id_to_id(x) for x in instance_id]
-            instances = [x for x in instances if x['id'] in instance_id]
+            instances = [self.compute_api.get(context, x) for x in instance_id]
+        else:
+            instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
