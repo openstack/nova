@@ -650,7 +650,7 @@ def instance_get(context, instance_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
+                         options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
@@ -658,7 +658,7 @@ def instance_get(context, instance_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
+                         options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
@@ -840,12 +840,9 @@ def instance_action_create(context, values):
 def instance_get_actions(context, instance_id):
     """Return the actions associated to the given instance id"""
     session = get_session()
-    actions = {}
-    for action in session.query(models.InstanceActions).\
+    return session.query(models.InstanceActions).\
         filter_by(instance_id=instance_id).\
-        all():
-        actions[action.action] = action.error
-    return actions
+        all()
 
 
 ###################
@@ -1578,6 +1575,44 @@ def security_group_rule_get(context, security_group_rule_id, session=None):
     if not result:
         raise exception.NotFound(_("No secuity group rule with id %s") %
                                  security_group_rule_id)
+    return result
+
+
+@require_context
+def security_group_rule_get_by_security_group(context, security_group_id,
+                                              session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         filter_by(parent_group_id=security_group_id).\
+                         all()
+    else:
+        # TODO(vish): Join to group and check for project_id
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=False).\
+                         filter_by(parent_group_id=security_group_id).\
+                         all()
+    return result
+
+
+@require_context
+def security_group_rule_get_by_security_group_grantee(context,
+                                                      security_group_id,
+                                                      session=None):
+    if not session:
+        session = get_session()
+    if is_admin_context(context):
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         filter_by(group_id=security_group_id).\
+                         all()
+    else:
+        result = session.query(models.SecurityGroupIngressRule).\
+                         filter_by(deleted=False).\
+                         filter_by(group_id=security_group_id).\
+                         all()
     return result
 
 

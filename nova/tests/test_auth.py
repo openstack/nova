@@ -16,17 +16,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 from M2Crypto import X509
 import unittest
 
 from nova import crypto
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova.auth import manager
 from nova.api.ec2 import cloud
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.auth_unittest')
 
 
 class user_generator(object):
@@ -211,12 +212,12 @@ class AuthManagerTestCase(object):
             # NOTE(vish): Setup runs genroot.sh if it hasn't been run
             cloud.CloudController().setup()
             _key, cert_str = crypto.generate_x509_cert(user.id, project.id)
-            logging.debug(cert_str)
+            LOG.debug(cert_str)
 
             full_chain = crypto.fetch_ca(project_id=project.id, chain=True)
             int_cert = crypto.fetch_ca(project_id=project.id, chain=False)
             cloud_cert = crypto.fetch_ca()
-            logging.debug("CA chain:\n\n =====\n%s\n\n=====" % full_chain)
+            LOG.debug("CA chain:\n\n =====\n%s\n\n=====", full_chain)
             signed_cert = X509.load_cert_string(cert_str)
             chain_cert = X509.load_cert_string(full_chain)
             int_cert = X509.load_cert_string(int_cert)
@@ -331,7 +332,7 @@ class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
         test.TestCase.__init__(self, *args, **kwargs)
         import nova.auth.fakeldap as fakeldap
         if FLAGS.flush_db:
-            logging.info("Flushing datastore")
+            LOG.info("Flushing datastore")
             r = fakeldap.Store.instance()
             r.flushdb()
 

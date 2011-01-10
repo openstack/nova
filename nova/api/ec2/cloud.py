@@ -24,18 +24,16 @@ datastore.
 
 import base64
 import datetime
-import logging
-import re
+import IPy
 import os
 
-from nova import context
-import IPy
-
 from nova import compute
+from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import network
 from nova import rpc
 from nova import utils
@@ -44,6 +42,8 @@ from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
+
+LOG = logging.getLogger("nova.api.cloud")
 
 InvalidInputException = exception.InvalidInputException
 
@@ -130,15 +130,6 @@ class CloudController(object):
                 else:
                     result[key] = [line]
         return result
-
-    def _trigger_refresh_security_group(self, context, security_group):
-        nodes = set([instance['host'] for instance in security_group.instances
-                       if instance['host'] is not None])
-        for node in nodes:
-            rpc.cast(context,
-                     '%s.%s' % (FLAGS.compute_topic, node),
-                     {"method": "refresh_security_group",
-                      "args": {"security_group_id": security_group.id}})
 
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
@@ -247,6 +238,7 @@ class CloudController(object):
                                                             FLAGS.cc_host,
                                                             FLAGS.cc_port,
                                                             FLAGS.ec2_suffix)}]
+        return {'regionInfo': regions}
 
     def describe_snapshots(self,
                            context,
@@ -282,6 +274,7 @@ class CloudController(object):
         return {'keypairsSet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
+        LOG.audit(_("Create key pair %s"), key_name, context=context)
         data = _gen_key(context, context.user.id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
@@ -289,6 +282,7 @@ class CloudController(object):
         # TODO(vish): when context is no longer an object, pass it here
 
     def delete_key_pair(self, context, key_name, **kwargs):
+        LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
             db.key_pair_destroy(context, context.user.id, key_name)
         except exception.NotFound:
@@ -395,6 +389,8 @@ class CloudController(object):
         return False
 
     def revoke_security_group_ingress(self, context, group_name, **kwargs):
+        LOG.audit(_("Revoke security group ingress %s"), group_name,
+                  context=context)
         self.compute_api.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
@@ -412,7 +408,8 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(context, security_group)
+                self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
                 return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
@@ -421,6 +418,8 @@ class CloudController(object):
     #              for these operations, so support for newer API versions
     #              is sketchy.
     def authorize_security_group_ingress(self, context, group_name, **kwargs):
+        LOG.audit(_("Authorize security group ingress %s"), group_name,
+                  context=context)
         self.compute_api.ensure_default_security_group(context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
@@ -435,7 +434,8 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(context, security_group)
+        self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
 
         return True
 
@@ -457,6 +457,7 @@ class CloudController(object):
         return source_project_id
 
     def create_security_group(self, context, group_name, group_description):
+        LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError(_('group %s already exists') % group_name)
@@ -471,6 +472,7 @@ class CloudController(object):
                                                                  group_ref)]}
 
     def delete_security_group(self, context, group_name, **kwargs):
+        LOG.audit(_("Delete security group %s"), group_name, context=context)
         security_group = db.security_group_get_by_name(context,
                                                        context.project_id,
                                                        group_name)
@@ -478,6 +480,8 @@ class CloudController(object):
         return True
 
     def get_console_output(self, context, instance_id, **kwargs):
+        LOG.audit(_("Get console output for instance %s"), instance_id,
+                  context=context)
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
@@ -536,6 +540,7 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, size, **kwargs):
+        LOG.audit(_("Create volume of %s GB"), size, context=context)
         volume = self.volume_api.create(context, size,
                                         kwargs.get('display_name'),
                                         kwargs.get('display_description'))
@@ -559,6 +564,8 @@ class CloudController(object):
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        LOG.audit(_("Attach volume %s to instacne %s at %s"), volume_id,
+                  instance_id, device, context=context)
         self.compute_api.attach_volume(context, instance_id, volume_id, device)
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
@@ -569,6 +576,7 @@ class CloudController(object):
                 'volumeId': volume_id}
 
     def detach_volume(self, context, volume_id, **kwargs):
+        LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
         instance = self.compute_api.detach_volume(context, volume_id)
         return {'attachTime': volume['attach_time'],
@@ -586,19 +594,24 @@ class CloudController(object):
         return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context)
+        return self._format_describe_instances(context, **kwargs)
 
-    def _format_describe_instances(self, context):
-        return {'reservationSet': self._format_instances(context)}
+    def _format_describe_instances(self, context, **kwargs):
+        return {'reservationSet': self._format_instances(context, **kwargs)}
 
     def _format_run_instances(self, context, reservation_id):
-        i = self._format_instances(context, reservation_id)
+        i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, **kwargs):
+    def _format_instances(self, context, instance_id=None, **kwargs):
         reservations = {}
-        instances = self.compute_api.get_all(context, **kwargs)
+        # NOTE(vish): instance_id is an optional list of ids to filter by
+        if instance_id:
+            instance_id = [ec2_id_to_id(x) for x in instance_id]
+            instances = [self.compute_api.get(context, x) for x in instance_id]
+        else:
+            instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -670,19 +683,24 @@ class CloudController(object):
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
+        LOG.audit(_("Allocate address"), context=context)
         public_ip = self.network_api.allocate_floating_ip(context)
         return {'addressSet': [{'publicIp': public_ip}]}
 
     def release_address(self, context, public_ip, **kwargs):
+        LOG.audit(_("Release address %s"), public_ip, context=context)
         self.network_api.release_floating_ip(context, public_ip)
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
+        LOG.audit(_("Associate address %s to instance %s"), public_ip,
+                  instance_id, context=context)
         instance_id = ec2_id_to_id(instance_id)
         self.compute_api.associate_floating_ip(context, instance_id, public_ip)
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
+        LOG.audit(_("Disassociate address %s"), public_ip, context=context)
         self.network_api.disassociate_floating_ip(context, public_ip)
         return {'disassociateResponse': ["Address disassociated."]}
 
@@ -709,7 +727,7 @@ class CloudController(object):
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
-        logging.debug("Going to start terminating instances")
+        LOG.debug(_("Going to start terminating instances"))
         for ec2_id in instance_id:
             instance_id = ec2_id_to_id(ec2_id)
             self.compute_api.delete(context, instance_id)
@@ -717,6 +735,7 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
+        LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for ec2_id in instance_id:
             instance_id = ec2_id_to_id(ec2_id)
             self.compute_api.reboot(context, instance_id)
@@ -753,6 +772,7 @@ class CloudController(object):
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
+        LOG.audit(_("De-registering image %s"), image_id, context=context)
         self.image_service.deregister(context, image_id)
         return {'imageId': image_id}
 
@@ -760,7 +780,8 @@ class CloudController(object):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         image_id = self.image_service.register(context, image_location)
-        logging.debug("Registered %s as %s" % (image_location, image_id))
+        LOG.audit(_("Registered image %s with id %s"), image_location,
+                  image_id, context=context)
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
@@ -788,6 +809,7 @@ class CloudController(object):
             raise exception.ApiError(_('only group "all" is supported'))
         if not operation_type in ['add', 'remove']:
             raise exception.ApiError(_('operation_type must be add or remove'))
+        LOG.audit(_("Updating image %s publicity"), image_id, context=context)
         return self.image_service.modify(context, image_id, operation_type)
 
     def update_image(self, context, image_id, **kwargs):

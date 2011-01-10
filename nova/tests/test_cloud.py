@@ -18,7 +18,6 @@
 
 from base64 import b64decode
 import json
-import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
@@ -31,6 +30,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
@@ -41,6 +41,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.cloud')
 
 # Temp dirs for working with image attributes through the cloud controller
 # (stole this from objectstore_unittest.py)
@@ -56,7 +57,6 @@ class CloudTestCase(test.TestCase):
                    images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
-        logging.getLogger().setLevel(logging.DEBUG)
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -133,6 +133,23 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_describe_instances(self):
+        """Makes sure describe_instances works and filters results."""
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a'})
+        inst2 = db.instance_create(self.context, {'reservation_id': 'a'})
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 2)
+        instance_id = cloud.id_to_ec2_id(inst2['id'])
+        result = self.cloud.describe_instances(self.context,
+                                             instance_id=[instance_id])
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        self.assertEqual(result['instancesSet'][0]['instanceId'],
+                         instance_id)
+        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst2['id'])
+
     def test_console_output(self):
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -140,15 +157,15 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(context=self.context,
+        output = self.cloud.get_console_output(context=self.context,
                                                      instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
-        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -178,7 +195,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances(self):
         if FLAGS.connection_type == 'fake':
-            logging.debug("Can't test instances without a real virtual env.")
+            LOG.debug(_("Can't test instances without a real virtual env."))
             return
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -186,30 +203,30 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         # TODO: check for proper response
         instance_id = rv['reservationSet'][0].keys()[0]
         instance = rv['reservationSet'][0][instance_id][0]
-        logging.debug("Need to watch instance %s until it's running..." %
-                      instance['instance_id'])
+        LOG.debug(_("Need to watch instance %s until it's running..."),
+                  instance['instance_id'])
         while True:
             greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
-            logging.debug(info['state'])
+            LOG.debug(info['state'])
             if info['state'] == power_state.RUNNING:
                 break
         self.assert_(rv)
 
-        if connection_type != 'fake':
+        if FLAGS.connection_type != 'fake':
             time.sleep(45)  # Should use boto for polling here
         for reservations in rv['reservationSet']:
             # for res_id in reservations.keys():
-            #     logging.debug(reservations[res_id])
+            #     LOG.debug(reservations[res_id])
             # for instance in reservations[res_id]:
             for instance in reservations[reservations.keys()[0]]:
                 instance_id = instance['instance_id']
-                logging.debug("Terminating instance %s" % instance_id)
-                rv = yield self.compute.terminate_instance(instance_id)
+                LOG.debug(_("Terminating instance %s"), instance_id)
+                rv = self.compute.terminate_instance(instance_id)
 
     def test_instance_update_state(self):
         def instance(num):

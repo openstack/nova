@@ -21,11 +21,11 @@ Handles all requests relating to volumes.
 """
 
 import datetime
-import logging
 
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova.db import base
@@ -33,16 +33,18 @@ from nova.db import base
 FLAGS = flags.FLAGS
 flags.DECLARE('storage_availability_zone', 'nova.volume.manager')
 
+LOG = logging.getLogger('nova.volume')
+
 
 class API(base.Base):
     """API for interacting with the volume manager."""
 
     def create(self, context, size, name, description):
         if quota.allowed_volumes(context, 1, size) < 1:
-            logging.warn("Quota exceeeded for %s, tried to create %sG volume",
+            LOG.warn(_("Quota exceeeded for %s, tried to create %sG volume"),
                          context.project_id, size)
-            raise quota.QuotaError("Volume quota exceeded. You cannot "
-                                   "create a volume of size %s" % size)
+            raise quota.QuotaError(_("Volume quota exceeded. You cannot "
+                                     "create a volume of size %s") % size)
 
         options = {
             'size': size,
