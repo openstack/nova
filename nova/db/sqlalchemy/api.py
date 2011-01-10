@@ -135,6 +135,18 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
+def service_get_all(context, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Service).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     all()
+
+    return result
+
+
+@require_admin_context
 def service_get_all_by_topic(context, topic):
     session = get_session()
     return session.query(models.Service).\

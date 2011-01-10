@@ -42,6 +42,7 @@ from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
@@ -198,7 +199,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context)
-        now = db.get_time()
+        now = datetime.datetime.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:

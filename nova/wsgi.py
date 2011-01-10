@@ -57,7 +57,7 @@ class Server(object):
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
         """Run a WSGI server with the given application."""
-        logging.audit("Starting %s on %s:%s", sys.argv[0], host, port)
+        logging.audit(_("Starting %s on %s:%s"), sys.argv[0], host, port)
         socket = eventlet.listen((host, port), backlog=backlog)
         self.pool.spawn_n(self._run, application, socket)
 
