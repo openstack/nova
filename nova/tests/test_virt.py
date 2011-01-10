@@ -171,7 +171,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
-            conn = libvirt_conn.get_connection(True)
+            conn = libvirt_conn.LibvirtConnection(True)
 
             uri = conn.get_uri()
             self.assertEquals(uri, expected_uri)
