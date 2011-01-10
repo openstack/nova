@@ -20,7 +20,6 @@ Drivers for volumes.
 
 """
 
-import os
 import time
 
 from nova import exception
@@ -80,7 +79,9 @@ class VolumeDriver(object):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+        out, err = self._execute("sudo vgs --noheadings -o name")
+        volume_groups = out.split()
+        if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
