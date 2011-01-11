@@ -138,7 +138,7 @@ class Controller(wsgi.Controller):
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
 
-        image_meta = compute_api.ComputeAPI().snapshot(
+        image_meta = compute.ComputeAPI().snapshot(
             context, instance_id, name)
 
         return dict(image=image_meta)

@@ -333,10 +333,8 @@ class API(base.Base):
         instance = self.get(context, instance_id)
         host = instance['host']
 
-        image_service = utils.import_object(FLAGS.image_service)
-
         data = {'name': name, 'is_public': True}
-        image_meta = image_service.create(context, data)
+        image_meta = self.image_service.create(context, data)
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "snapshot_instance",
