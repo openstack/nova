@@ -220,6 +220,9 @@ class VMOps(object):
         dh = SimpleDH()
         args = {'id': transaction_id, 'pub': str(dh.get_public())}
         resp = self._make_agent_call('key_init', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
         resp_dict = json.loads(resp)
         # Successful return code from key_init is 'D0'
         if resp_dict['returncode'] != 'D0':
@@ -232,6 +235,9 @@ class VMOps(object):
         # Send the encrypted password
         args['enc_pass'] = enc_pass
         resp = self._make_agent_call('password', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
         resp_dict = json.loads(resp)
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
@@ -384,12 +390,16 @@ class VMOps(object):
             task = self._session.async_call_plugin(plugin, method, args)
             ret = self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, e:
+            ret = None
             err_trace = e.details[-1]
             err_msg = err_trace.splitlines()[-1]
+            strargs = str(args)
             if 'TIMEOUT:' in err_msg:
-                raise exception.TimeoutException(err_msg)
+                LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
+                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
             else:
-                raise RuntimeError("%s" % e.details[-1])
+                LOG.error(_('The call to %(method)s returned an error: %(e)s. '
+                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
         return ret
 
     def add_to_xenstore(self, vm, path, key, value):
