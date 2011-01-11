@@ -23,7 +23,6 @@ Unittets for S3 objectstore clone.
 import boto
 import glob
 import hashlib
-import logging
 import os
 import shutil
 import tempfile
@@ -63,7 +62,6 @@ class ObjectStoreTestCase(test.TestCase):
         self.flags(buckets_path=os.path.join(OSS_TEMPDIR, 'buckets'),
                    images_path=os.path.join(OSS_TEMPDIR, 'images'),
                    ca_path=os.path.join(os.path.dirname(__file__), 'CA'))
-        logging.getLogger().setLevel(logging.DEBUG)
 
         self.auth_manager = manager.AuthManager()
         self.auth_manager.create_user('user1')

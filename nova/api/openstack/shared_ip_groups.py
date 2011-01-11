@@ -48,8 +48,8 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """ Shows in-depth information on a specific Shared IP Group """
-        if id == 'detail':
-            return _translate_detail_keys({})
+        #if id == 'detail':
+        #    return _translate_detail_keys({})
         return _translate_keys({})
 
     def update(self, req, id):

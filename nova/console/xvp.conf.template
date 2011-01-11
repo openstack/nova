@@ -1,0 +1,16 @@
+# One time password use with time window
+OTP ALLOW IPCHECK HTTP 60
+#if $multiplex_port
+MULTIPLEX $multiplex_port 
+#end if
+
+#for $pool in $pools
+POOL $pool.address
+  DOMAIN $pool.address
+  MANAGER root $pool.password 
+  HOST $pool.address
+    VM - dummy 0123456789ABCDEF
+  #for $console in $pool.consoles
+    VM #if $multiplex_port then '-' else $console.port # $console.instance_name $pass_encode($console.password)
+  #end for 
+#end for 

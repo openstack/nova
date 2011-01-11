@@ -21,16 +21,17 @@ and storage repositories
 
 import re
 import string
-import logging
 
 from nova import db
 from nova import context
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.virt.xenapi import HelperBase
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.virt.xenapi.volume_utils")
 
 
 class StorageError(Exception):
@@ -53,7 +54,7 @@ class VolumeHelper(HelperBase):
         """
         sr_ref = session.get_xenapi().SR.get_by_name_label(label)
         if len(sr_ref) == 0:
-            logging.debug('Introducing %s...', label)
+            LOG.debug(_('Introducing %s...'), label)
             record = {}
             if 'chapuser' in info and 'chappassword' in info:
                 record = {'target': info['targetHost'],
@@ -70,10 +71,10 @@ class VolumeHelper(HelperBase):
                     session.get_xenapi_host(),
                     record,
                     '0', label, description, 'iscsi', '', False, {})
-                logging.debug('Introduced %s as %s.', label, sr_ref)
+                LOG.debug(_('Introduced %s as %s.'), label, sr_ref)
                 return sr_ref
             except cls.XenAPI.Failure, exc:
-                logging.warn(exc)
+                LOG.exception(exc)
                 raise StorageError(_('Unable to create Storage Repository'))
         else:
             return sr_ref[0]
@@ -85,32 +86,32 @@ class VolumeHelper(HelperBase):
             vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
             sr_ref = session.get_xenapi().VDI.get_SR(vdi_ref)
         except cls.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
             raise StorageError(_('Unable to find SR from VBD %s') % vbd_ref)
         return sr_ref
 
     @classmethod
     def destroy_iscsi_storage(cls, session, sr_ref):
         """Forget the SR whilst preserving the state of the disk"""
-        logging.debug("Forgetting SR %s ... ", sr_ref)
+        LOG.debug(_("Forgetting SR %s ... "), sr_ref)
         pbds = []
         try:
             pbds = session.get_xenapi().SR.get_PBDs(sr_ref)
         except cls.XenAPI.Failure, exc:
-            logging.warn('Ignoring exception %s when getting PBDs for %s',
-                         exc, sr_ref)
+            LOG.warn(_('Ignoring exception %s when getting PBDs for %s'),
+                     exc, sr_ref)
         for pbd in pbds:
             try:
                 session.get_xenapi().PBD.unplug(pbd)
             except cls.XenAPI.Failure, exc:
-                logging.warn('Ignoring exception %s when unplugging PBD %s',
-                             exc, pbd)
+                LOG.warn(_('Ignoring exception %s when unplugging PBD %s'),
+                         exc, pbd)
         try:
             session.get_xenapi().SR.forget(sr_ref)
-            logging.debug("Forgetting SR %s done.", sr_ref)
+            LOG.debug(_("Forgetting SR %s done."), sr_ref)
         except cls.XenAPI.Failure, exc:
-            logging.warn('Ignoring exception %s when forgetting SR %s',
-                         exc, sr_ref)
+            LOG.warn(_('Ignoring exception %s when forgetting SR %s'), exc,
+                     sr_ref)
 
     @classmethod
     def introduce_vdi(cls, session, sr_ref):
@@ -118,12 +119,12 @@ class VolumeHelper(HelperBase):
         try:
             vdis = session.get_xenapi().SR.get_VDIs(sr_ref)
         except cls.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
             raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
         try:
             vdi_rec = session.get_xenapi().VDI.get_record(vdis[0])
         except cls.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
             raise StorageError(_('Unable to get record'
                                  ' of VDI %s on') % vdis[0])
         else:
@@ -141,7 +142,7 @@ class VolumeHelper(HelperBase):
                     vdi_rec['xenstore_data'],
                     vdi_rec['sm_config'])
             except cls.XenAPI.Failure, exc:
-                logging.warn(exc)
+                LOG.exception(exc)
                 raise StorageError(_('Unable to introduce VDI for SR %s')
                                    % sr_ref)
 
@@ -165,11 +166,8 @@ class VolumeHelper(HelperBase):
         target_host = _get_target_host(iscsi_portal)
         target_port = _get_target_port(iscsi_portal)
         target_iqn = _get_iqn(iscsi_name, volume_id)
-        logging.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
-                      volume_id,
-                      target_host,
-                      target_port,
-                      target_iqn)
+        LOG.debug('(vol_id,number,host,port,iqn): (%s,%s,%s,%s)',
+                  volume_id, target_host, target_port, target_iqn)
         if (device_number < 0) or \
             (volume_id is None) or \
             (target_host is None) or \
@@ -196,7 +194,7 @@ class VolumeHelper(HelperBase):
         elif re.match('^[0-9]+$', mountpoint):
             return string.atoi(mountpoint, 10)
         else:
-            logging.warn('Mountpoint cannot be translated: %s', mountpoint)
+            LOG.warn(_('Mountpoint cannot be translated: %s'), mountpoint)
             return -1
 
 
@@ -257,7 +255,7 @@ def _get_target(volume_id):
                                      "sendtargets -p %s" %
                                      volume_ref['host'])
     except exception.ProcessExecutionError, exc:
-        logging.warn(exc)
+        LOG.exception(exc)
     else:
         targets = r.splitlines()
         if len(_e) == 0 and len(targets) == 1:
