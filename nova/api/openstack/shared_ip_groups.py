@@ -48,8 +48,6 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """ Shows in-depth information on a specific Shared IP Group """
-        #if id == 'detail':
-        #    return _translate_detail_keys({})
         return _translate_keys({})
 
     def update(self, req, id):
@@ -60,7 +58,7 @@ class Controller(wsgi.Controller):
         """ Deletes a Shared IP Group """
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def detail(self, req, id):
+    def detail(self, req):
         """ Returns a complete list of Shared IP Groups """
         return _translate_detail_keys({})
 
