@@ -160,6 +160,15 @@ class Scheduler(object):
                               power_state.PAUSED,
                               'migrating')
 
+        # Changing volume state
+        try:
+            for vol in db.volume_get_all_by_instance(context, instance_id):
+                db.volume_update(context,
+                                 vol['id'],
+                                 {'status': 'migrating'})
+        except exception.NotFound:
+            pass
+
         # Requesting live migration.
         return src
 

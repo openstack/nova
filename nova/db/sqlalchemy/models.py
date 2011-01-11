@@ -138,7 +138,6 @@ class NovaBase(object):
 #    __tablename__ = 'hosts'
 #    id = Column(String(255), primary_key=True)
 
-# this class is created by masumotok
 class Host(BASE, NovaBase):
     """Represents a host where services are running"""
     __tablename__ = 'hosts'

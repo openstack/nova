@@ -97,6 +97,9 @@ class NovaManageTestFunctions(unittest.TestCase):
         # prepare test data
         self.setTestData()
 
+        # only AoE is supported for now
+        FLAGS.volume_driver = 'nova.volume.driver.AOEDriver'
+
 
     def setTestData(self):  
         import bin.novamanagetest

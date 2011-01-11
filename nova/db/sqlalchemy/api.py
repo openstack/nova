@@ -900,6 +900,8 @@ def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     return _instance_get_sum_by_host_and_project(context, 'local_gb',
                                                  hostname, proj_id)
+
+
 @require_context
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
@@ -1494,6 +1496,18 @@ def volume_get_by_ec2_id(context, ec2_id):
     if not result:
         raise exception.NotFound(_('Volume %s not found') % ec2_id)
 
+    return result
+
+
+@require_admin_context
+def volume_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.Volume).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(deleted=False).\
+                     all()
+    if not result:
+        raise exception.NotFound(_('No volume for instance %s') % instance_id)
     return result
 
 

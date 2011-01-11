@@ -141,7 +141,7 @@ class Service(object):
                            'local_gb': local_gb,
                            'hypervisor_type': hypervisor,
                            'hypervisor_version': version,
-                           'cpu_info':cpu_xml })
+                           'cpu_info': cpu_xml})
         return host_ref
 
     def __getattr__(self, key):

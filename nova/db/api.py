@@ -711,6 +711,11 @@ def volume_get_by_ec2_id(context, ec2_id):
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
+def volume_get_all_by_instance(context, instance_id):
+    """Get all volumes by instance id or raise if it does not exist."""
+    return IMPL.volume_get_all_by_instance(context, instance_id)
+
+
 def volume_get_instance(context, volume_id):
     """Get the instance that a volume is attached to."""
     return IMPL.volume_get_instance(context, volume_id)

@@ -474,7 +474,6 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    #def setup_compute_network(self, context, instance_id):
     def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
         if network_ref is None:

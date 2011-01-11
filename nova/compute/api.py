@@ -233,7 +233,8 @@ class ComputeAPI(base.Base):
                              terminated_at=datetime.datetime.utcnow())
 
         host = instance['host']
-        logging.error('terminate %s %s %s %s',context, FLAGS.compute_topic, host, self.db.queue_get_for(context, FLAGS.compute_topic, host))
+        logging.error('terminate %s %s %s %s', context, FLAGS.compute_topic,
+            host, self.db.queue_get_for(context, FLAGS.compute_topic, host))
         if host:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),

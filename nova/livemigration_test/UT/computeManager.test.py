@@ -170,7 +170,8 @@ class ComputeTestFunctions(unittest.TestCase):
         # mocks for pre_live_migration
         self.ctxt = context.get_admin_context()
         db.instance_get = Mock(return_value=self.instance1)
-        db.volume_get_by_ec2_id = Mock(return_value=[self.vol1, self.vol2])
+        db.volume_get_all_by_instance \
+            = Mock(return_value=[self.vol1, self.vol2])
         db.volume_get_shelf_and_blade = Mock(return_value=(3, 4))
         db.instance_get_fixed_address = Mock(return_value=self.fixed_ip1)
         db.security_group_get_by_instance \
@@ -199,7 +200,7 @@ class ComputeTestFunctions(unittest.TestCase):
     def test02(self):
         """02: NotAuthrized occurs on finding volume on DB. """
 
-        db.volume_get_by_ec2_id \
+        db.volume_get_all_by_instance \
             = Mock(side_effect=exception.NotAuthorized('ERR'))
 
         self.assertRaises(exception.NotAuthorized,
@@ -211,7 +212,7 @@ class ComputeTestFunctions(unittest.TestCase):
     def test03(self):
         """03: Unexpected exception occurs on finding volume on DB. """
 
-        db.volume_get_by_ec2_id = Mock(side_effect=TypeError('ERR'))
+        db.volume_get_all_by_instance = Mock(side_effect=TypeError('ERR'))
 
         self.assertRaises(TypeError,
                          self.manager.pre_live_migration,
@@ -222,7 +223,6 @@ class ComputeTestFunctions(unittest.TestCase):
     def test04(self):
         """04: no volume and fixed ip found on DB,  """
 
-        db.volume_get_by_ec2_id = Mock(side_effect=exception.NotFound('ERR'))
         db.instance_get_fixed_address = Mock(return_value=None)
 
         self.assertRaises(rpc.RemoteError,
@@ -230,10 +230,6 @@ class ComputeTestFunctions(unittest.TestCase):
                          self.ctxt,
                          'dummy_ec2_id',
                          'host2')
-        
-        c1 = (0 <= sys.stderr.buffer.find('has no volume'))
-
-        self.assertEqual(c1, True)
 
     def test05(self):
         """05: volume found and no fixed_ip found on DB. """

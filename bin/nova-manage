@@ -83,8 +83,6 @@ from nova import rpc
 from nova.cloudpipe import pipelib
 from nova.api.ec2 import cloud
 
-
-
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
@@ -462,6 +460,10 @@ class InstanceCommands(object):
     def live_migration(self, ec2_id, dest):
         """live_migration"""
 
+        if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver':
+            raise exception.Error('Only AOEDriver is supported for now. '
+                'Sorry.')
+
         logging.basicConfig()
         ctxt = context.get_admin_context()
 
@@ -491,7 +493,6 @@ class InstanceCommands(object):
 class HostCommands(object):
     """Class for mangaging host(physical nodes)."""
 
-
     def list(self):
         """describe host list."""
 
@@ -501,7 +502,6 @@ class HostCommands(object):
         host_refs = db.host_get_all(context.get_admin_context())
         for host_ref in host_refs:
             print host_ref['name']
-
 
     def show(self, host):
         """describe cpu/memory/hdd info for host."""
@@ -545,6 +545,7 @@ CATEGORIES = [
     ('network', NetworkCommands),
     ('instance', InstanceCommands),
     ('host', HostCommands)]
+
 
 def lazy_match(name, key_value_tuples):
     """Finds all objects that have a key that case insensitively contains

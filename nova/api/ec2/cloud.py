@@ -679,22 +679,13 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                # modified by masumotok
-                internal_id = \
-                    floating_ip_ref['fixed_ip']['instance']['internal_id']
+                internal_id = floating_ip_ref['fixed_ip']['instance']
                 ec2_id = internal_id_to_ec2_id(internal_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
             if context.user.is_admin():
-                # modified by masumotok- b/c proj_id is never inserted
-                #details = "%s (%s)" % (address_rv['instance_id'],
-                #                       floating_ip_ref['project_id'])
-                if None != address_rv['instance_id']:
-                    status = 'reserved'
-                else:
-                    status = None
                 details = "%s (%s)" % (address_rv['instance_id'],
-                                       status)
+                                       floating_ip_ref['project_id'])
                 address_rv['instance_id'] = details
             addresses.append(address_rv)
         return {'addressesSet': addresses}

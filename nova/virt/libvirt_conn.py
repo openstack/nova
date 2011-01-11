@@ -695,8 +695,9 @@ class LibvirtConnection(object):
         xmlstr = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xmlstr)
         nodes = xml.xpathEval('//cpu')
-        if 1 != len(nodes): 
-            msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' % len(nodes)
+        if 1 != len(nodes):
+            msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' \
+                    % len(nodes)
             msg += '\n' + xml.serialize()
             raise exception.Invalid(_(msg))
         cpuxmlstr = re.sub("\n|[ ]+", ' ', nodes[0].serialize())
@@ -735,8 +736,8 @@ class LibvirtConnection(object):
         except libvirt.libvirtError:
             return False
 
-    def compareCPU(self, xml): 
-        """ 
+    def compareCPU(self, xml):
+        """
            Check the host cpu is compatible to a cpu given by xml.
            "xml" must be a part of libvirt.openReadonly().getCapabilities().
            return values follows by virCPUCompareResult.
@@ -747,9 +748,9 @@ class LibvirtConnection(object):
         return self._conn.compareCPU(xml, 0)
 
     def live_migration(self, context, instance_ref, dest):
-        """ 
-           Just spawning live_migration operation for 
-           distributing high-load. 
+        """
+           Just spawning live_migration operation for
+           distributing high-load.
         """
         greenthread.spawn(self._live_migration, context, instance_ref, dest)
 
@@ -757,14 +758,21 @@ class LibvirtConnection(object):
         """ Do live migration."""
 
         # Do live migration.
-        try: 
+        try:
             uri = FLAGS.live_migration_uri % dest
             out, err = utils.execute("sudo virsh migrate --live %s %s"
                                     % (instance_ref.name, uri))
-        except exception.ProcessExecutionError: 
+        except exception.ProcessExecutionError:
             id = instance_ref['id']
             db.instance_set_state(context, id, power_state.RUNNING, 'running')
-            raise
+            try:
+                for volume in db.volume_get_all_by_instance(context, id):
+                    db.volume_update(context,
+                                     volume['id'],
+                                     {'status': 'in-use'})
+            except exception.NotFound:
+                pass
+            raise exception.ProcessExecutionError
 
         # Waiting for completion of live_migration.
         timer = utils.LoopingCall(f=None)
@@ -781,7 +789,7 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
 
     def _post_live_migration(self, context, instance_ref, dest):
-        """ 
+        """
            Post operations for live migration.
            Mainly, database updating.
         """
@@ -808,13 +816,14 @@ class LibvirtConnection(object):
         db.network_update(context, network_ref['id'], {'host': dest})
 
         try:
-            floating_ip = db.instance_get_floating_address(context, instance_id)
+            floating_ip \
+                = db.instance_get_floating_address(context, instance_id)
             # Not return if floating_ip is not found, otherwise,
             # instance never be accessible..
             if None == floating_ip:
                 logging.error('floating_ip is not found for %s ' % ec2_id)
-            else: 
-                floating_ip_ref = db.floating_ip_get_by_address(context, 
+            else:
+                floating_ip_ref = db.floating_ip_get_by_address(context,
                                                                 floating_ip)
                 db.floating_ip_update(context,
                                       floating_ip_ref['address'],
@@ -831,6 +840,14 @@ class LibvirtConnection(object):
                            {'state_description': 'running',
                             'state': power_state.RUNNING,
                             'host': dest})
+
+        try:
+            for volume in db.volume_get_all_by_instance(context, instance_id):
+                db.volume_update(context,
+                                 volume['id'],
+                                 {'status': 'in-use'})
+        except exception.NotFound:
+            pass
 
         logging.info(_('Live migrating %s to %s finishes successfully')
                      % (ec2_id, dest))

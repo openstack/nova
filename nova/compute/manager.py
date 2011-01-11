@@ -122,7 +122,7 @@ class ComputeManager(manager.Manager):
             raise exception.Error(_("Instance has already been created"))
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host, 'launched_on':self.host})
+                                {'host': self.host, 'launched_on': self.host})
 
         self.db.instance_set_state(context,
                                    instance_id,
@@ -443,20 +443,9 @@ class ComputeManager(manager.Manager):
     def pre_live_migration(self, context, instance_id, dest):
         """Any preparation for live migration at dst host."""
 
-        # Getting volume info ( shlf/slot number )
+        # Getting volume info
         instance_ref = db.instance_get(context, instance_id)
         ec2_id = instance_ref['hostname']
-
-        volumes = []
-        try:
-            volumes = db.volume_get_by_ec2_id(context, ec2_id)
-        except exception.NotFound:
-            logging.info(_('%s has no volume.'), ec2_id)
-
-        shelf_slots = {}
-        for vol in volumes:
-            shelf, slot = db.volume_get_shelf_and_blade(context, vol['id'])
-            shelf_slots[vol.id] = (shelf, slot)
 
         # Getting fixed ips
         fixed_ip = db.instance_get_fixed_address(context, instance_id)
@@ -466,18 +455,22 @@ class ComputeManager(manager.Manager):
             tb = ''.join(traceback.format_tb(sys.exc_info()[2]))
             raise rpc.RemoteError(exc_type, val, tb)
 
-        # If any volume is mounted, prepare here.
-        if 0 != len(shelf_slots):
-            pass
+        # if any volume is mounted, prepare here.
+        try:
+            for vol in db.volume_get_all_by_instance(context, instance_id):
+                self.volume_manager.setup_compute_volume(context, vol['id'])
+        except exception.NotFound:
+            logging.info(_("%s has no volume.") % ec2_id)
 
-        #  Creating nova-instance-instance-xxx, this is written to libvirt.xml,
-        #  and can be seen when executin "virsh nwfiter-list" On destination host,
-        #  this nwfilter is necessary.
-        #  In addition this method is creating security rule ingress rule onto
-        #  destination host.
+        # Creating nova-instance-instance-xxx,
+        # this is written to libvirt.xml,
+        # and can be seen when executin "virsh nwfiter-list"
+        # On destination host, this nwfilter is necessary.
+        # In addition this method is creating security rule ingress rule
+        # onto destination host.
         self.driver.setup_nwfilters_for_instance(instance_ref)
 
-        # 5. bridge settings
+        # bridge settings
         self.network_manager.setup_compute_network(context, instance_id)
         return True
 
@@ -497,12 +490,23 @@ class ComputeManager(manager.Manager):
                          "args": {'instance_id': instance_id,
                                     'dest': dest}})
 
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
         if True != ret:
             logging.error(_('Pre live migration failed(err at %s)'), dest)
             db.instance_set_state(context,
                                   instance_id,
                                   power_state.RUNNING,
                                   'running')
+
+            try:
+                for vol in db.volume_get_all_by_instance(context, instance_id):
+                    db.volume_update(context,
+                                     vol['id'],
+                                     {'status': 'in-use'})
+            except exception.NotFound:
+                pass
+
             return
 
         # Waiting for setting up nwfilter such as, nova-instance-instance-xxx.
@@ -522,6 +526,11 @@ class ComputeManager(manager.Manager):
         if not ret:
             logging.error(_('Timeout for pre_live_migration at %s'), dest)
             return
+
+        rpc.call(context,
+                  FLAGS.volume_topic,
+                  {"method": "check_for_export",
+                   "args": {'instance_id': instance_id}})
 
         # Executing live migration
         # live_migration might raises ProcessExecution error, but
