@@ -19,22 +19,23 @@
 from __future__ import absolute_import
 import httplib
 import json
-import logging
 import urlparse
 
-import webob.exc
-
-from nova import flags
 from nova import exception
+from nova import flags
+from nova import log as logging
 from nova import utils
-import nova.image.service
+from nova.image import service
+
+
+LOG = logging.getLogger('nova.image.glance')
 
 FLAGS = flags.FLAGS
 
 GlanceClient = utils.import_class('glance.client.Client')
 
 
-class GlanceImageService(nova.image.service.BaseImageService):
+class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
     def __init__(self):

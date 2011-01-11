@@ -20,7 +20,6 @@
 Auth driver using the DB as its backend.
 """
 
-import logging
 import sys
 
 from nova import context

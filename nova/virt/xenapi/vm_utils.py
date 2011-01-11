@@ -19,7 +19,6 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
-import logging
 import pickle
 import urllib
 from xml.dom import minidom
@@ -27,6 +26,7 @@ from xml.dom import minidom
 from eventlet import event
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
@@ -37,6 +37,7 @@ from nova.virt.xenapi.volume_utils import StorageError
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -121,9 +122,9 @@ class VMHelper(HelperBase):
                 rec['HVM_boot_params'] = {'order': 'dc'}
                 rec['platform'] = {'acpi': 'true', 'apic': 'true',
                                    'pae': 'true', 'viridian': 'true'}
-        logging.debug('Created VM %s...', instance.name)
+        LOG.debug(_('Created VM %s...'), instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
-        logging.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
+        LOG.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
         return vm_ref
 
     @classmethod
@@ -143,10 +144,9 @@ class VMHelper(HelperBase):
         vbd_rec['qos_algorithm_type'] = ''
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
-        logging.debug(_('Creating VBD for VM %s, VDI %s ... '),
-                      vm_ref, vdi_ref)
+        LOG.debug(_('Creating VBD for VM %s, VDI %s ... '), vm_ref, vdi_ref)
         vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
-        logging.debug(_('Created VBD %s for VM %s, VDI %s.'), vbd_ref, vm_ref,
+        LOG.debug(_('Created VBD %s for VM %s, VDI %s.'), vbd_ref, vm_ref,
                       vdi_ref)
         return vbd_ref
 
@@ -161,7 +161,7 @@ class VMHelper(HelperBase):
                     if vbd_rec['userdevice'] == str(number):
                         return vbd
                 except cls.XenAPI.Failure, exc:
-                    logging.warn(exc)
+                    LOG.exception(exc)
         raise StorageError(_('VBD not found in instance %s') % vm_ref)
 
     @classmethod
@@ -170,7 +170,7 @@ class VMHelper(HelperBase):
         try:
             vbd_ref = session.call_xenapi('VBD.unplug', vbd_ref)
         except cls.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
             if exc.details[0] != 'DEVICE_ALREADY_DETACHED':
                 raise StorageError(_('Unable to unplug VBD %s') % vbd_ref)
 
@@ -183,7 +183,7 @@ class VMHelper(HelperBase):
             #with Josh Kearney
             session.wait_for_task(0, task)
         except cls.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
@@ -199,11 +199,11 @@ class VMHelper(HelperBase):
         vif_rec['other_config'] = {}
         vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
-        logging.debug(_('Creating VIF for VM %s, network %s.'), vm_ref,
-                      network_ref)
+        LOG.debug(_('Creating VIF for VM %s, network %s.'), vm_ref,
+                  network_ref)
         vif_ref = session.call_xenapi('VIF.create', vif_rec)
-        logging.debug(_('Created VIF %s for VM %s, network %s.'), vif_ref,
-                      vm_ref, network_ref)
+        LOG.debug(_('Created VIF %s for VM %s, network %s.'), vif_ref,
+                  vm_ref, network_ref)
         return vif_ref
 
     @classmethod
@@ -213,8 +213,7 @@ class VMHelper(HelperBase):
         """
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
-        logging.debug(_("Snapshotting VM %s with label '%s'..."),
-                      vm_ref, label)
+        LOG.debug(_("Snapshotting VM %s with label '%s'..."), vm_ref, label)
 
         vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
@@ -227,8 +226,8 @@ class VMHelper(HelperBase):
         template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
-        logging.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
-                      vm_ref)
+        LOG.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
+                  vm_ref)
 
         parent_uuid = wait_for_vhd_coalesce(
             session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
@@ -260,7 +259,7 @@ class VMHelper(HelperBase):
         """
         url = images.image_url(image)
         access = AuthManager().get_access_key(user, project)
-        logging.debug("Asking xapi to fetch %s as %s", url, access)
+        LOG.debug(_("Asking xapi to fetch %s as %s"), url, access)
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
@@ -278,7 +277,7 @@ class VMHelper(HelperBase):
 
     @classmethod
     def lookup_image(cls, session, vdi_ref):
-        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
         fn = "is_vdi_pv"
         args = {}
         args['vdi-ref'] = vdi_ref
@@ -289,7 +288,7 @@ class VMHelper(HelperBase):
             pv = True
         elif pv_str.lower() == 'false':
             pv = False
-        logging.debug("PV Kernel in VDI:%d", pv)
+        LOG.debug(_("PV Kernel in VDI:%d"), pv)
         return pv
 
     @classmethod
@@ -317,10 +316,9 @@ class VMHelper(HelperBase):
                     vdi = session.get_xenapi().VBD.get_VDI(vbd)
                     # Test valid VDI
                     record = session.get_xenapi().VDI.get_record(vdi)
-                    logging.debug(_('VDI %s is still available'),
-                                  record['uuid'])
+                    LOG.debug(_('VDI %s is still available'), record['uuid'])
                 except cls.XenAPI.Failure, exc:
-                    logging.warn(exc)
+                    LOG.exception(exc)
                 else:
                     vdis.append(vdi)
             if len(vdis) > 0:
@@ -331,10 +329,10 @@ class VMHelper(HelperBase):
     @classmethod
     def compile_info(cls, record):
         """Fill record with VM status information"""
-        logging.info(_("(VM_UTILS) xenserver vm state -> |%s|"),
-                     record['power_state'])
-        logging.info(_("(VM_UTILS) xenapi power_state -> |%s|"),
-                     XENAPI_POWER_STATE[record['power_state']])
+        LOG.info(_("(VM_UTILS) xenserver vm state -> |%s|"),
+                 record['power_state'])
+        LOG.info(_("(VM_UTILS) xenapi power_state -> |%s|"),
+                 XENAPI_POWER_STATE[record['power_state']])
         return {'state': XENAPI_POWER_STATE[record['power_state']],
                 'max_mem': long(record['memory_static_max']) >> 10,
                 'mem': long(record['memory_dynamic_max']) >> 10,
@@ -388,11 +386,9 @@ def get_vhd_parent(session, vdi_rec):
     """
     if 'vhd-parent' in vdi_rec['sm_config']:
         parent_uuid = vdi_rec['sm_config']['vhd-parent']
-        #NOTE(sirp): changed xenapi -> get_xenapi()
         parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
         parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
-        #NOTE(sirp): changed log -> logging
-        logging.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
+        LOG.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
         return parent_ref, parent_rec
     else:
         return None
@@ -409,7 +405,7 @@ def get_vhd_parent_uuid(session, vdi_ref):
 
 
 def scan_sr(session, instance_id, sr_ref):
-    logging.debug(_("Re-scanning SR %s"), sr_ref)
+    LOG.debug(_("Re-scanning SR %s"), sr_ref)
     task = session.call_xenapi('Async.SR.scan', sr_ref)
     session.wait_for_task(instance_id, task)
 
@@ -440,10 +436,9 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
         scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
-            logging.debug(
-                _("Parent %s doesn't match original parent %s, "
-                  "waiting for coalesce..."),
-                parent_uuid, original_parent_uuid)
+            LOG.debug(_("Parent %s doesn't match original parent %s, "
+                         "waiting for coalesce..."), parent_uuid,
+                      original_parent_uuid)
         else:
             # Breakout of the loop (normally) and return the parent_uuid
             raise utils.LoopingCallDone(parent_uuid)
