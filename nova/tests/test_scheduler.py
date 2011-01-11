@@ -76,7 +76,7 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         scheduler.named_method(ctxt, 'topic', num=7)
 
-        
+
 class ZoneSchedulerTestCase(test.TestCase):
     """Test case for zone scheduler"""
     def setUp(self):
