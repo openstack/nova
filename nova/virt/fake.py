@@ -292,6 +292,7 @@ class FakeConnection(object):
     def get_ajax_console(self, instance):
         return 'http://fakeajaxconsole.com/?token=FAKETOKEN'
 
+
 class FakeInstance(object):
 
     def __init__(self):

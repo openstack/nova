@@ -426,8 +426,8 @@ class API(base.Base):
 
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
-                  'args': {'token': output['token'], 'host': output['host'], 
-                  'port':output['port']}})
+                  'args': {'token': output['token'], 'host': output['host'],
+                  'port': output['port']}})
 
         return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}

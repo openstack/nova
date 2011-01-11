@@ -168,7 +168,7 @@ class CloudTestCase(test.TestCase):
         rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_ajax_console(self):
-        kwargs = {'image_id': image_id }
+        kwargs = {'image_id': image_id}
         rv = yield self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         output = yield self.cloud.get_console_output(context=self.context,
