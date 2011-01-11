@@ -707,6 +707,14 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
+    def get_console_pool_info(self, console_type):
+        #TODO(mdragon): console proxy should be implemented for libvirt,
+        #               in case someone wants to use it with kvm or
+        #               such. For now return fake data.
+        return  {'address': '127.0.0.1',
+                 'username': 'fakeuser',
+                 'password': 'fakepassword'}
+
     def refresh_security_group_rules(self, security_group_id):
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
