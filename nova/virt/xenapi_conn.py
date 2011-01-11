@@ -52,6 +52,7 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 """
 
 import sys
+import urlparse
 import xmlrpclib
 
 from eventlet import event
@@ -193,6 +194,12 @@ class XenAPIConnection(object):
     def detach_volume(self, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
         return self._volumeops.detach_volume(instance_name, mountpoint)
+
+    def get_console_pool_info(self, console_type):
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
+        return  {'address': xs_url.netloc,
+                 'username': FLAGS.xenapi_connection_username,
+                 'password': FLAGS.xenapi_connection_password}
 
 
 class XenAPISession(object):

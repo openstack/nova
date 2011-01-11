@@ -31,6 +31,7 @@ from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
+from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
@@ -97,6 +98,11 @@ class APIRouter(wsgi.Router):
 
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("console", "consoles",
+                        controller=consoles.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 

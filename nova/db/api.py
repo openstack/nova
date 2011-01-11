@@ -906,3 +906,57 @@ def host_get_networks(context, host):
 
     """
     return IMPL.host_get_networks(context, host)
+
+
+##################
+
+
+def console_pool_create(context, values):
+    """Create console pool."""
+    return IMPL.console_pool_create(context, values)
+
+
+def console_pool_get(context, pool_id):
+    """Get a console pool."""
+    return IMPL.console_pool_get(context, pool_id)
+
+
+def console_pool_get_by_host_type(context, compute_host, proxy_host,
+                                  console_type):
+    """Fetch a console pool for a given proxy host, compute host, and type."""
+    return IMPL.console_pool_get_by_host_type(context,
+                                              compute_host,
+                                              proxy_host,
+                                              console_type)
+
+
+def console_pool_get_all_by_host_type(context, host, console_type):
+    """Fetch all pools for given proxy host and type."""
+    return IMPL.console_pool_get_all_by_host_type(context,
+                                                  host,
+                                                  console_type)
+
+
+def console_create(context, values):
+    """Create a console."""
+    return IMPL.console_create(context, values)
+
+
+def console_delete(context, console_id):
+    """Delete a console."""
+    return IMPL.console_delete(context, console_id)
+
+
+def console_get_by_pool_instance(context, pool_id, instance_id):
+    """Get console entry for a given instance and pool."""
+    return IMPL.console_get_by_pool_instance(context, pool_id, instance_id)
+
+
+def console_get_all_by_instance(context, instance_id):
+    """Get consoles for a given instance."""
+    return IMPL.console_get_all_by_instance(context, instance_id)
+
+
+def console_get(context, console_id, instance_id=None):
+    """Get a specific console (possibly on a given instance)."""
+    return IMPL.console_get(context, console_id, instance_id)
