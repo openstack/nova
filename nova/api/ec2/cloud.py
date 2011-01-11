@@ -25,7 +25,6 @@ datastore.
 import base64
 import datetime
 import IPy
-import re
 import os
 
 from nova import compute
@@ -35,7 +34,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import network
 from nova import rpc
 from nova import utils
@@ -44,6 +42,7 @@ from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
@@ -200,7 +199,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context)
-        now = db.get_time()
+        now = datetime.datetime.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -240,6 +239,7 @@ class CloudController(object):
                                                             FLAGS.cc_host,
                                                             FLAGS.cc_port,
                                                             FLAGS.ec2_suffix)}]
+        return {'regionInfo': regions}
 
     def describe_snapshots(self,
                            context,
@@ -595,19 +595,24 @@ class CloudController(object):
         return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context)
+        return self._format_describe_instances(context, **kwargs)
 
-    def _format_describe_instances(self, context):
-        return {'reservationSet': self._format_instances(context)}
+    def _format_describe_instances(self, context, **kwargs):
+        return {'reservationSet': self._format_instances(context, **kwargs)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, **kwargs):
+    def _format_instances(self, context, instance_id=None, **kwargs):
         reservations = {}
-        instances = self.compute_api.get_all(context, **kwargs)
+        # NOTE(vish): instance_id is an optional list of ids to filter by
+        if instance_id:
+            instance_id = [ec2_id_to_id(x) for x in instance_id]
+            instances = [self.compute_api.get(context, x) for x in instance_id]
+        else:
+            instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
