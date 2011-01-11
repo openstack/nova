@@ -151,6 +151,7 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
     availability_zone = Column(String(255), default='nova')
 
+    
 class Certificate(BASE, NovaBase):
     """Represents a an x509 certificate"""
     __tablename__ = 'certificates'

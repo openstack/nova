@@ -31,8 +31,8 @@ class ZoneScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
     def hosts_up_with_zone(self, context, topic, zone):
-        """Return the list of hosts that have a running service 
-        for topic and availability zone (if defined). 
+        """Return the list of hosts that have a running service
+        for topic and availability zone (if defined).
         """
 
         if zone is None:
@@ -44,9 +44,8 @@ class ZoneScheduler(driver.Scheduler):
                 if self.service_is_up(service)
                 and service.availability_zone == zone]
 
-
     def schedule(self, context, topic, *_args, **_kwargs):
-        """Picks a host that is up at random in selected 
+        """Picks a host that is up at random in selected
         availability zone (if defined).
         """
 
@@ -55,4 +54,3 @@ class ZoneScheduler(driver.Scheduler):
         if not hosts:
             raise driver.NoValidHost(_("No hosts found"))
         return hosts[int(random.random() * len(hosts))]
-

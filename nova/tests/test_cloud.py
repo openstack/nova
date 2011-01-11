@@ -135,12 +135,12 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_availability_zones(self):
         """Makes sure describe_availability_zones works and filters results."""
-        service1 = db.service_create(self.context, {'host': 'host1_describe_zones',
+        service1 = db.service_create(self.context, {'host': 'host1_zones',
                                          'binary': "nova-compute",
                                          'topic': 'compute',
                                          'report_count': 0,
                                          'availability_zone': "zone1"})
-        service2 = db.service_create(self.context, {'host': 'host2_describe_zones',
+        service2 = db.service_create(self.context, {'host': 'host2_zones',
                                          'binary': "nova-compute",
                                          'topic': 'compute',
                                          'report_count': 0,
@@ -150,17 +150,18 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
-        
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
-        inst1 = db.instance_create(self.context, {'reservation_id': 'a', 'host': 'host1'})
-        inst2 = db.instance_create(self.context, {'reservation_id': 'a', 'host': 'host2'})
-        compute1 = db.service_create(self.context, {'host': 'host1',
-                                                    'availability_zone': 'zone1',
-                                                    'topic': "compute"})
-        compute2 = db.service_create(self.context, {'host': 'host2',
-                                                    'availability_zone': 'zone2',
-                                                    'topic': "compute"})
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'host': 'host1'})
+        inst2 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'host': 'host2'})
+        comp1 = db.service_create(self.context, {'host': 'host1',
+                                                 'availability_zone': 'zone1',
+                                                 'topic': "compute"})
+        comp2 = db.service_create(self.context, {'host': 'host2',
+                                                 'availability_zone': 'zone2',
+                                                 'topic': "compute"})
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 2)
@@ -171,13 +172,12 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['instancesSet']), 1)
         self.assertEqual(result['instancesSet'][0]['instanceId'],
                          instance_id)
-        self.assertEqual(result['instancesSet'][0]\
+        self.assertEqual(result['instancesSet'][0]
                          ['placement']['availabilityZone'], 'zone2')
         db.instance_destroy(self.context, inst1['id'])
         db.instance_destroy(self.context, inst2['id'])
-        db.service_destroy(self.context, compute1['id'])
-        db.service_destroy(self.context, compute2['id'])
-
+        db.service_destroy(self.context, comp1['id'])
+        db.service_destroy(self.context, comp2['id'])
 
     def test_console_output(self):
         image_id = FLAGS.default_image
@@ -257,21 +257,19 @@ class CloudTestCase(test.TestCase):
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
 
-
     def test_describe_instances(self):
         """Makes sure describe_instances works."""
         instance1 = db.instance_create(self.context, {'host': 'host2'})
-        service1 = db.service_create(self.context, {'host': 'host2',
-                                                    'availability_zone': 'zone1',
-                                                    'topic': "compute"})
+        comp1 = db.service_create(self.context, {'host': 'host2',
+                                                 'availability_zone': 'zone1',
+                                                 'topic': "compute"})
         result = self.cloud.describe_instances(self.context)
-        self.assertEqual(result['reservationSet'][0]\
-                         ['instancesSet'][0]\
+        self.assertEqual(result['reservationSet'][0]
+                         ['instancesSet'][0]
                          ['placement']['availabilityZone'], 'zone1')
         db.instance_destroy(self.context, instance1['id'])
-        db.service_destroy(self.context, service1['id'])
+        db.service_destroy(self.context, comp1['id'])
 
-        
     def test_instance_update_state(self):
         def instance(num):
             return {
@@ -320,7 +318,6 @@ class CloudTestCase(test.TestCase):
         #for i in xrange(4):
         #    data = self.cloud.get_metadata(instance(i)['private_dns_name'])
         #    self.assert_(data['meta-data']['ami-id'] == 'ami-%s' % i)
-
 
     @staticmethod
     def _fake_set_image_description(ctxt, image_id, description):

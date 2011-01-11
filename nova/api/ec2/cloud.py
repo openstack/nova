@@ -159,8 +159,8 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
-        availability_zone = self._get_availability_zone_by_host(ctxt,
-                                                                instance_ref['host'])
+        host = instance_ref['host']
+        availability_zone = self._get_availability_zone_by_host(ctxt, host)
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = id_to_ec2_id(instance_ref['id'])
@@ -210,12 +210,13 @@ class CloudController(object):
         enabled_services = db.service_get_all(context)
         disabled_services = db.service_get_all(context, True)
         available_zones = []
-        for zone in [service.availability_zone for service in enabled_services]:
+        for zone in [service.availability_zone for service
+                     in enabled_services]:
             if not zone in available_zones:
                 available_zones.append(zone)
         not_available_zones = []
         for zone in [service.availability_zone for service in disabled_services
-                              and not service['availability_zone'] in available_zones]:
+                     if not service['availability_zone'] in available_zones]:
             if not zone in not_available_zones:
                 not_available_zones.append(zone)
         result = []
@@ -679,8 +680,9 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
-            availability_zone = self._get_availability_zone_by_host(context, instance['host'])
-            i['placement'] = {'availabilityZone': availability_zone}
+            host = instance['host']
+            zone = self._get_availability_zone_by_host(context, host)
+            i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
                 r['reservationId'] = instance['reservation_id']

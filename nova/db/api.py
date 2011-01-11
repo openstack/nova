@@ -96,7 +96,6 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
-
 def service_get_all_compute_sorted(context):
     """Get all compute services sorted by instance count.
 
