@@ -54,6 +54,7 @@ MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
 
+
 class ImageType:
     """
     Enumeration class for distinguishing different image types
@@ -310,7 +311,7 @@ class VMHelper(HelperBase):
         virtual_size = int(meta['size'])
 
         vdi_size = virtual_size
-        logging.debug("Size for image %s:%d",image,virtual_size)
+        logging.debug("Size for image %s:%d", image, virtual_size)
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -330,15 +331,20 @@ class VMHelper(HelperBase):
                     f.write(chunk)
 
         with_vdi_attached_here(session, vdi, False, stream)
-        if (type==ImageType.KERNEL_RAMDISK):
-            #we need to invoke a plugin for copying VDI's content into proper path
+        if (type == ImageType.KERNEL_RAMDISK):
+            #we need to invoke a plugin for copying VDI's
+            #content into proper path
+            logging.debug("Copying VDI %s to /boot/guest on dom0", vdi)
             fn = "copy_kernel_vdi"
             args = {}
             args['vdi-ref'] = vdi
-            args['image-size']=str(vdi_size)
+            #let the plugin copy the correct number of bytes
+            args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
-            filename=session.wait_for_task(instance_id,task)
-            #TODO(salvatore-orlando): remove the VDI as it is not needed anymore
+            filename = session.wait_for_task(instance_id, task)
+            #remove the VDI as it is not needed anymore
+            session.get_xenapi().VDI.destroy(vdi)
+            logging.debug("Kernel/Ramdisk VDI %s destroyed", vdi)
             return filename
         else:
             return session.get_xenapi().VDI.get_uuid(vdi)
@@ -596,7 +602,7 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
-    logging.debug("read_only: %s",str(read_only))
+    logging.debug("read_only: %s", str(read_only))
     vbd_rec['type'] = 'disk'
     vbd_rec['unpluggable'] = True
     vbd_rec['empty'] = False

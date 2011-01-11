@@ -206,40 +206,57 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
+    def check_vm_record(self, conn):
+        instances = conn.list_instances()
+        self.assertEquals(instances, [1])
+
+        # Get Nova record for VM
+        vm_info = conn.get_info(1)
+
+        # Get XenAPI record for VM
+        vms = fake.get_all('VM')
+        vm = fake.get_record('VM', vms[0])
+
+        # Check that m1.large above turned into the right thing.
+        instance_type = instance_types.INSTANCE_TYPES['m1.large']
+        mem_kib = long(instance_type['memory_mb']) << 10
+        mem_bytes = str(mem_kib << 10)
+        vcpus = instance_type['vcpus']
+        self.assertEquals(vm_info['max_mem'], mem_kib)
+        self.assertEquals(vm_info['mem'], mem_kib)
+        self.assertEquals(vm['memory_static_max'], mem_bytes)
+        self.assertEquals(vm['memory_dynamic_max'], mem_bytes)
+        self.assertEquals(vm['memory_dynamic_min'], mem_bytes)
+        self.assertEquals(vm['VCPUs_max'], str(vcpus))
+        self.assertEquals(vm['VCPUs_at_startup'], str(vcpus))
+
+        # Check that the VM is running according to Nova
+        self.assertEquals(vm_info['state'], power_state.RUNNING)
+
+        # Check that the VM is running according to XenAPI.
+        self.assertEquals(vm['power_state'], 'Running')
+
+    def _test_spawn(self, image_id, kernel_id, ramdisk_id):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        values = {'name': 1,
+                  'project_id': self.project.id,
+                  'user_id': self.user.id,
+                  'image_id': image_id,
+                  'kernel_id': kernel_id,
+                  'ramdisk_id': ramdisk_id,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  }
+        conn = xenapi_conn.get_connection(False)
+        instance = db.instance_create(values)
+        conn.spawn(instance)
+        self.check_vm_record(conn)
+
+    def test_spawn_raw(self):
+        self._test_spawn(1, None, None)
+
     def test_spawn(self):
-        instance = self._create_instance()
-
-        def check():
-            instances = self.conn.list_instances()
-            self.assertEquals(instances, [1])
-
-            # Get Nova record for VM
-            vm_info = self.conn.get_info(1)
-
-            # Get XenAPI record for VM
-            vms = xenapi_fake.get_all('VM')
-            vm = xenapi_fake.get_record('VM', vms[0])
-
-            # Check that m1.large above turned into the right thing.
-            instance_type = instance_types.INSTANCE_TYPES['m1.large']
-            mem_kib = long(instance_type['memory_mb']) << 10
-            mem_bytes = str(mem_kib << 10)
-            vcpus = instance_type['vcpus']
-            self.assertEquals(vm_info['max_mem'], mem_kib)
-            self.assertEquals(vm_info['mem'], mem_kib)
-            self.assertEquals(vm['memory_static_max'], mem_bytes)
-            self.assertEquals(vm['memory_dynamic_max'], mem_bytes)
-            self.assertEquals(vm['memory_dynamic_min'], mem_bytes)
-            self.assertEquals(vm['VCPUs_max'], str(vcpus))
-            self.assertEquals(vm['VCPUs_at_startup'], str(vcpus))
-
-            # Check that the VM is running according to Nova
-            self.assertEquals(vm_info['state'], power_state.RUNNING)
-
-            # Check that the VM is running according to XenAPI.
-            self.assertEquals(vm['power_state'], 'Running')
-
-        check()
+        self._test_spawn(1, 2, 3)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
