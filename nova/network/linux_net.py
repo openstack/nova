@@ -17,14 +17,15 @@
 Implements vlans, bridges, and iptables rules using linux utilities.
 """
 
-import logging
 import os
-
-# TODO(ja): does the definition of network_path belong here?
 
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import utils
+
+
+LOG = logging.getLogger("nova.linux_net")
 
 
 def _bin_file(script):
@@ -45,7 +46,7 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
+flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
@@ -172,7 +173,7 @@ def ensure_vlan(vlan_num):
     """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
-        logging.debug(_("Starting VLAN inteface %s"), interface)
+        LOG.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
         _execute("sudo ifconfig %s up" % interface)
@@ -182,7 +183,7 @@ def ensure_vlan(vlan_num):
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
-        logging.debug(_("Starting Bridge interface for %s"), interface)
+        LOG.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
@@ -208,6 +209,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
 
     _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
     _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
+    _execute("sudo iptables -N nova-local", check_exit_code=False)
+    _confirm_rule("FORWARD", "-j nova-local")
 
 
 def get_dhcp_hosts(context, network_id):
@@ -248,9 +251,9 @@ def update_dhcp(context, network_id):
                 _execute('sudo kill -HUP %d' % pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
-                logging.debug(_("Hupping dnsmasq threw %s"), exc)
+                LOG.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
-            logging.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
+            LOG.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
 
     # FLAGFILE and DNSMASQ_INTERFACE in env
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
@@ -270,7 +273,7 @@ def _host_dhcp(fixed_ip_ref):
 def _execute(cmd, *args, **kwargs):
     """Wrapper around utils._execute for fake_network"""
     if FLAGS.fake_network:
-        logging.debug("FAKE NET: %s", cmd)
+        LOG.debug("FAKE NET: %s", cmd)
         return "fake", 0
     else:
         return utils.execute(cmd, *args, **kwargs)
@@ -328,7 +331,7 @@ def _stop_dnsmasq(network):
         try:
             _execute('sudo kill -TERM %d' % pid)
         except Exception as exc:  # pylint: disable-msg=W0703
-            logging.debug(_("Killing dnsmasq threw %s"), exc)
+            LOG.debug(_("Killing dnsmasq threw %s"), exc)
 
 
 def _dhcp_file(bridge, kind):

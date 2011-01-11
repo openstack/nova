@@ -51,7 +51,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
 """
 
-import logging
 import sys
 import xmlrpclib
 
@@ -62,8 +61,13 @@ from nova import context
 from nova import db
 from nova import utils
 from nova import flags
+from nova import log as logging
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
+
+
+LOG = logging.getLogger("nova.virt.xenapi")
+
 
 FLAGS = flags.FLAGS
 
@@ -194,6 +198,7 @@ class XenAPISession(object):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)
         self._session.login_with_password(user, pw)
+        self.loop = None
 
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
@@ -230,13 +235,19 @@ class XenAPISession(object):
 
     def wait_for_task(self, id, task):
         """Return the result of the given task. The task is polled
-        until it completes."""
+        until it completes. Not re-entrant."""
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, id, task, done)
-        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
+        self.loop = utils.LoopingCall(self._poll_task, id, task, done)
+        self.loop.start(FLAGS.xenapi_task_poll_interval, now=True)
         rv = done.wait()
-        loop.stop()
+        self.loop.stop()
         return rv
+
+    def _stop_loop(self):
+        """Stop polling for task to finish."""
+        #NOTE(sandy-walsh) Had to break this call out to support unit tests.
+        if self.loop:
+            self.loop.stop()
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
@@ -256,7 +267,7 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                logging.info(_("Task [%s] %s status: success    %s") % (
+                LOG.info(_("Task [%s] %s status: success    %s") % (
                     name,
                     task,
                     result))
@@ -264,7 +275,7 @@ class XenAPISession(object):
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                logging.warn(_("Task [%s] %s status: %s    %s") % (
+                LOG.warn(_("Task [%s] %s status: %s    %s") % (
                     name,
                     task,
                     status,
@@ -272,15 +283,16 @@ class XenAPISession(object):
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.warn(exc)
             done.send_exception(*sys.exc_info())
+        self._stop_loop()
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details"""
         try:
             return func(*args, **kwargs)
         except self.XenAPI.Failure, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
                 exc.details[2] == 'Failure'):
@@ -293,7 +305,7 @@ class XenAPISession(object):
             else:
                 raise
         except xmlrpclib.ProtocolError, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             raise
 
 

@@ -52,12 +52,12 @@ A fake XenAPI SDK.
 
 
 import datetime
-import logging
 import uuid
 
 from pprint import pformat
 
 from nova import exception
+from nova import log as logging
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
@@ -65,9 +65,11 @@ _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
 
 _db_content = {}
 
+LOG = logging.getLogger("nova.virt.xenapi.fake")
+
 
 def log_db_contents(msg=None):
-    logging.debug(_("%s: _db_content => %s"), msg or "", pformat(_db_content))
+    LOG.debug(_("%s: _db_content => %s"), msg or "", pformat(_db_content))
 
 
 def reset():
@@ -242,9 +244,9 @@ class SessionBase(object):
             full_params = (self._session,) + params
             meth = getattr(self, methodname, None)
             if meth is None:
-                logging.warn('Raising NotImplemented')
+                LOG.debug(_('Raising NotImplemented'))
                 raise NotImplementedError(
-                    'xenapi.fake does not have an implementation for %s' %
+                    _('xenapi.fake does not have an implementation for %s') %
                     methodname)
             return meth(*full_params)
 
@@ -278,12 +280,12 @@ class SessionBase(object):
             if impl is not None:
 
                 def callit(*params):
-                    logging.warn('Calling %s %s', name, impl)
+                    LOG.debug(_('Calling %s %s'), name, impl)
                     self._check_session(params)
                     return impl(*params)
                 return callit
         if self._is_gettersetter(name, True):
-            logging.warn('Calling getter %s', name)
+            LOG.debug(_('Calling getter %s'), name)
             return lambda *params: self._getter(name, params)
         elif self._is_create(name):
             return lambda *params: self._create(name, params)
@@ -333,10 +335,10 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 return _db_content[cls][ref][field]
 
-        logging.error('Raising NotImplemented')
+        LOG.debuug(_('Raising NotImplemented'))
         raise NotImplementedError(
-            'xenapi.fake does not have an implementation for %s or it has '
-            'been called with the wrong number of arguments' % name)
+            _('xenapi.fake does not have an implementation for %s or it has '
+            'been called with the wrong number of arguments') % name)
 
     def _setter(self, name, params):
         self._check_session(params)
@@ -351,7 +353,7 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 _db_content[cls][ref][field] = val
 
-        logging.warn('Raising NotImplemented')
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             'xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments or the database '
@@ -399,7 +401,7 @@ class SessionBase(object):
             self._session not in _db_content['session']):
             raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
-            logging.warn('Raising NotImplemented')
+            LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')
 
     def _check_arg_count(self, params, expected):

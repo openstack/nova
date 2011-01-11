@@ -83,7 +83,7 @@ def service_get(context, service_id):
 
 def service_get_all(context, disabled=False):
     """Get all service."""
-    return IMPL.service_get_all(context, disabled)
+    return IMPL.service_get_all(context, None, disabled)
 
 
 def service_get_all_by_topic(context, topic):
@@ -781,6 +781,13 @@ def security_group_rule_get_by_security_group(context, security_group_id):
     """Get all rules for a a given security group."""
     return IMPL.security_group_rule_get_by_security_group(context,
                                                           security_group_id)
+
+
+def security_group_rule_get_by_security_group_grantee(context,
+                                                      security_group_id):
+    """Get all rules that grant access to the given security group."""
+    return IMPL.security_group_rule_get_by_security_group_grantee(context,
+                                                             security_group_id)
 
 
 def security_group_rule_destroy(context, security_group_rule_id):

@@ -15,13 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import traceback
 
 from webob import exc
 
 from nova import compute
 from nova import exception
+from nova import log as logging
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
@@ -170,6 +170,50 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def lock(self, req, id):
+        """
+        lock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unlock(self, req, id):
+        """
+        unlock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.unlock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::unlock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def get_lock(self, req, id):
+        """
+        return the boolean state of (instance with id)'s lock
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.get_lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::get_lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -177,7 +221,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::pause %s"), readable)
+            LOG.exception(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -188,7 +232,7 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("Compute.api::unpause %s"), readable)
+            LOG.exception(_("Compute.api::unpause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -199,7 +243,7 @@ class Controller(wsgi.Controller):
             self.compute_api.suspend(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("compute.api::suspend %s"), readable)
+            LOG.exception(_("compute.api::suspend %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -210,7 +254,7 @@ class Controller(wsgi.Controller):
             self.compute_api.resume(context, id)
         except:
             readable = traceback.format_exc()
-            logging.error(_("compute.api::resume %s"), readable)
+            LOG.exception(_("compute.api::resume %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -222,4 +266,13 @@ class Controller(wsgi.Controller):
     def actions(self, req, id):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
-        return self.compute_api.get_actions(ctxt, id)
+        items = self.compute_api.get_actions(ctxt, id)
+        actions = []
+        # TODO(jk0): Do not do pre-serialization here once the default
+        # serializer is updated
+        for item in items:
+            actions.append(dict(
+                created_at=str(item.created_at),
+                action=item.action,
+                error=item.error))
+        return dict(actions=actions)

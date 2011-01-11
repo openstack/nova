@@ -29,8 +29,6 @@ import sys
 
 import gflags
 
-from nova import utils
-
 
 class FlagValues(gflags.FlagValues):
     """Extension of gflags.FlagValues that allows undefined and runtime flags.
@@ -202,10 +200,22 @@ def DECLARE(name, module_string, flag_values=FLAGS):
                 "%s not defined by %s" % (name, module_string))
 
 
+def _get_my_ip():
+    """Returns the actual ip of the local machine."""
+    try:
+        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        csock.connect(('8.8.8.8', 80))
+        (addr, port) = csock.getsockname()
+        csock.close()
+        return addr
+    except socket.gaierror as ex:
+        return "127.0.0.1"
+
+
 # __GLOBAL FLAGS ONLY__
 # Define any app-specific flags in their own files, docs at:
-# http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
-
+# http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#a9
+DEFINE_string('my_ip', _get_my_ip(), 'host ip address')
 DEFINE_list('region_list',
             [],
             'list of region=url pairs separated by commas')
@@ -213,10 +223,10 @@ DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
 DEFINE_integer('glance_port', 9292, 'glance port')
-DEFINE_string('glance_host', utils.get_my_ip(), 'glance host')
+DEFINE_string('glance_host', '$my_ip', 'glance host')
 DEFINE_integer('s3_port', 3333, 's3 port')
-DEFINE_string('s3_host', utils.get_my_ip(), 's3 host (for infrastructure)')
-DEFINE_string('s3_dmz', utils.get_my_ip(), 's3 dmz ip (for instances)')
+DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')
+DEFINE_string('s3_dmz', '$my_ip', 's3 dmz ip (for instances)')
 DEFINE_string('compute_topic', 'compute', 'the topic compute nodes listen on')
 DEFINE_string('scheduler_topic', 'scheduler',
               'the topic scheduler nodes listen on')
@@ -236,8 +246,8 @@ DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_string('ec2_prefix', 'http', 'prefix for ec2')
-DEFINE_string('cc_host', utils.get_my_ip(), 'ip of api server')
-DEFINE_string('cc_dmz', utils.get_my_ip(), 'internal ip of api server')
+DEFINE_string('cc_host', '$my_ip', 'ip of api server')
+DEFINE_string('cc_dmz', '$my_ip', 'internal ip of api server')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_suffix', '/services/Cloud', 'suffix for ec2')
 

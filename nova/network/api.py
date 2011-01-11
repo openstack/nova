@@ -20,15 +20,15 @@
 Handles all requests relating to instances (guest vms).
 """
 
-import logging
-
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova.db import base
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.network')
 
 
 class API(base.Base):
@@ -36,7 +36,7 @@ class API(base.Base):
 
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
-            logging.warn(_("Quota exceeeded for %s, tried to allocate "
+            LOG.warn(_("Quota exceeeded for %s, tried to allocate "
                            "address"),
                          context.project_id)
             raise quota.QuotaError(_("Address quota exceeded. You cannot "
