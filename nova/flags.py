@@ -248,10 +248,12 @@ DEFINE_integer('rabbit_retry_interval', 10, 'rabbit connection retry interval')
 DEFINE_integer('rabbit_max_retries', 12, 'rabbit connection attempts')
 DEFINE_string('control_exchange', 'nova', 'the main exchange to connect to')
 DEFINE_string('ec2_prefix', 'http', 'prefix for ec2')
+DEFINE_string('os_prefix', 'http', 'prefix for openstack')
 DEFINE_string('cc_host', '$my_ip', 'ip of api server')
 DEFINE_string('cc_dmz', '$my_ip', 'internal ip of api server')
 DEFINE_integer('cc_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_suffix', '/services/Cloud', 'suffix for ec2')
+DEFINE_string('os_suffix', '/v1.0/', 'suffix for openstack')
 
 DEFINE_string('default_project', 'openstack', 'default project for openstack')
 DEFINE_string('default_image', 'ami-11111',
