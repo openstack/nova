@@ -282,7 +282,7 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v automatic" %
                       (iscsi_name, iscsi_portal))
-        return "/dev/iscsi/%s" % volume['name']
+        return "/dev/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal, iscsi_name)
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
