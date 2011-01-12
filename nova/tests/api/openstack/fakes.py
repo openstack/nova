@@ -118,12 +118,12 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
-def stub_out_glance(stubs, initial_fixtures=[]):
+def stub_out_glance(stubs, initial_fixtures=None):
 
     class FakeGlanceClient:
 
         def __init__(self, initial_fixtures):
-            self.fixtures = initial_fixtures
+            self.fixtures = initial_fixtures or []
 
         def fake_get_images(self):
             return [dict(id=f['id'], name=f['name'])
