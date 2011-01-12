@@ -756,12 +756,14 @@ def instance_get_by_id(context, instance_id):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
+                         options(joinedload('fixed_ip')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
+                         options(joinedload('fixed_ip')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
