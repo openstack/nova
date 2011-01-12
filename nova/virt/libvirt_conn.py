@@ -38,6 +38,11 @@ Supports KVM, QEMU, UML, and XEN.
 
 import os
 import shutil
+import random
+import subprocess
+import uuid
+from xml.dom import minidom
+
 
 from eventlet import greenthread
 from eventlet import event
@@ -86,6 +91,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_string('ajaxterm_portrange',
+                    '10000-12000',
+                    'Range of ports that ajaxterm should randomly try to bind')
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
@@ -441,6 +449,43 @@ class LibvirtConnection(object):
             fpath = console_log
 
         return self._dump_file(fpath)
+
+    @exception.wrap_exception
+    def get_ajax_console(self, instance):
+        def get_open_port():
+            start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
+            for i in xrange(0, 100):  # don't loop forever
+                port = random.randint(int(start_port), int(end_port))
+                # netcat will exit with 0 only if the port is in use,
+                # so a nonzero return value implies it is unused
+                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
+                stdout, stderr = utils.execute(cmd)
+                if stdout.strip() == 'free':
+                    return port
+            raise Exception(_('Unable to find an open port'))
+
+        def get_pty_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            dom = minidom.parseString(xml)
+
+            for serial in dom.getElementsByTagName('serial'):
+                if serial.getAttribute('type') == 'pty':
+                    source = serial.getElementsByTagName('source')[0]
+                    return source.getAttribute('path')
+
+        port = get_open_port()
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        ajaxterm_cmd = 'sudo socat - %s' \
+                       % get_pty_for_instance(instance['name'])
+
+        cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
+              % (utils.novadir(), ajaxterm_cmd, token, port)
+
+        subprocess.Popen(cmd, shell=True)
+        return {'token': token, 'host': host, 'port': port}
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety

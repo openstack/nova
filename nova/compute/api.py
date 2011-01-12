@@ -414,7 +414,26 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
-                  "args": {"instance_id": instance_id}})
+                  "args": {"instance_id": instance['id']}})
+
+    def get_ajax_console(self, context, instance_id):
+        """Get a url to an AJAX Console"""
+
+        instance = self.get(context, instance_id)
+
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance['host']),
+                          {'method': 'get_ajax_console',
+                           'args': {'instance_id': instance['id']}})
+
+        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
+                 {'method': 'authorize_ajax_console',
+                  'args': {'token': output['token'], 'host': output['host'],
+                  'port': output['port']}})
+
+        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+                output['token'])}
 
     def lock(self, context, instance_id):
         """

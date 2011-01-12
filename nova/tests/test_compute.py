@@ -169,6 +169,16 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_ajax_console(self):
+        """Make sure we can get console output from instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_ajax_console(self.context,
+                                                instance_id)
+        self.assert_(console)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()

@@ -155,6 +155,11 @@ def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 
 
+def novadir():
+    import nova
+    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+
+
 def default_flagfile(filename='nova.conf'):
     for arg in sys.argv:
         if arg.find('flagfile') != -1:
