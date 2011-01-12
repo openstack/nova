@@ -24,7 +24,6 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 import base64
 import gettext
 import hashlib
-import logging
 import os
 import shutil
 import struct
@@ -39,8 +38,10 @@ gettext.install('nova', unicode=1)
 from nova import context
 from nova import db
 from nova import flags
+from nova import log as logging
 
 
+LOG = logging.getLogger("nova.crypto")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ca_file', 'cacert.pem', _('Filename of root CA'))
 flags.DEFINE_string('key_file',
@@ -254,7 +255,7 @@ def _sign_csr(csr_text, ca_folder):
     csrfile = open(inbound, "w")
     csrfile.write(csr_text)
     csrfile.close()
-    logging.debug(_("Flags path: %s") % ca_folder)
+    LOG.debug(_("Flags path: %s"), ca_folder)
     start = os.getcwd()
     # Change working dir to CA
     os.chdir(ca_folder)

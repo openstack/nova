@@ -56,8 +56,8 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1):
-    return Instance(id=int(id) + 123456, state=0, image_id=10, user_id=user_id,
-                    display_name='server%s' % id, internal_id=id)
+    return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                    display_name='server%s' % id)
 
 
 def fake_compute_api(cls, req, id):
@@ -76,8 +76,7 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_internal_id',
-                       return_server)
+        self.stubs.Set(nova.db.api, 'instance_get_by_id', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
@@ -87,18 +86,12 @@ class ServersTest(unittest.TestCase):
                        instance_address)
         self.stubs.Set(nova.db.api, 'instance_get_floating_address',
                        instance_address)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'pause',
-                       fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'unpause',
-                       fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'suspend',
-                       fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, 'resume',
-                       fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, "get_diagnostics",
-                       fake_compute_api)
-        self.stubs.Set(nova.compute.api.ComputeAPI, "get_actions",
-                       fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'pause', fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'unpause', fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'suspend', fake_compute_api)
+        self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
+        self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
+        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
 
     def tearDown(self):
@@ -109,7 +102,7 @@ class ServersTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['id'], '1')
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_list(self):
@@ -126,7 +119,7 @@ class ServersTest(unittest.TestCase):
 
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': 1, 'internal_id': 1, 'display_name': ''}
+            return {'id': '1', 'display_name': ''}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -140,6 +133,12 @@ class ServersTest(unittest.TestCase):
         def queue_get_for(context, *args):
             return 'network_topic'
 
+        def kernel_ramdisk_mapping(*args, **kwargs):
+            return (1, 1)
+
+        def image_id_from_hash(*args, **kwargs):
+            return 2
+
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
@@ -149,6 +148,10 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
+        self.stubs.Set(nova.api.openstack.servers.Controller,
+            "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
+        self.stubs.Set(nova.api.openstack.common,
+            "get_image_id_from_image_hash", image_id_from_hash)
 
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},

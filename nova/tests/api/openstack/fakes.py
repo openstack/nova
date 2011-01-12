@@ -120,13 +120,13 @@ def stub_out_rate_limiting(stubs):
 def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1'
-    stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
+    stubs.Set(nova.flags, '_get_my_ip', get_my_ip)
 
 
 def stub_out_compute_api_snapshot(stubs):
     def snapshot(self, context, instance_id, name):
         return 123
-    stubs.Set(nova.compute.api.ComputeAPI, 'snapshot', snapshot)
+    stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
 def stub_out_glance(stubs, initial_fixtures=[]):
