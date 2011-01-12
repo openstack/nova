@@ -302,6 +302,9 @@ class FakeConnection(object):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT'
 
+    def get_ajax_console(self, instance):
+        return 'http://fakeajaxconsole.com/?token=FAKETOKEN'
+
     def get_console_pool_info(self, console_type):
         return  {'address': '127.0.0.1',
                  'username': 'fakeuser',

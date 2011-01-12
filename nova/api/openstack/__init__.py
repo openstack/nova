@@ -35,7 +35,7 @@ from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
-from nova.api.openstack import sharedipgroups
+from nova.api.openstack import shared_ip_groups
 
 
 LOG = logging.getLogger('nova.api.openstack')
@@ -47,6 +47,10 @@ flags.DEFINE_string('os_api_auth',
 flags.DEFINE_string('os_api_ratelimiting',
     'nova.api.openstack.ratelimiting.RateLimitingMiddleware',
     'Default ratelimiting implementation for the Openstack API')
+
+flags.DEFINE_string('os_krm_mapping_file',
+    'krm_mapping.json',
+    'Location of OpenStack Flavor/OS:EC2 Kernel/Ramdisk/Machine JSON file.')
 
 flags.DEFINE_bool('allow_admin_api',
     False,
@@ -110,8 +114,9 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'})
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
-        mapper.resource("sharedipgroup", "sharedipgroups",
-                        controller=sharedipgroups.Controller())
+        mapper.resource("shared_ip_group", "shared_ip_groups",
+                        collection={'detail': 'GET'},
+                        controller=shared_ip_groups.Controller())
 
         super(APIRouter, self).__init__(mapper)
 

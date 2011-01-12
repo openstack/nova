@@ -504,6 +504,14 @@ class ComputeManager(manager.Manager):
         return self.driver.get_console_output(instance_ref)
 
     @exception.wrap_exception
+    def get_ajax_console(self, context, instance_id):
+        """Return connection information for an ajax console"""
+        context = context.elevated()
+        logging.debug(_("instance %s: getting ajax console"), instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        return self.driver.get_ajax_console(instance_ref)
+
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""

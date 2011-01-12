@@ -108,6 +108,8 @@ class API(base.Base):
                 ramdisk_id = None
                 LOG.debug(_("Creating a raw instance"))
             # Make sure we have access to kernel and ramdisk (if not raw)
+            logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                           (kernel_id, ramdisk_id))
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
@@ -171,7 +173,8 @@ class API(base.Base):
 
             # Set sane defaults if not specified
             updates = dict(hostname=generate_hostname(instance_id))
-            if 'display_name' not in instance:
+            if (not hasattr(instance, 'display_name')) or \
+                               instance.display_name == None:
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)
@@ -183,7 +186,8 @@ class API(base.Base):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id}})
+                               "instance_id": instance_id,
+                               "availability_zone": availability_zone}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -378,6 +382,25 @@ class API(base.Base):
     def set_admin_password(self, context, instance_id):
         """Set the root/admin password for the given instance."""
         self._cast_compute_message('set_admin_password', context, instance_id)
+
+    def get_ajax_console(self, context, instance_id):
+        """Get a url to an AJAX Console"""
+
+        instance = self.get(context, instance_id)
+
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance['host']),
+                          {'method': 'get_ajax_console',
+                           'args': {'instance_id': instance['id']}})
+
+        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
+                 {'method': 'authorize_ajax_console',
+                  'args': {'token': output['token'], 'host': output['host'],
+                  'port': output['port']}})
+
+        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+                output['token'])}
 
     def lock(self, context, instance_id):
         """lock the instance with instance_id"""
