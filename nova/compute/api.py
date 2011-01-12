@@ -186,7 +186,8 @@ class API(base.Base):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id}})
+                               "instance_id": instance_id,
+                               "availability_zone": availability_zone}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
