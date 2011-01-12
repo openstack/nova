@@ -18,7 +18,7 @@
 #    under the License.
 
 #
-# XenAPI plugin for putting images into glance
+# XenAPI plugin for managing glance images
 #
 
 import base64
@@ -62,6 +62,7 @@ def _copy_kernel_vdi(dest,copy_args):
     #read data from /dev/ and write into a file on /boot/guest
     of=open(filename,'wb')
     f=open(dest,'rb')
+    #copy only vdi_size bytes
     data=f.read(vdi_size)
     of.write(data)
     f.close()

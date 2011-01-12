@@ -19,7 +19,6 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
-import glance.client
 import logging
 import os
 import pickle
@@ -28,6 +27,7 @@ import urllib
 from xml.dom import minidom
 
 from eventlet import event
+import glance.client
 from nova import exception
 from nova import flags
 from nova import utils
@@ -53,6 +53,7 @@ SECTOR_SIZE = 512
 MBR_SIZE_SECTORS = 63
 MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
+
 
 class ImageType:
     """
@@ -310,7 +311,7 @@ class VMHelper(HelperBase):
         virtual_size = int(meta['size'])
 
         vdi_size = virtual_size
-        logging.debug("Size for image %s:%d",image,virtual_size)
+        logging.debug("Size for image %s:%d", image, virtual_size)
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -319,15 +320,20 @@ class VMHelper(HelperBase):
                              vdi_size, False)
 
         with_vdi_attached_here(session, vdi, False, _stream_disk)
-        if (type==ImageType.KERNEL_RAMDISK):
-            #we need to invoke a plugin for copying VDI's content into proper path
+        if (type == ImageType.KERNEL_RAMDISK):
+            #we need to invoke a plugin for copying VDI's
+            #content into proper path
+            logging.debug("Copying VDI %s to /boot/guest on dom0", vdi)
             fn = "copy_kernel_vdi"
             args = {}
             args['vdi-ref'] = vdi
-            args['image-size']=str(vdi_size)
+            #let the plugin copy the correct number of bytes
+            args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
-            filename=session.wait_for_task(instance_id,task)
-            #TODO(salvatore-orlando): remove the VDI as it is not needed anymore
+            filename = session.wait_for_task(instance_id, task)
+            #remove the VDI as it is not needed anymore
+            session.get_xenapi().VDI.destroy(vdi)
+            logging.debug("Kernel/Ramdisk VDI %s destroyed", vdi)
             return filename
         else:
             return session.get_xenapi().VDI.get_uuid(vdi)
@@ -353,20 +359,21 @@ class VMHelper(HelperBase):
         return uuid
 
     @classmethod
-    def lookup_image(cls, session, vdi_ref):
+    def lookup_image(cls, session, instance_id,vdi_ref):
         if FLAGS.xenapi_image_service == 'glance':
             return cls._lookup_image_glance(session, vdi_ref)
         else:
-            return cls._lookup_image_objectstore(session, vdi_ref)
+            return cls._lookup_image_objectstore(session, instance_id, vdi_ref)
 
     @classmethod
-    def _lookup_image_objectstore(cls, session, vdi_ref):
+    def _lookup_image_objectstore(cls, session, instance_id, vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
         fn = "is_vdi_pv"
         args = {}
         args['vdi-ref'] = vdi_ref
         task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(task)
+        pv_str = session.wait_for_task(instance_id,task)
+        pv = None
         if pv_str.lower() == 'true':
             pv = True
         elif pv_str.lower() == 'false':
@@ -563,10 +570,12 @@ def get_vdi_for_vm_safely(session, vm_ref):
 
 
 def find_sr(session):
+    logging.warning("IN find_sr")
     host = session.get_xenapi_host()
     srs = session.get_xenapi().SR.get_all()
     for sr in srs:
         sr_rec = session.get_xenapi().SR.get_record(sr)
+        logging.warning("HERE: %s",sr_rec['uuid'])
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue
@@ -585,7 +594,7 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
-    logging.debug("read_only: %s",str(read_only))
+    logging.debug("read_only: %s", str(read_only))
     vbd_rec['type'] = 'disk'
     vbd_rec['unpluggable'] = True
     vbd_rec['empty'] = False
