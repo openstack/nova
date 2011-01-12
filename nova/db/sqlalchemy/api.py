@@ -798,7 +798,7 @@ def instance_get_fixed_address_v6(context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        network_ref = project_get_network(context, context.project_id)
+        network_ref = network_get_by_instance(context, instance_id)
         prefix = network_ref.cidr_v6
         mac = instance_ref.mac_address
         return utils.to_global_ipv6(prefix, mac)
