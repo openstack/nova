@@ -125,7 +125,7 @@ def stubout_get_this_vm_uuid(stubs):
 
 
 def stubout_stream_disk(stubs):
-    def f(_):
+    def f(_1,_2):
         pass
     stubs.Set(vm_utils, '_stream_disk', f)
 
