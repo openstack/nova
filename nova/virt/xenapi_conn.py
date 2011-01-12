@@ -185,6 +185,10 @@ class XenAPIConnection(object):
         """Return snapshot of console"""
         return self._vmops.get_console_output(instance)
 
+    def get_ajax_console(self, instance):
+        """Return link to instance's ajax console"""
+        return self._vmops.get_ajax_console(instance)
+
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach volume storage to VM instance"""
         return self._volumeops.attach_volume(instance_name,
