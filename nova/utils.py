@@ -22,7 +22,6 @@ System-level utilities and helper functions.
 
 import datetime
 import inspect
-import logging
 import os
 import random
 import subprocess
@@ -37,8 +36,10 @@ from eventlet import greenthread
 
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import log as logging
 
 
+LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -109,7 +110,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
 
 
 def fetchfile(url, target):
-    logging.debug(_("Fetching %s") % url)
+    LOG.debug(_("Fetching %s") % url)
 #    c = pycurl.Curl()
 #    fp = open(target, "wb")
 #    c.setopt(c.URL, url)
@@ -121,7 +122,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug(_("Running cmd (subprocess): %s"), cmd)
+    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -134,7 +135,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % (obj.returncode))
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -152,6 +153,11 @@ def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 
 
+def novadir():
+    import nova
+    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+
+
 def default_flagfile(filename='nova.conf'):
     for arg in sys.argv:
         if arg.find('flagfile') != -1:
@@ -167,12 +173,12 @@ def default_flagfile(filename='nova.conf'):
 
 
 def debug(arg):
-    logging.debug('debug in callback: %s', arg)
+    LOG.debug(_('debug in callback: %s'), arg)
     return arg
 
 
 def runthis(prompt, cmd, check_exit_code=True):
-    logging.debug(_("Running %s") % (cmd))
+    LOG.debug(_("Running %s"), (cmd))
     rv, err = execute(cmd, check_exit_code=check_exit_code)
 
 
@@ -192,19 +198,6 @@ def generate_mac():
 
 def last_octet(address):
     return int(address.split(".")[-1])
-
-
-def get_my_ip():
-    """Returns the actual ip of the local machine."""
-    try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.gaierror as ex:
-        logging.warn(_("Couldn't get IP, using 127.0.0.1 %s"), ex)
-        return "127.0.0.1"
 
 
 def utcnow():
@@ -296,7 +289,7 @@ class LazyPluggable(object):
                 fromlist = backend
 
             self.__backend = __import__(name, None, None, fromlist)
-            logging.info('backend %s', self.__backend)
+            LOG.debug(_('backend %s'), self.__backend)
         return self.__backend
 
     def __getattr__(self, key):

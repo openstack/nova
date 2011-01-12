@@ -20,10 +20,10 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import json
-import logging
 
 from nova import db
 from nova import context
+from nova import log as logging
 from nova import exception
 from nova import utils
 
@@ -32,6 +32,9 @@ from nova.compute import power_state
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.vm_utils import ImageType
+
+XenAPI = None
+LOG = logging.getLogger("nova.virt.xenapi.vmops")
 
 
 class VMOps(object):
@@ -93,10 +96,9 @@ class VMOps(object):
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
-        logging.debug(_('Starting VM %s...'), vm_ref)
+        LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        logging.info(_('Spawning VM %s created %s.'), instance.name,
-                     vm_ref)
+        LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
 
         # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
@@ -107,12 +109,12 @@ class VMOps(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug(_('Instance %s: booted'), instance['name'])
+                    LOG.debug(_('Instance %s: booted'), instance['name'])
                     timer.stop()
             except Exception, exc:
-                logging.warn(exc)
-                logging.exception(_('instance %s: failed to boot'),
-                                  instance['name'])
+                LOG.warn(exc)
+                LOG.exception(_('instance %s: failed to boot'),
+                              instance['name'])
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -205,7 +207,7 @@ class VMOps(object):
                 task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
                 self._session.wait_for_task(instance.id, task)
             except self.XenAPI.Failure, exc:
-                logging.warn(exc)
+                LOG.exception(exc)
 
         # Disk clean-up
         if vdis:
@@ -214,20 +216,20 @@ class VMOps(object):
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(instance.id, task)
                 except self.XenAPI.Failure, exc:
-                    logging.warn(exc)
+                    LOG.exception(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
             ret = self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
         callback(ret)
 
     def pause(self, instance, callback):
@@ -281,6 +283,11 @@ class VMOps(object):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
+
+    def get_ajax_console(self, instance):
+        """Return link to instance's ajax console"""
+        # TODO: implement this!
+        return 'http://fakeajaxconsole/fake_url'
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records

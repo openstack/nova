@@ -19,19 +19,17 @@
 
 import httplib
 import json
-import logging
 import urlparse
 
-import webob.exc
-
-from nova import utils
-from nova import flags
 from nova import exception
-import nova.image.service
+from nova import flags
+from nova import log as logging
+from nova.image import service
+
+
+LOG = logging.getLogger('nova.image.glance')
 
 FLAGS = flags.FLAGS
-
-
 flags.DEFINE_string('glance_teller_address', 'http://127.0.0.1',
                     'IP address or URL where Glance\'s Teller service resides')
 flags.DEFINE_string('glance_teller_port', '9191',
@@ -77,8 +75,8 @@ class ParallaxClient(object):
                 data = json.loads(res.read())['images']
                 return data
             else:
-                logging.warn(_("Parallax returned HTTP error %d from "
-                               "request for /images"), res.status_int)
+                LOG.warn(_("Parallax returned HTTP error %d from "
+                           "request for /images"), res.status_int)
                 return []
         finally:
             c.close()
@@ -96,8 +94,8 @@ class ParallaxClient(object):
                 data = json.loads(res.read())['images']
                 return data
             else:
-                logging.warn(_("Parallax returned HTTP error %d from "
-                               "request for /images/detail"), res.status_int)
+                LOG.warn(_("Parallax returned HTTP error %d from "
+                           "request for /images/detail"), res.status_int)
                 return []
         finally:
             c.close()
@@ -165,7 +163,7 @@ class ParallaxClient(object):
             c.close()
 
 
-class GlanceImageService(nova.image.service.BaseImageService):
+class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
     def __init__(self):

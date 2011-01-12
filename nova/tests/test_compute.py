@@ -20,25 +20,25 @@ Tests For Compute
 """
 
 import datetime
-import logging
 
 from nova import compute
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.compute')
 
 
 class ComputeTestCase(test.TestCase):
     """Test case for compute"""
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
                    stub_network=True,
@@ -101,13 +101,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info(_("Running instances: %s"), instances)
+        LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
         self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info(_("After terminating instances: %s"), instances)
+        LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
     def test_run_terminate_timestamps(self):
@@ -169,6 +169,16 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_ajax_console(self):
+        """Make sure we can get console output from instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_ajax_console(self.context,
+                                                instance_id)
+        self.assert_(console)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
@@ -177,4 +187,23 @@ class ComputeTestCase(test.TestCase):
                           self.compute.run_instance,
                           self.context,
                           instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_lock(self):
+        """ensure locked instance cannot be changed"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        non_admin_context = context.RequestContext(None, None, False, False)
+
+        # decorator should return False (fail) with locked nonadmin context
+        self.compute.lock_instance(self.context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        self.assertEqual(ret_val, False)
+
+        # decorator should return None (success) with unlocked nonadmin context
+        self.compute.unlock_instance(self.context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        self.assertEqual(ret_val, None)
+
         self.compute.terminate_instance(self.context, instance_id)
