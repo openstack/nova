@@ -307,7 +307,6 @@ class VMHelper(HelperBase):
 
         meta, image_file = c.get_image(image)
         virtual_size = int(meta['size'])
-
         vdi_size = virtual_size
         LOG.debug(_("Size for image %s:%d"), image, virtual_size)
         if type == ImageType.DISK:
@@ -317,7 +316,8 @@ class VMHelper(HelperBase):
         vdi = cls.create_vdi(session, sr, _('Glance image %s') % image,
                              vdi_size, False)
 
-        with_vdi_attached_here(session, vdi, False, _stream_disk)
+        with_vdi_attached_here(session, vdi, False,
+                               lambda dev:_stream_disk(dev,image_file))
         if (type == ImageType.KERNEL_RAMDISK):
             #we need to invoke a plugin for copying VDI's
             #content into proper path
@@ -652,7 +652,7 @@ def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
 
 
-def _stream_disk(dev):
+def _stream_disk(dev,image_file):
     offset = 0
     if type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
