@@ -48,6 +48,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         db_fakes.stub_out_db_instance_api(self.stubs)
+        stubs.stubout_glance_client(self.stubs)    
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.values = {'name': 1, 'id': 1,
@@ -104,6 +105,7 @@ class XenAPIVolumeTestCase(test.TestCase):
     def test_attach_volume(self):
         """ This shows how to test Ops classes' methods """
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
+        stubs.stubout_glance_client(self.stubs)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = db.instance_create(self.values)
@@ -126,6 +128,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         """ This shows how to test when exceptions are raised """
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
+        stubs.stubout_glance_client(self.stubs)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = db.instance_create(self.values)
@@ -159,6 +162,7 @@ class XenAPIVMTestCase(test.TestCase):
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        stubs.stubout_glance_client(self.stubs)    
         self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
@@ -214,8 +218,8 @@ class XenAPIVMTestCase(test.TestCase):
         vm_info = conn.get_info(1)
 
         # Get XenAPI record for VM
-        vms = fake.get_all('VM')
-        vm = fake.get_record('VM', vms[0])
+        vms = xenapi_fake.get_all('VM')
+        vm = xenapi_fake.get_record('VM', vms[0])
 
         # Check that m1.large above turned into the right thing.
         instance_type = instance_types.INSTANCE_TYPES['m1.large']
@@ -238,7 +242,9 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        stubs.stubout_glance_client(self.stubs)
         values = {'name': 1,
+                  'id':1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -252,12 +258,24 @@ class XenAPIVMTestCase(test.TestCase):
         conn.spawn(instance)
         self.check_vm_record(conn)
 
-    def test_spawn_raw(self):
+    def test_spawn_raw_objectstore(self):
+        FLAGS.xenapi_image_service='objectstore'
         self._test_spawn(1, None, None)
 
-    def test_spawn(self):
+    def test_spawn_objectstore(self):
+        FLAGS.xenapi_image_service='objectstore'
         self._test_spawn(1, 2, 3)
 
+    def test_spawn_raw_glance(self):
+        xenapi_fake._create_sr('SR',['','',{'other_config':{'i18n-key':'local-storage'}},'',
+                                     '','','iscsi'])
+        FLAGS.xenapi_image_service='glance'
+        self._test_spawn(1, None, None)
+
+    def test_spawn_glance(self):
+        FLAGS.xenapi_image_service='glance'
+        self._test_spawn(1, 2, 3)
+        
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)

@@ -42,6 +42,11 @@ class VMOps(object):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
         VMHelper.XenAPI = self.XenAPI
+        VMHelper.Glance = self._get_imported_glance() 
+
+    def _get_imported_glance(self):
+        """Stubout point. This can be replaced with a mock glance module."""
+        return __import__('glance')
 
     def list_instances(self):
         """List VM instances"""
@@ -77,7 +82,7 @@ class VMOps(object):
         #Have a look at the VDI and see if it has a PV kernel
         pv_kernel = False
         if not instance.kernel_id:
-            pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
+            pv_kernel = VMHelper.lookup_image(self._session, instance.id,vdi_ref)
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,

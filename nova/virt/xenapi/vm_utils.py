@@ -19,7 +19,6 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
-import glance.client
 import logging
 import os
 import pickle
@@ -72,6 +71,8 @@ class VMHelper(HelperBase):
     """
     The class that wraps the helper methods together.
     """
+
+    Glance = None
 
     @classmethod
     def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
@@ -297,7 +298,7 @@ class VMHelper(HelperBase):
                                            access, type)
         else:
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, type)
+                                                user,access, type)
 
     @classmethod
     def _fetch_image_glance(cls, session, instance_id, image, access, type):
@@ -305,7 +306,7 @@ class VMHelper(HelperBase):
         if sr is None:
             raise exception.NotFound('Cannot find SR to write VDI to')
 
-        c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        c = cls.Glance.Client(FLAGS.glance_host, FLAGS.glance_port)
 
         meta, image_file = c.get_image(image)
         virtual_size = int(meta['size'])
@@ -350,8 +351,8 @@ class VMHelper(HelperBase):
             return session.get_xenapi().VDI.get_uuid(vdi)
 
     @classmethod
-    def _fetch_image_objectstore(cls, session, instance_id, image, access,
-                                 type):
+    def _fetch_image_objectstore(cls, session, instance_id, image, 
+                                 user,access,type):
         url = images.image_url(image)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
@@ -370,20 +371,21 @@ class VMHelper(HelperBase):
         return uuid
 
     @classmethod
-    def lookup_image(cls, session, vdi_ref):
+    def lookup_image(cls, session, instance_id,vdi_ref):
         if FLAGS.xenapi_image_service == 'glance':
             return cls._lookup_image_glance(session, vdi_ref)
         else:
-            return cls._lookup_image_objectstore(session, vdi_ref)
+            return cls._lookup_image_objectstore(session, instance_id,vdi_ref)
 
     @classmethod
-    def _lookup_image_objectstore(cls, session, vdi_ref):
+    def _lookup_image_objectstore(cls, session, instance_id,vdi_ref):
         logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
         fn = "is_vdi_pv"
         args = {}
         args['vdi-ref'] = vdi_ref
         task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(task)
+        pv_str = session.wait_for_task(instance_id,task)
+        pv = None
         if pv_str.lower() == 'true':
             pv = True
         elif pv_str.lower() == 'false':
@@ -580,10 +582,12 @@ def get_vdi_for_vm_safely(session, vm_ref):
 
 
 def find_sr(session):
+    logging.warning("IN find_sr")
     host = session.get_xenapi_host()
     srs = session.get_xenapi().SR.get_all()
     for sr in srs:
         sr_rec = session.get_xenapi().SR.get_record(sr)
+        logging.warning("HERE: %s",sr_rec['uuid'])
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue

@@ -17,6 +17,7 @@
 """Stubouts, mocks and fixtures for the test suite"""
 
 from nova.virt import xenapi_conn
+from nova.virt.xenapi import vmops
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
@@ -68,6 +69,16 @@ def stubout_instance_snapshot(stubs):
 
     stubs.Set(vm_utils, 'wait_for_vhd_coalesce', fake_wait_for_vhd_coalesce)
 
+
+def stubout_glance_client(stubs):
+    """Stubs out glance import method for importing fake client"""
+    def fake_import(self):
+        """Stubs out get_imported_xenapi of XenAPISession"""
+        fake_module = 'nova.tests.glance.fake_client'
+        from_list = ['fake_client']
+        return __import__(fake_module, globals(), locals(), from_list, -1)
+
+    stubs.Set(vmops.VMOps, '_get_imported_glance',fake_import)
 
 def stubout_session(stubs, cls):
     """Stubs out two methods from XenAPISession"""
