@@ -1024,7 +1024,6 @@ class NWFilterFirewall(FirewallDriver):
         security_group = db.security_group_get(context.get_admin_context(),
                                                security_group_id)
         rule_xml = ""
-        version = 4
         v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
