@@ -40,59 +40,48 @@ from nova import flags
 from nova import log as logging
 from nova import wsgi
 
+logging.basicConfig()
 LOG = logging.getLogger('nova.api')
-LOG.setLevel(logging.DEBUG)
-LOG.addHandler(logging.StreamHandler())
 
 FLAGS = flags.FLAGS
 
-API_ENDPOINTS = ['ec2', 'openstack']
+API_ENDPOINTS = ['ec2', 'osapi']
 
 
-def load_configuration(paste_config):
+def load_configuration(paste_config, name):
     """Load the paste configuration from the config file and return it."""
     config = None
-    # Try each known name to get the global DEFAULTS, which will give ports
-    for name in API_ENDPOINTS:
-        try:
-            config = deploy.appconfig("config:%s" % paste_config, name=name)
-        except LookupError:
-            pass
-        if config:
-            verbose = config.get('verbose', None)
-            if verbose:
-                FLAGS.verbose = int(verbose) == 1
-                if FLAGS.verbose:
-                    logging.getLogger().setLevel(logging.DEBUG)
-            return config
-    LOG.debug(_("Paste config at %s has no secion for known apis"),
-              paste_config)
-    print _("Paste config at %s has no secion for any known apis") % \
-          paste_config
-    os.exit(1)
-
-
-def launch_api(paste_config_file, section, server, port, host):
-    """Launch an api server from the specified port and IP."""
-    LOG.debug(_("Launching %s api on %s:%s"), section, host, port)
-    app = deploy.loadapp('config:%s' % paste_config_file, name=section)
-    server.start(app, int(port), host)
+    try:
+        config = deploy.appconfig("config:%s" % paste_config, name=name)
+        return config
+    except LookupError:
+        return None
 
 
 def run_app(paste_config_file):
     LOG.debug(_("Using paste.deploy config at: %s"), configfile)
-    config = load_configuration(paste_config_file)
-    LOG.debug(_("Configuration: %r"), config)
     server = wsgi.Server()
-    ip = config.get('host', '0.0.0.0')
+    apps = []
     for api in API_ENDPOINTS:
-        port = config.get("%s_port" % api, None)
-        if not port:
+        config = load_configuration(paste_config_file, api)
+        if config is None:
             continue
-        host = config.get("%s_host" % api, ip)
-        launch_api(configfile, api, server, port, host)
-    LOG.debug(_("All api servers launched, now waiting"))
-    server.wait()
+        if int(config.get('verbose', 0)) == 1:
+            FLAGS.verbose = True
+        host = config.get("%s_host" % api, config.get('host', '0.0.0.0'))
+        port = config.get("%s_port" % api, getattr(FLAGS, "%s_port" % api))
+        setattr(FLAGS, "%s_host" % api, host)
+        setattr(FLAGS, "%s_port" % api, port)
+        LOG.info(_("Running %s API"), api)
+        app = deploy.loadapp('config:%s' % paste_config_file, name=api)
+        apps.append((app, int(port), host))
+    if len(apps) == 0:
+        LOG.error(_("No known API applications configured in %s."),
+                  paste_config_file)
+    else:
+        for app in apps:
+            server.start(*app)
+        server.wait()
 
 
 if __name__ == '__main__':
