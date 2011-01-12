@@ -643,15 +643,21 @@ class CloudController(object):
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context)
 
+    def describe_instances_v6(self, context, **kwargs):
+        return self._format_describe_instances(context)
+
     def _format_describe_instances(self, context):
         return {'reservationSet': self._format_instances(context)}
+
+    def _format_describe_instances_v6(self, context):
+        return {'reservationSet': self._format_instances(context,None,True)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, reservation_id=None):
+    def _format_instances(self, context, reservation_id=None,use_v6=False):
         reservations = {}
         if reservation_id:
             instances = db.instance_get_all_by_reservation(context,
@@ -677,7 +683,7 @@ class CloudController(object):
                 if instance['fixed_ip']['floating_ips']:
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
-                if instance['fixed_ip']['network'] and FLAGS.use_ipv6:
+                if instance['fixed_ip']['network'] and use_v6:
                     i['dnsNameV6'] = utils.to_global_ipv6(
                         instance['fixed_ip']['network']['cidr_v6'],
                         instance['mac_address'])

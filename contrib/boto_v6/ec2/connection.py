@@ -37,5 +37,5 @@ class EC2ConnectionV6(boto.ec2.EC2Connection):
             self.build_list_params(params, instance_ids, 'InstanceId')
         if filters:
             self.build_filter_params(params, filters)
-        return self.get_list('DescribeInstances', params,
+        return self.get_list('DescribeInstancesV6', params,
                              [('item', ReservationV6)])
