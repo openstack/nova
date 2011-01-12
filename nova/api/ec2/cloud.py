@@ -574,7 +574,8 @@ class CloudController(object):
                                    'device': volume['mountpoint'],
                                    'instanceId': instance_ec2_id,
                                    'status': 'attached',
-                                   'volumeId': id_to_ec2_id(volume['id'], 'vol-%s')}]
+                                   'volumeId': id_to_ec2_id(volume['id'],
+                                                            'vol-%s')}]
         else:
             v['attachmentSet'] = [{}]
 
