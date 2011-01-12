@@ -940,8 +940,8 @@ class NWFilterFirewall(FirewallDriver):
                                                    ['no-mac-spoofing',
                                                     'no-ip-spoofing',
                                                     'no-arp-spoofing',
-                                                    'allow-dhcp-server',
-                                                    'allow-ra-server']))
+                                                    'allow-dhcp-server'
+                                                   ]))
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
@@ -1035,6 +1035,8 @@ class NWFilterFirewall(FirewallDriver):
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
+        if FLAGS.use_ipv6:
+            instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
 

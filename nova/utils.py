@@ -218,7 +218,7 @@ def get_my_ip():
 def  get_my_linklocal(interface):
     try:
         if_str = execute("ip -f inet6 -o addr show %s" % interface)
-        condition = "\s+inet6\s+([0-9a-f:]+/\d+)\s+scope:link"
+        condition = "\s+inet6\s+([0-9a-f:]+/\d+)\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
         if address[0] is not None:

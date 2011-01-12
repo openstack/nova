@@ -610,7 +610,7 @@ class CloudController(object):
 
     def describe_instances_v6(self, context, **kwargs):
         kwargs['use_v6'] = True
-        return self._format_describe_instances_v6(context, **kwargs)
+        return self._format_describe_instances(context, **kwargs)
 
     def _format_describe_instances(self, context, **kwargs):
         return {'reservationSet': self._format_instances(context, **kwargs)}
