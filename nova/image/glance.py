@@ -43,13 +43,13 @@ class GlanceImageService(service.BaseImageService):
 
     def index(self, context):
         """
-        Calls out to Parallax for a list of images available
+        Calls out to Glance for a list of images available
         """
         return self.client.get_images()
 
     def detail(self, context):
         """
-        Calls out to Parallax for a list of detailed image information
+        Calls out to Glance for a list of detailed image information
         """
         return self.client.get_images_detailed()
 
@@ -92,4 +92,4 @@ class GlanceImageService(service.BaseImageService):
         """
         Clears out all images
         """
-        raise NotImplementedError
+        pass #raise NotImplementedError

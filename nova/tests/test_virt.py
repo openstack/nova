@@ -278,6 +278,20 @@ class IptablesFirewallTestCase(test.TestCase):
 
         db.security_group_rule_create(admin_ctxt,
                                       {'parent_group_id': secgroup['id'],
+                                       'protocol': 'icmp',
+                                       'from_port': -1,
+                                       'to_port': -1,
+                                       'cidr': '192.168.11.0/24'})
+
+        db.security_group_rule_create(admin_ctxt,
+                                      {'parent_group_id': secgroup['id'],
+                                       'protocol': 'icmp',
+                                       'from_port': 8,
+                                       'to_port': -1,
+                                       'cidr': '192.168.11.0/24'})
+
+        db.security_group_rule_create(admin_ctxt,
+                                      {'parent_group_id': secgroup['id'],
                                        'protocol': 'tcp',
                                        'from_port': 80,
                                        'to_port': 81,
@@ -297,7 +311,35 @@ class IptablesFirewallTestCase(test.TestCase):
                 self.assertTrue(rule in out_rules,
                                 'Rule went missing: %s' % rule)
 
-        print '\n'.join(out_rules)
+        instance_chain = None
+        for rule in out_rules:
+            # This is pretty crude, but it'll do for now
+            if '-d 10.11.12.13 -j' in rule:
+                instance_chain = rule.split(' ')[-1]
+                break
+        self.assertTrue(instance_chain, "The instance chain wasn't added")
+
+        security_group_chain = None
+        for rule in out_rules:
+            # This is pretty crude, but it'll do for now
+            if '-A %s -j' % instance_chain in rule:
+                security_group_chain = rule.split(' ')[-1]
+                break
+        self.assertTrue(security_group_chain,
+                        "The security group chain wasn't added")
+
+        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -j ACCEPT' % \
+                               security_group_chain in out_rules,
+                        "ICMP acceptance rule wasn't added")
+
+        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -m icmp --icmp-type'
+                        ' 8 -j ACCEPT' % security_group_chain in out_rules,
+                        "ICMP Echo Request acceptance rule wasn't added")
+
+        self.assertTrue('-A %s -p tcp -s 192.168.10.0/24 -m multiport '
+                        '--dports 80:81 -j ACCEPT' % security_group_chain \
+                            in out_rules,
+                        "TCP port 80/81 acceptance rule wasn't added")
 
 
 class NWFilterTestCase(test.TestCase):
