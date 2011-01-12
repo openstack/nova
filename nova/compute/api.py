@@ -108,6 +108,8 @@ class API(base.Base):
                 ramdisk_id = None
                 LOG.debug(_("Creating a raw instance"))
             # Make sure we have access to kernel and ramdisk (if not raw)
+            logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                           (kernel_id, ramdisk_id))
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
@@ -171,7 +173,8 @@ class API(base.Base):
 
             # Set sane defaults if not specified
             updates = dict(hostname=generate_hostname(instance_id))
-            if 'display_name' not in instance:
+            if (not hasattr(instance, 'display_name')) or \
+                               instance.display_name == None:
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)

@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from webob import exc
 
 from nova import wsgi
@@ -29,7 +31,7 @@ def _translate_keys(inst):
 def _translate_detail_keys(inst):
     """ Coerces a shared IP group instance into proper dictionary format with
     correctly mapped attributes """
-    return dict(sharedIpGroup=inst)
+    return dict(sharedIpGroups=inst)
 
 
 class Controller(wsgi.Controller):
@@ -54,12 +56,12 @@ class Controller(wsgi.Controller):
 
     def delete(self, req, id):
         """ Deletes a Shared IP Group """
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(exc.HTTPNotImplemented())
 
-    def detail(self, req, id):
+    def detail(self, req):
         """ Returns a complete list of Shared IP Groups """
         return _translate_detail_keys({})
 
     def create(self, req):
         """ Creates a new Shared IP group """
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(exc.HTTPNotImplemented())

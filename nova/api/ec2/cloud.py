@@ -399,8 +399,8 @@ class CloudController(object):
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria == None:
-            raise exception.ApiError(_("No rule for the specified "
-                                       "parameters."))
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
 
         for rule in security_group.rules:
             match = True
@@ -427,6 +427,9 @@ class CloudController(object):
                                                        group_name)
 
         values = self._revoke_rule_args_to_dict(context, **kwargs)
+        if values is None:
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
         values['parent_group_id'] = security_group.id
 
         if self._security_group_rule_exists(security_group, values):

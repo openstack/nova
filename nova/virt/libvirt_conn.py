@@ -752,6 +752,14 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
+    def get_console_pool_info(self, console_type):
+        #TODO(mdragon): console proxy should be implemented for libvirt,
+        #               in case someone wants to use it with kvm or
+        #               such. For now return fake data.
+        return  {'address': '127.0.0.1',
+                 'username': 'fakeuser',
+                 'password': 'fakepassword'}
+
     def refresh_security_group_rules(self, security_group_id):
         self.firewall_driver.refresh_security_group_rules(security_group_id)
 
@@ -1150,15 +1158,15 @@ class IptablesFirewallDriver(FirewallDriver):
                     icmp_type = rule.from_port
                     icmp_code = rule.to_port
 
-                    if icmp_type == '-1':
+                    if icmp_type == -1:
                         icmp_type_arg = None
                     else:
                         icmp_type_arg = '%s' % icmp_type
-                        if not icmp_code == '-1':
+                        if not icmp_code == -1:
                             icmp_type_arg += '/%s' % icmp_code
 
                     if icmp_type_arg:
-                        args += ['-m', 'icmp', '--icmp_type', icmp_type_arg]
+                        args += ['-m', 'icmp', '--icmp-type', icmp_type_arg]
 
                 args += ['-j ACCEPT']
                 our_rules += [' '.join(args)]
