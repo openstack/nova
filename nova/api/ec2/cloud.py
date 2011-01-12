@@ -501,6 +501,11 @@ class CloudController(object):
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
 
+    def get_ajax_console(self, context, instance_id, **kwargs):
+        ec2_id = instance_id[0]
+        internal_id = ec2_id_to_id(ec2_id)
+        return self.compute_api.get_ajax_console(context, internal_id)
+
     def describe_volumes(self, context, volume_id=None, **kwargs):
         volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
