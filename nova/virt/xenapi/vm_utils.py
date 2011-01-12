@@ -317,7 +317,7 @@ class VMHelper(HelperBase):
                              vdi_size, False)
 
         with_vdi_attached_here(session, vdi, False,
-                               lambda dev:_stream_disk(dev,image_file))
+                               lambda dev: _stream_disk(dev, image_file))
         if (type == ImageType.KERNEL_RAMDISK):
             #we need to invoke a plugin for copying VDI's
             #content into proper path
@@ -652,7 +652,7 @@ def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
 
 
-def _stream_disk(dev,image_file):
+def _stream_disk(dev, image_file):
     offset = 0
     if type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
