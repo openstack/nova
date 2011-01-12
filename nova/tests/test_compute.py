@@ -20,18 +20,19 @@ Tests For Compute
 """
 
 import datetime
-import logging
 
+from nova import compute
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.compute import api as compute_api
 
 
+LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
 
@@ -39,13 +40,12 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 class ComputeTestCase(test.TestCase):
     """Test case for compute"""
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(ComputeTestCase, self).setUp()
         self.flags(connection_type='fake',
                    stub_network=True,
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
-        self.compute_api = compute_api.ComputeAPI()
+        self.compute_api = compute.API()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
@@ -73,7 +73,7 @@ class ComputeTestCase(test.TestCase):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
-            ref = self.compute_api.create_instances(self.context,
+            ref = self.compute_api.create(self.context,
                 FLAGS.default_instance_type, None, **instance)
             try:
                 self.assertNotEqual(ref[0].display_name, None)
@@ -81,13 +81,13 @@ class ComputeTestCase(test.TestCase):
                 db.instance_destroy(self.context, ref[0]['id'])
 
     def test_create_instance_associates_security_groups(self):
-        """Make sure create_instances associates security groups"""
+        """Make sure create associates security groups"""
         values = {'name': 'default',
                   'description': 'default',
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute_api.create_instances(self.context,
+        ref = self.compute_api.create(self.context,
             FLAGS.default_instance_type, None, security_group=['default'])
         try:
             self.assertEqual(len(ref[0]['security_groups']), 1)
@@ -102,13 +102,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.run_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info(_("Running instances: %s"), instances)
+        LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
 
         self.compute.terminate_instance(self.context, instance_id)
 
         instances = db.instance_get_all(context.get_admin_context())
-        logging.info(_("After terminating instances: %s"), instances)
+        LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
     def test_run_terminate_timestamps(self):
@@ -170,6 +170,16 @@ class ComputeTestCase(test.TestCase):
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_ajax_console(self):
+        """Make sure we can get console output from instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_ajax_console(self.context,
+                                                instance_id)
+        self.assert_(console)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_run_instance_existing(self):
         """Ensure failure when running an instance that already exists"""
         instance_id = self._create_instance()
@@ -178,4 +188,23 @@ class ComputeTestCase(test.TestCase):
                           self.compute.run_instance,
                           self.context,
                           instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_lock(self):
+        """ensure locked instance cannot be changed"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        non_admin_context = context.RequestContext(None, None, False, False)
+
+        # decorator should return False (fail) with locked nonadmin context
+        self.compute.lock_instance(self.context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        self.assertEqual(ret_val, False)
+
+        # decorator should return None (success) with unlocked nonadmin context
+        self.compute.unlock_instance(self.context, instance_id)
+        ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
+        self.assertEqual(ret_val, None)
+
         self.compute.terminate_instance(self.context, instance_id)

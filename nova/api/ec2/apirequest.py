@@ -20,13 +20,13 @@
 APIRequest class
 """
 
-import logging
 import re
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
 
-_log = logging.getLogger("api")
-_log.setLevel(logging.DEBUG)
+from nova import log as logging
+
+LOG = logging.getLogger("nova.api.request")
 
 
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
@@ -95,7 +95,7 @@ class APIRequest(object):
         except AttributeError:
             _error = _('Unsupported API request: controller = %s,'
                        'action = %s') % (self.controller, self.action)
-            _log.warning(_error)
+            LOG.exception(_error)
             # TODO: Raise custom exception, trap in apiserver,
             #       and reraise as 400 error.
             raise Exception(_error)
@@ -143,7 +143,7 @@ class APIRequest(object):
 
         response = xml.toxml()
         xml.unlink()
-        _log.debug(response)
+        LOG.debug(response)
         return response
 
     def _render_dict(self, xml, el, data):
@@ -152,7 +152,7 @@ class APIRequest(object):
                 val = data[key]
                 el.appendChild(self._render_data(xml, key, val))
         except:
-            _log.debug(data)
+            LOG.debug(data)
             raise
 
     def _render_data(self, xml, el_name, data):

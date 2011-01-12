@@ -20,7 +20,8 @@ Starting point for routing EC2 requests.
 
 """
 
-import logging
+import datetime
+import routes
 import webob
 import webob.dec
 import webob.exc
@@ -28,6 +29,7 @@ import webob.exc
 from nova import context
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
@@ -35,6 +37,7 @@ from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.api")
 flags.DEFINE_boolean('use_forwarded_for', False,
                      'Treat X-Forwarded-For as the canonical remote address. '
                      'Only enable this if you have a sanitizing proxy.')
@@ -48,8 +51,42 @@ flags.DEFINE_list('lockout_memcached_servers', None,
                   'Memcached servers or None for in process cache.')
 
 
-_log = logging.getLogger("api")
-_log.setLevel(logging.DEBUG)
+class RequestLogging(wsgi.Middleware):
+    """Access-Log akin logging for all EC2 API requests."""
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        rv = req.get_response(self.application)
+        self.log_request_completion(rv, req)
+        return rv
+
+    def log_request_completion(self, response, request):
+        controller = request.environ.get('ec2.controller', None)
+        if controller:
+            controller = controller.__class__.__name__
+        action = request.environ.get('ec2.action', None)
+        ctxt = request.environ.get('ec2.context', None)
+        seconds = 'X'
+        microseconds = 'X'
+        if ctxt:
+            delta = datetime.datetime.utcnow() - \
+                    ctxt.timestamp
+            seconds = delta.seconds
+            microseconds = delta.microseconds
+        LOG.info(
+            "%s.%ss %s %s %s %s:%s %s [%s] %s %s",
+            seconds,
+            microseconds,
+            request.remote_addr,
+            request.method,
+            request.path_info,
+            controller,
+            action,
+            response.status_int,
+            request.user_agent,
+            request.content_type,
+            response.content_type,
+            context=ctxt)
 
 
 class Lockout(wsgi.Middleware):
@@ -85,7 +122,7 @@ class Lockout(wsgi.Middleware):
         failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
         if failures >= FLAGS.lockout_attempts:
-            detail = "Too many failed authentications."
+            detail = _("Too many failed authentications.")
             raise webob.exc.HTTPForbidden(detail=detail)
         res = req.get_response(self.application)
         if res.status_int == 403:
@@ -94,9 +131,9 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
             elif failures >= FLAGS.lockout_attempts:
-                _log.warn('Access key %s has had %d failed authentications'
-                          ' and will be locked out for %d minutes.' %
-                          (access_key, failures, FLAGS.lockout_minutes))
+                LOG.warn(_('Access key %s has had %d failed authentications'
+                           ' and will be locked out for %d minutes.'),
+                         access_key, failures, FLAGS.lockout_minutes)
                 self.mc.set(failures_key, str(failures),
                             time=FLAGS.lockout_minutes * 60)
         return res
@@ -129,8 +166,9 @@ class Authenticate(wsgi.Middleware):
                     req.method,
                     req.host,
                     req.path)
-        except exception.Error, ex:
-            logging.debug(_("Authentication Failure: %s") % ex)
+        # Be explicit for what exceptions are 403, the rest bubble as 500
+        except (exception.NotFound, exception.NotAuthorized) as ex:
+            LOG.audit(_("Authentication Failure: %s"), str(ex))
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -141,6 +179,8 @@ class Authenticate(wsgi.Middleware):
                                       project=project,
                                       remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
+        LOG.audit(_('Authenticated Request For %s:%s)'), user.name,
+                  project.name, context=req.environ['ec2.context'])
         return self.application
 
 
@@ -163,6 +203,12 @@ class Requestify(wsgi.Middleware):
                 args.pop(non_arg)
         except:
             raise webob.exc.HTTPBadRequest()
+
+        LOG.debug(_('action: %s'), action)
+        for key, value in args.items():
+            LOG.debug(_('arg: %s\t\tval: %s'), key, value)
+
+        # Success!
         api_request = apirequest.APIRequest(self.controller, action, args)
         req.environ['ec2.request'] = api_request
         req.environ['ec2.action_args'] = args
@@ -231,6 +277,9 @@ class Authorizer(wsgi.Middleware):
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
+            LOG.audit(_("Unauthorized request for controller=%s "
+                        "and action=%s"), controller_name, action,
+                      context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
@@ -261,14 +310,24 @@ class Executor(wsgi.Application):
         result = None
         try:
             result = api_request.invoke(context)
+        except exception.NotFound as ex:
+            LOG.info(_('NotFound raised: %s'), str(ex),  context=context)
+            return self._error(req, context, type(ex).__name__, str(ex))
         except exception.ApiError as ex:
+            LOG.exception(_('ApiError raised: %s'), str(ex), context=context)
             if ex.code:
-                return self._error(req, ex.code, ex.message)
+                return self._error(req, context, ex.code, str(ex))
             else:
-                return self._error(req, type(ex).__name__, ex.message)
-        # TODO(vish): do something more useful with unknown exceptions
+                return self._error(req, context, type(ex).__name__, str(ex))
         except Exception as ex:
-            return self._error(req, type(ex).__name__, str(ex))
+            extra = {'environment': req.environ}
+            LOG.exception(_('Unexpected error raised: %s'), str(ex),
+                          extra=extra, context=context)
+            return self._error(req,
+                               context,
+                               'UnknownError',
+                               _('An unknown error has occurred. '
+                               'Please try your request again.'))
         else:
             resp = webob.Response()
             resp.status = 200
@@ -276,15 +335,16 @@ class Executor(wsgi.Application):
             resp.body = str(result)
             return resp
 
-    def _error(self, req, code, message):
-        logging.error("%s: %s", code, message)
+    def _error(self, req, context, code, message):
+        LOG.error("%s: %s", code, message, context=context)
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
         resp.body = str('<?xml version="1.0"?>\n'
-                     '<Response><Errors><Error><Code>%s</Code>'
-                     '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>' % (code, message))
+                         '<Response><Errors><Error><Code>%s</Code>'
+                         '<Message>%s</Message></Error></Errors>'
+                         '<RequestID>%s</RequestID></Response>' %
+                         (code, message, context.request_id))
         return resp
 
 
