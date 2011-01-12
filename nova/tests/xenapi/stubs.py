@@ -91,6 +91,21 @@ def stub_out_get_target(stubs):
     stubs.Set(volume_utils, '_get_target', fake_get_target)
 
 
+def stubout_get_this_vm_uuid(stubs):
+    def f():
+        vms = [rec['uuid'] for ref, rec
+               in fake.get_all_records('VM').iteritems()
+               if rec['is_control_domain']]
+        return vms[0]
+    stubs.Set(vm_utils, 'get_this_vm_uuid', f)
+
+
+def stubout_stream_disk(stubs):
+    def f(_):
+        pass
+    stubs.Set(vm_utils, '_stream_disk', f)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
@@ -100,7 +115,10 @@ class FakeSessionForVMTests(fake.SessionBase):
         return self.xenapi.network.get_all_records()
 
     def host_call_plugin(self, _1, _2, _3, _4, _5):
-        return ''
+        sr_ref = fake.get_all('SR')[0]
+        vdi_ref = fake.create_vdi('', False, sr_ref, False)
+        vdi_rec = fake.get_record('VDI', vdi_ref)
+        return '<string>%s</string>' % vdi_rec['uuid']
 
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
@@ -134,10 +152,6 @@ class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):
         super(FakeSessionForVolumeTests, self).__init__(uri)
-
-    def VBD_plug(self, _1, ref):
-        rec = fake.get_record('VBD', ref)
-        rec['currently-attached'] = True
 
     def VDI_introduce(self, _1, uuid, _2, _3, _4, _5,
                       _6, _7, _8, _9, _10, _11):

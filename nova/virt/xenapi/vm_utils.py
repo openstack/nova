@@ -296,7 +296,7 @@ class VMHelper(HelperBase):
                                            access, type)
         else:
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, type)
+                                                access, user.secret, type)
 
     @classmethod
     def _fetch_image_glance(cls, session, instance_id, image, access, type):
@@ -318,18 +318,7 @@ class VMHelper(HelperBase):
         vdi = cls.create_vdi(session, sr, _('Glance image %s') % image,
                              vdi_size, False)
 
-        def stream(dev):
-            offset = 0
-            if type == ImageType.DISK:
-                offset = MBR_SIZE_BYTES
-                _write_partition(virtual_size, dev)
-
-            with open('/dev/%s' % dev, 'wb') as f:
-                f.seek(offset)
-                for chunk in image_file:
-                    f.write(chunk)
-
-        with_vdi_attached_here(session, vdi, False, stream)
+        with_vdi_attached_here(session, vdi, False, _stream_disk)
         if (type==ImageType.KERNEL_RAMDISK):
             #we need to invoke a plugin for copying VDI's content into proper path
             fn = "copy_kernel_vdi"
@@ -345,14 +334,14 @@ class VMHelper(HelperBase):
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
-                                 type):
+                                 secret, type):
         url = images.image_url(image)
         logging.debug("Asking xapi to fetch %s as %s", url, access)
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
         args['username'] = access
-        args['password'] = user.secret
+        args['password'] = secret
         args['add_partition'] = 'false'
         args['raw'] = 'false'
         if type != ImageType.KERNEL_RAMDISK:
@@ -629,7 +618,7 @@ def vbd_unplug_with_retry(session, vbd):
             session.get_xenapi().VBD.unplug(vbd)
             logging.debug(_('VBD.unplug successful first time.'))
             return
-        except XenAPI.Failure, e:
+        except VMHelper.XenAPI.Failure, e:
             if (len(e.details) > 0 and
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 logging.debug(_('VBD.unplug rejected: retrying...'))
@@ -647,7 +636,7 @@ def vbd_unplug_with_retry(session, vbd):
 def ignore_failure(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except XenAPI.Failure, e:
+    except VMHelper.XenAPI.Failure, e:
         logging.error(_('Ignoring XenAPI.Failure %s'), e)
         return None
 
@@ -659,6 +648,18 @@ def get_this_vm_uuid():
 
 def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
+
+
+def _stream_disk(dev):
+    offset = 0
+    if type == ImageType.DISK:
+        offset = MBR_SIZE_BYTES
+        _write_partition(virtual_size, dev)
+
+    with open('/dev/%s' % dev, 'wb') as f:
+        f.seek(offset)
+        for chunk in image_file:
+            f.write(chunk)
 
 
 def _write_partition(virtual_size, dev):
