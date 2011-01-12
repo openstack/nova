@@ -245,7 +245,7 @@ class XenAPIVMTestCase(test.TestCase):
     def _test_spawn(self, image_id, kernel_id, ramdisk_id):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
-                  'id':1,
+                  'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -260,23 +260,21 @@ class XenAPIVMTestCase(test.TestCase):
         self.check_vm_record(conn)
 
     def test_spawn_raw_objectstore(self):
-        FLAGS.xenapi_image_service='objectstore'
+        FLAGS.xenapi_image_service = 'objectstore'
         self._test_spawn(1, None, None)
 
     def test_spawn_objectstore(self):
-        FLAGS.xenapi_image_service='objectstore'
+        FLAGS.xenapi_image_service = 'objectstore'
         self._test_spawn(1, 2, 3)
 
     def test_spawn_raw_glance(self):
-        xenapi_fake._create_sr('SR',['','',{'other_config':{'i18n-key':'local-storage'}},'',
-                                     '','','iscsi'])
-        FLAGS.xenapi_image_service='glance'
+        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, None, None)
 
     def test_spawn_glance(self):
-        FLAGS.xenapi_image_service='glance'
+        FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, 2, 3)
-        
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)

@@ -28,7 +28,7 @@ def stubout_glance_client(stubs, cls):
 class FakeGlance(object):
     def __init__(self, host, port=None, use_ssl=False):
         pass
-    
+
     def get_image(self, image):
         meta = {
             'size': 0,

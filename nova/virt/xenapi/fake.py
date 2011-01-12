@@ -148,7 +148,8 @@ def create_vbd(vm_ref, vdi_ref):
 
 
 def after_VBD_create(vbd_ref, vbd_rec):
-    """Create read-only fields and backref from VM to VBD when VBD is created"""
+    """Create read-only fields and backref from VM to VBD when VBD is
+    created."""
     vbd_rec['currently_attached'] = False
     vbd_rec['device'] = ''
     vm_ref = vbd_rec['VM']

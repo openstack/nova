@@ -19,6 +19,7 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
+import os
 import pickle
 import re
 import urllib
@@ -229,8 +230,8 @@ class VMHelper(HelperBase):
               'other_config': {},
               'sm_config': {},
               'tags': []})
-        logging.debug(_('Created VDI %s (%s, %s, %s) on %s.'), vdi_ref,
-                      name_label, virtual_size, read_only, sr_ref)
+        LOG.debug(_('Created VDI %s (%s, %s, %s) on %s.'), vdi_ref,
+                  name_label, virtual_size, read_only, sr_ref)
         return vdi_ref
 
     @classmethod
@@ -308,7 +309,7 @@ class VMHelper(HelperBase):
         virtual_size = int(meta['size'])
 
         vdi_size = virtual_size
-        logging.debug("Size for image %s:%d", image, virtual_size)
+        LOG.debug(_("Size for image %s:%d"), image, virtual_size)
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -320,7 +321,7 @@ class VMHelper(HelperBase):
         if (type == ImageType.KERNEL_RAMDISK):
             #we need to invoke a plugin for copying VDI's
             #content into proper path
-            logging.debug("Copying VDI %s to /boot/guest on dom0", vdi)
+            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
             fn = "copy_kernel_vdi"
             args = {}
             args['vdi-ref'] = vdi
@@ -330,7 +331,7 @@ class VMHelper(HelperBase):
             filename = session.wait_for_task(instance_id, task)
             #remove the VDI as it is not needed anymore
             session.get_xenapi().VDI.destroy(vdi)
-            logging.debug("Kernel/Ramdisk VDI %s destroyed", vdi)
+            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
             return filename
         else:
             return session.get_xenapi().VDI.get_uuid(vdi)
@@ -339,7 +340,6 @@ class VMHelper(HelperBase):
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
                                  secret, type):
         url = images.image_url(image)
-        access = AuthManager().get_access_key(user, project)
         LOG.debug(_("Asking xapi to fetch %s as %s"), url, access)
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
@@ -357,7 +357,7 @@ class VMHelper(HelperBase):
         return uuid
 
     @classmethod
-    def lookup_image(cls, session, instance_id,vdi_ref):
+    def lookup_image(cls, session, instance_id, vdi_ref):
         if FLAGS.xenapi_image_service == 'glance':
             return cls._lookup_image_glance(session, vdi_ref)
         else:
@@ -370,7 +370,7 @@ class VMHelper(HelperBase):
         args = {}
         args['vdi-ref'] = vdi_ref
         task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(instance_id,task)
+        pv_str = session.wait_for_task(instance_id, task)
         pv = None
         if pv_str.lower() == 'true':
             pv = True
@@ -381,18 +381,18 @@ class VMHelper(HelperBase):
 
     @classmethod
     def _lookup_image_glance(cls, session, vdi_ref):
-        logging.debug("Looking up vdi %s for PV kernel", vdi_ref)
+        LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
 
         def is_vdi_pv(dev):
-            logging.debug("Running pygrub against %s", dev)
+            LOG.debug(_("Running pygrub against %s"), dev)
             output = os.popen('pygrub -qn /dev/%s' % dev)
             for line in output.readlines():
                 #try to find kernel string
                 m = re.search('(?<=kernel:)/.*(?:>)', line)
                 if m and m.group(0).find('xen') != -1:
-                    logging.debug("Found Xen kernel %s" % m.group(0))
+                    LOG.debug(_("Found Xen kernel %s") % m.group(0))
                     return True
-            logging.debug("No Xen kernel found.  Booting HVM.")
+            LOG.debug(_("No Xen kernel found.  Booting HVM."))
             return False
         return with_vdi_attached_here(session, vdi_ref, True, is_vdi_pv)
 
@@ -566,12 +566,10 @@ def get_vdi_for_vm_safely(session, vm_ref):
 
 
 def find_sr(session):
-    logging.warning("IN find_sr")
     host = session.get_xenapi_host()
     srs = session.get_xenapi().SR.get_all()
     for sr in srs:
         sr_rec = session.get_xenapi().SR.get_record(sr)
-        logging.warning("HERE: %s",sr_rec['uuid'])
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue
@@ -590,7 +588,6 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
-    logging.debug("read_only: %s", str(read_only))
     vbd_rec['type'] = 'disk'
     vbd_rec['unpluggable'] = True
     vbd_rec['empty'] = False
@@ -598,19 +595,19 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    logging.debug(_('Creating VBD for VDI %s ... '), vdi)
+    LOG.debug(_('Creating VBD for VDI %s ... '), vdi)
     vbd = session.get_xenapi().VBD.create(vbd_rec)
-    logging.debug(_('Creating VBD for VDI %s done.'), vdi)
+    LOG.debug(_('Creating VBD for VDI %s done.'), vdi)
     try:
-        logging.debug(_('Plugging VBD %s ... '), vbd)
+        LOG.debug(_('Plugging VBD %s ... '), vbd)
         session.get_xenapi().VBD.plug(vbd)
-        logging.debug(_('Plugging VBD %s done.'), vbd)
+        LOG.debug(_('Plugging VBD %s done.'), vbd)
         return f(session.get_xenapi().VBD.get_device(vbd))
     finally:
-        logging.debug(_('Destroying VBD for VDI %s ... '), vdi)
+        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
         vbd_unplug_with_retry(session, vbd)
         ignore_failure(session.get_xenapi().VBD.destroy, vbd)
-        logging.debug(_('Destroying VBD for VDI %s done.'), vdi)
+        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi)
 
 
 def vbd_unplug_with_retry(session, vbd):
@@ -621,19 +618,19 @@ def vbd_unplug_with_retry(session, vbd):
     while True:
         try:
             session.get_xenapi().VBD.unplug(vbd)
-            logging.debug(_('VBD.unplug successful first time.'))
+            LOG.debug(_('VBD.unplug successful first time.'))
             return
         except VMHelper.XenAPI.Failure, e:
             if (len(e.details) > 0 and
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
-                logging.debug(_('VBD.unplug rejected: retrying...'))
+                LOG.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
-                logging.debug(_('VBD.unplug successful eventually.'))
+                LOG.debug(_('VBD.unplug successful eventually.'))
                 return
             else:
-                logging.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
+                LOG.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
                               e)
                 return
 
@@ -642,7 +639,7 @@ def ignore_failure(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except VMHelper.XenAPI.Failure, e:
-        logging.error(_('Ignoring XenAPI.Failure %s'), e)
+        LOG.error(_('Ignoring XenAPI.Failure %s'), e)
         return None
 
 
@@ -673,8 +670,8 @@ def _write_partition(virtual_size, dev):
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
-    logging.debug('Writing partition table %d %d to %s...',
-                  primary_first, primary_last, dest)
+    LOG.debug(_('Writing partition table %d %d to %s...'),
+              primary_first, primary_last, dest)
 
     def execute(cmd, process_input=None, check_exit_code=True):
         return utils.execute(cmd=cmd,
@@ -685,4 +682,4 @@ def _write_partition(virtual_size, dev):
     execute('parted --script %s mkpart primary %ds %ds' %
             (dest, primary_first, primary_last))
 
-    logging.debug('Writing partition table %s done.', dest)
+    LOG.debug(_('Writing partition table %s done.'), dest)
