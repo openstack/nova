@@ -73,17 +73,13 @@ def _gen_key(context, user_id, key_name):
 
 
 def ec2_id_to_id(ec2_id):
-    """Convert an ec2 ID (i-[base 36 number]) to an instance id (int)"""
-    return int(ec2_id[2:], 36)
+    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
+    return int(ec2_id.split('-')[-1], 16)
 
 
-def id_to_ec2_id(instance_id, template='i-%s'):
-    """Convert an instance ID (int) to an ec2 ID (i-[base 36 number])"""
-    digits = []
-    while instance_id != 0:
-        instance_id, remainder = divmod(instance_id, 36)
-        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
-    return template % (''.join(reversed(digits)).zfill(8))
+def id_to_ec2_id(instance_id, template='i-%08x'):
+    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
+    return template % instance_id
 
 
 class CloudController(object):
