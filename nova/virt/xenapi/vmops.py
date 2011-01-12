@@ -252,7 +252,7 @@ class VMOps(object):
             raise Exception(_("suspend: instance not present %s") %
                                                      instance_name)
         task = self._session.call_xenapi('Async.VM.suspend', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def resume(self, instance, callback):
         """resume the specified instance"""
@@ -262,7 +262,7 @@ class VMOps(object):
             raise Exception(_("resume: instance not present %s") %
                                                     instance_name)
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
