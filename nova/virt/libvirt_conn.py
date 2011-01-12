@@ -224,14 +224,14 @@ class LibvirtConnection(object):
         virt_dom = self._conn.lookupByName(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         xml = ''
-        (protocol, vol_name) = device_path.split(':')
         if device_path.startswith('/dev/'):
             xml = """<disk type='block' device='disk'>
                          <driver name='qemu' type='raw'/>
                          <source dev='%s'/>
                          <target dev='%s' bus='virtio'/>
                      </disk>""" % (device_path, mount_device)
-        elif vol_name != '':
+        elif device_path.find(':') >= 0:
+            (protocol, vol_name) = device_path.split(':', 1)
             xml = """<disk type='network' device='disk'>
                          <driver name='qemu' type='raw'/>
                          <source protocol='%s' name='%s'/>
