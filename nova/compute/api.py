@@ -337,6 +337,9 @@ class API(base.Base):
         instance = self.get(context, instance_id)
         host = instance['host']
 
+        # TODO(sirp): When Glance supports images tied to servers, this should
+        # be replaced by something like 'is_public': False, 'server_id':
+        # instance_id
         data = {'name': name, 'is_public': True}
         image_meta = self.image_service.create(context, data)
         rpc.cast(context,
