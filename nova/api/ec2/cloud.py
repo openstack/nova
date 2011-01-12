@@ -77,13 +77,13 @@ def ec2_id_to_id(ec2_id):
     return int(ec2_id[2:], 36)
 
 
-def id_to_ec2_id(instance_id):
+def id_to_ec2_id(instance_id, template='i-%s'):
     """Convert an instance ID (int) to an ec2 ID (i-[base 36 number])"""
     digits = []
     while instance_id != 0:
         instance_id, remainder = divmod(instance_id, 36)
         digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
-    return "i-%s" % ''.join(reversed(digits))
+    return template % (''.join(reversed(digits)).zfill(8))
 
 
 class CloudController(object):
@@ -556,7 +556,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = volume['id']
+        v['volumeId'] = id_to_ec2_id(volume['id'], 'vol-%s')
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -574,7 +574,7 @@ class CloudController(object):
                                    'device': volume['mountpoint'],
                                    'instanceId': instance_ec2_id,
                                    'status': 'attached',
-                                   'volume_id': volume['ec2_id']}]
+                                   'volumeId': id_to_ec2_id(volume['id'], 'vol-%s')}]
         else:
             v['attachmentSet'] = [{}]
 
@@ -616,7 +616,7 @@ class CloudController(object):
                 'instanceId': instance_id,
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': volume_id}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%s')}
 
     def detach_volume(self, context, volume_id, **kwargs):
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
@@ -627,7 +627,7 @@ class CloudController(object):
                 'instanceId': id_to_ec2_id(instance['id']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': volume_id}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%s')}
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:

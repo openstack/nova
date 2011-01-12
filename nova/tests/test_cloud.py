@@ -127,7 +127,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
         result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[vol2['id']])
+                                             volume_id=[cloud.id_to_ec2_id(vol2['id'], 'vol-%s')])
         self.assertEqual(len(result['volumeSet']), 1)
         self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
@@ -385,7 +385,7 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_volume_display_fields(self):
         vol = db.volume_create(self.context, {})
-        self.cloud.update_volume(self.context, vol['id'],
+        self.cloud.update_volume(self.context, id_to_ec2_id(vol['id'], 'vol-%s'),
                                  display_name='c00l v0lum3')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
@@ -393,8 +393,8 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_volume_wont_update_private_fields(self):
         vol = db.volume_create(self.context, {})
-        self.cloud.update_volume(self.context, vol['id'],
-                                   mountpoint='/not/here')
+        self.cloud.update_volume(self.context, id_to_ec2_id(vol['id'], 'vol-%s'),
+                                 mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])
         db.volume_destroy(self.context, vol['id'])
