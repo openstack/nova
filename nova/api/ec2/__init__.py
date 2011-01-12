@@ -278,8 +278,7 @@ class Authorizer(wsgi.Middleware):
             return self.application
         else:
             LOG.audit(_("Unauthorized request for controller=%s "
-                        "and action=%s"), controller_name, action,
-                      context=context)
+                        "and action=%s"), controller, action, context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
