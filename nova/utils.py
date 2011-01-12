@@ -22,7 +22,6 @@ System-level utilities and helper functions.
 
 import datetime
 import inspect
-import logging
 import os
 import random
 import subprocess
@@ -39,8 +38,10 @@ from eventlet import greenthread
 
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import log as logging
 
 
+LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -111,7 +112,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
 
 
 def fetchfile(url, target):
-    logging.debug(_("Fetching %s") % url)
+    LOG.debug(_("Fetching %s") % url)
 #    c = pycurl.Curl()
 #    fp = open(target, "wb")
 #    c.setopt(c.URL, url)
@@ -123,7 +124,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug(_("Running cmd (subprocess): %s"), cmd)
+    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -136,7 +137,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % (obj.returncode))
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -169,12 +170,12 @@ def default_flagfile(filename='nova.conf'):
 
 
 def debug(arg):
-    logging.debug('debug in callback: %s', arg)
+    LOG.debug(_('debug in callback: %s'), arg)
     return arg
 
 
 def runthis(prompt, cmd, check_exit_code=True):
-    logging.debug(_("Running %s") % (cmd))
+    LOG.debug(_("Running %s"), (cmd))
     rv, err = execute(cmd, check_exit_code=check_exit_code)
 
 
@@ -220,11 +221,11 @@ def  get_my_linklocal(interface):
         else:
             return 'fe00::'
     except IndexError as ex:
-        logging.warn(_("Couldn't parse command from get Link Local IP of %s :%s"), interface, ex)
+        logging.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
     except ProcessExecutionError as ex:
-        logging.warn(_("Couldn't execute command to get Link Local IP of %s :%s"), interface, ex)
+        logging.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
     except:
-		 return 'fe00::'
+        return 'fe00::'
 
 
 def to_global_ipv6(prefix, mac):
@@ -332,7 +333,7 @@ class LazyPluggable(object):
                 fromlist = backend
 
             self.__backend = __import__(name, None, None, fromlist)
-            logging.info('backend %s', self.__backend)
+            LOG.debug(_('backend %s'), self.__backend)
         return self.__backend
 
     def __getattr__(self, key):

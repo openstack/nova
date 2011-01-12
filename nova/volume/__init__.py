@@ -16,16 +16,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-:mod:`nova.volume` -- Nova Block Storage
-=====================================================
-
-.. automodule:: nova.volume
-   :platform: Unix
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
-"""
+from nova.volume.api import API
