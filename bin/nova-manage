@@ -91,6 +91,7 @@ flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 
+
 class VpnCommands(object):
     """Class for managing VPNs."""
 
@@ -432,11 +433,12 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None, vpn_start=None,fixed_range_v6=None):
+               network_size=None, vlan_start=None, vpn_start=None,
+               fixed_range_v6=None):
         """Creates fixed ips for host by range
         arguments: [fixed_range=FLAG], [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG],[fixed_range_v6=FLAG]"""
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
             fixed_range = FLAGS.fixed_range
         if not num_networks:
@@ -453,9 +455,7 @@ class NetworkCommands(object):
         net_manager.create_networks(context.get_admin_context(),
                                     fixed_range, int(num_networks),
                                     int(network_size), int(vlan_start),
-                                    int(vpn_start),fixed_range_v6)
-                                    
-
+                                    int(vpn_start), fixed_range_v6)
 
 
 class ServiceCommands(object):
