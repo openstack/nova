@@ -95,6 +95,8 @@ class APIRouter(wsgi.Router):
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
+            server_members['rescue'] = 'POST'
+            server_members['unrescue'] = 'POST'
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
