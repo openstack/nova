@@ -149,6 +149,7 @@ class Service(BASE, NovaBase):
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
+    availability_zone = Column(String(255), default='nova')
 
 
 class Certificate(BASE, NovaBase):

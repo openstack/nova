@@ -134,6 +134,21 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
+    def _trigger_refresh_security_group(self, context, security_group):
+        nodes = set([instance['host'] for instance in security_group.instances
+                       if instance['host'] is not None])
+        for node in nodes:
+            rpc.cast(context,
+                     '%s.%s' % (FLAGS.compute_topic, node),
+                     {"method": "refresh_security_group",
+                      "args": {"security_group_id": security_group.id}})
+
+    def _get_availability_zone_by_host(self, context, host):
+        services = db.service_get_all_by_host(context, host)
+        if len(services) > 0:
+            return services[0]['availability_zone']
+        return 'unknown zone'
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -146,6 +161,8 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
+        host = instance_ref['host']
+        availability_zone = self._get_availability_zone_by_host(ctxt, host)
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = id_to_ec2_id(instance_ref['id'])
@@ -168,8 +185,7 @@ class CloudController(object):
                 'local-hostname': hostname,
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
-                # TODO(vish): real zone
-                'placement': {'availability-zone': 'nova'},
+                'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
@@ -193,8 +209,26 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        return {'availabilityZoneInfo': [{'zoneName': 'nova',
-                                          'zoneState': 'available'}]}
+        enabled_services = db.service_get_all(context)
+        disabled_services = db.service_get_all(context, True)
+        available_zones = []
+        for zone in [service.availability_zone for service
+                     in enabled_services]:
+            if not zone in available_zones:
+                available_zones.append(zone)
+        not_available_zones = []
+        for zone in [service.availability_zone for service in disabled_services
+                     if not service['availability_zone'] in available_zones]:
+            if not zone in not_available_zones:
+                not_available_zones.append(zone)
+        result = []
+        for zone in available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "available"})
+        for zone in not_available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "not available"})
+        return {'availabilityZoneInfo': result}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
@@ -667,6 +701,9 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
+            host = instance['host']
+            zone = self._get_availability_zone_by_host(context, host)
+            i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
                 r['reservationId'] = instance['reservation_id']

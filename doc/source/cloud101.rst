@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 United States Government as represented by the
+      Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration. 
       All Rights Reserved.
 
@@ -54,7 +54,7 @@ Cloud computing offers different service models depending on the capabilities a 
 The US-based National Institute of Standards and Technology offers definitions for cloud computing
 and the service models that are emerging. 
 
-These definitions are summarized from http://csrc.nist.gov/groups/SNS/cloud-computing/.
+These definitions are summarized from the `U.S. National Institute of Standards and Technology (NIST) cloud computing research group <http://csrc.nist.gov/groups/SNS/cloud-computing/>`_.
 
 SaaS - Software as a Service
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -74,7 +74,6 @@ IaaS - Infrastructure as a Service
 Provides infrastructure such as computer instances, network connections, and storage so that people 
 can run any software or operating system.
 
-
 Types of Cloud Deployments
 --------------------------
 
@@ -87,4 +86,5 @@ A hybrid cloud can be a deployment model, as a composition of both public and pr
 Work in the Clouds
 ------------------
 
-.. todo:: What people have done/sample projects
+What have people done with cloud computing? Cloud computing can help with large-scale computing needs or can lead consolidation efforts by virtualizing servers to make more use of existing hardware (and possibly release old hardware from service.) People also use cloud computing for collaboration because of the high availability through networked computers. Productivity suites for word processing, number crunching, and email communications, and more are also available through cloud computing. Cloud computing also avails additional storage to the cloud user, avoiding the need for additional hard drives on your desktop and enabling access to large data storage capacity online in the cloud.
+

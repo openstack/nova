@@ -81,14 +81,19 @@ def service_get(context, service_id):
     return IMPL.service_get(context, service_id)
 
 
-def service_get_all(context):
-    """Get a list of all services on any machine on any topic of any type"""
-    return IMPL.service_get_all(context)
+def service_get_all(context, disabled=False):
+    """Get all service."""
+    return IMPL.service_get_all(context, None, disabled)
 
 
 def service_get_all_by_topic(context, topic):
-    """Get all compute services for a given topic."""
+    """Get all services for a given topic."""
     return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_by_host(context, host):
+    """Get all services for a given host."""
+    return IMPL.service_get_all_by_host(context, host)
 
 
 def service_get_all_compute_sorted(context):
