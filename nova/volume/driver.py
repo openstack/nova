@@ -322,7 +322,8 @@ class RBDDriver(VolumeDriver):
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         (stdout, stderr) = self._execute("rados lspools")
-        if stdout.find(FLAGS.rbd_pool + "\n") == -1:
+        pools = stdout.split("\n")
+        if not FLAGS.rbd_pool in pools:
             raise exception.Error(_("rbd has no pool %s") %
                                   FLAGS.rbd_pool)
 
