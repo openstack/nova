@@ -537,6 +537,8 @@ class CloudController(object):
         return self.compute_api.get_ajax_console(context, internal_id)
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
+        if volume_id:
+            volume_id = [ec2_id_to_id(x) for x in volume_id]
         volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
@@ -552,7 +554,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = id_to_ec2_id(volume['id'], 'vol-%s')
+        v['volumeId'] = id_to_ec2_id(volume['id'], 'vol-%08x')
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -571,7 +573,7 @@ class CloudController(object):
                                    'instanceId': instance_ec2_id,
                                    'status': 'attached',
                                    'volumeId': id_to_ec2_id(volume['id'],
-                                                            'vol-%s')}]
+                                                            'vol-%08x')}]
         else:
             v['attachmentSet'] = [{}]
 
@@ -590,10 +592,12 @@ class CloudController(object):
         return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
 
     def delete_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         self.volume_api.delete(context, volume_id)
         return True
 
     def update_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
@@ -604,18 +608,21 @@ class CloudController(object):
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
+        instance_id = ec2_id_to_id(instance_id)
         LOG.audit(_("Attach volume %s to instacne %s at %s"), volume_id,
                   instance_id, device, context=context)
         self.compute_api.attach_volume(context, instance_id, volume_id, device)
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': instance_id,
+                'instanceId': id_to_ec2_id(instance_id),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': id_to_ec2_id(volume_id, 'vol-%s')}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def detach_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
         instance = self.compute_api.detach_volume(context, volume_id)
@@ -624,7 +631,7 @@ class CloudController(object):
                 'instanceId': id_to_ec2_id(instance['id']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': id_to_ec2_id(volume_id, 'vol-%s')}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
