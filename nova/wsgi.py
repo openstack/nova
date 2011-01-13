@@ -22,7 +22,6 @@ Utility methods for working with WSGI servers
 """
 
 import json
-import logging
 import sys
 from xml.dom import minidom
 
@@ -35,18 +34,30 @@ import webob
 import webob.dec
 import webob.exc
 
+from nova import log as logging
 
-logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
+
+class WritableLogger(object):
+    """A thin wrapper that responds to `write` and logs."""
+
+    def __init__(self, logger, level=logging.DEBUG):
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
 
 
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     def __init__(self, threads=1000):
+        logging.basicConfig()
         self.pool = eventlet.GreenPool(threads)
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
         """Run a WSGI server with the given application."""
+        logging.audit(_("Starting %s on %s:%s"), sys.argv[0], host, port)
         socket = eventlet.listen((host, port), backlog=backlog)
         self.pool.spawn_n(self._run, application, socket)
 
@@ -59,7 +70,9 @@ class Server(object):
 
     def _run(self, application, socket):
         """Start a WSGI server in a new green thread."""
-        eventlet.wsgi.server(socket, application, custom_pool=self.pool)
+        logger = logging.getLogger('eventlet.wsgi.server')
+        eventlet.wsgi.server(socket, application, custom_pool=self.pool,
+                             log=WritableLogger(logger))
 
 
 class Application(object):

@@ -21,16 +21,17 @@
 Scheduler Service
 """
 
-import logging
 import functools
 
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
 from nova import exception
 
+LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
                     'nova.scheduler.chance.ChanceScheduler',
@@ -66,7 +67,8 @@ class SchedulerManager(manager.Manager):
                  db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        logging.debug(_("Casting to %s %s for %s"), topic, host, method)
+        LOG.debug(_("Casting to %s %s for %s"), topic, host, method)
+
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bear design summit discussion,
@@ -110,3 +112,4 @@ class SchedulerManager(manager.Manager):
                                 'local_gb': hdd}
 
         return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}
+

@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 OpenStack LLC 
+      Copyright 2010-2011 OpenStack LLC 
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,7 +24,7 @@ Routing
 
 To map URLs to controllers+actions, OpenStack uses the Routes package, a clone of Rails routes for Python implementations. See http://routes.groovie.org/ fore more information.
 
-URLs are mapped to "action" methods on "controller" classes in nova/api/openstack/__init__/ApiRouter.__init__ .
+URLs are mapped to "action" methods on "controller" classes in `nova/api/openstack/__init__/ApiRouter.__init__` .
 
 See http://routes.groovie.org/manual.html for all syntax, but you'll probably just need these two:
    - mapper.connect() lets you map a single URL to a single action on a controller.
@@ -33,9 +33,9 @@ See http://routes.groovie.org/manual.html for all syntax, but you'll probably ju
 Controllers and actions
 -----------------------
 
-Controllers live in nova/api/openstack, and inherit from nova.wsgi.Controller.
+Controllers live in `nova/api/openstack`, and inherit from nova.wsgi.Controller.
 
-See nova/api/openstack/servers.py for an example.
+See `nova/api/openstack/servers.py` for an example.
 
 Action methods take parameters that are sucked out of the URL by mapper.connect() or .resource().  The first two parameters are self and the WebOb request, from which you can get the req.environ, req.body, req.headers, etc.
 
@@ -46,7 +46,7 @@ Actions return a dictionary, and wsgi.Controller serializes that to JSON or XML 
 
 If you define a new controller, you'll need to define a _serialization_metadata attribute on the class, to tell wsgi.Controller how to convert your dictionary to XML.  It needs to know the singular form of any list tag (e.g. <servers> list contains <server> tags) and which dictionary keys are to be XML attributes as opposed to subtags (e.g. <server id="4"/> instead of <server><id>4</id></server>).  
 
-See nova/api/openstack/servers.py for an example.
+See `nova/api/openstack/servers.py` for an example.
 
 Faults
 ------

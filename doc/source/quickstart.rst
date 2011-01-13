@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 United States Government as represented by the
+      Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration. 
       All Rights Reserved.
 
@@ -59,38 +59,21 @@ different configurations (though for more complex setups you should see
 * HOST_IP
     * Default: address of first interface from the ifconfig command
     * Values: 127.0.0.1, or any other valid address
-
-TEST
-~~~~
-
-**Default**: 0
-**Values**: 1, run tests after checkout and initial setup
-
-USE_MYSQL
-~~~~~~~~~
-
-**Default**: 0, use sqlite3
-**Values**: 1, use mysql instead of sqlite3
-
-MYSQL_PASS
-~~~~~~~~~~
-
-Only useful if $USE_MYSQL=1.
-
-**Default**: nova
-**Values**: value of root password for mysql
-
-USE_LDAP
-~~~~~~~~
-
-**Default**: 0, use :mod:`nova.auth.dbdriver`
-**Values**: 1, use :mod:`nova.auth.ldapdriver`
-
-LIBVIRT_TYPE
-~~~~~~~~~~~~
-
-**Default**: qemu
-**Values**: uml, kvm
+* TEST
+    * Default: 0
+    * Values: 1, run tests after checkout and initial setup
+* USE_MYSQL
+    * Default: 0, use sqlite3
+    * Values: 1, use mysql instead of sqlite3
+* MYSQL_PASS (Only useful if $USE_MYSQL=1)
+    * Default: nova
+    * Values: value of root password for mysql
+* USE_LDAP
+    * Default: 0, use :mod:`nova.auth.dbdriver`
+    * Values: 1, use :mod:`nova.auth.ldapdriver`
+* LIBVIRT_TYPE
+    * Default: qemu
+    * Values: uml, kvm
 
 Usage
 -----

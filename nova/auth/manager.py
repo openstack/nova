@@ -20,7 +20,6 @@
 Nova authentication management
 """
 
-import logging
 import os
 import shutil
 import string  # pylint: disable-msg=W0402
@@ -33,6 +32,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth import signer
 
@@ -69,6 +69,8 @@ flags.DEFINE_string('credential_rc_file', '%src',
                     'replaced by name of the region (nova by default)')
 flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
                     'Driver that auth manager uses')
+
+LOG = logging.getLogger('nova.auth.manager')
 
 
 class AuthBase(object):
@@ -254,43 +256,51 @@ class AuthManager(object):
         # TODO(vish): check for valid timestamp
         (access_key, _sep, project_id) = access.partition(':')
 
-        logging.info(_('Looking up user: %r'), access_key)
+        LOG.debug(_('Looking up user: %r'), access_key)
         user = self.get_user_from_access_key(access_key)
-        logging.info('user: %r', user)
+        LOG.debug('user: %r', user)
         if user == None:
+            LOG.audit(_("Failed authorization for access key %s"), access_key)
             raise exception.NotFound(_('No user found for access key %s')
                                      % access_key)
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
         if project_id == '':
+            LOG.debug(_("Using project name = user name (%s)"), user.name)
             project_id = user.name
 
         project = self.get_project(project_id)
         if project == None:
+            LOG.audit(_("failed authorization: no project named %s (user=%s)"),
+                      project_id, user.name)
             raise exception.NotFound(_('No project called %s could be found')
                                      % project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
+            LOG.audit(_("Failed authorization: user %s not admin and not "
+                        "member of project %s"), user.name, project.name)
             raise exception.NotFound(_('User %s is not a member of project %s')
                                      % (user.id, project.id))
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
-            logging.debug('user.secret: %s', user.secret)
-            logging.debug('expected_signature: %s', expected_signature)
-            logging.debug('signature: %s', signature)
+            LOG.debug('user.secret: %s', user.secret)
+            LOG.debug('expected_signature: %s', expected_signature)
+            LOG.debug('signature: %s', signature)
             if signature != expected_signature:
+                LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.NotAuthorized(_('Signature does not match'))
         elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
             expected_signature = signer.Signer(user.secret.encode()).generate(
                     params, verb, server_string, path)
-            logging.debug('user.secret: %s', user.secret)
-            logging.debug('expected_signature: %s', expected_signature)
-            logging.debug('signature: %s', signature)
+            LOG.debug('user.secret: %s', user.secret)
+            LOG.debug('expected_signature: %s', expected_signature)
+            LOG.debug('signature: %s', signature)
             if signature != expected_signature:
+                LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.NotAuthorized(_('Signature does not match'))
         return (user, project)
 
@@ -398,6 +408,12 @@ class AuthManager(object):
             raise exception.NotFound(_("The %s role can not be found") % role)
         if project is not None and role in FLAGS.global_roles:
             raise exception.NotFound(_("The %s role is global only") % role)
+        if project:
+            LOG.audit(_("Adding role %s to user %s in project %s"), role,
+                      User.safe_id(user), Project.safe_id(project))
+        else:
+            LOG.audit(_("Adding sitewide role %s to user %s"), role,
+                      User.safe_id(user))
         with self.driver() as drv:
             drv.add_role(User.safe_id(user), role, Project.safe_id(project))
 
@@ -418,6 +434,12 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to remove local role.
         """
+        if project:
+            LOG.audit(_("Removing role %s from user %s on project %s"),
+                      role, User.safe_id(user), Project.safe_id(project))
+        else:
+            LOG.audit(_("Removing sitewide role %s from user %s"), role,
+                      User.safe_id(user))
         with self.driver() as drv:
             drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
 
@@ -480,6 +502,8 @@ class AuthManager(object):
                                               description,
                                               member_users)
             if project_dict:
+                LOG.audit(_("Created project %s with manager %s"), name,
+                          manager_user)
                 project = Project(**project_dict)
                 return project
 
@@ -496,6 +520,7 @@ class AuthManager(object):
         @param project: This will be the new description of the project.
 
         """
+        LOG.audit(_("modifying project %s"), Project.safe_id(project))
         if manager_user:
             manager_user = User.safe_id(manager_user)
         with self.driver() as drv:
@@ -505,6 +530,8 @@ class AuthManager(object):
 
     def add_to_project(self, user, project):
         """Add user to project"""
+        LOG.audit(_("Adding user %s to project %s"), User.safe_id(user),
+                  Project.safe_id(project))
         with self.driver() as drv:
             return drv.add_to_project(User.safe_id(user),
                                        Project.safe_id(project))
@@ -523,6 +550,8 @@ class AuthManager(object):
 
     def remove_from_project(self, user, project):
         """Removes a user from a project"""
+        LOG.audit(_("Remove user %s from project %s"), User.safe_id(user),
+                  Project.safe_id(project))
         with self.driver() as drv:
             return drv.remove_from_project(User.safe_id(user),
                                             Project.safe_id(project))
@@ -549,6 +578,7 @@ class AuthManager(object):
 
     def delete_project(self, project):
         """Deletes a project"""
+        LOG.audit(_("Deleting project %s"), Project.safe_id(project))
         with self.driver() as drv:
             drv.delete_project(Project.safe_id(project))
 
@@ -603,13 +633,16 @@ class AuthManager(object):
         with self.driver() as drv:
             user_dict = drv.create_user(name, access, secret, admin)
             if user_dict:
-                return User(**user_dict)
+                rv = User(**user_dict)
+                LOG.audit(_("Created user %s (admin: %r)"), rv.name, rv.admin)
+                return rv
 
     def delete_user(self, user):
         """Deletes a user
 
         Additionally deletes all users key_pairs"""
         uid = User.safe_id(user)
+        LOG.audit(_("Deleting user %s"), uid)
         db.key_pair_destroy_all_by_user(context.get_admin_context(),
                                         uid)
         with self.driver() as drv:
@@ -618,6 +651,12 @@ class AuthManager(object):
     def modify_user(self, user, access_key=None, secret_key=None, admin=None):
         """Modify credentials for a user"""
         uid = User.safe_id(user)
+        if access_key:
+            LOG.audit(_("Access Key change for user %s"), uid)
+        if secret_key:
+            LOG.audit(_("Secret Key change for user %s"), uid)
+        if admin is not None:
+            LOG.audit(_("Admin status set to %r for user %s"), admin, uid)
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
 
@@ -645,8 +684,7 @@ class AuthManager(object):
         else:
             regions = {'nova': FLAGS.cc_host}
         for region, host in regions.iteritems():
-            rc = self.__generate_rc(user.access,
-                                    user.secret,
+            rc = self.__generate_rc(user,
                                     pid,
                                     use_dmz,
                                     host)
@@ -666,7 +704,7 @@ class AuthManager(object):
                                   port=vpn_port)
             zippy.writestr(FLAGS.credential_vpn_file, config)
         else:
-            logging.warn(_("No vpn data for project %s"), pid)
+            LOG.warn(_("No vpn data for project %s"), pid)
 
         zippy.writestr(FLAGS.ca_file, crypto.fetch_ca(pid))
         zippy.close()
@@ -683,10 +721,10 @@ class AuthManager(object):
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        return self.__generate_rc(user.access, user.secret, pid, use_dmz)
+        return self.__generate_rc(user, pid, use_dmz)
 
     @staticmethod
-    def __generate_rc(access, secret, pid, use_dmz=True, host=None):
+    def __generate_rc(user, pid, use_dmz=True, host=None):
         """Generate rc file for user"""
         if use_dmz:
             cc_host = FLAGS.cc_dmz
@@ -699,14 +737,19 @@ class AuthManager(object):
             s3_host = host
             cc_host = host
         rc = open(FLAGS.credentials_template).read()
-        rc = rc % {'access': access,
+        rc = rc % {'access': user.access,
                    'project': pid,
-                   'secret': secret,
+                   'secret': user.secret,
                    'ec2': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
                                             cc_host,
                                             FLAGS.cc_port,
                                             FLAGS.ec2_suffix),
                    's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
+                   'os': '%s://%s:%s%s' % (FLAGS.os_prefix,
+                                            cc_host,
+                                            FLAGS.osapi_port,
+                                            FLAGS.os_suffix),
+                   'user': user.name,
                    'nova': FLAGS.ca_file,
                    'cert': FLAGS.credential_cert_file,
                    'key': FLAGS.credential_key_file}

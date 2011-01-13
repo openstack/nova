@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 United States Government as represented by the
+      Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
@@ -76,11 +76,11 @@ External unix tools that are required:
 * aoetools and vblade-persist (if you use aoe-volumes)
 
 Nova uses cutting-edge versions of many packages. There are ubuntu packages in
-the nova-core ppa.  You can use add this ppa to your sources list on an ubuntu
-machine with the following commands::
+the nova-core trunk ppa.  You can use add this ppa to your sources list on an
+ubuntu machine with the following commands::
 
   sudo apt-get install -y python-software-properties
-  sudo add-apt-repository ppa:nova-core/ppa
+  sudo add-apt-repository ppa:nova-core/trunk
 
 Recommended
 -----------

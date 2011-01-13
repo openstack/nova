@@ -23,11 +23,8 @@ import base64
 import boto
 import httplib
 
-from nova import flags
 from boto.ec2.regioninfo import RegionInfo
 
-
-FLAGS = flags.FLAGS
 
 DEFAULT_CLC_URL = 'http://127.0.0.1:8773'
 DEFAULT_REGION = 'nova'
@@ -199,8 +196,8 @@ class NovaAdminClient(object):
             self,
             clc_url=DEFAULT_CLC_URL,
             region=DEFAULT_REGION,
-            access_key=FLAGS.aws_access_key_id,
-            secret_key=FLAGS.aws_secret_access_key,
+            access_key=None,
+            secret_key=None,
             **kwargs):
         parts = self.split_clc_url(clc_url)
 

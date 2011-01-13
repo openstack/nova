@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 United States Government as represented by the
+      Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
 
@@ -75,7 +75,7 @@ Nova is built on a shared-nothing, messaging-based architecture. All of the majo
 
 To achieve the shared-nothing property with multiple copies of the same component, Nova keeps all the cloud system state in a distributed data store. Updates to system state are written into this store, using atomic transactions when required. Requests for system state are read out of this store. In limited cases, the read results are cached within controllers for short periods of time (for example, the current list of system users.) 
 
-    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>_`. 
+    .. note:: The database schema is available on the `OpenStack Wiki <http://wiki.openstack.org/NovaDatabaseSchema>`_. 
 
 Concept: Storage
 ----------------
@@ -105,7 +105,7 @@ It is important to know that there are user-specific (sometimes called global) r
 
 For example: A user can access api commands allowed to the netadmin role (like allocate_address) only if he has the user-specific netadmin role AND the project-specific netadmin role.
 
-More information about RBAC can be found in the :ref:`auth`.
+More information about RBAC can be found in :ref:`auth`.
 
 Concept: API
 ------------
@@ -129,12 +129,12 @@ The simplest networking mode.  Each instance receives a fixed ip from the pool. 
 Flat DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed IPs by doing a dhcpdiscover.
+This is similar to the flat mode, in that all instances are attached to the same bridge.  In this mode Nova does a bit more configuration, it will attempt to bridge into an ethernet device (eth0 by default).  It will also run dnsmasq as a dhcpserver listening on this bridge.  Instances receive their fixed IPs by doing a dhcpdiscover.
 
 VLAN DHCP Mode
 ~~~~~~~~~~~~~~
 
-This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
+This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, Nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
 
 The following diagram illustrates how the communication that occurs between the vlan (the dashed box) and the public internet (represented by the two clouds)
 
@@ -154,17 +154,15 @@ Concept: nova-manage
 --------------------
 
 The nova-manage command is used to perform many essential functions for
-administration and ongoing maintenance of nova, such as user creation,
+administration and ongoing maintenance of Nova, such as user creation,
 vpn management, and much more.
 
-See doc:`nova.manage` in the Administration Guide for more details.
-
+See :doc:`nova.manage` in the Administration Guide for more details.
 
 Concept: Flags
 --------------
 
-Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within flag files. When you install Nova packages, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. 
-
+Nova uses python-gflags for a distributed command line system, and the flags can either be set when running a command at the command line or within a flag file. When you install Nova packages for the Austin release, each nova service gets its own flag file. For example, nova-network.conf is used for configuring the nova-network service, and so forth. In releases beyond Austin which was released in October 2010, all flags are set in nova.conf.  
 
 Concept: Plugins
 ----------------
@@ -181,7 +179,7 @@ Concept: Plugins
 Concept: IPC/RPC
 ----------------
 
-Nova utilizes the RabbitMQ implementation of the AMQP messaging standard for performing communication between the various nova services.  This message queuing service is used for both local and remote communication because Nova is designed so that there is no requirement that any of the services exist on the same physical machine.  RabbitMQ in particular is very robust and provides the efficiency and reliability that Nova needs.  More information about RabbitMQ can be found at http://www.rabbitmq.com/. 
+Nova utilizes the RabbitMQ implementation of the AMQP messaging standard for performing communication between the various Nova services.  This message queuing service is used for both local and remote communication because Nova is designed so that there is no requirement that any of the services exist on the same physical machine.  RabbitMQ in particular is very robust and provides the efficiency and reliability that Nova needs.  More information about RabbitMQ can be found at http://www.rabbitmq.com/. 
 
 Concept: Fakes
 --------------
