@@ -169,6 +169,14 @@ class XenAPIConnection(object):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
+    def rescue(self, instance, callback):
+        """Rescue the specified instance"""
+        self._vmops.rescue(instance, callback)
+
+    def unrescue(self, instance, callback):
+        """Unrescue the specified instance"""
+        self._vmops.unrescue(instance, callback)
+
     def get_info(self, instance_id):
         """Return data about VM instance"""
         return self._vmops.get_info(instance_id)

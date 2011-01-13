@@ -264,6 +264,14 @@ class VMOps(object):
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
         self._wait_with_callback(task, callback)
 
+    def rescue(self, instance, callback):
+        """Rescue the specified instance"""
+        return True
+
+    def unrescue(self, instance, callback):
+        """Unrescue the specified instance"""
+        return True
+
     def get_info(self, instance_id):
         """Return data about VM instance"""
         vm = VMHelper.lookup(self._session, instance_id)
