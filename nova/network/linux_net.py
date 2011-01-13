@@ -292,12 +292,12 @@ interface %s
 """ % (network_ref['bridge'], network_ref['cidr_v6'])
         f.write(conf_str)
 
-    # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
+    # Make sure radvd can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0644)
 
     pid = _ra_pid_for(network_ref['bridge'])
 
-    # if dnsmasq is already running, then tell it to reload
+    # if radvd is already running, then tell it to reload
     if pid:
         out, _err = _execute('cat /proc/%d/cmdline'
                              % pid, check_exit_code=False)
@@ -306,9 +306,9 @@ interface %s
                 _execute('sudo kill -HUP %d' % pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
-                logging.debug("Hupping radvd threw %s", exc)
+                LOG.debug(_("Hupping radvd threw %s"), exc)
         else:
-            logging.debug("Pid %d is stale, relaunching radvd", pid)
+            LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
     _execute(command)
     db.network_update(context, network_id,
@@ -378,7 +378,7 @@ def _dnsmasq_cmd(net):
 
 
 def _ra_cmd(net):
-    """Builds dnsmasq command"""
+    """Builds radvd command"""
     cmd = ['sudo -E radvd',
 #           ' -u nobody',
            ' -C %s' % _ra_file(net['bridge'], 'conf'),
@@ -408,7 +408,7 @@ def _dhcp_file(bridge, kind):
 
 
 def _ra_file(bridge, kind):
-    """Return path to a pid, leases or conf file for a bridge"""
+    """Return path to a pid or conf file for a bridge"""
 
     if not os.path.exists(FLAGS.networks_path):
         os.makedirs(FLAGS.networks_path)
@@ -433,7 +433,7 @@ def _dnsmasq_pid_for(bridge):
 
 
 def _ra_pid_for(bridge):
-    """Returns the pid for prior dnsmasq instance for a bridge
+    """Returns the pid for prior radvd instance for a bridge
 
     Returns None if no pid file exists
 

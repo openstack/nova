@@ -24,7 +24,6 @@ import httplib
 import random
 import StringIO
 import webob
-import logging
 
 from nova import context
 from nova import flags

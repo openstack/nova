@@ -202,19 +202,6 @@ def last_octet(address):
     return int(address.split(".")[-1])
 
 
-def get_my_ip():
-    """Returns the actual ip of the local machine."""
-    try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.gaierror as ex:
-        logging.warn(_("Couldn't get IP, using 127.0.0.1 %s"), ex)
-        return "127.0.0.1"
-
-
 def  get_my_linklocal(interface):
     try:
         if_str = execute("ip -f inet6 -o addr show %s" % interface)
@@ -226,9 +213,9 @@ def  get_my_linklocal(interface):
         else:
             return 'fe00::'
     except IndexError as ex:
-        logging.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
     except ProcessExecutionError as ex:
-        logging.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
     except:
         return 'fe00::'
 
