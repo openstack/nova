@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,10 +19,11 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
-import logging
+import json
 
 from nova import db
 from nova import context
+from nova import log as logging
 from nova import exception
 from nova import utils
 
@@ -31,12 +33,14 @@ from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.vm_utils import ImageType
 
+XenAPI = None
+LOG = logging.getLogger("nova.virt.xenapi.vmops")
+
 
 class VMOps(object):
     """
     Management class for VM-related tasks
     """
-
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
@@ -92,10 +96,9 @@ class VMOps(object):
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
-        logging.debug(_('Starting VM %s...'), vm_ref)
+        LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        logging.info(_('Spawning VM %s created %s.'), instance.name,
-                     vm_ref)
+        LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
 
         # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
@@ -106,12 +109,12 @@ class VMOps(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug(_('Instance %s: booted'), instance['name'])
+                    LOG.debug(_('Instance %s: booted'), instance['name'])
                     timer.stop()
             except Exception, exc:
-                logging.warn(exc)
-                logging.exception(_('instance %s: failed to boot'),
-                                  instance['name'])
+                LOG.warn(exc)
+                LOG.exception(_('instance %s: failed to boot'),
+                              instance['name'])
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -119,6 +122,20 @@ class VMOps(object):
 
         timer.f = _wait_for_boot
         return timer.start(interval=0.5, now=True)
+
+    def _get_vm_opaque_ref(self, instance_or_vm):
+        """Refactored out the common code of many methods that receive either
+        a vm name or a vm instance, and want a vm instance in return.
+        """
+        try:
+            instance_name = instance_or_vm.name
+            vm = VMHelper.lookup(self._session, instance_name)
+        except AttributeError:
+            # A vm opaque ref was passed
+            vm = instance_or_vm
+        if vm is None:
+            raise Exception(_('Instance not present %s') % instance_name)
+        return vm
 
     def snapshot(self, instance, name):
         """ Create snapshot from a running VM instance
@@ -168,11 +185,7 @@ class VMOps(object):
 
     def reboot(self, instance):
         """Reboot VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('instance not'
-                                       ' found %s') % instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
         self._session.wait_for_task(instance.id, task)
 
@@ -194,7 +207,7 @@ class VMOps(object):
                 task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
                 self._session.wait_for_task(instance.id, task)
             except self.XenAPI.Failure, exc:
-                logging.warn(exc)
+                LOG.exception(exc)
 
         # Disk clean-up
         if vdis:
@@ -203,39 +216,31 @@ class VMOps(object):
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                     self._session.wait_for_task(instance.id, task)
                 except self.XenAPI.Failure, exc:
-                    logging.warn(exc)
+                    LOG.exception(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.exception(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
             ret = self._session.wait_for_task(instance_id, task)
-        except XenAPI.Failure, exc:
-            logging.warn(exc)
+        except self.XenAPI.Failure, exc:
+            LOG.exception(exc)
         callback(ret)
 
     def pause(self, instance, callback):
         """Pause VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.pause', vm)
         self._wait_with_callback(instance.id, task, callback)
 
     def unpause(self, instance, callback):
         """Unpause VM instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm)
         self._wait_with_callback(instance.id, task, callback)
 
@@ -247,7 +252,7 @@ class VMOps(object):
             raise Exception(_("suspend: instance not present %s") %
                                                      instance_name)
         task = self._session.call_xenapi('Async.VM.suspend', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def resume(self, instance, callback):
         """resume the specified instance"""
@@ -257,7 +262,7 @@ class VMOps(object):
             raise Exception(_("resume: instance not present %s") %
                                                     instance_name)
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
@@ -270,10 +275,7 @@ class VMOps(object):
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics"""
-        vm = VMHelper.lookup(self._session, instance.name)
-        if vm is None:
-            raise exception.NotFound(_("Instance not found %s") %
-                instance.name)
+        vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_diagnostics(self._session, rec)
 
@@ -281,3 +283,180 @@ class VMOps(object):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
+
+    def get_ajax_console(self, instance):
+        """Return link to instance's ajax console"""
+        # TODO: implement this!
+        return 'http://fakeajaxconsole/fake_url'
+
+    def list_from_xenstore(self, vm, path):
+        """Runs the xenstore-ls command to get a listing of all records
+        from 'path' downward. Returns a dict with the sub-paths as keys,
+        and the value stored in those paths as values. If nothing is
+        found at that path, returns None.
+        """
+        ret = self._make_xenstore_call('list_records', vm, path)
+        return json.loads(ret)
+
+    def read_from_xenstore(self, vm, path):
+        """Returns the value stored in the xenstore record for the given VM
+        at the specified location. A XenAPIPlugin.PluginError will be raised
+        if any error is encountered in the read process.
+        """
+        try:
+            ret = self._make_xenstore_call('read_record', vm, path,
+                    {'ignore_missing_path': 'True'})
+        except self.XenAPI.Failure, e:
+            return None
+        ret = json.loads(ret)
+        if ret == "None":
+            # Can't marshall None over RPC calls.
+            return None
+        return ret
+
+    def write_to_xenstore(self, vm, path, value):
+        """Writes the passed value to the xenstore record for the given VM
+        at the specified location. A XenAPIPlugin.PluginError will be raised
+        if any error is encountered in the write process.
+        """
+        return self._make_xenstore_call('write_record', vm, path,
+                {'value': json.dumps(value)})
+
+    def clear_xenstore(self, vm, path):
+        """Deletes the VM's xenstore record for the specified path.
+        If there is no such record, the request is ignored.
+        """
+        self._make_xenstore_call('delete_record', vm, path)
+
+    def _make_xenstore_call(self, method, vm, path, addl_args={}):
+        """Handles calls to the xenstore xenapi plugin."""
+        return self._make_plugin_call('xenstore.py', method=method, vm=vm,
+                path=path, addl_args=addl_args)
+
+    def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
+        """Abstracts out the process of calling a method of a xenapi plugin.
+        Any errors raised by the plugin will in turn raise a RuntimeError here.
+        """
+        vm = self._get_vm_opaque_ref(vm)
+        rec = self._session.get_xenapi().VM.get_record(vm)
+        args = {'dom_id': rec['domid'], 'path': path}
+        args.update(addl_args)
+        # If the 'testing_mode' attribute is set, add that to the args.
+        if getattr(self, 'testing_mode', False):
+            args['testing_mode'] = 'true'
+        try:
+            task = self._session.async_call_plugin(plugin, method, args)
+            ret = self._session.wait_for_task(0, task)
+        except self.XenAPI.Failure, e:
+            raise RuntimeError("%s" % e.details[-1])
+        return ret
+
+    def add_to_xenstore(self, vm, path, key, value):
+        """Adds the passed key/value pair to the xenstore record for
+        the given VM at the specified location. A XenAPIPlugin.PluginError
+        will be raised if any error is encountered in the write process.
+        """
+        current = self.read_from_xenstore(vm, path)
+        if not current:
+            # Nothing at that location
+            current = {key: value}
+        else:
+            current[key] = value
+        self.write_to_xenstore(vm, path, current)
+
+    def remove_from_xenstore(self, vm, path, key_or_keys):
+        """Takes either a single key or a list of keys and removes
+        them from the xenstoreirecord data for the given VM.
+        If the key doesn't exist, the request is ignored.
+        """
+        current = self.list_from_xenstore(vm, path)
+        if not current:
+            return
+        if isinstance(key_or_keys, basestring):
+            keys = [key_or_keys]
+        else:
+            keys = key_or_keys
+        keys.sort(lambda x, y: cmp(y.count('/'), x.count('/')))
+        for key in keys:
+            if path:
+                keypath = "%s/%s" % (path, key)
+            else:
+                keypath = key
+            self._make_xenstore_call('delete_record', vm, keypath)
+
+    ########################################################################
+    ###### The following methods interact with the xenstore parameter
+    ###### record, not the live xenstore. They were created before I
+    ###### knew the difference, and are left in here in case they prove
+    ###### to be useful. They all have '_param' added to their method
+    ###### names to distinguish them. (dabo)
+    ########################################################################
+    def read_partial_from_param_xenstore(self, instance_or_vm, key_prefix):
+        """Returns a dict of all the keys in the xenstore parameter record
+        for the given instance that begin with the key_prefix.
+        """
+        data = self.read_from_param_xenstore(instance_or_vm)
+        badkeys = [k for k in data.keys()
+                if not k.startswith(key_prefix)]
+        for badkey in badkeys:
+            del data[badkey]
+        return data
+
+    def read_from_param_xenstore(self, instance_or_vm, keys=None):
+        """Returns the xenstore parameter record data for the specified VM
+        instance as a dict. Accepts an optional key or list of keys; if a
+        value for 'keys' is passed, the returned dict is filtered to only
+        return the values for those keys.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        data = self._session.call_xenapi_request('VM.get_xenstore_data',
+                (vm, ))
+        ret = {}
+        if keys is None:
+            keys = data.keys()
+        elif isinstance(keys, basestring):
+            keys = [keys]
+        for key in keys:
+            raw = data.get(key)
+            if raw:
+                ret[key] = json.loads(raw)
+            else:
+                ret[key] = raw
+        return ret
+
+    def add_to_param_xenstore(self, instance_or_vm, key, val):
+        """Takes a key/value pair and adds it to the xenstore parameter
+        record for the given vm instance. If the key exists in xenstore,
+        it is overwritten"""
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        self.remove_from_param_xenstore(instance_or_vm, key)
+        jsonval = json.dumps(val)
+        self._session.call_xenapi_request('VM.add_to_xenstore_data',
+                (vm, key, jsonval))
+
+    def write_to_param_xenstore(self, instance_or_vm, mapping):
+        """Takes a dict and writes each key/value pair to the xenstore
+        parameter record for the given vm instance. Any existing data for
+        those keys is overwritten.
+        """
+        for k, v in mapping.iteritems():
+            self.add_to_param_xenstore(instance_or_vm, k, v)
+
+    def remove_from_param_xenstore(self, instance_or_vm, key_or_keys):
+        """Takes either a single key or a list of keys and removes
+        them from the xenstore parameter record data for the given VM.
+        If the key doesn't exist, the request is ignored.
+        """
+        vm = self._get_vm_opaque_ref(instance_or_vm)
+        if isinstance(key_or_keys, basestring):
+            keys = [key_or_keys]
+        else:
+            keys = key_or_keys
+        for key in keys:
+            self._session.call_xenapi_request('VM.remove_from_xenstore_data',
+                    (vm, key))
+
+    def clear_param_xenstore(self, instance_or_vm):
+        """Removes all data from the xenstore parameter record for this VM."""
+        self.write_to_param_xenstore(instance_or_vm, {})
+    ########################################################################

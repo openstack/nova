@@ -81,9 +81,22 @@
 #end if
             </filterref>
         </interface>
+
+        <!-- The order is significant here.  File must be defined first -->
         <serial type="file">
             <source path='${basepath}/console.log'/>
             <target port='1'/>
         </serial>
+
+        <console type='pty' tty='/dev/pts/2'>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
+        </console>
+
+        <serial type='pty'>
+            <source path='/dev/pts/2'/>
+            <target port='0'/>
+        </serial>
+
     </devices>
 </domain>

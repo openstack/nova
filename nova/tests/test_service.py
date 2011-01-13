@@ -133,7 +133,8 @@ class ServiceTestCase(test.TestCase):
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
-                          'report_count': 0}
+                          'report_count': 0,
+                          'availability_zone': 'nova'}
         service_ref = {'host': host,
                        'binary': binary,
                        'report_count': 0,
@@ -161,11 +162,13 @@ class ServiceTestCase(test.TestCase):
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
-                          'report_count': 0}
+                          'report_count': 0,
+                          'availability_zone': 'nova'}
         service_ref = {'host': host,
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
+                          'availability_zone': 'nova',
                           'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
@@ -193,11 +196,13 @@ class ServiceTestCase(test.TestCase):
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
-                          'report_count': 0}
+                          'report_count': 0,
+                          'availability_zone': 'nova'}
         service_ref = {'host': host,
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
+                          'availability_zone': 'nova',
                           'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),
@@ -224,11 +229,13 @@ class ServiceTestCase(test.TestCase):
         service_create = {'host': host,
                           'binary': binary,
                           'topic': topic,
-                          'report_count': 0}
+                          'report_count': 0,
+                          'availability_zone': 'nova'}
         service_ref = {'host': host,
                           'binary': binary,
                           'topic': topic,
                           'report_count': 0,
+                          'availability_zone': 'nova',
                           'id': 1}
 
         service.db.service_get_by_args(mox.IgnoreArg(),

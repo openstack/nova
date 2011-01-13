@@ -22,7 +22,6 @@ an instance with it.
 
 """
 
-import logging
 import os
 import string
 import tempfile
@@ -33,6 +32,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
@@ -51,7 +51,7 @@ flags.DEFINE_string('dmz_mask',
                     _('Netmask to push into openvpn config'))
 
 
-LOG = logging.getLogger('nova-cloudpipe')
+LOG = logging.getLogger('nova.cloudpipe')
 
 
 class CloudPipe(object):

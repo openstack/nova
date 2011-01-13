@@ -18,11 +18,15 @@
 
 """Based a bit on the carrot.backeds.queue backend... but a lot better."""
 
-import logging
 import Queue as queue
 
 from carrot.backends import base
 from eventlet import greenthread
+
+from nova import log as logging
+
+
+LOG = logging.getLogger("nova.fakerabbit")
 
 
 EXCHANGES = {}
@@ -41,12 +45,12 @@ class Exchange(object):
         self._routes = {}
 
     def publish(self, message, routing_key=None):
-        logging.debug(_('(%s) publish (key: %s) %s'),
-                      self.name, routing_key, message)
+        LOG.debug(_('(%s) publish (key: %s) %s'),
+                  self.name, routing_key, message)
         routing_key = routing_key.split('.')[0]
         if routing_key in self._routes:
             for f in self._routes[routing_key]:
-                logging.debug(_('Publishing to route %s'), f)
+                LOG.debug(_('Publishing to route %s'), f)
                 f(message, routing_key=routing_key)
 
     def bind(self, callback, routing_key):
@@ -76,19 +80,19 @@ class Backend(base.BaseBackend):
     def queue_declare(self, queue, **kwargs):
         global QUEUES
         if queue not in QUEUES:
-            logging.debug(_('Declaring queue %s'), queue)
+            LOG.debug(_('Declaring queue %s'), queue)
             QUEUES[queue] = Queue(queue)
 
     def exchange_declare(self, exchange, type, *args, **kwargs):
         global EXCHANGES
         if exchange not in EXCHANGES:
-            logging.debug(_('Declaring exchange %s'), exchange)
+            LOG.debug(_('Declaring exchange %s'), exchange)
             EXCHANGES[exchange] = Exchange(exchange, type)
 
     def queue_bind(self, queue, exchange, routing_key, **kwargs):
         global EXCHANGES
         global QUEUES
-        logging.debug(_('Binding %s to %s with key %s'),
+        LOG.debug(_('Binding %s to %s with key %s'),
                       queue, exchange, routing_key)
         EXCHANGES[exchange].bind(QUEUES[queue].push, routing_key)
 
@@ -113,7 +117,7 @@ class Backend(base.BaseBackend):
                           content_type=content_type,
                           content_encoding=content_encoding)
         message.result = True
-        logging.debug(_('Getting from %s: %s'), queue, message)
+        LOG.debug(_('Getting from %s: %s'), queue, message)
         return message
 
     def prepare_message(self, message_data, delivery_mode,
