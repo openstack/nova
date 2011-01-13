@@ -525,6 +525,7 @@ class VMOps(object):
         self.write_to_param_xenstore(instance_or_vm, {})
     ########################################################################
 
+
 def _runproc(cmd):
     pipe = subprocess.PIPE
     return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
