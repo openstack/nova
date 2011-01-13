@@ -20,18 +20,18 @@ Unit Tests for network code
 """
 import IPy
 import os
-import logging
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import service
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.network')
 
 
 class NetworkTestCase(test.TestCase):
@@ -45,7 +45,6 @@ class NetworkTestCase(test.TestCase):
                    fake_network=True,
                    network_size=16,
                    num_networks=5)
-        logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
@@ -328,7 +327,7 @@ def lease_ip(private_ip):
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
-    logging.debug("ISSUE_IP: %s, %s ", out, err)
+    LOG.debug("ISSUE_IP: %s, %s ", out, err)
 
 
 def release_ip(private_ip):
@@ -344,4 +343,4 @@ def release_ip(private_ip):
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
-    logging.debug("RELEASE_IP: %s, %s ", out, err)
+    LOG.debug("RELEASE_IP: %s, %s ", out, err)

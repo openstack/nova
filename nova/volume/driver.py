@@ -20,15 +20,15 @@ Drivers for volumes.
 
 """
 
-import logging
-import os
 import time
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 
+LOG = logging.getLogger("nova.volume.driver")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('volume_group', 'nova-volumes',
                     'Name for the VG that will contain exported volumes')
@@ -49,6 +49,8 @@ flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
 flags.DEFINE_string('iscsi_ip_prefix', '127.0',
                     'discover volumes on the ip that starts with this prefix')
+flags.DEFINE_string('rbd_pool', 'rbd',
+                    'the rbd pool in which volumes are stored')
 
 
 class VolumeDriver(object):
@@ -73,13 +75,15 @@ class VolumeDriver(object):
                 tries = tries + 1
                 if tries >= FLAGS.num_shell_tries:
                     raise
-                logging.exception(_("Recovering from a failed execute."
-                                    "Try number %s"), tries)
+                LOG.exception(_("Recovering from a failed execute.  "
+                                "Try number %s"), tries)
                 time.sleep(tries ** 2)
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+        out, err = self._execute("sudo vgs --noheadings -o name")
+        volume_groups = out.split()
+        if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
@@ -205,7 +209,7 @@ class FakeAOEDriver(AOEDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug(_("FAKE AOE: %s"), cmd)
+        LOG.debug(_("FAKE AOE: %s"), cmd)
         return (None, None)
 
 
@@ -310,8 +314,63 @@ class FakeISCSIDriver(ISCSIDriver):
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
-        logging.debug(_("FAKE ISCSI: %s"), cmd)
+        LOG.debug(_("FAKE ISCSI: %s"), cmd)
         return (None, None)
+
+
+class RBDDriver(VolumeDriver):
+    """Implements RADOS block device (RBD) volume commands"""
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        (stdout, stderr) = self._execute("rados lspools")
+        pools = stdout.split("\n")
+        if not FLAGS.rbd_pool in pools:
+            raise exception.Error(_("rbd has no pool %s") %
+                                  FLAGS.rbd_pool)
+
+    def create_volume(self, volume):
+        """Creates a logical volume."""
+        if int(volume['size']) == 0:
+            size = 100
+        else:
+            size = int(volume['size']) * 1024
+        self._try_execute("rbd --pool %s --size %d create %s" %
+                          (FLAGS.rbd_pool,
+                           size,
+                           volume['name']))
+
+    def delete_volume(self, volume):
+        """Deletes a logical volume."""
+        self._try_execute("rbd --pool %s rm %s" %
+                          (FLAGS.rbd_pool,
+                           volume['name']))
+
+    def local_path(self, volume):
+        """Returns the path of the rbd volume."""
+        # This is the same as the remote path
+        # since qemu accesses it directly.
+        return self.discover_volume(volume)
+
+    def ensure_export(self, context, volume):
+        """Synchronously recreates an export for a logical volume."""
+        pass
+
+    def create_export(self, context, volume):
+        """Exports the volume"""
+        pass
+
+    def remove_export(self, context, volume):
+        """Removes an export for a logical volume"""
+        pass
+
+    def discover_volume(self, volume):
+        """Discover volume on a remote host"""
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host"""
+        pass
 
 
 class SheepdogDriver(VolumeDriver):

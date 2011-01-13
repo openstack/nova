@@ -18,15 +18,16 @@
 """
 Unit Tests for remote procedure calls using queue
 """
-import logging
 
 from nova import context
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import test
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.rpc')
 
 
 class RpcTestCase(test.TestCase):
@@ -85,12 +86,12 @@ class RpcTestCase(test.TestCase):
             @staticmethod
             def echo(context, queue, value):
                 """Calls echo in the passed queue"""
-                logging.debug("Nested received %s, %s", queue, value)
+                LOG.debug(_("Nested received %s, %s"), queue, value)
                 ret = rpc.call(context,
                                queue,
                                {"method": "echo",
                                 "args": {"value": value}})
-                logging.debug("Nested return %s", ret)
+                LOG.debug(_("Nested return %s"), ret)
                 return value
 
         nested = Nested()
@@ -115,13 +116,13 @@ class TestReceiver(object):
     @staticmethod
     def echo(context, value):
         """Simply returns whatever value is sent in"""
-        logging.debug("Received %s", value)
+        LOG.debug(_("Received %s"), value)
         return value
 
     @staticmethod
     def context(context, value):
         """Returns dictionary version of context"""
-        logging.debug("Received %s", context)
+        LOG.debug(_("Received %s"), context)
         return context.to_dict()
 
     @staticmethod
