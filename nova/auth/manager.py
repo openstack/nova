@@ -721,7 +721,7 @@ class AuthManager(object):
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        return self.__generate_rc(user.access, user.secret, pid, use_dmz)
+        return self.__generate_rc(user, pid, use_dmz)
 
     @staticmethod
     def __generate_rc(user, pid, use_dmz=True, host=None):
