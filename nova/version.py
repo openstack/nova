@@ -28,12 +28,10 @@ FINAL = False   # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
-    return ''
     return '.'.join([YEAR, COUNT])
 
 
 def version_string():
-    return ''
     if FINAL:
         return canonical_version_string()
     else:
@@ -41,10 +39,8 @@ def version_string():
 
 
 def vcs_version_string():
-    return ''
     return "%s:%s" % (version_info['branch_nick'], version_info['revision_id'])
 
 
 def version_string_with_vcs():
-    return ''
     return "%s-%s" % (canonical_version_string(), vcs_version_string())
