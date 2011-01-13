@@ -2117,4 +2117,3 @@ def console_get(context, console_id, instance_id=None):
                                   {'instance': idesc,
                                   'console_id': console_id})
     return result
->>>>>>> MERGE-SOURCE
