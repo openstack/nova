@@ -776,6 +776,10 @@ class FirewallDriver(object):
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
+    def unfilter_instance(self, instance):
+        """Stop filtering instance"""
+        raise NotImplementedError()
+
     def apply_instance_filter(self, instance):
         """Apply instance filter.
 
@@ -965,6 +969,10 @@ class NWFilterFirewall(FirewallDriver):
 
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
+
+    def unfilter_instance(self, instance):
+        # Nothing to do
+        pass
 
     def prepare_instance_filter(self, instance):
         """
