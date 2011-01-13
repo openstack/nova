@@ -321,7 +321,11 @@ class ComputeManager(manager.Manager):
                                    power_state.NOSTATE,
                                    'rescuing')
         self.network_manager.setup_compute_network(context, instance_id)
-        self.driver.rescue(instance_ref)
+        self.driver.rescue(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -335,7 +339,11 @@ class ComputeManager(manager.Manager):
                                    instance_id,
                                    power_state.NOSTATE,
                                    'unrescuing')
-        self.driver.unrescue(instance_ref)
+        self.driver.unrescue(instance_ref,
+            lambda result: self._update_state_callback(self,
+                                                       context,
+                                                       instance_id,
+                                                       result))
         self._update_state(context, instance_id)
 
     @staticmethod
