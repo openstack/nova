@@ -468,7 +468,6 @@ class InstanceCommands(object):
     def live_migration(self, ec2_id, dest):
         """live_migration"""
 
-
         if FLAGS.connection_type != 'libvirt':
             raise exception.Error('Only KVM is supported for now. '
                 'Sorry.')

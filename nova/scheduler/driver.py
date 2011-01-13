@@ -130,16 +130,16 @@ class Scheduler(object):
             msg = _('Unexpected err: not found cpu_info for %s on DB.hosts')
             raise exception.Invalid(msg % orighost)
 
-        try : 
+        try:
             rpc.call(context,
                  db.queue_get_for(context, FLAGS.compute_topic, dest),
                  {"method": 'compare_cpu',
                   "args": {'xml': cpuinfo}})
 
-        except rpc.RemoteError, e: 
+        except rpc.RemoteError, e:
             msg = '%s doesnt have compatibility to %s(where %s launching at)\n'
             msg += 'result:%s \n'
-            logging.error( _(msg) % (dest, src, ec2_id, ret))
+            logging.error(_(msg) % (dest, src, ec2_id, ret))
             raise e
 
         # Checking dst host still has enough capacities.

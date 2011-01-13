@@ -96,7 +96,7 @@ flags.DEFINE_string('live_migration_uri',
 flags.DEFINE_string('live_migration_flag',
                   "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
                   'Define live migration behavior.')
-flags.DEFINE_integer('live_migration_bandwidth', 0, 
+flags.DEFINE_integer('live_migration_bandwidth', 0,
                   'Define live migration behavior')
 flags.DEFINE_string('live_migration_timeout_sec', 10,
                     'Timeout second for pre_live_migration is completed.')
@@ -817,7 +817,6 @@ class LibvirtConnection(object):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
-
     def compare_cpu(self, xml):
         """
            Check the host cpu is compatible to a cpu given by xml.
@@ -827,9 +826,8 @@ class LibvirtConnection(object):
 
            'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
         """
-        
         ret = self._conn.compareCPU(xml, 0)
-        if ret <= 0 : 
+        if ret <= 0:
             url = 'http://libvirt.org/html/libvirt-libvirt.html'
             url += '#virCPUCompareResult\n'
             msg = 'CPU does not have compativility.\n'
@@ -837,22 +835,22 @@ class LibvirtConnection(object):
             msg += 'Refer to %s'
             msg = _(msg)
             raise exception.Invalid(msg % (ret, url))
-        return 
+        return
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """ Setting up inevitable filtering rules on compute node, 
-            and waiting for its completion. 
+        """ Setting up inevitable filtering rules on compute node,
+            and waiting for its completion.
             To migrate an instance, filtering rules to hypervisors
             and firewalls are inevitable on destination host.
-            ( Waiting only for filterling rules to hypervisor, 
+            ( Waiting only for filterling rules to hypervisor,
             since filtering rules to firewall rules can be set faster).
 
             Concretely, the below method must be called.
             - setup_basic_filtering (for nova-basic, etc.)
             - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
-             
+
             to_xml may have to be called since it defines PROJNET, PROJMASK.
-            but libvirt migrates those value through migrateToURI(), 
+            but libvirt migrates those value through migrateToURI(),
             so , no need to be called.
 
             Don't use thread for this method since migration should
@@ -879,7 +877,7 @@ class LibvirtConnection(object):
                     msg = _('Timeout migrating for %s(%s)')
                     raise exception.Error(msg % (ec2_id, instance_ref.name))
                 time.sleep(0.5)
-                 
+
     def live_migration(self, context, instance_ref, dest):
         """
            Just spawning live_migration operation for
@@ -895,21 +893,21 @@ class LibvirtConnection(object):
             duri = FLAGS.live_migration_uri % dest
 
             flaglist = FLAGS.live_migration_flag.split(',')
-            flagvals = [ getattr(libvirt, x.strip()) for x in flaglist ]
-            logical_sum = reduce(lambda x,y: x|y, flagvals)
+            flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+            logical_sum = reduce(lambda x, y: x | y, flagvals)
 
             bandwidth = FLAGS.live_migration_bandwidth
-            
-            if self.read_only: 
+
+            if self.read_only:
                 tmpconn = self._connect(self.libvirt_uri, False)
                 dom = tmpconn.lookupByName(instance_ref.name)
                 dom.migrateToURI(duri, logical_sum, None, bandwidth)
                 tmpconn.close()
-            else : 
+            else:
                 dom = self._conn.lookupByName(instance_ref.name)
                 dom.migrateToURI(duri, logical_sum, None, bandwidth)
-                
-        except Exception, e: 
+
+        except Exception, e:
             id = instance_ref['id']
             db.instance_set_state(context, id, power_state.RUNNING, 'running')
             try:
@@ -950,7 +948,7 @@ class LibvirtConnection(object):
         # Releasing security group ingress rule.
         if FLAGS.firewall_driver == \
             'nova.virt.libvirt_conn.IptablesFirewallDriver':
-            try : 
+            try:
                 self.firewall_driver.remove_instance(instance_ref)
             except KeyError, e:
                 pass

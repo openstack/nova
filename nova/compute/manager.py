@@ -561,7 +561,7 @@ class ComputeManager(manager.Manager):
         self.network_manager.setup_compute_network(context, instance_id)
 
         # Creating filters to hypervisors and firewalls.
-        # An example is that nova-instance-instance-xxx, 
+        # An example is that nova-instance-instance-xxx,
         # which is written to libvirt.xml( check "virsh nwfilter-list )
         # On destination host, this nwfilter is necessary.
         # In addition, this method is creating filtering rule
@@ -575,8 +575,8 @@ class ComputeManager(manager.Manager):
         instance_ref = db.instance_get(context, instance_id)
         ec2_id = instance_ref['hostname']
 
-        try: 
-            # Checking volume node is working correctly when any volumes 
+        try:
+            # Checking volume node is working correctly when any volumes
             # are attached to instances.
             rpc.call(context,
                       FLAGS.volume_topic,
@@ -584,7 +584,9 @@ class ComputeManager(manager.Manager):
                        "args": {'instance_id': instance_id}})
 
             # Asking dest host to preparing live migration.
-            compute_topic = db.queue_get_for(context, FLAGS.compute_topic, dest)
+            compute_topic = db.queue_get_for(context,
+                                             FLAGS.compute_topic,
+                                             dest)
 
             rpc.call(context,
                         compute_topic,

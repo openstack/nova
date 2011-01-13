@@ -69,7 +69,6 @@ class SchedulerManager(manager.Manager):
                   "args": kwargs})
         LOG.debug(_("Casting to %s %s for %s"), topic, host, method)
 
-
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bear design summit discussion,
     #                    just put this here for bexar release.
@@ -112,4 +111,3 @@ class SchedulerManager(manager.Manager):
                                 'local_gb': hdd}
 
         return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}
-
