@@ -286,6 +286,6 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
         enc = self.alice.encrypt(msg)
         dec = self.bob.decrypt(enc)
         self.assertEquals(dec, msg)
-    
+
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
