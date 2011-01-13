@@ -249,7 +249,7 @@ class IptablesFirewallTestCase(test.TestCase):
       '-A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable ',
       '-A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable ',
       'COMMIT',
-      '# Completed on Mon Dec  6 11:54:13 2010'
+      '# Completed on Mon Dec  6 11:54:13 2010',
     ]
 
     def test_static_filters(self):

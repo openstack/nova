@@ -35,6 +35,8 @@ terminating it.
 """
 
 import datetime
+import logging
+import socket
 import functools
 
 from nova import exception
@@ -52,6 +54,9 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
+flags.DEFINE_string('console_host', socket.gethostname(),
+                    'Console proxy host to use to connect to instances on'
+                    'this host.')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -122,6 +127,15 @@ class ComputeManager(manager.Manager):
             state = power_state.NOSTATE
         self.db.instance_set_state(context, instance_id, state)
 
+    def get_console_topic(self, context, **_kwargs):
+        """Retrieves the console host for a project on this host
+           Currently this is just set in the flags for each compute
+           host."""
+        #TODO(mdragon): perhaps make this variable by console_type?
+        return self.db.queue_get_for(context,
+                                     FLAGS.console_topic,
+                                     FLAGS.console_host)
+
     def get_network_topic(self, context, **_kwargs):
         """Retrieves the network host for a project on this host"""
         # TODO(vish): This method should be memoized. This will make
@@ -135,6 +149,9 @@ class ComputeManager(manager.Manager):
         return self.db.queue_get_for(context,
                                      FLAGS.network_topic,
                                      host)
+
+    def get_console_pool_info(self, context, console_type):
+        return self.driver.get_console_pool_info(console_type)
 
     @exception.wrap_exception
     def refresh_security_group_rules(self, context,
@@ -454,6 +471,14 @@ class ComputeManager(manager.Manager):
         return self.driver.get_console_output(instance_ref)
 
     @exception.wrap_exception
+    def get_ajax_console(self, context, instance_id):
+        """Return connection information for an ajax console"""
+        context = context.elevated()
+        logging.debug(_("instance %s: getting ajax console"), instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        return self.driver.get_ajax_console(instance_ref)
+
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""

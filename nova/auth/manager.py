@@ -684,8 +684,7 @@ class AuthManager(object):
         else:
             regions = {'nova': FLAGS.cc_host}
         for region, host in regions.iteritems():
-            rc = self.__generate_rc(user.access,
-                                    user.secret,
+            rc = self.__generate_rc(user,
                                     pid,
                                     use_dmz,
                                     host)
@@ -725,7 +724,7 @@ class AuthManager(object):
         return self.__generate_rc(user.access, user.secret, pid, use_dmz)
 
     @staticmethod
-    def __generate_rc(access, secret, pid, use_dmz=True, host=None):
+    def __generate_rc(user, pid, use_dmz=True, host=None):
         """Generate rc file for user"""
         if use_dmz:
             cc_host = FLAGS.cc_dmz
@@ -738,14 +737,19 @@ class AuthManager(object):
             s3_host = host
             cc_host = host
         rc = open(FLAGS.credentials_template).read()
-        rc = rc % {'access': access,
+        rc = rc % {'access': user.access,
                    'project': pid,
-                   'secret': secret,
+                   'secret': user.secret,
                    'ec2': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
                                             cc_host,
                                             FLAGS.cc_port,
                                             FLAGS.ec2_suffix),
                    's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
+                   'os': '%s://%s:%s%s' % (FLAGS.os_prefix,
+                                            cc_host,
+                                            FLAGS.osapi_port,
+                                            FLAGS.os_suffix),
+                   'user': user.name,
                    'nova': FLAGS.ca_file,
                    'cert': FLAGS.credential_cert_file,
                    'key': FLAGS.credential_key_file}

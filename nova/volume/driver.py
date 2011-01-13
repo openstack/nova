@@ -49,6 +49,8 @@ flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
 flags.DEFINE_string('iscsi_ip_prefix', '127.0',
                     'discover volumes on the ip that starts with this prefix')
+flags.DEFINE_string('rbd_pool', 'rbd',
+                    'the rbd pool in which volumes are stored')
 
 
 class VolumeDriver(object):
@@ -314,3 +316,58 @@ class FakeISCSIDriver(ISCSIDriver):
         """Execute that simply logs the command."""
         LOG.debug(_("FAKE ISCSI: %s"), cmd)
         return (None, None)
+
+
+class RBDDriver(VolumeDriver):
+    """Implements RADOS block device (RBD) volume commands"""
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        (stdout, stderr) = self._execute("rados lspools")
+        pools = stdout.split("\n")
+        if not FLAGS.rbd_pool in pools:
+            raise exception.Error(_("rbd has no pool %s") %
+                                  FLAGS.rbd_pool)
+
+    def create_volume(self, volume):
+        """Creates a logical volume."""
+        if int(volume['size']) == 0:
+            size = 100
+        else:
+            size = int(volume['size']) * 1024
+        self._try_execute("rbd --pool %s --size %d create %s" %
+                          (FLAGS.rbd_pool,
+                           size,
+                           volume['name']))
+
+    def delete_volume(self, volume):
+        """Deletes a logical volume."""
+        self._try_execute("rbd --pool %s rm %s" %
+                          (FLAGS.rbd_pool,
+                           volume['name']))
+
+    def local_path(self, volume):
+        """Returns the path of the rbd volume."""
+        # This is the same as the remote path
+        # since qemu accesses it directly.
+        return self.discover_volume(volume)
+
+    def ensure_export(self, context, volume):
+        """Synchronously recreates an export for a logical volume."""
+        pass
+
+    def create_export(self, context, volume):
+        """Exports the volume"""
+        pass
+
+    def remove_export(self, context, volume):
+        """Removes an export for a logical volume"""
+        pass
+
+    def discover_volume(self, volume):
+        """Discover volume on a remote host"""
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host"""
+        pass

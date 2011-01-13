@@ -19,7 +19,7 @@ import unittest
 
 import stubout
 
-from nova.api.openstack import sharedipgroups
+from nova.api.openstack import shared_ip_groups
 
 
 class SharedIpGroupsTest(unittest.TestCase):
