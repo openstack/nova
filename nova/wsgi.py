@@ -393,9 +393,10 @@ class Serializer(object):
             result.appendChild(node)
         return result
 
+
 def paste_config_file(basename):
     """Find the best location in the system for a paste config file.
-   
+
     Search Order
     ------------
 
@@ -424,6 +425,7 @@ def paste_config_file(basename):
         if os.path.exists(configfile):
             return configfile
 
+
 def load_paste_configuration(filename, appname):
     """Returns a paste configuration dict, or None."""
     filename = os.path.abspath(filename)
@@ -433,6 +435,7 @@ def load_paste_configuration(filename, appname):
     except LookupError:
         pass
     return config
+
 
 def load_paste_app(filename, appname):
     """Builds a wsgi app from a paste config, None if app not configured."""
@@ -444,8 +447,9 @@ def load_paste_app(filename, appname):
         pass
     return app
 
+
 def paste_config_to_flags(config, mixins):
-    for k,v in mixins.iteritems():
+    for k, v in mixins.iteritems():
         value = config.get(k, v)
         converted_value = FLAGS[k].parser.Parse(value)
         setattr(FLAGS, k, converted_value)
