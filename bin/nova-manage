@@ -85,6 +85,7 @@ from nova import rpc
 from nova.cloudpipe import pipelib
 from nova.api.ec2 import cloud
 
+logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')

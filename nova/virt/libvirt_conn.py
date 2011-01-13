@@ -40,6 +40,11 @@ import os
 import shutil
 import re
 import time
+import random
+import subprocess
+import uuid
+from xml.dom import minidom
+
 
 from eventlet import greenthread
 from eventlet import event
@@ -98,6 +103,9 @@ flags.DEFINE_string('live_migration_timeout_sec', 10,
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_string('ajaxterm_portrange',
+                    '10000-12000',
+                    'Range of ports that ajaxterm should randomly try to bind')
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
@@ -201,40 +209,27 @@ class LibvirtConnection(object):
             pass
             # If the instance is already terminated, we're still happy
 
-        done = event.Event()
-
         # We'll save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
         timer = utils.LoopingCall(f=None)
 
-        def _wait_for_shutdown():
+        while True:
             try:
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.SHUTDOWN:
-                    timer.stop()
+                    break
             except Exception:
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
-                timer.stop()
+                break
 
-        timer.f = _wait_for_shutdown
-        timer_done = timer.start(interval=0.5, now=True)
+        if cleanup:
+            self._cleanup(instance)
 
-        # NOTE(termie): this is strictly superfluous (we could put the
-        #               cleanup code in the timer), but this emulates the
-        #               previous model so I am keeping it around until
-        #               everything has been vetted a bit
-        def _wait_for_timer():
-            timer_done.wait()
-            if cleanup:
-                self._cleanup(instance)
-            done.send()
-
-        greenthread.spawn(_wait_for_timer)
-        return done
+        return True
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
@@ -247,11 +242,24 @@ class LibvirtConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        xml = """<disk type='block'>
-                     <driver name='qemu' type='raw'/>
-                     <source dev='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (device_path, mount_device)
+        if device_path.startswith('/dev/'):
+            xml = """<disk type='block'>
+                         <driver name='qemu' type='raw'/>
+                         <source dev='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (device_path, mount_device)
+        elif ':' in device_path:
+            (protocol, name) = device_path.split(':')
+            xml = """<disk type='network'>
+                         <driver name='qemu' type='raw'/>
+                         <source protocol='%s' name='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (protocol,
+                                   name,
+                                   mount_device)
+        else:
+            raise exception.Invalid(_("Invalid device path %s") % device_path)
+
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):
@@ -444,6 +452,43 @@ class LibvirtConnection(object):
             fpath = console_log
 
         return self._dump_file(fpath)
+
+    @exception.wrap_exception
+    def get_ajax_console(self, instance):
+        def get_open_port():
+            start_port, end_port = FLAGS.ajaxterm_portrange.split("-")
+            for i in xrange(0, 100):  # don't loop forever
+                port = random.randint(int(start_port), int(end_port))
+                # netcat will exit with 0 only if the port is in use,
+                # so a nonzero return value implies it is unused
+                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
+                stdout, stderr = utils.execute(cmd)
+                if stdout.strip() == 'free':
+                    return port
+            raise Exception(_('Unable to find an open port'))
+
+        def get_pty_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            dom = minidom.parseString(xml)
+
+            for serial in dom.getElementsByTagName('serial'):
+                if serial.getAttribute('type') == 'pty':
+                    source = serial.getElementsByTagName('source')[0]
+                    return source.getAttribute('path')
+
+        port = get_open_port()
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        ajaxterm_cmd = 'sudo socat - %s' \
+                       % get_pty_for_instance(instance['name'])
+
+        cmd = '%s/tools/ajaxterm/ajaxterm.py --command "%s" -t %s -p %s' \
+              % (utils.novadir(), ajaxterm_cmd, token, port)
+
+        subprocess.Popen(cmd, shell=True)
+        return {'token': token, 'host': host, 'port': port}
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
@@ -755,6 +800,14 @@ class LibvirtConnection(object):
         """
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
+
+    def get_console_pool_info(self, console_type):
+        #TODO(mdragon): console proxy should be implemented for libvirt,
+        #               in case someone wants to use it with kvm or
+        #               such. For now return fake data.
+        return  {'address': '127.0.0.1',
+                 'username': 'fakeuser',
+                 'password': 'fakepassword'}
 
     def refresh_security_group_rules(self, security_group_id):
         self.firewall_driver.refresh_security_group_rules(security_group_id)
@@ -1341,15 +1394,15 @@ class IptablesFirewallDriver(FirewallDriver):
                     icmp_type = rule.from_port
                     icmp_code = rule.to_port
 
-                    if icmp_type == '-1':
+                    if icmp_type == -1:
                         icmp_type_arg = None
                     else:
                         icmp_type_arg = '%s' % icmp_type
-                        if not icmp_code == '-1':
+                        if not icmp_code == -1:
                             icmp_type_arg += '/%s' % icmp_code
 
                     if icmp_type_arg:
-                        args += ['-m', 'icmp', '--icmp_type', icmp_type_arg]
+                        args += ['-m', 'icmp', '--icmp-type', icmp_type_arg]
 
                 args += ['-j ACCEPT']
                 our_rules += [' '.join(args)]

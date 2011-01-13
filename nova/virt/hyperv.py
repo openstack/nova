@@ -92,7 +92,7 @@ REQ_POWER_STATE = {
     'Reboot': 10,
     'Reset': 11,
     'Paused': 32768,
-    'Suspended': 32769
+    'Suspended': 32769,
 }
 
 

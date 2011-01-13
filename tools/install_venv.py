@@ -66,7 +66,8 @@ def check_dependencies():
     # Try installing it via easy_install...
     if HAS_EASY_INSTALL:
       print 'Installing virtualenv via easy_install...',
-      if not run_command(['which', 'easy_install']):
+      if not (run_command(['which', 'easy_install']) and 
+              run_command(['easy_install', 'virtualenv'])):
         die('ERROR: virtualenv not found.\n\nNova development requires virtualenv,'
             ' please install it using your favorite package management tool')
       print 'done.'

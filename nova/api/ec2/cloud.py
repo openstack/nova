@@ -73,17 +73,13 @@ def _gen_key(context, user_id, key_name):
 
 
 def ec2_id_to_id(ec2_id):
-    """Convert an ec2 ID (i-[base 36 number]) to an instance id (int)"""
-    return int(ec2_id[2:], 36)
+    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
+    return int(ec2_id.split('-')[-1], 16)
 
 
-def id_to_ec2_id(instance_id):
-    """Convert an instance ID (int) to an ec2 ID (i-[base 36 number])"""
-    digits = []
-    while instance_id != 0:
-        instance_id, remainder = divmod(instance_id, 36)
-        digits.append('0123456789abcdefghijklmnopqrstuvwxyz'[remainder])
-    return "i-%s" % ''.join(reversed(digits))
+def id_to_ec2_id(instance_id, template='i-%08x'):
+    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
+    return template % instance_id
 
 
 class CloudController(object):
@@ -132,6 +128,21 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
+    def _trigger_refresh_security_group(self, context, security_group):
+        nodes = set([instance['host'] for instance in security_group.instances
+                       if instance['host'] is not None])
+        for node in nodes:
+            rpc.cast(context,
+                     '%s.%s' % (FLAGS.compute_topic, node),
+                     {"method": "refresh_security_group",
+                      "args": {"security_group_id": security_group.id}})
+
+    def _get_availability_zone_by_host(self, context, host):
+        services = db.service_get_all_by_host(context, host)
+        if len(services) > 0:
+            return services[0]['availability_zone']
+        return 'unknown zone'
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -144,6 +155,8 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
+        host = instance_ref['host']
+        availability_zone = self._get_availability_zone_by_host(ctxt, host)
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = id_to_ec2_id(instance_ref['id'])
@@ -166,8 +179,7 @@ class CloudController(object):
                 'local-hostname': hostname,
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
-                # TODO(vish): real zone
-                'placement': {'availability-zone': 'nova'},
+                'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
@@ -191,8 +203,26 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        return {'availabilityZoneInfo': [{'zoneName': 'nova',
-                                          'zoneState': 'available'}]}
+        enabled_services = db.service_get_all(context)
+        disabled_services = db.service_get_all(context, True)
+        available_zones = []
+        for zone in [service.availability_zone for service
+                     in enabled_services]:
+            if not zone in available_zones:
+                available_zones.append(zone)
+        not_available_zones = []
+        for zone in [service.availability_zone for service in disabled_services
+                     if not service['availability_zone'] in available_zones]:
+            if not zone in not_available_zones:
+                not_available_zones.append(zone)
+        result = []
+        for zone in available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "available"})
+        for zone in not_available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "not available"})
+        return {'availabilityZoneInfo': result}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
@@ -399,8 +429,8 @@ class CloudController(object):
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria == None:
-            raise exception.ApiError(_("No rule for the specified "
-                                       "parameters."))
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
 
         for rule in security_group.rules:
             match = True
@@ -427,6 +457,9 @@ class CloudController(object):
                                                        group_name)
 
         values = self._revoke_rule_args_to_dict(context, **kwargs)
+        if values is None:
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
         values['parent_group_id'] = security_group.id
 
         if self._security_group_rule_exists(security_group, values):
@@ -498,7 +531,14 @@ class CloudController(object):
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
 
+    def get_ajax_console(self, context, instance_id, **kwargs):
+        ec2_id = instance_id[0]
+        internal_id = ec2_id_to_id(ec2_id)
+        return self.compute_api.get_ajax_console(context, internal_id)
+
     def describe_volumes(self, context, volume_id=None, **kwargs):
+        if volume_id:
+            volume_id = [ec2_id_to_id(x) for x in volume_id]
         volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
         volumes = [self._format_volume(context, v) for v in volumes
@@ -514,7 +554,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = volume['id']
+        v['volumeId'] = id_to_ec2_id(volume['id'], 'vol-%08x')
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -532,7 +572,8 @@ class CloudController(object):
                                    'device': volume['mountpoint'],
                                    'instanceId': instance_ec2_id,
                                    'status': 'attached',
-                                   'volume_id': volume['ec2_id']}]
+                                   'volumeId': id_to_ec2_id(volume['id'],
+                                                            'vol-%08x')}]
         else:
             v['attachmentSet'] = [{}]
 
@@ -548,13 +589,15 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
+        return {'volumeSet': [self._format_volume(context, dict(volume))]}
 
     def delete_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         self.volume_api.delete(context, volume_id)
         return True
 
     def update_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
@@ -565,18 +608,21 @@ class CloudController(object):
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
+        instance_id = ec2_id_to_id(instance_id)
         LOG.audit(_("Attach volume %s to instacne %s at %s"), volume_id,
                   instance_id, device, context=context)
         self.compute_api.attach_volume(context, instance_id, volume_id, device)
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
-                'instanceId': instance_id,
+                'instanceId': id_to_ec2_id(instance_id),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': volume_id}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def detach_volume(self, context, volume_id, **kwargs):
+        volume_id = ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
         instance = self.compute_api.detach_volume(context, volume_id)
@@ -585,7 +631,7 @@ class CloudController(object):
                 'instanceId': id_to_ec2_id(instance['id']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': volume_id}
+                'volumeId': id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
         if lst == None or lst == []:
@@ -646,6 +692,9 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
+            host = instance['host']
+            zone = self._get_availability_zone_by_host(context, host)
+            i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
                 r['reservationId'] = instance['reservation_id']
