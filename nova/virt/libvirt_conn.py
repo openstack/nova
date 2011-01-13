@@ -243,11 +243,24 @@ class LibvirtConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        xml = """<disk type='block'>
-                     <driver name='qemu' type='raw'/>
-                     <source dev='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (device_path, mount_device)
+        if device_path.startswith('/dev/'):
+            xml = """<disk type='block'>
+                         <driver name='qemu' type='raw'/>
+                         <source dev='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (device_path, mount_device)
+        elif ':' in device_path:
+            (protocol, name) = device_path.split(':')
+            xml = """<disk type='network'>
+                         <driver name='qemu' type='raw'/>
+                         <source protocol='%s' name='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (protocol,
+                                   name,
+                                   mount_device)
+        else:
+            raise exception.Invalid(_("Invalid device path %s") % device_path)
+
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):

@@ -20,6 +20,7 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import json
+import M2Crypto
 import os
 import random
 import subprocess
@@ -310,13 +311,13 @@ class VMOps(object):
         """suspend the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def resume(self, instance, callback):
         """resume the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def get_info(self, instance):
         """Return data about VM instance"""
@@ -524,7 +525,6 @@ class VMOps(object):
         self.write_to_param_xenstore(instance_or_vm, {})
     ########################################################################
 
-
 def _runproc(cmd):
     pipe = subprocess.PIPE
     return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
@@ -539,19 +539,10 @@ class SimpleDH(object):
     the openssl binary be installed on the system on which this is run,
     as it uses that to handle the encryption and decryption. If openssl
     is not available, a RuntimeError will be raised.
-
-    Please note that nova already uses the M2Crypto library for most
-    cryptographic functions, and that it includes a Diffie-Hellman
-    implementation. However, that is a much more complex implementation,
-    and is not compatible with the DH algorithm that the agent uses. Hence
-    the need for this 'simple' version.
     """
     def __init__(self, prime=None, base=None, secret=None):
         """You can specify the values for prime and base if you wish;
-        otherwise, reasonable default values will be used. You may also
-        specify the integer value for 'secret', but this should only be
-        done while testing when you need reproducible values. Otherwise,
-        any security benefits are lost.
+        otherwise, reasonable default values will be used.
         """
         if prime is None:
             self._prime = 162259276829213363391578010288127
@@ -561,19 +552,38 @@ class SimpleDH(object):
             self._base = 5
         else:
             self._base = base
-        if secret is None:
-            self._secret = random.randint(5000, 15000)
-        else:
-            self._secret = secret
         self._shared = self._public = None
 
+        self._dh = M2Crypto.DH.set_params(
+                self.dec_to_mpi(self._prime),
+                self.dec_to_mpi(self._base))
+        self._dh.gen_key()
+        self._public = self.mpi_to_dec(self._dh.pub)
+
     def get_public(self):
-        self._public = (self._base ** self._secret) % self._prime
         return self._public
 
     def compute_shared(self, other):
-        self._shared = (other ** self._secret) % self._prime
+        self._shared = self.bin_to_dec(
+                self._dh.compute_key(self.dec_to_mpi(other)))
         return self._shared
+
+    def mpi_to_dec(self, mpi):
+        bn = M2Crypto.m2.mpi_to_bn(mpi)
+        hexval = M2Crypto.m2.bn_to_hex(bn)
+        dec = int(hexval, 16)
+        return dec
+
+    def bin_to_dec(self, binval):
+        bn = M2Crypto.m2.bin_to_bn(binval)
+        hexval = M2Crypto.m2.bn_to_hex(bn)
+        dec = int(hexval, 16)
+        return dec
+
+    def dec_to_mpi(self, dec):
+        bn = M2Crypto.m2.dec_to_bn('%s' % dec)
+        mpi = M2Crypto.m2.bn_to_mpi(bn)
+        return mpi
 
     def _run_ssl(self, text, which):
         base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
