@@ -22,7 +22,6 @@ Management class for VM-related functions (spawn, reboot, etc).
 import json
 import M2Crypto
 import os
-import random
 import subprocess
 import tempfile
 import uuid
