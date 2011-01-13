@@ -197,40 +197,27 @@ class LibvirtConnection(object):
             pass
             # If the instance is already terminated, we're still happy
 
-        done = event.Event()
-
         # We'll save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
         timer = utils.LoopingCall(f=None)
 
-        def _wait_for_shutdown():
+        while True:
             try:
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.SHUTDOWN:
-                    timer.stop()
+                    break
             except Exception:
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
-                timer.stop()
+                break
 
-        timer.f = _wait_for_shutdown
-        timer_done = timer.start(interval=0.5, now=True)
+        if cleanup:
+            self._cleanup(instance)
 
-        # NOTE(termie): this is strictly superfluous (we could put the
-        #               cleanup code in the timer), but this emulates the
-        #               previous model so I am keeping it around until
-        #               everything has been vetted a bit
-        def _wait_for_timer():
-            timer_done.wait()
-            if cleanup:
-                self._cleanup(instance)
-            done.send()
-
-        greenthread.spawn(_wait_for_timer)
-        return done
+        return True
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
@@ -243,11 +230,24 @@ class LibvirtConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        xml = """<disk type='block'>
-                     <driver name='qemu' type='raw'/>
-                     <source dev='%s'/>
-                     <target dev='%s' bus='virtio'/>
-                 </disk>""" % (device_path, mount_device)
+        if device_path.startswith('/dev/'):
+            xml = """<disk type='block'>
+                         <driver name='qemu' type='raw'/>
+                         <source dev='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (device_path, mount_device)
+        elif ':' in device_path:
+            (protocol, name) = device_path.split(':')
+            xml = """<disk type='network'>
+                         <driver name='qemu' type='raw'/>
+                         <source protocol='%s' name='%s'/>
+                         <target dev='%s' bus='virtio'/>
+                     </disk>""" % (protocol,
+                                   name,
+                                   mount_device)
+        else:
+            raise exception.Invalid(_("Invalid device path %s") % device_path)
+
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):
