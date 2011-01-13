@@ -99,9 +99,11 @@ def _filter_keys(item, keys):
 
 
 def _convert_image_id_to_hash(image):
-    image_id = abs(hash(image['imageId']))
-    image['imageId'] = image_id
-    image['id'] = image_id
+    if 'imageId' in image:
+        # Convert EC2-style ID (i-blah) to Rackspace-style (int)
+        image_id = abs(hash(image['imageId']))
+        image['imageId'] = image_id
+        image['id'] = image_id
 
 
 class Controller(wsgi.Controller):
@@ -155,7 +157,7 @@ class Controller(wsgi.Controller):
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
 
-        image_meta = compute.ComputeAPI().snapshot(
+        image_meta = compute.API().snapshot(
             context, instance_id, name)
 
         return dict(image=image_meta)
