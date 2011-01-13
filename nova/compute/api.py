@@ -261,8 +261,8 @@ class API(base.Base):
         given parameters. If there is no filter and the context is
         an admin, it will retreive all instances in the system."""
         if reservation_id is not None:
-            rv = self.db.instance_get_all_by_reservation(context,
-                                                         reservation_id)
+            return self.db.instance_get_all_by_reservation(context,
+                                                             reservation_id)
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)
         if project_id or not context.is_admin:
