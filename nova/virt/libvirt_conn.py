@@ -1065,7 +1065,7 @@ class IptablesFirewallDriver(FirewallDriver):
         if instance['id'] in self.instances:
             del self.instances[instance['id']]
         else:
-            LOG.info(_('Attempted to untiler instance %s which is not '
+            LOG.info(_('Attempted to unfilter instance %s which is not '
                        'filtered'), instance['id'])
 
     def add_instance(self, instance):
