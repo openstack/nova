@@ -1141,7 +1141,7 @@ class IptablesFirewallDriver(FirewallDriver):
             self.execute('sudo ip6tables-restore',
                          process_input='\n'.join(new_filter))
 
-    def modify_rules(self, current_lines, ip_version):
+    def modify_rules(self, current_lines, ip_version=4):
         ctxt = context.get_admin_context()
         # Remove any trace of nova rules.
         new_filter = filter(lambda l: 'nova-' not in l, current_lines)
