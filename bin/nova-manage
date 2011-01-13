@@ -77,12 +77,14 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 
 
+logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
@@ -332,6 +334,11 @@ class ProjectCommands(object):
         """Creates a new project
         arguments: name project_manager [description]"""
         self.manager.create_project(name, project_manager, description)
+
+    def modify(self, name, project_manager, description=None):
+        """Modifies a project
+        arguments: name project_manager [description]"""
+        self.manager.modify_project(name, project_manager, description)
 
     def delete(self, name):
         """Deletes an existing project

@@ -110,6 +110,8 @@ class API(base.Base):
                 ramdisk_id = None
                 LOG.debug(_("Creating a raw instance"))
             # Make sure we have access to kernel and ramdisk (if not raw)
+            logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                           (kernel_id, ramdisk_id))
             if kernel_id:
                 self.image_service.show(context, kernel_id)
             if ramdisk_id:
@@ -173,7 +175,8 @@ class API(base.Base):
 
             # Set sane defaults if not specified
             updates = dict(hostname=self.hostname_factory(instance_id))
-            if 'display_name' not in instance:
+            if (not hasattr(instance, 'display_name') or
+                    instance.display_name == None):
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)
@@ -185,7 +188,11 @@ class API(base.Base):
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id}})
+                               "instance_id": instance_id,
+                               "availability_zone": availability_zone}})
+
+        for group_id in security_groups:
+            self.trigger_security_group_members_refresh(elevated, group_id)
 
         return [dict(x.iteritems()) for x in instances]
 
@@ -205,6 +212,60 @@ class API(base.Base):
                       'user_id': context.user_id,
                       'project_id': context.project_id}
             db.security_group_create(context, values)
+
+    def trigger_security_group_rules_refresh(self, context, security_group_id):
+        """Called when a rule is added to or removed from a security_group"""
+
+        security_group = self.db.security_group_get(context, security_group_id)
+
+        hosts = set()
+        for instance in security_group['instances']:
+            if instance['host'] is not None:
+                hosts.add(instance['host'])
+
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_rules",
+                      "args": {"security_group_id": security_group.id}})
+
+    def trigger_security_group_members_refresh(self, context, group_id):
+        """Called when a security group gains a new or loses a member
+
+        Sends an update request to each compute node for whom this is
+        relevant."""
+
+        # First, we get the security group rules that reference this group as
+        # the grantee..
+        security_group_rules = \
+                self.db.security_group_rule_get_by_security_group_grantee(
+                                                                     context,
+                                                                     group_id)
+
+        # ..then we distill the security groups to which they belong..
+        security_groups = set()
+        for rule in security_group_rules:
+            security_groups.add(rule['parent_group_id'])
+
+        # ..then we find the instances that are members of these groups..
+        instances = set()
+        for security_group in security_groups:
+            for instance in security_group['instances']:
+                instances.add(instance['id'])
+
+        # ...then we find the hosts where they live...
+        hosts = set()
+        for instance in instances:
+            if instance['host']:
+                hosts.add(instance['host'])
+
+        # ...and finally we tell these nodes to refresh their view of this
+        # particular security group.
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_members",
+                      "args": {"security_group_id": group_id}})
 
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
@@ -358,7 +419,26 @@ class API(base.Base):
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
-                  "args": {"instance_id": instance_id}})
+                  "args": {"instance_id": instance['id']}})
+
+    def get_ajax_console(self, context, instance_id):
+        """Get a url to an AJAX Console"""
+
+        instance = self.get(context, instance_id)
+
+        output = rpc.call(context,
+                          '%s.%s' % (FLAGS.compute_topic,
+                                     instance['host']),
+                          {'method': 'get_ajax_console',
+                           'args': {'instance_id': instance['id']}})
+
+        rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
+                 {'method': 'authorize_ajax_console',
+                  'args': {'token': output['token'], 'host': output['host'],
+                  'port': output['port']}})
+
+        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+                output['token'])}
 
     def lock(self, context, instance_id):
         """

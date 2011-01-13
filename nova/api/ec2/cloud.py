@@ -25,7 +25,6 @@ datastore.
 import base64
 import datetime
 import IPy
-import re
 import os
 
 from nova import compute
@@ -35,7 +34,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import network
 from nova import rpc
 from nova import utils
@@ -44,6 +42,7 @@ from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
+flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
@@ -145,6 +144,12 @@ class CloudController(object):
                      {"method": "refresh_security_group",
                       "args": {"security_group_id": security_group.id}})
 
+    def _get_availability_zone_by_host(self, context, host):
+        services = db.service_get_all_by_host(context, host)
+        if len(services) > 0:
+            return services[0]['availability_zone']
+        return 'unknown zone'
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -157,6 +162,8 @@ class CloudController(object):
         else:
             keys = ''
         hostname = instance_ref['hostname']
+        host = instance_ref['host']
+        availability_zone = self._get_availability_zone_by_host(ctxt, host)
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = id_to_ec2_id(instance_ref['id'])
@@ -179,8 +186,7 @@ class CloudController(object):
                 'local-hostname': hostname,
                 'local-ipv4': address,
                 'kernel-id': instance_ref['kernel_id'],
-                # TODO(vish): real zone
-                'placement': {'availability-zone': 'nova'},
+                'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
@@ -204,15 +210,33 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        return {'availabilityZoneInfo': [{'zoneName': 'nova',
-                                          'zoneState': 'available'}]}
+        enabled_services = db.service_get_all(context)
+        disabled_services = db.service_get_all(context, True)
+        available_zones = []
+        for zone in [service.availability_zone for service
+                     in enabled_services]:
+            if not zone in available_zones:
+                available_zones.append(zone)
+        not_available_zones = []
+        for zone in [service.availability_zone for service in disabled_services
+                     if not service['availability_zone'] in available_zones]:
+            if not zone in not_available_zones:
+                not_available_zones.append(zone)
+        result = []
+        for zone in available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "available"})
+        for zone in not_available_zones:
+            result.append({'zoneName': zone,
+                           'zoneState': "not available"})
+        return {'availabilityZoneInfo': result}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
         rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context)
-        now = db.get_time()
+        now = datetime.datetime.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -252,6 +276,7 @@ class CloudController(object):
                                                             FLAGS.cc_host,
                                                             FLAGS.cc_port,
                                                             FLAGS.ec2_suffix)}]
+        return {'regionInfo': regions}
 
     def describe_snapshots(self,
                            context,
@@ -411,8 +436,8 @@ class CloudController(object):
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria == None:
-            raise exception.ApiError(_("No rule for the specified "
-                                       "parameters."))
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
 
         for rule in security_group.rules:
             match = True
@@ -421,7 +446,8 @@ class CloudController(object):
                     match = False
             if match:
                 db.security_group_rule_destroy(context, rule['id'])
-                self._trigger_refresh_security_group(context, security_group)
+                self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
                 return True
         raise exception.ApiError(_("No rule for the specified parameters."))
 
@@ -438,6 +464,9 @@ class CloudController(object):
                                                        group_name)
 
         values = self._revoke_rule_args_to_dict(context, **kwargs)
+        if values is None:
+            raise exception.ApiError(_("Not enough parameters to build a "
+                                       "valid rule."))
         values['parent_group_id'] = security_group.id
 
         if self._security_group_rule_exists(security_group, values):
@@ -446,7 +475,8 @@ class CloudController(object):
 
         security_group_rule = db.security_group_rule_create(context, values)
 
-        self._trigger_refresh_security_group(context, security_group)
+        self.compute_api.trigger_security_group_rules_refresh(context,
+                                                          security_group['id'])
 
         return True
 
@@ -508,6 +538,11 @@ class CloudController(object):
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
 
+    def get_ajax_console(self, context, instance_id, **kwargs):
+        ec2_id = instance_id[0]
+        internal_id = ec2_id_to_id(ec2_id)
+        return self.compute_api.get_ajax_console(context, internal_id)
+
     def describe_volumes(self, context, volume_id=None, **kwargs):
         volumes = self.volume_api.get_all(context)
         # NOTE(vish): volume_id is an optional list of volume ids to filter by.
@@ -558,7 +593,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume_ref))]}
+        return {'volumeSet': [self._format_volume(context, dict(volume))]}
 
     def delete_volume(self, context, volume_id, **kwargs):
         self.volume_api.delete(context, volume_id=volume_id)
@@ -608,19 +643,28 @@ class CloudController(object):
         return [{label: x} for x in lst]
 
     def describe_instances(self, context, **kwargs):
-        return self._format_describe_instances(context)
+        return self._format_describe_instances(context, **kwargs)
 
-    def _format_describe_instances(self, context):
-        return {'reservationSet': self._format_instances(context)}
+    def _format_describe_instances(self, context, **kwargs):
+        return {'reservationSet': self._format_instances(context, **kwargs)}
 
     def _format_run_instances(self, context, reservation_id):
         i = self._format_instances(context, reservation_id=reservation_id)
         assert len(i) == 1
         return i[0]
 
-    def _format_instances(self, context, **kwargs):
+    def _format_instances(self, context, instance_id=None, **kwargs):
+        # TODO(termie): this method is poorly named as its name does not imply
+        #               that it will be making a variety of database calls
+        #               rather than simply formatting a bunch of instances that
+        #               were handed to it
         reservations = {}
-        instances = self.compute_api.get_all(context, **kwargs)
+        # NOTE(vish): instance_id is an optional list of ids to filter by
+        if instance_id:
+            instance_id = [ec2_id_to_id(x) for x in instance_id]
+            instances = [self.compute_api.get(context, x) for x in instance_id]
+        else:
+            instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.user.is_admin():
                 if instance['image_id'] == FLAGS.vpn_image_id:
@@ -654,6 +698,9 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
+            host = instance['host']
+            zone = self._get_availability_zone_by_host(context, host)
+            i['placement'] = {'availabilityZone': zone}
             if instance['reservation_id'] not in reservations:
                 r = {}
                 r['reservationId'] = instance['reservation_id']

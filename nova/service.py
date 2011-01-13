@@ -38,7 +38,6 @@ from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
@@ -114,11 +113,13 @@ class Service(object):
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
+        zone = FLAGS.node_availability_zone
         service_ref = db.service_create(context,
                                         {'host': self.host,
                                          'binary': self.binary,
                                          'topic': self.topic,
-                                         'report_count': 0})
+                                         'report_count': 0,
+                                         'availability_zone': zone})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
@@ -209,6 +210,10 @@ class Service(object):
                 logging.exception(_("model server went away"))
 
                 try:
+                    # NOTE(vish): This is late-loaded to make sure that the
+                    #             database is not created before flags have
+                    #             been loaded.
+                    from nova.db.sqlalchemy import models
                     models.register_models()
                 except OperationalError:
                     logging.exception(_("Data store %s is unreachable."
