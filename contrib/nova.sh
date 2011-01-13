@@ -89,6 +89,9 @@ if [ "$CMD" == "install" ]; then
 #For IPV6
     sudo apt-get install -y python-netaddr 
     sudo apt-get install -y radvd
+#(Nati) Note that this configuration is only needed for nova-network node.
+    sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
+    sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
     
     if [ "$USE_MYSQL" == 1 ]; then
         cat <<MYSQL_PRESEED | debconf-set-selections

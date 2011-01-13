@@ -124,11 +124,6 @@ def init_host():
                   (FLAGS.fixed_range, FLAGS.dmz_cidr))
     _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
                   {'range': FLAGS.fixed_range})
-    if(FLAGS.use_ipv6):
-        _execute('sudo bash -c ' +
-                 '"echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"')
-        _execute('sudo bash -c ' +
-                 '"echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"')
 
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
