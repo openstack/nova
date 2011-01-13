@@ -92,4 +92,4 @@ class GlanceImageService(service.BaseImageService):
         """
         Clears out all images
         """
-        pass #raise NotImplementedError
+        pass
