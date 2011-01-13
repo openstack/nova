@@ -24,8 +24,6 @@ import gettext
 import os
 import sys
 
-from paste import deploy
-
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -42,57 +40,47 @@ from nova import wsgi
 
 logging.basicConfig()
 LOG = logging.getLogger('nova.api')
+LOG.setLevel(logging.DEBUG)
 
 FLAGS = flags.FLAGS
 
 API_ENDPOINTS = ['ec2', 'osapi']
 
 
-def load_configuration(paste_config, name):
-    """Load the paste configuration from the config file and return it."""
-    config = None
-    try:
-        config = deploy.appconfig("config:%s" % paste_config, name=name)
-        return config
-    except LookupError:
-        return None
-
-
 def run_app(paste_config_file):
-    LOG.debug(_("Using paste.deploy config at: %s"), configfile)
-    server = wsgi.Server()
+    LOG.debug(_("Using paste.deploy config at: %s"), paste_config_file)
     apps = []
     for api in API_ENDPOINTS:
-        config = load_configuration(paste_config_file, api)
+        config = wsgi.load_paste_configuration(paste_config_file, api)
         if config is None:
+            LOG.debug(_("No paste configuration for app: %s"), api)
             continue
-        if int(config.get('verbose', 0)) == 1:
-            FLAGS.verbose = True
-        host = config.get("%s_host" % api, config.get('host', '0.0.0.0'))
-        port = config.get("%s_port" % api, getattr(FLAGS, "%s_port" % api))
-        setattr(FLAGS, "%s_host" % api, host)
-        setattr(FLAGS, "%s_port" % api, port)
+        LOG.debug(_("App Config: %s\n%r"), api, config)
+        wsgi.paste_config_to_flags(config, {
+            "verbose": FLAGS.verbose,
+            "%s_host" % api: config.get('host', '0.0.0.0'),
+            "%s_port" % api: getattr(FLAGS, "%s_port" % api)})
         LOG.info(_("Running %s API"), api)
-        app = deploy.loadapp('config:%s' % paste_config_file, name=api)
-        apps.append((app, int(port), host))
+        app = wsgi.load_paste_app(paste_config_file, api)
+        apps.append((app, getattr(FLAGS, "%s_port" % api),
+                     getattr(FLAGS, "%s_host" % api)))
     if len(apps) == 0:
         LOG.error(_("No known API applications configured in %s."),
                   paste_config_file)
-    else:
-        for app in apps:
-            server.start(*app)
-        server.wait()
+        return
+
+    # NOTE(todd): redo logging config, verbose could be set in paste config
+    logging.basicConfig()
+    server = wsgi.Server()
+    for app in apps:
+        server.start(*app)
+    server.wait()
 
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
-    configfiles = ['/etc/nova/nova-api.conf']
-    if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-        configfiles.insert(0,
-                       os.path.join(possible_topdir, 'etc', 'nova-api.conf'))
-    for configfile in configfiles:
-        if os.path.exists(configfile):
-            run_app(configfile)
-            break
-        else:
-            LOG.debug(_("Skipping missing configuration: %s"), configfile)
+    conf = wsgi.paste_config_file('nova-api.conf')
+    if conf:
+        run_app(conf)
+    else:
+        LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')
