@@ -125,7 +125,7 @@ class ComputeManager(manager.Manager):
         # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         try:
-            info = self.driver.get_info(instance_ref)
+            info = self.driver.get_info(instance_ref['name'])
             state = info['state']
         except exception.NotFound:
             state = power_state.NOSTATE

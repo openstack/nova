@@ -265,10 +265,6 @@ class XenAPIVMTestCase(test.TestCase):
         return instance
 
 
-
-
-
-
 class XenAPIDiffieHellmanTestCase(test.TestCase):
     """
     Unit tests for Diffie-Hellman code
