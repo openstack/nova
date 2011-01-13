@@ -226,6 +226,8 @@ class LibvirtConnection(object):
                                       power_state.SHUTDOWN)
                 break
 
+        self.firewall_driver.unfilter_instance(instance)
+
         if cleanup:
             self._cleanup(instance)
 
@@ -1011,6 +1013,10 @@ class FirewallDriver(object):
         At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
+    def unfilter_instance(self, instance):
+        """Stop filtering instance"""
+        raise NotImplementedError()
+
     def apply_instance_filter(self, instance):
         """Apply instance filter.
 
@@ -1200,6 +1206,10 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
+    def unfilter_instance(self, instance):
+        # Nothing to do
+        pass
+
     def prepare_instance_filter(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
@@ -1281,17 +1291,25 @@ class NWFilterFirewall(FirewallDriver):
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None):
         self.execute = execute or utils.execute
-        self.instances = set()
+        self.instances = {}
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
     def remove_instance(self, instance):
-        self.instances.remove(instance)
+        if instance['id'] in self.instances:
+            del self.instances[instance['id']]
+        else:
+            LOG.info(_('Attempted to unfilter instance %s which is not '
+                       'filtered'), instance['id'])
 
     def add_instance(self, instance):
-        self.instances.add(instance)
+        self.instances[instance['id']] = instance
+
+    def unfilter_instance(self, instance):
+        self.remove_instance(instance)
+        self.apply_ruleset()
 
     def prepare_instance_filter(self, instance):
         self.add_instance(instance)
@@ -1324,10 +1342,11 @@ class IptablesFirewallDriver(FirewallDriver):
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
 
-        security_groups = set()
+        security_groups = {}
         # Add our chains
         # First, we add instance chains and rules
-        for instance in self.instances:
+        for instance_id in self.instances:
+            instance = self.instances[instance_id]
             chain_name = self._instance_chain_name(instance)
             ip_address = self._ip_for_instance(instance)
 
@@ -1349,9 +1368,10 @@ class IptablesFirewallDriver(FirewallDriver):
             for security_group in \
                             db.security_group_get_by_instance(ctxt,
                                                               instance['id']):
-                security_groups.add(security_group)
+                security_groups[security_group['id']] = security_group
 
-                sg_chain_name = self._security_group_chain_name(security_group)
+                sg_chain_name = self._security_group_chain_name(
+                                                          security_group['id'])
 
                 our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
 
@@ -1364,13 +1384,13 @@ class IptablesFirewallDriver(FirewallDriver):
             our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
 
         # then, security group chains and rules
-        for security_group in security_groups:
-            chain_name = self._security_group_chain_name(security_group)
+        for security_group_id in security_groups:
+            chain_name = self._security_group_chain_name(security_group_id)
             our_chains += [':%s - [0:0]' % chain_name]
 
             rules = \
               db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group['id'])
+                                                          security_group_id)
 
             for rule in rules:
                 logging.info('%r', rule)
@@ -1418,8 +1438,8 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_rules(self, security_group):
         self.apply_ruleset()
 
-    def _security_group_chain_name(self, security_group):
-        return 'nova-sg-%s' % (security_group['id'],)
+    def _security_group_chain_name(self, security_group_id):
+        return 'nova-sg-%s' % (security_group_id,)
 
     def _instance_chain_name(self, instance):
         return 'nova-inst-%s' % (instance['id'],)
