@@ -23,7 +23,6 @@
 
 import gettext
 import os
-import logging
 import sys
 from twisted.application import service
 
@@ -37,11 +36,15 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import log as logging
 from nova import utils
 from nova import twistd
 from nova.compute import monitor
 
+# TODO(todd): shouldn't this be done with flags?  And what about verbose?
 logging.getLogger('boto').setLevel(logging.WARN)
+
+LOG = logging.getLogger('nova.instancemonitor')
 
 
 if __name__ == '__main__':
@@ -49,7 +52,7 @@ if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    logging.warn('Starting instance monitor')
+    LOG.warn(_('Starting instance monitor'))
     # pylint: disable-msg=C0103
     monitor = monitor.InstanceMonitor()
 

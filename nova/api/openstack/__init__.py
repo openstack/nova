@@ -20,30 +20,24 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-import json
-import time
-
-import logging
 import routes
-import traceback
 import webob.dec
 import webob.exc
 import webob
 
-from nova import context
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import flavors
 from nova.api.openstack import images
-from nova.api.openstack import ratelimiting
 from nova.api.openstack import servers
 from nova.api.openstack import sharedipgroups
-from nova.auth import manager
 
 
+LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
 flags.DEFINE_string('os_api_auth',
     'nova.api.openstack.auth.AuthMiddleware',
@@ -73,8 +67,7 @@ class API(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            logging.warn(_("Caught error: %s") % str(ex))
-            logging.error(traceback.format_exc())
+            LOG.exception(_("Caught error: %s"), str(ex))
             exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
             return faults.Fault(exc)
 
@@ -90,7 +83,7 @@ class APIRouter(wsgi.Router):
 
         server_members = {'action': 'POST'}
         if FLAGS.allow_admin_api:
-            logging.debug("Including admin operations in API.")
+            LOG.debug(_("Including admin operations in API."))
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
             server_members["diagnostics"] = "GET"
@@ -115,3 +108,24 @@ class APIRouter(wsgi.Router):
                         controller=sharedipgroups.Controller())
 
         super(APIRouter, self).__init__(mapper)
+
+
+class Versions(wsgi.Application):
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Respond to a request for all OpenStack API versions."""
+        response = {
+                "versions": [
+                    dict(status="CURRENT", id="v1.0")]}
+        metadata = {
+            "application/xml": {
+                "attributes": dict(version=["status", "id"])}}
+        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+
+def router_factory(global_cof, **local_conf):
+    return APIRouter()
+
+
+def versions_factory(global_conf, **local_conf):
+    return Versions()

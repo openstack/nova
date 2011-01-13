@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,15 +20,15 @@ A connection to XenServer or Xen Cloud Platform.
 
 The concurrency model for this class is as follows:
 
-All XenAPI calls are on a thread (using t.i.t.deferToThread, via the decorator
-deferredToThread).  They are remote calls, and so may hang for the usual
-reasons.  They should not be allowed to block the reactor thread.
+All XenAPI calls are on a green thread (using eventlet's "tpool"
+thread pool). They are remote calls, and so may hang for the usual
+reasons.
 
 All long-running XenAPI calls (VM.start, VM.reboot, etc) are called async
-(using XenAPI.VM.async_start etc).  These return a task, which can then be
-polled for completion.  Polling is handled using reactor.callLater.
+(using XenAPI.VM.async_start etc). These return a task, which can then be
+polled for completion.
 
-This combination of techniques means that we don't block the reactor thread at
+This combination of techniques means that we don't block the main thread at
 all, and at the same time we don't hold lots of threads waiting for
 long-running operations.
 
@@ -50,7 +51,6 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
 """
 
-import logging
 import sys
 import xmlrpclib
 
@@ -61,8 +61,13 @@ from nova import context
 from nova import db
 from nova import utils
 from nova import flags
+from nova import log as logging
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
+
+
+LOG = logging.getLogger("nova.virt.xenapi")
+
 
 FLAGS = flags.FLAGS
 
@@ -81,7 +86,7 @@ flags.DEFINE_string('xenapi_connection_password',
 flags.DEFINE_float('xenapi_task_poll_interval',
                    0.5,
                    'The interval used for polling of remote tasks '
-                   '(Async.VM.start, etc).  Used only if '
+                   '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
@@ -193,6 +198,7 @@ class XenAPISession(object):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)
         self._session.login_with_password(user, pw)
+        self.loop = None
 
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
@@ -213,6 +219,14 @@ class XenAPISession(object):
             f = f.__getattr__(m)
         return tpool.execute(f, *args)
 
+    def call_xenapi_request(self, method, *args):
+        """Some interactions with dom0, such as interacting with xenstore's
+        param record, require using the xenapi_request method of the session
+        object. This wraps that call on a background thread.
+        """
+        f = self._session.xenapi_request
+        return tpool.execute(f, method, *args)
+
     def async_call_plugin(self, plugin, fn, args):
         """Call Async.host.call_plugin on a background thread."""
         return tpool.execute(self._unwrap_plugin_exceptions,
@@ -221,21 +235,26 @@ class XenAPISession(object):
 
     def wait_for_task(self, id, task):
         """Return the result of the given task. The task is polled
-        until it completes."""
-
+        until it completes. Not re-entrant."""
         done = event.Event()
-        loop = utils.LoopingCall(self._poll_task, id, task, done)
-        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
+        self.loop = utils.LoopingCall(self._poll_task, id, task, done)
+        self.loop.start(FLAGS.xenapi_task_poll_interval, now=True)
         rv = done.wait()
-        loop.stop()
+        self.loop.stop()
         return rv
+
+    def _stop_loop(self):
+        """Stop polling for task to finish."""
+        #NOTE(sandy-walsh) Had to break this call out to support unit tests.
+        if self.loop:
+            self.loop.stop()
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
         return self.XenAPI.Session(url)
 
     def _poll_task(self, id, task, done):
-        """Poll the given XenAPI task, and fire the given Deferred if we
+        """Poll the given XenAPI task, and fire the given action if we
         get a result."""
         try:
             name = self._session.xenapi.task.get_name_label(task)
@@ -248,7 +267,7 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                logging.info(_("Task [%s] %s status: success    %s") % (
+                LOG.info(_("Task [%s] %s status: success    %s") % (
                     name,
                     task,
                     result))
@@ -256,7 +275,7 @@ class XenAPISession(object):
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                logging.warn(_("Task [%s] %s status: %s    %s") % (
+                LOG.warn(_("Task [%s] %s status: %s    %s") % (
                     name,
                     task,
                     status,
@@ -264,15 +283,16 @@ class XenAPISession(object):
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:
-            logging.warn(exc)
+            LOG.warn(exc)
             done.send_exception(*sys.exc_info())
+        self._stop_loop()
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details"""
         try:
             return func(*args, **kwargs)
         except self.XenAPI.Failure, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             if (len(exc.details) == 4 and
                 exc.details[0] == 'XENAPI_PLUGIN_EXCEPTION' and
                 exc.details[2] == 'Failure'):
@@ -285,12 +305,12 @@ class XenAPISession(object):
             else:
                 raise
         except xmlrpclib.ProtocolError, exc:
-            logging.debug(_("Got exception: %s"), exc)
+            LOG.debug(_("Got exception: %s"), exc)
             raise
 
 
 def _parse_xmlrpc_value(val):
-    """Parse the given value as if it were an XML-RPC value.  This is
+    """Parse the given value as if it were an XML-RPC value. This is
     sometimes used as the format for the task.result field."""
     if not val:
         return val

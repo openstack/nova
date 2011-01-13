@@ -283,9 +283,14 @@ class NovaManageTestFunctions(unittest.TestCase):
         db.host_get_by_name = Mock(return_value = self.host1)
         db.instance_get_by_internal_id = Mock( return_value = self.instance3 )
         rpc.call = Mock(return_value = rpc.RemoteError(TypeError, 'val', 'traceback'))
-        self.assertRaises(rpc.RemoteError, self.instanceCmds.live_migration, 'i-xxx', 'host2' )
-
-
+        try : 
+            self.instanceCmds.live_migration('i-xxx', 'host2')
+        except exception.Error, e: 
+            c1 = ( 0 < e.message.find('traceback'))
+            self.assertTrue(c1, True)
+            return True
+        return False
+             
     def test14(self):
         """14: nova-manage instances live_migration ec2_id host, 
            everything goes well, ang gets success messages.
@@ -295,7 +300,7 @@ class NovaManageTestFunctions(unittest.TestCase):
         rpc.call = Mock(return_value = None)
 
         self.instanceCmds.live_migration('i-12345', 'host2')
-        c1 = (0 <= self.stdout.buffer.find('Finished all procedure') )
+        c1 = (0 <= self.stdout.buffer.find('Check its progress using euca-describe-instances') )
         self.assertEqual( c1, True )
 
 

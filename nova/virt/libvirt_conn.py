@@ -36,10 +36,10 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
-import logging
 import os
 import shutil
 import re
+import time
 
 from eventlet import greenthread
 from eventlet import event
@@ -51,6 +51,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
@@ -63,6 +64,7 @@ libvirt = None
 libxml2 = None
 Template = None
 
+LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
 # TODO(vish): These flags should probably go into a shared location
@@ -86,9 +88,19 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_string('live_migration_uri',
                   "qemu+tcp://%s/system",
                   'Define protocol used by live_migration feature')
+flags.DEFINE_string('live_migration_flag',
+                  "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
+                  'Define live migration behavior.')
+flags.DEFINE_integer('live_migration_bandwidth', 0, 
+                  'Define live migration behavior')
+flags.DEFINE_string('live_migration_timeout_sec', 10,
+                    'Timeout second for pre_live_migration is completed.')
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_string('firewall_driver',
+                    'nova.virt.libvirt_conn.IptablesFirewallDriver',
+                    'Firewall driver (defaults to iptables)')
 
 
 def get_connection(read_only):
@@ -128,16 +140,24 @@ class LibvirtConnection(object):
         self._wrapped_conn = None
         self.read_only = read_only
 
-    def init_host(self):
-        NWFilterFirewall(self._conn).setup_base_nwfilters()
+        self.nwfilter = NWFilterFirewall(self._get_connection)
 
-    @property
-    def _conn(self):
+        if not FLAGS.firewall_driver:
+            self.firewall_driver = self.nwfilter
+            self.nwfilter.handle_security_groups = True
+        else:
+            self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
+
+    def init_host(self):
+        pass
+
+    def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
-            logging.debug(_('Connecting to libvirt: %s') % self.libvirt_uri)
+            LOG.debug(_('Connecting to libvirt: %s'), self.libvirt_uri)
             self._wrapped_conn = self._connect(self.libvirt_uri,
                                                self.read_only)
         return self._wrapped_conn
+    _conn = property(_get_connection)
 
     def _test_connection(self):
         try:
@@ -146,7 +166,7 @@ class LibvirtConnection(object):
         except libvirt.libvirtError as e:
             if e.get_error_code() == libvirt.VIR_ERR_SYSTEM_ERROR and \
                e.get_error_domain() == libvirt.VIR_FROM_REMOTE:
-                logging.debug(_('Connection to libvirt broke'))
+                LOG.debug(_('Connection to libvirt broke'))
                 return False
             raise
 
@@ -218,8 +238,8 @@ class LibvirtConnection(object):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        logging.info(_('instance %s: deleting instance files %s'),
-            instance['name'], target)
+        LOG.info(_('instance %s: deleting instance files %s'),
+                 instance['name'], target)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -283,10 +303,10 @@ class LibvirtConnection(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug(_('instance %s: rebooted'), instance['name'])
+                    LOG.debug(_('instance %s: rebooted'), instance['name'])
                     timer.stop()
             except Exception, exn:
-                logging.error(_('_wait_for_reboot failed: %s'), exn)
+                LOG.exception(_('_wait_for_reboot failed: %s'), exn)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -329,10 +349,10 @@ class LibvirtConnection(object):
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(None, instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug(_('instance %s: rescued'), instance['name'])
+                    LOG.debug(_('instance %s: rescued'), instance['name'])
                     timer.stop()
             except Exception, exn:
-                logging.error(_('_wait_for_rescue failed: %s'), exn)
+                LOG.exception(_('_wait_for_rescue failed: %s'), exn)
                 db.instance_set_state(None,
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -354,10 +374,13 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        NWFilterFirewall(self._conn).setup_nwfilters_for_instance(instance)
+
+        self.nwfilter.setup_basic_filtering(instance)
+        self.firewall_driver.prepare_instance_filter(instance)
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
-        logging.debug(_("instance %s: is running"), instance['name'])
+        LOG.debug(_("instance %s: is running"), instance['name'])
+        self.firewall_driver.apply_instance_filter(instance)
 
         timer = utils.LoopingCall(f=None)
 
@@ -367,11 +390,11 @@ class LibvirtConnection(object):
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    logging.debug(_('instance %s: booted'), instance['name'])
+                    LOG.debug(_('instance %s: booted'), instance['name'])
                     timer.stop()
             except:
-                logging.exception(_('instance %s: failed to boot'),
-                                  instance['name'])
+                LOG.exception(_('instance %s: failed to boot'),
+                              instance['name'])
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -381,11 +404,11 @@ class LibvirtConnection(object):
         return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):
-        logging.info('virsh said: %r' % (virsh_output,))
+        LOG.info(_('virsh said: %r'), virsh_output)
         virsh_output = virsh_output[0].strip()
 
         if virsh_output.startswith('/dev/'):
-            logging.info(_('cool, it\'s a device'))
+            LOG.info(_('cool, it\'s a device'))
             out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
                                      virsh_output, check_exit_code=False)
             return out
@@ -393,7 +416,7 @@ class LibvirtConnection(object):
             return ''
 
     def _append_to_file(self, data, fpath):
-        logging.info(_('data: %r, fpath: %r') % (data, fpath))
+        LOG.info(_('data: %r, fpath: %r'), data, fpath)
         fp = open(fpath, 'a+')
         fp.write(data)
         return fpath
@@ -401,7 +424,7 @@ class LibvirtConnection(object):
     def _dump_file(self, fpath):
         fp = open(fpath, 'r+')
         contents = fp.read()
-        logging.info('Contents: %r' % (contents,))
+        LOG.info(_('Contents of file %s: %r'), fpath, contents)
         return contents
 
     @exception.wrap_exception
@@ -435,7 +458,7 @@ class LibvirtConnection(object):
 
         # TODO(termie): these are blocking calls, it would be great
         #               if they weren't.
-        logging.info(_('instance %s: Creating image'), inst['name'])
+        LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
@@ -491,10 +514,10 @@ class LibvirtConnection(object):
                                   'dns': network_ref['dns']}
         if key or net:
             if key:
-                logging.info(_('instance %s: injecting key into image %s'),
+                LOG.info(_('instance %s: injecting key into image %s'),
                     inst['name'], inst.image_id)
             if net:
-                logging.info(_('instance %s: injecting net into image %s'),
+                LOG.info(_('instance %s: injecting net into image %s'),
                              inst['name'], inst.image_id)
             try:
                 disk.inject_data(basepath('disk-raw'), key, net,
@@ -502,9 +525,9 @@ class LibvirtConnection(object):
                                  execute=execute)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
-                logging.warn(_('instance %s: ignoring error injecting data'
-                               ' into image %s (%s)'),
-                             inst['name'], inst.image_id, e)
+                LOG.warn(_('instance %s: ignoring error injecting data'
+                           ' into image %s (%s)'),
+                         inst['name'], inst.image_id, e)
 
         if inst['kernel_id']:
             if os.path.exists(basepath('disk')):
@@ -530,8 +553,10 @@ class LibvirtConnection(object):
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
-        logging.debug(_('instance %s: starting toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        network = db.project_get_network(context.get_admin_context(),
+                                         instance['project_id'])
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         # FIXME(vish): stick this in db
@@ -573,7 +598,7 @@ class LibvirtConnection(object):
             xml_info['disk'] = xml_info['basepath'] + "/disk"
 
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        logging.debug(_('instance %s: finished toXML method'),
+        LOG.debug(_('instance %s: finished toXML method'),
                         instance['name'])
 
         return xml
@@ -682,6 +707,18 @@ class LibvirtConnection(object):
         """ Get vcpu number of physical computer.  """
         return self._conn.getMaxVcpus(None)
 
+    def get_memory_mb(self):
+        """Get the memory size of physical computer ."""
+        meminfo = open('/proc/meminfo').read().split()
+        idx = meminfo.index('MemTotal:')
+        # transforming kb to mb.
+        return int(meminfo[idx + 1]) / 1024
+
+    def get_local_gb(self):
+        """Get the hdd size of physical computer ."""
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
     def get_hypervisor_type(self):
         """ Get hypervisor type """
         return self._conn.getType()
@@ -695,7 +732,7 @@ class LibvirtConnection(object):
         xmlstr = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xmlstr)
         nodes = xml.xpathEval('//cpu')
-        if 1 != len(nodes):
+        if len(nodes) != 1:
             msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' \
                     % len(nodes)
             msg += '\n' + xml.serialize()
@@ -719,24 +756,14 @@ class LibvirtConnection(object):
         domain = self._conn.lookupByName(instance_name)
         return domain.interfaceStats(interface)
 
-    def refresh_security_group(self, security_group_id):
-        fw = NWFilterFirewall(self._conn)
-        fw.ensure_security_group_filter(security_group_id)
+    def refresh_security_group_rules(self, security_group_id):
+        self.firewall_driver.refresh_security_group_rules(security_group_id)
 
-    def setup_nwfilters_for_instance(self, instance):
-        """ See same method of NWFilterFirewall class """
-        nwfilter = NWFilterFirewall(self._conn)
-        return nwfilter.setup_nwfilters_for_instance(instance)
+    def refresh_security_group_members(self, security_group_id):
+        self.firewall_driver.refresh_security_group_members(security_group_id)
 
-    def nwfilter_for_instance_exists(self, instance_ref):
-        try:
-            filter = 'nova-instance-%s' % instance_ref.name
-            self._conn.nwfilterLookupByName(filter)
-            return True
-        except libvirt.libvirtError:
-            return False
 
-    def compareCPU(self, xml):
+    def compare_cpu(self, xml):
         """
            Check the host cpu is compatible to a cpu given by xml.
            "xml" must be a part of libvirt.openReadonly().getCapabilities().
@@ -745,8 +772,59 @@ class LibvirtConnection(object):
 
            'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
         """
-        return self._conn.compareCPU(xml, 0)
+        
+        ret = self._conn.compareCPU(xml, 0)
+        if ret <= 0 : 
+            url = 'http://libvirt.org/html/libvirt-libvirt.html'
+            url += '#virCPUCompareResult\n'
+            msg = 'CPU does not have compativility.\n'
+            msg += 'result:%d \n'
+            msg += 'Refer to %s'
+            msg = _(msg)
+            raise exception.Invalid(msg % (ret, url))
+        return 
 
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """ Setting up inevitable filtering rules on compute node, 
+            and waiting for its completion. 
+            To migrate an instance, filtering rules to hypervisors
+            and firewalls are inevitable on destination host.
+            ( Waiting only for filterling rules to hypervisor, 
+            since filtering rules to firewall rules can be set faster).
+
+            Concretely, the below method must be called.
+            - setup_basic_filtering (for nova-basic, etc.)
+            - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
+             
+            to_xml may have to be called since it defines PROJNET, PROJMASK.
+            but libvirt migrates those value through migrateToURI(), 
+            so , no need to be called.
+
+            Don't use thread for this method since migration should
+            not be started when setting-up filtering rules operations
+            are not completed."""
+
+        # Tf any instances never launch at destination host,
+        # basic-filtering must be set here.
+        self.nwfilter.setup_basic_filtering(instance_ref)
+        # setting up n)ova-instance-instance-xx mainly.
+        self.firewall_driver.prepare_instance_filter(instance_ref)
+
+        # wait for completion
+        timeout_count = range(FLAGS.live_migration_timeout_sec * 2)
+        while len(timeout_count) != 0:
+            try:
+                filter_name = 'nova-instance-%s' % instance_ref.name
+                self._conn.nwfilterLookupByName(filter_name)
+                break
+            except libvirt.libvirtError:
+                timeout_count.pop()
+                if len(timeout_count) == 0:
+                    ec2_id = instance_ref['hostname']
+                    msg = _('Timeout migrating for %s(%s)')
+                    raise exception.Error(msg % (ec2_id, instance_ref.name))
+                time.sleep(0.5)
+                 
     def live_migration(self, context, instance_ref, dest):
         """
            Just spawning live_migration operation for
@@ -759,10 +837,24 @@ class LibvirtConnection(object):
 
         # Do live migration.
         try:
-            uri = FLAGS.live_migration_uri % dest
-            out, err = utils.execute("sudo virsh migrate --live %s %s"
-                                    % (instance_ref.name, uri))
-        except exception.ProcessExecutionError:
+            duri = FLAGS.live_migration_uri % dest
+
+            flaglist = FLAGS.live_migration_flag.split(',')
+            flagvals = [ getattr(libvirt, x.strip()) for x in flaglist ]
+            logical_sum = reduce(lambda x,y: x|y, flagvals)
+
+            bandwidth = FLAGS.live_migration_bandwidth
+            
+            if self.read_only: 
+                tmpconn = self._connect(self.libvirt_uri, False)
+                dom = tmpconn.lookupByName(instance_ref.name)
+                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+                tmpconn.close()
+            else : 
+                dom = self._conn.lookupByName(instance_ref.name)
+                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+                
+        except Exception, e: 
             id = instance_ref['id']
             db.instance_set_state(context, id, power_state.RUNNING, 'running')
             try:
@@ -772,7 +864,8 @@ class LibvirtConnection(object):
                                      {'status': 'in-use'})
             except exception.NotFound:
                 pass
-            raise exception.ProcessExecutionError
+
+            raise e
 
         # Waiting for completion of live_migration.
         timer = utils.LoopingCall(f=None)
@@ -800,7 +893,12 @@ class LibvirtConnection(object):
         #   (not necessary in current implementation?)
 
         # Releasing security group ingress rule.
-        #   (not necessary in current implementation?)
+        if FLAGS.firewall_driver == \
+            'nova.virt.libvirt_conn.IptablesFirewallDriver':
+            try : 
+                self.firewall_driver.remove_instance(instance_ref)
+            except KeyError, e:
+                pass
 
         # Database updating.
         ec2_id = instance_ref['hostname']
@@ -853,13 +951,48 @@ class LibvirtConnection(object):
                      % (ec2_id, dest))
 
 
-class NWFilterFirewall(object):
+class FirewallDriver(object):
+    def prepare_instance_filter(self, instance):
+        """Prepare filters for the instance.
+
+        At this point, the instance isn't running yet."""
+        raise NotImplementedError()
+
+    def apply_instance_filter(self, instance):
+        """Apply instance filter.
+
+        Once this method returns, the instance should be firewalled
+        appropriately. This method should as far as possible be a
+        no-op. It's vastly preferred to get everything set up in
+        prepare_instance_filter.
+        """
+        raise NotImplementedError()
+
+    def refresh_security_group_rules(self, security_group_id):
+        """Refresh security group rules from data store
+
+        Gets called when a rule has been added to or removed from
+        the security group."""
+        raise NotImplementedError()
+
+    def refresh_security_group_members(self, security_group_id):
+        """Refresh security group members from data store
+
+        Gets called when an instance gets added to or removed from
+        the security group."""
+        raise NotImplementedError()
+
+
+class NWFilterFirewall(FirewallDriver):
     """
     This class implements a network filtering mechanism versatile
     enough for EC2 style Security Group filtering by leveraging
     libvirt's nwfilter.
 
     First, all instances get a filter ("nova-base-filter") applied.
+    This filter provides some basic security such as protection against
+    MAC spoofing, IP spoofing, and ARP spoofing.
+
     This filter drops all incoming ipv4 and ipv6 connections.
     Outgoing connections are never blocked.
 
@@ -893,38 +1026,78 @@ class NWFilterFirewall(object):
 
     (*) This sentence brought to you by the redundancy department of
         redundancy.
+
     """
 
     def __init__(self, get_connection):
-        self._conn = get_connection
+        self._libvirt_get_connection = get_connection
+        self.static_filters_configured = False
+        self.handle_security_groups = False
 
-    nova_base_filter = '''<filter name='nova-base' chain='root'>
-                            <uuid>26717364-50cf-42d1-8185-29bf893ab110</uuid>
-                            <filterref filter='no-mac-spoofing'/>
-                            <filterref filter='no-ip-spoofing'/>
-                            <filterref filter='no-arp-spoofing'/>
-                            <filterref filter='allow-dhcp-server'/>
-                            <filterref filter='nova-allow-dhcp-server'/>
-                            <filterref filter='nova-base-ipv4'/>
-                            <filterref filter='nova-base-ipv6'/>
-                          </filter>'''
+    def _get_connection(self):
+        return self._libvirt_get_connection()
+    _conn = property(_get_connection)
 
-    nova_dhcp_filter = '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
-                            <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
-                              <rule action='accept' direction='out'
-                                    priority='100'>
-                                <udp srcipaddr='0.0.0.0'
-                                     dstipaddr='255.255.255.255'
-                                     srcportstart='68'
-                                     dstportstart='67'/>
-                              </rule>
-                              <rule action='accept' direction='in'
-                                    priority='100'>
-                                <udp srcipaddr='$DHCPSERVER'
-                                     srcportstart='67'
-                                     dstportstart='68'/>
-                              </rule>
-                            </filter>'''
+    def nova_dhcp_filter(self):
+        """The standard allow-dhcp-server filter is an <ip> one, so it uses
+           ebtables to allow traffic through. Without a corresponding rule in
+           iptables, it'll get blocked anyway."""
+
+        return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
+                    <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                    <rule action='accept' direction='out'
+                          priority='100'>
+                      <udp srcipaddr='0.0.0.0'
+                           dstipaddr='255.255.255.255'
+                           srcportstart='68'
+                           dstportstart='67'/>
+                    </rule>
+                    <rule action='accept' direction='in'
+                          priority='100'>
+                      <udp srcipaddr='$DHCPSERVER'
+                           srcportstart='67'
+                           dstportstart='68'/>
+                    </rule>
+                  </filter>'''
+
+    def setup_basic_filtering(self, instance):
+        """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
+        logging.info('called setup_basic_filtering in nwfilter')
+
+        if self.handle_security_groups:
+            # No point in setting up a filter set that we'll be overriding
+            # anyway.
+            return
+
+        self._ensure_static_filters()
+
+        instance_filter_name = self._instance_filter_name(instance)
+        self._define_filter(self._filter_container(instance_filter_name,
+                                                   ['nova-base']))
+
+    def _ensure_static_filters(self):
+        if self.static_filters_configured:
+            return
+
+        self._define_filter(self._filter_container('nova-base',
+                                                   ['no-mac-spoofing',
+                                                    'no-ip-spoofing',
+                                                    'no-arp-spoofing',
+                                                    'allow-dhcp-server']))
+        self._define_filter(self.nova_base_ipv4_filter)
+        self._define_filter(self.nova_base_ipv6_filter)
+        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_vpn_filter)
+        if FLAGS.allow_project_net_traffic:
+            self._define_filter(self.nova_project_filter)
+
+        self.static_filters_configured = True
+
+    def _filter_container(self, name, filters):
+        xml = '''<filter name='%s' chain='root'>%s</filter>''' % (
+                 name,
+                 ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
+        return xml
 
     nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
                            <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
@@ -938,7 +1111,7 @@ class NWFilterFirewall(object):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             for direction, action, priority in [('out', 'accept', 399),
-                                                ('inout', 'drop', 400)]:
+                                                ('in', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s />
                              </rule>""" % (action, direction,
@@ -950,7 +1123,7 @@ class NWFilterFirewall(object):
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
         for protocol in ['tcp', 'udp', 'icmp']:
             for direction, action, priority in [('out', 'accept', 399),
-                                                ('inout', 'drop', 400)]:
+                                                ('in', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
                                <%s-ipv6 />
                              </rule>""" % (action, direction,
@@ -974,43 +1147,49 @@ class NWFilterFirewall(object):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    def setup_base_nwfilters(self):
-        self._define_filter(self.nova_base_ipv4_filter)
-        self._define_filter(self.nova_base_ipv6_filter)
-        self._define_filter(self.nova_dhcp_filter)
-        self._define_filter(self.nova_base_filter)
-        self._define_filter(self.nova_vpn_filter)
-        if FLAGS.allow_project_net_traffic:
-            self._define_filter(self.nova_project_filter)
-
-    def setup_nwfilters_for_instance(self, instance):
+    def prepare_instance_filter(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
         it makes sure the filters for the security groups as well as
         the base filter are all in place.
         """
 
-        nwfilter_xml = ("<filter name='nova-instance-%s' "
-                        "chain='root'>\n") % instance['name']
-
         if instance['image_id'] == FLAGS.vpn_image_id:
-            nwfilter_xml += "  <filterref filter='nova-vpn' />\n"
+            base_filter = 'nova-vpn'
         else:
-            nwfilter_xml += "  <filterref filter='nova-base' />\n"
+            base_filter = 'nova-base'
+
+        instance_filter_name = self._instance_filter_name(instance)
+        instance_secgroup_filter_name = '%s-secgroup' % (instance_filter_name,)
+        instance_filter_children = [base_filter, instance_secgroup_filter_name]
+        instance_secgroup_filter_children = ['nova-base-ipv4',
+                                             'nova-base-ipv6',
+                                             'nova-allow-dhcp-server']
+
+        ctxt = context.get_admin_context()
 
         if FLAGS.allow_project_net_traffic:
-            nwfilter_xml += "  <filterref filter='nova-project' />\n"
+            instance_filter_children += ['nova-project']
 
-        for security_group in instance.security_groups:
-            self.ensure_security_group_filter(security_group['id'])
+        for security_group in db.security_group_get_by_instance(ctxt,
+                                                               instance['id']):
 
-            nwfilter_xml += ("  <filterref filter='nova-secgroup-%d' "
-                             "/>\n") % security_group['id']
-        nwfilter_xml += "</filter>"
+            self.refresh_security_group_rules(security_group['id'])
 
-        self._define_filter(nwfilter_xml)
+            instance_secgroup_filter_children += [('nova-secgroup-%s' %
+                                                         security_group['id'])]
 
-    def ensure_security_group_filter(self, security_group_id):
+        self._define_filter(
+                    self._filter_container(instance_secgroup_filter_name,
+                                           instance_secgroup_filter_children))
+
+        self._define_filter(
+                    self._filter_container(instance_filter_name,
+                                           instance_filter_children))
+
+        return
+
+    def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -1028,9 +1207,9 @@ class NWFilterFirewall(object):
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)
                 elif rule.protocol == 'icmp':
-                    logging.info('rule.protocol: %r, rule.from_port: %r, '
-                                 'rule.to_port: %r' %
-                                 (rule.protocol, rule.from_port, rule.to_port))
+                    LOG.info('rule.protocol: %r, rule.from_port: %r, '
+                             'rule.to_port: %r', rule.protocol,
+                             rule.from_port, rule.to_port)
                     if rule.from_port != -1:
                         rule_xml += "type='%s' " % rule.from_port
                     if rule.to_port != -1:
@@ -1041,3 +1220,162 @@ class NWFilterFirewall(object):
         xml = "<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>" % \
               (security_group_id, rule_xml,)
         return xml
+
+    def _instance_filter_name(self, instance):
+        return 'nova-instance-%s' % instance['name']
+
+
+class IptablesFirewallDriver(FirewallDriver):
+    def __init__(self, execute=None):
+        self.execute = execute or utils.execute
+        self.instances = set()
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
+
+    def remove_instance(self, instance):
+        self.instances.remove(instance)
+
+    def add_instance(self, instance):
+        self.instances.add(instance)
+
+    def prepare_instance_filter(self, instance):
+        self.add_instance(instance)
+        self.apply_ruleset()
+
+    def apply_ruleset(self):
+        current_filter, _ = self.execute('sudo iptables-save -t filter')
+        current_lines = current_filter.split('\n')
+        new_filter = self.modify_rules(current_lines)
+        self.execute('sudo iptables-restore',
+                     process_input='\n'.join(new_filter))
+
+    def modify_rules(self, current_lines):
+        ctxt = context.get_admin_context()
+        # Remove any trace of nova rules.
+        new_filter = filter(lambda l: 'nova-' not in l, current_lines)
+
+        seen_chains = False
+        for rules_index in range(len(new_filter)):
+            if not seen_chains:
+                if new_filter[rules_index].startswith(':'):
+                    seen_chains = True
+            elif seen_chains == 1:
+                if not new_filter[rules_index].startswith(':'):
+                    break
+
+        our_chains = [':nova-ipv4-fallback - [0:0]']
+        our_rules = ['-A nova-ipv4-fallback -j DROP']
+
+        our_chains += [':nova-local - [0:0]']
+        our_rules += ['-A FORWARD -j nova-local']
+
+        security_groups = set()
+        # Add our chains
+        # First, we add instance chains and rules
+        for instance in self.instances:
+            chain_name = self._instance_chain_name(instance)
+            ip_address = self._ip_for_instance(instance)
+
+            our_chains += [':%s - [0:0]' % chain_name]
+
+            # Jump to the per-instance chain
+            our_rules += ['-A nova-local -d %s -j %s' % (ip_address,
+                                                         chain_name)]
+
+            # Always drop invalid packets
+            our_rules += ['-A %s -m state --state '
+                          'INVALID -j DROP' % (chain_name,)]
+
+            # Allow established connections
+            our_rules += ['-A %s -m state --state '
+                          'ESTABLISHED,RELATED -j ACCEPT' % (chain_name,)]
+
+            # Jump to each security group chain in turn
+            for security_group in \
+                            db.security_group_get_by_instance(ctxt,
+                                                              instance['id']):
+                security_groups.add(security_group)
+
+                sg_chain_name = self._security_group_chain_name(security_group)
+
+                our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
+
+            # Allow DHCP responses
+            dhcp_server = self._dhcp_server_for_instance(instance)
+            our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
+                                                     (chain_name, dhcp_server)]
+
+            # If nothing matches, jump to the fallback chain
+            our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
+
+        # then, security group chains and rules
+        for security_group in security_groups:
+            chain_name = self._security_group_chain_name(security_group)
+            our_chains += [':%s - [0:0]' % chain_name]
+
+            rules = \
+              db.security_group_rule_get_by_security_group(ctxt,
+                                                          security_group['id'])
+
+            for rule in rules:
+                logging.info('%r', rule)
+                args = ['-A', chain_name, '-p', rule.protocol]
+
+                if rule.cidr:
+                    args += ['-s', rule.cidr]
+                else:
+                    # Eventually, a mechanism to grant access for security
+                    # groups will turn up here. It'll use ipsets.
+                    continue
+
+                if rule.protocol in ['udp', 'tcp']:
+                    if rule.from_port == rule.to_port:
+                        args += ['--dport', '%s' % (rule.from_port,)]
+                    else:
+                        args += ['-m', 'multiport',
+                                 '--dports', '%s:%s' % (rule.from_port,
+                                                        rule.to_port)]
+                elif rule.protocol == 'icmp':
+                    icmp_type = rule.from_port
+                    icmp_code = rule.to_port
+
+                    if icmp_type == '-1':
+                        icmp_type_arg = None
+                    else:
+                        icmp_type_arg = '%s' % icmp_type
+                        if not icmp_code == '-1':
+                            icmp_type_arg += '/%s' % icmp_code
+
+                    if icmp_type_arg:
+                        args += ['-m', 'icmp', '--icmp_type', icmp_type_arg]
+
+                args += ['-j ACCEPT']
+                our_rules += [' '.join(args)]
+
+        new_filter[rules_index:rules_index] = our_rules
+        new_filter[rules_index:rules_index] = our_chains
+        logging.info('new_filter: %s', '\n'.join(new_filter))
+        return new_filter
+
+    def refresh_security_group_members(self, security_group):
+        pass
+
+    def refresh_security_group_rules(self, security_group):
+        self.apply_ruleset()
+
+    def _security_group_chain_name(self, security_group):
+        return 'nova-sg-%s' % (security_group['id'],)
+
+    def _instance_chain_name(self, instance):
+        return 'nova-inst-%s' % (instance['id'],)
+
+    def _ip_for_instance(self, instance):
+        return db.instance_get_fixed_address(context.get_admin_context(),
+                                             instance['id'])
+
+    def _dhcp_server_for_instance(self, instance):
+        network = db.project_get_network(context.get_admin_context(),
+                                         instance['project_id'])
+        return network['gateway']

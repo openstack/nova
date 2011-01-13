@@ -22,13 +22,12 @@ Scheduler base class that all Schedulers should inherit from
 """
 
 import datetime
-import logging
 
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import rpc
-from nova.api.ec2 import cloud
 from nova.compute import power_state
 
 FLAGS = flags.FLAGS
@@ -38,6 +37,11 @@ flags.DEFINE_integer('service_down_time', 60,
 
 class NoValidHost(exception.Error):
     """There is no valid host for the command."""
+    pass
+
+
+class WillNotSchedule(exception.Error):
+    """The specified host is not up or doesn't exist."""
     pass
 
 
@@ -68,16 +72,8 @@ class Scheduler(object):
         """ live migration method """
 
         # Whether instance exists and running
-        # try-catch clause is necessary because only internal_id is shown
-        # when NotFound exception occurs. it isnot understandable to admins.
-        try:
-            instance_ref = db.instance_get(context, instance_id)
-            ec2_id = instance_ref['hostname']
-            internal_id = instance_ref['internal_id']
-        except exception.NotFound, e:
-            msg = _('Unexpected error: instance is not found')
-            e.args += ('\n' + msg, )
-            raise e
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
 
         # Checking instance state.
         if power_state.RUNNING != instance_ref['state'] or \
@@ -134,22 +130,17 @@ class Scheduler(object):
             msg = _('Unexpected err: not found cpu_info for %s on DB.hosts')
             raise exception.Invalid(msg % orighost)
 
-        ret = rpc.call(context,
-                       db.queue_get_for(context, FLAGS.compute_topic, dest),
-                       {"method": 'compareCPU',
-                        "args": {'xml': cpuinfo}})
+        try : 
+            rpc.call(context,
+                 db.queue_get_for(context, FLAGS.compute_topic, dest),
+                 {"method": 'compare_cpu',
+                  "args": {'xml': cpuinfo}})
 
-        if int != type(ret):
-            raise ret
-
-        if 0 >= ret:
-            u = 'http://libvirt.org/html/libvirt-libvirt.html'
-            u += '#virCPUCompareResult'
+        except rpc.RemoteError, e: 
             msg = '%s doesnt have compatibility to %s(where %s launching at)\n'
-            msg += 'result:%d \n'
-            msg += 'Refer to %s'
-            msg = _(msg)
-            raise exception.Invalid(msg % (dest, src, ec2_id, ret, u))
+            msg += 'result:%s \n'
+            logging.error( _(msg) % (dest, src, ec2_id, ret))
+            raise e
 
         # Checking dst host still has enough capacities.
         self.has_enough_resource(context, instance_id, dest)
@@ -169,7 +160,8 @@ class Scheduler(object):
         except exception.NotFound:
             pass
 
-        # Requesting live migration.
+        # Return value is necessary to send request to src
+        # Check _schedule() in detail.
         return src
 
     def has_enough_resource(self, context, instance_id, dest):

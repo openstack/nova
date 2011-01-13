@@ -407,11 +407,13 @@ class SchedulerTestFunctions(unittest.TestCase):
     def test17(self):
         """17: rpc.call raises RemoteError(Unexpected error occurs when executing compareCPU) """
         rpc.call = Mock(return_value = rpc.RemoteError(libvirt.libvirtError, 'val', 'traceback'))
-        self.assertRaises(rpc.RemoteError,
-                     self.manager.driver.schedule_live_migration,
-                     self.ctxt, 
-                     'i-12345', 
-                     'host2') 
+        try : 
+            self.manager.driver.schedule_live_migration(self.ctxt, 'i-12345', 'host2')
+        except rpc.RemoteError, e:
+            c1 = (0 <= str(e.message).find('doesnt have compatibility to') )
+            self.assertTrue(c1, True)
+        return False
+
 
     def test18(self):
         """18: rpc.call returns 0 (cpu is not compatible between src and dest) """

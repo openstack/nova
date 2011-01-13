@@ -53,9 +53,10 @@
   CLI interface for nova management.
 """
 
+import datetime
 import gettext
-import logging
 import os
+import re
 import sys
 import time
 
@@ -76,6 +77,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import utils
 from nova.auth import manager
@@ -333,6 +335,11 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         self.manager.create_project(name, project_manager, description)
 
+    def modify(self, name, project_manager, description=None):
+        """Modifies a project
+        arguments: name project_manager [description]"""
+        self.manager.modify_project(name, project_manager, description)
+
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
@@ -460,34 +467,29 @@ class InstanceCommands(object):
     def live_migration(self, ec2_id, dest):
         """live_migration"""
 
+
+        if FLAGS.connection_type != 'libvirt':
+            raise exception.Error('Only KVM is supported for now. '
+                'Sorry.')
+
         if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver':
             raise exception.Error('Only AOEDriver is supported for now. '
                 'Sorry.')
 
         logging.basicConfig()
         ctxt = context.get_admin_context()
+        instance_id = cloud.ec2_id_to_id(ec2_id)
 
-        try:
-            internal_id = cloud.ec2_id_to_internal_id(ec2_id)
-            instance_ref = db.instance_get_by_internal_id(ctxt, internal_id)
-            instance_id = instance_ref['id']
-        except exception.NotFound as e:
-            msg = _('instance(%s) is not found')
-            e.args += (msg % ec2_id,)
-            raise e
+        rpc.call(ctxt,
+                 FLAGS.scheduler_topic,
+                 {"method": "live_migration",
+                  "args": {"instance_id": instance_id,
+                           "dest": dest,
+                           "topic": FLAGS.compute_topic}})
 
-        ret = rpc.call(ctxt,
-                       FLAGS.scheduler_topic,
-                       {"method": "live_migration",
-                        "args": {"instance_id": instance_id,
-                                "dest": dest,
-                                "topic": FLAGS.compute_topic}})
-
-        if None != ret:
-            raise ret
-
-        print 'Finished all procedure. Check migrating finishes successfully'
-        print 'check status by using euca-describe-instances.'
+        msg = 'Migration of %s initiated. ' % ec2_id
+        msg += 'Check its progress using euca-describe-instances.'
+        print msg
 
 
 class HostCommands(object):
@@ -510,13 +512,13 @@ class HostCommands(object):
         logging.basicConfig()
 
         result = rpc.call(context.get_admin_context(),
-                         FLAGS.scheduler_topic,
-                         {"method": "show_host_resource",
-                          "args": {"host": host}})
+                     FLAGS.scheduler_topic,
+                     {"method": "show_host_resource",
+                      "args": {"host": host}})
 
         # Checking result msg format is necessary, that will have done
         # when this feture is included in API.
-        if dict != type(result):
+        if type(result) != dict:
             print 'Unexpected error occurs'
         elif not result['ret']:
             print '%s' % result['msg']
@@ -535,6 +537,60 @@ class HostCommands(object):
                                              val['local_gb'])
 
 
+class ServiceCommands(object):
+    """Enable and disable running services"""
+
+    def list(self, host=None, service=None):
+        """Show a list of all running services. Filter by host & service name.
+        args: [host] [service]"""
+        ctxt = context.get_admin_context()
+        now = datetime.datetime.utcnow()
+        services = db.service_get_all(ctxt)
+        if host:
+            services = [s for s in services if s['host'] == host]
+        if service:
+            services = [s for s in services if s['binary'] == service]
+        for svc in services:
+            delta = now - (svc['updated_at'] or svc['created_at'])
+            alive = (delta.seconds <= 15)
+            art = (alive and ":-)") or "XXX"
+            active = 'enabled'
+            if svc['disabled']:
+                active = 'disabled'
+            print "%-10s %-10s %-8s %s %s" % (svc['host'], svc['binary'],
+                                              active, art,
+                                              svc['updated_at'])
+
+    def enable(self, host, service):
+        """Enable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': False})
+
+    def disable(self, host, service):
+        """Disable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': True})
+
+
+class LogCommands(object):
+    def request(self, request_id, logfile='/var/log/nova.log'):
+        """Show all fields in the log for the given request.  Assumes you
+        haven't changed the log format too much.
+        ARGS: request_id [logfile]"""
+        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
+        print re.sub('#012', "\n", "\n".join(lines))
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -544,7 +600,9 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('instance', InstanceCommands),
-    ('host', HostCommands)]
+    ('host', HostCommands),
+    ('service', ServiceCommands),
+    ('log', LogCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -582,9 +640,6 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     script_name = argv.pop(0)
     if len(argv) < 1:

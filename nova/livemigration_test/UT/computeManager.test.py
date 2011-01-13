@@ -170,13 +170,14 @@ class ComputeTestFunctions(unittest.TestCase):
         # mocks for pre_live_migration
         self.ctxt = context.get_admin_context()
         db.instance_get = Mock(return_value=self.instance1)
+        db.instance_get_fixed_address = Mock(return_value = self.fixed_ip1)
         db.volume_get_all_by_instance \
             = Mock(return_value=[self.vol1, self.vol2])
         db.volume_get_shelf_and_blade = Mock(return_value=(3, 4))
         db.instance_get_fixed_address = Mock(return_value=self.fixed_ip1)
         db.security_group_get_by_instance \
             = Mock(return_value=[self.secgrp1, self.secgrp2])
-        self.manager.driver.setup_nwfilters_for_instance \
+        self.manager.driver.ensure_filtering_rules_for_instance \
             = Mock(return_value=None)
         self.manager.driver.nwfilter_for_instance_exists = Mock(return_value=None)
         self.manager.network_manager.setup_compute_network \
@@ -184,6 +185,7 @@ class ComputeTestFunctions(unittest.TestCase):
         # mocks for live_migration_
         rpc.call = Mock(return_value=True)
         db.instance_set_state = Mock(return_value=True)
+        
 
     # ---> test for nova.compute.manager.pre_live_migration()
     def test01(self):
@@ -198,21 +200,9 @@ class ComputeTestFunctions(unittest.TestCase):
                          'host2')
 
     def test02(self):
-        """02: NotAuthrized occurs on finding volume on DB. """
+        """02: Unknown error occurs on finding instance on DB. """
 
-        db.volume_get_all_by_instance \
-            = Mock(side_effect=exception.NotAuthorized('ERR'))
-
-        self.assertRaises(exception.NotAuthorized,
-                         self.manager.pre_live_migration,
-                         self.ctxt,
-                         'dummy_ec2_id',
-                         'host2')
-
-    def test03(self):
-        """03: Unexpected exception occurs on finding volume on DB. """
-
-        db.volume_get_all_by_instance = Mock(side_effect=TypeError('ERR'))
+        db.instance_get = Mock(side_effect=TypeError('ERR'))
 
         self.assertRaises(TypeError,
                          self.manager.pre_live_migration,
@@ -220,19 +210,24 @@ class ComputeTestFunctions(unittest.TestCase):
                          'dummy_ec2_id',
                          'host2')
 
-    def test04(self):
-        """04: no volume and fixed ip found on DB,  """
+    # the case of no fixed ip found on DB( instance_get_fixed_address 
+    # returns unknown error) is ommited because it is same as test02
+
+    def test03(self):
+        """03: no fixed ip found on DB,  """
 
         db.instance_get_fixed_address = Mock(return_value=None)
 
-        self.assertRaises(rpc.RemoteError,
-                         self.manager.pre_live_migration,
-                         self.ctxt,
-                         'dummy_ec2_id',
-                         'host2')
+        try : 
+            self.manager.pre_live_migration(self.ctxt, 'dummy_ec2_id', 'host2')
+        except exception.NotFound, e:
+            c1 = ( 0 < e.message.find('doesnt have fixed_ip'))
+            self.assertTrue(c1, True)
+        return False
 
-    def test05(self):
-        """05: volume found and no fixed_ip found on DB. """
+
+    def test04(self):
+        """04: no fixed_ip found on DB. """
 
         db.instance_get_fixed_address \
             = Mock(side_effect=exception.NotFound('ERR'))
@@ -243,12 +238,24 @@ class ComputeTestFunctions(unittest.TestCase):
                          'dummy_ec2_id',
                          'host2')
 
-    def test06(self):
-        """06: self.driver.setup_nwfilters_for_instance causes NotFound. """
-        self.manager.driver.setup_nwfilters_for_instance \
-            = Mock(side_effect=exception.NotFound("ERR"))
+    def test05(self):
+        """05: NotAuthrized occurs on finding volume on DB. """
 
-        self.assertRaises(exception.NotFound,
+        db.volume_get_all_by_instance \
+            = Mock(side_effect=exception.NotAuthorized('ERR'))
+
+        self.assertRaises(exception.NotAuthorized,
+                         self.manager.pre_live_migration,
+                         self.ctxt,
+                         'dummy_ec2_id',
+                         'host2')
+
+    def test06(self):
+        """06: Unexpected exception occurs on finding volume on DB. """
+
+        db.volume_get_all_by_instance = Mock(side_effect=TypeError('ERR'))
+
+        self.assertRaises(TypeError,
                          self.manager.pre_live_migration,
                          self.ctxt,
                          'dummy_ec2_id',
@@ -278,88 +285,44 @@ class ComputeTestFunctions(unittest.TestCase):
                          'dummy_ec2_id',
                          'host2')
 
-    # those 2 cases are omitted :
-    # self.driver.setup_nwfilters_for_instance causes
-    # twisted.python.failure.Failure.
-    # self.driver.refresh_security_group causes twisted.python.failure.Failure.
-    #
-    # twisted.python.failure.Failure can not be used with assertRaises,
-    # it doesnt have __call___
-    #
-
+    # ensure_filtering_rules_for_instance mainly access to libvirt.
+    # Therefore, exception may be libvirt-related one, but cannot expect.
+    # so, for test cases, just expect unkonwn exception( TypeError is just a case)
     def test09(self):
-        """09: volume/fixed_ip found on DB, all procedure finish
+        """09: self.driver.ensure_filtering_rules_for_instance raises unexpected exception. """
+        self.manager.driver.ensure_filtering_rules_for_instance \
+            = Mock(side_effect=TypeError('ERR'))
+
+        self.assertRaises(TypeError,
+                         self.manager.pre_live_migration,
+                         self.ctxt,
+                         'dummy_ec2_id',
+                         'host2')
+
+    def test10(self):
+        """10: volume/fixed_ip found on DB, all procedure finish
         successfully.. """
 
         result = self.manager.pre_live_migration(self.ctxt, 'dummy_ec2_id',
             'host2')
-        self.assertEqual(result, True)
+        self.assertEqual(result, None)
 
     # ---> test for nova.compute.manager.live_migration()
 
-    def test10(self):
-        """10: rpc.call(pre_live_migration returns Error(Not None). """
-        rpc.call = Mock(side_effect=exception.NotFound("ERR"))
+    def test11(self):
+        """11: if db_instance_get issues NotFound.
+        """
+        db.instance_get = Mock(side_effect=exception.NotFound("ERR"))
 
         self.assertRaises(exception.NotFound,
                          self.manager.live_migration,
                          self.ctxt,
                          'dummy_ec2_id',
                          'host2')
-
-    def test11(self):
-        """11: if rpc.call returns rpc.RemoteError. """
-
-        rpc.call = Mock(return_value=rpc.RemoteError(None, None, None))
-        db.instance_set_state = Mock(return_value=True)
-        result = self.manager.live_migration(self.ctxt, 'dummy_ec2_id',
-            'host2')
-        c1 = (None == result)
-        c2 = (0 <= sys.stderr.buffer.find('err at'))
-        self.assertEqual(c1 and c2, True)
 
     def test12(self):
-        """12: if rpc.call returns rpc.RemoteError and instance_set_state
-           also ends up err. (then , unexpected err occurs, in this case
-           TypeError)
+        """12: if db_instance_get issues Unexpected Error.
         """
-        rpc.call = Mock(return_value=rpc.RemoteError(None, None, None))
-        db.instance_set_state = Mock(side_effect=TypeError("ERR"))
-        self.assertRaises(TypeError,
-                          self.manager.live_migration,
-                          self.ctxt,
-                          'dummy_ec2_id',
-                           'host2')
-
-    def test13(self):
-        """13: if wait for pre_live_migration, but timeout. """
-        rpc.call = dummyCall
-
-        db.instance_get = Mock(return_value=self.instance1)
-
-        result = self.manager.live_migration(self.ctxt, 'dummy_ec2_id',
-            'host2')
-        c1 = (None == result)
-        c2 = (0 <= sys.stderr.buffer.find('Timeout for'))
-        self.assertEqual(c1 and c2, True)
-
-    def test14(self):
-        """14: if db_instance_get issues NotFound.
-        """
-        rpc.call = Mock(return_value=True)
-        db.instance_get = Mock(side_effect=exception.NotFound("ERR"))
-        self.assertRaises(exception.NotFound,
-                         self.manager.live_migration,
-                         self.ctxt,
-                         'dummy_ec2_id',
-                         'host2')
-
-    def test15(self):
-        """15: if rpc.call returns True, and instance_get() cause other
-           exception. (Unexpected case - b/c it already checked by
-           nova-manage)
-        """
-        rpc.call = Mock(return_value=True)
         db.instance_get = Mock(side_effect=TypeError("ERR"))
 
         self.assertRaises(TypeError,
@@ -368,15 +331,58 @@ class ComputeTestFunctions(unittest.TestCase):
                          'dummy_ec2_id',
                          'host2')
 
-    def test16(self):
-        """16: if rpc.call returns True, and live_migration issues
-        ProcessExecutionError. """
-        rpc.call = Mock(return_value=True)
-        db.instance_get = Mock(return_value=self.instance1)
-        ret = self.manager.driver.live_migration \
-            = Mock(side_effect=utils.ProcessExecutionError("ERR"))
+    def test13(self):
+        """13: if rpc.call returns rpc.RemoteError. """
 
-        self.assertRaises(utils.ProcessExecutionError,
+        rpc.call = Mock(return_value=rpc.RemoteError(None, None, None))
+        db.instance_set_state = Mock(return_value=True)
+        try : 
+            self.manager.live_migration(self.ctxt, 'dummy_ec2_id','host2')
+        except rpc.RemoteError, e: 
+            c1 = ( 0 < e.message.find('Pre live migration for'))
+            self.assertTrue(c1, True)
+        return False
+
+    def test14(self):
+        """14: if rpc.call returns rpc.RemoteError and instance_set_state
+           also ends up err. (then , unexpected err occurs, in this case
+           TypeError)
+        """
+        rpc.call = Mock(return_value=rpc.RemoteError(None, None, None))
+        db.instance_set_state = Mock(side_effect=TypeError("ERR"))
+
+        try : 
+            self.manager.live_migration(self.ctxt, 'dummy_ec2_id','host2')
+        except TypeError, e: 
+            c1 = ( 0 < e.message.find('Pre live migration for'))
+            self.assertTrue(c1, True)
+        return False
+
+
+    def test15(self):
+        """15: if rpc.call returns rpc.RemoteError and volume_get_all_by_instance
+           also ends up err. (then , unexpected err occurs, in this case
+           TypeError)
+        """
+        rpc.call = Mock(return_value=rpc.RemoteError(None, None, None))
+        db.volume_get_all_by_instance = Mock(side_effect=exception.NotAuthorized("ERR"))
+
+        try : 
+            self.manager.live_migration(self.ctxt, 'dummy_ec2_id','host2')
+        except exception.NotAuthorized, e: 
+            c1 = ( 0 < e.message.find('Pre live migration for'))
+            self.assertTrue(c1, True)
+        return False
+
+
+    def test16(self):
+        """16: if rpc.call finish successfully, e, and live_migration raises
+        TypeError(Unexpected error), which means unexpected libvirt-related one. """
+        rpc.call = Mock(return_value=None)
+        ret = self.manager.driver.live_migration \
+            = Mock(side_effect=TypeError("ERR"))
+
+        self.assertRaises(TypeError,
                          self.manager.live_migration,
                          self.ctxt,
                          'dummy_ec2_id',
@@ -386,7 +392,7 @@ class ComputeTestFunctions(unittest.TestCase):
         """17: everything goes well. """
         self.manager.driver.live_migration = Mock(return_value=True)
         ret = self.manager.live_migration(self.ctxt, 'i-12345', 'host1')
-        self.assertEqual(True, True)
+        self.assertEqual(ret, None)
 
     def tearDown(self):
         """common terminating method. """

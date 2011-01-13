@@ -17,75 +17,83 @@
 #    under the License.
 
 """
-Handles all API requests relating to instances (guest vms).
+Handles all requests relating to instances (guest vms).
 """
 
 import datetime
-import logging
+import re
 import time
 
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
+from nova import network
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import instance_types
 from nova.db import base
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.compute.api')
 
 
-def generate_default_hostname(internal_id):
+def generate_default_hostname(instance_id):
     """Default function to generate a hostname given an instance reference."""
-    return str(internal_id)
+    return str(instance_id)
 
 
-class ComputeAPI(base.Base):
+class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, network_manager=None, image_service=None, **kwargs):
-        if not network_manager:
-            network_manager = utils.import_object(FLAGS.network_manager)
-        self.network_manager = network_manager
+    def __init__(self, image_service=None, network_api=None, volume_api=None,
+                 **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
-        super(ComputeAPI, self).__init__(**kwargs)
+        if not network_api:
+            network_api = network.API()
+        self.network_api = network_api
+        if not volume_api:
+            volume_api = volume.API()
+        self.volume_api = volume_api
+        super(API, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
         try:
-            instance = self.db.instance_get_by_internal_id(context,
-                                                           instance_id)
+            instance = self.get(context, instance_id)
         except exception.NotFound as e:
-            logging.warning("Instance %d was not found in get_network_topic",
-                            instance_id)
+            LOG.warning(_("Instance %d was not found in get_network_topic"),
+                        instance_id)
             raise e
 
         host = instance['host']
         if not host:
-            raise exception.Error("Instance %d has no host" % instance_id)
+            raise exception.Error(_("Instance %d has no host") % instance_id)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         return rpc.call(context,
                         topic,
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
-    def create_instances(self, context, instance_type, image_id, min_count=1,
-                         max_count=1, kernel_id=None, ramdisk_id=None,
-                         display_name='', description='', key_name=None,
-                         key_data=None, security_group='default',
-                         user_data=None,
-                         generate_hostname=generate_default_hostname):
-        """Create the number of instances requested if quote and
+    def create(self, context, instance_type,
+               image_id, kernel_id=None, ramdisk_id=None,
+               min_count=1, max_count=1,
+               display_name='', display_description='',
+               key_name=None, key_data=None, security_group='default',
+               availability_zone=None, user_data=None,
+               generate_hostname=generate_default_hostname):
+        """Create the number of instances requested if quota and
         other arguments check out ok."""
 
-        num_instances = quota.allowed_instances(context, max_count,
-                                                instance_type)
+        type_data = instance_types.INSTANCE_TYPES[instance_type]
+        num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
-            logging.warn("Quota exceeeded for %s, tried to run %s instances",
-                         context.project_id, min_count)
-            raise quota.QuotaError("Instance quota exceeded. You can only "
-                                   "run %s more instances of this type." %
+            LOG.warn(_("Quota exceeeded for %s, tried to run %s instances"),
+                     context.project_id, min_count)
+            raise quota.QuotaError(_("Instance quota exceeded. You can only "
+                                     "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
         is_vpn = image_id == FLAGS.vpn_image_id
@@ -95,11 +103,11 @@ class ComputeAPI(base.Base):
                 kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdiskId', None)
-            #No kernel and ramdisk for raw images
+            # No kernel and ramdisk for raw images
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
                 ramdisk_id = None
-                logging.debug("Creating a raw instance")
+                LOG.debug(_("Creating a raw instance"))
             # Make sure we have access to kernel and ramdisk (if not raw)
             if kernel_id:
                 self.image_service.show(context, kernel_id)
@@ -123,7 +131,6 @@ class ComputeAPI(base.Base):
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
         base_options = {
             'reservation_id': utils.generate_uid('r'),
             'image_id': image_id,
@@ -138,21 +145,22 @@ class ComputeAPI(base.Base):
             'vcpus': type_data['vcpus'],
             'local_gb': type_data['local_gb'],
             'display_name': display_name,
-            'display_description': description,
+            'display_description': display_description,
             'user_data': user_data or '',
             'key_name': key_name,
-            'key_data': key_data}
+            'key_data': key_data,
+            'locked': False,
+            'availability_zone': availability_zone}
 
         elevated = context.elevated()
         instances = []
-        logging.debug(_("Going to run %s instances..."), num_instances)
+        LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = dict(mac_address=utils.generate_mac(),
                             launch_index=num,
                             **base_options)
             instance = self.db.instance_create(context, instance)
             instance_id = instance['id']
-            internal_id = instance['internal_id']
 
             elevated = context.elevated()
             if not security_groups:
@@ -163,20 +171,23 @@ class ComputeAPI(base.Base):
                                                     security_group_id)
 
             # Set sane defaults if not specified
-            updates = dict(hostname=generate_hostname(internal_id))
+            updates = dict(hostname=generate_hostname(instance_id))
             if 'display_name' not in instance:
-                updates['display_name'] = "Server %s" % internal_id
+                updates['display_name'] = "Server %s" % instance_id
 
-            instance = self.update_instance(context, instance_id, **updates)
+            instance = self.update(context, instance_id, **updates)
             instances.append(instance)
 
-            logging.debug(_("Casting to scheduler for %s/%s's instance %s"),
+            LOG.debug(_("Casting to scheduler for %s/%s's instance %s"),
                           context.project_id, context.user_id, instance_id)
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id}})
+
+        for group_id in security_groups:
+            self.trigger_security_group_members_refresh(elevated, group_id)
 
         return instances
 
@@ -197,7 +208,61 @@ class ComputeAPI(base.Base):
                       'project_id': context.project_id}
             db.security_group_create(context, values)
 
-    def update_instance(self, context, instance_id, **kwargs):
+    def trigger_security_group_rules_refresh(self, context, security_group_id):
+        """Called when a rule is added to or removed from a security_group"""
+
+        security_group = self.db.security_group_get(context, security_group_id)
+
+        hosts = set()
+        for instance in security_group['instances']:
+            if instance['host'] is not None:
+                hosts.add(instance['host'])
+
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_rules",
+                      "args": {"security_group_id": security_group.id}})
+
+    def trigger_security_group_members_refresh(self, context, group_id):
+        """Called when a security group gains a new or loses a member
+
+        Sends an update request to each compute node for whom this is
+        relevant."""
+
+        # First, we get the security group rules that reference this group as
+        # the grantee..
+        security_group_rules = \
+                self.db.security_group_rule_get_by_security_group_grantee(
+                                                                     context,
+                                                                     group_id)
+
+        # ..then we distill the security groups to which they belong..
+        security_groups = set()
+        for rule in security_group_rules:
+            security_groups.add(rule['parent_group_id'])
+
+        # ..then we find the instances that are members of these groups..
+        instances = set()
+        for security_group in security_groups:
+            for instance in security_group['instances']:
+                instances.add(instance['id'])
+
+        # ...then we find the hosts where they live...
+        hosts = set()
+        for instance in instances:
+            if instance['host']:
+                hosts.add(instance['host'])
+
+        # ...and finally we tell these nodes to refresh their view of this
+        # particular security group.
+        for host in hosts:
+            rpc.cast(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                     {"method": "refresh_security_group_members",
+                      "args": {"security_group_id": group_id}})
+
+    def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
 
         :param context: The security context
@@ -211,136 +276,204 @@ class ComputeAPI(base.Base):
         """
         return self.db.instance_update(context, instance_id, kwargs)
 
-    def delete_instance(self, context, instance_id):
-        logging.debug("Going to try and terminate %d" % instance_id)
+    def delete(self, context, instance_id):
+        LOG.debug(_("Going to try and terminate %s"), instance_id)
         try:
-            instance = self.db.instance_get_by_internal_id(context,
-                                                           instance_id)
+            instance = self.get(context, instance_id)
         except exception.NotFound as e:
-            logging.warning(_("Instance %d was not found during terminate"),
-                            instance_id)
+            LOG.warning(_("Instance %d was not found during terminate"),
+                        instance_id)
             raise e
 
         if (instance['state_description'] == 'terminating'):
-            logging.warning(_("Instance %d is already being terminated"),
-                            instance_id)
+            LOG.warning(_("Instance %d is already being terminated"),
+                        instance_id)
             return
 
-        self.update_instance(context,
-                             instance['id'],
-                             state_description='terminating',
-                             state=0,
-                             terminated_at=datetime.datetime.utcnow())
+        self.update(context,
+                    instance['id'],
+                    state_description='terminating',
+                    state=0,
+                    terminated_at=datetime.datetime.utcnow())
 
         host = instance['host']
-        logging.error('terminate %s %s %s %s', context, FLAGS.compute_topic,
-            host, self.db.queue_get_for(context, FLAGS.compute_topic, host))
         if host:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
                      {"method": "terminate_instance",
-                      "args": {"instance_id": instance['id']}})
+                      "args": {"instance_id": instance_id}})
         else:
-            self.db.instance_destroy(context, instance['id'])
+            self.db.instance_destroy(context, instance_id)
 
-    def get_instances(self, context, project_id=None):
-        """Get all instances, possibly filtered by project ID or
-        user ID. If there is no filter and the context is an admin,
-        it will retreive all instances in the system."""
+    def get(self, context, instance_id):
+        """Get a single instance with the given ID."""
+        return self.db.instance_get_by_id(context, instance_id)
+
+    def get_all(self, context, project_id=None, reservation_id=None,
+                fixed_ip=None):
+        """Get all instances, possibly filtered by one of the
+        given parameters. If there is no filter and the context is
+        an admin, it will retreive all instances in the system."""
+        if reservation_id is not None:
+            return self.db.instance_get_all_by_reservation(context,
+                                                           reservation_id)
+        if fixed_ip is not None:
+            return self.db.fixed_ip_get_instance(context, fixed_ip)
         if project_id or not context.is_admin:
             if not context.project:
                 return self.db.instance_get_all_by_user(context,
                                                         context.user_id)
             if project_id is None:
                 project_id = context.project_id
-            return self.db.instance_get_all_by_project(context, project_id)
+            return self.db.instance_get_all_by_project(context,
+            project_id)
         return self.db.instance_get_all(context)
-
-    def get_instance(self, context, instance_id):
-        return self.db.instance_get_by_internal_id(context, instance_id)
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "snapshot_instance",
-                  "args": {"instance_id": instance['id'], "name": name}})
+                  "args": {"instance_id": instance_id, "name": name}})
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "reboot_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "pause_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unpause_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance["host"]
         return rpc.call(context,
             self.db.queue_get_for(context, FLAGS.compute_topic, host),
             {"method": "get_diagnostics",
-             "args": {"instance_id": instance["id"]}})
+             "args": {"instance_id": instance_id}})
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
-        return self.db.instance_get_actions(context, instance["id"])
+        return self.db.instance_get_actions(context, instance_id)
 
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "suspend_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "resume_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "rescue_instance",
-                  "args": {"instance_id": instance['id']}})
+                  "args": {"instance_id": instance_id}})
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        instance = self.db.instance_get_by_internal_id(context, instance_id)
+        instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "unrescue_instance",
+                  "args": {"instance_id": instance_id}})
+
+    def lock(self, context, instance_id):
+        """
+        lock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "lock_instance",
                   "args": {"instance_id": instance['id']}})
+
+    def unlock(self, context, instance_id):
+        """
+        unlock the instance with instance_id
+
+        """
+        instance = self.get_instance(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "unlock_instance",
+                  "args": {"instance_id": instance['id']}})
+
+    def get_lock(self, context, instance_id):
+        """
+        return the boolean state of (instance with instance_id)'s lock
+
+        """
+        instance = self.get_instance(context, instance_id)
+        return instance['locked']
+
+    def attach_volume(self, context, instance_id, volume_id, device):
+        if not re.match("^/dev/[a-z]d[a-z]+$", device):
+            raise exception.ApiError(_("Invalid device specified: %s. "
+                                     "Example device: /dev/vdb") % device)
+        self.volume_api.check_attach(context, volume_id)
+        instance = self.get(context, instance_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"volume_id": volume_id,
+                           "instance_id": instance_id,
+                           "mountpoint": device}})
+
+    def detach_volume(self, context, volume_id):
+        instance = self.db.volume_get_instance(context.elevated(), volume_id)
+        if not instance:
+            raise exception.ApiError(_("Volume isn't attached to anything!"))
+        self.volume_api.check_detach(context, volume_id)
+        host = instance['host']
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "detach_volume",
+                  "args": {"instance_id": instance['id'],
+                           "volume_id": volume_id}})
+        return instance
+
+    def associate_floating_ip(self, context, instance_id, address):
+        instance = self.get(context, instance_id)
+        self.network_api.associate_floating_ip(context, address,
+                                               instance['fixed_ip'])
