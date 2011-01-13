@@ -40,74 +40,6 @@ flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
 
 
-def partition(infile, outfile, local_bytes=0, resize=True, local_type='ext2'):
-    """
-    Turns a partition (infile) into a bootable drive image (outfile).
-
-    The first 63 sectors (0-62) of the resulting image is a master boot record.
-    Infile becomes the first primary partition.
-    If local bytes is specified, a second primary partition is created and
-    formatted as ext2.
-
-    ::
-
-        In the diagram below, dashes represent drive sectors.
-        +-----+------. . .-------+------. . .------+
-        | 0  a| b               c|d               e|
-        +-----+------. . .-------+------. . .------+
-        | mbr | primary partiton | local partition |
-        +-----+------. . .-------+------. . .------+
-
-    """
-    sector_size = 512
-    file_size = os.path.getsize(infile)
-    if resize and file_size < FLAGS.minimum_root_size:
-        last_sector = FLAGS.minimum_root_size / sector_size - 1
-        utils.execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                % (infile, last_sector, sector_size))
-        utils.execute('e2fsck -fp %s' % infile, check_exit_code=False)
-        utils.execute('resize2fs %s' % infile)
-        file_size = FLAGS.minimum_root_size
-    elif file_size % sector_size != 0:
-        LOG.warn(_("Input partition size not evenly divisible by"
-                   " sector size: %d / %d"), file_size, sector_size)
-    primary_sectors = file_size / sector_size
-    if local_bytes % sector_size != 0:
-        LOG.warn(_("Bytes for local storage not evenly divisible"
-                   " by sector size: %d / %d"), local_bytes, sector_size)
-    local_sectors = local_bytes / sector_size
-
-    mbr_last = 62  # a
-    primary_first = mbr_last + 1  # b
-    primary_last = primary_first + primary_sectors - 1  # c
-    local_first = primary_last + 1  # d
-    local_last = local_first + local_sectors - 1  # e
-    last_sector = local_last  # e
-
-    # create an empty file
-    utils.execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-            % (outfile, mbr_last, sector_size))
-
-    # make mbr partition
-    utils.execute('parted --script %s mklabel msdos' % outfile)
-
-    # append primary file
-    utils.execute('dd if=%s of=%s bs=%s conv=notrunc,fsync oflag=append'
-            % (infile, outfile, FLAGS.block_size))
-
-    # make primary partition
-    utils.execute('parted --script %s mkpart primary %ds %ds'
-            % (outfile, primary_first, primary_last))
-
-    if local_bytes > 0:
-        # make the file bigger
-        utils.execute('dd if=/dev/zero of=%s count=1 seek=%d bs=%d'
-                % (outfile, last_sector, sector_size))
-        # make and format local partition
-        utils.execute('parted --script %s mkpartfs primary %s %ds %ds'
-                % (outfile, local_type, local_first, local_last))
-
-
 def extend(image, size):
     """Increase image to size"""
     file_size = os.path.getsize(image)
@@ -185,8 +117,11 @@ def _link_device(image, nbd):
         utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuuing
-        time.sleep(1)
-        return device
+        for i in xrange(10):
+            if os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
+                return device
+            time.sleep(1)
+        raise exception.Error(_('nbd device %s did not show up') % device)
     else:
         out, err = utils.execute('sudo losetup --find --show %s' % image)
         if err:
@@ -208,12 +143,16 @@ _DEVICES = ['/dev/nbd%s' % i for i in xrange(16)]
 
 
 def _allocate_device():
-    # NOTE(vish): This assumes no other processes are using nbd devices.
-    #             It will race cause a race condition if multiple
+    # NOTE(vish): This assumes no other processes are allocating nbd devices.
+    #             It may race cause a race condition if multiple
     #             workers are running on a given machine.
-    if not _DEVICES:
-        raise exception.Error(_('No free nbd devices'))
-    return _DEVICES.pop()
+    while True:
+        if not _DEVICES:
+            raise exception.Error(_('No free nbd devices'))
+        device = _DEVICES.pop()
+        if not os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
+            break
+    return device
 
 
 def _free_device(device):

@@ -58,9 +58,9 @@ from nova import log as logging
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
-from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 
 libvirt = None
@@ -495,7 +495,7 @@ class LibvirtConnection(object):
         return {'token': token, 'host': host, 'port': port}
 
     def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
-        """Wrapper to cache a method that creates an image.
+        """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
         copy for use by the hypervisor.
@@ -504,7 +504,7 @@ class LibvirtConnection(object):
         where the image will be saved.
 
         fname is used as the filename of the base image.  The filename needs
-        to be fname to a given image.
+        to be unique to a given image.
 
         If cow is True, it will make a CoW image instead of a copy.
         """
@@ -531,9 +531,7 @@ class LibvirtConnection(object):
 
     def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
-        last_mb = local_gb * 1024 - 1
-        utils.execute('dd if=/dev/zero of=%s bs=1M count=1 '
-                      'seek=%s' % (target, last_mb))
+        utils.execute('truncate %s -s %dG' % (target, local_gb))
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
