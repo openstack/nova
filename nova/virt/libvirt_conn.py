@@ -223,26 +223,11 @@ class LibvirtConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         virt_dom = self._conn.lookupByName(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
-        xml = ''
-        if device_path.startswith('/dev/'):
-            xml = """<disk type='block' device='disk'>
-                         <driver name='qemu' type='raw'/>
-                         <source dev='%s'/>
-                         <target dev='%s' bus='virtio'/>
-                     </disk>""" % (device_path, mount_device)
-        elif device_path.find(':') >= 0:
-            (protocol, vol_name) = device_path.split(':', 1)
-            xml = """<disk type='network' device='disk'>
-                         <driver name='qemu' type='raw'/>
-                         <source protocol='%s' name='%s'/>
-                         <target dev='%s' bus='virtio'/>
-                     </disk>""" % (protocol, vol_name, mount_device)
-        else:
-            xml = """<disk type='file' device='disk'>
-                         <driver name='qemu' type='raw'/>
-                         <source file='%s'/>
-                         <target dev='%s' bus='virtio'/>
-                     </disk>""" % (device_path, mount_device)
+        xml = """<disk type='block'>
+                     <driver name='qemu' type='raw'/>
+                     <source dev='%s'/>
+                     <target dev='%s' bus='virtio'/>
+                 </disk>""" % (device_path, mount_device)
         virt_dom.attachDevice(xml)
 
     def _get_disk_xml(self, xml, device):
