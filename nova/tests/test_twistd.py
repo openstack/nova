@@ -28,7 +28,7 @@ from nova import test
 FLAGS = flags.FLAGS
 
 
-class TwistdTestCase(test.TrialTestCase):
+class TwistdTestCase(test.TestCase):
     def setUp(self):
         super(TwistdTestCase, self).setUp()
         self.Options = twistd.WrapTwistedOptions(twistd.TwistdServerOptions)
