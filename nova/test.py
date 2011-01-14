@@ -27,8 +27,6 @@ import unittest
 
 import mox
 import stubout
-from twisted.internet import defer
-from twisted.trial import unittest as trial_unittest
 
 from nova import context
 from nova import db
@@ -36,6 +34,7 @@ from nova import fakerabbit
 from nova import flags
 from nova import rpc
 from nova.network import manager as network_manager
+from nova.tests import fake_flags
 
 
 FLAGS = flags.FLAGS
