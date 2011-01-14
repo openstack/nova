@@ -331,13 +331,22 @@ class API(base.Base):
         return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None):
-        """Generic handler for RPC calls to compute."""
+        """Generic handler for RPC casts to compute."""
         if not host:
             instance = self.get(context, instance_id)
             host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         kwargs = {'method': method, 'args': {'instance_id': instance_id}}
         rpc.cast(context, queue, kwargs)
+
+    def _call_compute_message(self, method, context, instance_id, host=None):
+        """Generic handler for RPC calls to compute."""
+        if not host:
+            instance = self.get(context, instance_id)
+            host = instance["host"]
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        kwargs = {"method": method, "args": {"instance_id": instance_id}}
+        return rpc.call(context, queue, kwargs)
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance."""
@@ -357,7 +366,10 @@ class API(base.Base):
 
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
-        self._cast_compute_message('get_diagnostics', context, instance_id)
+        return self._call_compute_message(
+            "get_diagnostics",
+            context,
+            instance_id)
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
