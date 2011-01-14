@@ -239,8 +239,8 @@ class NetworkManager(manager.Manager):
         """Get the network host for the current context."""
         raise NotImplementedError()
 
-    def create_networks(self, context, num_networks, network_size, cidr_v6,
-                        *args, **kwargs):
+    def create_networks(self, context, cidr, num_networks, network_size,
+                        cidr_v6, *args, **kwargs):
         """Create networks based on parameters."""
         raise NotImplementedError()
 

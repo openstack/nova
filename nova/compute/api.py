@@ -21,6 +21,7 @@ Handles all requests relating to instances (guest vms).
 """
 
 import datetime
+import re
 import time
 
 from nova import db
@@ -397,22 +398,22 @@ class API(base.Base):
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
-
         instance = self.get(context, instance_id)
-
-        output = rpc.call(context,
-                          '%s.%s' % (FLAGS.compute_topic,
-                                     instance['host']),
-                          {'method': 'get_ajax_console',
-                           'args': {'instance_id': instance['id']}})
-
+        output = self._call_compute_message('get_ajax_console',
+                                            context,
+                                            instance_id)
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
                   'port': output['port']}})
-
         return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
+
+    def get_console_output(self, context, instance_id):
+        """Get console output for an an instance"""
+        return self._call_compute_message('get_console_output',
+                                          context,
+                                          instance_id)
 
     def lock(self, context, instance_id):
         """lock the instance with instance_id"""
