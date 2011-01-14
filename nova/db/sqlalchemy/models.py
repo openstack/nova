@@ -124,7 +124,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return "instance-%08x" % self.id
+        return FLAGS.instance_name_template % self.id
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))
@@ -211,7 +211,7 @@ class Volume(BASE, NovaBase):
 
     @property
     def name(self):
-        return "volume-%08x" % self.id
+        return FLAGS.volume_name_template % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))

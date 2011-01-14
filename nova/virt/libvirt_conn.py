@@ -58,9 +58,9 @@ from nova import log as logging
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
-from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 
 libvirt = None
@@ -91,6 +91,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_bool('use_cow_images',
+                  True,
+                  'Whether to use cow images')
 flags.DEFINE_string('ajaxterm_portrange',
                     '10000-12000',
                     'Range of ports that ajaxterm should randomly try to bind')
@@ -197,40 +200,29 @@ class LibvirtConnection(object):
             pass
             # If the instance is already terminated, we're still happy
 
-        done = event.Event()
-
         # We'll save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
         timer = utils.LoopingCall(f=None)
 
-        def _wait_for_shutdown():
+        while True:
             try:
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.SHUTDOWN:
-                    timer.stop()
+                    break
             except Exception:
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
-                timer.stop()
+                break
 
-        timer.f = _wait_for_shutdown
-        timer_done = timer.start(interval=0.5, now=True)
+        self.firewall_driver.unfilter_instance(instance)
 
-        # NOTE(termie): this is strictly superfluous (we could put the
-        #               cleanup code in the timer), but this emulates the
-        #               previous model so I am keeping it around until
-        #               everything has been vetted a bit
-        def _wait_for_timer():
-            timer_done.wait()
-            if cleanup:
-                self._cleanup(instance)
-            done.send()
+        if cleanup:
+            self._cleanup(instance)
 
-        greenthread.spawn(_wait_for_timer)
-        return done
+        return True
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
@@ -491,19 +483,57 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+        """Wrapper for a method that creates an image that caches the image.
+
+        This wrapper will save the image into a common store and create a
+        copy for use by the hypervisor.
+
+        The underlying method should specify a kwarg of target representing
+        where the image will be saved.
+
+        fname is used as the filename of the base image.  The filename needs
+        to be unique to a given image.
+
+        If cow is True, it will make a CoW image instead of a copy.
+        """
+        if not os.path.exists(target):
+            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            if not os.path.exists(base_dir):
+                os.mkdir(base_dir)
+                os.chmod(base_dir, 0777)
+            base = os.path.join(base_dir, fname)
+            if not os.path.exists(base):
+                fn(target=base, *args, **kwargs)
+            if cow:
+                utils.execute('qemu-img create -f qcow2 -o '
+                              'cluster_size=2M,backing_file=%s %s'
+                              % (base, target))
+            else:
+                utils.execute('cp %s %s' % (base, target))
+
+    def _fetch_image(self, target, image_id, user, project, size=None):
+        """Grab image and optionally attempt to resize it"""
+        images.fetch(image_id, target, user, project)
+        if size:
+            disk.extend(target, size)
+
+    def _create_local(self, target, local_gb):
+        """Create a blank image of specified size"""
+        utils.execute('truncate %s -s %dG' % (target, local_gb))
+        # TODO(vish): should we format disk by default?
+
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
-        basepath = lambda fname = '', prefix = prefix: os.path.join(
-                                                 FLAGS.instances_path,
-                                                 inst['name'],
-                                                 prefix + fname)
+        def basepath(fname='', prefix=prefix):
+            return os.path.join(FLAGS.instances_path,
+                                inst['name'],
+                                prefix + fname)
 
         # ensure directories exist and are writable
         utils.execute('mkdir -p %s' % basepath(prefix=''))
         utils.execute('chmod 0777 %s' % basepath(prefix=''))
 
-        # TODO(termie): these are blocking calls, it would be great
-        #               if they weren't.
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
@@ -520,23 +550,44 @@ class LibvirtConnection(object):
             disk_images = {'image_id': inst['image_id'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
-        if not os.path.exists(basepath('disk')):
-            images.fetch(inst.image_id, basepath('disk-raw'), user,
-                         project)
 
-        if inst['kernel_id']:
-            if not os.path.exists(basepath('kernel')):
-                images.fetch(inst['kernel_id'], basepath('kernel'),
-                             user, project)
-            if inst['ramdisk_id']:
-                if not os.path.exists(basepath('ramdisk')):
-                    images.fetch(inst['ramdisk_id'], basepath('ramdisk'),
-                                 user, project)
+        if disk_images['kernel_id']:
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('kernel'),
+                              fname=disk_images['kernel_id'],
+                              image_id=disk_images['kernel_id'],
+                              user=user,
+                              project=project)
+            if disk_images['ramdisk_id']:
+                self._cache_image(fn=self._fetch_image,
+                                  target=basepath('ramdisk'),
+                                  fname=disk_images['ramdisk_id'],
+                                  image_id=disk_images['ramdisk_id'],
+                                  user=user,
+                                  project=project)
 
-        def execute(cmd, process_input=None, check_exit_code=True):
-            return utils.execute(cmd=cmd,
-                                 process_input=process_input,
-                                 check_exit_code=check_exit_code)
+        root_fname = disk_images['image_id']
+        size = FLAGS.minimum_root_size
+        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+            size = None
+            root_fname += "_sm"
+
+        self._cache_image(fn=self._fetch_image,
+                          target=basepath('disk'),
+                          fname=root_fname,
+                          cow=FLAGS.use_cow_images,
+                          image_id=disk_images['image_id'],
+                          user=user,
+                          project=project,
+                          size=size)
+        type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
+
+        if type_data['local_gb']:
+            self._cache_image(fn=self._create_local,
+                              target=basepath('local'),
+                              fname="local_%s" % type_data['local_gb'],
+                              cow=FLAGS.use_cow_images,
+                              local_gb=type_data['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -566,33 +617,14 @@ class LibvirtConnection(object):
                 LOG.info(_('instance %s: injecting net into image %s'),
                              inst['name'], inst.image_id)
             try:
-                disk.inject_data(basepath('disk-raw'), key, net,
+                disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
-                                 execute=execute)
+                                 nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %s: ignoring error injecting data'
                            ' into image %s (%s)'),
                          inst['name'], inst.image_id, e)
-
-        if inst['kernel_id']:
-            if os.path.exists(basepath('disk')):
-                utils.execute('rm -f %s' % basepath('disk'))
-
-        local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
-                                                    ['local_gb']
-                                                    * 1024 * 1024 * 1024)
-
-        resize = True
-        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
-            resize = False
-
-        if inst['kernel_id']:
-            disk.partition(basepath('disk-raw'), basepath('disk'),
-                           local_bytes, resize, execute=execute)
-        else:
-            os.rename(basepath('disk-raw'), basepath('disk'))
-            disk.extend(basepath('disk'), local_bytes, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo chown root %s' % basepath('disk'))
@@ -621,6 +653,10 @@ class LibvirtConnection(object):
                             "value=\"%s\" />\n") % (net, mask)
         else:
             extra_params = "\n"
+        if FLAGS.use_cow_images:
+            driver_type = 'qcow2'
+        else:
+            driver_type = 'raw'
 
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
@@ -633,7 +669,9 @@ class LibvirtConnection(object):
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
                     'extra_params': extra_params,
-                    'rescue': rescue}
+                    'rescue': rescue,
+                    'local': instance_type['local_gb'],
+                    'driver_type': driver_type}
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -785,6 +823,10 @@ class FirewallDriver(object):
         """Prepare filters for the instance.
 
         At this point, the instance isn't running yet."""
+        raise NotImplementedError()
+
+    def unfilter_instance(self, instance):
+        """Stop filtering instance"""
         raise NotImplementedError()
 
     def apply_instance_filter(self, instance):
@@ -977,6 +1019,10 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
+    def unfilter_instance(self, instance):
+        # Nothing to do
+        pass
+
     def prepare_instance_filter(self, instance):
         """
         Creates an NWFilter for the given instance. In the process,
@@ -1058,17 +1104,25 @@ class NWFilterFirewall(FirewallDriver):
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None):
         self.execute = execute or utils.execute
-        self.instances = set()
+        self.instances = {}
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
     def remove_instance(self, instance):
-        self.instances.remove(instance)
+        if instance['id'] in self.instances:
+            del self.instances[instance['id']]
+        else:
+            LOG.info(_('Attempted to unfilter instance %s which is not '
+                       'filtered'), instance['id'])
 
     def add_instance(self, instance):
-        self.instances.add(instance)
+        self.instances[instance['id']] = instance
+
+    def unfilter_instance(self, instance):
+        self.remove_instance(instance)
+        self.apply_ruleset()
 
     def prepare_instance_filter(self, instance):
         self.add_instance(instance)
@@ -1101,10 +1155,11 @@ class IptablesFirewallDriver(FirewallDriver):
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
 
-        security_groups = set()
+        security_groups = {}
         # Add our chains
         # First, we add instance chains and rules
-        for instance in self.instances:
+        for instance_id in self.instances:
+            instance = self.instances[instance_id]
             chain_name = self._instance_chain_name(instance)
             ip_address = self._ip_for_instance(instance)
 
@@ -1126,9 +1181,10 @@ class IptablesFirewallDriver(FirewallDriver):
             for security_group in \
                             db.security_group_get_by_instance(ctxt,
                                                               instance['id']):
-                security_groups.add(security_group)
+                security_groups[security_group['id']] = security_group
 
-                sg_chain_name = self._security_group_chain_name(security_group)
+                sg_chain_name = self._security_group_chain_name(
+                                                          security_group['id'])
 
                 our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
 
@@ -1141,13 +1197,13 @@ class IptablesFirewallDriver(FirewallDriver):
             our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
 
         # then, security group chains and rules
-        for security_group in security_groups:
-            chain_name = self._security_group_chain_name(security_group)
+        for security_group_id in security_groups:
+            chain_name = self._security_group_chain_name(security_group_id)
             our_chains += [':%s - [0:0]' % chain_name]
 
             rules = \
               db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group['id'])
+                                                          security_group_id)
 
             for rule in rules:
                 logging.info('%r', rule)
@@ -1195,8 +1251,8 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_rules(self, security_group):
         self.apply_ruleset()
 
-    def _security_group_chain_name(self, security_group):
-        return 'nova-sg-%s' % (security_group['id'],)
+    def _security_group_chain_name(self, security_group_id):
+        return 'nova-sg-%s' % (security_group_id,)
 
     def _instance_chain_name(self, instance):
         return 'nova-inst-%s' % (instance['id'],)
