@@ -165,15 +165,18 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
+        ctxt = req.environ['nova.context']
         update_dict = {}
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            try:
+                self.compute_api.set_admin_password(ctxt, id)
+            except exception.TimeoutException, e:
+                return exc.HTTPRequestTimeout()
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
-
         try:
-            self.compute_api.update(req.environ['nova.context'], id,
-                                    **update_dict)
+            self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
