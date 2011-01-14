@@ -17,6 +17,7 @@
 #    under the License.
 
 import boto
+import boto_v6
 import commands
 import httplib
 import os
@@ -69,6 +70,17 @@ class SmokeTestCase(unittest.TestCase):
                             'test.')
 
         parts = self.split_clc_url(clc_url)
+        if FLAGS.use_ipv6:
+            return boto_v6.connect_ec2(aws_access_key_id=access_key,
+                                aws_secret_access_key=secret_key,
+                                is_secure=parts['is_secure'],
+                                region=RegionInfo(None,
+                                                  'nova',
+                                                  parts['ip']),
+                                port=parts['port'],
+                                path='/services/Cloud',
+                                **kwargs)
+
         return boto.connect_ec2(aws_access_key_id=access_key,
                                 aws_secret_access_key=secret_key,
                                 is_secure=parts['is_secure'],
@@ -115,7 +127,8 @@ class SmokeTestCase(unittest.TestCase):
         return True
 
     def upload_image(self, bucket_name, image):
-        cmd = 'euca-upload-bundle -b %s -m /tmp/%s.manifest.xml' % (bucket_name, image)
+        cmd = 'euca-upload-bundle -b '
+        cmd += '%s -m /tmp/%s.manifest.xml' % (bucket_name, image)
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
@@ -129,6 +142,7 @@ class SmokeTestCase(unittest.TestCase):
             print '%s -> \n%s' % (cmd, output)
             raise Exception(output)
         return True
+
 
 def run_tests(suites):
     argv = FLAGS(sys.argv)
@@ -151,4 +165,3 @@ def run_tests(suites):
     else:
         for suite in suites.itervalues():
             unittest.TextTestRunner(verbosity=2).run(suite)
-

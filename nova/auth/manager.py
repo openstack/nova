@@ -721,7 +721,7 @@ class AuthManager(object):
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        return self.__generate_rc(user.access, user.secret, pid, use_dmz)
+        return self.__generate_rc(user, pid, use_dmz)
 
     @staticmethod
     def __generate_rc(user, pid, use_dmz=True, host=None):
@@ -747,7 +747,7 @@ class AuthManager(object):
                    's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
                    'os': '%s://%s:%s%s' % (FLAGS.os_prefix,
                                             cc_host,
-                                            FLAGS.cc_port,
+                                            FLAGS.osapi_port,
                                             FLAGS.os_suffix),
                    'user': user.name,
                    'nova': FLAGS.ca_file,

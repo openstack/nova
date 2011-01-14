@@ -31,6 +31,7 @@ from nova.compute import power_state
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi.vmops import SimpleDH
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
@@ -296,3 +297,29 @@ class XenAPIVMTestCase(test.TestCase):
         instance = db.instance_create(values)
         self.conn.spawn(instance)
         return instance
+
+
+class XenAPIDiffieHellmanTestCase(test.TestCase):
+    """
+    Unit tests for Diffie-Hellman code
+    """
+    def setUp(self):
+        super(XenAPIDiffieHellmanTestCase, self).setUp()
+        self.alice = SimpleDH()
+        self.bob = SimpleDH()
+
+    def test_shared(self):
+        alice_pub = self.alice.get_public()
+        bob_pub = self.bob.get_public()
+        alice_shared = self.alice.compute_shared(bob_pub)
+        bob_shared = self.bob.compute_shared(alice_pub)
+        self.assertEquals(alice_shared, bob_shared)
+
+    def test_encryption(self):
+        msg = "This is a top-secret message"
+        enc = self.alice.encrypt(msg)
+        dec = self.bob.decrypt(enc)
+        self.assertEquals(dec, msg)
+
+    def tearDown(self):
+        super(XenAPIDiffieHellmanTestCase, self).tearDown()
