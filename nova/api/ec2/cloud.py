@@ -37,7 +37,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import network
-from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
