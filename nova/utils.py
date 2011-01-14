@@ -30,6 +30,8 @@ import struct
 import sys
 import time
 from xml.sax import saxutils
+import re
+import netaddr
 
 from eventlet import event
 from eventlet import greenthread
@@ -198,6 +200,40 @@ def generate_mac():
 
 def last_octet(address):
     return int(address.split(".")[-1])
+
+
+def  get_my_linklocal(interface):
+    try:
+        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        condition = "\s+inet6\s+([0-9a-f:]+/\d+)\s+scope\s+link"
+        links = [re.search(condition, x) for x in if_str[0].split('\n')]
+        address = [w.group(1) for w in links if w is not None]
+        if address[0] is not None:
+            return address[0]
+        else:
+            return 'fe00::'
+    except IndexError as ex:
+        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+    except ProcessExecutionError as ex:
+        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+    except:
+        return 'fe00::'
+
+
+def to_global_ipv6(prefix, mac):
+    mac64 = netaddr.EUI(mac).eui64().words
+    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+    mac64_addr = netaddr.IPAddress(int_addr)
+    maskIP = netaddr.IPNetwork(prefix).ip
+    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+
+
+def to_mac(ipv6_address):
+    address = netaddr.IPAddress(ipv6_address)
+    mask1 = netaddr.IPAddress("::ffff:ffff:ffff:ffff")
+    mask2 = netaddr.IPAddress("::0200:0:0:0")
+    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
+    return ":".join(["%02x" % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def utcnow():
