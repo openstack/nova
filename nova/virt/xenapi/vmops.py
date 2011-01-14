@@ -79,6 +79,9 @@ class VMOps(object):
             disk_image_type = ImageType.DISK
         else:
             disk_image_type = ImageType.DISK_RAW
+        # TODO: Coalesce fetch_image, lookup_image and
+        # manipulate_root_image so requires a single VDI mount/umount
+        # sequence
         vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
             instance.image_id, user, project, disk_image_type)
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
@@ -102,6 +105,10 @@ class VMOps(object):
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
+                                
+        # Alter the image before VM start for, e.g. network injection
+        VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
+        
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name

@@ -22,6 +22,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 import os
 import pickle
 import re
+import tempfile
 import time
 import urllib
 from xml.dom import minidom
@@ -33,10 +34,12 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
+from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
+from nova.virt import conn_common
 from nova.virt.xenapi.volume_utils import StorageError
 
 
@@ -438,6 +441,39 @@ class VMHelper(HelperBase):
                 return vdis
             else:
                 return None
+
+    @classmethod
+    def preconfigure_instance(cls, session, instance, vdi_ref):
+        """Makes alterations to the image before launching as part of spawn.
+        May also set xenstore values to modify the image behaviour after
+        VM start."""
+        
+        # As mounting the image VDI is expensive, we only want do do it once,
+        # if at all, so determine whether it's required first, and then do
+        # everything
+        mount_required = False
+        key, net = conn_common.get_injectables(instance)
+        if key is not None or net is not None:
+            mount_required = True
+    
+        if mount_required:
+            def _mounted_processing(device):
+                devPath = '/dev/'+device+'1' # Note: Partition 1 hardcoded
+                tmpdir = tempfile.mkdtemp()
+                try:
+                    out, err = utils.execute('sudo mount %s %s' % (devPath, tmpdir))
+                    if err:
+                        raise exception.Error(_('Failed to mount filesystem: %s') % err)
+                    try:
+                        disk.inject_data_into_fs(tmpdir, key, net, utils.execute)
+                    finally:
+                        utils.execute('sudo umount %s' % devPath)
+                finally:
+                    # remove temporary directory
+                    os.rmdir(tmpdir)
+    
+            # FIXME: Check self._session is the type of session this fn wants
+            with_vdi_attached_here(session, vdi_ref, False, _mounted_processing)
 
     @classmethod
     def compile_info(cls, record):

@@ -92,11 +92,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                       % err)
 
             try:
-                if key:
-                    # inject key file
-                    _inject_key_into_fs(key, tmpdir)
-                if net:
-                    _inject_net_into_fs(net, tmpdir)
+                inject_data_into_fs(tmpdir, key, net, execute)
             finally:
                 # unmount device
                 utils.execute('sudo umount %s' % mapped_device)
@@ -158,8 +154,17 @@ def _allocate_device():
 def _free_device(device):
     _DEVICES.append(device)
 
+def inject_data_into_fs(fs, key, net, execute):
+    """Injects data into a filesystem already mounted by the caller.
+    Virt connections can call this directly if they mount their fs
+    in a different way to inject_data
+    """
+    if key:
+        _inject_key_into_fs(key, fs, execute=execute)
+    if net:
+        _inject_net_into_fs(net, fs, execute=execute)
 
-def _inject_key_into_fs(key, fs):
+def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
 
     key is an ssh key string.
@@ -173,7 +178,7 @@ def _inject_key_into_fs(key, fs):
     utils.execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
 
 
-def _inject_net_into_fs(net, fs):
+def _inject_net_into_fs(net, fs, execute=None):
     """Inject /etc/network/interfaces into the filesystem rooted at fs.
 
     net is the contents of /etc/network/interfaces.

@@ -28,6 +28,7 @@ import re
 import time
 import XenAPI
 
+import XenAPI
 
 ##### Logging setup
 

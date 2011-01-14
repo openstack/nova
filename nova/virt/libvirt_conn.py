@@ -62,6 +62,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import images
+from nova.virt import conn_common
 
 libvirt = None
 libxml2 = None
@@ -74,9 +75,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
-flags.DEFINE_string('injected_network_template',
-                    utils.abspath('virt/interfaces.template'),
-                    'Template file for injected network')
+
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -622,23 +621,8 @@ class LibvirtConnection(object):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        key = str(inst['key_data'])
-        net = None
-        network_ref = db.network_get_by_instance(context.get_admin_context(),
-                                                 inst['id'])
-        if network_ref['injected']:
-            admin_context = context.get_admin_context()
-            address = db.instance_get_fixed_address(admin_context, inst['id'])
-            ra_server = network_ref['ra_server']
-            if not ra_server:
-                ra_server = "fd00::"
-            with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': address,
-                                  'netmask': network_ref['netmask'],
-                                  'gateway': network_ref['gateway'],
-                                  'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns'],
-                                  'ra_server': ra_server}
+        key, net = conn_common.get_injectables(inst)
+
         if key or net:
             inst_name = inst['name']
             img_id = inst.image_id
