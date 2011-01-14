@@ -183,7 +183,7 @@ def upgrade(migrate_engine):
                                             assert_unicode=None,
                                             unicode_error=None,
                                             _warn_on_bytestring=False))
-    
+
     instances.create_column(instances_availability_zone)
     instances.create_column(instances_locked)
     services.create_column(services_availability_zone)
