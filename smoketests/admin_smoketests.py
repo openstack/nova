@@ -43,7 +43,7 @@ flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 # TODO(devamcar): Use random tempfile
 ZIP_FILENAME = '/tmp/nova-me-x509.zip'
 
-TEST_PREFIX = 'test%s' % int(random.random()*1000000)
+TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_USERNAME = '%suser' % TEST_PREFIX
 TEST_PROJECTNAME = '%sproject' % TEST_PREFIX
 
@@ -96,4 +96,3 @@ class UserTests(AdminSmokeTestCase):
 if __name__ == "__main__":
     suites = {'user': unittest.makeSuite(UserTests)}
     sys.exit(base.run_tests(suites))
-
