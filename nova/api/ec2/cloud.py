@@ -130,15 +130,6 @@ class CloudController(object):
                     result[key] = [line]
         return result
 
-    def _trigger_refresh_security_group(self, context, security_group):
-        nodes = set([instance['host'] for instance in security_group.instances
-                       if instance['host'] is not None])
-        for node in nodes:
-            rpc.cast(context,
-                     '%s.%s' % (FLAGS.compute_topic, node),
-                     {"method": "refresh_security_group",
-                      "args": {"security_group_id": security_group.id}})
-
     def _get_availability_zone_by_host(self, context, host):
         services = db.service_get_all_by_host(context, host)
         if len(services) > 0:
@@ -522,13 +513,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
-        instance_ref = self.compute_api.get(context, instance_id)
-        output = rpc.call(context,
-                          '%s.%s' % (FLAGS.compute_topic,
-                                     instance_ref['host']),
-                          {"method": "get_console_output",
-                           "args": {"instance_id": instance_ref['id']}})
-
+        output = self.compute_api.get_console_output(context, instance_id)
         now = datetime.datetime.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
