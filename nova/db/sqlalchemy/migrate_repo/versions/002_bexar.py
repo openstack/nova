@@ -25,31 +25,19 @@ from nova import log as logging
 meta = MetaData()
 
 
-# Just for the ForeignKey to succeed
+# Just for the ForeignKey and column creation to succeed, these are not the
+# actual definitions of instances or services.
 instances = Table('instances', meta,
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        )
+
+services = Table('services', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
 
 #
 # New Tables
 #
-instance_actions = Table('instance_actions', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
-        Column('instance_id',
-               Integer(),
-               ForeignKey('instances.id')),
-        Column('action',
-               String(length=None, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('error',
-               Text(length=None, convert_unicode=False, assert_unicode=None,
-                    unicode_error=None, _warn_on_bytestring=False)),
-        )
-
 certificates = Table('certificates', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
@@ -65,6 +53,74 @@ certificates = Table('certificates', meta,
         Column('file_name',
                String(length=None, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
+        )
+
+
+consoles = Table('consoles', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('instance_name',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('instance_id', Integer()),
+        Column('password',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('port', Integer(), nullable=True),
+        Column('pool_id',
+               Integer(),
+               ForeignKey('console_pools.id')),
+        )
+
+
+console_pools = Table('console_pools', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('address',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('username',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('password',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('console_type',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('public_hostname',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('host',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('compute_host',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        )
+
+
+instance_actions = Table('instance_actions', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('instance_id',
+               Integer(),
+               ForeignKey('instances.id')),
+        Column('action',
+               String(length=None, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('error',
+               Text(length=None, convert_unicode=False, assert_unicode=None,
+                    unicode_error=None, _warn_on_bytestring=False)),
         )
 
 
@@ -101,14 +157,20 @@ instances_availability_zone = Column(
 
 
 instances_locked = Column('locked',
-                          Boolean(create_constraint=True, name=None))
+                Boolean(create_constraint=True, name=None))
+
+
+services_availability_zone = Column(
+        'availability_zone',
+        String(length=None, convert_unicode=False, assert_unicode=None,
+               unicode_error=None, _warn_on_bytestring=False))
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (instance_actions, certificates):
+    for table in (certificates, consoles, console_pools, instance_actions):
         try:
             table.create()
         except Exception:
@@ -121,5 +183,7 @@ def upgrade(migrate_engine):
                                             assert_unicode=None,
                                             unicode_error=None,
                                             _warn_on_bytestring=False))
-    instances_availability_zone.create(table=instances)
-    instances_locked.create(table=instances)
+    
+    instances.create_column(instances_availability_zone)
+    instances.create_column(instances_locked)
+    services.create_column(services_availability_zone)
