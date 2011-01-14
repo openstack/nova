@@ -83,9 +83,10 @@ if [ "$CMD" == "install" ]; then
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
+    sudo modprobe nbd
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-daemon python-eventlet python-gflags python-tornado python-ipy
-    sudo apt-get install -y python-libvirt python-libxml2 python-routes
+    sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy
+    sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
 #For IPV6
     sudo apt-get install -y python-netaddr 
     sudo apt-get install -y radvd
