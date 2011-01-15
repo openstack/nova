@@ -92,8 +92,11 @@ class CloudController(object):
         self.image_service = utils.import_object(FLAGS.image_service)
         self.network_api = network.API()
         self.volume_api = volume.API()
-        self.compute_api = compute.API(self.image_service, self.network_api,
-                                       self.volume_api)
+        self.compute_api = compute.API(
+                network_api=self.network_api,
+                image_service=self.image_service,
+                volume_api=self.volume_api,
+                hostname_factory=id_to_ec2_id)
         self.setup()
 
     def __str__(self):
@@ -512,7 +515,8 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
-        output = self.compute_api.get_console_output(context, instance_id)
+        output = self.compute_api.get_console_output(
+                context, instance_id=instance_id)
         now = datetime.datetime.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
@@ -580,7 +584,7 @@ class CloudController(object):
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2_id_to_id(volume_id)
-        self.volume_api.delete(context, volume_id)
+        self.volume_api.delete(context, volume_id=volume_id)
         return True
 
     def update_volume(self, context, volume_id, **kwargs):
@@ -597,9 +601,12 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_id = ec2_id_to_id(volume_id)
         instance_id = ec2_id_to_id(instance_id)
-        LOG.audit(_("Attach volume %s to instacne %s at %s"), volume_id,
+        LOG.audit(_("Attach volume %s to instance %s at %s"), volume_id,
                   instance_id, device, context=context)
-        self.compute_api.attach_volume(context, instance_id, volume_id, device)
+        self.compute_api.attach_volume(context,
+                                       instance_id=instance_id,
+                                       volume_id=volume_id,
+                                       device=device)
         volume = self.volume_api.get(context, volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
@@ -612,7 +619,7 @@ class CloudController(object):
         volume_id = ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
         volume = self.volume_api.get(context, volume_id)
-        instance = self.compute_api.detach_volume(context, volume_id)
+        instance = self.compute_api.detach_volume(context, volume_id=volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
                 'instanceId': id_to_ec2_id(instance['id']),
@@ -643,6 +650,10 @@ class CloudController(object):
         return i[0]
 
     def _format_instances(self, context, instance_id=None, **kwargs):
+        # TODO(termie): this method is poorly named as its name does not imply
+        #               that it will be making a variety of database calls
+        #               rather than simply formatting a bunch of instances that
+        #               were handed to it
         reservations = {}
         # NOTE(vish): instance_id is an optional list of ids to filter by
         if instance_id:
@@ -743,7 +754,9 @@ class CloudController(object):
         LOG.audit(_("Associate address %s to instance %s"), public_ip,
                   instance_id, context=context)
         instance_id = ec2_id_to_id(instance_id)
-        self.compute_api.associate_floating_ip(context, instance_id, public_ip)
+        self.compute_api.associate_floating_ip(context,
+                                               instance_id=instance_id,
+                                               address=public_ip)
         return {'associateResponse': ["Address associated."]}
 
     def disassociate_address(self, context, public_ip, **kwargs):
@@ -754,8 +767,9 @@ class CloudController(object):
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
         instances = self.compute_api.create(context,
-            instance_types.get_by_type(kwargs.get('instance_type', None)),
-            kwargs['image_id'],
+            instance_type=instance_types.get_by_type(
+                kwargs.get('instance_type', None)),
+            image_id=kwargs['image_id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id', None),
@@ -766,8 +780,7 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'),
-            generate_hostname=id_to_ec2_id)
+                                  'AvailabilityZone'))
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
@@ -777,7 +790,7 @@ class CloudController(object):
         LOG.debug(_("Going to start terminating instances"))
         for ec2_id in instance_id:
             instance_id = ec2_id_to_id(ec2_id)
-            self.compute_api.delete(context, instance_id)
+            self.compute_api.delete(context, instance_id=instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
@@ -785,19 +798,19 @@ class CloudController(object):
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for ec2_id in instance_id:
             instance_id = ec2_id_to_id(ec2_id)
-            self.compute_api.reboot(context, instance_id)
+            self.compute_api.reboot(context, instance_id=instance_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         instance_id = ec2_id_to_id(instance_id)
-        self.compute_api.rescue(context, instance_id)
+        self.compute_api.rescue(context, instance_id=instance_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
         instance_id = ec2_id_to_id(instance_id)
-        self.compute_api.unrescue(context, instance_id)
+        self.compute_api.unrescue(context, instance_id=instance_id)
         return True
 
     def update_instance(self, context, ec2_id, **kwargs):
@@ -808,7 +821,7 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2_id_to_id(ec2_id)
-            self.compute_api.update(context, instance_id, **kwargs)
+            self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
     def describe_images(self, context, image_id=None, **kwargs):

@@ -48,7 +48,8 @@ def generate_default_hostname(instance_id):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, image_service=None, network_api=None, volume_api=None,
+    def __init__(self, image_service=None, network_api=None,
+                 volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
@@ -59,9 +60,11 @@ class API(base.Base):
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
+        self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
+        """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound as e:
@@ -82,8 +85,7 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None,
-               generate_hostname=generate_default_hostname):
+               availability_zone=None, user_data=None):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -173,9 +175,9 @@ class API(base.Base):
                                                     security_group_id)
 
             # Set sane defaults if not specified
-            updates = dict(hostname=generate_hostname(instance_id))
-            if (not hasattr(instance, 'display_name')) or \
-                               instance.display_name == None:
+            updates = dict(hostname=self.hostname_factory(instance_id))
+            if (not hasattr(instance, 'display_name') or
+                    instance.display_name == None):
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)
@@ -193,7 +195,7 @@ class API(base.Base):
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
 
-        return instances
+        return [dict(x.iteritems()) for x in instances]
 
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
@@ -278,7 +280,8 @@ class API(base.Base):
         :retval None
 
         """
-        return self.db.instance_update(context, instance_id, kwargs)
+        rv = self.db.instance_update(context, instance_id, kwargs)
+        return dict(rv.iteritems())
 
     def delete(self, context, instance_id):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
@@ -309,7 +312,8 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        return self.db.instance_get_by_id(context, instance_id)
+        rv = self.db.instance_get_by_id(context, instance_id)
+        return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
@@ -318,7 +322,7 @@ class API(base.Base):
         an admin, it will retreive all instances in the system."""
         if reservation_id is not None:
             return self.db.instance_get_all_by_reservation(context,
-                                                           reservation_id)
+                                                             reservation_id)
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)
         if project_id or not context.is_admin:
