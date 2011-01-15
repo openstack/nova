@@ -517,10 +517,8 @@ class VlanManager(NetworkManager):
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (
-                                     fixed_net_v6[start_v6],
-                                     significant_bits_v6
-                                     )
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
 
             # NOTE(vish): This makes ports unique accross the cloud, a more

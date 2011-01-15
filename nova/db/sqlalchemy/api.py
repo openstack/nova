@@ -611,9 +611,9 @@ def fixed_ip_get_instance_v6(context, address):
     session = get_session()
     mac = utils.to_mac(address)
 
-    result = session.query(models.Instance
-                   ).filter_by(mac_address=mac
-                   ).first()
+    result = session.query(models.Instance).\
+                     filter_by(mac_address=mac).\
+                     first()
     return result
 
 

@@ -995,8 +995,7 @@ class NWFilterFirewall(FirewallDriver):
                                                    ['no-mac-spoofing',
                                                     'no-ip-spoofing',
                                                     'no-arp-spoofing',
-                                                    'allow-dhcp-server'
-                                                   ]))
+                                                    'allow-dhcp-server']))
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)

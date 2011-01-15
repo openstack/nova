@@ -515,7 +515,8 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
-        output = self.compute_api.get_console_output(context, instance_id=instance_id)
+        output = self.compute_api.get_console_output(
+                context, instance_id=instance_id)
         now = datetime.datetime.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
