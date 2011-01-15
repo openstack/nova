@@ -101,7 +101,6 @@ class ServersTest(unittest.TestCase):
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(nova.api.API('os'))
-        print res.body
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], '1')
         self.assertEqual(res_dict['server']['name'], 'server1')
