@@ -42,6 +42,10 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 flags.DEFINE_boolean('enable_new_services', True,
                      'Services to be added to the available pool on create')
+flags.DEFINE_string('instance_name_template', 'instance-%08x',
+                    'Template string to be used to generate instance names')
+flags.DEFINE_string('volume_name_template', 'volume-%08x',
+                    'Template string to be used to generate instance names')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -295,6 +299,10 @@ def fixed_ip_get_instance(context, address):
     return IMPL.fixed_ip_get_instance(context, address)
 
 
+def fixed_ip_get_instance_v6(context, address):
+    return IMPL.fixed_ip_get_instance_v6(context, address)
+
+
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
@@ -351,6 +359,10 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_fixed_address(context, instance_id):
     """Get the fixed ip address of an instance."""
     return IMPL.instance_get_fixed_address(context, instance_id)
+
+
+def instance_get_fixed_address_v6(context, instance_id):
+    return IMPL.instance_get_fixed_address_v6(context, instance_id)
 
 
 def instance_get_floating_address(context, instance_id):
@@ -546,6 +558,10 @@ def project_get_network(context, project_id, associate=True):
     """
 
     return IMPL.project_get_network(context, project_id)
+
+
+def project_get_network_v6(context, project_id):
+    return IMPL.project_get_network_v6(context, project_id)
 
 
 ###################

@@ -155,6 +155,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.reboot_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_set_admin_password(self):
+        """Ensure instance can have its admin password set"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.set_admin_password(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()

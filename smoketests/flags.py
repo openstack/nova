@@ -33,6 +33,7 @@ DEFINE_bool = DEFINE_bool
 # __GLOBAL FLAGS ONLY__
 # Define any app-specific flags in their own files, docs at:
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
+
 DEFINE_string('region', 'nova', 'Region to use')
 DEFINE_string('test_image', 'ami-tiny', 'Image to use for launch tests')
-
+DEFINE_string('use_ipv6', True, 'use the ipv6 or not')
