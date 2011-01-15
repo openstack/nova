@@ -130,4 +130,3 @@ class ConsoleTestCase(test.TestCase):
                           self.context,
                           console_id)
         db.instance_destroy(self.context, instance_id)
-

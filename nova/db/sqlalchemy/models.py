@@ -91,7 +91,7 @@ class NovaBase(object):
 
     def iteritems(self):
         """Make the model object behave like a dict.
-        
+
         Includes attributes from joins."""
         local = dict(self)
         joined = dict([(k, v) for k, v in self.__dict__.iteritems()
