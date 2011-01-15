@@ -98,7 +98,7 @@ class FakeConnection(object):
         the new instance.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
 
         Once this successfully completes, the instance should be
         running (power_state.RUNNING).
@@ -122,7 +122,7 @@ class FakeConnection(object):
         The second parameter is the name of the snapshot.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
         """
         pass
 
@@ -134,7 +134,20 @@ class FakeConnection(object):
         and so the instance is being specified as instance.name.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
+    def set_admin_password(self, instance, new_pass):
+        """
+        Set the root password on the specified instance.
+
+        The first parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name. The second
+        parameter is the value of the new password.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
         """
         pass
 
@@ -182,7 +195,7 @@ class FakeConnection(object):
         and so the instance is being specified as instance.name.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
 

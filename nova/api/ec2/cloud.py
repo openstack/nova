@@ -26,16 +26,17 @@ import base64
 import datetime
 import IPy
 import os
+import urllib
 
 from nova import compute
 from nova import context
+
 from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import network
-from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
@@ -127,15 +128,6 @@ class CloudController(object):
                 else:
                     result[key] = [line]
         return result
-
-    def _trigger_refresh_security_group(self, context, security_group):
-        nodes = set([instance['host'] for instance in security_group.instances
-                       if instance['host'] is not None])
-        for node in nodes:
-            rpc.cast(context,
-                     '%s.%s' % (FLAGS.compute_topic, node),
-                     {"method": "refresh_security_group",
-                      "args": {"security_group_id": security_group.id}})
 
     def _get_availability_zone_by_host(self, context, host):
         services = db.service_get_all_by_host(context, host)
@@ -374,6 +366,7 @@ class CloudController(object):
             values['group_id'] = source_security_group['id']
         elif cidr_ip:
             # If this fails, it throws an exception. This is what we want.
+            cidr_ip = urllib.unquote(cidr_ip).decode()
             IPy.IP(cidr_ip)
             values['cidr'] = cidr_ip
         else:
@@ -519,13 +512,7 @@ class CloudController(object):
         # instance_id is passed in as a list of instances
         ec2_id = instance_id[0]
         instance_id = ec2_id_to_id(ec2_id)
-        instance_ref = self.compute_api.get(context, instance_id)
-        output = rpc.call(context,
-                          '%s.%s' % (FLAGS.compute_topic,
-                                     instance_ref['host']),
-                          {"method": "get_console_output",
-                           "args": {"instance_id": instance_ref['id']}})
-
+        output = self.compute_api.get_console_output(context, instance_id)
         now = datetime.datetime.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
@@ -643,6 +630,10 @@ class CloudController(object):
     def describe_instances(self, context, **kwargs):
         return self._format_describe_instances(context, **kwargs)
 
+    def describe_instances_v6(self, context, **kwargs):
+        kwargs['use_v6'] = True
+        return self._format_describe_instances(context, **kwargs)
+
     def _format_describe_instances(self, context, **kwargs):
         return {'reservationSet': self._format_instances(context, **kwargs)}
 
@@ -678,10 +669,16 @@ class CloudController(object):
                 if instance['fixed_ip']['floating_ips']:
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
+                if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
+                    i['dnsNameV6'] = utils.to_global_ipv6(
+                        instance['fixed_ip']['network']['cidr_v6'],
+                        instance['mac_address'])
+
             i['privateDnsName'] = fixed_addr
             i['publicDnsName'] = floating_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
+
             if context.user.is_admin():
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],

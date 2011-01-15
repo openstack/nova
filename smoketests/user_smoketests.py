@@ -45,7 +45,7 @@ flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
 flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
               'Local image file to use for bundling tests')
 
-TEST_PREFIX = 'test%s' % int (random.random()*1000000)
+TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_BUCKET = '%s_bucket' % TEST_PREFIX
 TEST_KEY = '%s_key' % TEST_PREFIX
 TEST_GROUP = '%s_group' % TEST_PREFIX
@@ -80,7 +80,7 @@ class ImageTests(UserSmokeTestCase):
 
     def test_006_can_register_kernel(self):
         kernel_id = self.conn.register_image('%s/%s.manifest.xml' %
-                                             (TEST_BUCKET, FLAGS.bundle_kernel))
+                                            (TEST_BUCKET, FLAGS.bundle_kernel))
         self.assert_(kernel_id is not None)
         self.data['kernel_id'] = kernel_id
 
@@ -92,7 +92,7 @@ class ImageTests(UserSmokeTestCase):
             time.sleep(1)
         else:
             print image.state
-            self.assert_(False) # wasn't available within 10 seconds
+            self.assert_(False)  # wasn't available within 10 seconds
         self.assert_(image.type == 'machine')
 
         for i in xrange(10):
@@ -101,7 +101,7 @@ class ImageTests(UserSmokeTestCase):
                 break
             time.sleep(1)
         else:
-            self.assert_(False) # wasn't available within 10 seconds
+            self.assert_(False)    # wasn't available within 10 seconds
         self.assert_(kernel.type == 'kernel')
 
     def test_008_can_describe_image_attribute(self):
@@ -152,14 +152,17 @@ class InstanceTests(UserSmokeTestCase):
         for x in xrange(60):
             instance.update()
             if instance.state == u'running':
-                 break
+                break
             time.sleep(1)
         else:
             self.fail('instance failed to start')
         ip = reservations[0].instances[0].private_dns_name
         self.failIf(ip == '0.0.0.0')
         self.data['private_ip'] = ip
-        print self.data['private_ip']
+        if FLAGS.use_ipv6:
+            ipv6 = reservations[0].instances[0].dns_name_v6
+            self.failIf(ipv6 is None)
+            self.data['ip_v6'] = ipv6
 
     def test_004_can_ping_private_ip(self):
         for x in xrange(120):
@@ -170,6 +173,16 @@ class InstanceTests(UserSmokeTestCase):
                 break
         else:
             self.fail('could not ping instance')
+
+        if FLAGS.use_ipv6:
+            for x in xrange(120):
+            # ping waits for 1 second
+                status, output = commands.getstatusoutput(
+                    'ping6 -c1 %s' % self.data['ip_v6'])
+                if status == 0:
+                    break
+            else:
+                self.fail('could not ping instance')
 
     def test_005_can_ssh_to_private_ip(self):
         for x in xrange(30):
@@ -182,6 +195,19 @@ class InstanceTests(UserSmokeTestCase):
                 break
         else:
             self.fail('could not ssh to instance')
+
+        if FLAGS.use_ipv6:
+            for x in xrange(30):
+                try:
+                    conn = self.connect_ssh(
+                                        self.data['ip_v6'], TEST_KEY)
+                    conn.close()
+                except Exception:
+                    time.sleep(1)
+                else:
+                    break
+            else:
+                self.fail('could not ssh to instance v6')
 
     def test_006_can_allocate_elastic_ip(self):
         result = self.conn.allocate_address()
@@ -387,7 +413,6 @@ class SecurityGroupTests(UserSmokeTestCase):
             if time.time() - start_time > 60:
                 raise Exception("Timeout")
             time.sleep(1)
-
 
     def test_999_tearDown(self):
         self.conn.delete_key_pair(TEST_KEY)

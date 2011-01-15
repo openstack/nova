@@ -366,6 +366,10 @@ class Network(BASE, NovaBase):
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
+    cidr_v6 = Column(String(255), unique=True)
+
+    ra_server = Column(String(255))
+
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
