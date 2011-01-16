@@ -89,7 +89,7 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
-        if 'nova-compute' == self.binary: 
+        if 'nova-compute' == self.binary:
             self.manager.update_service(ctxt, self.host, self.binary)
 
         conn1 = rpc.Connection.instance(new=True)
@@ -119,11 +119,11 @@ class Service(object):
     def _create_service_ref(self, context):
         zone = FLAGS.node_availability_zone
         service_ref = db.service_create(context,
-                                        {'host': self.host,
-                                         'binary': self.binary,
-                                         'topic': self.topic,
+                                        {'host':self.host,
+                                         'binary':self.binary,
+                                         'topic':self.topic,
                                          'report_count': 0,
-                                         'availability_zone': zone})
+                                         'availability_zone':zone})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):

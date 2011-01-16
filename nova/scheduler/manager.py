@@ -75,12 +75,9 @@ class SchedulerManager(manager.Manager):
     def show_host_resource(self, context, host, *args):
         """ show the physical/usage resource given by hosts."""
 
-        try:
-            services = db.service_get_all_by_host(context, host)
-        except exception.NotFound:
+        services = db.service_get_all_by_host(context, host)
+        if len(services) == 0:
             return {'ret': False, 'msg': 'No such Host'}
-        except:
-            raise
 
         compute = [ s for s in services if s['topic'] == 'compute']
         if 0 == len(compute): 
@@ -93,6 +90,7 @@ class SchedulerManager(manager.Manager):
                      'memory_mb': service_ref['memory_mb'],
                      'local_gb': service_ref['local_gb']}
 
+        
         # Getting usage resource information
         u_resource = {}
         instances_ref = db.instance_get_all_by_host(context, 

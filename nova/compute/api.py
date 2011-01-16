@@ -48,7 +48,8 @@ def generate_default_hostname(instance_id):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, image_service=None, network_api=None, volume_api=None,
+    def __init__(self, image_service=None, network_api=None,
+                 volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
@@ -59,9 +60,11 @@ class API(base.Base):
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
+        self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
     def get_network_topic(self, context, instance_id):
+        """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound as e:
@@ -82,8 +85,7 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None,
-               generate_hostname=generate_default_hostname):
+               availability_zone=None, user_data=None):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -173,9 +175,9 @@ class API(base.Base):
                                                     security_group_id)
 
             # Set sane defaults if not specified
-            updates = dict(hostname=generate_hostname(instance_id))
-            if (not hasattr(instance, 'display_name')) or \
-                               instance.display_name == None:
+            updates = dict(hostname=self.hostname_factory(instance_id))
+            if (not hasattr(instance, 'display_name') or
+                    instance.display_name == None):
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)
@@ -193,7 +195,7 @@ class API(base.Base):
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
 
-        return instances
+        return [dict(x.iteritems()) for x in instances]
 
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
@@ -278,10 +280,11 @@ class API(base.Base):
         :retval None
 
         """
-        return self.db.instance_update(context, instance_id, kwargs)
+        rv = self.db.instance_update(context, instance_id, kwargs)
+        return dict(rv.iteritems())
 
     def delete(self, context, instance_id):
-        LOG.debug(_("Going to try and terminate %s"), instance_id)
+        LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound as e:
@@ -302,16 +305,15 @@ class API(base.Base):
 
         host = instance['host']
         if host:
-            rpc.cast(context,
-                     self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "terminate_instance",
-                      "args": {"instance_id": instance_id}})
+            self._cast_compute_message('terminate_instance', context,
+                    instance_id, host)
         else:
             self.db.instance_destroy(context, instance_id)
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        return self.db.instance_get_by_id(context, instance_id)
+        rv = self.db.instance_get_by_id(context, instance_id)
+        return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
@@ -320,7 +322,7 @@ class API(base.Base):
         an admin, it will retreive all instances in the system."""
         if reservation_id is not None:
             return self.db.instance_get_all_by_reservation(context,
-                                                           reservation_id)
+                                                             reservation_id)
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)
         if project_id or not context.is_admin:
@@ -333,50 +335,46 @@ class API(base.Base):
             project_id)
         return self.db.instance_get_all(context)
 
+    def _cast_compute_message(self, method, context, instance_id, host=None):
+        """Generic handler for RPC casts to compute."""
+        if not host:
+            instance = self.get(context, instance_id)
+            host = instance['host']
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        kwargs = {'method': method, 'args': {'instance_id': instance_id}}
+        rpc.cast(context, queue, kwargs)
+
+    def _call_compute_message(self, method, context, instance_id, host=None):
+        """Generic handler for RPC calls to compute."""
+        if not host:
+            instance = self.get(context, instance_id)
+            host = instance["host"]
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        kwargs = {"method": method, "args": {"instance_id": instance_id}}
+        return rpc.call(context, queue, kwargs)
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "snapshot_instance",
-                  "args": {"instance_id": instance_id, "name": name}})
+        self._cast_compute_message('snapshot_instance', context, instance_id)
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "reboot_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('reboot_instance', context, instance_id)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "pause_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('pause_instance', context, instance_id)
 
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "unpause_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('unpause_instance', context, instance_id)
 
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance["host"]
-        return rpc.call(context,
-            self.db.queue_get_for(context, FLAGS.compute_topic, host),
-            {"method": "get_diagnostics",
-             "args": {"instance_id": instance_id}})
+        return self._call_compute_message(
+            "get_diagnostics",
+            context,
+            instance_id)
 
     def get_actions(self, context, instance_id):
         """Retrieve actions for the given instance."""
@@ -384,89 +382,54 @@ class API(base.Base):
 
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "suspend_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('suspend_instance', context, instance_id)
 
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "resume_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('resume_instance', context, instance_id)
 
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "rescue_instance",
-                  "args": {"instance_id": instance_id}})
+        self._cast_compute_message('rescue_instance', context, instance_id)
 
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
-        instance = self.get(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "unrescue_instance",
-                  "args": {"instance_id": instance['id']}})
+        self._cast_compute_message('unrescue_instance', context, instance_id)
+
+    def set_admin_password(self, context, instance_id):
+        """Set the root/admin password for the given instance."""
+        self._cast_compute_message('set_admin_password', context, instance_id)
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
-
         instance = self.get(context, instance_id)
-
-        output = rpc.call(context,
-                          '%s.%s' % (FLAGS.compute_topic,
-                                     instance['host']),
-                          {'method': 'get_ajax_console',
-                           'args': {'instance_id': instance['id']}})
-
+        output = self._call_compute_message('get_ajax_console',
+                                            context,
+                                            instance_id)
         rpc.cast(context, '%s' % FLAGS.ajax_console_proxy_topic,
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
                   'port': output['port']}})
-
         return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
 
-    def lock(self, context, instance_id):
-        """
-        lock the instance with instance_id
+    def get_console_output(self, context, instance_id):
+        """Get console output for an an instance"""
+        return self._call_compute_message('get_console_output',
+                                          context,
+                                          instance_id)
 
-        """
-        instance = self.get_instance(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "lock_instance",
-                  "args": {"instance_id": instance['id']}})
+    def lock(self, context, instance_id):
+        """lock the instance with instance_id"""
+        self._cast_compute_message('lock_instance', context, instance_id)
 
     def unlock(self, context, instance_id):
-        """
-        unlock the instance with instance_id
-
-        """
-        instance = self.get_instance(context, instance_id)
-        host = instance['host']
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "unlock_instance",
-                  "args": {"instance_id": instance['id']}})
+        """unlock the instance with instance_id"""
+        self._cast_compute_message('unlock_instance', context, instance_id)
 
     def get_lock(self, context, instance_id):
-        """
-        return the boolean state of (instance with instance_id)'s lock
-
-        """
-        instance = self.get_instance(context, instance_id)
+        """return the boolean state of (instance with instance_id)'s lock"""
+        instance = self.get(context, instance_id)
         return instance['locked']
 
     def attach_volume(self, context, instance_id, volume_id, device):

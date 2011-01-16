@@ -90,8 +90,14 @@ class NovaBase(object):
             setattr(self, k, v)
 
     def iteritems(self):
-        """Make the model object behave like a dict"""
-        return iter(self)
+        """Make the model object behave like a dict.
+
+        Includes attributes from joins."""
+        local = dict(self)
+        joined = dict([(k, v) for k, v in self.__dict__.iteritems()
+                      if not k[0] == '_'])
+        local.update(joined)
+        return local.iteritems()
 
 
 # TODO(vish): Store images in the database instead of file system
@@ -162,11 +168,11 @@ class Service(BASE, NovaBase):
     hypervisor_version = Column(Integer, nullable=False, default=-1)
     # Note(masumotok): Expected Strings example:
     #
-    # '{"arch":"x86_64", "model":"Nehalem", 
-    #  "topology":{"sockets":1, "threads":2, "cores":3}, 
+    # '{"arch":"x86_64", "model":"Nehalem",
+    #  "topology":{"sockets":1, "threads":2, "cores":3},
     #  features:[ "tdtscp", "xtpr"]}'
     #
-    # Points are "json translatable" and it must have all 
+    # Points are "json translatable" and it must have all
     # dictionary keys above.
     cpu_info = Column(String(512))
 
@@ -433,6 +439,10 @@ class Network(BASE, NovaBase):
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
+    cidr_v6 = Column(String(255), unique=True)
+
+    ra_server = Column(String(255))
+
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -600,7 +610,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console, Host)  # , Image
+              Project, Certificate, ConsolePool, Console)  # , Host, Image
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

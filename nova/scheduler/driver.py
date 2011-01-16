@@ -111,8 +111,9 @@ class Scheduler(object):
             ec2_id = instance_ref['hostname']
             raise exception.Invalid(msg % ec2_id)
 
-        # Checing volume node is running when any volumes are mounted to the instance.
-        if len(instance_ref['volumes']) != 0: 
+        # Checing volume node is running when any volumes are mounted
+        # to the instance.
+        if len(instance_ref['volumes']) != 0:
             services = db.service_get_all_by_topic(context, 'volume')
             if len(services) < 1 or  not self.service_is_up(services[0]):
                 msg = _('volume node is not alive(time synchronize problem?)')
@@ -126,18 +127,17 @@ class Scheduler(object):
             msg = _('%s is not alive(time synchronize problem?)')
             raise exception.Invalid(msg % src)
 
-
     def _live_migration_dest_check(self, context, instance_ref, dest):
         """Live migration check routine (for destination host)"""
 
         # Checking dest exists and compute node.
         dservice_refs = db.service_get_all_by_host(context, dest)
-        if len(dservice_refs) <= 0 : 
+        if len(dservice_refs) <= 0:
             msg = _('%s does not exists.')
             raise exception.Invalid(msg % dest)
 
         dservice_ref = dservice_refs[0]
-        if dservice_ref['topic'] != 'compute': 
+        if dservice_ref['topic'] != 'compute':
             msg = _('%s must be compute node')
             raise exception.Invalid(msg % dest)
 
@@ -167,7 +167,7 @@ class Scheduler(object):
 
         # Checking dest exists.
         dservice_refs = db.service_get_all_by_host(context, dest)
-        if len(dservice_refs) <= 0 : 
+        if len(dservice_refs) <= 0:
             msg = _('%s does not exists.')
             raise exception.Invalid(msg % dest)
         dservice_ref = dservice_refs[0]
@@ -175,7 +175,7 @@ class Scheduler(object):
         # Checking original host( where instance was launched at) exists.
         orighost = instance_ref['launched_on']
         oservice_refs = db.service_get_all_by_host(context, orighost)
-        if len(oservice_refs) <= 0 : 
+        if len(oservice_refs) <= 0:
             msg = _('%s(where instance was launched at) does not exists.')
             raise exception.Invalid(msg % orighost)
         oservice_ref = oservice_refs[0]
@@ -203,7 +203,8 @@ class Scheduler(object):
                       "args": {'cpu_info': cpu_info}})
 
         except rpc.RemoteError, e:
-            msg = _('%s doesnt have compatibility to %s(where %s launching at)')
+            msg = _(("""%s doesnt have compatibility to %s"""
+                     """(where %s was launched at)"""))
             ec2_id = instance_ref['hostname']
             src = instance_ref['host']
             logging.error(msg % (dest, src, ec2_id))
@@ -220,7 +221,7 @@ class Scheduler(object):
 
         # Gettin host information
         service_refs = db.service_get_all_by_host(context, dest)
-        if len(service_refs) <= 0 : 
+        if len(service_refs) <= 0:
             msg = _('%s does not exists.')
             raise exception.Invalid(msg % dest)
         service_ref = service_refs[0]

@@ -82,6 +82,7 @@ flags.DEFINE_integer('network_size', 256,
 flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
+flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
 flags.DEFINE_integer('cnt_vpn_clients', 5,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
@@ -90,6 +91,9 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
                   'Whether to update dhcp when fixed_ip is disassociated')
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
+
+flags.DEFINE_bool('use_ipv6', True,
+                  'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
@@ -235,8 +239,8 @@ class NetworkManager(manager.Manager):
         """Get the network host for the current context."""
         raise NotImplementedError()
 
-    def create_networks(self, context, num_networks, network_size,
-                        *args, **kwargs):
+    def create_networks(self, context, cidr, num_networks, network_size,
+                        cidr_v6, *args, **kwargs):
         """Create networks based on parameters."""
         raise NotImplementedError()
 
@@ -321,9 +325,11 @@ class FlatManager(NetworkManager):
         pass
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        *args, **kwargs):
+                        cidr_v6, *args, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
+        fixed_net_v6 = IPy.IP(cidr_v6)
+        significant_bits_v6 = 64
         for index in range(num_networks):
             start = index * network_size
             significant_bits = 32 - int(math.log(network_size, 2))
@@ -336,7 +342,13 @@ class FlatManager(NetworkManager):
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast())
             net['dhcp_start'] = str(project_net[2])
+
+            if(FLAGS.use_ipv6):
+                cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
+                net['cidr_v6'] = cidr_v6
+
             network_ref = self.db.network_create_safe(context, net)
+
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
 
@@ -484,12 +496,16 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        vlan_start, vpn_start):
+                        vlan_start, vpn_start, cidr_v6):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
+        fixed_net_v6 = IPy.IP(cidr_v6)
+        network_size_v6 = 1 << 64
+        significant_bits_v6 = 64
         for index in range(num_networks):
             vlan = vlan_start + index
             start = index * network_size
+            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
@@ -502,6 +518,11 @@ class VlanManager(NetworkManager):
             net['dhcp_start'] = str(project_net[3])
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
+            if(FLAGS.use_ipv6):
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
+                net['cidr_v6'] = cidr_v6
+
             # NOTE(vish): This makes ports unique accross the cloud, a more
             #             robust solution would be to make them unique per ip
             net['vpn_public_port'] = vpn_start + index
@@ -540,6 +561,7 @@ class VlanManager(NetworkManager):
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
                                        network_ref)
+
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
         if address == FLAGS.vpn_ip:
@@ -548,6 +570,8 @@ class VlanManager(NetworkManager):
                                             network_ref['vpn_private_address'])
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
+            if(FLAGS.use_ipv6):
+                self.driver.update_ra(context, network_id)
 
     @property
     def _bottom_reserved_ips(self):

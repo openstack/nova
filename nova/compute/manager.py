@@ -35,6 +35,8 @@ terminating it.
 """
 
 import datetime
+import random
+import string
 import logging
 import socket
 import functools
@@ -56,6 +58,8 @@ flags.DEFINE_string('compute_driver', 'nova.virt.connection.get_connection',
                     'Driver to use for controlling virtualization')
 flags.DEFINE_string('stub_network', False,
                     'Stub network related code')
+flags.DEFINE_integer('password_length', 12,
+                    'Length of generated admin passwords')
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
@@ -118,8 +122,7 @@ class ComputeManager(manager.Manager):
         """
         self.driver.init_host()
 
-
-    def update_service(self, ctxt, host, binary): 
+    def update_service(self, ctxt, host, binary):
         """Insert compute node specific information to DB."""
 
         try:
@@ -129,7 +132,7 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             msg = _(("""Cannot insert compute manager specific info"""
                       """Because no service record found."""))
-            raise exception.invalid(msg)
+            raise exception.Invalid(msg)
 
         # Updating host information
         vcpu = self.driver.get_vcpu_number()
@@ -147,7 +150,6 @@ class ComputeManager(manager.Manager):
                            'hypervisor_type': hypervisor,
                            'hypervisor_version': version,
                            'cpu_info': cpu_info})
-
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -342,6 +344,35 @@ class ComputeManager(manager.Manager):
                      instance_id, instance_ref['state'], power_state.RUNNING)
 
         self.driver.snapshot(instance_ref, name)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def set_admin_password(self, context, instance_id, new_pass=None):
+        """Set the root/admin password for an instance on this server."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        if instance_ref['state'] != power_state.RUNNING:
+            logging.warn('trying to reset the password on a non-running '
+                    'instance: %s (state: %s expected: %s)',
+                    instance_ref['id'],
+                    instance_ref['state'],
+                    power_state.RUNNING)
+
+        logging.debug('instance %s: setting admin password',
+                instance_ref['name'])
+        if new_pass is None:
+            # Generate a random password
+            new_pass = self._generate_password(FLAGS.password_length)
+
+        self.driver.set_admin_password(instance_ref, new_pass)
+        self._update_state(context, instance_id)
+
+    def _generate_password(self, length=20):
+        """Generate a random sequence of letters and digits
+        to be used as a password.
+        """
+        chrs = string.letters + string.digits
+        return "".join([random.choice(chrs) for i in xrange(length)])
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -610,7 +641,7 @@ class ComputeManager(manager.Manager):
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            if len(instance_ref['volumes']) != 0: 
+            if len(instance_ref['volumes']) != 0:
                 rpc.call(context,
                           FLAGS.volume_topic,
                           {"method": "check_for_export",
@@ -635,8 +666,8 @@ class ComputeManager(manager.Manager):
                                   'running')
 
             for v in instance_ref['volumes']:
-                db.volume_update(context, 
-                                 v['id'], 
+                db.volume_update(context,
+                                 v['id'],
                                  {'status': 'in-use'})
 
             # e should be raised. just calling "raise" may raise NotFound.

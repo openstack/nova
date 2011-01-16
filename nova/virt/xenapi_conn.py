@@ -149,6 +149,10 @@ class XenAPIConnection(object):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
 
+    def set_admin_password(self, instance, new_pass):
+        """Set the root/admin password on the VM instance"""
+        self._vmops.set_admin_password(instance, new_pass)
+
     def destroy(self, instance):
         """Destroy VM instance"""
         self._vmops.destroy(instance)
@@ -296,7 +300,8 @@ class XenAPISession(object):
 
     def _poll_task(self, id, task, done):
         """Poll the given XenAPI task, and fire the given action if we
-        get a result."""
+        get a result.
+        """
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
