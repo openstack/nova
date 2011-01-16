@@ -39,6 +39,7 @@ import logging
 import socket
 import functools
 
+from nova import context
 from nova import db
 from nova import exception
 from nova import flags
@@ -116,6 +117,37 @@ class ComputeManager(manager.Manager):
            standalone service.
         """
         self.driver.init_host()
+
+
+    def update_service(self, ctxt, host, binary): 
+        """Insert compute node specific information to DB."""
+
+        try:
+            service_ref = db.service_get_by_args(ctxt,
+                                                 host,
+                                                 binary)
+        except exception.NotFound:
+            msg = _(("""Cannot insert compute manager specific info"""
+                      """Because no service record found."""))
+            raise exception.invalid(msg)
+
+        # Updating host information
+        vcpu = self.driver.get_vcpu_number()
+        memory_mb = self.driver.get_memory_mb()
+        local_gb = self.driver.get_local_gb()
+        hypervisor = self.driver.get_hypervisor_type()
+        version = self.driver.get_hypervisor_version()
+        cpu_info = self.driver.get_cpu_info()
+
+        db.service_update(ctxt,
+                          service_ref['id'],
+                          {'vcpus': vcpu,
+                           'memory_mb': memory_mb,
+                           'local_gb': local_gb,
+                           'hypervisor_type': hypervisor,
+                           'hypervisor_version': version,
+                           'cpu_info': cpu_info})
+
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -530,9 +562,9 @@ class ComputeManager(manager.Manager):
         self.db.volume_detached(context, volume_id)
         return True
 
-    def compare_cpu(self, context, xml):
+    def compare_cpu(self, context, cpu_info):
         """ Check the host cpu is compatible to a cpu given by xml."""
-        return self.driver.compare_cpu(xml)
+        return self.driver.compare_cpu(cpu_info)
 
     def pre_live_migration(self, context, instance_id, dest):
         """Any preparation for live migration at dst host."""
@@ -548,11 +580,11 @@ class ComputeManager(manager.Manager):
             raise exception.NotFound(msg)
 
         # If any volume is mounted, prepare here.
-        try:
-            for vol in db.volume_get_all_by_instance(context, instance_id):
-                self.volume_manager.setup_compute_volume(context, vol['id'])
-        except exception.NotFound:
+        if len(instance_ref['volumes']) == 0:
             logging.info(_("%s has no volume.") % ec2_id)
+        else:
+            for v in instance_ref['volumes']:
+                self.volume_manager.setup_compute_volume(context, v['id'])
 
         # Bridge settings
         # call this method prior to ensure_filtering_rules_for_instance,
@@ -578,16 +610,16 @@ class ComputeManager(manager.Manager):
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            rpc.call(context,
-                      FLAGS.volume_topic,
-                      {"method": "check_for_export",
-                       "args": {'instance_id': instance_id}})
+            if len(instance_ref['volumes']) != 0: 
+                rpc.call(context,
+                          FLAGS.volume_topic,
+                          {"method": "check_for_export",
+                           "args": {'instance_id': instance_id}})
 
             # Asking dest host to preparing live migration.
             compute_topic = db.queue_get_for(context,
                                              FLAGS.compute_topic,
                                              dest)
-
             rpc.call(context,
                         compute_topic,
                         {"method": "pre_live_migration",
@@ -602,13 +634,10 @@ class ComputeManager(manager.Manager):
                                   power_state.RUNNING,
                                   'running')
 
-            try:
-                for vol in db.volume_get_all_by_instance(context, instance_id):
-                    db.volume_update(context,
-                                     vol['id'],
-                                     {'status': 'in-use'})
-            except exception.NotFound:
-                pass
+            for v in instance_ref['volumes']:
+                db.volume_update(context, 
+                                 v['id'], 
+                                 {'status': 'in-use'})
 
             # e should be raised. just calling "raise" may raise NotFound.
             raise e

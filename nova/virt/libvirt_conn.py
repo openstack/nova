@@ -36,6 +36,7 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
+import json
 import os
 import shutil
 import re
@@ -82,6 +83,9 @@ flags.DEFINE_string('injected_network_template',
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
+flags.DEFINE_string('cpuinfo_xml_template',
+                    utils.abspath('virt/cpuinfo.xml.template'),
+                    'CpuInfo XML Template (used only live migration now)')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
@@ -110,6 +114,11 @@ flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
 
+class cpuinfo:
+    arch = ''
+    vendor = ''
+    def __init__(self): pass
+    
 
 def get_connection(read_only):
     # These are loaded late so that there's no need to install these
@@ -145,6 +154,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -774,7 +784,7 @@ class LibvirtConnection(object):
         """ Get hypervisor version """
         return self._conn.getVersion()
 
-    def get_cpu_xml(self):
+    def get_cpu_info(self):
         """ Get cpuinfo information """
         xmlstr = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xmlstr)
@@ -784,8 +794,40 @@ class LibvirtConnection(object):
                     % len(nodes)
             msg += '\n' + xml.serialize()
             raise exception.Invalid(_(msg))
-        cpuxmlstr = re.sub("\n|[ ]+", ' ', nodes[0].serialize())
-        return cpuxmlstr
+
+        arch = xml.xpathEval('//cpu/arch')[0].getContent()
+        model = xml.xpathEval('//cpu/model')[0].getContent()
+        vendor = xml.xpathEval('//cpu/vendor')[0].getContent()
+
+        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        topology = dict()
+        while topology_node != None:
+            name = topology_node.get_name()
+            topology[name] = topology_node.getContent()
+            topology_node = topology_node.get_next()
+
+        keys = ['cores', 'sockets', 'threads']
+        tkeys = topology.keys()
+        if list(set(tkeys)) != list(set(keys)):
+            msg = _('Invalid xml: topology(%s) must have %s')
+            raise exception.Invalid(msg % (str(topology), ', '.join(keys)))
+        
+        feature_nodes = xml.xpathEval('//cpu/feature')
+        features = list()
+        for nodes in feature_nodes:
+            feature_name = nodes.get_properties().getContent()
+            features.append(feature_name)
+
+        template = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
+                    """"topology":{"cores":"%s", "threads":"%s", "sockets":"%s"}, """
+                    """"features":[%s]}""")
+        c = topology['cores']
+        s = topology['sockets']
+        t = topology['threads']
+        f = [ '"%s"' % x for x in features]
+        cpu_info = template % (arch, model, vendor, c, s, t, ', '.join(f))
+        return cpu_info
+
 
     def block_stats(self, instance_name, disk):
         """
@@ -817,7 +859,7 @@ class LibvirtConnection(object):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
-    def compare_cpu(self, xml):
+    def compare_cpu(self, cpu_info):
         """
            Check the host cpu is compatible to a cpu given by xml.
            "xml" must be a part of libvirt.openReadonly().getCapabilities().
@@ -826,6 +868,11 @@ class LibvirtConnection(object):
 
            'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
         """
+        dic = json.loads(cpu_info)
+        print dic
+        xml = str(Template(self.cpuinfo_xml, searchList=dic))
+        msg = _('Checking cpu_info: instance was launched this cpu.\n: %s ')
+        LOG.info(msg % xml)
         ret = self._conn.compareCPU(xml, 0)
         if ret <= 0:
             url = 'http://libvirt.org/html/libvirt-libvirt.html'
@@ -910,13 +957,10 @@ class LibvirtConnection(object):
         except Exception, e:
             id = instance_ref['id']
             db.instance_set_state(context, id, power_state.RUNNING, 'running')
-            try:
-                for volume in db.volume_get_all_by_instance(context, id):
-                    db.volume_update(context,
-                                     volume['id'],
-                                     {'status': 'in-use'})
-            except exception.NotFound:
-                pass
+            for v in instance_ref['volumes']:
+                db.volume_update(context,
+                                 v['id'],
+                                 {'status': 'in-use'})
 
             raise e
 
@@ -939,6 +983,7 @@ class LibvirtConnection(object):
            Post operations for live migration.
            Mainly, database updating.
         """
+        LOG.info('post livemigration operation is started..')
         # Detaching volumes.
         # (not necessary in current version )
 
@@ -949,7 +994,7 @@ class LibvirtConnection(object):
         if FLAGS.firewall_driver == \
             'nova.virt.libvirt_conn.IptablesFirewallDriver':
             try:
-                self.firewall_driver.remove_instance(instance_ref)
+                self.firewall_driver.unfilter_instance(instance_ref)
             except KeyError, e:
                 pass
 
@@ -986,22 +1031,25 @@ class LibvirtConnection(object):
             msg += '%s cannot inherit floating ip.. ' % ec2_id
             logging.error(_(msg))
 
+        # Restore instance/volume state
         db.instance_update(context,
                            instance_id,
                            {'state_description': 'running',
                             'state': power_state.RUNNING,
                             'host': dest})
 
-        try:
-            for volume in db.volume_get_all_by_instance(context, instance_id):
-                db.volume_update(context,
-                                 volume['id'],
-                                 {'status': 'in-use'})
-        except exception.NotFound:
-            pass
+        for v in instance_ref['volumes']:
+            db.volume_update(context,
+                             v['id'],
+                             {'status': 'in-use'})
 
         logging.info(_('Live migrating %s to %s finishes successfully')
                      % (ec2_id, dest))
+        msg = _(("""Known error: the below error is nomally occurs.\n"""
+                 """Just check if iinstance is successfully migrated.\n"""
+                 """libvir: QEMU error : Domain not found: no domain """
+                 """with matching name.."""))
+        logging.info(msg)
 
 
 class FirewallDriver(object):

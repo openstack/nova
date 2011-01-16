@@ -67,6 +67,7 @@ class API(base.Base):
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
         # NOTE(vish): Perhaps we should just pass this on to compute and
         #             let compute communicate with network.
+        host = fixed_ip['network']['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {"method": "associate_floating_ip",

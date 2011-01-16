@@ -153,9 +153,6 @@ class VolumeManager(manager.Manager):
     def check_for_export(self, context, instance_id):
         """Make sure whether volume is exported."""
         if FLAGS.volume_driver == 'nova.volume.driver.AOEDriver':
-            try:
-                for vol in self.db.volume_get_all_by_instance(context,
-                                                              instance_id):
-                    self.driver.check_for_export(context, vol['id'])
-            except exception.NotFound:
-                pass
+            instance_ref = db.instance_get(instance_id)
+            for v in instance_ref['volumes']:
+                self.driver.check_for_export(context, v['id'])

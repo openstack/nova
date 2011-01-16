@@ -76,20 +76,27 @@ class SchedulerManager(manager.Manager):
         """ show the physical/usage resource given by hosts."""
 
         try:
-            host_ref = db.host_get_by_name(context, host)
+            services = db.service_get_all_by_host(context, host)
         except exception.NotFound:
             return {'ret': False, 'msg': 'No such Host'}
         except:
             raise
 
+        compute = [ s for s in services if s['topic'] == 'compute']
+        if 0 == len(compute): 
+            service_ref = services[0]
+        else:
+            service_ref = compute[0]
+
         # Getting physical resource information
-        h_resource = {'vcpus': host_ref['vcpus'],
-                     'memory_mb': host_ref['memory_mb'],
-                     'local_gb': host_ref['local_gb']}
+        h_resource = {'vcpus': service_ref['vcpus'],
+                     'memory_mb': service_ref['memory_mb'],
+                     'local_gb': service_ref['local_gb']}
 
         # Getting usage resource information
         u_resource = {}
-        instances_ref = db.instance_get_all_by_host(context, host_ref['name'])
+        instances_ref = db.instance_get_all_by_host(context, 
+                                                    service_ref['host'])
 
         if 0 == len(instances_ref):
             return {'ret': True, 'phy_resource': h_resource, 'usage': {}}
@@ -98,11 +105,11 @@ class SchedulerManager(manager.Manager):
         project_ids = list(set(project_ids))
         for p_id in project_ids:
             vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,
-                                                               host,
-                                                               p_id)
+                                                                 host,
+                                                                 p_id)
             mem = db.instance_get_memory_sum_by_host_and_project(context,
-                                                                host,
-                                                                p_id)
+                                                                 host,
+                                                                 p_id)
             hdd = db.instance_get_disk_sum_by_host_and_project(context,
                                                                host,
                                                                p_id)

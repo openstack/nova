@@ -201,6 +201,36 @@ class XenAPIConnection(object):
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
 
+    def get_cpu_info(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_vcpu_number(self):
+        """This method is supported only libvirt.  """
+        return -1
+
+    def get_memory_mb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_local_gb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_hypervisor_type(self):
+        """This method is supported only libvirt.."""
+        return
+
+    def get_hypervisor_version(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def compare_cpu(self, xml):
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def live_migration(self, context, instance_ref, dest):
+        raise NotImplementedError('This method is supported only libvirt.')
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""

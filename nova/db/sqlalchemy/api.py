@@ -864,10 +864,10 @@ def instance_get_all_by_host(context, hostname):
     if not session:
         session = get_session()
 
-    result = session.query(models.Instance
-                       ).filter_by(host=hostname
-                       ).filter_by(deleted=can_read_deleted(context)
-                       ).all()
+    result = session.query(models.Instance).\
+                     filter_by(host=hostname).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     all()
     if not result:
         return []
     return result
@@ -877,11 +877,11 @@ def instance_get_all_by_host(context, hostname):
 def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
     session = get_session()
 
-    result = session.query(models.Instance
-                       ).filter_by(host=hostname
-                       ).filter_by(project_id=proj_id
-                       ).filter_by(deleted=can_read_deleted(context)
-                       ).value(column)
+    result = session.query(models.Instance).\
+                     filter_by(host=hostname).\
+                     filter_by(project_id=proj_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     value(column)
     if not result:
         return 0
     return result
@@ -889,20 +889,26 @@ def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
 
 @require_context
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context, 'vcpus', hostname,
+    return _instance_get_sum_by_host_and_project(context, 
+                                                 'vcpus',
+                                                 hostname,
                                                  proj_id)
 
 
 @require_context
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context, 'memory_mb',
-                                                 hostname, proj_id)
+    return _instance_get_sum_by_host_and_project(context,
+                                                 'memory_mb',
+                                                 hostname,
+                                                 proj_id)
 
 
 @require_context
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context, 'local_gb',
-                                                 hostname, proj_id)
+    return _instance_get_sum_by_host_and_project(context,
+                                                 'local_gb',
+                                                 hostname,
+                                                 proj_id)
 
 
 @require_context
@@ -1471,18 +1477,6 @@ def volume_get_all_by_project(context, project_id):
 
 
 @require_admin_context
-def volume_get_all_by_instance(context, instance_id):
-    session = get_session()
-    result = session.query(models.Volume).\
-                     filter_by(instance_id=instance_id).\
-                     filter_by(deleted=False).\
-                     all()
-    if not result:
-        raise exception.NotFound(_('No volume for instance %s') % instance_id)
-    return result
-
-
-@require_admin_context
 def volume_get_instance(context, volume_id):
     session = get_session()
     result = session.query(models.Volume).\
@@ -1944,71 +1938,6 @@ def host_get_networks(context, host):
                        filter_by(deleted=False).\
                        filter_by(host=host).\
                        all()
-
-
-@require_admin_context
-def host_create(context, values):
-    host_ref = models.Host()
-    for (key, value) in values.iteritems():
-        host_ref[key] = value
-    host_ref.save()
-    return host_ref
-
-
-@require_admin_context
-def host_get(context, host_id, session=None):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Host
-                     ).filter_by(deleted=False
-                     ).filter_by(id=host_id
-                     ).first()
-
-    if not result:
-        raise exception.NotFound('No host for id %s' % host_id)
-
-    return result
-
-
-@require_admin_context
-def host_get_all(context, session=None):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Host
-                     ).filter_by(deleted=False
-                     ).all()
-
-    if not result:
-        raise exception.NotFound('No host record found .')
-
-    return result
-
-
-@require_admin_context
-def host_get_by_name(context, host, session=None):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Host
-                     ).filter_by(deleted=False
-                     ).filter_by(name=host
-                     ).first()
-
-    if not result:
-        raise exception.NotFound('No host for name %s' % host)
-
-    return result
-
-
-@require_admin_context
-def host_update(context, host_id, values):
-    session = get_session()
-    with session.begin():
-        host_ref = host_get(context, host_id, session=session)
-        for (key, value) in values.iteritems():
-            host_ref[key] = value
 
 
 ##################

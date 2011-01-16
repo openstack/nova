@@ -62,6 +62,7 @@ import time
 
 import IPy
 
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -468,17 +469,19 @@ class InstanceCommands(object):
     def live_migration(self, ec2_id, dest):
         """live_migration"""
 
-        if FLAGS.connection_type != 'libvirt':
-            raise exception.Error('Only KVM is supported for now. '
-                'Sorry.')
-
-        if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver':
-            raise exception.Error('Only AOEDriver is supported for now. '
-                'Sorry.')
-
-        logging.basicConfig()
         ctxt = context.get_admin_context()
         instance_id = cloud.ec2_id_to_id(ec2_id)
+
+        if FLAGS.connection_type != 'libvirt':
+            msg = _('Only KVM is supported for now. Sorry!')
+            raise exception.Error(msg)
+
+        if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver':
+            instance_ref = db.instance_get(instance_id)
+            if len(instance_ref['volumes']) != 0:
+                msg = _(("""Volumes attached by ISCSIDriver"""
+                         """ are not supported. Sorry!"""))
+                raise  exception.Error(msg)
 
         rpc.call(ctxt,
                  FLAGS.scheduler_topic,
@@ -501,15 +504,14 @@ class HostCommands(object):
         # To supress msg: No handlers could be found for logger "amqplib"
         logging.basicConfig()
 
-        host_refs = db.host_get_all(context.get_admin_context())
-        for host_ref in host_refs:
-            print host_ref['name']
+        service_refs = db.service_get_all(context.get_admin_context())
+        hosts = [ h['host'] for h in service_refs]
+        hosts = list(set(hosts))
+        for host in hosts:
+            print host
 
     def show(self, host):
         """describe cpu/memory/hdd info for host."""
-
-        # To supress msg: No handlers could be found for logger "amqplib"
-        logging.basicConfig()
 
         result = rpc.call(context.get_admin_context(),
                      FLAGS.scheduler_topic,

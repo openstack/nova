@@ -730,11 +730,6 @@ def volume_get_by_ec2_id(context, ec2_id):
     return IMPL.volume_get_by_ec2_id(context, ec2_id)
 
 
-def volume_get_all_by_instance(context, instance_id):
-    """Get all volumes by instance id or raise if it does not exist."""
-    return IMPL.volume_get_all_by_instance(context, instance_id)
-
-
 def volume_get_instance(context, volume_id):
     """Get the instance that a volume is attached to."""
     return IMPL.volume_get_instance(context, volume_id)
@@ -950,31 +945,6 @@ def host_get_networks(context, host):
 
     """
     return IMPL.host_get_networks(context, host)
-
-
-def host_create(context, value):
-    """Create a host from the values dictionary."""
-    return IMPL.host_create(context, value)
-
-
-def host_get(context, host_id):
-    """Get an host or raise if it does not exist."""
-    return IMPL.host_get(context, host_id)
-
-
-def host_get_all(context, session=None):
-    """Get all hosts or raise if it does not exist."""
-    return IMPL.host_get_all(context)
-
-
-def host_get_by_name(context, host):
-    """Get an host or raise if it does not exist."""
-    return IMPL.host_get_by_name(context, host)
-
-
-def host_update(context, host, values):
-    """Set the given properties on an host and update it."""
-    return IMPL.host_update(context, host, values)
 
 
 ##################

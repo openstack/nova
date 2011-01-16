@@ -138,37 +138,37 @@ class NovaBase(object):
 #    __tablename__ = 'hosts'
 #    id = Column(String(255), primary_key=True)
 
-class Host(BASE, NovaBase):
-    """Represents a host where services are running"""
-    __tablename__ = 'hosts'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    vcpus = Column(Integer, nullable=False, default=-1)
-    memory_mb = Column(Integer, nullable=False, default=-1)
-    local_gb = Column(Integer, nullable=False, default=-1)
-    hypervisor_type = Column(String(128))
-    hypervisor_version = Column(Integer, nullable=False, default=-1)
-    cpu_info = Column(String(1024))
-    deleted = Column(Boolean, default=False)
-    # C: when calling service_create()
-    # D: never deleted. instead of deleting cloumn "deleted" is true
-    #    when host is down
-    #    b/c Host.id is foreign key of service, and records
-    #    of the "service" table are not deleted.
-    # R: Column "deleted" is true when calling hosts_up() and host is down.
-
 
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    #host_id = Column(Integer, ForeignKey('hosts.id'), nullable=True)
+    #host = relationship(Host, backref=backref('services'))
+    host = Column(String(255))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
     availability_zone = Column(String(255), default='nova')
+
+    # The below items are compute node only.
+    # -1 or None is inserted for other service.
+    vcpus = Column(Integer, nullable=False, default=-1)
+    memory_mb = Column(Integer, nullable=False, default=-1)
+    local_gb = Column(Integer, nullable=False, default=-1)
+    hypervisor_type = Column(String(128))
+    hypervisor_version = Column(Integer, nullable=False, default=-1)
+    # Note(masumotok): Expected Strings example:
+    #
+    # '{"arch":"x86_64", "model":"Nehalem", 
+    #  "topology":{"sockets":1, "threads":2, "cores":3}, 
+    #  features:[ "tdtscp", "xtpr"]}'
+    #
+    # Points are "json translatable" and it must have all 
+    # dictionary keys above.
+    cpu_info = Column(String(512))
 
 
 class Certificate(BASE, NovaBase):

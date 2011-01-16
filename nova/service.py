@@ -82,18 +82,15 @@ class Service(object):
         ctxt = context.get_admin_context()
 
         try:
-            host_ref = db.host_get_by_name(ctxt, self.host)
-        except exception.NotFound:
-            host_ref = db.host_create(ctxt, {'name': self.host})
-        host_ref = self._update_host_ref(ctxt, host_ref)
-
-        try:
             service_ref = db.service_get_by_args(ctxt,
                                                  self.host,
                                                  self.binary)
             self.service_id = service_ref['id']
         except exception.NotFound:
             self._create_service_ref(ctxt)
+
+        if 'nova-compute' == self.binary: 
+            self.manager.update_service(ctxt, self.host, self.binary)
 
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
@@ -128,26 +125,6 @@ class Service(object):
                                          'report_count': 0,
                                          'availability_zone': zone})
         self.service_id = service_ref['id']
-
-    def _update_host_ref(self, context, host_ref):
-
-        if 0 <= self.manager_class_name.find('ComputeManager'):
-            vcpu = self.manager.driver.get_vcpu_number()
-            memory_mb = self.manager.driver.get_memory_mb()
-            local_gb = self.manager.driver.get_local_gb()
-            hypervisor = self.manager.driver.get_hypervisor_type()
-            version = self.manager.driver.get_hypervisor_version()
-            cpu_xml = self.manager.driver.get_cpu_xml()
-
-            db.host_update(context,
-                           host_ref['id'],
-                           {'vcpus': vcpu,
-                           'memory_mb': memory_mb,
-                           'local_gb': local_gb,
-                           'hypervisor_type': hypervisor,
-                           'hypervisor_version': version,
-                           'cpu_info': cpu_xml})
-        return host_ref
 
     def __getattr__(self, key):
         manager = self.__dict__.get('manager', None)
