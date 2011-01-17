@@ -38,7 +38,7 @@ def conditional_forbid(req):
     return 'OK'
 
 
-class LockoutTestCase(test.TrialTestCase):
+class LockoutTestCase(test.TestCase):
     """Test case for the Lockout middleware."""
     def setUp(self):  # pylint: disable-msg=C0103
         super(LockoutTestCase, self).setUp()

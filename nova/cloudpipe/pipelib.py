@@ -68,8 +68,8 @@ class CloudPipe(object):
         shellfile = open(FLAGS.boot_script_template, "r")
         s = string.Template(shellfile.read())
         shellfile.close()
-        boot_script = s.substitute(cc_dmz=FLAGS.cc_dmz,
-                                   cc_port=FLAGS.cc_port,
+        boot_script = s.substitute(cc_dmz=FLAGS.ec2_dmz_host,
+                                   cc_port=FLAGS.ec2_port,
                                    dmz_net=FLAGS.dmz_net,
                                    dmz_mask=FLAGS.dmz_mask,
                                    num_vpn=FLAGS.cnt_vpn_clients)

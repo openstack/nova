@@ -295,7 +295,7 @@ class LibvirtConnection(object):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
-    def snapshot(self, instance, name):
+    def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         raise NotImplementedError(
             _("Instance snapshotting is not supported for libvirt"
@@ -995,8 +995,7 @@ class NWFilterFirewall(FirewallDriver):
                                                    ['no-mac-spoofing',
                                                     'no-ip-spoofing',
                                                     'no-arp-spoofing',
-                                                    'allow-dhcp-server'
-                                                   ]))
+                                                    'allow-dhcp-server']))
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)

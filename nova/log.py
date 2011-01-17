@@ -116,6 +116,8 @@ def basicConfig():
         handler.setFormatter(_formatter)
     if FLAGS.verbose:
         logging.root.setLevel(logging.DEBUG)
+    else:
+        logging.root.setLevel(logging.INFO)
     if FLAGS.use_syslog:
         syslog = SysLogHandler(address='/dev/log')
         syslog.setFormatter(_formatter)

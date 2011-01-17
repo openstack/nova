@@ -26,9 +26,8 @@ import StringIO
 import webob
 
 from nova import context
-from nova import flags
 from nova import test
-from nova import api
+from nova.api import ec2
 from nova.api.ec2 import cloud
 from nova.api.ec2 import apirequest
 from nova.auth import manager
@@ -79,7 +78,7 @@ class FakeHttplibConnection(object):
         pass
 
 
-class XmlConversionTestCase(test.TrialTestCase):
+class XmlConversionTestCase(test.TestCase):
     """Unit test api xml conversion"""
     def test_number_conversion(self):
         conv = apirequest._try_convert
@@ -96,16 +95,14 @@ class XmlConversionTestCase(test.TrialTestCase):
         self.assertEqual(conv('-0'), 0)
 
 
-class ApiEc2TestCase(test.TrialTestCase):
+class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()
-
         self.manager = manager.AuthManager()
-
         self.host = '127.0.0.1'
-
-        self.app = api.API('ec2')
+        self.app = ec2.Authenticate(ec2.Requestify(ec2.Executor(),
+                       'nova.api.ec2.cloud.CloudController'))
 
     def expect_http(self, host=None, is_secure=False):
         """Returns a new EC2 connection"""

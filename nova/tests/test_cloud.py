@@ -21,6 +21,7 @@ import json
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
+import shutil
 import tempfile
 import time
 
@@ -50,6 +51,8 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
+# TODO(termie): these tests are rather fragile, they should at the lest be
+#               wiping database state after each run
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
@@ -287,6 +290,7 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
 
     def test_instance_update_state(self):
+        # TODO(termie): what is this code even testing?
         def instance(num):
             return {
                 'reservation_id': 'r-1',
@@ -305,7 +309,8 @@ class CloudTestCase(test.TestCase):
                 'state': 0x01,
                 'user_data': ''}
         rv = self.cloud._format_describe_instances(self.context)
-        self.assert_(len(rv['reservationSet']) == 0)
+        logging.error(str(rv))
+        self.assertEqual(len(rv['reservationSet']), 0)
 
         # simulate launch of 5 instances
         # self.cloud.instances['pending'] = {}
@@ -368,6 +373,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('Foo Img', img.metadata['description'])
         self._fake_set_image_description(self.context, 'ami-testing', '')
         self.assertEqual('', img.metadata['description'])
+        shutil.rmtree(pathdir)
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})

@@ -78,7 +78,14 @@ def _translate_status(item):
         'decrypting': 'preparing',
         'untarring': 'saving',
         'available': 'active'}
-    item['status'] = status_mapping[item['status']]
+    try:
+        item['status'] = status_mapping[item['status']]
+    except KeyError:
+        # TODO(sirp): Performing translation of status (if necessary) here for
+        # now. Perhaps this should really be done in EC2 API and
+        # S3ImageService
+        pass
+
     return item
 
 
@@ -92,9 +99,11 @@ def _filter_keys(item, keys):
 
 
 def _convert_image_id_to_hash(image):
-    image_id = abs(hash(image['imageId']))
-    image['imageId'] = image_id
-    image['id'] = image_id
+    if 'imageId' in image:
+        # Convert EC2-style ID (i-blah) to Rackspace-style (int)
+        image_id = abs(hash(image['imageId']))
+        image['imageId'] = image_id
+        image['id'] = image_id
 
 
 class Controller(wsgi.Controller):
@@ -147,7 +156,11 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req)
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-        return compute.API().snapshot(context, instance_id, name)
+
+        image_meta = compute.API().snapshot(
+            context, instance_id, name)
+
+        return dict(image=image_meta)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that
