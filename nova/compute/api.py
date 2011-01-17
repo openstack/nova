@@ -375,8 +375,8 @@ class API(base.Base):
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
-       
-        :retval: A dict containing image metadata 
+
+        :retval: A dict containing image metadata
         """
         data = {'name': name, 'is_public': False}
         image_meta = self.image_service.create(context, data)
