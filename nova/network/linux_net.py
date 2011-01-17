@@ -61,7 +61,7 @@ def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_dmz, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
 
 
 def init_host():

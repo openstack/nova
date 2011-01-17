@@ -23,11 +23,9 @@ WSGI middleware for OpenStack API controllers.
 import routes
 import webob.dec
 import webob.exc
-import webob
 
 from nova import flags
 from nova import log as logging
-from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
@@ -40,32 +38,16 @@ from nova.api.openstack import shared_ip_groups
 
 LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
-flags.DEFINE_string('os_api_auth',
-    'nova.api.openstack.auth.AuthMiddleware',
-    'The auth mechanism to use for the OpenStack API implemenation')
-
-flags.DEFINE_string('os_api_ratelimiting',
-    'nova.api.openstack.ratelimiting.RateLimitingMiddleware',
-    'Default ratelimiting implementation for the Openstack API')
-
 flags.DEFINE_string('os_krm_mapping_file',
     'krm_mapping.json',
     'Location of OpenStack Flavor/OS:EC2 Kernel/Ramdisk/Machine JSON file.')
-
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
 
 
-class API(wsgi.Middleware):
-    """WSGI entry point for all OpenStack API requests."""
-
-    def __init__(self):
-        auth_middleware = utils.import_class(FLAGS.os_api_auth)
-        ratelimiting_middleware = \
-            utils.import_class(FLAGS.os_api_ratelimiting)
-        app = auth_middleware(ratelimiting_middleware(APIRouter()))
-        super(API, self).__init__(app)
+class FaultWrapper(wsgi.Middleware):
+    """Calls down the middleware stack, making exceptions into faults."""
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -82,6 +64,11 @@ class APIRouter(wsgi.Router):
     Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
+
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
+        return cls()
 
     def __init__(self):
         mapper = routes.Mapper()
@@ -134,11 +121,3 @@ class Versions(wsgi.Application):
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
         return wsgi.Serializer(req.environ, metadata).to_content_type(response)
-
-
-def router_factory(global_cof, **local_conf):
-    return APIRouter()
-
-
-def versions_factory(global_conf, **local_conf):
-    return Versions()
