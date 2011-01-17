@@ -213,18 +213,16 @@ class VMOps(object):
         task = self._session.call_xenapi("Async.VM.start", vm, False, False)
         self._session.wait_for_task(instance.id, task)
 
-    def shutdown(self, instance, hard=True):
+    def shutdown(self, instance):
         """Shutdown a VM instance"""
         vm = self._get_vm_opaque_ref(instance)
-        if hard:
-            task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
-        else:
-            # TODO(jk0): clean_shutdown is only supported if XenTools is
-            # installed and running. What we want to do eventually is try
-            # this first, and only issue the hard_shutdown if clean_shutdown
-            # were to fail.
+
+        try:
             task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
-        self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(instance.id, task)
+        except self.XenAPI.Failure:
+            task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
+            self._session.wait_for_task(instance.id, task)
 
     def reboot(self, instance):
         """Reboot VM instance"""
