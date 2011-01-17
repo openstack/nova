@@ -65,6 +65,11 @@ class APIRouter(wsgi.Router):
     and method.
     """
 
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
+        return cls()
+
     def __init__(self):
         mapper = routes.Mapper()
 
@@ -114,17 +119,3 @@ class Versions(wsgi.Application):
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
         return wsgi.Serializer(req.environ, metadata).to_content_type(response)
-
-
-def router_factory(global_cof, **local_conf):
-    return APIRouter()
-
-
-def versions_factory(global_conf, **local_conf):
-    return Versions()
-
-
-def fault_wrapper_factory(global_conf, **local_conf):
-    def fwrap(app):
-        return FaultWrapper(app)
-    return fwrap

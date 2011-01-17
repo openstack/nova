@@ -186,9 +186,9 @@ class Authenticate(wsgi.Middleware):
 
 class Requestify(wsgi.Middleware):
 
-    def __init__(self, app, controller_name):
+    def __init__(self, app, controller):
         super(Requestify, self).__init__(app)
-        self.controller = utils.import_class(controller_name)()
+        self.controller = utils.import_class(controller)()
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -365,41 +365,3 @@ class Versions(wsgi.Application):
             '2009-04-04',
         ]
         return ''.join('%s\n' % v for v in versions)
-
-
-def request_logging_factory(global_args, **local_args):
-    def logger(app):
-        return RequestLogging(app)
-    return logger
-
-
-def authenticate_factory(global_args, **local_args):
-    def authenticator(app):
-        return Authenticate(app)
-    return authenticator
-
-
-def authorizer_factory(global_args, **local_args):
-    def authorizer(app):
-        return Authorizer(app)
-    return authorizer
-
-
-def executor_factory(global_args, **local_args):
-    return Executor()
-
-
-def versions_factory(global_args, **local_args):
-    return Versions()
-
-
-def requestify_factory(global_args, **local_args):
-    def requestifier(app):
-        return Requestify(app, local_args['controller'])
-    return requestifier
-
-
-def lockout_factory(global_args, **local_args):
-    def locksmith(app):
-        return Lockout(app)
-    return locksmith
