@@ -22,6 +22,7 @@ import string
 
 import webob
 import webob.dec
+from paste import urlmap
 
 from glance import client as glance_client
 
@@ -31,6 +32,7 @@ from nova import exception as exc
 from nova import flags
 from nova import utils
 import nova.api.openstack.auth
+from nova.api import openstack
 from nova.api.openstack import auth
 from nova.api.openstack import ratelimiting
 from nova.image import glance
@@ -69,6 +71,17 @@ def fake_wsgi(self, req):
     if req.body:
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
+
+
+def wsgi_app(inner_application=None):
+    if not inner_application:
+        inner_application = openstack.APIRouter()
+    mapper = urlmap.URLMap()
+    api = openstack.FaultWrapper(auth.AuthMiddleware(
+              ratelimiting.RateLimitingMiddleware(inner_application)))
+    mapper['/v1.0'] = api
+    mapper['/'] = openstack.FaultWrapper(openstack.Versions())
+    return mapper
 
 
 def stub_out_key_pair_funcs(stubs):

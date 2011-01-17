@@ -30,10 +30,9 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import admin
-from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
@@ -42,8 +41,6 @@ LOG = logging.getLogger("nova.api")
 flags.DEFINE_boolean('use_forwarded_for', False,
                      'Treat X-Forwarded-For as the canonical remote address. '
                      'Only enable this if you have a sanitizing proxy.')
-flags.DEFINE_boolean('use_lockout', False,
-                     'Whether or not to use lockout middleware.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
@@ -54,13 +51,8 @@ flags.DEFINE_list('lockout_memcached_servers', None,
                   'Memcached servers or None for in process cache.')
 
 
-class API(wsgi.Middleware):
-    """Routing for all EC2 API requests."""
-
-    def __init__(self):
-        self.application = Authenticate(Router(Authorizer(Executor())))
-        if FLAGS.use_lockout:
-            self.application = Lockout(self.application)
+class RequestLogging(wsgi.Middleware):
+    """Access-Log akin logging for all EC2 API requests."""
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -192,26 +184,14 @@ class Authenticate(wsgi.Middleware):
         return self.application
 
 
-class Router(wsgi.Middleware):
+class Requestify(wsgi.Middleware):
 
-    """Add ec2.'controller', .'action', and .'action_args' to WSGI environ."""
-
-    def __init__(self, application):
-        super(Router, self).__init__(application)
-        self.map = routes.Mapper()
-        self.map.connect("/{controller_name}/")
-        self.controllers = dict(Cloud=cloud.CloudController(),
-                                Admin=admin.AdminController())
+    def __init__(self, app, controller_name):
+        super(Requestify, self).__init__(app)
+        self.controller = utils.import_class(controller_name)()
 
     @webob.dec.wsgify
     def __call__(self, req):
-        # Obtain the appropriate controller and action for this request.
-        try:
-            match = self.map.match(req.path_info)
-            controller_name = match['controller_name']
-            controller = self.controllers[controller_name]
-        except:
-            raise webob.exc.HTTPNotFound()
         non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
@@ -229,8 +209,8 @@ class Router(wsgi.Middleware):
             LOG.debug(_('arg: %s\t\tval: %s'), key, value)
 
         # Success!
-        req.environ['ec2.controller'] = controller
-        req.environ['ec2.action'] = action
+        api_request = apirequest.APIRequest(self.controller, action, args)
+        req.environ['ec2.request'] = api_request
         req.environ['ec2.action_args'] = args
         return self.application
 
@@ -291,16 +271,14 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller_name = req.environ['ec2.controller'].__class__.__name__
-        action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action,
-                                                               ['none'])
+        controller = req.environ['ec2.request'].controller.__class__.__name__
+        action = req.environ['ec2.request'].action
+        allowed_roles = self.action_roles[controller].get(action, ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
             LOG.audit(_("Unauthorized request for controller=%s "
-                        "and action=%s"), controller_name, action,
-                      context=context)
+                        "and action=%s"), controller, action, context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
@@ -327,14 +305,10 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller = req.environ['ec2.controller']
-        action = req.environ['ec2.action']
-        args = req.environ['ec2.action_args']
-
-        api_request = apirequest.APIRequest(controller, action)
+        api_request = req.environ['ec2.request']
         result = None
         try:
-            result = api_request.send(context, **args)
+            result = api_request.invoke(context)
         except exception.NotFound as ex:
             LOG.info(_('NotFound raised: %s'), str(ex),  context=context)
             return self._error(req, context, type(ex).__name__, str(ex))
@@ -393,16 +367,16 @@ class Versions(wsgi.Application):
         return ''.join('%s\n' % v for v in versions)
 
 
+def request_logging_factory(global_args, **local_args):
+    def logger(app):
+        return RequestLogging(app)
+    return logger
+
+
 def authenticate_factory(global_args, **local_args):
     def authenticator(app):
         return Authenticate(app)
     return authenticator
-
-
-def router_factory(global_args, **local_args):
-    def router(app):
-        return Router(app)
-    return router
 
 
 def authorizer_factory(global_args, **local_args):
@@ -417,3 +391,15 @@ def executor_factory(global_args, **local_args):
 
 def versions_factory(global_args, **local_args):
     return Versions()
+
+
+def requestify_factory(global_args, **local_args):
+    def requestifier(app):
+        return Requestify(app, local_args['controller'])
+    return requestifier
+
+
+def lockout_factory(global_args, **local_args):
+    def locksmith(app):
+        return Lockout(app)
+    return locksmith
