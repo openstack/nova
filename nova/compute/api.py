@@ -361,7 +361,7 @@ class API(base.Base):
         :param params: Optional dictionary of arguments to be passed to the
                        compute worker
 
-        :retval Result returned by compute worker
+        :retval: Result returned by compute worker
         """
         if not params:
             params = {}
@@ -374,12 +374,16 @@ class API(base.Base):
         return rpc.call(context, queue, kwargs)
 
     def snapshot(self, context, instance_id, name):
-        """Snapshot the given instance."""
+        """Snapshot the given instance.
+       
+        :retval: A dict containing image metadata 
+        """
         data = {'name': name, 'is_public': False}
         image_meta = self.image_service.create(context, data)
         params = {'image_id': image_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
+        return image_meta
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
