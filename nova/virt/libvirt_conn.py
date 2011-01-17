@@ -58,9 +58,9 @@ from nova import log as logging
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
-from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 
 libvirt = None
@@ -91,6 +91,9 @@ flags.DEFINE_string('libvirt_uri',
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
+flags.DEFINE_bool('use_cow_images',
+                  True,
+                  'Whether to use cow images')
 flags.DEFINE_string('ajaxterm_portrange',
                     '10000-12000',
                     'Range of ports that ajaxterm should randomly try to bind')
@@ -125,6 +128,16 @@ def _late_load_cheetah():
 def _get_net_and_mask(cidr):
     net = IPy.IP(cidr)
     return str(net.net()), str(net.netmask())
+
+
+def _get_net_and_prefixlen(cidr):
+    net = IPy.IP(cidr)
+    return str(net.net()), str(net.prefixlen())
+
+
+def _get_ip_version(cidr):
+        net = IPy.IP(cidr)
+        return int(net.version())
 
 
 class LibvirtConnection(object):
@@ -372,7 +385,6 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-
         self.nwfilter.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_image(instance, xml)
@@ -480,19 +492,57 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+        """Wrapper for a method that creates an image that caches the image.
+
+        This wrapper will save the image into a common store and create a
+        copy for use by the hypervisor.
+
+        The underlying method should specify a kwarg of target representing
+        where the image will be saved.
+
+        fname is used as the filename of the base image.  The filename needs
+        to be unique to a given image.
+
+        If cow is True, it will make a CoW image instead of a copy.
+        """
+        if not os.path.exists(target):
+            base_dir = os.path.join(FLAGS.instances_path, '_base')
+            if not os.path.exists(base_dir):
+                os.mkdir(base_dir)
+                os.chmod(base_dir, 0777)
+            base = os.path.join(base_dir, fname)
+            if not os.path.exists(base):
+                fn(target=base, *args, **kwargs)
+            if cow:
+                utils.execute('qemu-img create -f qcow2 -o '
+                              'cluster_size=2M,backing_file=%s %s'
+                              % (base, target))
+            else:
+                utils.execute('cp %s %s' % (base, target))
+
+    def _fetch_image(self, target, image_id, user, project, size=None):
+        """Grab image and optionally attempt to resize it"""
+        images.fetch(image_id, target, user, project)
+        if size:
+            disk.extend(target, size)
+
+    def _create_local(self, target, local_gb):
+        """Create a blank image of specified size"""
+        utils.execute('truncate %s -s %dG' % (target, local_gb))
+        # TODO(vish): should we format disk by default?
+
     def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
         # syntactic nicety
-        basepath = lambda fname = '', prefix = prefix: os.path.join(
-                                                 FLAGS.instances_path,
-                                                 inst['name'],
-                                                 prefix + fname)
+        def basepath(fname='', prefix=prefix):
+            return os.path.join(FLAGS.instances_path,
+                                inst['name'],
+                                prefix + fname)
 
         # ensure directories exist and are writable
         utils.execute('mkdir -p %s' % basepath(prefix=''))
         utils.execute('chmod 0777 %s' % basepath(prefix=''))
 
-        # TODO(termie): these are blocking calls, it would be great
-        #               if they weren't.
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
@@ -509,23 +559,44 @@ class LibvirtConnection(object):
             disk_images = {'image_id': inst['image_id'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
-        if not os.path.exists(basepath('disk')):
-            images.fetch(inst.image_id, basepath('disk-raw'), user,
-                         project)
 
-        if inst['kernel_id']:
-            if not os.path.exists(basepath('kernel')):
-                images.fetch(inst['kernel_id'], basepath('kernel'),
-                             user, project)
-            if inst['ramdisk_id']:
-                if not os.path.exists(basepath('ramdisk')):
-                    images.fetch(inst['ramdisk_id'], basepath('ramdisk'),
-                                 user, project)
+        if disk_images['kernel_id']:
+            self._cache_image(fn=self._fetch_image,
+                              target=basepath('kernel'),
+                              fname=disk_images['kernel_id'],
+                              image_id=disk_images['kernel_id'],
+                              user=user,
+                              project=project)
+            if disk_images['ramdisk_id']:
+                self._cache_image(fn=self._fetch_image,
+                                  target=basepath('ramdisk'),
+                                  fname=disk_images['ramdisk_id'],
+                                  image_id=disk_images['ramdisk_id'],
+                                  user=user,
+                                  project=project)
 
-        def execute(cmd, process_input=None, check_exit_code=True):
-            return utils.execute(cmd=cmd,
-                                 process_input=process_input,
-                                 check_exit_code=check_exit_code)
+        root_fname = disk_images['image_id']
+        size = FLAGS.minimum_root_size
+        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+            size = None
+            root_fname += "_sm"
+
+        self._cache_image(fn=self._fetch_image,
+                          target=basepath('disk'),
+                          fname=root_fname,
+                          cow=FLAGS.use_cow_images,
+                          image_id=disk_images['image_id'],
+                          user=user,
+                          project=project,
+                          size=size)
+        type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
+
+        if type_data['local_gb']:
+            self._cache_image(fn=self._create_local,
+                              target=basepath('local'),
+                              fname="local_%s" % type_data['local_gb'],
+                              cow=FLAGS.use_cow_images,
+                              local_gb=type_data['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -541,12 +612,16 @@ class LibvirtConnection(object):
         if network_ref['injected']:
             admin_context = context.get_admin_context()
             address = db.instance_get_fixed_address(admin_context, inst['id'])
+            ra_server = network_ref['ra_server']
+            if not ra_server:
+                ra_server = "fd00::"
             with open(FLAGS.injected_network_template) as f:
                 net = f.read() % {'address': address,
                                   'netmask': network_ref['netmask'],
                                   'gateway': network_ref['gateway'],
                                   'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns']}
+                                  'dns': network_ref['dns'],
+                                  'ra_server': ra_server}
         if key or net:
             if key:
                 LOG.info(_('instance %s: injecting key into image %s'),
@@ -555,33 +630,14 @@ class LibvirtConnection(object):
                 LOG.info(_('instance %s: injecting net into image %s'),
                              inst['name'], inst.image_id)
             try:
-                disk.inject_data(basepath('disk-raw'), key, net,
+                disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
-                                 execute=execute)
+                                 nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %s: ignoring error injecting data'
                            ' into image %s (%s)'),
                          inst['name'], inst.image_id, e)
-
-        if inst['kernel_id']:
-            if os.path.exists(basepath('disk')):
-                utils.execute('rm -f %s' % basepath('disk'))
-
-        local_bytes = (instance_types.INSTANCE_TYPES[inst.instance_type]
-                                                    ['local_gb']
-                                                    * 1024 * 1024 * 1024)
-
-        resize = True
-        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
-            resize = False
-
-        if inst['kernel_id']:
-            disk.partition(basepath('disk-raw'), basepath('disk'),
-                           local_bytes, resize, execute=execute)
-        else:
-            os.rename(basepath('disk-raw'), basepath('disk'))
-            disk.extend(basepath('disk'), local_bytes, execute=execute)
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo chown root %s' % basepath('disk'))
@@ -601,15 +657,36 @@ class LibvirtConnection(object):
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
-
+        ra_server = network['ra_server']
+        if not ra_server:
+            ra_server = 'fd00::'
         if FLAGS.allow_project_net_traffic:
-            net, mask = _get_net_and_mask(network['cidr'])
-            extra_params = ("<parameter name=\"PROJNET\" "
+            if FLAGS.use_ipv6:
+                net, mask = _get_net_and_mask(network['cidr'])
+                net_v6, prefixlen_v6 = _get_net_and_prefixlen(
+                                           network['cidr_v6'])
+                extra_params = ("<parameter name=\"PROJNET\" "
                             "value=\"%s\" />\n"
                             "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % (net, mask)
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJNETV6\" "
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASKV6\" "
+                            "value=\"%s\" />\n") % \
+                              (net, mask, net_v6, prefixlen_v6)
+            else:
+                net, mask = _get_net_and_mask(network['cidr'])
+                extra_params = ("<parameter name=\"PROJNET\" "
+                            "value=\"%s\" />\n"
+                            "<parameter name=\"PROJMASK\" "
+                            "value=\"%s\" />\n") % \
+                              (net, mask)
         else:
             extra_params = "\n"
+        if FLAGS.use_cow_images:
+            driver_type = 'qcow2'
+        else:
+            driver_type = 'raw'
 
         xml_info = {'type': FLAGS.libvirt_type,
                     'name': instance['name'],
@@ -621,8 +698,11 @@ class LibvirtConnection(object):
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
+                    'ra_server': ra_server,
                     'extra_params': extra_params,
-                    'rescue': rescue}
+                    'rescue': rescue,
+                    'local': instance_type['local_gb'],
+                    'driver_type': driver_type}
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -882,6 +962,15 @@ class NWFilterFirewall(FirewallDriver):
                     </rule>
                   </filter>'''
 
+    def nova_ra_filter(self):
+        return '''<filter name='nova-allow-ra-server' chain='root'>
+                            <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
+                              <rule action='accept' direction='inout'
+                                    priority='100'>
+                                <icmpv6 srcipaddr='$RASERVER'/>
+                              </rule>
+                            </filter>'''
+
     def setup_basic_filtering(self, instance):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
         logging.info('called setup_basic_filtering in nwfilter')
@@ -910,9 +999,12 @@ class NWFilterFirewall(FirewallDriver):
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_ra_filter)
         self._define_filter(self.nova_vpn_filter)
         if FLAGS.allow_project_net_traffic:
             self._define_filter(self.nova_project_filter)
+            if FLAGS.use_ipv6:
+                self._define_filter(self.nova_project_filter_v6)
 
         self.static_filters_configured = True
 
@@ -944,13 +1036,13 @@ class NWFilterFirewall(FirewallDriver):
 
     def nova_base_ipv6_filter(self):
         retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
-        for protocol in ['tcp', 'udp', 'icmp']:
+        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
             for direction, action, priority in [('out', 'accept', 399),
                                                 ('in', 'drop', 400)]:
                 retval += """<rule action='%s' direction='%s' priority='%d'>
-                               <%s-ipv6 />
+                               <%s />
                              </rule>""" % (action, direction,
-                                             priority, protocol)
+                                              priority, protocol)
         retval += '</filter>'
         return retval
 
@@ -963,10 +1055,20 @@ class NWFilterFirewall(FirewallDriver):
         retval += '</filter>'
         return retval
 
+    def nova_project_filter_v6(self):
+        retval = "<filter name='nova-project-v6' chain='ipv6'>"
+        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
+            retval += """<rule action='accept' direction='inout'
+                                                   priority='200'>
+                           <%s srcipaddr='$PROJNETV6'
+                               srcipmask='$PROJMASKV6' />
+                         </rule>""" % (protocol)
+        retval += '</filter>'
+        return retval
+
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
-
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
@@ -980,7 +1082,6 @@ class NWFilterFirewall(FirewallDriver):
         it makes sure the filters for the security groups as well as
         the base filter are all in place.
         """
-
         if instance['image_id'] == FLAGS.vpn_image_id:
             base_filter = 'nova-vpn'
         else:
@@ -992,11 +1093,15 @@ class NWFilterFirewall(FirewallDriver):
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
+        if FLAGS.use_ipv6:
+            instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
 
         if FLAGS.allow_project_net_traffic:
             instance_filter_children += ['nova-project']
+            if FLAGS.use_ipv6:
+                instance_filter_children += ['nova-project-v6']
 
         for security_group in db.security_group_get_by_instance(ctxt,
                                                                instance['id']):
@@ -1024,12 +1129,19 @@ class NWFilterFirewall(FirewallDriver):
         security_group = db.security_group_get(context.get_admin_context(),
                                                security_group_id)
         rule_xml = ""
+        v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
         for rule in security_group.rules:
             rule_xml += "<rule action='accept' direction='in' priority='300'>"
             if rule.cidr:
-                net, mask = _get_net_and_mask(rule.cidr)
-                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                            (rule.protocol, net, mask)
+                version = _get_ip_version(rule.cidr)
+                if(FLAGS.use_ipv6 and version == 6):
+                    net, prefixlen = _get_net_and_prefixlen(rule.cidr)
+                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                                (v6protocol[rule.protocol], net, prefixlen)
+                else:
+                    net, mask = _get_net_and_mask(rule.cidr)
+                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                                (rule.protocol, net, mask)
                 if rule.protocol in ['tcp', 'udp']:
                     rule_xml += "dstportstart='%s' dstportend='%s' " % \
                                 (rule.from_port, rule.to_port)
@@ -1044,8 +1156,11 @@ class NWFilterFirewall(FirewallDriver):
 
                 rule_xml += '/>\n'
             rule_xml += "</rule>\n"
-        xml = "<filter name='nova-secgroup-%s' chain='ipv4'>%s</filter>" % \
-              (security_group_id, rule_xml,)
+        xml = "<filter name='nova-secgroup-%s' " % security_group_id
+        if(FLAGS.use_ipv6):
+            xml += "chain='root'>%s</filter>" % rule_xml
+        else:
+            xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml
 
     def _instance_filter_name(self, instance):
@@ -1082,11 +1197,17 @@ class IptablesFirewallDriver(FirewallDriver):
     def apply_ruleset(self):
         current_filter, _ = self.execute('sudo iptables-save -t filter')
         current_lines = current_filter.split('\n')
-        new_filter = self.modify_rules(current_lines)
+        new_filter = self.modify_rules(current_lines, 4)
         self.execute('sudo iptables-restore',
                      process_input='\n'.join(new_filter))
+        if(FLAGS.use_ipv6):
+            current_filter, _ = self.execute('sudo ip6tables-save -t filter')
+            current_lines = current_filter.split('\n')
+            new_filter = self.modify_rules(current_lines, 6)
+            self.execute('sudo ip6tables-restore',
+                         process_input='\n'.join(new_filter))
 
-    def modify_rules(self, current_lines):
+    def modify_rules(self, current_lines, ip_version=4):
         ctxt = context.get_admin_context()
         # Remove any trace of nova rules.
         new_filter = filter(lambda l: 'nova-' not in l, current_lines)
@@ -1100,8 +1221,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 if not new_filter[rules_index].startswith(':'):
                     break
 
-        our_chains = [':nova-ipv4-fallback - [0:0]']
-        our_rules = ['-A nova-ipv4-fallback -j DROP']
+        our_chains = [':nova-fallback - [0:0]']
+        our_rules = ['-A nova-fallback -j DROP']
 
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
@@ -1112,7 +1233,10 @@ class IptablesFirewallDriver(FirewallDriver):
         for instance_id in self.instances:
             instance = self.instances[instance_id]
             chain_name = self._instance_chain_name(instance)
-            ip_address = self._ip_for_instance(instance)
+            if(ip_version == 4):
+                ip_address = self._ip_for_instance(instance)
+            elif(ip_version == 6):
+                ip_address = self._ip_for_instance_v6(instance)
 
             our_chains += [':%s - [0:0]' % chain_name]
 
@@ -1139,13 +1263,19 @@ class IptablesFirewallDriver(FirewallDriver):
 
                 our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
 
-            # Allow DHCP responses
-            dhcp_server = self._dhcp_server_for_instance(instance)
-            our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
-                                                     (chain_name, dhcp_server)]
+            if(ip_version == 4):
+                # Allow DHCP responses
+                dhcp_server = self._dhcp_server_for_instance(instance)
+                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
+                                                 (chain_name, dhcp_server)]
+            elif(ip_version == 6):
+                # Allow RA responses
+                ra_server = self._ra_server_for_instance(instance)
+                our_rules += ['-A %s -s %s -p icmpv6' %
+                                                 (chain_name, ra_server)]
 
             # If nothing matches, jump to the fallback chain
-            our_rules += ['-A %s -j nova-ipv4-fallback' % (chain_name,)]
+            our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
 
         # then, security group chains and rules
         for security_group_id in security_groups:
@@ -1158,14 +1288,21 @@ class IptablesFirewallDriver(FirewallDriver):
 
             for rule in rules:
                 logging.info('%r', rule)
-                args = ['-A', chain_name, '-p', rule.protocol]
 
-                if rule.cidr:
-                    args += ['-s', rule.cidr]
-                else:
+                if not rule.cidr:
                     # Eventually, a mechanism to grant access for security
                     # groups will turn up here. It'll use ipsets.
                     continue
+
+                version = _get_ip_version(rule.cidr)
+                if version != ip_version:
+                    continue
+
+                protocol = rule.protocol
+                if version == 6 and rule.protocol == 'icmp':
+                    protocol = 'icmpv6'
+
+                args = ['-A', chain_name, '-p', protocol, '-s', rule.cidr]
 
                 if rule.protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:
@@ -1186,7 +1323,12 @@ class IptablesFirewallDriver(FirewallDriver):
                             icmp_type_arg += '/%s' % icmp_code
 
                     if icmp_type_arg:
-                        args += ['-m', 'icmp', '--icmp-type', icmp_type_arg]
+                        if(ip_version == 4):
+                            args += ['-m', 'icmp', '--icmp-type',
+                                     icmp_type_arg]
+                        elif(ip_version == 6):
+                            args += ['-m', 'icmp6', '--icmpv6-type',
+                                     icmp_type_arg]
 
                 args += ['-j ACCEPT']
                 our_rules += [' '.join(args)]
@@ -1212,7 +1354,16 @@ class IptablesFirewallDriver(FirewallDriver):
         return db.instance_get_fixed_address(context.get_admin_context(),
                                              instance['id'])
 
+    def _ip_for_instance_v6(self, instance):
+        return db.instance_get_fixed_address_v6(context.get_admin_context(),
+                                             instance['id'])
+
     def _dhcp_server_for_instance(self, instance):
         network = db.project_get_network(context.get_admin_context(),
                                          instance['project_id'])
         return network['gateway']
+
+    def _ra_server_for_instance(self, instance):
+        network = db.project_get_network(context.get_admin_context(),
+                                         instance['project_id'])
+        return network['ra_server']

@@ -371,3 +371,52 @@ class RBDDriver(VolumeDriver):
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host"""
         pass
+
+
+class SheepdogDriver(VolumeDriver):
+    """Executes commands relating to Sheepdog Volumes"""
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        try:
+            (out, err) = self._execute("collie cluster info")
+            if not out.startswith('running'):
+                raise exception.Error(_("Sheepdog is not working: %s") % out)
+        except exception.ProcessExecutionError:
+            raise exception.Error(_("Sheepdog is not working"))
+
+    def create_volume(self, volume):
+        """Creates a sheepdog volume"""
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
+        self._try_execute("qemu-img create sheepdog:%s %s" %
+                          (volume['name'], sizestr))
+
+    def delete_volume(self, volume):
+        """Deletes a logical volume"""
+        self._try_execute("collie vdi delete %s" % volume['name'])
+
+    def local_path(self, volume):
+        return "sheepdog:%s" % volume['name']
+
+    def ensure_export(self, context, volume):
+        """Safely and synchronously recreates an export for a logical volume"""
+        pass
+
+    def create_export(self, context, volume):
+        """Exports the volume"""
+        pass
+
+    def remove_export(self, context, volume):
+        """Removes an export for a logical volume"""
+        pass
+
+    def discover_volume(self, volume):
+        """Discover volume on a remote host"""
+        return "sheepdog:%s" % volume['name']
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host"""
+        pass
