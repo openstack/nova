@@ -76,7 +76,7 @@ class ComputeTestCase(test.TestCase):
             ref = self.compute_api.create(self.context,
                 FLAGS.default_instance_type, None, **instance)
             try:
-                self.assertNotEqual(ref[0].display_name, None)
+                self.assertNotEqual(ref[0]['display_name'], None)
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
 
@@ -87,10 +87,14 @@ class ComputeTestCase(test.TestCase):
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute_api.create(self.context,
-            FLAGS.default_instance_type, None, security_group=['default'])
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['default'])
         try:
-            self.assertEqual(len(ref[0]['security_groups']), 1)
+            self.assertEqual(len(db.security_group_get_by_instance(
+                self.context, ref[0]['id'])), 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
@@ -150,6 +154,13 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.compute.reboot_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_set_admin_password(self):
+        """Ensure instance can have its admin password set"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.set_admin_password(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_snapshot(self):

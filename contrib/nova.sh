@@ -83,9 +83,17 @@ if [ "$CMD" == "install" ]; then
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
+    sudo modprobe nbd
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-daemon python-eventlet python-gflags python-tornado python-ipy
-    sudo apt-get install -y python-libvirt python-libxml2 python-routes
+    sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy
+    sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
+#For IPV6
+    sudo apt-get install -y python-netaddr 
+    sudo apt-get install -y radvd
+#(Nati) Note that this configuration is only needed for nova-network node.
+    sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
+    sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
+    
     if [ "$USE_MYSQL" == 1 ]; then
         cat <<MYSQL_PRESEED | debconf-set-selections
 mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
@@ -107,6 +115,8 @@ function screen_it {
 
 if [ "$CMD" == "run" ]; then
     killall dnsmasq
+    #For IPv6
+    killall radvd
     screen -d -m -S nova -t nova
     sleep 1
     if [ "$USE_MYSQL" == 1 ]; then

@@ -9,7 +9,7 @@ def _fake_context():
     return context.RequestContext(1, 1)
 
 
-class RootLoggerTestCase(test.TrialTestCase):
+class RootLoggerTestCase(test.TestCase):
     def setUp(self):
         super(RootLoggerTestCase, self).setUp()
         self.log = log.logging.root
@@ -46,7 +46,7 @@ class RootLoggerTestCase(test.TrialTestCase):
         self.assert_(True)  # didn't raise exception
 
 
-class NovaFormatterTestCase(test.TrialTestCase):
+class NovaFormatterTestCase(test.TestCase):
     def setUp(self):
         super(NovaFormatterTestCase, self).setUp()
         self.flags(logging_context_format_string="HAS CONTEXT "\
@@ -78,7 +78,7 @@ class NovaFormatterTestCase(test.TrialTestCase):
         self.assertEqual("NOCTXT: baz --DBG\n", self.stream.getvalue())
 
 
-class NovaLoggerTestCase(test.TrialTestCase):
+class NovaLoggerTestCase(test.TestCase):
     def setUp(self):
         super(NovaLoggerTestCase, self).setUp()
         self.flags(default_log_levels=["nova-test=AUDIT"], verbose=False)
@@ -96,7 +96,7 @@ class NovaLoggerTestCase(test.TrialTestCase):
         self.assertEqual(log.AUDIT, l.level)
 
 
-class VerboseLoggerTestCase(test.TrialTestCase):
+class VerboseLoggerTestCase(test.TestCase):
     def setUp(self):
         super(VerboseLoggerTestCase, self).setUp()
         self.flags(default_log_levels=["nova.test=AUDIT"], verbose=True)
