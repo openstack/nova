@@ -79,7 +79,7 @@ class FakeHttplibConnection(object):
         pass
 
 
-class XmlConversionTestCase(test.TrialTestCase):
+class XmlConversionTestCase(test.TestCase):
     """Unit test api xml conversion"""
     def test_number_conversion(self):
         conv = apirequest._try_convert
@@ -96,7 +96,7 @@ class XmlConversionTestCase(test.TrialTestCase):
         self.assertEqual(conv('-0'), 0)
 
 
-class ApiEc2TestCase(test.TrialTestCase):
+class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
     def setUp(self):
         super(ApiEc2TestCase, self).setUp()

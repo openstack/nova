@@ -239,8 +239,8 @@ class NetworkManager(manager.Manager):
         """Get the network host for the current context."""
         raise NotImplementedError()
 
-    def create_networks(self, context, num_networks, network_size, cidr_v6,
-                        *args, **kwargs):
+    def create_networks(self, context, cidr, num_networks, network_size,
+                        cidr_v6, *args, **kwargs):
         """Create networks based on parameters."""
         raise NotImplementedError()
 
@@ -517,10 +517,8 @@ class VlanManager(NetworkManager):
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (
-                                     fixed_net_v6[start_v6],
-                                     significant_bits_v6
-                                     )
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
 
             # NOTE(vish): This makes ports unique accross the cloud, a more
