@@ -111,12 +111,14 @@ class ConsoleTestCase(test.TestCase):
 
         console_instances = [con['instance_id'] for con in pool.consoles]
         self.assert_(instance_id in console_instances)
+        db.instance_destroy(self.context, instance_id)
 
     def test_add_console_does_not_duplicate(self):
         instance_id = self._create_instance()
         cons1 = self.console.add_console(self.context, instance_id)
         cons2 = self.console.add_console(self.context, instance_id)
         self.assertEqual(cons1, cons2)
+        db.instance_destroy(self.context, instance_id)
 
     def test_remove_console(self):
         instance_id = self._create_instance()
@@ -127,3 +129,4 @@ class ConsoleTestCase(test.TestCase):
                           db.console_get,
                           self.context,
                           console_id)
+        db.instance_destroy(self.context, instance_id)
