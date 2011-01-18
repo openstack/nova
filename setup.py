@@ -34,6 +34,7 @@ if os.path.isdir('.bzr'):
         version_file.write(vcsversion)
 
 
+
 class local_BuildDoc(BuildDoc):
     def run(self):
         for builder in ['html', 'man']:

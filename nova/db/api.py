@@ -253,6 +253,10 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
+def floating_ip_update(context, address, values):
+    """update floating ip information."""
+    return IMPL.floating_ip_update(context, address, values)
+
 ####################
 
 
@@ -403,6 +407,32 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
+
+
+def instance_get_all_by_host(context, hostname):
+    """Get instances by host"""
+    return IMPL.instance_get_all_by_host(context, hostname)
+
+
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    """Get instances.vcpus by host and project"""
+    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
+
+
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    """Get amount of memory by host and project """
+    return IMPL.instance_get_memory_sum_by_host_and_project(context,
+                                                            hostname,
+                                                            proj_id)
+
+
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    """Get total amount of disk by host and project """
+    return IMPL.instance_get_disk_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
 
 
 def instance_action_create(context, values):
