@@ -127,10 +127,17 @@ class VolumeManager(manager.Manager):
             raise exception.Error(_("Volume is still attached"))
         if volume_ref['host'] != self.host:
             raise exception.Error(_("Volume is not local to this node"))
-        LOG.debug(_("volume %s: removing export"), volume_ref['name'])
-        self.driver.remove_export(context, volume_ref)
-        LOG.debug(_("volume %s: deleting"), volume_ref['name'])
-        self.driver.delete_volume(volume_ref)
+
+        try:
+            LOG.debug(_("volume %s: removing export"), volume_ref['name'])
+            self.driver.remove_export(context, volume_ref)
+            LOG.debug(_("volume %s: deleting"), volume_ref['name'])
+            self.driver.delete_volume(volume_ref)
+        except Exception as e:
+            self.db.volume_update(context,
+                                  volume_ref['id'], {'status': 'error_deleting'})
+            raise e
+
         self.db.volume_destroy(context, volume_id)
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])
         return True
