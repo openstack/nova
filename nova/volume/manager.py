@@ -99,12 +99,18 @@ class VolumeManager(manager.Manager):
         #             before passing it to the driver.
         volume_ref['host'] = self.host
 
-        LOG.debug(_("volume %s: creating lv of size %sG"), volume_ref['name'],
-                  volume_ref['size'])
-        self.driver.create_volume(volume_ref)
+        try:
+            LOG.debug(_("volume %s: creating lv of size %sG"),
+                      volume_ref['name'],
+                      volume_ref['size'])
+            self.driver.create_volume(volume_ref)
 
-        LOG.debug(_("volume %s: creating export"), volume_ref['name'])
-        self.driver.create_export(context, volume_ref)
+            LOG.debug(_("volume %s: creating export"), volume_ref['name'])
+            self.driver.create_export(context, volume_ref)
+        except Exception as e:
+            self.db.volume_update(context,
+                                  volume_ref['id'], {'status': 'error'})
+            raise e
 
         now = datetime.datetime.utcnow()
         self.db.volume_update(context,
