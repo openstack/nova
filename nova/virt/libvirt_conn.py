@@ -98,7 +98,7 @@ flags.DEFINE_string('ajaxterm_portrange',
                     '10000-12000',
                     'Range of ports that ajaxterm should randomly try to bind')
 flags.DEFINE_string('firewall_driver',
-                    'nova.virt.libvirt_conn.IptablesFirewallDriver',
+                    None,
                     'Firewall driver (defaults to iptables)')
 
 
@@ -935,6 +935,10 @@ class NWFilterFirewall(FirewallDriver):
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
 
     def _get_connection(self):
         return self._libvirt_get_connection()
