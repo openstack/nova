@@ -138,6 +138,18 @@ class FakeConnection(object):
         """
         pass
 
+    def resize(self, instance, flavor):
+        """
+        Resizes/Migrates the specified instance.
+
+        The flavor parameter determines whether or not the instance RAM and
+        disk space are modified, and if so, to what size.
+
+        The work will be done asynchronously. This function returns a task
+        that allows the caller to detect when it is complete.
+        """
+        pass
+
     def set_admin_password(self, instance, new_pass):
         """
         Set the root password on the specified instance.

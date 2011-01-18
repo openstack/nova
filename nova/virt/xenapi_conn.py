@@ -145,6 +145,10 @@ class XenAPIConnection(object):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, name)
 
+    def resize(self, instance, flavor):
+        """Resize a VM instance"""
+        raise NotImplementedError()
+
     def reboot(self, instance):
         """Reboot VM instance"""
         self._vmops.reboot(instance)

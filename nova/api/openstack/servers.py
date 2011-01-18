@@ -182,9 +182,44 @@ class Controller(wsgi.Controller):
         return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ Multi-purpose method used to reboot, rebuild, and
+        """ Multi-purpose method used to reboot, rebuild, or
         resize a server """
+
+        actions = {
+            'reboot':self._action_reboot,
+            'resize':self._action_resize,
+            'confirmResize':self._action_confirm_resize,
+            'revertResize':self._action_revert_resize,
+            'rebuild':self._action_rebuild
+        }
+
         input_dict = self._deserialize(req.body, req)
+        for key in actions.keys():
+            if key in input_dict:
+                return actions[key](input_dict, req, id)
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_confirm_resize(self, input_dict, req, id):
+        return fault.Fault(exc.HTTPNotImplemented())
+
+    def _action_revert_resize(self, input_dict, req, id):
+        return fault.Fault(exc.HTTPNotImplemented())
+
+    def _action_rebuild(self, input_dict, req, id):
+        return fault.Fault(exc.HTTPNotImplemented())
+
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            resize_flavor = input_dict['resize']['flavorId']
+            self.compute_api.resize(req.environ['nova.context'], id,
+                    flavor_id)
+        except:
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return fault.Fault(exc.HTTPAccepted())
+
+
+    def _action_reboot(self, input_dict, req, id):
         #TODO(sandy): rebuild/resize not supported.
         try:
             reboot_type = input_dict['reboot']['type']

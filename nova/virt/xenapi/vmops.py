@@ -207,6 +207,10 @@ class VMOps(object):
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
+    def resize(self, instance, flavor):
+        """Resize a running instance by changing it's RAM and disk size """
+        raise NotImplementedError()
+
     def reboot(self, instance):
         """Reboot VM instance"""
         vm = self._get_vm_opaque_ref(instance)

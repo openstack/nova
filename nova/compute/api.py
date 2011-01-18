@@ -361,6 +361,20 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    def revert_resize(self, context, instance_id):
+        """Reverts a resize, deleting the 'new' instance in the process"""
+        raise NotImplemented()
+
+    def confirm_resize(self, context, instance_id):
+        """Confirms a migration/resize, deleting the 'old' instance in the
+        process."""
+        raise NotImplemented()
+
+    def resize(self, context, instance_id, flavor_id):
+        """Resize a running instance."""
+        self._cast_compute_message('resize_instance', context, instance_id,
+                flavor_id)
+        
     def pause(self, context, instance_id):
         """Pause the given instance."""
         self._cast_compute_message('pause_instance', context, instance_id)

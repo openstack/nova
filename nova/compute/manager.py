@@ -378,6 +378,19 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def resize_instance(self, context, instance_id, flavor_id):
+        """Moves a running instance to another host, possibly changing the RAM
+        and disk size in the process"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context. instance_id)
+        LOG.audit(_('instance %s: migrating'), instance_id, context=context)
+        self.db.instance_set_state(context, instance_id, power_state.RUNNING,
+                'migrating')
+        self.driver.resize(instance_ref, flavor_id)
+        self._update_state(context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this server."""
         context = context.elevated()
