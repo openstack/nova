@@ -209,3 +209,11 @@ class AdminController(object):
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""
         return host_dict(db.host_get(name))
+
+    def block_external_addresses(self, context, cidr):
+        """Add provider-level firewall rules to block incoming traffic."""
+        LOG.audit(_("Blocking access to all projects incoming from %s"),
+                  cidr, context=context)
+        raise NotImplementedError(_("Awaiting implementation."))
+        # TODO(todd): implement
+        # return {'status': 'OK', 'message': 'Disabled (number) IPs'}

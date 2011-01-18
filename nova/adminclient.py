@@ -190,6 +190,22 @@ class HostInfo(object):
         setattr(self, name, value)
 
 
+class SimpleResponse(object): 
+    def __init__(self, connection=None): 
+        self.connection = connection 
+        self.status = None 
+        self.message = ''
+ 
+    def __repr__(self): 
+        return 'Status:%s' % self.status 
+ 
+    def startElement(self, name, attrs, connection): 
+        return None 
+ 
+    def endElement(self, name, value, connection): 
+        setattr(self, name.lower(), str(value)) 
+
+
 class NovaAdminClient(object):
 
     def __init__(
@@ -373,3 +389,8 @@ class NovaAdminClient(object):
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
+
+    def block_ips(self, cidr):
+        """Block incoming traffic from specified hosts."""
+        return self.apiconn.get_object('BlockExternalAddresses',
+                                       {'Cidr': cidr}, SimpleResponse)
