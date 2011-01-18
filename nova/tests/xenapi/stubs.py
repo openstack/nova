@@ -37,7 +37,7 @@ def stubout_instance_snapshot(stubs):
                     return self.rv
 
             done = FakeEvent()
-            self._poll_task(id, task, done)
+            self._poll_task(task, id, done)
             rv = done.wait()
             return rv
 

@@ -211,24 +211,23 @@ class VMOps(object):
         """Start a VM instance"""
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi("Async.VM.start", vm, False, False)
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
     def shutdown(self, instance):
         """Shutdown a VM instance"""
         vm = self._get_vm_opaque_ref(instance)
-
         try:
             task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure:
             task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
 
     def reboot(self, instance):
         """Reboot VM instance"""
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance. This is done via
@@ -284,7 +283,7 @@ class VMOps(object):
         if shutdown:
             try:
                 task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
-                self._session.wait_for_task(instance.id, task)
+                self._session.wait_for_task(task, instance.id)
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
@@ -293,20 +292,20 @@ class VMOps(object):
             for vdi in vdis:
                 try:
                     task = self._session.call_xenapi('Async.VDI.destroy', vdi)
-                    self._session.wait_for_task(instance.id, task)
+                    self._session.wait_for_task(task, instance.id)
                 except self.XenAPI.Failure, exc:
                     LOG.exception(exc)
         # VM Destroy
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
-            ret = self._session.wait_for_task(instance_id, task)
+            ret = self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
         callback(ret)
@@ -337,10 +336,36 @@ class VMOps(object):
 
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
+        vm = self._get_vm_opaque_ref(instance)
+        target_vm = VMHelper.lookup(self._session, "instance-00000001")
+
         self.shutdown(instance)
+
+        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        vbd_ref = VMHelper.create_vbd(
+            self._session,
+            target_vm,
+            vdi_ref,
+            1,
+            False)
+
+        # Plug the VBD into the target instance
+        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
+        vm = self._get_vm_opaque_ref(instance)
+        target_vm = VMHelper.lookup(self._session, "instance-00000001")
+
+        vbds = self._session.get_xenapi().VM.get_VBDs(target_vm)
+
+        for vbd_ref in vbds:
+            vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            if vbd["userdevice"] == str(1):
+                VMHelper.unplug_vbd(self._session, vbd_ref)
+                VMHelper.destroy_vbd(self._session, vbd_ref)
+
         self.start(instance)
 
     def get_info(self, instance):
@@ -425,7 +450,7 @@ class VMOps(object):
         args.update(addl_args)
         try:
             task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(instance_id, task)
+            ret = self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, e:
             ret = None
             err_trace = e.details[-1]

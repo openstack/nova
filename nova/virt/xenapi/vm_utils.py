@@ -179,9 +179,7 @@ class VMHelper(HelperBase):
         """Destroy VBD from host database"""
         try:
             task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
-            #FIXME(armando): find a solution to missing instance_id
-            #with Josh Kearney
-            session.wait_for_task(0, task)
+            session.wait_for_task(task)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
@@ -222,7 +220,7 @@ class VMHelper(HelperBase):
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vm_ref = session.wait_for_task(task, instance_id)
         template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
@@ -250,7 +248,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'put_vdis', kwargs)
-        session.wait_for_task(instance_id, task)
+        session.wait_for_task(task, instance_id)
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project, type):
@@ -272,7 +270,7 @@ class VMHelper(HelperBase):
             if type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(instance_id, task)
+        uuid = session.wait_for_task(task, instance_id)
         return uuid
 
     @classmethod
@@ -409,7 +407,7 @@ def get_vhd_parent_uuid(session, vdi_ref):
 def scan_sr(session, instance_id, sr_ref):
     LOG.debug(_("Re-scanning SR %s"), sr_ref)
     task = session.call_xenapi('Async.SR.scan', sr_ref)
-    session.wait_for_task(instance_id, task)
+    session.wait_for_task(task, instance_id)
 
 
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
