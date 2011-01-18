@@ -18,7 +18,7 @@
 #    under the License.
 
 #
-# XenAPI plugin for putting images into glance
+# XenAPI plugin for managing glance images
 #
 
 import base64
@@ -40,7 +40,35 @@ from pluginlib_nova import *
 configure_logging('glance')
 
 CHUNK_SIZE = 8192
+KERNEL_DIR = '/boot/guest'
 FILE_SR_PATH = '/var/run/sr-mount'
+
+def copy_kernel_vdi(session,args):
+    vdi = exists(args, 'vdi-ref')
+    size = exists(args,'image-size')
+    #Use the uuid as a filename
+    vdi_uuid=session.xenapi.VDI.get_uuid(vdi)
+    copy_args={'vdi_uuid':vdi_uuid,'vdi_size':int(size)}
+    filename=with_vdi_in_dom0(session, vdi, False,
+                              lambda dev:
+                              _copy_kernel_vdi('/dev/%s' % dev,copy_args))
+    return filename
+
+def _copy_kernel_vdi(dest,copy_args):
+    vdi_uuid=copy_args['vdi_uuid']
+    vdi_size=copy_args['vdi_size']
+    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",dest,vdi_uuid)
+    filename=KERNEL_DIR + '/' + vdi_uuid
+    #read data from /dev/ and write into a file on /boot/guest
+    of=open(filename,'wb')
+    f=open(dest,'rb')
+    #copy only vdi_size bytes
+    data=f.read(vdi_size)
+    of.write(data)
+    f.close()
+    of.close()    
+    logging.debug("Done. Filename: %s",filename)
+    return filename 
 
 def put_vdis(session, args):
     params = pickle.loads(exists(args, 'params'))
@@ -128,4 +156,5 @@ def find_sr(session):
 
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'put_vdis': put_vdis})
+    XenAPIPlugin.dispatch({'put_vdis': put_vdis, 
+                           'copy_kernel_vdi': copy_kernel_vdi})

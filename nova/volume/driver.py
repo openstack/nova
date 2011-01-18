@@ -47,7 +47,7 @@ flags.DEFINE_integer('iscsi_num_targets',
                     'Number of iscsi target ids per host')
 flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
-flags.DEFINE_string('iscsi_ip_prefix', '127.0',
+flags.DEFINE_string('iscsi_ip_prefix', '$my_ip',
                     'discover volumes on the ip that starts with this prefix')
 flags.DEFINE_string('rbd_pool', 'rbd',
                     'the rbd pool in which volumes are stored')
@@ -305,7 +305,8 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v automatic" %
                       (iscsi_name, iscsi_portal))
-        return "/dev/iscsi/%s" % volume['name']
+        return "/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal,
+                                                           iscsi_name)
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
