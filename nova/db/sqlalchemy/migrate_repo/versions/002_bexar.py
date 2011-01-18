@@ -31,9 +31,16 @@ instances = Table('instances', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
 
+
 services = Table('services', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
+
+
+networks = Table('networks', meta,
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        )
+
 
 #
 # New Tables
@@ -45,13 +52,13 @@ certificates = Table('certificates', meta,
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
         Column('user_id',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('project_id',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('file_name',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         )
 
@@ -63,11 +70,11 @@ consoles = Table('consoles', meta,
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
         Column('instance_name',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('instance_id', Integer()),
         Column('password',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('port', Integer(), nullable=True),
         Column('pool_id',
@@ -83,25 +90,25 @@ console_pools = Table('console_pools', meta,
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
         Column('address',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('username',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('password',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('console_type',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('public_hostname',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('host',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('compute_host',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         )
 
@@ -116,7 +123,7 @@ instance_actions = Table('instance_actions', meta,
                Integer(),
                ForeignKey('instances.id')),
         Column('action',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('error',
                Text(length=None, convert_unicode=False, assert_unicode=None,
@@ -133,26 +140,26 @@ auth_tokens = Table('auth_tokens', meta,
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('token_hash',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),
                primary_key=True,
                nullable=False),
         Column('user_id', Integer()),
         Column('server_manageent_url',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('storage_url',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('cdn_management_url',
-               String(length=None, convert_unicode=False, assert_unicode=None,
+               String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
         )
 
 
 instances_availability_zone = Column(
         'availability_zone',
-        String(length=None, convert_unicode=False, assert_unicode=None,
+        String(length=255, convert_unicode=False, assert_unicode=None,
                unicode_error=None, _warn_on_bytestring=False))
 
 
@@ -160,9 +167,20 @@ instances_locked = Column('locked',
                 Boolean(create_constraint=True, name=None))
 
 
+networks_cidr_v6 = Column(
+        'cidr_v6',
+        String(length=255, convert_unicode=False, assert_unicode=None,
+               unicode_error=None, _warn_on_bytestring=False))
+
+networks_ra_server = Column(
+        'ra_server',
+        String(length=255, convert_unicode=False, assert_unicode=None,
+               unicode_error=None, _warn_on_bytestring=False))
+
+
 services_availability_zone = Column(
         'availability_zone',
-        String(length=None, convert_unicode=False, assert_unicode=None,
+        String(length=255, convert_unicode=False, assert_unicode=None,
                unicode_error=None, _warn_on_bytestring=False))
 
 
@@ -178,7 +196,7 @@ def upgrade(migrate_engine):
             logging.exception('Exception while creating table')
             raise
 
-    auth_tokens.c.user_id.alter(type=String(length=None,
+    auth_tokens.c.user_id.alter(type=String(length=255,
                                             convert_unicode=False,
                                             assert_unicode=None,
                                             unicode_error=None,
@@ -186,4 +204,6 @@ def upgrade(migrate_engine):
 
     instances.create_column(instances_availability_zone)
     instances.create_column(instances_locked)
+    networks.create_column(networks_cidr_v6)
+    networks.create_column(networks_ra_server)
     services.create_column(services_availability_zone)
