@@ -329,7 +329,7 @@ class VMHelper(HelperBase):
             #let the plugin copy the correct number of bytes
             args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
-            filename = session.wait_for_task(instance_id, task)
+            filename = session.wait_for_task(task, instance_id)
             #remove the VDI as it is not needed anymore
             session.get_xenapi().VDI.destroy(vdi)
             LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
