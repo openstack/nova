@@ -27,3 +27,4 @@ PasteDeploy
 paste
 sqlalchemy-migrate
 netaddr
+glance

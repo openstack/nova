@@ -611,9 +611,9 @@ def fixed_ip_get_instance_v6(context, address):
     session = get_session()
     mac = utils.to_mac(address)
 
-    result = session.query(models.Instance
-                   ).filter_by(mac_address=mac
-                   ).first()
+    result = session.query(models.Instance).\
+                     filter_by(mac_address=mac).\
+                     first()
     return result
 
 
@@ -775,6 +775,7 @@ def instance_get_by_id(context, instance_id):
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
+                         options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          filter_by(id=instance_id).\

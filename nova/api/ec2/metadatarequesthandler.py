@@ -23,6 +23,7 @@ import webob.exc
 
 from nova import log as logging
 from nova import flags
+from nova import wsgi
 from nova.api.ec2 import cloud
 
 
@@ -30,7 +31,7 @@ LOG = logging.getLogger('nova.api.ec2.metadata')
 FLAGS = flags.FLAGS
 
 
-class MetadataRequestHandler(object):
+class MetadataRequestHandler(wsgi.Application):
     """Serve metadata from the EC2 API."""
 
     def print_data(self, data):
@@ -78,7 +79,3 @@ class MetadataRequestHandler(object):
         if data is None:
             raise webob.exc.HTTPNotFound()
         return self.print_data(data)
-
-
-def metadata_factory(global_args, **local_args):
-    return MetadataRequestHandler()

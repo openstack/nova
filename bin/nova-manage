@@ -527,12 +527,11 @@ class DbCommands(object):
         pass
 
     def sync(self, version=None):
-        """adds role to user
-        if project is specified, adds project specific role
-        arguments: user, role [project]"""
+        """Sync the database up to the most recent version."""
         return migration.db_sync(version)
 
     def version(self):
+        """Print the current database version."""
         print migration.db_version()
 
 

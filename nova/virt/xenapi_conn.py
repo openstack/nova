@@ -89,10 +89,17 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
+flags.DEFINE_string('xenapi_image_service',
+                    'glance',
+                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
                    '  Used only if connection_type=xenapi.')
+flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
+                     5,
+                     'Max number of times to poll for VHD to coalesce.'
+                     '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -141,9 +148,9 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
-    def snapshot(self, instance, name):
+    def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
-        self._vmops.snapshot(instance, name)
+        self._vmops.snapshot(instance, image_id)
 
     def reboot(self, instance):
         """Reboot VM instance"""

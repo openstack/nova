@@ -92,7 +92,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 
-flags.DEFINE_bool('use_ipv6', True,
+flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
@@ -517,10 +517,8 @@ class VlanManager(NetworkManager):
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (
-                                     fixed_net_v6[start_v6],
-                                     significant_bits_v6
-                                     )
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
 
             # NOTE(vish): This makes ports unique accross the cloud, a more

@@ -90,8 +90,14 @@ class NovaBase(object):
             setattr(self, k, v)
 
     def iteritems(self):
-        """Make the model object behave like a dict"""
-        return iter(self)
+        """Make the model object behave like a dict.
+
+        Includes attributes from joins."""
+        local = dict(self)
+        joined = dict([(k, v) for k, v in self.__dict__.iteritems()
+                      if not k[0] == '_'])
+        local.update(joined)
+        return local.iteritems()
 
 
 class Service(BASE, NovaBase):

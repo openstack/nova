@@ -85,7 +85,8 @@ class VMOps(object):
         #Have a look at the VDI and see if it has a PV kernel
         pv_kernel = False
         if not instance.kernel_id:
-            pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
+            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
+                                              vdi_ref)
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
@@ -161,11 +162,11 @@ class VMOps(object):
             raise Exception(_('Instance not present %s') % instance_name)
         return vm
 
-    def snapshot(self, instance, name):
+    def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance
 
         :param instance: instance to be snapshotted
-        :param name: name/label to be given to the snapshot
+        :param image_id: id of image to upload to
 
         Steps involved in a XenServer snapshot:
 
@@ -201,7 +202,7 @@ class VMOps(object):
         try:
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                self._session, instance.id, template_vdi_uuids, name)
+                self._session, instance.id, template_vdi_uuids, image_id)
         finally:
             self._destroy(instance, template_vm_ref, shutdown=False)
 
