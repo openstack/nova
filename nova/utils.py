@@ -212,13 +212,11 @@ def  get_my_linklocal(interface):
         if address[0] is not None:
             return address[0]
         else:
+            LOG.warn(_("Link Local address is not found.:%s") % if_str)
             return 'fe00::'
-    except IndexError as ex:
+    except Exception as ex:
         LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
-    except ProcessExecutionError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
-    except:
-        return 'fe00::'
+    return 'fe00::'
 
 
 def to_global_ipv6(prefix, mac):
