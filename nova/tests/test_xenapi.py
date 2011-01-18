@@ -34,6 +34,7 @@ from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi.vmops import SimpleDH
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
+from nova.tests.glance import stubs as glance_stubs
 
 FLAGS = flags.FLAGS
 
@@ -108,18 +109,16 @@ class XenAPIVolumeTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
         instance = db.instance_create(self.values)
-        xenapi_fake.create_vm(instance.name, 'Running')
+        vm = xenapi_fake.create_vm(instance.name, 'Running')
         result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
         def check():
             # check that the VM has a VBD attached to it
-            # Get XenAPI reference for the VM
-            vms = xenapi_fake.get_all('VM')
             # Get XenAPI record for VBD
             vbds = xenapi_fake.get_all('VBD')
             vbd = xenapi_fake.get_record('VBD', vbds[0])
             vm_ref = vbd['VM']
-            self.assertEqual(vm_ref, vms[0])
+            self.assertEqual(vm_ref, vm)
 
         check()
 
@@ -157,9 +156,14 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         xenapi_fake.reset()
+        xenapi_fake.create_local_srs()
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        stubs.stubout_get_this_vm_uuid(self.stubs)
+        stubs.stubout_stream_disk(self.stubs)
+        glance_stubs.stubout_glance_client(self.stubs,
+                                           glance_stubs.FakeGlance)
         self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
@@ -207,40 +211,70 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
-    def test_spawn(self):
-        instance = self._create_instance()
+    def check_vm_record(self, conn):
+        instances = conn.list_instances()
+        self.assertEquals(instances, [1])
 
-        def check():
-            instances = self.conn.list_instances()
-            self.assertEquals(instances, [1])
+        # Get Nova record for VM
+        vm_info = conn.get_info(1)
 
-            # Get Nova record for VM
-            vm_info = self.conn.get_info(1)
+        # Get XenAPI record for VM
+        vms = [rec for ref, rec
+               in xenapi_fake.get_all_records('VM').iteritems()
+               if not rec['is_control_domain']]
+        vm = vms[0]
 
-            # Get XenAPI record for VM
-            vms = xenapi_fake.get_all('VM')
-            vm = xenapi_fake.get_record('VM', vms[0])
+        # Check that m1.large above turned into the right thing.
+        instance_type = instance_types.INSTANCE_TYPES['m1.large']
+        mem_kib = long(instance_type['memory_mb']) << 10
+        mem_bytes = str(mem_kib << 10)
+        vcpus = instance_type['vcpus']
+        self.assertEquals(vm_info['max_mem'], mem_kib)
+        self.assertEquals(vm_info['mem'], mem_kib)
+        self.assertEquals(vm['memory_static_max'], mem_bytes)
+        self.assertEquals(vm['memory_dynamic_max'], mem_bytes)
+        self.assertEquals(vm['memory_dynamic_min'], mem_bytes)
+        self.assertEquals(vm['VCPUs_max'], str(vcpus))
+        self.assertEquals(vm['VCPUs_at_startup'], str(vcpus))
 
-            # Check that m1.large above turned into the right thing.
-            instance_type = instance_types.INSTANCE_TYPES['m1.large']
-            mem_kib = long(instance_type['memory_mb']) << 10
-            mem_bytes = str(mem_kib << 10)
-            vcpus = instance_type['vcpus']
-            self.assertEquals(vm_info['max_mem'], mem_kib)
-            self.assertEquals(vm_info['mem'], mem_kib)
-            self.assertEquals(vm['memory_static_max'], mem_bytes)
-            self.assertEquals(vm['memory_dynamic_max'], mem_bytes)
-            self.assertEquals(vm['memory_dynamic_min'], mem_bytes)
-            self.assertEquals(vm['VCPUs_max'], str(vcpus))
-            self.assertEquals(vm['VCPUs_at_startup'], str(vcpus))
+        # Check that the VM is running according to Nova
+        self.assertEquals(vm_info['state'], power_state.RUNNING)
 
-            # Check that the VM is running according to Nova
-            self.assertEquals(vm_info['state'], power_state.RUNNING)
+        # Check that the VM is running according to XenAPI.
+        self.assertEquals(vm['power_state'], 'Running')
 
-            # Check that the VM is running according to XenAPI.
-            self.assertEquals(vm['power_state'], 'Running')
+    def _test_spawn(self, image_id, kernel_id, ramdisk_id):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        values = {'name': 1,
+                  'id': 1,
+                  'project_id': self.project.id,
+                  'user_id': self.user.id,
+                  'image_id': image_id,
+                  'kernel_id': kernel_id,
+                  'ramdisk_id': ramdisk_id,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  }
+        conn = xenapi_conn.get_connection(False)
+        instance = db.instance_create(values)
+        conn.spawn(instance)
+        self.check_vm_record(conn)
 
-        check()
+    def test_spawn_raw_objectstore(self):
+        FLAGS.xenapi_image_service = 'objectstore'
+        self._test_spawn(1, None, None)
+
+    def test_spawn_objectstore(self):
+        FLAGS.xenapi_image_service = 'objectstore'
+        self._test_spawn(1, 2, 3)
+
+    def test_spawn_raw_glance(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(1, None, None)
+
+    def test_spawn_glance(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(1, 2, 3)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
