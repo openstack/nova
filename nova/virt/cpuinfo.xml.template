@@ -1,9 +1,0 @@
-<cpu>
-    <arch>$arch</arch>
-    <model>$model</model>
-    <vendor>$vendor</vendor>
-    <topology sockets="$topology.sockets" cores="$topology.cores" threads="$topology.threads"/>
-#for $var in $features
-    <features name="$var" />
-#end for
-</cpu>
