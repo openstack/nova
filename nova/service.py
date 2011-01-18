@@ -80,6 +80,7 @@ class Service(object):
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
+
         try:
             service_ref = db.service_get_by_args(ctxt,
                                                  self.host,
@@ -87,6 +88,9 @@ class Service(object):
             self.service_id = service_ref['id']
         except exception.NotFound:
             self._create_service_ref(ctxt)
+
+        if 'nova-compute' == self.binary:
+            self.manager.update_service(ctxt, self.host, self.binary)
 
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)

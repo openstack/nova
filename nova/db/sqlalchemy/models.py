@@ -150,12 +150,31 @@ class Service(BASE, NovaBase):
 
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
+    #host_id = Column(Integer, ForeignKey('hosts.id'), nullable=True)
+    #host = relationship(Host, backref=backref('services'))
+    host = Column(String(255))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
     availability_zone = Column(String(255), default='nova')
+
+    # The below items are compute node only.
+    # -1 or None is inserted for other service.
+    vcpus = Column(Integer, nullable=False, default=-1)
+    memory_mb = Column(Integer, nullable=False, default=-1)
+    local_gb = Column(Integer, nullable=False, default=-1)
+    hypervisor_type = Column(String(128))
+    hypervisor_version = Column(Integer, nullable=False, default=-1)
+    # Note(masumotok): Expected Strings example:
+    #
+    # '{"arch":"x86_64", "model":"Nehalem",
+    #  "topology":{"sockets":1, "threads":2, "cores":3},
+    #  features:[ "tdtscp", "xtpr"]}'
+    #
+    # Points are "json translatable" and it must have all
+    # dictionary keys above.
+    cpu_info = Column(String(512))
 
 
 class Certificate(BASE, NovaBase):
@@ -231,6 +250,9 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    # To remember on which host a instance booted.
+    # An instance may moved to other host by live migraiton.
+    launched_on = Column(String(255))
     locked = Column(Boolean)
 
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -588,7 +610,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console)  # , Image, Host
+              Project, Certificate, ConsolePool, Console)  # , Host, Image
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
