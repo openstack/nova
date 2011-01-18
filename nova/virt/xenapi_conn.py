@@ -93,6 +93,10 @@ flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
                    '  Used only if connection_type=xenapi.')
+flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
+                     5,
+                     'Max number of times to poll for VHD to coalesce.'
+                     '  Used only if connection_type=xenapi.')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -141,9 +145,9 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
-    def snapshot(self, instance, name):
+    def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
-        self._vmops.snapshot(instance, name)
+        self._vmops.snapshot(instance, image_id)
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -204,6 +208,36 @@ class XenAPIConnection(object):
         return  {'address': xs_url.netloc,
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
+
+    def get_cpu_info(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_vcpu_number(self):
+        """This method is supported only libvirt.  """
+        return -1
+
+    def get_memory_mb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_local_gb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_hypervisor_type(self):
+        """This method is supported only libvirt.."""
+        return
+
+    def get_hypervisor_version(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def compare_cpu(self, xml):
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def live_migration(self, context, instance_ref, dest):
+        raise NotImplementedError('This method is supported only libvirt.')
 
 
 class XenAPISession(object):

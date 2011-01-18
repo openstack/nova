@@ -159,7 +159,7 @@ class NetworkManager(manager.Manager):
         """Called when this host becomes the host for a network."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
         raise NotImplementedError()
 
@@ -239,8 +239,8 @@ class NetworkManager(manager.Manager):
         """Get the network host for the current context."""
         raise NotImplementedError()
 
-    def create_networks(self, context, num_networks, network_size, cidr_v6,
-                        *args, **kwargs):
+    def create_networks(self, context, cidr, num_networks, network_size,
+                        cidr_v6, *args, **kwargs):
         """Create networks based on parameters."""
         raise NotImplementedError()
 
@@ -320,7 +320,7 @@ class FlatManager(NetworkManager):
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context.elevated(), address)
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Network is created manually."""
         pass
 
@@ -395,9 +395,10 @@ class FlatDHCPManager(FlatManager):
         super(FlatDHCPManager, self).init_host()
         self.driver.metadata_forward()
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
-        network_ref = db.network_get_by_instance(context, instance_id)
+        if network_ref is None:
+            network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface)
 
@@ -487,9 +488,10 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    def setup_compute_network(self, context, instance_id):
+    def setup_compute_network(self, context, instance_id, network_ref=None):
         """Sets up matching network for compute hosts."""
-        network_ref = db.network_get_by_instance(context, instance_id)
+        if network_ref is None:
+            network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
 
@@ -517,10 +519,8 @@ class VlanManager(NetworkManager):
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (
-                                     fixed_net_v6[start_v6],
-                                     significant_bits_v6
-                                     )
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
 
             # NOTE(vish): This makes ports unique accross the cloud, a more

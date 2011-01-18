@@ -19,13 +19,17 @@ import unittest
 import webob.exc
 import webob.dec
 
-import nova.api.openstack
-from nova.api.openstack import API
-from nova.api.openstack import faults
 from webob import Request
+
+from nova.api import openstack
+from nova.api.openstack import faults
 
 
 class APITest(unittest.TestCase):
+
+    def _wsgi_app(self, inner_app):
+        # simpler version of the app than fakes.wsgi_app
+        return openstack.FaultWrapper(inner_app)
 
     def test_exceptions_are_converted_to_faults(self):
 
@@ -46,29 +50,32 @@ class APITest(unittest.TestCase):
             exc = webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
             return faults.Fault(exc)
 
-        api = API()
-
-        api.application = succeed
+        #api.application = succeed
+        api = self._wsgi_app(succeed)
         resp = Request.blank('/').get_response(api)
         self.assertFalse('computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 200, resp.body)
 
-        api.application = raise_webob_exc
+        #api.application = raise_webob_exc
+        api = self._wsgi_app(raise_webob_exc)
         resp = Request.blank('/').get_response(api)
         self.assertFalse('computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
-        api.application = raise_api_fault
+        #api.application = raise_api_fault
+        api = self._wsgi_app(raise_api_fault)
         resp = Request.blank('/').get_response(api)
         self.assertTrue('itemNotFound' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
-        api.application = fail
+        #api.application = fail
+        api = self._wsgi_app(fail)
         resp = Request.blank('/').get_response(api)
         self.assertTrue('{"computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
-        api.application = fail
+        #api.application = fail
+        api = self._wsgi_app(fail)
         resp = Request.blank('/.xml').get_response(api)
         self.assertTrue('<computeFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
