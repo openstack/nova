@@ -38,6 +38,11 @@ def limited(items, req):
     return items[offset:range_end]
 
 
+def get_image_id_or_id(image):
+    """Some image services return image_id, others id"""
+    return image.get('imageId', image.get('id', None))
+
+
 def get_image_id_from_image_hash(image_service, context, image_hash):
     """Given an Image ID Hash, return an objectstore Image ID.
 
@@ -54,7 +59,7 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
     except NotImplementedError:
         items = image_service.index(context)
     for image in items:
-        image_id = image['imageId']
+        image_id = get_image_id_or_id(image)
         if abs(hash(image_id)) == int(image_hash):
             return image_id
     raise exception.NotFound(image_hash)

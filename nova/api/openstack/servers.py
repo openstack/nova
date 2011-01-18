@@ -127,6 +127,7 @@ class Controller(wsgi.Controller):
     def _get_kernel_ramdisk_from_image(self, image_id):
         mapping_filename = FLAGS.os_krm_mapping_file
 
+        image_id = str(image_id)
         with open(mapping_filename) as f:
             mapping = json.load(f)
             if image_id in mapping:
