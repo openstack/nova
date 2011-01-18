@@ -36,8 +36,11 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
+import json
 import os
 import shutil
+import re
+import time
 import random
 import subprocess
 import uuid
@@ -80,6 +83,9 @@ flags.DEFINE_string('injected_network_template',
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
+flags.DEFINE_string('cpuinfo_xml_template',
+                    utils.abspath('virt/cpuinfo.xml.template'),
+                    'CpuInfo XML Template (used only live migration now)')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
@@ -88,6 +94,16 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
+flags.DEFINE_string('live_migration_uri',
+                  "qemu+tcp://%s/system",
+                  'Define protocol used by live_migration feature')
+flags.DEFINE_string('live_migration_flag',
+                  "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
+                  'Define live migration behavior.')
+flags.DEFINE_integer('live_migration_bandwidth', 0,
+                  'Define live migration behavior')
+flags.DEFINE_string('live_migration_timeout_sec', 10,
+                    'Timeout second for pre_live_migration is completed.')
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
@@ -146,6 +162,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -818,6 +835,74 @@ class LibvirtConnection(object):
 
         return interfaces
 
+    def get_vcpu_number(self):
+        """ Get vcpu number of physical computer.  """
+        return self._conn.getMaxVcpus(None)
+
+    def get_memory_mb(self):
+        """Get the memory size of physical computer ."""
+        meminfo = open('/proc/meminfo').read().split()
+        idx = meminfo.index('MemTotal:')
+        # transforming kb to mb.
+        return int(meminfo[idx + 1]) / 1024
+
+    def get_local_gb(self):
+        """Get the hdd size of physical computer ."""
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
+    def get_hypervisor_type(self):
+        """ Get hypervisor type """
+        return self._conn.getType()
+
+    def get_hypervisor_version(self):
+        """ Get hypervisor version """
+        return self._conn.getVersion()
+
+    def get_cpu_info(self):
+        """ Get cpuinfo information """
+        xmlstr = self._conn.getCapabilities()
+        xml = libxml2.parseDoc(xmlstr)
+        nodes = xml.xpathEval('//cpu')
+        if len(nodes) != 1:
+            msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' \
+                    % len(nodes)
+            msg += '\n' + xml.serialize()
+            raise exception.Invalid(_(msg))
+
+        arch = xml.xpathEval('//cpu/arch')[0].getContent()
+        model = xml.xpathEval('//cpu/model')[0].getContent()
+        vendor = xml.xpathEval('//cpu/vendor')[0].getContent()
+
+        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        topology = dict()
+        while topology_node != None:
+            name = topology_node.get_name()
+            topology[name] = topology_node.getContent()
+            topology_node = topology_node.get_next()
+
+        keys = ['cores', 'sockets', 'threads']
+        tkeys = topology.keys()
+        if list(set(tkeys)) != list(set(keys)):
+            msg = _('Invalid xml: topology(%s) must have %s')
+            raise exception.Invalid(msg % (str(topology), ', '.join(keys)))
+
+        feature_nodes = xml.xpathEval('//cpu/feature')
+        features = list()
+        for nodes in feature_nodes:
+            feature_name = nodes.get_properties().getContent()
+            features.append(feature_name)
+
+        template = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
+                    """"topology":{"cores":"%s", "threads":"%s", """
+                    """"sockets":"%s"}, "features":[%s]}""")
+        c = topology['cores']
+        s = topology['sockets']
+        t = topology['threads']
+        f = ['"%s"' % x for x in features]
+        cpu_info = template % (arch, model, vendor, c, s, t, ', '.join(f))
+        return cpu_info
+
     def block_stats(self, instance_name, disk):
         """
         Note that this function takes an instance name, not an Instance, so
@@ -847,6 +932,208 @@ class LibvirtConnection(object):
 
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def compare_cpu(self, cpu_info):
+        """
+           Check the host cpu is compatible to a cpu given by xml.
+           "xml" must be a part of libvirt.openReadonly().getCapabilities().
+           return values follows by virCPUCompareResult.
+           if 0 > return value, do live migration.
+
+           'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+        """
+        msg = _('Checking cpu_info: instance was launched this cpu.\n: %s ')
+        LOG.info(msg % cpu_info)
+        dic = json.loads(cpu_info)
+        xml = str(Template(self.cpuinfo_xml, searchList=dic))
+        msg = _('to xml...\n: %s ')
+        LOG.info(msg % xml)
+
+        url = 'http://libvirt.org/html/libvirt-libvirt.html'
+        url += '#virCPUCompareResult\n'
+        msg = 'CPU does not have compativility.\n'
+        msg += 'result:%d \n'
+        msg += 'Refer to %s'
+        msg = _(msg)
+
+        # unknown character exists in xml, then libvirt complains
+        try:
+            ret = self._conn.compareCPU(xml, 0)
+        except libvirt.libvirtError, e:
+            LOG.error(msg % (ret, url))
+            raise e
+
+        if ret <= 0:
+            raise exception.Invalid(msg % (ret, url))
+
+        return
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """ Setting up inevitable filtering rules on compute node,
+            and waiting for its completion.
+            To migrate an instance, filtering rules to hypervisors
+            and firewalls are inevitable on destination host.
+            ( Waiting only for filterling rules to hypervisor,
+            since filtering rules to firewall rules can be set faster).
+
+            Concretely, the below method must be called.
+            - setup_basic_filtering (for nova-basic, etc.)
+            - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
+
+            to_xml may have to be called since it defines PROJNET, PROJMASK.
+            but libvirt migrates those value through migrateToURI(),
+            so , no need to be called.
+
+            Don't use thread for this method since migration should
+            not be started when setting-up filtering rules operations
+            are not completed."""
+
+        # Tf any instances never launch at destination host,
+        # basic-filtering must be set here.
+        self.nwfilter.setup_basic_filtering(instance_ref)
+        # setting up n)ova-instance-instance-xx mainly.
+        self.firewall_driver.prepare_instance_filter(instance_ref)
+
+        # wait for completion
+        timeout_count = range(FLAGS.live_migration_timeout_sec * 2)
+        while len(timeout_count) != 0:
+            try:
+                filter_name = 'nova-instance-%s' % instance_ref.name
+                self._conn.nwfilterLookupByName(filter_name)
+                break
+            except libvirt.libvirtError:
+                timeout_count.pop()
+                if len(timeout_count) == 0:
+                    ec2_id = instance_ref['hostname']
+                    msg = _('Timeout migrating for %s(%s)')
+                    raise exception.Error(msg % (ec2_id, instance_ref.name))
+                time.sleep(0.5)
+
+    def live_migration(self, context, instance_ref, dest):
+        """
+           Just spawning live_migration operation for
+           distributing high-load.
+        """
+        greenthread.spawn(self._live_migration, context, instance_ref, dest)
+
+    def _live_migration(self, context, instance_ref, dest):
+        """ Do live migration."""
+
+        # Do live migration.
+        try:
+            duri = FLAGS.live_migration_uri % dest
+
+            flaglist = FLAGS.live_migration_flag.split(',')
+            flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+            logical_sum = reduce(lambda x, y: x | y, flagvals)
+
+            bandwidth = FLAGS.live_migration_bandwidth
+
+            if self.read_only:
+                tmpconn = self._connect(self.libvirt_uri, False)
+                dom = tmpconn.lookupByName(instance_ref.name)
+                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+                tmpconn.close()
+            else:
+                dom = self._conn.lookupByName(instance_ref.name)
+                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+
+        except Exception, e:
+            id = instance_ref['id']
+            db.instance_set_state(context, id, power_state.RUNNING, 'running')
+            for v in instance_ref['volumes']:
+                db.volume_update(context,
+                                 v['id'],
+                                 {'status': 'in-use'})
+
+            raise e
+
+        # Waiting for completion of live_migration.
+        timer = utils.LoopingCall(f=None)
+
+        def wait_for_live_migration():
+
+            try:
+                state = self.get_info(instance_ref.name)['state']
+            except exception.NotFound:
+                timer.stop()
+                self._post_live_migration(context, instance_ref, dest)
+
+        timer.f = wait_for_live_migration
+        timer.start(interval=0.5, now=True)
+
+    def _post_live_migration(self, context, instance_ref, dest):
+        """
+           Post operations for live migration.
+           Mainly, database updating.
+        """
+        LOG.info('post livemigration operation is started..')
+        # Detaching volumes.
+        # (not necessary in current version )
+
+        # Releasing vlan.
+        #   (not necessary in current implementation?)
+
+        # Releasing security group ingress rule.
+        if FLAGS.firewall_driver == \
+            'nova.virt.libvirt_conn.IptablesFirewallDriver':
+            try:
+                self.firewall_driver.unfilter_instance(instance_ref)
+            except KeyError, e:
+                pass
+
+        # Database updating.
+        ec2_id = instance_ref['hostname']
+
+        instance_id = instance_ref['id']
+        fixed_ip = db.instance_get_fixed_address(context, instance_id)
+        # Not return if fixed_ip is not found, otherwise,
+        # instance never be accessible..
+        if None == fixed_ip:
+            logging.warn('fixed_ip is not found for %s ' % ec2_id)
+        db.fixed_ip_update(context, fixed_ip, {'host': dest})
+        network_ref = db.fixed_ip_get_network(context, fixed_ip)
+        db.network_update(context, network_ref['id'], {'host': dest})
+
+        try:
+            floating_ip \
+                = db.instance_get_floating_address(context, instance_id)
+            # Not return if floating_ip is not found, otherwise,
+            # instance never be accessible..
+            if None == floating_ip:
+                logging.error('floating_ip is not found for %s ' % ec2_id)
+            else:
+                floating_ip_ref = db.floating_ip_get_by_address(context,
+                                                                floating_ip)
+                db.floating_ip_update(context,
+                                      floating_ip_ref['address'],
+                                      {'host': dest})
+        except exception.NotFound:
+            logging.debug('%s doesnt have floating_ip.. ' % ec2_id)
+        except:
+            msg = 'Live migration: Unexpected error:'
+            msg += '%s cannot inherit floating ip.. ' % ec2_id
+            logging.error(_(msg))
+
+        # Restore instance/volume state
+        db.instance_update(context,
+                           instance_id,
+                           {'state_description': 'running',
+                            'state': power_state.RUNNING,
+                            'host': dest})
+
+        for v in instance_ref['volumes']:
+            db.volume_update(context,
+                             v['id'],
+                             {'status': 'in-use'})
+
+        logging.info(_('Live migrating %s to %s finishes successfully')
+                     % (ec2_id, dest))
+        msg = _(("""Known error: the below error is nomally occurs.\n"""
+                 """Just check if iinstance is successfully migrated.\n"""
+                 """libvir: QEMU error : Domain not found: no domain """
+                 """with matching name.."""))
+        logging.info(msg)
 
 
 class FirewallDriver(object):
