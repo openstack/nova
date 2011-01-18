@@ -142,9 +142,15 @@ class Reflection(object):
                 if argspec[2]:
                     args_out.insert(0, ('**%s' % argspec[2],))
 
+                if f.__doc__:
+                    short_doc = f.__doc__.split('\n')[0]
+                    doc = f.__doc__
+                else:
+                    short_doc = doc = _('not available')
+
                 methods['/%s/%s' % (route, k)] = {
-                        'short_doc': f.__doc__.split('\n')[0],
-                        'doc': f.__doc__,
+                        'short_doc': short_doc,
+                        'doc': doc,
                         'name': k,
                         'args': list(reversed(args_out))}
 
