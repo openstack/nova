@@ -358,38 +358,6 @@ class FakeConnection(object):
         """
         return True
 
-    def get_cpu_info(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_vcpu_number(self):
-        """This method is supported only libvirt.  """
-        return -1
-
-    def get_memory_mb(self):
-        """This method is supported only libvirt.."""
-        return -1
-
-    def get_local_gb(self):
-        """This method is supported only libvirt.."""
-        return -1
-
-    def get_hypervisor_type(self):
-        """This method is supported only libvirt.."""
-        return
-
-    def get_hypervisor_version(self):
-        """This method is supported only libvirt.."""
-        return -1
-
-    def compare_cpu(self, xml):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
-
-    def live_migration(self, context, instance_ref, dest):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
-
 
 class FakeInstance(object):
 

@@ -92,7 +92,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 
-flags.DEFINE_bool('use_ipv6', True,
+flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
@@ -159,7 +159,7 @@ class NetworkManager(manager.Manager):
         """Called when this host becomes the host for a network."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
         raise NotImplementedError()
 
@@ -320,7 +320,7 @@ class FlatManager(NetworkManager):
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context.elevated(), address)
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Network is created manually."""
         pass
 
@@ -395,10 +395,9 @@ class FlatDHCPManager(FlatManager):
         super(FlatDHCPManager, self).init_host()
         self.driver.metadata_forward()
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
-        if network_ref is None:
-            network_ref = db.network_get_by_instance(context, instance_id)
+        network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface)
 
@@ -488,10 +487,9 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
-        if network_ref is None:
-            network_ref = db.network_get_by_instance(context, instance_id)
+        network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
 
