@@ -122,10 +122,10 @@ class LibvirtConnTestCase(test.TestCase):
 
             if rescue:
                 check = (lambda t: t.find('./os/kernel').text.split('/')[1],
-                         'rescue-kernel')
+                         'kernel.rescue')
                 check_list.append(check)
                 check = (lambda t: t.find('./os/initrd').text.split('/')[1],
-                         'rescue-ramdisk')
+                         'ramdisk.rescue')
                 check_list.append(check)
             else:
                 if expect_kernel:
@@ -161,13 +161,16 @@ class LibvirtConnTestCase(test.TestCase):
         if rescue:
             common_checks += [
                 (lambda t: t.findall('./devices/disk/source')[0].get(
-                    'file').split('/')[1], 'rescue-disk'),
+                    'file').split('/')[1], 'disk.rescue'),
                 (lambda t: t.findall('./devices/disk/source')[1].get(
                     'file').split('/')[1], 'disk')]
         else:
             common_checks += [(lambda t: t.findall(
                 './devices/disk/source')[0].get('file').split('/')[1],
                                'disk')]
+            common_checks += [(lambda t: t.findall(
+                './devices/disk/source')[1].get('file').split('/')[1],
+                               'disk.local')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type

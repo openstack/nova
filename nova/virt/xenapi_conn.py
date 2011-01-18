@@ -89,6 +89,9 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
+flags.DEFINE_string('xenapi_image_service',
+                    'glance',
+                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
@@ -208,6 +211,36 @@ class XenAPIConnection(object):
         return  {'address': xs_url.netloc,
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
+
+    def get_cpu_info(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_vcpu_number(self):
+        """This method is supported only libvirt.  """
+        return -1
+
+    def get_memory_mb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_local_gb(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def get_hypervisor_type(self):
+        """This method is supported only libvirt.."""
+        return
+
+    def get_hypervisor_version(self):
+        """This method is supported only libvirt.."""
+        return -1
+
+    def compare_cpu(self, xml):
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def live_migration(self, context, instance_ref, dest):
+        raise NotImplementedError('This method is supported only libvirt.')
 
 
 class XenAPISession(object):

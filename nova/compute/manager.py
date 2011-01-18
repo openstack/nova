@@ -41,6 +41,7 @@ import logging
 import socket
 import functools
 
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -120,6 +121,35 @@ class ComputeManager(manager.Manager):
         """
         self.driver.init_host()
 
+    def update_service(self, ctxt, host, binary):
+        """Insert compute node specific information to DB."""
+
+        try:
+            service_ref = db.service_get_by_args(ctxt,
+                                                 host,
+                                                 binary)
+        except exception.NotFound:
+            msg = _(("""Cannot insert compute manager specific info"""
+                      """Because no service record found."""))
+            raise exception.Invalid(msg)
+
+        # Updating host information
+        vcpu = self.driver.get_vcpu_number()
+        memory_mb = self.driver.get_memory_mb()
+        local_gb = self.driver.get_local_gb()
+        hypervisor = self.driver.get_hypervisor_type()
+        version = self.driver.get_hypervisor_version()
+        cpu_info = self.driver.get_cpu_info()
+
+        db.service_update(ctxt,
+                          service_ref['id'],
+                          {'vcpus': vcpu,
+                           'memory_mb': memory_mb,
+                           'local_gb': local_gb,
+                           'hypervisor_type': hypervisor,
+                           'hypervisor_version': version,
+                           'cpu_info': cpu_info})
+
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
@@ -183,9 +213,10 @@ class ComputeManager(manager.Manager):
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
+
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host})
+                                {'host': self.host, 'launched_on': self.host})
 
         self.db.instance_set_state(context,
                                    instance_id,
@@ -565,3 +596,88 @@ class ComputeManager(manager.Manager):
         self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         return True
+
+    def compare_cpu(self, context, cpu_info):
+        """ Check the host cpu is compatible to a cpu given by xml."""
+        return self.driver.compare_cpu(cpu_info)
+
+    def pre_live_migration(self, context, instance_id, dest):
+        """Any preparation for live migration at dst host."""
+
+        # Getting instance info
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+
+        # Getting fixed ips
+        fixed_ip = db.instance_get_fixed_address(context, instance_id)
+        if not fixed_ip:
+            msg = _('%s(%s) doesnt have fixed_ip') % (instance_id, ec2_id)
+            raise exception.NotFound(msg)
+
+        # If any volume is mounted, prepare here.
+        if len(instance_ref['volumes']) == 0:
+            logging.info(_("%s has no volume.") % ec2_id)
+        else:
+            for v in instance_ref['volumes']:
+                self.volume_manager.setup_compute_volume(context, v['id'])
+
+        # Bridge settings
+        # call this method prior to ensure_filtering_rules_for_instance,
+        # since bridge is not set up, ensure_filtering_rules_for instance
+        # fails.
+        self.network_manager.setup_compute_network(context, instance_id)
+
+        # Creating filters to hypervisors and firewalls.
+        # An example is that nova-instance-instance-xxx,
+        # which is written to libvirt.xml( check "virsh nwfilter-list )
+        # On destination host, this nwfilter is necessary.
+        # In addition, this method is creating filtering rule
+        # onto destination host.
+        self.driver.ensure_filtering_rules_for_instance(instance_ref)
+
+    def live_migration(self, context, instance_id, dest):
+        """executes live migration."""
+
+        # Get instance for error handling.
+        instance_ref = db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+
+        try:
+            # Checking volume node is working correctly when any volumes
+            # are attached to instances.
+            if len(instance_ref['volumes']) != 0:
+                rpc.call(context,
+                          FLAGS.volume_topic,
+                          {"method": "check_for_export",
+                           "args": {'instance_id': instance_id}})
+
+            # Asking dest host to preparing live migration.
+            compute_topic = db.queue_get_for(context,
+                                             FLAGS.compute_topic,
+                                             dest)
+            rpc.call(context,
+                        compute_topic,
+                        {"method": "pre_live_migration",
+                         "args": {'instance_id': instance_id,
+                                    'dest': dest}})
+
+        except Exception, e:
+            msg = _('Pre live migration for %s failed at %s')
+            logging.error(msg, ec2_id, dest)
+            db.instance_set_state(context,
+                                  instance_id,
+                                  power_state.RUNNING,
+                                  'running')
+
+            for v in instance_ref['volumes']:
+                db.volume_update(context,
+                                 v['id'],
+                                 {'status': 'in-use'})
+
+            # e should be raised. just calling "raise" may raise NotFound.
+            raise e
+
+        # Executing live migration
+        # live_migration might raises exceptions, but
+        # nothing must be recovered in this version.
+        self.driver.live_migration(context, instance_ref, dest)
