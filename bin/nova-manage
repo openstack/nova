@@ -599,10 +599,10 @@ class LogCommands(object):
         print re.sub('#012', "\n", "\n".join(lines))
 
 
-class CleanupCommands(object):
+class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
-    def delete_volume(self, volume_id):
+    def delete(self, volume_id):
         """Delete a volume, bypassing the check that it
         must be available.
         args: volume_id_id"""
@@ -619,7 +619,7 @@ class CleanupCommands(object):
                  {"method": "delete_volume",
                   "args": {"volume_id": volume['id']}})
 
-    def reattach_volume(self, volume_id):
+    def reattach(self, volume_id):
         """Re-attach a volume that has previously been attached
         to an instance.  Typically called after a compute host
         has been rebooted.
@@ -650,7 +650,7 @@ CATEGORIES = [
     ('host', HostCommands),
     ('service', ServiceCommands),
     ('log', LogCommands),
-    ('cleanup', CleanupCommands)]
+    ('volume', VolumeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
