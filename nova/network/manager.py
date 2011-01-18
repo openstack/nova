@@ -92,7 +92,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 
-flags.DEFINE_bool('use_ipv6', True,
+flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
