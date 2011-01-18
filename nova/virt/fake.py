@@ -318,7 +318,7 @@ class FakeConnection(object):
         running the specified security group.
 
         An error should be raised if the operation cannot complete.
-        
+
         """
         return True
 
@@ -328,7 +328,7 @@ class FakeConnection(object):
         This message is sent to the virtualization drivers on hosts that are
         running an instance that belongs to a security group that has a rule
         that references the security group identified by `security_group_id`.
-        It is the responsiblity of this method to make sure any rules 
+        It is the responsiblity of this method to make sure any rules
         that authorize traffic flow with members of the security group are
         updated and any new members can communicate, and any removed members
         cannot.
@@ -354,9 +354,10 @@ class FakeConnection(object):
         are made to authorizing those instances.
 
         An error should be raised if the operation cannot complete.
-        
+
         """
         return True
+
 
 class FakeInstance(object):
 
