@@ -848,6 +848,9 @@ class LibvirtConnection(object):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
+    def refresh_provier_fw_rules(self):
+        self.firewall_driver.refresh_provider_fw_rules()
+
 
 class FirewallDriver(object):
     def prepare_instance_filter(self, instance):
@@ -882,6 +885,13 @@ class FirewallDriver(object):
 
         Gets called when an instance gets added to or removed from
         the security group."""
+        raise NotImplementedError()
+
+    def refresh_provider_fw_rules(self):
+        """Refresh common rules for all hosts/instances from data store.
+
+        Gets called when a rule has been added to or removed from
+        the list of rules (via admin api)."""
         raise NotImplementedError()
 
 

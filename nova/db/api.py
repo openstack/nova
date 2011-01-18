@@ -813,6 +813,14 @@ def security_group_rule_destroy(context, security_group_rule_id):
 ###################
 
 
+def provider_fw_rule_create(context, rule):
+    """Add a firewall rule at the provider level (all hosts & instances)."""
+    return IMPL.provider_fw_rule_create(context, rule)
+
+
+###################
+
+
 def user_get(context, id):
     """Get user by id."""
     return IMPL.user_get(context, id)

@@ -1687,6 +1687,18 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 ###################
 
+
+@require_admin_context
+def provider_fw_rule_create(context, rule):
+    fw_rule_ref = models.ProviderFirewallRule()
+    fw_rule_ref.update(rule)
+    fw_rule_ref.save()
+    return fw_rule_ref
+
+
+###################
+
+
 @require_admin_context
 def user_get(context, id, session=None):
     if not session:

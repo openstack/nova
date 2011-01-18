@@ -170,6 +170,11 @@ class ComputeManager(manager.Manager):
         return self.driver.refresh_security_group_members(security_group_id)
 
     @exception.wrap_exception
+    def refresh_provider_fw_rules(self, context, **_kwargs):
+        """This call passes straight through to the virtualization driver."""
+        return self.driver.refresh_security_group_rules()
+
+    @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
