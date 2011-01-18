@@ -122,7 +122,7 @@ class VolumeDriver(object):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    def discover_volume(self, _context, volume):
+    def discover_volume(self, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
@@ -184,34 +184,14 @@ class AOEDriver(VolumeDriver):
         self._try_execute("sudo vblade-persist destroy %s %s" %
                           (shelf_id, blade_id))
 
-    def discover_volume(self, context, volume):
+    def discover_volume(self, _volume):
         """Discover volume on a remote host."""
         self._execute("sudo aoe-discover")
         self._execute("sudo aoe-stat", check_exit_code=False)
-        shelf_id, blade_id = self.db.volume_get_shelf_and_blade(context,
-                                                                volume['id'])
-        return "/dev/etherd/e%s.%s" % (shelf_id, blade_id)
 
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
         pass
-
-    def check_for_export(self, context, volume_id):
-        """Make sure whether volume is exported."""
-        (shelf_id,
-         blade_id) = self.db.volume_get_shelf_and_blade(context,
-                                                        volume_id)
-        (out, _err) = self._execute("sudo vblade-persist ls --no-header")
-        exists = False
-        for line in out.split('\n'):
-            param = line.split(' ')
-            if len(param) == 6 and param[0] == str(shelf_id) \
-                    and param[1] == str(blade_id) and param[-1] == "run":
-                exists = True
-                break
-        if not exists:
-            logging.warning(_("vblade process for e%s.%s isn't running.")
-                            % (shelf_id, blade_id))
 
 
 class FakeAOEDriver(AOEDriver):
@@ -296,7 +276,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_portal = location.split(",")[0]
         return (iscsi_name, iscsi_portal)
 
-    def discover_volume(self, _context, volume):
+    def discover_volume(self, volume):
         """Discover volume on a remote host."""
         iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
                                                              volume['host'])
@@ -385,7 +365,7 @@ class RBDDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, _context, volume):
+    def discover_volume(self, volume):
         """Discover volume on a remote host"""
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
@@ -434,7 +414,7 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, _context, volume):
+    def discover_volume(self, volume):
         """Discover volume on a remote host"""
         return "sheepdog:%s" % volume['name']
 
