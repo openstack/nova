@@ -254,15 +254,15 @@ class CloudController(object):
                 name, _sep, host = region.partition('=')
                 endpoint = '%s://%s:%s%s' % (FLAGS.ec2_prefix,
                                              host,
-                                             FLAGS.cc_port,
+                                             FLAGS.ec2_port,
                                              FLAGS.ec2_suffix)
                 regions.append({'regionName': name,
                                 'regionEndpoint': endpoint})
         else:
             regions = [{'regionName': 'nova',
                         'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
-                                                            FLAGS.cc_host,
-                                                            FLAGS.cc_port,
+                                                            FLAGS.ec2_host,
+                                                            FLAGS.ec2_port,
                                                             FLAGS.ec2_suffix)}]
         return {'regionInfo': regions}
 

@@ -32,8 +32,9 @@ from nova import utils
 from nova.auth import manager
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.compute')
+FLAGS = flags.FLAGS
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class ComputeTestCase(test.TestCase):
