@@ -729,8 +729,6 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                # modified by masumotok
-                #instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
                 instance_id = floating_ip_ref['fixed_ip']['instance']['id']
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,

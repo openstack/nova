@@ -1267,6 +1267,7 @@ class NWFilterFirewall(FirewallDriver):
             # anyway.
             return
 
+        logging.info('ensuring static filters')
         self._ensure_static_filters()
 
         instance_filter_name = self._instance_filter_name(instance)
