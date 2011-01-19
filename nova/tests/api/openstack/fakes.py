@@ -22,6 +22,9 @@ import string
 
 import webob
 import webob.dec
+from paste import urlmap
+
+from glance import client as glance_client
 
 from nova import auth
 from nova import context
@@ -29,6 +32,7 @@ from nova import exception as exc
 from nova import flags
 from nova import utils
 import nova.api.openstack.auth
+from nova.api import openstack
 from nova.api.openstack import auth
 from nova.api.openstack import ratelimiting
 from nova.image import glance
@@ -69,6 +73,17 @@ def fake_wsgi(self, req):
     return self.application
 
 
+def wsgi_app(inner_application=None):
+    if not inner_application:
+        inner_application = openstack.APIRouter()
+    mapper = urlmap.URLMap()
+    api = openstack.FaultWrapper(auth.AuthMiddleware(
+              ratelimiting.RateLimitingMiddleware(inner_application)))
+    mapper['/v1.0'] = api
+    mapper['/'] = openstack.FaultWrapper(openstack.Versions())
+    return mapper
+
+
 def stub_out_key_pair_funcs(stubs):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
@@ -107,7 +122,7 @@ def stub_out_rate_limiting(stubs):
 def stub_out_networking(stubs):
     def get_my_ip():
         return '127.0.0.1'
-    stubs.Set(nova.utils, 'get_my_ip', get_my_ip)
+    stubs.Set(nova.flags, '_get_my_ip', get_my_ip)
 
 
 def stub_out_compute_api_snapshot(stubs):
@@ -116,64 +131,60 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
-def stub_out_glance(stubs, initial_fixtures=[]):
+def stub_out_glance(stubs, initial_fixtures=None):
 
-    class FakeParallaxClient:
+    class FakeGlanceClient:
 
         def __init__(self, initial_fixtures):
-            self.fixtures = initial_fixtures
+            self.fixtures = initial_fixtures or []
 
-        def fake_get_image_index(self):
+        def fake_get_images(self):
             return [dict(id=f['id'], name=f['name'])
                     for f in self.fixtures]
 
-        def fake_get_image_details(self):
+        def fake_get_images_detailed(self):
             return self.fixtures
 
-        def fake_get_image_metadata(self, image_id):
+        def fake_get_image_meta(self, image_id):
             for f in self.fixtures:
                 if f['id'] == image_id:
                     return f
             return None
 
-        def fake_add_image_metadata(self, image_data):
+        def fake_add_image(self, image_meta):
             id = ''.join(random.choice(string.letters) for _ in range(20))
-            image_data['id'] = id
-            self.fixtures.append(image_data)
+            image_meta['id'] = id
+            self.fixtures.append(image_meta)
             return id
 
-        def fake_update_image_metadata(self, image_id, image_data):
-            f = self.fake_get_image_metadata(image_id)
+        def fake_update_image(self, image_id, image_meta):
+            f = self.fake_get_image_meta(image_id)
             if not f:
                 raise exc.NotFound
 
-            f.update(image_data)
+            f.update(image_meta)
 
-        def fake_delete_image_metadata(self, image_id):
-            f = self.fake_get_image_metadata(image_id)
+        def fake_delete_image(self, image_id):
+            f = self.fake_get_image_meta(image_id)
             if not f:
                 raise exc.NotFound
 
             self.fixtures.remove(f)
 
-        def fake_delete_all(self):
-            self.fixtures = []
+        ##def fake_delete_all(self):
+        ##    self.fixtures = []
 
-    fake_parallax_client = FakeParallaxClient(initial_fixtures)
-    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_index',
-              fake_parallax_client.fake_get_image_index)
-    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_details',
-              fake_parallax_client.fake_get_image_details)
-    stubs.Set(nova.image.glance.ParallaxClient, 'get_image_metadata',
-              fake_parallax_client.fake_get_image_metadata)
-    stubs.Set(nova.image.glance.ParallaxClient, 'add_image_metadata',
-              fake_parallax_client.fake_add_image_metadata)
-    stubs.Set(nova.image.glance.ParallaxClient, 'update_image_metadata',
-              fake_parallax_client.fake_update_image_metadata)
-    stubs.Set(nova.image.glance.ParallaxClient, 'delete_image_metadata',
-              fake_parallax_client.fake_delete_image_metadata)
-    stubs.Set(nova.image.glance.GlanceImageService, 'delete_all',
-              fake_parallax_client.fake_delete_all)
+    GlanceClient = glance_client.Client
+    fake = FakeGlanceClient(initial_fixtures)
+
+    stubs.Set(GlanceClient, 'get_images', fake.fake_get_images)
+    stubs.Set(GlanceClient, 'get_images_detailed',
+              fake.fake_get_images_detailed)
+    stubs.Set(GlanceClient, 'get_image_meta', fake.fake_get_image_meta)
+    stubs.Set(GlanceClient, 'add_image', fake.fake_add_image)
+    stubs.Set(GlanceClient, 'update_image', fake.fake_update_image)
+    stubs.Set(GlanceClient, 'delete_image', fake.fake_delete_image)
+    #stubs.Set(GlanceClient, 'delete_all', fake.fake_delete_all)
 
 
 class FakeToken(object):

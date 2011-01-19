@@ -20,18 +20,18 @@ Unit Tests for network code
 """
 import IPy
 import os
-import logging
 
 from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import service
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.network')
 
 
 class NetworkTestCase(test.TestCase):
@@ -45,7 +45,6 @@ class NetworkTestCase(test.TestCase):
                    fake_network=True,
                    network_size=16,
                    num_networks=5)
-        logging.getLogger().setLevel(logging.DEBUG)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
@@ -96,6 +95,28 @@ class NetworkTestCase(test.TestCase):
         self.context._project = self.projects[project_num]
         self.context.project_id = self.projects[project_num].id
         self.network.deallocate_fixed_ip(self.context, address)
+
+    def test_private_ipv6(self):
+        """Make sure ipv6 is OK"""
+        if FLAGS.use_ipv6:
+            instance_ref = self._create_instance(0)
+            address = self._create_address(0, instance_ref['id'])
+            network_ref = db.project_get_network(
+                                                 context.get_admin_context(),
+                                                 self.context.project_id)
+            address_v6 = db.instance_get_fixed_address_v6(
+                                                 context.get_admin_context(),
+                                                 instance_ref['id'])
+            self.assertEqual(instance_ref['mac_address'],
+                             utils.to_mac(address_v6))
+            instance_ref2 = db.fixed_ip_get_instance_v6(
+                                                 context.get_admin_context(),
+                                                 address_v6)
+            self.assertEqual(instance_ref['id'], instance_ref2['id'])
+            self.assertEqual(address_v6,
+                             utils.to_global_ipv6(
+                                                 network_ref['cidr_v6'],
+                                                 instance_ref['mac_address']))
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
@@ -328,7 +349,7 @@ def lease_ip(private_ip):
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
-    logging.debug("ISSUE_IP: %s, %s ", out, err)
+    LOG.debug("ISSUE_IP: %s, %s ", out, err)
 
 
 def release_ip(private_ip):
@@ -344,4 +365,4 @@ def release_ip(private_ip):
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
     (out, err) = utils.execute(cmd, addl_env=env)
-    logging.debug("RELEASE_IP: %s, %s ", out, err)
+    LOG.debug("RELEASE_IP: %s, %s ", out, err)

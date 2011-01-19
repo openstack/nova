@@ -17,25 +17,34 @@
 #    under the License.
 
 import unittest
-import logging
 import webob
 
 from nova import context
-from nova import exception
 from nova import flags
 from nova import test
 from nova.api import ec2
 from nova.auth import manager
 
-
 FLAGS = flags.FLAGS
 
 
-class Context(object):
+class FakeControllerClass(object):
     pass
 
 
+class FakeApiRequest(object):
+    def __init__(self, action):
+        self.controller = FakeControllerClass()
+        self.action = action
+
+
 class AccessTestCase(test.TestCase):
+    def _env_for(self, ctxt, action):
+        env = {}
+        env['ec2.context'] = ctxt
+        env['ec2.request'] = FakeApiRequest(action)
+        return env
+
     def setUp(self):
         super(AccessTestCase, self).setUp()
         um = manager.AuthManager()
@@ -65,7 +74,7 @@ class AccessTestCase(test.TestCase):
             return ['']
 
         self.mw = ec2.Authorizer(noopWSGIApp)
-        self.mw.action_roles = {'str': {
+        self.mw.action_roles = {'FakeControllerClass': {
                 '_allow_all': ['all'],
                 '_allow_none': [],
                 '_allow_project_manager': ['projectmanager'],
@@ -85,9 +94,7 @@ class AccessTestCase(test.TestCase):
 
     def response_status(self, user, methodName):
         ctxt = context.RequestContext(user, self.project)
-        environ = {'ec2.context': ctxt,
-                   'ec2.controller': 'some string',
-                   'ec2.action': methodName}
+        environ = self._env_for(ctxt, methodName)
         req = webob.Request.blank('/', environ)
         resp = req.get_response(self.mw)
         return resp.status_int

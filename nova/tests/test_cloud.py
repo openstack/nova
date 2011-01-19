@@ -18,10 +18,10 @@
 
 from base64 import b64decode
 import json
-import logging
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
+import shutil
 import tempfile
 import time
 
@@ -31,6 +31,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
@@ -41,6 +42,7 @@ from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.tests.cloud')
 
 # Temp dirs for working with image attributes through the cloud controller
 # (stole this from objectstore_unittest.py)
@@ -49,6 +51,8 @@ IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
 os.makedirs(IMAGES_PATH)
 
 
+# TODO(termie): these tests are rather fragile, they should at the lest be
+#               wiping database state after each run
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
@@ -56,7 +60,6 @@ class CloudTestCase(test.TestCase):
                    images_path=IMAGES_PATH)
 
         self.conn = rpc.Connection.instance()
-        logging.getLogger().setLevel(logging.DEBUG)
 
         # set up our cloud
         self.cloud = cloud.CloudController()
@@ -126,12 +129,61 @@ class CloudTestCase(test.TestCase):
         vol2 = db.volume_create(self.context, {})
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
+        volume_id = cloud.id_to_ec2_id(vol2['id'], 'vol-%08x')
         result = self.cloud.describe_volumes(self.context,
-                                             volume_id=[vol2['id']])
+                                             volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
-        self.assertEqual(result['volumeSet'][0]['volumeId'], vol2['id'])
+        self.assertEqual(
+                cloud.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
+                vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
+
+    def test_describe_availability_zones(self):
+        """Makes sure describe_availability_zones works and filters results."""
+        service1 = db.service_create(self.context, {'host': 'host1_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone1"})
+        service2 = db.service_create(self.context, {'host': 'host2_zones',
+                                         'binary': "nova-compute",
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': "zone2"})
+        result = self.cloud.describe_availability_zones(self.context)
+        self.assertEqual(len(result['availabilityZoneInfo']), 3)
+        db.service_destroy(self.context, service1['id'])
+        db.service_destroy(self.context, service2['id'])
+
+    def test_describe_instances(self):
+        """Makes sure describe_instances works and filters results."""
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'host': 'host1'})
+        inst2 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'host': 'host2'})
+        comp1 = db.service_create(self.context, {'host': 'host1',
+                                                 'availability_zone': 'zone1',
+                                                 'topic': "compute"})
+        comp2 = db.service_create(self.context, {'host': 'host2',
+                                                 'availability_zone': 'zone2',
+                                                 'topic': "compute"})
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 2)
+        instance_id = cloud.id_to_ec2_id(inst2['id'])
+        result = self.cloud.describe_instances(self.context,
+                                             instance_id=[instance_id])
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        self.assertEqual(result['instancesSet'][0]['instanceId'],
+                         instance_id)
+        self.assertEqual(result['instancesSet'][0]
+                         ['placement']['availabilityZone'], 'zone2')
+        db.instance_destroy(self.context, inst1['id'])
+        db.instance_destroy(self.context, inst2['id'])
+        db.service_destroy(self.context, comp1['id'])
+        db.service_destroy(self.context, comp2['id'])
 
     def test_console_output(self):
         image_id = FLAGS.default_image
@@ -140,11 +192,24 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
+        rv = self.cloud.run_instances(self.context, **kwargs)
+        instance_id = rv['instancesSet'][0]['instanceId']
+        output = self.cloud.get_console_output(context=self.context,
+                                                     instance_id=[instance_id])
+        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
+        # TODO(soren): We need this until we can stop polling in the rpc code
+        #              for unit tests.
+        greenthread.sleep(0.3)
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
+
+    def test_ajax_console(self):
+        kwargs = {'image_id': image_id}
         rv = yield self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         output = yield self.cloud.get_console_output(context=self.context,
                                                      instance_id=[instance_id])
-        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
+        self.assertEquals(b64decode(output['output']),
+                          'http://fakeajaxconsole.com/?token=FAKETOKEN')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
@@ -178,7 +243,7 @@ class CloudTestCase(test.TestCase):
 
     def test_run_instances(self):
         if FLAGS.connection_type == 'fake':
-            logging.debug("Can't test instances without a real virtual env.")
+            LOG.debug(_("Can't test instances without a real virtual env."))
             return
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -186,32 +251,46 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         # TODO: check for proper response
         instance_id = rv['reservationSet'][0].keys()[0]
         instance = rv['reservationSet'][0][instance_id][0]
-        logging.debug("Need to watch instance %s until it's running..." %
-                      instance['instance_id'])
+        LOG.debug(_("Need to watch instance %s until it's running..."),
+                  instance['instance_id'])
         while True:
             greenthread.sleep(1)
             info = self.cloud._get_instance(instance['instance_id'])
-            logging.debug(info['state'])
+            LOG.debug(info['state'])
             if info['state'] == power_state.RUNNING:
                 break
         self.assert_(rv)
 
-        if connection_type != 'fake':
+        if FLAGS.connection_type != 'fake':
             time.sleep(45)  # Should use boto for polling here
         for reservations in rv['reservationSet']:
             # for res_id in reservations.keys():
-            #     logging.debug(reservations[res_id])
+            #     LOG.debug(reservations[res_id])
             # for instance in reservations[res_id]:
             for instance in reservations[reservations.keys()[0]]:
                 instance_id = instance['instance_id']
-                logging.debug("Terminating instance %s" % instance_id)
-                rv = yield self.compute.terminate_instance(instance_id)
+                LOG.debug(_("Terminating instance %s"), instance_id)
+                rv = self.compute.terminate_instance(instance_id)
+
+    def test_describe_instances(self):
+        """Makes sure describe_instances works."""
+        instance1 = db.instance_create(self.context, {'host': 'host2'})
+        comp1 = db.service_create(self.context, {'host': 'host2',
+                                                 'availability_zone': 'zone1',
+                                                 'topic': "compute"})
+        result = self.cloud.describe_instances(self.context)
+        self.assertEqual(result['reservationSet'][0]
+                         ['instancesSet'][0]
+                         ['placement']['availabilityZone'], 'zone1')
+        db.instance_destroy(self.context, instance1['id'])
+        db.service_destroy(self.context, comp1['id'])
 
     def test_instance_update_state(self):
+        # TODO(termie): what is this code even testing?
         def instance(num):
             return {
                 'reservation_id': 'r-1',
@@ -230,7 +309,8 @@ class CloudTestCase(test.TestCase):
                 'state': 0x01,
                 'user_data': ''}
         rv = self.cloud._format_describe_instances(self.context)
-        self.assert_(len(rv['reservationSet']) == 0)
+        logging.error(str(rv))
+        self.assertEqual(len(rv['reservationSet']), 0)
 
         # simulate launch of 5 instances
         # self.cloud.instances['pending'] = {}
@@ -293,6 +373,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('Foo Img', img.metadata['description'])
         self._fake_set_image_description(self.context, 'ami-testing', '')
         self.assertEqual('', img.metadata['description'])
+        shutil.rmtree(pathdir)
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
@@ -313,7 +394,8 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_volume_display_fields(self):
         vol = db.volume_create(self.context, {})
-        self.cloud.update_volume(self.context, vol['id'],
+        self.cloud.update_volume(self.context,
+                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
                                  display_name='c00l v0lum3')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
@@ -321,8 +403,9 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_volume_wont_update_private_fields(self):
         vol = db.volume_create(self.context, {})
-        self.cloud.update_volume(self.context, vol['id'],
-                                   mountpoint='/not/here')
+        self.cloud.update_volume(self.context,
+                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])
         db.volume_destroy(self.context, vol['id'])

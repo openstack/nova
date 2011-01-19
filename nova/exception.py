@@ -21,9 +21,8 @@ Nova base exception handling, including decorator for re-raising
 Nova-type exceptions. SHOULD include dedicated exception logging.
 """
 
-import logging
-import sys
-import traceback
+from nova import log as logging
+LOG = logging.getLogger('nova.exception')
 
 
 class ProcessExecutionError(IOError):
@@ -77,6 +76,10 @@ class InvalidInputException(Error):
     pass
 
 
+class TimeoutException(Error):
+    pass
+
+
 def wrap_exception(f):
     def _wrap(*args, **kw):
         try:
@@ -84,7 +87,7 @@ def wrap_exception(f):
         except Exception, e:
             if not isinstance(e, Error):
                 #exc_type, exc_value, exc_traceback = sys.exc_info()
-                logging.exception(_('Uncaught exception'))
+                LOG.exception(_('Uncaught exception'))
                 #logging.error(traceback.extract_stack(exc_traceback))
                 raise Error(str(e))
             raise

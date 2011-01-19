@@ -42,6 +42,10 @@ flags.DEFINE_string('db_backend', 'sqlalchemy',
                     'The backend to use for db')
 flags.DEFINE_boolean('enable_new_services', True,
                      'Services to be added to the available pool on create')
+flags.DEFINE_string('instance_name_template', 'instance-%08x',
+                    'Template string to be used to generate instance names')
+flags.DEFINE_string('volume_name_template', 'volume-%08x',
+                    'Template string to be used to generate instance names')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -81,9 +85,19 @@ def service_get(context, service_id):
     return IMPL.service_get(context, service_id)
 
 
+def service_get_all(context, disabled=False):
+    """Get all service."""
+    return IMPL.service_get_all(context, None, disabled)
+
+
 def service_get_all_by_topic(context, topic):
-    """Get all compute services for a given topic."""
+    """Get all services for a given topic."""
     return IMPL.service_get_all_by_topic(context, topic)
+
+
+def service_get_all_by_host(context, host):
+    """Get all services for a given host."""
+    return IMPL.service_get_all_by_host(context, host)
 
 
 def service_get_all_compute_sorted(context):
@@ -285,6 +299,10 @@ def fixed_ip_get_instance(context, address):
     return IMPL.fixed_ip_get_instance(context, address)
 
 
+def fixed_ip_get_instance_v6(context, address):
+    return IMPL.fixed_ip_get_instance_v6(context, address)
+
+
 def fixed_ip_get_network(context, address):
     """Get a network for a fixed ip by address."""
     return IMPL.fixed_ip_get_network(context, address)
@@ -341,6 +359,10 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_fixed_address(context, instance_id):
     """Get the fixed ip address of an instance."""
     return IMPL.instance_get_fixed_address(context, instance_id)
+
+
+def instance_get_fixed_address_v6(context, instance_id):
+    return IMPL.instance_get_fixed_address_v6(context, instance_id)
 
 
 def instance_get_floating_address(context, instance_id):
@@ -536,6 +558,10 @@ def project_get_network(context, project_id, associate=True):
     """
 
     return IMPL.project_get_network(context, project_id)
+
+
+def project_get_network_v6(context, project_id):
+    return IMPL.project_get_network_v6(context, project_id)
 
 
 ###################
@@ -772,6 +798,13 @@ def security_group_rule_get_by_security_group(context, security_group_id):
                                                           security_group_id)
 
 
+def security_group_rule_get_by_security_group_grantee(context,
+                                                      security_group_id):
+    """Get all rules that grant access to the given security group."""
+    return IMPL.security_group_rule_get_by_security_group_grantee(context,
+                                                             security_group_id)
+
+
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule."""
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)
@@ -894,3 +927,57 @@ def host_get_networks(context, host):
 
     """
     return IMPL.host_get_networks(context, host)
+
+
+##################
+
+
+def console_pool_create(context, values):
+    """Create console pool."""
+    return IMPL.console_pool_create(context, values)
+
+
+def console_pool_get(context, pool_id):
+    """Get a console pool."""
+    return IMPL.console_pool_get(context, pool_id)
+
+
+def console_pool_get_by_host_type(context, compute_host, proxy_host,
+                                  console_type):
+    """Fetch a console pool for a given proxy host, compute host, and type."""
+    return IMPL.console_pool_get_by_host_type(context,
+                                              compute_host,
+                                              proxy_host,
+                                              console_type)
+
+
+def console_pool_get_all_by_host_type(context, host, console_type):
+    """Fetch all pools for given proxy host and type."""
+    return IMPL.console_pool_get_all_by_host_type(context,
+                                                  host,
+                                                  console_type)
+
+
+def console_create(context, values):
+    """Create a console."""
+    return IMPL.console_create(context, values)
+
+
+def console_delete(context, console_id):
+    """Delete a console."""
+    return IMPL.console_delete(context, console_id)
+
+
+def console_get_by_pool_instance(context, pool_id, instance_id):
+    """Get console entry for a given instance and pool."""
+    return IMPL.console_get_by_pool_instance(context, pool_id, instance_id)
+
+
+def console_get_all_by_instance(context, instance_id):
+    """Get consoles for a given instance."""
+    return IMPL.console_get_all_by_instance(context, instance_id)
+
+
+def console_get(context, console_id, instance_id=None):
+    """Get a specific console (possibly on a given instance)."""
+    return IMPL.console_get(context, console_id, instance_id)
