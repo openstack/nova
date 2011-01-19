@@ -79,8 +79,8 @@ class SchedulerManager(manager.Manager):
         if len(services) == 0:
             return {'ret': False, 'msg': 'No such Host'}
 
-        compute = [ s for s in services if s['topic'] == 'compute']
-        if 0 == len(compute): 
+        compute = [s for s in services if s['topic'] == 'compute']
+        if 0 == len(compute):
             service_ref = services[0]
         else:
             service_ref = compute[0]
@@ -90,10 +90,9 @@ class SchedulerManager(manager.Manager):
                      'memory_mb': service_ref['memory_mb'],
                      'local_gb': service_ref['local_gb']}
 
-        
         # Getting usage resource information
         u_resource = {}
-        instances_ref = db.instance_get_all_by_host(context, 
+        instances_ref = db.instance_get_all_by_host(context,
                                                     service_ref['host'])
 
         if 0 == len(instances_ref):
