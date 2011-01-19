@@ -258,10 +258,15 @@ class VolumeTests(UserSmokeTestCase):
         instance = reservation.instances[0]
         self.data['instance'] = instance
         for x in xrange(120):
-            if self.can_ping(instance.private_dns_name):
+            time.sleep(1)
+            instance.update()
+            #if self.can_ping(instance.private_dns_name):
+            if instance.state == u'running':
                 break
         else:
             self.fail('unable to start instance')
+        time.sleep(10)
+        instance.update()
 
     def test_001_can_create_volume(self):
         volume = self.conn.create_volume(1, 'nova')
@@ -273,10 +278,11 @@ class VolumeTests(UserSmokeTestCase):
     def test_002_can_attach_volume(self):
         volume = self.data['volume']
 
-        for x in xrange(10):
-            if volume.status == u'available':
+        for x in xrange(30):
+            print volume.status
+            if volume.status.startswith('available'):
                 break
-            time.sleep(5)
+            time.sleep(1)
             volume.update()
         else:
             self.fail('cannot attach volume with state %s' % volume.status)
@@ -285,12 +291,12 @@ class VolumeTests(UserSmokeTestCase):
 
         # Volumes seems to report "available" too soon.
         for x in xrange(10):
-            if volume.status == u'in-use':
+            if volume.status.startswith('in-use'):
                 break
             time.sleep(5)
             volume.update()
 
-        self.assertEqual(volume.status, u'in-use')
+        self.assertTrue(volume.status.startswith('in-use'))
 
         # Give instance time to recognize volume.
         time.sleep(5)
@@ -298,9 +304,15 @@ class VolumeTests(UserSmokeTestCase):
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_dns_name
         conn = self.connect_ssh(ip, TEST_KEY)
+        # NOTE(vish): this will create an dev for images that don't have
+        #             udev rules
+        stdin, stdout, stderr = conn.exec_command(
+                'grep %s /proc/partitions | '
+                '`awk \'{print "mknod /dev/"\\$4" b "\\$1" "\\$2}\'`'
+                % self.device.rpartition('/')[2])
         commands = []
         commands.append('mkdir -p /mnt/vol')
-        commands.append('mkfs.ext2 %s' % self.device)
+        commands.append('/sbin/mke2fs %s' % self.device)
         commands.append('mount %s /mnt/vol' % self.device)
         commands.append('echo success')
         stdin, stdout, stderr = conn.exec_command(' && '.join(commands))
@@ -327,7 +339,7 @@ class VolumeTests(UserSmokeTestCase):
             "df -h | grep %s | awk {'print $2'}" % self.device)
         out = stdout.read()
         conn.close()
-        if not out.strip() == '1008M':
+        if not out.strip() == '1007.9M':
             self.fail('Volume is not the right size: %s %s' %
                       (out, stderr.read()))
 
