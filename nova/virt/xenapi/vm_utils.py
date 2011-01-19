@@ -371,7 +371,7 @@ class VMHelper(HelperBase):
         args = {}
         args['vdi-ref'] = vdi_ref
         task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(instance_id, task)
+        pv_str = session.wait_for_task(task, instance_id)
         pv = None
         if pv_str.lower() == 'true':
             pv = True
