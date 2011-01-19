@@ -31,46 +31,46 @@ always_venv=0
 never_venv=0
 force=0
 noseargs=
-
+wrapper=""
 
 for arg in "$@"; do
   process_option $arg
 done
 
+function run_tests {
+  # Just run the test suites in current environment
+  ${wrapper} rm -f nova.sqlite
+  ${wrapper} $NOSETESTS 2> run_tests.err.log
+}
+
 NOSETESTS="python run_tests.py $noseargs"
 
-if [ $never_venv -eq 1 ]; then
-  # Just run the test suites in current environment
-  rm -f nova.sqlite
-  $NOSETESTS 2> run_tests.err.log
-  exit
-fi
-
-# Remove the virtual environment if --force used
-if [ $force -eq 1 ]; then
-  echo "Cleaning virtualenv..."
-  rm -rf ${venv}
-fi
-
-if [ -e ${venv} ]; then
-  ${with_venv} rm -f nova.sqlite
-  ${with_venv} $NOSETESTS 2> run_tests.err.log
-else  
-  if [ $always_venv -eq 1 ]; then
-    # Automatically install the virtualenv
-    python tools/install_venv.py
+if [ $never_venv -eq 0 ]
+then
+  # Remove the virtual environment if --force used
+  if [ $force -eq 1 ]; then
+    echo "Cleaning virtualenv..."
+    rm -rf ${venv}
+  fi
+  if [ -e ${venv} ]; then
+    wrapper="${with_venv}"
   else
-    echo -e "No virtual environment found...create one? (Y/n) \c"
-    read use_ve
-    if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
-      # Install the virtualenv and run the test suite in it
+    if [ $always_venv -eq 1 ]; then
+      # Automatically install the virtualenv
       python tools/install_venv.py
+      wrapper="${with_venv}"
     else
-      rm -f nova.sqlite
-      $NOSETESTS 2> run_tests.err.log
-      exit
+      echo -e "No virtual environment found...create one? (Y/n) \c"
+      read use_ve
+      if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
+        # Install the virtualenv and run the test suite in it
+        python tools/install_venv.py
+		wrapper=${with_venv}
+      fi
     fi
   fi
-  ${with_venv} rm -f nova.sqlite
-  ${with_venv} $NOSETESTS 2> run_tests.err.log
 fi
+
+run_tests
+
+pep8 --repeat --show-pep8 --show-source bin/* nova setup.py

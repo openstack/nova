@@ -15,27 +15,24 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""Database setup and migration commands."""
 
-"""
-:mod:`nova.tests` -- Nova Unittests
-=====================================================
+from nova import flags
+from nova import utils
 
-.. automodule:: nova.tests
-   :platform: Unix
-.. moduleauthor:: Jesse Andrews <jesse@ansolabs.com>
-.. moduleauthor:: Devin Carlen <devin.carlen@gmail.com>
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@yahoo.com>
-.. moduleauthor:: Joshua McKenty <joshua@cognition.ca>
-.. moduleauthor:: Manish Singh <yosh@gimp.org>
-.. moduleauthor:: Andy Smith <andy@anarkystic.com>
-"""
-
-# See http://code.google.com/p/python-nose/issues/detail?id=373
-# The code below enables nosetests to work with i18n _() blocks
-import __builtin__
-setattr(__builtin__, '_', lambda x: x)
+FLAGS = flags.FLAGS
+flags.DECLARE('db_backend', 'nova.db.api')
 
 
-def setup():
-    from nova.db import migration
-    migration.db_sync()
+IMPL = utils.LazyPluggable(FLAGS['db_backend'],
+                           sqlalchemy='nova.db.sqlalchemy.migration')
+
+
+def db_sync(version=None):
+    """Migrate the database to `version` or the most recent version."""
+    return IMPL.db_sync(version=version)
+
+
+def db_version():
+    """Display the current database version."""
+    return IMPL.db_version()
