@@ -848,6 +848,11 @@ def provider_fw_rule_create(context, rule):
     return IMPL.provider_fw_rule_create(context, rule)
 
 
+def provider_fw_rule_get_all(context):
+    """Get all provider-level firewall rules."""
+    return IMPL.provider_fw_rule_get_all(context)
+
+
 ###################
 
 

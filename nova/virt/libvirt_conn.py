@@ -1408,6 +1408,8 @@ class NWFilterFirewall(FirewallDriver):
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
                                                          security_group['id'])]
 
+        instance_filter_children += ['nova-provider-rules']
+
         self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
@@ -1421,6 +1423,18 @@ class NWFilterFirewall(FirewallDriver):
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
+
+    def refresh_provider_fw_rules(self):
+        """Update rules for all instances.
+
+        This is part of the FirewallDriver API and is called when the
+        provider firewall rules change in the database.  In the
+        `prepare_instance_filter` we add a reference to the
+        'nova-provider-rules' filter for each instance's firewall, and
+        by changing that filter we update them all.
+        """
+        xml = self.provider_fw_to_nwfilter_xml(self)
+        return self._define_filter(xml)
 
     def security_group_to_nwfilter_xml(self, security_group_id):
         security_group = db.security_group_get(context.get_admin_context(),
@@ -1454,6 +1468,43 @@ class NWFilterFirewall(FirewallDriver):
                 rule_xml += '/>\n'
             rule_xml += "</rule>\n"
         xml = "<filter name='nova-secgroup-%s' " % security_group_id
+        if(FLAGS.use_ipv6):
+            xml += "chain='root'>%s</filter>" % rule_xml
+        else:
+            xml += "chain='ipv4'>%s</filter>" % rule_xml
+        return xml
+
+    def provider_fw_to_nwfilter_xml(self):
+        """Compose a filter of  drop rules from specified cidrs."""
+        rule_xml = ""
+        v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
+        rules = db.provider_fw_rule_get_all(context.get_admin_context())
+        for rule in rules:
+            rule_xml += "<rule action='block' direction='in' priority='150'>"
+            version = _get_ip_version(rule.cidr)
+            if(FLAGS.use_ipv6 and version == 6):
+                net, prefixlen = _get_net_and_prefixlen(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                            (v6protocol[rule.protocol], net, prefixlen)
+            else:
+                net, mask = _get_net_and_mask(rule.cidr)
+                rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
+                            (rule.protocol, net, mask)
+            if rule.protocol in ['tcp', 'udp']:
+                rule_xml += "dstportstart='%s' dstportend='%s' " % \
+                            (rule.from_port, rule.to_port)
+            elif rule.protocol == 'icmp':
+                LOG.info('rule.protocol: %r, rule.from_port: %r, '
+                         'rule.to_port: %r', rule.protocol,
+                         rule.from_port, rule.to_port)
+                if rule.from_port != -1:
+                    rule_xml += "type='%s' " % rule.from_port
+                if rule.to_port != -1:
+                    rule_xml += "code='%s' " % rule.to_port
+
+                rule_xml += '/>\n'
+            rule_xml += "</rule>\n"
+        xml = "<filter name='nova-provider-rules' "
         if(FLAGS.use_ipv6):
             xml += "chain='root'>%s</filter>" % rule_xml
         else:
