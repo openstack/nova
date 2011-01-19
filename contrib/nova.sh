@@ -24,6 +24,8 @@ TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
 # Use OpenDJ instead of OpenLDAP when using LDAP
 USE_OPENDJ=${USE_OPENDJ:-0}
+# Use IPv6
+USE_IPV6=${USE_IPV6:-0}
 LIBVIRT_TYPE=${LIBVIRT_TYPE:-qemu}
 NET_MAN=${NET_MAN:-VlanManager}
 # NOTE(vish): If you are using FlatDHCP on multiple hosts, set the interface
@@ -60,6 +62,10 @@ if [ -n "$FLAT_INTERFACE" ]; then
     echo "--flat_interface=$FLAT_INTERFACE" >>$NOVA_DIR/bin/nova.conf
 fi
 
+if [ -n "$USE_IPV6" ]; then
+    echo "--use_ipv6" >>$NOVA_DIR/bin/nova.conf
+fi
+
 if [ "$CMD" == "branch" ]; then
     sudo apt-get install -y bzr
     rm -rf $NOVA_DIR
@@ -74,7 +80,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-software-properties
     sudo add-apt-repository ppa:nova-core/trunk
     sudo apt-get update
-    sudo apt-get install -y dnsmasq kpartx kvm gawk iptables ebtables
+    sudo apt-get install -y dnsmasq-base kpartx kvm gawk iptables ebtables
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
     sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
     sudo apt-get install -y lvm2 iscsitarget open-iscsi
@@ -85,15 +91,16 @@ if [ "$CMD" == "install" ]; then
     sudo /etc/init.d/libvirt-bin restart
     sudo modprobe nbd
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy
+    sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy python-tempita
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
-#For IPV6
-    sudo apt-get install -y python-netaddr 
-    sudo apt-get install -y radvd
-#(Nati) Note that this configuration is only needed for nova-network node.
-    sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
-    sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
-    
+    sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
+
+    if [ -n "$USE_IPV6" ]; then
+        sudo apt-get install -y radvd
+        sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
+        sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
+    fi
+
     if [ "$USE_MYSQL" == 1 ]; then
         cat <<MYSQL_PRESEED | debconf-set-selections
 mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
@@ -102,7 +109,7 @@ mysql-server-5.1 mysql-server/start_on_boot boolean true
 MYSQL_PRESEED
         apt-get install -y mysql-server python-mysqldb
     fi
-    wget http://c2477062.cdn.cloudfiles.rackspacecloud.com/images.tgz
+    wget -c http://c2477062.cdn.cloudfiles.rackspacecloud.com/images.tgz
     tar -C $DIR -zxf images.tgz
 fi
 
@@ -115,8 +122,9 @@ function screen_it {
 
 if [ "$CMD" == "run" ]; then
     killall dnsmasq
-    #For IPv6
-    killall radvd
+    if [ -n "$USE_IPV6" ]; then
+       killall radvd
+    fi
     screen -d -m -S nova -t nova
     sleep 1
     if [ "$USE_MYSQL" == 1 ]; then
@@ -149,6 +157,8 @@ if [ "$CMD" == "run" ]; then
         cd $DIR
     fi
 
+    # create the database
+    $NOVA_DIR/bin/nova-manage db sync
     # create an admin user called 'admin'
     $NOVA_DIR/bin/nova-manage user admin admin admin admin
     # create a project called 'admin' with project manager of 'admin'
@@ -177,6 +187,7 @@ if [ "$CMD" == "run" ] || [ "$CMD" == "terminate" ]; then
     sleep 2
     # delete volumes
     . $NOVA_DIR/novarc; euca-describe-volumes | grep vol- | cut -f2 | xargs -n1 euca-delete-volume
+    sleep 2
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "clean" ]; then
@@ -191,5 +202,4 @@ if [ "$CMD" == "scrub" ]; then
     else
         virsh list | grep i- | awk '{print \$1}' | xargs -n1 virsh destroy
     fi
-    vblade-persist ls | grep vol- | awk '{print \$1\" \"\$2}' | xargs -n2 vblade-persist destroy
 fi
