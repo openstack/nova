@@ -1121,6 +1121,10 @@ class NWFilterFirewall(FirewallDriver):
 
         return
 
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
+
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))

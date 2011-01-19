@@ -82,6 +82,7 @@ from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.db import migration
 
 
 logging.basicConfig()
@@ -519,6 +520,21 @@ class LogCommands(object):
         print re.sub('#012', "\n", "\n".join(lines))
 
 
+class DbCommands(object):
+    """Class for managing the database."""
+
+    def __init__(self):
+        pass
+
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version)
+
+    def version(self):
+        """Print the current database version."""
+        print migration.db_version()
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -528,7 +544,8 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('service', ServiceCommands),
-    ('log', LogCommands)]
+    ('log', LogCommands),
+    ('db', DbCommands)]
 
 
 def lazy_match(name, key_value_tuples):

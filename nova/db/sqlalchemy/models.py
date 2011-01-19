@@ -100,51 +100,6 @@ class NovaBase(object):
         return local.iteritems()
 
 
-# TODO(vish): Store images in the database instead of file system
-#class Image(BASE, NovaBase):
-#    """Represents an image in the datastore"""
-#    __tablename__ = 'images'
-#    id = Column(Integer, primary_key=True)
-#    ec2_id = Column(String(12), unique=True)
-#    user_id = Column(String(255))
-#    project_id = Column(String(255))
-#    image_type = Column(String(255))
-#    public = Column(Boolean, default=False)
-#    state = Column(String(255))
-#    location = Column(String(255))
-#    arch = Column(String(255))
-#    default_kernel_id = Column(String(255))
-#    default_ramdisk_id = Column(String(255))
-#
-#    @validates('image_type')
-#    def validate_image_type(self, key, image_type):
-#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-#
-#    @validates('state')
-#    def validate_state(self, key, state):
-#        assert(state in ['available', 'pending', 'disabled'])
-#
-#    @validates('default_kernel_id')
-#    def validate_kernel_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#    @validates('default_ramdisk_id')
-#    def validate_ramdisk_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#
-# TODO(vish): To make this into its own table, we need a good place to
-#             create the host entries. In config somwhere? Or the first
-#             time any object sets host? This only becomes particularly
-#             important if we need to store per-host data.
-#class Host(BASE, NovaBase):
-#    """Represents a host where services are running"""
-#    __tablename__ = 'hosts'
-#    id = Column(String(255), primary_key=True)
-
-
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
