@@ -26,10 +26,6 @@ from nose import config
 from nose import result
 from nose import core
 
-gettext.install('nova', unicode=1)
-
-from nova.db import migration
-
 
 class NovaTestResult(result.TextTestResult):
     def __init__(self, *args, **kw):
@@ -65,9 +61,6 @@ if __name__ == '__main__':
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3)
-    
-    migration.db_sync()
-
 
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
