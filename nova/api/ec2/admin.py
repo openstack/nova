@@ -226,7 +226,6 @@ class AdminController(object):
                 return dupe
         return False
 
-
     def block_external_addresses(self, context, cidr):
         """Add provider-level firewall rules to block incoming traffic."""
         LOG.audit(_("Blocking traffic to all projects incoming from %s"),

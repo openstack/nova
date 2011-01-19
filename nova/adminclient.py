@@ -190,20 +190,20 @@ class HostInfo(object):
         setattr(self, name, value)
 
 
-class SimpleResponse(object): 
-    def __init__(self, connection=None): 
-        self.connection = connection 
-        self.status = None 
+class SimpleResponse(object):
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.status = None
         self.message = ''
- 
-    def __repr__(self): 
-        return 'Status:%s' % self.status 
- 
-    def startElement(self, name, attrs, connection): 
-        return None 
- 
-    def endElement(self, name, value, connection): 
-        setattr(self, name.lower(), str(value)) 
+
+    def __repr__(self):
+        return 'Status:%s' % self.status
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        setattr(self, name.lower(), str(value))
 
 
 class NovaAdminClient(object):
@@ -224,8 +224,7 @@ class NovaAdminClient(object):
         self.apiconn = boto.connect_ec2(aws_access_key_id=access_key,
                                         aws_secret_access_key=secret_key,
                                         is_secure=parts['is_secure'],
-                                        region=RegionInfo(None,
-                                                          region,
+                                        region=RegionInfo(None, region,
                                                           parts['ip']),
                                         port=parts['port'],
                                         path='/services/Admin',
