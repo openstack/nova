@@ -44,7 +44,7 @@ class API(base.Base):
             LOG.warn(_("Quota exceeeded for %s, tried to create %sG volume"),
                          context.project_id, size)
             raise quota.QuotaError(_("Volume quota exceeded. You cannot "
-                                     "create a volume of size %s") % size)
+                                     "create a volume of size %sG") % size)
 
         options = {
             'size': size,
