@@ -41,7 +41,6 @@ import logging
 import socket
 import functools
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import flags
