@@ -346,7 +346,6 @@ class VMHelper(HelperBase):
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
                                  secret, type):
         url = images.image_url(image)
-        access = AuthManager().get_access_key(user, project)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
