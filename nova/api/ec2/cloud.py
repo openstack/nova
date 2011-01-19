@@ -841,8 +841,8 @@ class CloudController(object):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         image_id = self.image_service.register(context, image_location)
-        msg = _("Registered image %(image_location)s"
-                " with id %(image_id)s") % locals()
+        msg = _("Registered image %(image_location)s with id %(image_id)s")
+                % locals()
         LOG.audit(msg, context=context)
         return {'imageId': image_id}
 
