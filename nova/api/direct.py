@@ -196,6 +196,8 @@ class ServiceWrapper(wsgi.Controller):
         # TODO(termie): do some basic normalization on methods
         method = getattr(self.service_handle, action)
 
+        # NOTE(vish): make sure we have no unicode keys for py2.6.
+        params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
         if type(result) is dict or type(result) is list:
             return self._serialize(result, req)
