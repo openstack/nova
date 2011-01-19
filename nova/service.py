@@ -209,20 +209,6 @@ class Service(object):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
 
-                try:
-                    # NOTE(vish): This is late-loaded to make sure that the
-                    #             database is not created before flags have
-                    #             been loaded.
-                    from nova.db.sqlalchemy import models
-                    models.register_models()
-                except OperationalError:
-                    fl_conn = FLAGS.sql_connection
-                    fl_intv = FLAGS.sql_retry_interval
-                    logging.exception(_("Data store %(fl_conn)s is"
-                            " unreachable. Trying again in %(fl_intv)d"
-                            " seconds.") % locals())
-                    time.sleep(FLAGS.sql_retry_interval)
-
 
 def serve(*services):
     FLAGS(sys.argv)

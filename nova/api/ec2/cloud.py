@@ -730,7 +730,7 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                instance_id = floating_ip_ref['fixed_ip']['instance']['id']
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
@@ -841,8 +841,8 @@ class CloudController(object):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         image_id = self.image_service.register(context, image_location)
-        msg = _("Registered image %(image_location)s with id %(image_id)s")
-                % locals()
+        msg = _("Registered image %(image_location)s with"
+                " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
         return {'imageId': image_id}
 

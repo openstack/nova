@@ -351,7 +351,7 @@ class LibvirtConnection(object):
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(instance, xml, 'rescue-', rescue_images)
+        self._create_image(instance, xml, '.rescue', rescue_images)
         self._conn.createXML(xml, 0)
 
         timer = utils.LoopingCall(f=None)
@@ -533,23 +533,23 @@ class LibvirtConnection(object):
         utils.execute('truncate %s -s %dG' % (target, local_gb))
         # TODO(vish): should we format disk by default?
 
-    def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
+    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
         # syntactic nicety
-        def basepath(fname='', prefix=prefix):
+        def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
                                 inst['name'],
-                                prefix + fname)
+                                fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir -p %s' % basepath(prefix=''))
-        utils.execute('chmod 0777 %s' % basepath(prefix=''))
+        utils.execute('mkdir -p %s' % basepath(suffix=''))
+        utils.execute('chmod 0777 %s' % basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
 
-        # NOTE(vish): No need add the prefix to console.log
+        # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
 
@@ -578,7 +578,7 @@ class LibvirtConnection(object):
 
         root_fname = disk_images['image_id']
         size = FLAGS.minimum_root_size
-        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+        if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None
             root_fname += "_sm"
 
@@ -594,7 +594,7 @@ class LibvirtConnection(object):
 
         if type_data['local_gb']:
             self._cache_image(fn=self._create_local,
-                              target=basepath('local'),
+                              target=basepath('disk.local'),
                               fname="local_%s" % type_data['local_gb'],
                               cow=FLAGS.use_cow_images,
                               local_gb=type_data['local_gb'])
@@ -1122,6 +1122,10 @@ class NWFilterFirewall(FirewallDriver):
                                            instance_filter_children))
 
         return
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
 
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
