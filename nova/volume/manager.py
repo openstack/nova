@@ -84,7 +84,10 @@ class VolumeManager(manager.Manager):
         volumes = self.db.volume_get_all_by_host(ctxt, self.host)
         LOG.debug(_("Re-exporting %s volumes"), len(volumes))
         for volume in volumes:
-            self.driver.ensure_export(ctxt, volume)
+            if volume['status'] in ['available', 'in-use']:
+                self.driver.ensure_export(ctxt, volume)
+            else:
+                LOG.info(_("volume %s: skipping export"), volume_ref['name'])
 
     def create_volume(self, context, volume_id):
         """Creates and exports the volume."""

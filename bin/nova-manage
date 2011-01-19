@@ -98,6 +98,16 @@ flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 
 
+def param2id(object_id):
+    """Helper function to convert various id types to internal id.
+    args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
+    """
+    if '-' in object_id:
+        return ec2_id_to_id(object_id)
+    else:
+        return int(object_id)
+
+
 class VpnCommands(object):
     """Class for managing VPNs."""
 
@@ -607,7 +617,7 @@ class VolumeCommands(object):
         must be available.
         args: volume_id_id"""
         ctxt = context.get_admin_context()
-        volume = db.volume_get(ctxt, ec2_id_to_id(volume_id))
+        volume = db.volume_get(ctxt, param2id(volume_id))
         host = volume['host']
         if volume['status'] == 'in-use':
             print "Volume is in-use."
@@ -625,7 +635,7 @@ class VolumeCommands(object):
         has been rebooted.
         args: volume_id_id"""
         ctxt = context.get_admin_context()
-        volume = db.volume_get(ctxt, ec2_id_to_id(volume_id))
+        volume = db.volume_get(ctxt, param2id(volume_id))
         if not volume['instance_id']:
             print "volume is not attached to an instance"
             return
