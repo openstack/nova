@@ -1,8 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright (c) 2011 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,4 +14,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""No-op __init__ for directory full of api goodies."""
+import StringIO
+
+import glance.client
+
+
+def stubout_glance_client(stubs, cls):
+    """Stubs out glance.client.Client"""
+    stubs.Set(glance.client, 'Client',
+              lambda *args, **kwargs: cls(*args, **kwargs))
+
+
+class FakeGlance(object):
+    def __init__(self, host, port=None, use_ssl=False):
+        pass
+
+    def get_image(self, image):
+        meta = {
+            'size': 0,
+            }
+        image_file = StringIO.StringIO('')
+        return meta, image_file

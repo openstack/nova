@@ -12,6 +12,7 @@ include nova/cloudpipe/bootscript.sh
 include nova/cloudpipe/client.ovpn.template
 include nova/compute/fakevirtinstance.xml
 include nova/compute/interfaces.template
+include nova/db/sqlalchemy/migrate_repo/migrate.cfg
 include nova/virt/interfaces.template
 include nova/virt/libvirt*.xml.template
 include nova/tests/CA/

@@ -254,15 +254,15 @@ class CloudController(object):
                 name, _sep, host = region.partition('=')
                 endpoint = '%s://%s:%s%s' % (FLAGS.ec2_prefix,
                                              host,
-                                             FLAGS.cc_port,
+                                             FLAGS.ec2_port,
                                              FLAGS.ec2_suffix)
                 regions.append({'regionName': name,
                                 'regionEndpoint': endpoint})
         else:
             regions = [{'regionName': 'nova',
                         'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
-                                                            FLAGS.cc_host,
-                                                            FLAGS.cc_port,
+                                                            FLAGS.ec2_host,
+                                                            FLAGS.ec2_port,
                                                             FLAGS.ec2_suffix)}]
         return {'regionInfo': regions}
 
@@ -729,7 +729,7 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                instance_id = floating_ip_ref['fixed_ip']['instance']['id']
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}

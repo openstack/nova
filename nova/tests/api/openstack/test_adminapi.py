@@ -19,15 +19,19 @@ import unittest
 
 import stubout
 import webob
+from paste import urlmap
 
-import nova.api
 from nova import flags
+from nova.api import openstack
+from nova.api.openstack import ratelimiting
+from nova.api.openstack import auth
 from nova.tests.api.openstack import fakes
 
 FLAGS = flags.FLAGS
 
 
 class AdminAPITest(unittest.TestCase):
+
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
@@ -45,7 +49,7 @@ class AdminAPITest(unittest.TestCase):
         FLAGS.allow_admin_api = True
         # We should still be able to access public operations.
         req = webob.Request.blank('/v1.0/flavors')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         # TODO: Confirm admin operations are available.
 
@@ -53,7 +57,7 @@ class AdminAPITest(unittest.TestCase):
         FLAGS.allow_admin_api = False
         # We should still be able to access public operations.
         req = webob.Request.blank('/v1.0/flavors')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         # TODO: Confirm admin operations are unavailable.
 
