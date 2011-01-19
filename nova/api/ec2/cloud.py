@@ -601,8 +601,9 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_id = ec2_id_to_id(volume_id)
         instance_id = ec2_id_to_id(instance_id)
-        LOG.audit(_("Attach volume %s to instance %s at %s"), volume_id,
-                  instance_id, device, context=context)
+        msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
+                " at %(device)s") % locals()
+        LOG.audit(msg, context=context)
         self.compute_api.attach_volume(context,
                                        instance_id=instance_id,
                                        volume_id=volume_id,
@@ -751,8 +752,8 @@ class CloudController(object):
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        LOG.audit(_("Associate address %s to instance %s"), public_ip,
-                  instance_id, context=context)
+        LOG.audit(_("Associate address %(public_ip)s to"
+                " instance %(instance_id)s") % locals(), context=context)
         instance_id = ec2_id_to_id(instance_id)
         self.compute_api.associate_floating_ip(context,
                                                instance_id=instance_id,
@@ -840,8 +841,9 @@ class CloudController(object):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         image_id = self.image_service.register(context, image_location)
-        LOG.audit(_("Registered image %s with id %s"), image_location,
-                  image_id, context=context)
+        msg = _("Registered image %(image_location)s"
+                " with id %(image_id)s") % locals()
+        LOG.audit(msg, context=context)
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):

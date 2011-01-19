@@ -67,7 +67,7 @@ def _fetch_image_no_curl(url, path, headers):
 
     urlopened = urllib2.urlopen(request)
     urlretrieve(urlopened, path)
-    LOG.debug(_("Finished retreving %s -- placed in %s"), url, path)
+    LOG.debug(_("Finished retreving %(url)s -- placed in %(path)s") % locals())
 
 
 def _fetch_s3_image(image, path, user, project):

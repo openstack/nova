@@ -103,7 +103,9 @@ class VMOps(object):
                                 network_ref, instance.mac_address)
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
+        instance_name = instance.name
+        LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
+                % locals())
 
         # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
@@ -195,7 +197,8 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
         except self.XenAPI.Failure, exc:
-            logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
+            logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
+                    % locals())
             return
 
         try:

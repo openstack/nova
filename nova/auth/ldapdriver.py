@@ -473,8 +473,8 @@ class LdapDriver(object):
             raise exception.NotFound("The group at dn %s doesn't exist" %
                                      group_dn)
         if self.__is_in_group(uid, group_dn):
-            raise exception.Duplicate(_("User %s is already a member of "
-                                        "the group %s") % (uid, group_dn))
+            raise exception.Duplicate(_("User %(uid)s is already a member of "
+                                        "the group %(group_dn)s") % locals())
         attr = [(self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))]
         self.conn.modify_s(group_dn, attr)
 

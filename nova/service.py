@@ -216,10 +216,11 @@ class Service(object):
                     from nova.db.sqlalchemy import models
                     models.register_models()
                 except OperationalError:
-                    logging.exception(_("Data store %s is unreachable."
-                                        " Trying again in %d seconds.") %
-                                      (FLAGS.sql_connection,
-                                       FLAGS.sql_retry_interval))
+                    fl_conn = FLAGS.sql_connection
+                    fl_intv = FLAGS.sql_retry_interval
+                    logging.exception(_("Data store %(fl_conn)s is"
+                            " unreachable. Trying again in %(fl_intv)d"
+                            " seconds.") % locals())
                     time.sleep(FLAGS.sql_retry_interval)
 
 
@@ -232,10 +233,10 @@ def serve(*services):
 
     name = '_'.join(x.binary for x in services)
     logging.debug(_("Serving %s"), name)
-
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
+        flag_get = FLAGS.get(flag, None)
+        logging.debug("%(flag)s : %(flag_get)s" % locals())
 
     for x in services:
         x.start()

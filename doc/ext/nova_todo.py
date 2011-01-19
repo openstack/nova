@@ -26,7 +26,7 @@ def process_todo_nodes(app, doctree, fromdocname):
     # reading through docutils for the proper way to construct an empty list
     lists = []
     for i in xrange(5):
-        lists.append(nodes.bullet_list("", nodes.Text('','')));
+        lists.append(nodes.bullet_list("", nodes.Text('','')))
         lists[i].remove(lists[i][0]) 
         lists[i].set_class('todo_list')
 
@@ -42,7 +42,8 @@ def process_todo_nodes(app, doctree, fromdocname):
             # Create a reference
             newnode = nodes.reference('', '')
 
-            link = _('%s, line %d') % (filename, todo_info['lineno']);
+            line_info = todo_info['lineno']
+            link = _('%(filename)s, line %(line_info)d') % locals()
             innernode = nodes.emphasis(link, link)
             newnode['refdocname'] = todo_info['docname']
 
