@@ -352,8 +352,8 @@ class IptablesFirewallTestCase(test.TestCase):
                                security_group_chain in self.out_rules,
                         "ICMP acceptance rule wasn't added")
 
-        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -m icmp --icmp-type'
-                        ' 8 -j ACCEPT' % security_group_chain in self.out_rules,
+        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -m icmp --icmp-type '
+                        '8 -j ACCEPT' % security_group_chain in self.out_rules,
                         "ICMP Echo Request acceptance rule wasn't added")
 
         self.assertTrue('-A %s -p tcp -s 192.168.10.0/24 -m multiport '
@@ -496,4 +496,3 @@ class NWFilterTestCase(test.TestCase):
         self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
-
