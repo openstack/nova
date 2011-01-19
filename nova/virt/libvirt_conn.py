@@ -98,7 +98,7 @@ flags.DEFINE_string('ajaxterm_portrange',
                     '10000-12000',
                     'Range of ports that ajaxterm should randomly try to bind')
 flags.DEFINE_string('firewall_driver',
-                    None,
+                    'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
 
 
