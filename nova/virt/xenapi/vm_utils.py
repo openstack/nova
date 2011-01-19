@@ -232,8 +232,9 @@ class VMHelper(HelperBase):
               'other_config': {},
               'sm_config': {},
               'tags': []})
-        LOG.debug(_('Created VDI %s (%s, %s, %s) on %s.'), vdi_ref,
-                  name_label, virtual_size, read_only, sr_ref)
+        LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
+                ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.')
+                % locals())
         return vdi_ref
 
     @classmethod
@@ -312,7 +313,7 @@ class VMHelper(HelperBase):
         meta, image_file = c.get_image(image)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
-        LOG.debug(_("Size for image %s:%d"), image, virtual_size)
+        LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -501,7 +502,8 @@ def get_vhd_parent(session, vdi_rec):
         parent_uuid = vdi_rec['sm_config']['vhd-parent']
         parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
         parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
-        LOG.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
+        vdi_uuid = vdi_rec['uuid']
+        LOG.debug(_("VHD %(vdi_uuid)s has parent %(parent_ref)s") % locals())
         return parent_ref, parent_rec
     else:
         return None
@@ -571,7 +573,7 @@ def get_vdi_for_vm_safely(session, vm_ref):
         num_vdis = len(vdi_refs)
         if num_vdis != 1:
             raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
-                    " for VM %s") % locals())
+                    " for VM %(vm_ref)s") % locals())
 
     vdi_ref = vdi_refs[0]
     vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
@@ -683,8 +685,8 @@ def _write_partition(virtual_size, dev):
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
-    LOG.debug(_('Writing partition table %d %d to %s...'),
-              primary_first, primary_last, dest)
+    LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
+            ' to %(dest)s...') % locals())
 
     def execute(cmd, process_input=None, check_exit_code=True):
         return utils.execute(cmd=cmd,

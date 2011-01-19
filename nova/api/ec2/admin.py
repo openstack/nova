@@ -162,7 +162,7 @@ class AdminController(object):
                          member_users=None, **kwargs):
         """Creates a new project"""
         msg = _("Create project %(name)s managed by"
-                " %(manager_user(s") % locals()
+                " %(manager_user)s") % locals()
         LOG.audit(msg, context=context)
         return project_dict(
             manager.AuthManager().create_project(

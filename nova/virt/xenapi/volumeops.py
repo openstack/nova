@@ -101,7 +101,7 @@ class VolumeOps(object):
             raise exception.NotFound(_('Instance %s not found')
                                      % instance_name)
         # Detach VBD from VM
-        LOG.debug(_("Detach_volume: %instance_name)s, %(mountpoint)s")
+        LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s")
                 % locals())
         device_number = VolumeHelper.mountpoint_to_number(mountpoint)
         try:

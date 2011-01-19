@@ -319,9 +319,8 @@ class ObjectResource(ErrorHandlingResource):
                   context=request.context)
 
         if not self.bucket.is_authorized(request.context):
-            LOG.audit("Unauthorized attempt to delete object %s from "
-                      "bucket %s", self.name, self.bucket.name,
-                      context=request.context)
+            LOG.audit(_("Unauthorized attempt to delete object %(nm)s from "
+                      "bucket %(bname)s") % locals(), context=request.context)
             raise exception.NotAuthorized()
 
         del self.bucket[urllib.unquote(self.name)]

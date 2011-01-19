@@ -86,7 +86,8 @@ class RpcTestCase(test.TestCase):
             @staticmethod
             def echo(context, queue, value):
                 """Calls echo in the passed queue"""
-                LOG.debug(_("Nested received %(queue)s, %(value)s") % locals())
+                LOG.debug(_("Nested received %(queue)s, %(value)s")
+                        % locals())
                 ret = rpc.call(context,
                                queue,
                                {"method": "echo",

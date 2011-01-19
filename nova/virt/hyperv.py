@@ -199,8 +199,8 @@ class HyperVConnection(object):
 
     def _create_disk(self, vm_name, vhdfile):
         """Create a disk and attach it to the vm"""
-        LOG.debug(_('Creating disk for %s by attaching disk file %s'),
-                  vm_name, vhdfile)
+        LOG.debug(_('Creating disk for %(vm_name)s by attaching'
+                ' disk file %(vhdfile)s') % locals())
         #Find the IDE controller for the vm.
         vms = self._conn.MSVM_ComputerSystem(ElementName=vm_name)
         vm = vms[0]
