@@ -40,3 +40,4 @@ FLAGS.blades_per_shelf = 4
 FLAGS.iscsi_num_targets = 8
 FLAGS.verbose = True
 FLAGS.sql_connection = 'sqlite:///nova.sqlite'
+FLAGS.use_ipv6 = True
