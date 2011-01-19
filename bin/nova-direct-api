@@ -49,7 +49,7 @@ if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
 
-    direct.register_service('compute', compute_api.ComputeAPI())
+    direct.register_service('compute', compute_api.API())
     direct.register_service('reflect', direct.Reflection())
     router = direct.Router()
     with_json = direct.JsonParamsMiddleware(router)
