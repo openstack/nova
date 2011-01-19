@@ -1922,7 +1922,7 @@ def console_pool_get(context, pool_id):
                      filter_by(id=pool_id).\
                      first()
     if not result:
-        raise exception.NotFound(_("No console pool with id %(pool_id)s")i
+        raise exception.NotFound(_("No console pool with id %(pool_id)s")
                 % locals())
 
     return result

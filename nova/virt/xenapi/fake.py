@@ -282,7 +282,8 @@ class SessionBase(object):
             if impl is not None:
 
                 def callit(*params):
-                    LOG.debug(_('Calling %(name)s %(impl)s') % locals())
+                    localname = name
+                    LOG.debug(_('Calling %(localname)s %(impl)s') % locals())
                     self._check_session(params)
                     return impl(*params)
                 return callit
