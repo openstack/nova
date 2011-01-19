@@ -100,81 +100,17 @@ class NovaBase(object):
         return local.iteritems()
 
 
-# TODO(vish): Store images in the database instead of file system
-#class Image(BASE, NovaBase):
-#    """Represents an image in the datastore"""
-#    __tablename__ = 'images'
-#    id = Column(Integer, primary_key=True)
-#    ec2_id = Column(String(12), unique=True)
-#    user_id = Column(String(255))
-#    project_id = Column(String(255))
-#    image_type = Column(String(255))
-#    public = Column(Boolean, default=False)
-#    state = Column(String(255))
-#    location = Column(String(255))
-#    arch = Column(String(255))
-#    default_kernel_id = Column(String(255))
-#    default_ramdisk_id = Column(String(255))
-#
-#    @validates('image_type')
-#    def validate_image_type(self, key, image_type):
-#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-#
-#    @validates('state')
-#    def validate_state(self, key, state):
-#        assert(state in ['available', 'pending', 'disabled'])
-#
-#    @validates('default_kernel_id')
-#    def validate_kernel_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#    @validates('default_ramdisk_id')
-#    def validate_ramdisk_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#
-# TODO(vish): To make this into its own table, we need a good place to
-#             create the host entries. In config somwhere? Or the first
-#             time any object sets host? This only becomes particularly
-#             important if we need to store per-host data.
-#class Host(BASE, NovaBase):
-#    """Represents a host where services are running"""
-#    __tablename__ = 'hosts'
-#    id = Column(String(255), primary_key=True)
-
-
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    #host_id = Column(Integer, ForeignKey('hosts.id'), nullable=True)
-    #host = relationship(Host, backref=backref('services'))
-    host = Column(String(255))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
     availability_zone = Column(String(255), default='nova')
-
-    # The below items are compute node only.
-    # -1 or None is inserted for other service.
-    vcpus = Column(Integer, nullable=False, default=-1)
-    memory_mb = Column(Integer, nullable=False, default=-1)
-    local_gb = Column(Integer, nullable=False, default=-1)
-    hypervisor_type = Column(String(128))
-    hypervisor_version = Column(Integer, nullable=False, default=-1)
-    # Note(masumotok): Expected Strings example:
-    #
-    # '{"arch":"x86_64", "model":"Nehalem",
-    #  "topology":{"sockets":1, "threads":2, "cores":3},
-    #  features:[ "tdtscp", "xtpr"]}'
-    #
-    # Points are "json translatable" and it must have all
-    # dictionary keys above.
-    cpu_info = Column(String(512))
 
 
 class Certificate(BASE, NovaBase):
@@ -250,9 +186,6 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
-    # To remember on which host a instance booted.
-    # An instance may moved to other host by live migraiton.
-    launched_on = Column(String(255))
     locked = Column(Boolean)
 
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -610,7 +543,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console)  # , Host, Image
+              Project, Certificate, ConsolePool, Console)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
