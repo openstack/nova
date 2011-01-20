@@ -17,12 +17,10 @@
 #    under the License.
 
 import boto
-import boto_v6
 import commands
 import httplib
 import os
 import paramiko
-import random
 import sys
 import unittest
 from boto.ec2.regioninfo import RegionInfo
@@ -30,6 +28,8 @@ from boto.ec2.regioninfo import RegionInfo
 from smoketests import flags
 
 FLAGS = flags.FLAGS
+boto_v6 = None
+
 
 
 class SmokeTestCase(unittest.TestCase):
@@ -146,6 +146,9 @@ class SmokeTestCase(unittest.TestCase):
 
 def run_tests(suites):
     argv = FLAGS(sys.argv)
+    if FLAGS.use_ipv6:
+        global boto_v6
+        boto_v6 = __import__('boto_v6')
 
     if not os.getenv('EC2_ACCESS_KEY'):
         print >> sys.stderr, 'Missing EC2 environment variables. Please ' \

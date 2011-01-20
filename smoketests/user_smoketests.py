@@ -189,8 +189,8 @@ class InstanceTests(UserSmokeTestCase):
             try:
                 conn = self.connect_ssh(self.data['private_ip'], TEST_KEY)
                 conn.close()
-            except Exception:
-                time.sleep(1)
+            except Exception, e:
+                time.sleep(5)
             else:
                 break
         else:
@@ -224,7 +224,7 @@ class InstanceTests(UserSmokeTestCase):
             try:
                 conn = self.connect_ssh(self.data['public_ip'], TEST_KEY)
                 conn.close()
-            except socket.error:
+            except Exception:
                 time.sleep(1)
             else:
                 break
@@ -256,17 +256,24 @@ class VolumeTests(UserSmokeTestCase):
                                               instance_type='m1.tiny',
                                               key_name=TEST_KEY)
         instance = reservation.instances[0]
-        self.data['instance'] = instance
         for x in xrange(120):
             time.sleep(1)
             instance.update()
-            #if self.can_ping(instance.private_dns_name):
-            if instance.state == u'running':
+            if self.can_ping(instance.private_dns_name):
                 break
         else:
             self.fail('unable to start instance')
-        time.sleep(10)
-        instance.update()
+        self.data['instance'] = instance
+        for x in xrange(30):
+            try:
+                conn = self.connect_ssh(instance.private_dns_name, TEST_KEY)
+                conn.close()
+            except Exception:
+                time.sleep(5)
+            else:
+                break
+        else:
+            self.fail('could not ssh to instance')
 
     def test_001_can_create_volume(self):
         volume = self.conn.create_volume(1, 'nova')
@@ -279,7 +286,6 @@ class VolumeTests(UserSmokeTestCase):
         volume = self.data['volume']
 
         for x in xrange(30):
-            print volume.status
             if volume.status.startswith('available'):
                 break
             time.sleep(1)
@@ -438,7 +444,7 @@ class SecurityGroupTests(UserSmokeTestCase):
 if __name__ == "__main__":
     suites = {'image': unittest.makeSuite(ImageTests),
               'instance': unittest.makeSuite(InstanceTests),
-              'security_group': unittest.makeSuite(SecurityGroupTests),
+              #'security_group': unittest.makeSuite(SecurityGroupTests),
               'volume': unittest.makeSuite(VolumeTests)
               }
     sys.exit(base.run_tests(suites))
