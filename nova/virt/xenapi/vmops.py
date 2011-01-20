@@ -104,7 +104,7 @@ class VMOps(object):
                        'dns': network['dns'],
                        'ips': [{'netmask': network['netmask'],
                                 'enabled': '1',
-                                'ip': 192.168.3.3}]}        # <===== CHANGE!!!!
+                                'ip': '192.168.3.3'}]}      # <===== CHANGE!!!!
             self.write_network_config_to_xenstore(vm_ref, mapping)
 
             bridge = network['bridge']
