@@ -246,7 +246,10 @@ class API(base.Base):
         # ..then we distill the security groups to which they belong..
         security_groups = set()
         for rule in security_group_rules:
-            security_groups.add(rule['parent_group_id'])
+            security_group = self.db.security_group_get(
+                                                    context,
+                                                    rule['parent_group_id'])
+            security_groups.add(security_group)
 
         # ..then we find the instances that are members of these groups..
         instances = set()
