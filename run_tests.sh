@@ -71,4 +71,4 @@ then
   fi
 fi
 
-run_tests && pep8 --repeat --show-pep8 --show-source bin/* nova setup.py || exit 1
+run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
