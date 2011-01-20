@@ -358,7 +358,8 @@ class VMOps(object):
 
     def reset_networking(self, instance):
         vm = self._get_vm_opaque_ref(instance)
-        self.write_to_xenstore(vm, "resetnetwork", "")
+        args = {'id': str(uuid.uuid4())}
+        resp = self._make_agent_call('resetnetwork', vm, '', args)
 
     def write_network_config_to_xenstore(self, instance):
         vm = self._get_vm_opaque_ref(instance)
