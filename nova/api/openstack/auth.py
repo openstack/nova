@@ -134,9 +134,3 @@ class AuthMiddleware(wsgi.Middleware):
             token = self.db.auth_create_token(ctxt, token_dict)
             return token, user
         return None, None
-
-
-def auth_factory(global_conf, **local_conf):
-    def auth(app):
-        return AuthMiddleware(app)
-    return auth

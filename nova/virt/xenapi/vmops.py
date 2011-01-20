@@ -20,6 +20,11 @@ Management class for VM-related functions (spawn, reboot, etc).
 """
 
 import json
+import M2Crypto
+import os
+import subprocess
+import tempfile
+import uuid
 
 from nova import db
 from nova import context
@@ -80,7 +85,8 @@ class VMOps(object):
         #Have a look at the VDI and see if it has a PV kernel
         pv_kernel = False
         if not instance.kernel_id:
-            pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
+            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
+                                              vdi_ref)
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
@@ -127,21 +133,40 @@ class VMOps(object):
         """Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
+        vm = None
         try:
-            instance_name = instance_or_vm.name
-            vm = VMHelper.lookup(self._session, instance_name)
-        except AttributeError:
-            # A vm opaque ref was passed
-            vm = instance_or_vm
+            if instance_or_vm.startswith("OpaqueRef:"):
+                # Got passed an opaque ref; return it
+                return instance_or_vm
+            else:
+                # Must be the instance name
+                instance_name = instance_or_vm
+        except (AttributeError, KeyError):
+            # Note the the KeyError will only happen with fakes.py
+            # Not a string; must be an ID or a vm instance
+            if isinstance(instance_or_vm, (int, long)):
+                ctx = context.get_admin_context()
+                try:
+                    instance_obj = db.instance_get_by_id(ctx, instance_or_vm)
+                    instance_name = instance_obj.name
+                except exception.NotFound:
+                    # The unit tests screw this up, as they use an integer for
+                    # the vm name. I'd fix that up, but that's a matter for
+                    # another bug report. So for now, just try with the passed
+                    # value
+                    instance_name = instance_or_vm
+            else:
+                instance_name = instance_or_vm.name
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             raise Exception(_('Instance not present %s') % instance_name)
         return vm
 
-    def snapshot(self, instance, name):
+    def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance
 
         :param instance: instance to be snapshotted
-        :param name: name/label to be given to the snapshot
+        :param image_id: id of image to upload to
 
         Steps involved in a XenServer snapshot:
 
@@ -177,7 +202,7 @@ class VMOps(object):
         try:
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                self._session, instance.id, template_vdi_uuids, name)
+                self._session, instance.id, template_vdi_uuids, image_id)
         finally:
             self._destroy(instance, template_vm_ref, shutdown=False)
 
@@ -188,6 +213,44 @@ class VMOps(object):
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
         self._session.wait_for_task(instance.id, task)
+
+    def set_admin_password(self, instance, new_pass):
+        """Set the root/admin password on the VM instance. This is done via
+        an agent running on the VM. Communication between nova and the agent
+        is done via writing xenstore records. Since communication is done over
+        the XenAPI RPC calls, we need to encrypt the password. We're using a
+        simple Diffie-Hellman class instead of the more advanced one in
+        M2Crypto for compatibility with the agent code.
+        """
+        # Need to uniquely identify this request.
+        transaction_id = str(uuid.uuid4())
+        # The simple Diffie-Hellman class is used to manage key exchange.
+        dh = SimpleDH()
+        args = {'id': transaction_id, 'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        # Successful return code from key_init is 'D0'
+        if resp_dict['returncode'] != 'D0':
+            # There was some sort of error; the message will contain
+            # a description of the error.
+            raise RuntimeError(resp_dict['message'])
+        agent_pub = int(resp_dict['message'])
+        dh.compute_shared(agent_pub)
+        enc_pass = dh.encrypt(new_pass)
+        # Send the encrypted password
+        args['enc_pass'] = enc_pass
+        resp = self._make_agent_call('password', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        # Successful return code from password is '0'
+        if resp_dict['returncode'] != '0':
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
 
     def destroy(self, instance):
         """Destroy VM instance"""
@@ -246,30 +309,19 @@ class VMOps(object):
 
     def suspend(self, instance, callback):
         """suspend the specified instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise Exception(_("suspend: instance not present %s") %
-                                                     instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
     def resume(self, instance, callback):
         """resume the specified instance"""
-        instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
-            raise Exception(_("resume: instance not present %s") %
-                                                    instance_name)
+        vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
-        self._wait_with_callback(task, callback)
+        self._wait_with_callback(instance.id, task, callback)
 
-    def get_info(self, instance_id):
+    def get_info(self, instance):
         """Return data about VM instance"""
-        vm = VMHelper.lookup(self._session, instance_id)
-        if vm is None:
-            raise exception.NotFound(_('Instance not'
-                                       ' found %s') % instance_id)
+        vm = self._get_vm_opaque_ref(instance)
         rec = self._session.get_xenapi().VM.get_record(vm)
         return VMHelper.compile_info(rec)
 
@@ -283,6 +335,11 @@ class VMOps(object):
         """Return snapshot of console"""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
+
+    def get_ajax_console(self, instance):
+        """Return link to instance's ajax console"""
+        # TODO: implement this!
+        return 'http://fakeajaxconsole/fake_url'
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
@@ -328,22 +385,34 @@ class VMOps(object):
         return self._make_plugin_call('xenstore.py', method=method, vm=vm,
                 path=path, addl_args=addl_args)
 
+    def _make_agent_call(self, method, vm, path, addl_args={}):
+        """Abstracts out the interaction with the agent xenapi plugin."""
+        return self._make_plugin_call('agent', method=method, vm=vm,
+                path=path, addl_args=addl_args)
+
     def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
         """Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
+        instance_id = vm.id
         vm = self._get_vm_opaque_ref(vm)
         rec = self._session.get_xenapi().VM.get_record(vm)
         args = {'dom_id': rec['domid'], 'path': path}
         args.update(addl_args)
-        # If the 'testing_mode' attribute is set, add that to the args.
-        if getattr(self, 'testing_mode', False):
-            args['testing_mode'] = 'true'
         try:
             task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(0, task)
+            ret = self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, e:
-            raise RuntimeError("%s" % e.details[-1])
+            ret = None
+            err_trace = e.details[-1]
+            err_msg = err_trace.splitlines()[-1]
+            strargs = str(args)
+            if 'TIMEOUT:' in err_msg:
+                LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
+                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
+            else:
+                LOG.error(_('The call to %(method)s returned an error: %(e)s. '
+                        'VM id=%(instance_id)s; args=%(strargs)s') % locals())
         return ret
 
     def add_to_xenstore(self, vm, path, key, value):
@@ -455,3 +524,89 @@ class VMOps(object):
         """Removes all data from the xenstore parameter record for this VM."""
         self.write_to_param_xenstore(instance_or_vm, {})
     ########################################################################
+
+
+def _runproc(cmd):
+    pipe = subprocess.PIPE
+    return subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
+
+
+class SimpleDH(object):
+    """This class wraps all the functionality needed to implement
+    basic Diffie-Hellman-Merkle key exchange in Python. It features
+    intelligent defaults for the prime and base numbers needed for the
+    calculation, while allowing you to supply your own. It requires that
+    the openssl binary be installed on the system on which this is run,
+    as it uses that to handle the encryption and decryption. If openssl
+    is not available, a RuntimeError will be raised.
+    """
+    def __init__(self, prime=None, base=None, secret=None):
+        """You can specify the values for prime and base if you wish;
+        otherwise, reasonable default values will be used.
+        """
+        if prime is None:
+            self._prime = 162259276829213363391578010288127
+        else:
+            self._prime = prime
+        if base is None:
+            self._base = 5
+        else:
+            self._base = base
+        self._shared = self._public = None
+
+        self._dh = M2Crypto.DH.set_params(
+                self.dec_to_mpi(self._prime),
+                self.dec_to_mpi(self._base))
+        self._dh.gen_key()
+        self._public = self.mpi_to_dec(self._dh.pub)
+
+    def get_public(self):
+        return self._public
+
+    def compute_shared(self, other):
+        self._shared = self.bin_to_dec(
+                self._dh.compute_key(self.dec_to_mpi(other)))
+        return self._shared
+
+    def mpi_to_dec(self, mpi):
+        bn = M2Crypto.m2.mpi_to_bn(mpi)
+        hexval = M2Crypto.m2.bn_to_hex(bn)
+        dec = int(hexval, 16)
+        return dec
+
+    def bin_to_dec(self, binval):
+        bn = M2Crypto.m2.bin_to_bn(binval)
+        hexval = M2Crypto.m2.bn_to_hex(bn)
+        dec = int(hexval, 16)
+        return dec
+
+    def dec_to_mpi(self, dec):
+        bn = M2Crypto.m2.dec_to_bn('%s' % dec)
+        mpi = M2Crypto.m2.bn_to_mpi(bn)
+        return mpi
+
+    def _run_ssl(self, text, which):
+        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
+                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        if which.lower()[0] == 'd':
+            dec_flag = ' -d'
+        else:
+            dec_flag = ''
+        fd, tmpfile = tempfile.mkstemp()
+        os.close(fd)
+        file(tmpfile, 'w').write(text)
+        shared = self._shared
+        cmd = base_cmd % locals()
+        proc = _runproc(cmd)
+        proc.wait()
+        err = proc.stderr.read()
+        if err:
+            raise RuntimeError(_('OpenSSL error: %s') % err)
+        return proc.stdout.read()
+
+    def encrypt(self, text):
+        return self._run_ssl(text, 'enc')
+
+    def decrypt(self, text):
+        return self._run_ssl(text, 'dec')

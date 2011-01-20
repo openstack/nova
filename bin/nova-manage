@@ -77,18 +77,22 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.db import migration
 
 
+logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
+flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 
 
 class VpnCommands(object):
@@ -333,6 +337,11 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         self.manager.create_project(name, project_manager, description)
 
+    def modify(self, name, project_manager, description=None):
+        """Modifies a project
+        arguments: name project_manager [description]"""
+        self.manager.modify_project(name, project_manager, description)
+
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
@@ -432,11 +441,12 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None, vpn_start=None):
+               network_size=None, vlan_start=None, vpn_start=None,
+               fixed_range_v6=None):
         """Creates fixed ips for host by range
         arguments: [fixed_range=FLAG], [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG]"""
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
             fixed_range = FLAGS.fixed_range
         if not num_networks:
@@ -447,11 +457,13 @@ class NetworkCommands(object):
             vlan_start = FLAGS.vlan_start
         if not vpn_start:
             vpn_start = FLAGS.vpn_start
+        if not fixed_range_v6:
+            fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
                                     fixed_range, int(num_networks),
                                     int(network_size), int(vlan_start),
-                                    int(vpn_start))
+                                    int(vpn_start), fixed_range_v6)
 
 
 class ServiceCommands(object):
@@ -508,6 +520,21 @@ class LogCommands(object):
         print re.sub('#012', "\n", "\n".join(lines))
 
 
+class DbCommands(object):
+    """Class for managing the database."""
+
+    def __init__(self):
+        pass
+
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version)
+
+    def version(self):
+        """Print the current database version."""
+        print migration.db_version()
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -517,7 +544,8 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('service', ServiceCommands),
-    ('log', LogCommands)]
+    ('log', LogCommands),
+    ('db', DbCommands)]
 
 
 def lazy_match(name, key_value_tuples):

@@ -34,23 +34,53 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
-from nova import api
 from nova import flags
-from nova import utils
+from nova import log as logging
 from nova import wsgi
 
+logging.basicConfig()
+LOG = logging.getLogger('nova.api')
+LOG.setLevel(logging.DEBUG)
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
-flags.DEFINE_string('osapi_host', '0.0.0.0', 'OpenStack API host')
-flags.DEFINE_integer('ec2api_port', 8773, 'EC2 API port')
-flags.DEFINE_string('ec2api_host', '0.0.0.0', 'EC2 API host')
+
+API_ENDPOINTS = ['ec2', 'osapi']
+
+
+def run_app(paste_config_file):
+    LOG.debug(_("Using paste.deploy config at: %s"), paste_config_file)
+    apps = []
+    for api in API_ENDPOINTS:
+        config = wsgi.load_paste_configuration(paste_config_file, api)
+        if config is None:
+            LOG.debug(_("No paste configuration for app: %s"), api)
+            continue
+        LOG.debug(_("App Config: %s\n%r"), api, config)
+        wsgi.paste_config_to_flags(config, {
+            "verbose": FLAGS.verbose,
+            "%s_host" % api: config.get('host', '0.0.0.0'),
+            "%s_port" % api: getattr(FLAGS, "%s_port" % api)})
+        LOG.info(_("Running %s API"), api)
+        app = wsgi.load_paste_app(paste_config_file, api)
+        apps.append((app, getattr(FLAGS, "%s_port" % api),
+                     getattr(FLAGS, "%s_host" % api)))
+    if len(apps) == 0:
+        LOG.error(_("No known API applications configured in %s."),
+                  paste_config_file)
+        return
+
+    # NOTE(todd): redo logging config, verbose could be set in paste config
+    logging.basicConfig()
+    server = wsgi.Server()
+    for app in apps:
+        server.start(*app)
+    server.wait()
 
 
 if __name__ == '__main__':
-    utils.default_flagfile()
     FLAGS(sys.argv)
-    server = wsgi.Server()
-    server.start(api.API('os'), FLAGS.osapi_port, host=FLAGS.osapi_host)
-    server.start(api.API('ec2'), FLAGS.ec2api_port, host=FLAGS.ec2api_host)
-    server.wait()
+    conf = wsgi.paste_config_file('nova-api.conf')
+    if conf:
+        run_app(conf)
+    else:
+        LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')

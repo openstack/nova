@@ -83,11 +83,12 @@ def _try_convert(value):
 
 
 class APIRequest(object):
-    def __init__(self, controller, action):
+    def __init__(self, controller, action, args):
         self.controller = controller
         self.action = action
+        self.args = args
 
-    def send(self, context, **kwargs):
+    def invoke(self, context):
         try:
             method = getattr(self.controller,
                              _camelcase_to_underscore(self.action))
@@ -100,7 +101,7 @@ class APIRequest(object):
             raise Exception(_error)
 
         args = {}
-        for key, value in kwargs.items():
+        for key, value in self.args.items():
             parts = key.split(".")
             key = _camelcase_to_underscore(parts[0])
             if isinstance(value, str) or isinstance(value, unicode):

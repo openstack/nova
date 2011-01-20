@@ -15,12 +15,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.dec
-from nova import wsgi
+import unittest
+
+import stubout
+
+from nova.api.openstack import shared_ip_groups
 
 
-class APIStub(object):
-    """Class to verify request and mark it was called."""
-    @webob.dec.wsgify
-    def __call__(self, req):
-        return req.path_info
+class SharedIpGroupsTest(unittest.TestCase):
+    def setUp(self):
+        self.stubs = stubout.StubOutForTesting()
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+
+    def test_get_shared_ip_groups(self):
+        pass
+
+    def test_create_shared_ip_group(self):
+        pass
+
+    def test_delete_shared_ip_group(self):
+        pass

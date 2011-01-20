@@ -135,12 +135,33 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
+def service_get_all(context, session=None, disabled=False):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.Service).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(disabled=disabled).\
+                   all()
+    return result
+
+
+@require_admin_context
 def service_get_all_by_topic(context, topic):
     session = get_session()
     return session.query(models.Service).\
                    filter_by(deleted=False).\
                    filter_by(disabled=False).\
                    filter_by(topic=topic).\
+                   all()
+
+
+@require_admin_context
+def service_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(host=host).\
                    all()
 
 
@@ -585,6 +606,17 @@ def fixed_ip_get_instance(context, address):
     return fixed_ip_ref.instance
 
 
+@require_context
+def fixed_ip_get_instance_v6(context, address):
+    session = get_session()
+    mac = utils.to_mac(address)
+
+    result = session.query(models.Instance).\
+                     filter_by(mac_address=mac).\
+                     first()
+    return result
+
+
 @require_admin_context
 def fixed_ip_get_network(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
@@ -743,13 +775,17 @@ def instance_get_by_id(context, instance_id):
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
+                         options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
+                         options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -768,6 +804,17 @@ def instance_get_fixed_address(context, instance_id):
         if not instance_ref.fixed_ip:
             return None
         return instance_ref.fixed_ip['address']
+
+
+@require_context
+def instance_get_fixed_address_v6(context, instance_id):
+    session = get_session()
+    with session.begin():
+        instance_ref = instance_get(context, instance_id, session=session)
+        network_ref = network_get_by_instance(context, instance_id)
+        prefix = network_ref.cidr_v6
+        mac = instance_ref.mac_address
+        return utils.to_global_ipv6(prefix, mac)
 
 
 @require_context
@@ -1105,6 +1152,11 @@ def project_get_network(context, project_id, associate=True):
                              filter_by(deleted=False).\
                              first()
     return result
+
+
+@require_context
+def project_get_network_v6(context, project_id):
+    return project_get_network(context, project_id)
 
 
 ###################
@@ -1851,3 +1903,111 @@ def host_get_networks(context, host):
                        filter_by(deleted=False).\
                        filter_by(host=host).\
                        all()
+
+
+##################
+
+
+def console_pool_create(context, values):
+    pool = models.ConsolePool()
+    pool.update(values)
+    pool.save()
+    return pool
+
+
+def console_pool_get(context, pool_id):
+    session = get_session()
+    result = session.query(models.ConsolePool).\
+                     filter_by(deleted=False).\
+                     filter_by(id=pool_id).\
+                     first()
+    if not result:
+        raise exception.NotFound(_("No console pool with id %(pool_id)s") %
+                                 {'pool_id': pool_id})
+
+    return result
+
+
+def console_pool_get_by_host_type(context, compute_host, host,
+                                  console_type):
+    session = get_session()
+    result = session.query(models.ConsolePool).\
+                   filter_by(host=host).\
+                   filter_by(console_type=console_type).\
+                   filter_by(compute_host=compute_host).\
+                   filter_by(deleted=False).\
+                   options(joinedload('consoles')).\
+                   first()
+    if not result:
+        raise exception.NotFound(_('No console pool of type %(type)s '
+                                   'for compute host %(compute_host)s '
+                                   'on proxy host %(host)s') %
+                                   {'type': console_type,
+                                    'compute_host': compute_host,
+                                    'host': host})
+    return result
+
+
+def console_pool_get_all_by_host_type(context, host, console_type):
+    session = get_session()
+    return session.query(models.ConsolePool).\
+                   filter_by(host=host).\
+                   filter_by(console_type=console_type).\
+                   filter_by(deleted=False).\
+                   options(joinedload('consoles')).\
+                   all()
+
+
+def console_create(context, values):
+    console = models.Console()
+    console.update(values)
+    console.save()
+    return console
+
+
+def console_delete(context, console_id):
+    session = get_session()
+    with session.begin():
+        # consoles are meant to be transient. (mdragon)
+        session.execute('delete from consoles '
+                        'where id=:id', {'id': console_id})
+
+
+def console_get_by_pool_instance(context, pool_id, instance_id):
+    session = get_session()
+    result = session.query(models.Console).\
+                   filter_by(pool_id=pool_id).\
+                   filter_by(instance_id=instance_id).\
+                   options(joinedload('pool')).\
+                   first()
+    if not result:
+        raise exception.NotFound(_('No console for instance %(instance_id)s '
+                                 'in pool %(pool_id)s') %
+                                 {'instance_id': instance_id,
+                                  'pool_id': pool_id})
+    return result
+
+
+def console_get_all_by_instance(context, instance_id):
+    session = get_session()
+    results = session.query(models.Console).\
+                   filter_by(instance_id=instance_id).\
+                   options(joinedload('pool')).\
+                   all()
+    return results
+
+
+def console_get(context, console_id, instance_id=None):
+    session = get_session()
+    query = session.query(models.Console).\
+                    filter_by(id=console_id)
+    if instance_id:
+        query = query.filter_by(instance_id=instance_id)
+    result = query.options(joinedload('pool')).first()
+    if not result:
+        idesc = (_("on instance %s") % instance_id)  if instance_id else ""
+        raise exception.NotFound(_("No console with id %(console_id)s"
+                                   " %(instance)s") %
+                                  {'instance': idesc,
+                                  'console_id': console_id})
+    return result
