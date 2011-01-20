@@ -298,10 +298,9 @@ interface %s
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill -HUP %d' % pid)
-                return
+                _execute('sudo kill %d' % pid)
             except Exception as exc:  # pylint: disable-msg=W0703
-                LOG.debug(_("Hupping radvd threw %s"), exc)
+                LOG.debug(_("killing radvd threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
