@@ -5,6 +5,7 @@ graft CA
 graft doc
 graft smoketests
 graft tools
+graft etc
 include nova/api/openstack/notes.txt
 include nova/auth/novarc.template
 include nova/auth/slap.sh
