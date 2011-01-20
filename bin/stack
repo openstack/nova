@@ -22,6 +22,7 @@
 import eventlet
 eventlet.monkey_patch()
 
+import json
 import os
 import pprint
 import sys
@@ -38,7 +39,6 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
 import gflags
-from nova import utils
 
 
 FLAGS = gflags.FLAGS
@@ -106,8 +106,12 @@ def do_request(controller, method, params=None):
                'X-OpenStack-Project': FLAGS.project}
 
     req = urllib2.Request(url, data, headers)
-    resp = urllib2.urlopen(req)
-    return utils.loads(resp.read())
+    try:
+        resp = urllib2.urlopen(req)
+    except urllib2.HTTPError, e:
+        print e.read()
+        sys.exit(1)
+    return json.loads(resp.read())
 
 
 if __name__ == '__main__':
