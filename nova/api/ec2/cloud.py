@@ -707,12 +707,11 @@ class CloudController(object):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
                 r['ownerId'] = instance['project_id']
-                security_groups = db.security_group_get_by_instance(context,
-                                                                    instance_id)
-                security_group_ids = []
-                for security_group in security_groups:
-                    security_group_ids.append(security_group.name)
-                r['groupSet'] = self._convert_to_set(security_group_ids,
+                security_group_names = []
+                if instance.get('security_groups'):
+                    for security_group in instance['security_groups']:
+                        security_group_names.append(security_group.name)
+                r['groupSet'] = self._convert_to_set(security_group_names,
                                                      'groupId')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
