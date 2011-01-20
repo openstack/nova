@@ -56,7 +56,7 @@ flags.DEFINE_string('logging_debug_format_suffix',
                     'data to append to log format when level is DEBUG')
 
 flags.DEFINE_string('logging_exception_prefix',
-                    '%(asctime)s TRACE %(name)s: ',
+                    '(%(name)s): TRACE: ',
                     'prefix each line of exception output with this format')
 
 flags.DEFINE_list('default_log_levels',
