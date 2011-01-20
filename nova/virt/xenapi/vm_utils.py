@@ -29,6 +29,8 @@ from xml.dom import minidom
 
 from eventlet import event
 import glance.client
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -458,22 +460,107 @@ class VMHelper(HelperBase):
     
         if mount_required:
             def _mounted_processing(device):
-                devPath = '/dev/'+device+'1' # Note: Partition 1 hardcoded
+                devPath = '/dev/'+device+'1' # NB: Partition 1 hardcoded
                 tmpdir = tempfile.mkdtemp()
                 try:
-                    out, err = utils.execute('sudo mount %s %s' % (devPath, tmpdir))
-                    if err:
-                        raise exception.Error(_('Failed to mount filesystem: %s') % err)
+                    # Mount only Linux filesystems, as we mustn't disturb NTFS images
                     try:
-                        disk.inject_data_into_fs(tmpdir, key, net, utils.execute)
-                    finally:
-                        utils.execute('sudo umount %s' % devPath)
+                        out, err = utils.execute('sudo mount -t ext2,ext3 "%s" "%s"' % (devPath, tmpdir))
+                    except exception.ProcessExecutionError as e:
+                        err = str(e)
+                    if err:
+                        LOG.info('Failed to mount filesystem (expected for non-linux instances): %s' % err)
+                    else:
+                        try:
+                            # This try block ensures that the umount occurs
+                            
+                            xe_update_networking_filename = os.path.join(tmpdir, 'usr', 'sbin', 'xe-update-networking')
+                            if os.path.isfile(xe_update_networking_filename):
+                                # The presence of the xe-update-networking file indicates that this guest
+                                # agent can reconfigure the netwokr from xenstore data, so manipulation
+                                # of files in /etc is not required
+                                LOG.info('XenServer tools installed in this image are capable of network injection.  '
+                                    'Networking files will not be manipulated')
+                            else:
+                                xe_daemon_filename = os.path.join(tmpdir, 'usr', 'sbin', 'xe-daemon')
+                                if os.path.isfile(xe_daemon_filename):
+                                    LOG.info('XenServer tools are present in this image but '
+                                        'are not capable of network injection')
+                                else:
+                                    LOG.info('XenServer tools are not installed in this image')
+                                LOG.info('Manipulating interface files directly')
+                                disk.inject_data_into_fs(tmpdir, key, net, utils.execute)
+                        finally:
+                            utils.execute('sudo umount "%s"' % devPath)
                 finally:
                     # remove temporary directory
                     os.rmdir(tmpdir)
-    
-            # FIXME: Check self._session is the type of session this fn wants
+
             with_vdi_attached_here(session, vdi_ref, False, _mounted_processing)
+            
+            
+    @classmethod
+    def preconfigure_xenstore(cls, session, instance, vm_ref):
+        XENSTORE_TYPES = {
+            'BroadcastAddress' : 'multi_sz',
+            'DefaultGateway' : 'multi_sz',
+            'EnableDhcp' : 'dword',
+            'IPAddress' : 'multi_sz',
+            'NameServer' : 'string',
+            'SubnetMask' : 'multi_sz'
+        }
+        
+        # Network setup
+        network_ref = db.network_get_by_instance(context.get_admin_context(),
+            instance['id'])
+        if network_ref['injected']:
+            admin_context = context.get_admin_context()
+            address = db.instance_get_fixed_address(admin_context, instance['id'])
+            
+            xenstore_data =  {
+                # NB: Setting broadcast address is not supported by
+                # Windows or the Windows guest agent, and will be ignored
+                # on that platform
+                'BroadcastAddress': network_ref['broadcast'],
+                'EnableDhcp': '0',
+                'IPAddress': address,
+                'SubnetMask': network_ref['netmask'],
+                'DefaultGateway': network_ref['gateway'],
+                'NameServer': network_ref['dns']
+            }
+            
+            device_to_configure = 0 # Configure network device 0 in the VM
+            
+            vif_refs = session.call_xenapi('VM.get_VIFs', vm_ref)
+            mac_addr = None
+            
+            for vif_ref in vif_refs:
+                device = session.call_xenapi('VIF.get_device', vif_ref)
+                if str(device) == str(device_to_configure):
+                    mac_addr = session.call_xenapi('VIF.get_MAC', vif_ref)
+                    break
+            
+            if mac_addr is None:
+                raise exception.NotFound('Networking device %s not found in VM')
+                
+            # MAC address must be upper case in the xenstore key,
+            # with colons replaced by underscores
+            underscore_mac_addr = mac_addr.replace(':', '_')
+            xenstore_prefix='vm-data/vif/'+underscore_mac_addr.upper()+'/tcpip/'
+            
+            for xenstore_key, xenstore_value in xenstore_data.iteritems():
+                # NB: The xenstore_key part of the instance_key isn't used but must
+                # be unique.  We set it to xenstore_key as a convenient unique name.
+                # The xenstore_key value takes effect in the /name element.
+                instance_key = xenstore_prefix + xenstore_key
+                type = XENSTORE_TYPES[xenstore_key]
+
+                session.call_xenapi('VM.add_to_xenstore_data', vm_ref, instance_key+'/name', xenstore_key)	
+                session.call_xenapi('VM.add_to_xenstore_data', vm_ref, instance_key+'/type', type)
+                if type == 'multi_sz':
+                    session.call_xenapi('VM.add_to_xenstore_data', vm_ref, instance_key+'/data/0', xenstore_value)
+                else:
+                    session.call_xenapi('VM.add_to_xenstore_data', vm_ref, instance_key+'/data', xenstore_value)
 
     @classmethod
     def compile_info(cls, record):

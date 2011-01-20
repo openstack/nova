@@ -109,6 +109,9 @@ class VMOps(object):
         # Alter the image before VM start for, e.g. network injection
         VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
         
+        # Configure the VM's xenstore  data before start for, e.g. network configuration
+        VMHelper.preconfigure_xenstore(self._session, instance, vm_ref)
+        
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name
