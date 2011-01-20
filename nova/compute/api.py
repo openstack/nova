@@ -255,7 +255,7 @@ class API(base.Base):
         instances = set()
         for security_group in security_groups:
             for instance in security_group['instances']:
-                instances.add(instance['id'])
+                instances.add(instance)
 
         # ...then we find the hosts where they live...
         hosts = set()
