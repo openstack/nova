@@ -172,7 +172,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def refresh_provider_fw_rules(self, context, **_kwargs):
         """This call passes straight through to the virtualization driver."""
-        return self.driver.refresh_security_group_rules()
+        return self.driver.refresh_provider_fw_rules()
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **_kwargs):

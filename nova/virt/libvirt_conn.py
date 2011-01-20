@@ -848,7 +848,7 @@ class LibvirtConnection(object):
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
-    def refresh_provier_fw_rules(self):
+    def refresh_provider_fw_rules(self):
         self.firewall_driver.refresh_provider_fw_rules()
 
 
