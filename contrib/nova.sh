@@ -62,7 +62,7 @@ if [ -n "$FLAT_INTERFACE" ]; then
     echo "--flat_interface=$FLAT_INTERFACE" >>$NOVA_DIR/bin/nova.conf
 fi
 
-if [ -n "$USE_IPV6" ]; then
+if [ "$USE_IPV6" == 1 ]; then
     echo "--use_ipv6" >>$NOVA_DIR/bin/nova.conf
 fi
 
@@ -95,7 +95,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
     sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
 
-    if [ -n "$USE_IPV6" ]; then
+    if [ "$USE_IPV6" == 1 ]; then
         sudo apt-get install -y radvd
         sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
         sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
@@ -122,7 +122,7 @@ function screen_it {
 
 if [ "$CMD" == "run" ]; then
     killall dnsmasq
-    if [ -n "$USE_IPV6" ]; then
+    if [ "$USE_IPV6" == 1 ]; then
        killall radvd
     fi
     screen -d -m -S nova -t nova
