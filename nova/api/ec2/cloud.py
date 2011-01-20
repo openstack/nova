@@ -133,7 +133,7 @@ class CloudController(object):
         return result
 
     def _get_availability_zone_by_host(self, context, host):
-        services = db.service_get_all_by_host(context, host)
+        services = db.service_get_all_by_host(context.elevated(), host)
         if len(services) > 0:
             return services[0]['availability_zone']
         return 'unknown zone'
