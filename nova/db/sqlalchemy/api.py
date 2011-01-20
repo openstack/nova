@@ -156,7 +156,7 @@ def service_get_all_by_topic(context, topic):
                    all()
 
 
-@require_admin_context
+@require_context
 def service_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Service).\
