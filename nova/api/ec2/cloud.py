@@ -59,7 +59,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate("The key_pair %s already exists"
+        raise exception.Duplicate(_("The key_pair %s already exists")
                                   % key_name)
     except exception.NotFound:
         pass
