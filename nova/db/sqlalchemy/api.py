@@ -1054,6 +1054,12 @@ def network_get(context, network_id, session=None):
     return result
 
 
+@require_context
+def network_get_all(context):
+    session = get_session()
+    return session.query(models.Network).all()
+
+
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103

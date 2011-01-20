@@ -67,11 +67,6 @@ class VMOps(object):
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
 
-        bridge = db.network_get_by_instance(context.get_admin_context(),
-                                            instance['id'])['bridge']
-        network_ref = \
-            NetworkHelper.find_network_with_bridge(self._session, bridge)
-
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         #if kernel is not present we must download a raw disk
@@ -99,9 +94,29 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        if network_ref:
-            VMHelper.create_vif(self._session, vm_ref,
-                                network_ref, instance.mac_address)
+        # write network info
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        for network in db.network_get_all():
+            mapping = {'label': network['label'],
+                       'gateway': network['gateway'],
+                       'mac': instance.mac_address,
+                       'dns': network['dns'],
+                       'ips': [{'netmask': network['netmask'],
+                                'enabled': '1',
+                                'ip': 192.168.3.3}]}        # <===== CHANGE!!!!
+            self.write_network_config_to_xenstore(vm_ref, mapping)
+
+            bridge = network['bridge']
+            network_ref = \
+                NetworkHelper.find_network_with_bridge(self._session, bridge)
+
+            if network_ref:
+                VMHelper.create_vif(self._session, vm_ref,
+                                    network_ref, instance.mac_address)
+
+        # call reset networking
+
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
@@ -340,6 +355,14 @@ class VMOps(object):
         """Return link to instance's ajax console"""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def reset_networking(self, instance):
+        vm = self._get_vm_opaque_ref(instance)
+        self.write_to_xenstore(vm, "resetnetwork", "")
+
+    def write_network_config_to_xenstore(self, instance):
+        vm = self._get_vm_opaque_ref(instance)
+        self.write_to_param_xenstore(vm, mapping)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
