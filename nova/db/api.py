@@ -503,7 +503,7 @@ def network_get(context, network_id):
 
 def network_get_all(context):
     """Get all networks"""
-    returm IMPL.network_get_all(context)
+    return IMPL.network_get_all(context)
 
 
 # pylint: disable-msg=C0103
