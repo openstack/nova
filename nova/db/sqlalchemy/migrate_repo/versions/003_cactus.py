@@ -25,6 +25,11 @@ from nova import log as logging
 meta = MetaData()
 
 
+networks = Table('networks', meta,
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        )
+
+
 #
 # New Tables
 #
