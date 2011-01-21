@@ -23,23 +23,22 @@ from nova import db
 from nova import utils
 from nova.compute import instance_types
 
+class FakeModel(object):
+    """ Stubs out for model """
+    def __init__(self, values):
+        self.values = values
+
+    def __getattr__(self, name):
+        return self.values[name]
+
+    def __getitem__(self, key):
+        if key in self.values:
+            return self.values[key]
+        else:
+            raise NotImplementedError()
 
 def stub_out_db_instance_api(stubs):
     """ Stubs out the db API for creating Instances """
-
-    class FakeModel(object):
-        """ Stubs out for model """
-        def __init__(self, values):
-            self.values = values
-
-        def __getattr__(self, name):
-            return self.values[name]
-
-        def __getitem__(self, key):
-            if key in self.values:
-                return self.values[key]
-            else:
-                raise NotImplementedError()
 
     def fake_instance_create(values):
         """ Stubs out the db.instance_create method """
@@ -66,12 +65,29 @@ def stub_out_db_instance_api(stubs):
             }
         return FakeModel(base_options)
 
-    def fake_network_get_by_instance(context, instance_id):
-        fields = {
-            'bridge': 'xenbr0',
-            'injected': False
-            }
-        return FakeModel(fields)
-
     stubs.Set(db, 'instance_create', fake_instance_create)
+
+def stub_out_db_network_api(stubs, injected = False):
+    """Stubs out the db API for retrieving networks"""
+    network_fields = {
+            'bridge': 'xenbr0',
+            'injected': injected
+            }
+
+    if injected:
+        network_fields.update({
+            'netmask': '255.255.255.0',
+            'gateway': '10.0.0.1',
+            'broadcast': '10.0.0.255',
+            'dns': '10.0.0.2'
+            })
+
+    def fake_network_get_by_instance(context, instance_id):
+        return FakeModel(network_fields)
+
+    def fake_instance_get_fixed_address(context, instance_id):
+        return '10.0.0.3'
+
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
+    stubs.Set(db, 'instance_get_fixed_address', fake_instance_get_fixed_address)
+

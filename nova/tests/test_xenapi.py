@@ -50,6 +50,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_network_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.values = {'name': 1, 'id': 1,
@@ -158,6 +159,7 @@ class XenAPIVMTestCase(test.TestCase):
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         db_fakes.stub_out_db_instance_api(self.stubs)
+        db_fakes.stub_out_db_network_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
@@ -211,7 +213,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
-    def check_vm_record(self, conn):
+    def check_vm_record(self, conn, check_injection = False):
         instances = conn.list_instances()
         self.assertEquals(instances, [1])
 
@@ -219,10 +221,10 @@ class XenAPIVMTestCase(test.TestCase):
         vm_info = conn.get_info(1)
 
         # Get XenAPI record for VM
-        vms = [rec for ref, rec
+        vms = [(ref, rec) for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()
                if not rec['is_control_domain']]
-        vm = vms[0]
+        vm_ref, vm = vms[0]
 
         # Check that m1.large above turned into the right thing.
         instance_type = instance_types.INSTANCE_TYPES['m1.large']
@@ -242,8 +244,35 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Check that the VM is running according to XenAPI.
         self.assertEquals(vm['power_state'], 'Running')
+        
+        if check_injection:
+            xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
+            key_prefix = 'vm-data/vif/22_33_2A_B3_CC_DD/tcpip/'
+            tcpip_data = dict([(k.replace(key_prefix, ''), v)
+                for k, v in xenstore_data.iteritems() if k.startswith(key_prefix) ])
 
-    def _test_spawn(self, image_id, kernel_id, ramdisk_id):
+            self.assertEquals(tcpip_data, {
+                'BroadcastAddress/data/0': '10.0.0.255',
+                'BroadcastAddress/name': 'BroadcastAddress',
+                'BroadcastAddress/type': 'multi_sz',
+                'DefaultGateway/data/0': '10.0.0.1',
+                'DefaultGateway/name': 'DefaultGateway',
+                'DefaultGateway/type': 'multi_sz',
+                'EnableDhcp/data': '0',
+                'EnableDhcp/name': 'EnableDhcp',
+                'EnableDhcp/type': 'dword',
+                'IPAddress/data/0': '10.0.0.3',
+                'IPAddress/name': 'IPAddress',
+                'IPAddress/type': 'multi_sz',
+                'NameServer/data': '10.0.0.2',
+                'NameServer/name': 'NameServer',
+                'NameServer/type': 'string',
+                'SubnetMask/data/0': '255.255.255.0',
+                'SubnetMask/name': 'SubnetMask',
+                'SubnetMask/type': 'multi_sz'
+             })
+
+    def _test_spawn(self, image_id, kernel_id, ramdisk_id, check_injection = False):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
                   'id': 1,
@@ -258,7 +287,7 @@ class XenAPIVMTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
         conn.spawn(instance)
-        self.check_vm_record(conn)
+        self.check_vm_record(conn, check_injection = check_injection)
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'
@@ -276,6 +305,11 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, 2, 3)
 
+    def test_spawn_netinject(self):
+        FLAGS.xenapi_image_service = 'glance'
+        db_fakes.stub_out_db_network_api(self.stubs, injected = True)
+        self._test_spawn(1, 2, 3, check_injection = True)
+        
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)

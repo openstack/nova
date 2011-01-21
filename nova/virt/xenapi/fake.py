@@ -148,7 +148,15 @@ def create_vbd(vm_ref, vdi_ref):
     after_VBD_create(vbd_ref, vbd_rec)
     return vbd_ref
 
-
+def VM_get_xenstore_data(vm_ref):
+    return _db_content['VM'][vm_ref].get('xenstore_data', '')
+    
+def VM_add_to_xenstore_data(vm_ref, key, value):
+    db_ref = _db_content['VM'][vm_ref]
+    if not 'xenstore_data' in db_ref:
+        db_ref['xenstore_data'] = {}
+    db_ref['xenstore_data'][key] = value
+    
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM to VBD when VBD is
     created."""
@@ -401,7 +409,7 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 return _db_content[cls][ref][field]
 
-        LOG.debuug(_('Raising NotImplemented'))
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             _('xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments') % name)
