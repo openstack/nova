@@ -249,7 +249,8 @@ class XenAPIVMTestCase(test.TestCase):
             xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
             key_prefix = 'vm-data/vif/22_33_2A_B3_CC_DD/tcpip/'
             tcpip_data = dict([(k.replace(key_prefix, ''), v)
-                for k, v in xenstore_data.iteritems() if k.startswith(key_prefix) ])
+                for k, v in xenstore_data.iteritems()
+                if k.startswith(key_prefix) ])
 
             self.assertEquals(tcpip_data, {
                 'BroadcastAddress/data/0': '10.0.0.255',
@@ -272,7 +273,8 @@ class XenAPIVMTestCase(test.TestCase):
                 'SubnetMask/type': 'multi_sz'
              })
 
-    def _test_spawn(self, image_id, kernel_id, ramdisk_id, check_injection = False):
+    def _test_spawn(self, image_id, kernel_id, ramdisk_id,
+        check_injection = False):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
                   'id': 1,
