@@ -325,11 +325,12 @@ class FlatManager(NetworkManager):
         pass
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, *args, **kwargs):
+                        cidr_v6, label, *args, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         significant_bits_v6 = 64
+        count = 1
         for index in range(num_networks):
             start = index * network_size
             significant_bits = 32 - int(math.log(network_size, 2))
@@ -342,6 +343,11 @@ class FlatManager(NetworkManager):
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast())
             net['dhcp_start'] = str(project_net[2])
+            if num_networks > 1:
+                net['label'] = "%s_%d" % (label, count)
+            else:
+                net['label'] = label
+            count += 1
 
             if(FLAGS.use_ipv6):
                 cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
