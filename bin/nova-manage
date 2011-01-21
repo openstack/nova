@@ -61,7 +61,6 @@ import sys
 import time
 
 import IPy
-from sqlalchemy import exc
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -280,7 +279,7 @@ class UserCommands(object):
         arguments: name [access] [secret]"""
         try:
             user = self.manager.create_user(name, access, secret, True)
-        except exc.OperationalError, e:
+        except exception.DBError, e:
             _db_error(e)
         self._print_export(user)
 
@@ -289,7 +288,7 @@ class UserCommands(object):
         arguments: name [access] [secret]"""
         try:
             user = self.manager.create_user(name, access, secret, False)
-        except exc.OperationalError, e:
+        except exception.DBError, e:
             _db_error(e)
         self._print_export(user)
 

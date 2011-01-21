@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 DIR=`pwd`
 CMD=$1
-SOURCE_BRANCH=lp:nova
-if [ -n "$2" ]; then
-    SOURCE_BRANCH=$2
+if [ "$CMD" = "branch" ]; then
+    SOURCE_BRANCH=${2:-lp:nova}
+    DIRNAME=${3:-nova}
+else
+    DIRNAME=${2:-nova}
 fi
-DIRNAME=nova
+
 NOVA_DIR=$DIR/$DIRNAME
-if [ -n "$3" ]; then
-    NOVA_DIR=$DIR/$3
-fi
 
 if [ ! -n "$HOST_IP" ]; then
     # NOTE(vish): This will just get the first ip in the list, so if you
@@ -45,34 +44,17 @@ else
     AUTH=dbdriver.DbDriver
 fi
 
-mkdir -p /etc/nova
-cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
---verbose
---nodaemon
---dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
---network_manager=nova.network.manager.$NET_MAN
---cc_host=$HOST_IP
---routing_source_ip=$HOST_IP
---sql_connection=$SQL_CONN
---auth_driver=nova.auth.$AUTH
---libvirt_type=$LIBVIRT_TYPE
-NOVA_CONF_EOF
-
-if [ -n "$FLAT_INTERFACE" ]; then
-    echo "--flat_interface=$FLAT_INTERFACE" >>$NOVA_DIR/bin/nova.conf
-fi
-
-if [ "$USE_IPV6" == 1 ]; then
-    echo "--use_ipv6" >>$NOVA_DIR/bin/nova.conf
-fi
-
 if [ "$CMD" == "branch" ]; then
     sudo apt-get install -y bzr
+    if [ ! -e "$DIR/.bzr" ]; then
+        bzr init-repo $DIR
+    fi
     rm -rf $NOVA_DIR
     bzr branch $SOURCE_BRANCH $NOVA_DIR
     cd $NOVA_DIR
     mkdir -p $NOVA_DIR/instances
     mkdir -p $NOVA_DIR/networks
+    exit
 fi
 
 # You should only have to run this once
@@ -91,7 +73,7 @@ if [ "$CMD" == "install" ]; then
     sudo /etc/init.d/libvirt-bin restart
     sudo modprobe nbd
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy python-tempita
+    sudo apt-get install -y python-migrate python-eventlet python-gflags python-ipy python-tempita
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
     sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
 
@@ -109,8 +91,10 @@ mysql-server-5.1 mysql-server/start_on_boot boolean true
 MYSQL_PRESEED
         apt-get install -y mysql-server python-mysqldb
     fi
-    wget -c http://c2477062.cdn.cloudfiles.rackspacecloud.com/images.tgz
-    tar -C $DIR -zxf images.tgz
+    mkdir -p $DIR/images
+    wget -c http://images.ansolabs.com/tty.tgz
+    tar -C $DIR/images -zxf tty.tgz
+    exit
 fi
 
 NL=`echo -ne '\015'`
@@ -121,6 +105,27 @@ function screen_it {
 }
 
 if [ "$CMD" == "run" ]; then
+
+  cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
+--verbose
+--nodaemon
+--dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
+--network_manager=nova.network.manager.$NET_MAN
+--cc_host=$HOST_IP
+--routing_source_ip=$HOST_IP
+--sql_connection=$SQL_CONN
+--auth_driver=nova.auth.$AUTH
+--libvirt_type=$LIBVIRT_TYPE
+NOVA_CONF_EOF
+
+    if [ -n "$FLAT_INTERFACE" ]; then
+        echo "--flat_interface=$FLAT_INTERFACE" >>$NOVA_DIR/bin/nova.conf
+    fi
+
+    if [ "$USE_IPV6" == 1 ]; then
+        echo "--use_ipv6" >>$NOVA_DIR/bin/nova.conf
+    fi
+
     killall dnsmasq
     if [ "$USE_IPV6" == 1 ]; then
        killall radvd
