@@ -236,7 +236,8 @@ class AdminController(object):
         udp_rule = rule.copy()
         udp_rule.update({"protocol": "UDP", "from_port": 1, "to_port": 65535})
         icmp_rule = rule.copy()
-        icmp_rule.update({"protocol": "ICMP", "from_port": -1, "to_port": -1})
+        icmp_rule.update({"protocol": "ICMP", "from_port": -1,
+                          "to_port": None})
         rules_added = 0
         if not self._provider_fw_rule_exists(context, tcp_rule):
             db.provider_fw_rule_create(context, tcp_rule)

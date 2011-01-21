@@ -1290,7 +1290,51 @@ class IptablesFirewallDriver(FirewallDriver):
         our_rules = ['-A nova-fallback -j DROP']
 
         our_chains += [':nova-local - [0:0]']
-        our_rules += ['-A FORWARD -j nova-local']
+
+        our_chains += [':nova-provider - [0:0]']
+        our_rules += ['-A FORWARD -j nova-provider']
+
+        rules = db.provider_fw_rule_get_all(ctxt)
+        for rule in rules:
+            logging.info('%r', rule)
+            version = _get_ip_version(rule.cidr)
+            if version != ip_version:
+                continue
+            protocol = rule.protocol
+            if version == 6 and rule.protocol == 'icmp':
+                protocol = 'icmpv6'
+            args = ['-A nova-provider -p', protocol, '-s', rule.cidr]
+
+            if rule.protocol in ['udp', 'tcp']:
+                if rule.from_port == rule.to_port:
+                    args += ['--dport', '%s' % (rule.from_port,)]
+                else:
+                    args += ['-m', 'multiport',
+                             '--dports', '%s:%s' % (rule.from_port,
+                                                    rule.to_port)]
+            elif rule.protocol == 'icmp':
+                icmp_type = rule.from_port
+                icmp_code = rule.to_port
+
+                if icmp_type == -1:
+                    icmp_type_arg = None
+                else:
+                    icmp_type_arg = '%s' % icmp_type
+                    if not icmp_code == -1:
+                        icmp_type_arg += '/%s' % icmp_code
+
+                if icmp_type_arg:
+                    if(ip_version == 4):
+                        args += ['-m', 'icmp', '--icmp-type',
+                                 icmp_type_arg]
+                    elif(ip_version == 6):
+                        args += ['-m', 'icmp6', '--icmpv6-type',
+                                 icmp_type_arg]
+
+            args += ['-j DROP']
+            our_rules += [' '.join(args)]
+
+        our_rules += ['-A nova-provider -j nova-local']
 
         security_groups = {}
         # Add our chains
@@ -1407,6 +1451,9 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def refresh_security_group_rules(self, security_group):
+        self.apply_ruleset()
+
+    def refresh_provider_fw_rules(self):
         self.apply_ruleset()
 
     def _security_group_chain_name(self, security_group_id):
