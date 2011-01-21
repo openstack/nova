@@ -156,7 +156,7 @@ def WrapTwistedOptions(wrapped):
             try:
                 self.parseArgs(*argv)
             except TypeError:
-                raise usage.UsageError("Wrong number of arguments.")
+                raise usage.UsageError(_("Wrong number of arguments."))
 
             self.postOptions()
             return args
@@ -220,7 +220,7 @@ def stop(pidfile):
             time.sleep(0.1)
     except OSError, err:
         err = str(err)
-        if err.find("No such process") > 0:
+        if err.find(_("No such process")) > 0:
             if os.path.exists(pidfile):
                 os.remove(pidfile)
         else:

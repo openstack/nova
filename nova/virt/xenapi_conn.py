@@ -109,6 +109,14 @@ flags.DEFINE_string('target_port',
 flags.DEFINE_string('iqn_prefix',
                     'iqn.2010-10.org.openstack',
                     'IQN Prefix')
+# NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick, when we pull
+# support for it, we should remove this
+flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
+                  'Used to enable the remapping of VBD dev '
+                  '(Works around an issue in Ubuntu Maverick)')
+flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
+                    'Specify prefix to remap VBD dev to '
+                    '(ex. /dev/xvdb -> /dev/sdb)')
 
 
 def get_connection(_):
