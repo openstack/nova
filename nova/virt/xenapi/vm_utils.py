@@ -637,8 +637,8 @@ def with_vdi_attached_here(session, vdi, read_only, f):
         LOG.debug(_('VBD %s plugged as %s'), vbd, orig_dev)
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
-            LOG.debug(_('VBD %s plugged into wrong dev, remapping to %s'),
-                      vbd, dev)
+            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+                        'remapping to %(dev)s') % locals())
         return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
