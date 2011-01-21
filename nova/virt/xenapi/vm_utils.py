@@ -459,7 +459,7 @@ class VMHelper(HelperBase):
     
         if mount_required:
             def _mounted_processing(device):
-                """Callback whioch runds with the image VDI attached"""
+                """Callback which runs with the image VDI attached"""
                 
                 dev_path = '/dev/'+device+'1' # NB: Partition 1 hardcoded
                 tmpdir = tempfile.mkdtemp()
@@ -467,7 +467,7 @@ class VMHelper(HelperBase):
                     # Mount only Linux filesystems, to avoid disturbing
                     # NTFS images
                     try:
-                        _, err = utils.execute(
+                        out, err = utils.execute(
                             'sudo mount -t ext2,ext3 "%s" "%s"' %
                             (dev_path, tmpdir))
                     except exception.ProcessExecutionError as e:

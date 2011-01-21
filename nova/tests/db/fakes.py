@@ -58,6 +58,7 @@ def stub_out_db_instance_api(stubs):
             'project_id': values['project_id'],
             'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
             'instance_type': values['instance_type'],
+            'key_data': None,
             'memory_mb': type_data['memory_mb'],
             'mac_address': values['mac_address'],
             'vcpus': type_data['vcpus'],
@@ -68,6 +69,7 @@ def stub_out_db_instance_api(stubs):
     def fake_network_get_by_instance(context, instance_id):
         fields = {
             'bridge': 'xenbr0',
+            'injected': False
             }
         return FakeModel(fields)
 

@@ -161,6 +161,10 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
 
+def after_VM_create(vm_ref, vm_rec):
+    """Create read-only fields in the VM record."""
+    if 'is_control_domain' not in vm_rec:
+        vm_rec['is_control_domain'] = False
 
 def create_pbd(config, host_ref, sr_ref, attached):
     return _create_object('PBD', {
