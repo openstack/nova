@@ -48,7 +48,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-compute')
             if not self.service_is_up(service):
-                raise driver.WillNotSchedule("Host %s is not alive" % host)
+                raise driver.WillNotSchedule(_("Host %s is not alive") % host)
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
@@ -80,7 +80,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')
             if not self.service_is_up(service):
-                raise driver.WillNotSchedule("Host %s not available" % host)
+                raise driver.WillNotSchedule(_("Host %s not available") % host)
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow

@@ -165,7 +165,7 @@ To make things easier, we've provided a small image on the Rackspace CDN. Use th
     Resolving cblah2.cdn.cloudfiles.rackspacecloud.com... 208.111.196.6, 208.111.196.7
     Connecting to cblah2.cdn.cloudfiles.rackspacecloud.com|208.111.196.6|:80... connected.
     HTTP request sent, awaiting response... 200 OK
-    Length: 58520278 (56M) [appication/x-gzip]
+    Length: 58520278 (56M) [application/x-gzip]
     Saving to: `images.tgz'
 
     100%[======================================>] 58,520,278  14.1M/s   in 3.9s

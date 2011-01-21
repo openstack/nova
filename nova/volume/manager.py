@@ -84,7 +84,10 @@ class VolumeManager(manager.Manager):
         volumes = self.db.volume_get_all_by_host(ctxt, self.host)
         LOG.debug(_("Re-exporting %s volumes"), len(volumes))
         for volume in volumes:
-            self.driver.ensure_export(ctxt, volume)
+            if volume['status'] in ['available', 'in-use']:
+                self.driver.ensure_export(ctxt, volume)
+            else:
+                LOG.info(_("volume %s: skipping export"), volume_ref['name'])
 
     def create_volume(self, context, volume_id):
         """Creates and exports the volume."""
@@ -99,12 +102,18 @@ class VolumeManager(manager.Manager):
         #             before passing it to the driver.
         volume_ref['host'] = self.host
 
-        LOG.debug(_("volume %s: creating lv of size %sG"), volume_ref['name'],
-                  volume_ref['size'])
-        self.driver.create_volume(volume_ref)
+        try:
+            LOG.debug(_("volume %s: creating lv of size %sG"),
+                      volume_ref['name'],
+                      volume_ref['size'])
+            self.driver.create_volume(volume_ref)
 
-        LOG.debug(_("volume %s: creating export"), volume_ref['name'])
-        self.driver.create_export(context, volume_ref)
+            LOG.debug(_("volume %s: creating export"), volume_ref['name'])
+            self.driver.create_export(context, volume_ref)
+        except Exception as e:
+            self.db.volume_update(context,
+                                  volume_ref['id'], {'status': 'error'})
+            raise e
 
         now = datetime.datetime.utcnow()
         self.db.volume_update(context,
@@ -121,10 +130,18 @@ class VolumeManager(manager.Manager):
             raise exception.Error(_("Volume is still attached"))
         if volume_ref['host'] != self.host:
             raise exception.Error(_("Volume is not local to this node"))
-        LOG.debug(_("volume %s: removing export"), volume_ref['name'])
-        self.driver.remove_export(context, volume_ref)
-        LOG.debug(_("volume %s: deleting"), volume_ref['name'])
-        self.driver.delete_volume(volume_ref)
+
+        try:
+            LOG.debug(_("volume %s: removing export"), volume_ref['name'])
+            self.driver.remove_export(context, volume_ref)
+            LOG.debug(_("volume %s: deleting"), volume_ref['name'])
+            self.driver.delete_volume(volume_ref)
+        except Exception as e:
+            self.db.volume_update(context,
+                                  volume_ref['id'],
+                                  {'status': 'error_deleting'})
+            raise e
+
         self.db.volume_destroy(context, volume_id)
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])
         return True

@@ -60,12 +60,13 @@ For background on the core objects referenced in this section, see :doc:`../obje
 Deployment
 ----------
 
-.. todo:: talk about deployment scenarios
+For a starting multi-node architecture, you would start with two nodes - a cloud controller node and a compute node. The cloud controller node contains the nova- services plus the Nova database. The compute node installs all the nova-services but then refers to the database installation, which is hosted by the cloud controller node. Ensure that the nova.conf file is identical on each node. If you find performance issues not related to database reads or writes, but due to the messaging queue backing up, you could add additional messaging services (rabbitmq).
 
 .. toctree::
    :maxdepth: 1
 
    multi.node.install
+   dbsync
 
 
 Networking
