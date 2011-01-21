@@ -1380,5 +1380,3 @@ class IptablesFirewallDriver(FirewallDriver):
         network = db.project_get_network(context.get_admin_context(),
                                          instance['project_id'])
         return network['gateway']
-
-
