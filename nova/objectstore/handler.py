@@ -391,8 +391,8 @@ class ImagesResource(resource.Resource):
         image_location = get_argument(request, 'image_location', u'')
 
         image_path = os.path.join(FLAGS.images_path, image_id)
-        if not image_path.startswith(FLAGS.images_path) or \
-           os.path.exists(image_path):
+        if ((not image_path.startswith(FLAGS.images_path)) or
+                os.path.exists(image_path)):
             LOG.audit(_("Not authorized to upload image: invalid directory "
                       "%s"),
                       image_path, context=request.context)

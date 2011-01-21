@@ -31,7 +31,7 @@ If you're running on Ubuntu 10.04, you'll need to install Twisted and python-gfl
 
 ::
 
-    sudo add-get install python-software-properties
+    sudo apt-get install python-software-properties
     sudo add-apt-repository ppa:nova-core/trunk
     sudo apt-get update
     sudo apt-get install python-twisted python-gflags

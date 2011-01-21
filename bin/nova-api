@@ -36,6 +36,7 @@ gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
+from nova import version
 from nova import wsgi
 
 logging.basicConfig()
@@ -79,6 +80,8 @@ def run_app(paste_config_file):
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
+    LOG.audit(_("Starting nova-api node (version %s)"),
+              version.version_string_with_vcs())
     conf = wsgi.paste_config_file('nova-api.conf')
     if conf:
         run_app(conf)

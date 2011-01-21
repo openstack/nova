@@ -38,6 +38,7 @@ from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import version
 
 
 FLAGS = flags.FLAGS
@@ -156,7 +157,8 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.audit(_("Starting %s node"), topic)
+        logging.audit(_("Starting %s node (version %s)"), topic,
+                      version.version_string_with_vcs())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 

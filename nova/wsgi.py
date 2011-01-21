@@ -144,7 +144,7 @@ class Application(object):
         See the end of http://pythonpaste.org/webob/modules/dec.html
         for more info.
         """
-        raise NotImplementedError("You must implement __call__")
+        raise NotImplementedError(_("You must implement __call__"))
 
 
 class Middleware(Application):
