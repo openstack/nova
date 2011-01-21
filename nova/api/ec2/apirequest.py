@@ -95,7 +95,7 @@ class APIRequest(object):
         except AttributeError:
             controller = self.controller
             action = self.action
-            _error = _('Unsupported API request: controller = %(contorller)s,'
+            _error = _('Unsupported API request: controller = %(controller)s,'
                     ' action = %(action)s') % locals()
             LOG.exception(_error)
             # TODO: Raise custom exception, trap in apiserver,
