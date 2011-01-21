@@ -529,11 +529,18 @@ class CloudController(object):
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
-            volume_id = [ec2_id_to_id(x) for x in volume_id]
-        volumes = self.volume_api.get_all(context)
-        # NOTE(vish): volume_id is an optional list of volume ids to filter by.
-        volumes = [self._format_volume(context, v) for v in volumes
-                   if volume_id is None or v['id'] in volume_id]
+            volumes = []
+            for ec2_id in volume_id:
+                internal_id = ec2_id_to_id(ec2_id)
+                try:
+                    volume = self.volume_api.get(context, internal_id)
+                    volumes.append(volume)
+                except exception.NotFound:
+                    raise exception.NotFound("Volume %s could not be found"
+                                             % ec2_id)
+        else:
+            volumes = self.volume_api.get_all(context)
+        volumes = [self._format_volume(context, v) for v in volumes]
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
@@ -657,8 +664,15 @@ class CloudController(object):
         reservations = {}
         # NOTE(vish): instance_id is an optional list of ids to filter by
         if instance_id:
-            instance_id = [ec2_id_to_id(x) for x in instance_id]
-            instances = [self.compute_api.get(context, x) for x in instance_id]
+            instances = []
+            for ec2_id in instance_id:
+                internal_id = ec2_id_to_id(ec2_id)
+                try:
+                    instance = self.compute_api.get(context, internal_id)
+                    instances.append(instance)
+                except exception.NotFound:
+                    raise exception.NotFound("Instance %s could not be found"
+                                             % ec2_id)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
