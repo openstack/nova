@@ -19,6 +19,8 @@
 # that we need.
 #
 
+import gettext
+gettext.install('nova', unicode=1)
 import httplib
 import logging
 import logging.handlers
