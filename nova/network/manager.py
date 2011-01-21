@@ -92,7 +92,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 
-flags.DEFINE_bool('use_ipv6', True,
+flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
@@ -211,7 +211,7 @@ class NetworkManager(manager.Manager):
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug("Releasing IP %s", address, context=context)
+        LOG.debug(_("Releasing IP %s"), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:

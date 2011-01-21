@@ -777,7 +777,7 @@ def instance_get_by_id(context, instance_id):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -785,6 +785,7 @@ def instance_get_by_id(context, instance_id):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\

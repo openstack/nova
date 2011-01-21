@@ -41,6 +41,7 @@ class local_BuildDoc(BuildDoc):
             self.finalize_options()
             BuildDoc.run(self)
 
+
 class local_sdist(sdist):
     """Customized sdist hook - builds the ChangeLog file from VC first"""
 
@@ -57,17 +58,17 @@ class local_sdist(sdist):
                 changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
 
-nova_cmdclass= { 'sdist': local_sdist,
-                 'build_sphinx' : local_BuildDoc }
+nova_cmdclass = {'sdist': local_sdist,
+                 'build_sphinx': local_BuildDoc}
 
 try:
-  from babel.messages import frontend as babel
-  nova_cmdclass['compile_catalog'] = babel.compile_catalog
-  nova_cmdclass['extract_messages'] = babel.extract_messages
-  nova_cmdclass['init_catalog'] = babel.init_catalog
-  nova_cmdclass['update_catalog'] = babel.update_catalog
+    from babel.messages import frontend as babel
+    nova_cmdclass['compile_catalog'] = babel.compile_catalog
+    nova_cmdclass['extract_messages'] = babel.extract_messages
+    nova_cmdclass['init_catalog'] = babel.init_catalog
+    nova_cmdclass['update_catalog'] = babel.update_catalog
 except:
-  pass
+    pass
 
 setup(name='nova',
       version=version.canonical_version_string(),

@@ -47,7 +47,7 @@ flags.DEFINE_integer('iscsi_num_targets',
                     'Number of iscsi target ids per host')
 flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
-flags.DEFINE_string('iscsi_ip_prefix', '127.0',
+flags.DEFINE_string('iscsi_ip_prefix', '$my_ip',
                     'discover volumes on the ip that starts with this prefix')
 flags.DEFINE_string('rbd_pool', 'rbd',
                     'the rbd pool in which volumes are stored')
@@ -100,6 +100,14 @@ class VolumeDriver(object):
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
+        try:
+            self._try_execute("sudo lvdisplay %s/%s" %
+                              (FLAGS.volume_group,
+                               volume['name']))
+        except Exception as e:
+            # If the volume isn't present, then don't attempt to delete
+            return True
+
         self._try_execute("sudo lvremove -f %s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
@@ -218,8 +226,14 @@ class ISCSIDriver(VolumeDriver):
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
-        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping ensure_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._sync_exec("sudo ietadm --op new "
@@ -258,8 +272,23 @@ class ISCSIDriver(VolumeDriver):
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
-        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        try:
+            # ietadm show will exit with an error
+            # this export has already been removed
+            self._execute("sudo ietadm --op show --tid=%s " % iscsi_target)
+        except Exception as e:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "is presently exported for volume: %d"), volume['id'])
+            return
+
         self._execute("sudo ietadm --op delete --tid=%s "
                       "--lun=0" % iscsi_target)
         self._execute("sudo ietadm --op delete --tid=%s" %
@@ -285,7 +314,8 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v automatic" %
                       (iscsi_name, iscsi_portal))
-        return "/dev/iscsi/%s" % volume['name']
+        return "/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal,
+                                                           iscsi_name)
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""

@@ -59,7 +59,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate("The key_pair %s already exists"
+        raise exception.Duplicate(_("The key_pair %s already exists")
                                   % key_name)
     except exception.NotFound:
         pass
@@ -133,7 +133,7 @@ class CloudController(object):
         return result
 
     def _get_availability_zone_by_host(self, context, host):
-        services = db.service_get_all_by_host(context, host)
+        services = db.service_get_all_by_host(context.elevated(), host)
         if len(services) > 0:
             return services[0]['availability_zone']
         return 'unknown zone'
@@ -729,7 +729,7 @@ class CloudController(object):
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
                 and floating_ip_ref['fixed_ip']['instance']):
-                instance_id = floating_ip_ref['fixed_ip']['instance']['ec2_id']
+                instance_id = floating_ip_ref['fixed_ip']['instance']['id']
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
