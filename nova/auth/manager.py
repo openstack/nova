@@ -682,10 +682,9 @@ class AuthManager(object):
                 region, _sep, region_host = item.partition("=")
                 regions[region] = region_host
         else:
-            regions = {'nova': FLAGS.cc_host}
+            regions = {'nova': FLAGS.ec2_host}
         for region, host in regions.iteritems():
-            rc = self.__generate_rc(user.access,
-                                    user.secret,
+            rc = self.__generate_rc(user,
                                     pid,
                                     use_dmz,
                                     host)
@@ -722,30 +721,35 @@ class AuthManager(object):
         if project is None:
             project = user.id
         pid = Project.safe_id(project)
-        return self.__generate_rc(user.access, user.secret, pid, use_dmz)
+        return self.__generate_rc(user, pid, use_dmz)
 
     @staticmethod
-    def __generate_rc(access, secret, pid, use_dmz=True, host=None):
+    def __generate_rc(user, pid, use_dmz=True, host=None):
         """Generate rc file for user"""
         if use_dmz:
-            cc_host = FLAGS.cc_dmz
+            ec2_host = FLAGS.ec2_dmz_host
         else:
-            cc_host = FLAGS.cc_host
+            ec2_host = FLAGS.ec2_host
         # NOTE(vish): Always use the dmz since it is used from inside the
         #             instance
         s3_host = FLAGS.s3_dmz
         if host:
             s3_host = host
-            cc_host = host
+            ec2_host = host
         rc = open(FLAGS.credentials_template).read()
-        rc = rc % {'access': access,
+        rc = rc % {'access': user.access,
                    'project': pid,
-                   'secret': secret,
-                   'ec2': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
-                                            cc_host,
-                                            FLAGS.cc_port,
-                                            FLAGS.ec2_suffix),
+                   'secret': user.secret,
+                   'ec2': '%s://%s:%s%s' % (FLAGS.ec2_scheme,
+                                            ec2_host,
+                                            FLAGS.ec2_port,
+                                            FLAGS.ec2_path),
                    's3': 'http://%s:%s' % (s3_host, FLAGS.s3_port),
+                   'os': '%s://%s:%s%s' % (FLAGS.osapi_scheme,
+                                            ec2_host,
+                                            FLAGS.osapi_port,
+                                            FLAGS.osapi_path),
+                   'user': user.name,
                    'nova': FLAGS.ca_file,
                    'cert': FLAGS.credential_cert_file,
                    'key': FLAGS.credential_key_file}

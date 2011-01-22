@@ -20,7 +20,6 @@ Drivers for volumes.
 
 """
 
-import os
 import time
 
 from nova import exception
@@ -48,8 +47,10 @@ flags.DEFINE_integer('iscsi_num_targets',
                     'Number of iscsi target ids per host')
 flags.DEFINE_string('iscsi_target_prefix', 'iqn.2010-10.org.openstack:',
                     'prefix for iscsi volumes')
-flags.DEFINE_string('iscsi_ip_prefix', '127.0',
+flags.DEFINE_string('iscsi_ip_prefix', '$my_ip',
                     'discover volumes on the ip that starts with this prefix')
+flags.DEFINE_string('rbd_pool', 'rbd',
+                    'the rbd pool in which volumes are stored')
 
 
 class VolumeDriver(object):
@@ -80,7 +81,9 @@ class VolumeDriver(object):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        if not os.path.isdir("/dev/%s" % FLAGS.volume_group):
+        out, err = self._execute("sudo vgs --noheadings -o name")
+        volume_groups = out.split()
+        if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
@@ -97,6 +100,14 @@ class VolumeDriver(object):
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
+        try:
+            self._try_execute("sudo lvdisplay %s/%s" %
+                              (FLAGS.volume_group,
+                               volume['name']))
+        except Exception as e:
+            # If the volume isn't present, then don't attempt to delete
+            return True
+
         self._try_execute("sudo lvremove -f %s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
@@ -215,8 +226,14 @@ class ISCSIDriver(VolumeDriver):
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
-        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping ensure_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._sync_exec("sudo ietadm --op new "
@@ -255,8 +272,23 @@ class ISCSIDriver(VolumeDriver):
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
-        iscsi_target = self.db.volume_get_iscsi_target_num(context,
+        try:
+            iscsi_target = self.db.volume_get_iscsi_target_num(context,
                                                            volume['id'])
+        except exception.NotFound:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "provisioned for volume: %d"), volume['id'])
+            return
+
+        try:
+            # ietadm show will exit with an error
+            # this export has already been removed
+            self._execute("sudo ietadm --op show --tid=%s " % iscsi_target)
+        except Exception as e:
+            LOG.info(_("Skipping remove_export. No iscsi_target " +
+                       "is presently exported for volume: %d"), volume['id'])
+            return
+
         self._execute("sudo ietadm --op delete --tid=%s "
                       "--lun=0" % iscsi_target)
         self._execute("sudo ietadm --op delete --tid=%s" %
@@ -282,7 +314,8 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v automatic" %
                       (iscsi_name, iscsi_portal))
-        return "/dev/iscsi/%s" % volume['name']
+        return "/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal,
+                                                           iscsi_name)
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
@@ -313,3 +346,107 @@ class FakeISCSIDriver(ISCSIDriver):
         """Execute that simply logs the command."""
         LOG.debug(_("FAKE ISCSI: %s"), cmd)
         return (None, None)
+
+
+class RBDDriver(VolumeDriver):
+    """Implements RADOS block device (RBD) volume commands"""
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        (stdout, stderr) = self._execute("rados lspools")
+        pools = stdout.split("\n")
+        if not FLAGS.rbd_pool in pools:
+            raise exception.Error(_("rbd has no pool %s") %
+                                  FLAGS.rbd_pool)
+
+    def create_volume(self, volume):
+        """Creates a logical volume."""
+        if int(volume['size']) == 0:
+            size = 100
+        else:
+            size = int(volume['size']) * 1024
+        self._try_execute("rbd --pool %s --size %d create %s" %
+                          (FLAGS.rbd_pool,
+                           size,
+                           volume['name']))
+
+    def delete_volume(self, volume):
+        """Deletes a logical volume."""
+        self._try_execute("rbd --pool %s rm %s" %
+                          (FLAGS.rbd_pool,
+                           volume['name']))
+
+    def local_path(self, volume):
+        """Returns the path of the rbd volume."""
+        # This is the same as the remote path
+        # since qemu accesses it directly.
+        return self.discover_volume(volume)
+
+    def ensure_export(self, context, volume):
+        """Synchronously recreates an export for a logical volume."""
+        pass
+
+    def create_export(self, context, volume):
+        """Exports the volume"""
+        pass
+
+    def remove_export(self, context, volume):
+        """Removes an export for a logical volume"""
+        pass
+
+    def discover_volume(self, volume):
+        """Discover volume on a remote host"""
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host"""
+        pass
+
+
+class SheepdogDriver(VolumeDriver):
+    """Executes commands relating to Sheepdog Volumes"""
+
+    def check_for_setup_error(self):
+        """Returns an error if prerequisites aren't met"""
+        try:
+            (out, err) = self._execute("collie cluster info")
+            if not out.startswith('running'):
+                raise exception.Error(_("Sheepdog is not working: %s") % out)
+        except exception.ProcessExecutionError:
+            raise exception.Error(_("Sheepdog is not working"))
+
+    def create_volume(self, volume):
+        """Creates a sheepdog volume"""
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
+        self._try_execute("qemu-img create sheepdog:%s %s" %
+                          (volume['name'], sizestr))
+
+    def delete_volume(self, volume):
+        """Deletes a logical volume"""
+        self._try_execute("collie vdi delete %s" % volume['name'])
+
+    def local_path(self, volume):
+        return "sheepdog:%s" % volume['name']
+
+    def ensure_export(self, context, volume):
+        """Safely and synchronously recreates an export for a logical volume"""
+        pass
+
+    def create_export(self, context, volume):
+        """Exports the volume"""
+        pass
+
+    def remove_export(self, context, volume):
+        """Removes an export for a logical volume"""
+        pass
+
+    def discover_volume(self, volume):
+        """Discover volume on a remote host"""
+        return "sheepdog:%s" % volume['name']
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host"""
+        pass

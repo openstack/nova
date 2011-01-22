@@ -19,9 +19,16 @@
 import os
 import random
 import sys
-import time
 import unittest
 import zipfile
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
 
 from nova import adminclient
 from smoketests import flags
@@ -36,7 +43,7 @@ flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 # TODO(devamcar): Use random tempfile
 ZIP_FILENAME = '/tmp/nova-me-x509.zip'
 
-TEST_PREFIX = 'test%s' % int(random.random()*1000000)
+TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_USERNAME = '%suser' % TEST_PREFIX
 TEST_PROJECTNAME = '%sproject' % TEST_PREFIX
 
@@ -89,4 +96,3 @@ class UserTests(AdminSmokeTestCase):
 if __name__ == "__main__":
     suites = {'user': unittest.makeSuite(UserTests)}
     sys.exit(base.run_tests(suites))
-

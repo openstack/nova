@@ -32,8 +32,9 @@ from nova import utils
 from nova.auth import manager
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.compute')
+FLAGS = flags.FLAGS
+flags.DECLARE('stub_network', 'nova.compute.manager')
 
 
 class ComputeTestCase(test.TestCase):
@@ -75,7 +76,7 @@ class ComputeTestCase(test.TestCase):
             ref = self.compute_api.create(self.context,
                 FLAGS.default_instance_type, None, **instance)
             try:
-                self.assertNotEqual(ref[0].display_name, None)
+                self.assertNotEqual(ref[0]['display_name'], None)
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
 
@@ -86,10 +87,14 @@ class ComputeTestCase(test.TestCase):
                   'user_id': self.user.id,
                   'project_id': self.project.id}
         group = db.security_group_create(self.context, values)
-        ref = self.compute_api.create(self.context,
-            FLAGS.default_instance_type, None, security_group=['default'])
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['default'])
         try:
-            self.assertEqual(len(ref[0]['security_groups']), 1)
+            self.assertEqual(len(db.security_group_get_by_instance(
+                self.context, ref[0]['id'])), 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['id'])
@@ -151,6 +156,13 @@ class ComputeTestCase(test.TestCase):
         self.compute.reboot_instance(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_set_admin_password(self):
+        """Ensure instance can have its admin password set"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.set_admin_password(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
@@ -166,6 +178,16 @@ class ComputeTestCase(test.TestCase):
 
         console = self.compute.get_console_output(self.context,
                                                         instance_id)
+        self.assert_(console)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_ajax_console(self):
+        """Make sure we can get console output from instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_ajax_console(self.context,
+                                                instance_id)
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 

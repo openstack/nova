@@ -1,4 +1,4 @@
-#!/bin/sh
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -15,27 +15,24 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+"""Database setup and migration commands."""
 
-# NOTE(vish): This script helps udev create  common names for discovered iscsi
-#             volumes under /dev/iscsi.  To use it, create /dev/iscsi and add
-#             a file to /etc/udev/rules.d like so:
-#             mkdir /dev/iscsi
-#             echo 'KERNEL=="sd*", BUS=="scsi", PROGRAM="/path/to/iscsidev.sh
-#             %b",SYMLINK+="iscsi/%c%n"' > /etc/udev/rules.d/55-openiscsi.rules
+from nova import flags
+from nova import utils
 
-BUS=${1}
-HOST=${BUS%%:*}
+FLAGS = flags.FLAGS
+flags.DECLARE('db_backend', 'nova.db.api')
 
-if [ ! -e /sys/class/iscsi_host ]; then
-    exit 1
-fi
 
-file="/sys/class/iscsi_host/host${HOST}/device/session*/iscsi_session*/session*/targetname"
+IMPL = utils.LazyPluggable(FLAGS['db_backend'],
+                           sqlalchemy='nova.db.sqlalchemy.migration')
 
-target_name=$(cat ${file})
 
-if [ -z "${target_name}" ]; then
-   exit 1
-fi
+def db_sync(version=None):
+    """Migrate the database to `version` or the most recent version."""
+    return IMPL.db_sync(version=version)
 
-echo "${target_name##*:}"
+
+def db_version():
+    """Display the current database version."""
+    return IMPL.db_version()

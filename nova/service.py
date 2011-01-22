@@ -38,7 +38,7 @@ from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
-from nova.db.sqlalchemy import models
+from nova import version
 
 
 FLAGS = flags.FLAGS
@@ -114,11 +114,13 @@ class Service(object):
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
+        zone = FLAGS.node_availability_zone
         service_ref = db.service_create(context,
                                         {'host': self.host,
                                          'binary': self.binary,
                                          'topic': self.topic,
-                                         'report_count': 0})
+                                         'report_count': 0,
+                                         'availability_zone': zone})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
@@ -155,7 +157,8 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.audit(_("Starting %s node"), topic)
+        logging.audit(_("Starting %s node (version %s)"), topic,
+                      version.version_string_with_vcs())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -207,15 +210,6 @@ class Service(object):
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
-
-                try:
-                    models.register_models()
-                except OperationalError:
-                    logging.exception(_("Data store %s is unreachable."
-                                        " Trying again in %d seconds.") %
-                                      (FLAGS.sql_connection,
-                                       FLAGS.sql_retry_interval))
-                    time.sleep(FLAGS.sql_retry_interval)
 
 
 def serve(*services):

@@ -1,7 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
-# All Rights Reserved.
+#    Copyright (c) 2011 Citrix Systems, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,25 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
-import stubout
-
-from nova.api.openstack import sharedipgroups
-
-
-class SharedIpGroupsTest(unittest.TestCase):
-    def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-
-    def test_get_shared_ip_groups(self):
-        pass
-
-    def test_create_shared_ip_group(self):
-        pass
-
-    def test_delete_shared_ip_group(self):
-        pass
+"""
+:mod:`glance` -- Stubs for Glance
+=================================
+"""

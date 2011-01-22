@@ -46,10 +46,11 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
-flags.DEFINE_string('routing_source_ip', utils.get_my_ip(),
+flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
+
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
 flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
@@ -60,7 +61,7 @@ def metadata_forward():
     """Create forwarding rule for metadata"""
     _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
              "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.cc_dmz, FLAGS.cc_port))
+             "--to-destination %s:%s" % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
 
 
 def init_host():
@@ -196,6 +197,10 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                  net_attrs['gateway'],
                  net_attrs['broadcast'],
                  net_attrs['netmask']))
+        if(FLAGS.use_ipv6):
+            _execute("sudo ifconfig %s add %s up" % \
+                     (bridge,
+                      net_attrs['cidr_v6']))
     else:
         _execute("sudo ifconfig %s up" % bridge)
     if FLAGS.use_nova_chains:
@@ -209,6 +214,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
 
     _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
     _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
+    _execute("sudo iptables -N nova-local", check_exit_code=False)
+    _confirm_rule("FORWARD", "-j nova-local")
 
 
 def get_dhcp_hosts(context, network_id):
@@ -258,6 +265,50 @@ def update_dhcp(context, network_id):
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
     _execute(command, addl_env=env)
+
+
+def update_ra(context, network_id):
+    network_ref = db.network_get(context, network_id)
+
+    conffile = _ra_file(network_ref['bridge'], 'conf')
+    with open(conffile, 'w') as f:
+        conf_str = """
+interface %s
+{
+   AdvSendAdvert on;
+   MinRtrAdvInterval 3;
+   MaxRtrAdvInterval 10;
+   prefix %s
+   {
+        AdvOnLink on;
+        AdvAutonomous on;
+   };
+};
+""" % (network_ref['bridge'], network_ref['cidr_v6'])
+        f.write(conf_str)
+
+    # Make sure radvd can actually read it (it setuid()s to "nobody")
+    os.chmod(conffile, 0644)
+
+    pid = _ra_pid_for(network_ref['bridge'])
+
+    # if radvd is already running, then tell it to reload
+    if pid:
+        out, _err = _execute('cat /proc/%d/cmdline'
+                             % pid, check_exit_code=False)
+        if conffile in out:
+            try:
+                _execute('sudo kill -HUP %d' % pid)
+                return
+            except Exception as exc:  # pylint: disable-msg=W0703
+                LOG.debug(_("Hupping radvd threw %s"), exc)
+        else:
+            LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
+    command = _ra_cmd(network_ref)
+    _execute(command)
+    db.network_update(context, network_id,
+                      {"ra_server":
+                       utils.get_my_linklocal(network_ref['bridge'])})
 
 
 def _host_dhcp(fixed_ip_ref):
@@ -321,6 +372,15 @@ def _dnsmasq_cmd(net):
     return ''.join(cmd)
 
 
+def _ra_cmd(net):
+    """Builds radvd command"""
+    cmd = ['sudo -E radvd',
+#           ' -u nobody',
+           ' -C %s' % _ra_file(net['bridge'], 'conf'),
+           ' -p %s' % _ra_file(net['bridge'], 'pid')]
+    return ''.join(cmd)
+
+
 def _stop_dnsmasq(network):
     """Stops the dnsmasq instance for a given network"""
     pid = _dnsmasq_pid_for(network)
@@ -342,6 +402,16 @@ def _dhcp_file(bridge, kind):
                                               kind))
 
 
+def _ra_file(bridge, kind):
+    """Return path to a pid or conf file for a bridge"""
+
+    if not os.path.exists(FLAGS.networks_path):
+        os.makedirs(FLAGS.networks_path)
+    return os.path.abspath("%s/nova-ra-%s.%s" % (FLAGS.networks_path,
+                                              bridge,
+                                              kind))
+
+
 def _dnsmasq_pid_for(bridge):
     """Returns the pid for prior dnsmasq instance for a bridge
 
@@ -351,6 +421,21 @@ def _dnsmasq_pid_for(bridge):
     """
 
     pid_file = _dhcp_file(bridge, 'pid')
+
+    if os.path.exists(pid_file):
+        with open(pid_file, 'r') as f:
+            return int(f.read())
+
+
+def _ra_pid_for(bridge):
+    """Returns the pid for prior radvd instance for a bridge
+
+    Returns None if no pid file exists
+
+    If machine has rebooted pid might be incorrect (caller should check)
+    """
+
+    pid_file = _ra_file(bridge, 'pid')
 
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:

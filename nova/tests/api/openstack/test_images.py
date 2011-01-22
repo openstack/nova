@@ -172,6 +172,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
+         'imageId': '23g2ogk23k4hhkk4k42l',
          'name': 'public image #1',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
@@ -181,6 +182,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'status': 'available',
          'image_type': 'kernel'},
         {'id': 'slkduhfas73kkaskgdas',
+         'imageId': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
@@ -208,7 +210,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         fixture_index = [dict(id=f['id'], name=f['name']) for f
@@ -220,7 +222,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         def _is_equivalent_subset(x, y):

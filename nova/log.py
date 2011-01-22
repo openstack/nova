@@ -34,26 +34,21 @@ import logging.handlers
 import traceback
 
 from nova import flags
-# TODO(todd): fix after version.py merge
-# from nova import version
+from nova import version
 
 
 FLAGS = flags.FLAGS
 
-# TODO(todd): fix after version.py merge
-# '(%(name)s %(nova_version)s): %(levelname)s '
 flags.DEFINE_string('logging_context_format_string',
-                    '(%(name)s): %(levelname)s '
+                    '%(asctime)s %(levelname)s %(name)s '
                     '[%(request_id)s %(user)s '
                     '%(project)s] %(message)s',
-                    'format string to use for log messages')
+                    'format string to use for log messages with context')
 
-# TODO(todd): fix after version.py merge
-# '(%(name)s %(nova_version)s): %(levelname)s [N/A] '
 flags.DEFINE_string('logging_default_format_string',
-                    '(%(name)s): %(levelname)s [N/A] '
+                    '%(asctime)s %(levelname)s %(name)s [-] '
                     '%(message)s',
-                    'format string to use for log messages')
+                    'format string to use for log messages without context')
 
 flags.DEFINE_string('logging_debug_format_suffix',
                     'from %(processName)s (pid=%(process)d) %(funcName)s'
@@ -121,6 +116,8 @@ def basicConfig():
         handler.setFormatter(_formatter)
     if FLAGS.verbose:
         logging.root.setLevel(logging.DEBUG)
+    else:
+        logging.root.setLevel(logging.INFO)
     if FLAGS.use_syslog:
         syslog = SysLogHandler(address='/dev/log')
         syslog.setFormatter(_formatter)
@@ -162,8 +159,7 @@ class NovaLogger(logging.Logger):
             extra = {}
         if context:
             extra.update(_dictify_context(context))
-        # TODO(todd): fix after version.py merge
-        #extra.update({"nova_version": version.string_with_vcs()})
+        extra.update({"nova_version": version.version_string_with_vcs()})
         logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):

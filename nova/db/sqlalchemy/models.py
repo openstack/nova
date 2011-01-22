@@ -90,53 +90,14 @@ class NovaBase(object):
             setattr(self, k, v)
 
     def iteritems(self):
-        """Make the model object behave like a dict"""
-        return iter(self)
+        """Make the model object behave like a dict.
 
-
-# TODO(vish): Store images in the database instead of file system
-#class Image(BASE, NovaBase):
-#    """Represents an image in the datastore"""
-#    __tablename__ = 'images'
-#    id = Column(Integer, primary_key=True)
-#    ec2_id = Column(String(12), unique=True)
-#    user_id = Column(String(255))
-#    project_id = Column(String(255))
-#    image_type = Column(String(255))
-#    public = Column(Boolean, default=False)
-#    state = Column(String(255))
-#    location = Column(String(255))
-#    arch = Column(String(255))
-#    default_kernel_id = Column(String(255))
-#    default_ramdisk_id = Column(String(255))
-#
-#    @validates('image_type')
-#    def validate_image_type(self, key, image_type):
-#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-#
-#    @validates('state')
-#    def validate_state(self, key, state):
-#        assert(state in ['available', 'pending', 'disabled'])
-#
-#    @validates('default_kernel_id')
-#    def validate_kernel_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#    @validates('default_ramdisk_id')
-#    def validate_ramdisk_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#
-# TODO(vish): To make this into its own table, we need a good place to
-#             create the host entries. In config somwhere? Or the first
-#             time any object sets host? This only becomes particularly
-#             important if we need to store per-host data.
-#class Host(BASE, NovaBase):
-#    """Represents a host where services are running"""
-#    __tablename__ = 'hosts'
-#    id = Column(String(255), primary_key=True)
+        Includes attributes from joins."""
+        local = dict(self)
+        joined = dict([(k, v) for k, v in self.__dict__.iteritems()
+                      if not k[0] == '_'])
+        local.update(joined)
+        return local.iteritems()
 
 
 class Service(BASE, NovaBase):
@@ -149,6 +110,7 @@ class Service(BASE, NovaBase):
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
+    availability_zone = Column(String(255), default='nova')
 
 
 class Certificate(BASE, NovaBase):
@@ -168,7 +130,7 @@ class Instance(BASE, NovaBase):
 
     @property
     def name(self):
-        return "instance-%08x" % self.id
+        return FLAGS.instance_name_template % self.id
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))
@@ -255,7 +217,7 @@ class Volume(BASE, NovaBase):
 
     @property
     def name(self):
-        return "volume-%08x" % self.id
+        return FLAGS.volume_name_template % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -410,6 +372,10 @@ class Network(BASE, NovaBase):
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
+    cidr_v6 = Column(String(255), unique=True)
+
+    ra_server = Column(String(255))
+
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -540,6 +506,31 @@ class FloatingIp(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
+class ConsolePool(BASE, NovaBase):
+    """Represents pool of consoles on the same physical node."""
+    __tablename__ = 'console_pools'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    username = Column(String(255))
+    password = Column(String(255))
+    console_type = Column(String(255))
+    public_hostname = Column(String(255))
+    host = Column(String(255))
+    compute_host = Column(String(255))
+
+
+class Console(BASE, NovaBase):
+    """Represents a console session for an instance."""
+    __tablename__ = 'consoles'
+    id = Column(Integer, primary_key=True)
+    instance_name = Column(String(255))
+    instance_id = Column(Integer)
+    password = Column(String(255))
+    port = Column(Integer, nullable=True)
+    pool_id = Column(Integer, ForeignKey('console_pools.id'))
+    pool = relationship(ConsolePool, backref=backref('consoles'))
+
+
 def register_models():
     """Register Models and create metadata.
 
@@ -552,7 +543,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate)  # , Image, Host
+              Project, Certificate, ConsolePool, Console)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
