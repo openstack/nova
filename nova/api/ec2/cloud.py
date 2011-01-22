@@ -536,7 +536,7 @@ class CloudController(object):
                     volume = self.volume_api.get(context, internal_id)
                     volumes.append(volume)
                 except exception.NotFound:
-                    raise exception.NotFound("Volume %s could not be found"
+                    raise exception.NotFound(_("Volume %s not found")
                                              % ec2_id)
         else:
             volumes = self.volume_api.get_all(context)
@@ -671,7 +671,7 @@ class CloudController(object):
                     instance = self.compute_api.get(context, internal_id)
                     instances.append(instance)
                 except exception.NotFound:
-                    raise exception.NotFound("Instance %s could not be found"
+                    raise exception.NotFound(_("Instance %s not found")
                                              % ec2_id)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
