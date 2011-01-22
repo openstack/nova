@@ -87,6 +87,17 @@ class CloudTestCase(test.TestCase):
         # NOTE(vish): create depends on pool, so just call helper directly
         return cloud._gen_key(self.context, self.context.user.id, name)
 
+    def test_describe_regions(self):
+        """Makes sure describe regions runs without raising an exception"""
+        result = self.cloud.describe_regions(self.context)
+        self.assertEqual(len(result['regionInfo']), 1)
+        regions = FLAGS.region_list
+        FLAGS.region_list = ["one=test_host1", "two=test_host2"]
+        result = self.cloud.describe_regions(self.context)
+        print result
+        self.assertEqual(len(result['regionInfo']), 2)
+        regions = FLAGS.region_list
+
     def test_describe_addresses(self):
         """Makes sure describe addresses runs without raising an exception"""
         address = "10.10.10.10"
