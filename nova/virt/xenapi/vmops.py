@@ -254,6 +254,12 @@ class VMOps(object):
 
     def _shutdown(self, instance, vm):
         """Shutdown an instance """
+        state = self.get_info(instance['name'])['state']
+        if state == power_state.SHUTDOWN:
+            LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
+                     locals())
+            return
+
         try:
             task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
             self._session.wait_for_task(instance.id, task)
