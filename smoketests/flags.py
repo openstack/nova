@@ -36,4 +36,4 @@ DEFINE_bool = DEFINE_bool
 
 DEFINE_string('region', 'nova', 'Region to use')
 DEFINE_string('test_image', 'ami-tty', 'Image to use for launch tests')
-DEFINE_bool('use_ipv6', True, 'use the ipv6 or not')
+DEFINE_bool('use_ipv6', False, 'use the ipv6 or not')
