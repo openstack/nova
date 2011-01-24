@@ -585,11 +585,11 @@ class LdapDriver(object):
         else:
             return None
 
-    @staticmethod
-    def __dn_to_uid(dn):
+    def __dn_to_uid(self,dn):
         """Convert user dn to uid"""
-        return dn.split(',')[0].split('=')[1]
-
+        query = '(objectclass=novaUser)'
+        user = self.__find_object(dn,query)
+        return user[FLAGS.ldap_user_id_attribute][0]
 
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
