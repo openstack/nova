@@ -22,6 +22,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 import os
 import pickle
 import re
+import time
 import urllib
 from xml.dom import minidom
 
@@ -589,6 +590,27 @@ def find_sr(session):
     return None
 
 
+def remap_vbd_dev(dev):
+    """Return the appropriate location for a plugged-in VBD device
+
+    Ubuntu Maverick moved xvd? -> sd?. This is considered a bug and will be
+    fixed in future versions:
+        https://bugs.launchpad.net/ubuntu/+source/linux/+bug/684875
+
+    For now, we work around it by just doing a string replace.
+    """
+    # NOTE(sirp): This hack can go away when we pull support for Maverick
+    should_remap = FLAGS.xenapi_remap_vbd_dev
+    if not should_remap:
+        return dev
+
+    old_prefix = 'xvd'
+    new_prefix = FLAGS.xenapi_remap_vbd_dev_prefix
+    remapped_dev = dev.replace(old_prefix, new_prefix)
+
+    return remapped_dev
+
+
 def with_vdi_attached_here(session, vdi, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
@@ -611,7 +633,13 @@ def with_vdi_attached_here(session, vdi, read_only, f):
         LOG.debug(_('Plugging VBD %s ... '), vbd)
         session.get_xenapi().VBD.plug(vbd)
         LOG.debug(_('Plugging VBD %s done.'), vbd)
-        return f(session.get_xenapi().VBD.get_device(vbd))
+        orig_dev = session.get_xenapi().VBD.get_device(vbd)
+        LOG.debug(_('VBD %s plugged as %s'), vbd, orig_dev)
+        dev = remap_vbd_dev(orig_dev)
+        if dev != orig_dev:
+            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+                        'remapping to %(dev)s') % locals())
+        return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
         vbd_unplug_with_retry(session, vbd)
@@ -624,6 +652,7 @@ def vbd_unplug_with_retry(session, vbd):
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
     should be dead."""
+    # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
             session.get_xenapi().VBD.unplug(vbd)

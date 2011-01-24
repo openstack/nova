@@ -59,7 +59,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate("The key_pair %s already exists"
+        raise exception.Duplicate(_("The key_pair %s already exists")
                                   % key_name)
     except exception.NotFound:
         pass
@@ -133,7 +133,7 @@ class CloudController(object):
         return result
 
     def _get_availability_zone_by_host(self, context, host):
-        services = db.service_get_all_by_host(context, host)
+        services = db.service_get_all_by_host(context.elevated(), host)
         if len(services) > 0:
             return services[0]['availability_zone']
         return 'unknown zone'
@@ -252,18 +252,18 @@ class CloudController(object):
             regions = []
             for region in FLAGS.region_list:
                 name, _sep, host = region.partition('=')
-                endpoint = '%s://%s:%s%s' % (FLAGS.ec2_prefix,
+                endpoint = '%s://%s:%s%s' % (FLAGS.ec2_scheme,
                                              host,
                                              FLAGS.ec2_port,
-                                             FLAGS.ec2_suffix)
+                                             FLAGS.ec2_path)
                 regions.append({'regionName': name,
                                 'regionEndpoint': endpoint})
         else:
             regions = [{'regionName': 'nova',
-                        'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_prefix,
+                        'regionEndpoint': '%s://%s:%s%s' % (FLAGS.ec2_scheme,
                                                             FLAGS.ec2_host,
                                                             FLAGS.ec2_port,
-                                                            FLAGS.ec2_suffix)}]
+                                                            FLAGS.ec2_path)}]
         return {'regionInfo': regions}
 
     def describe_snapshots(self,
