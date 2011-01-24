@@ -36,9 +36,9 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
-from nova.compute import disk
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
 from nova.virt import conn_common

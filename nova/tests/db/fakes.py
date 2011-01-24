@@ -79,7 +79,8 @@ def stub_out_db_network_api(stubs, injected = False):
             'netmask': '255.255.255.0',
             'gateway': '10.0.0.1',
             'broadcast': '10.0.0.255',
-            'dns': '10.0.0.2'
+            'dns': '10.0.0.2',
+            'ra_server': None
             })
 
     def fake_network_get_by_instance(context, instance_id):
