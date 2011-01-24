@@ -40,15 +40,15 @@ from nova import version
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('logging_context_format_string',
-                    '(%(name)s %(nova_version)s): %(levelname)s '
+                    '%(asctime)s %(levelname)s %(name)s '
                     '[%(request_id)s %(user)s '
                     '%(project)s] %(message)s',
-                    'format string to use for log messages')
+                    'format string to use for log messages with context')
 
 flags.DEFINE_string('logging_default_format_string',
-                    '(%(name)s %(nova_version)s): %(levelname)s [N/A] '
+                    '%(asctime)s %(levelname)s %(name)s [-] '
                     '%(message)s',
-                    'format string to use for log messages')
+                    'format string to use for log messages without context')
 
 flags.DEFINE_string('logging_debug_format_suffix',
                     'from %(processName)s (pid=%(process)d) %(funcName)s'

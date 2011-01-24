@@ -27,4 +27,5 @@ PasteDeploy
 paste
 sqlalchemy-migrate
 netaddr
+sphinx
 glance
