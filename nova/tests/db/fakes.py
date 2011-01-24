@@ -23,6 +23,7 @@ from nova import db
 from nova import utils
 from nova.compute import instance_types
 
+
 class FakeModel(object):
     """ Stubs out for model """
     def __init__(self, values):
@@ -36,6 +37,7 @@ class FakeModel(object):
             return self.values[key]
         else:
             raise NotImplementedError()
+
 
 def stub_out_db_instance_api(stubs):
     """ Stubs out the db API for creating Instances """
@@ -67,12 +69,12 @@ def stub_out_db_instance_api(stubs):
 
     stubs.Set(db, 'instance_create', fake_instance_create)
 
-def stub_out_db_network_api(stubs, injected = False):
+
+def stub_out_db_network_api(stubs, injected=False):
     """Stubs out the db API for retrieving networks"""
     network_fields = {
-            'bridge': 'xenbr0',
-            'injected': injected
-            }
+        'bridge': 'xenbr0',
+        'injected': injected}
 
     if injected:
         network_fields.update({
@@ -80,8 +82,7 @@ def stub_out_db_network_api(stubs, injected = False):
             'gateway': '10.0.0.1',
             'broadcast': '10.0.0.255',
             'dns': '10.0.0.2',
-            'ra_server': None
-            })
+            'ra_server': None})
 
     def fake_network_get_by_instance(context, instance_id):
         return FakeModel(network_fields)
@@ -90,5 +91,5 @@ def stub_out_db_network_api(stubs, injected = False):
         return '10.0.0.3'
 
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
-    stubs.Set(db, 'instance_get_fixed_address', fake_instance_get_fixed_address)
-
+    stubs.Set(db, 'instance_get_fixed_address',
+        fake_instance_get_fixed_address)

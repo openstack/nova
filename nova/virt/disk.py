@@ -154,6 +154,7 @@ def _allocate_device():
 def _free_device(device):
     _DEVICES.append(device)
 
+
 def inject_data_into_fs(fs, key, net, execute):
     """Injects data into a filesystem already mounted by the caller.
     Virt connections can call this directly if they mount their fs
@@ -163,6 +164,7 @@ def inject_data_into_fs(fs, key, net, execute):
         _inject_key_into_fs(key, fs, execute=execute)
     if net:
         _inject_net_into_fs(net, fs, execute=execute)
+
 
 def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.

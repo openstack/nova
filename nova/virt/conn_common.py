@@ -27,7 +27,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('injected_network_template',
                     utils.abspath('virt/interfaces.template'),
                     'Template file for injected network')
-                    
+
+
 def get_injectables(inst):
     key = str(inst['key_data'])
     net = None

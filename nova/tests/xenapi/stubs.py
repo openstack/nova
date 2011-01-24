@@ -173,19 +173,19 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_get_VIFs(self, session_ref, vm_ref):
         return (['0', '1', '2'])
-            
+
     def VIF_get_device(self, session_ref, vif_ref):
         return ('1', '0', '2')[int(vif_ref)]
-    
+
     def VIF_get_MAC(self, session_ref, vif_ref):
         return (
             '11:22:2a:b3:CC:dd',
             '22:33:2a:b3:CC:dd',
-            '44:44:2a:b3:CC:dd'
-            )[int(vif_ref)]
-            
+            '44:44:2a:b3:CC:dd')[int(vif_ref)]
+
     def VM_add_to_xenstore_data(self, session_ref, vm_ref, key, value):
         fake.VM_add_to_xenstore_data(vm_ref, key, value)
+
 
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """

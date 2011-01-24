@@ -148,15 +148,18 @@ def create_vbd(vm_ref, vdi_ref):
     after_VBD_create(vbd_ref, vbd_rec)
     return vbd_ref
 
+
 def VM_get_xenstore_data(vm_ref):
     return _db_content['VM'][vm_ref].get('xenstore_data', '')
-    
+
+
 def VM_add_to_xenstore_data(vm_ref, key, value):
     db_ref = _db_content['VM'][vm_ref]
     if not 'xenstore_data' in db_ref:
         db_ref['xenstore_data'] = {}
     db_ref['xenstore_data'][key] = value
-    
+
+
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM to VBD when VBD is
     created."""
@@ -169,10 +172,12 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
 
+
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
     if 'is_control_domain' not in vm_rec:
         vm_rec['is_control_domain'] = False
+
 
 def create_pbd(config, host_ref, sr_ref, attached):
     return _create_object('PBD', {

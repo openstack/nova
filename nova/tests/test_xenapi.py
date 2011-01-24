@@ -213,7 +213,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
-    def check_vm_record(self, conn, check_injection = False):
+    def check_vm_record(self, conn, check_injection=False):
         instances = conn.list_instances()
         self.assertEquals(instances, [1])
 
@@ -244,13 +244,13 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Check that the VM is running according to XenAPI.
         self.assertEquals(vm['power_state'], 'Running')
-        
+
         if check_injection:
             xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
             key_prefix = 'vm-data/vif/22_33_2A_B3_CC_DD/tcpip/'
             tcpip_data = dict([(k.replace(key_prefix, ''), v)
                 for k, v in xenstore_data.iteritems()
-                if k.startswith(key_prefix) ])
+                if k.startswith(key_prefix)])
 
             self.assertEquals(tcpip_data, {
                 'BroadcastAddress/data/0': '10.0.0.255',
@@ -270,11 +270,10 @@ class XenAPIVMTestCase(test.TestCase):
                 'NameServer/type': 'string',
                 'SubnetMask/data/0': '255.255.255.0',
                 'SubnetMask/name': 'SubnetMask',
-                'SubnetMask/type': 'multi_sz'
-             })
+                'SubnetMask/type': 'multi_sz'})
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-        check_injection = False):
+        check_injection=False):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
                   'id': 1,
@@ -289,7 +288,7 @@ class XenAPIVMTestCase(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
         conn.spawn(instance)
-        self.check_vm_record(conn, check_injection = check_injection)
+        self.check_vm_record(conn, check_injection=check_injection)
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'
@@ -309,9 +308,9 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_spawn_netinject(self):
         FLAGS.xenapi_image_service = 'glance'
-        db_fakes.stub_out_db_network_api(self.stubs, injected = True)
-        self._test_spawn(1, 2, 3, check_injection = True)
-        
+        db_fakes.stub_out_db_network_api(self.stubs, injected=True)
+        self._test_spawn(1, 2, 3, check_injection=True)
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)
