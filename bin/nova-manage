@@ -473,9 +473,12 @@ class NetworkCommands(object):
             fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
-                                    fixed_range, int(num_networks),
-                                    int(network_size), int(vlan_start),
-                                    int(vpn_start), fixed_range_v6)
+                                    cidr=fixed_range,
+                                    num_networks=int(num_networks),
+                                    network_size=int(network_size),
+                                    vlan_start=int(vlan_start),
+                                    vpn_start=int(vpn_start),
+                                    cidr_v6=fixed_range_v6)
 
 
 class ServiceCommands(object):
