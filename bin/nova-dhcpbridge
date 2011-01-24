@@ -121,7 +121,7 @@ def main():
         ip = argv[3]
         hostname = argv[4]
         msg = _("Called %(action)s for mac %(mac)s with ip %(ip)s and"
-				" hostname %(hostname)s on interface %(interface)s") % locals()
+                " hostname %(hostname)s on interface %(interface)s") % locals()
         LOG.debug(msg)
         globals()[action + '_lease'](mac, ip, hostname, interface)
     else:
