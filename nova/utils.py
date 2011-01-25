@@ -138,7 +138,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        LOG.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % obj.returncode)
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -214,9 +214,11 @@ def  get_my_linklocal(interface):
         else:
             return 'fe00::'
     except IndexError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+        LOG.warn(_("Couldn't get Link Local IP of %(interface)s :%(ex)s")
+                % locals())
     except ProcessExecutionError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
+        LOG.warn(_("Couldn't get Link Local IP of %(interface)s :%(ex)s")
+                % locals())
     except:
         return 'fe00::'
 

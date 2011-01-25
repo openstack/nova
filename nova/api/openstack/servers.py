@@ -133,9 +133,9 @@ class Controller(wsgi.Controller):
             if image_id in mapping:
                 return mapping[image_id]
 
-        raise exception.NotFound(
-            _("No entry for image '%s' in mapping file '%s'") %
-                (image_id, mapping_filename))
+        msg = _("No entry for image '%(image_id)s'"
+                " in mapping file '%(mapping_filename)s'") % locals()
+        raise exception.NotFound(msg)
 
     def create(self, req):
         """ Creates a new server for a given user """

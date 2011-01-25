@@ -83,7 +83,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
+flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
@@ -198,8 +198,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s leased to bad"
+                    " mac %(inst_addr)s vs %(mac)s") % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -211,15 +212,16 @@ class NetworkManager(manager.Manager):
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug("Releasing IP %s", address, context=context)
+        LOG.debug(_("Releasing IP %s"), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s released from"
+                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
         if not fixed_ip_ref['leased']:
             LOG.warn(_("IP %s released that was not leased"), address,
                      context=context)

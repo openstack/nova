@@ -180,7 +180,7 @@ class S3(ErrorHandlingResource):
     def render_GET(self, request):  # pylint: disable-msg=R0201
         """Renders the GET request for a list of buckets as XML"""
         LOG.debug(_('List of buckets requested'), context=request.context)
-        buckets = [b for b in bucket.Bucket.all() \
+        buckets = [b for b in bucket.Bucket.all()
                    if b.is_authorized(request.context)]
 
         render_xml(request, {"ListAllMyBucketsResult": {
@@ -268,12 +268,14 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        LOG.debug(_("Getting object: %s / %s"), self.bucket.name, self.name)
+        bname = self.bucket.name
+        nm = self.name
+        LOG.debug(_("Getting object: %(bname)s / %(nm)s") % locals())
 
         if not self.bucket.is_authorized(request.context):
-            LOG.audit(_("Unauthorized attempt to get object %s from bucket "
-                        "%s"), self.name, self.bucket.name,
-                      context=request.context)
+            LOG.audit(_("Unauthorized attempt to get object %(nm)s"
+                    " from bucket %(bname)s") % locals(),
+                    context=request.context)
             raise exception.NotAuthorized()
 
         obj = self.bucket[urllib.unquote(self.name)]
@@ -289,12 +291,13 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-        LOG.debug(_("Putting object: %s / %s"), self.bucket.name, self.name)
+        nm = self.name
+        bname = self.bucket.name
+        LOG.debug(_("Putting object: %(bname)s / %(nm)s") % locals())
 
         if not self.bucket.is_authorized(request.context):
-            LOG.audit(_("Unauthorized attempt to upload object %s to bucket "
-                        "%s"),
-                      self.name, self.bucket.name, context=request.context)
+            LOG.audit(_("Unauthorized attempt to upload object %(nm)s to"
+                    " bucket %(bname)s") % locals(), context=request.context)
             raise exception.NotAuthorized()
 
         key = urllib.unquote(self.name)
@@ -310,14 +313,14 @@ class ObjectResource(ErrorHandlingResource):
         Raises NotAuthorized if user in request context is not
         authorized to delete the object.
         """
-
-        LOG.debug(_("Deleting object: %s / %s"), self.bucket.name, self.name,
+        nm = self.name
+        bname = self.bucket.name
+        LOG.debug(_("Deleting object: %(bname)s / %(nm)s") % locals(),
                   context=request.context)
 
         if not self.bucket.is_authorized(request.context):
-            LOG.audit("Unauthorized attempt to delete object %s from "
-                      "bucket %s", self.name, self.bucket.name,
-                      context=request.context)
+            LOG.audit(_("Unauthorized attempt to delete object %(nm)s from "
+                      "bucket %(bname)s") % locals(), context=request.context)
             raise exception.NotAuthorized()
 
         del self.bucket[urllib.unquote(self.name)]
@@ -388,10 +391,10 @@ class ImagesResource(resource.Resource):
         image_location = get_argument(request, 'image_location', u'')
 
         image_path = os.path.join(FLAGS.images_path, image_id)
-        if not image_path.startswith(FLAGS.images_path) or \
-           os.path.exists(image_path):
+        if ((not image_path.startswith(FLAGS.images_path)) or
+                os.path.exists(image_path)):
             LOG.audit(_("Not authorized to upload image: invalid directory "
-                        "%s"),
+                      "%s"),
                       image_path, context=request.context)
             raise exception.NotAuthorized()
 
@@ -425,8 +428,8 @@ class ImagesResource(resource.Resource):
         if operation:
             # operation implies publicity toggle
             newstatus = (operation == 'add')
-            LOG.audit(_("Toggling publicity flag of image %s %r"), image_id,
-                      newstatus, context=request.context)
+            LOG.audit(_("Toggling publicity flag of image %(image_id)s"
+                    " %(newstatus)r") % locals(), context=request.context)
             image_object.set_public(newstatus)
         else:
             # other attributes imply update
