@@ -313,7 +313,7 @@ class Executor(wsgi.Application):
             LOG.info(_('NotFound raised: %s'), ex.args[0],  context=context)
             return self._error(req, context, type(ex).__name__, ex.args[0])
         except exception.ApiError as ex:
-            LOG.exception(_('ApiError raised: %s'), ex.args[0], 
+            LOG.exception(_('ApiError raised: %s'), ex.args[0],
                           context=context)
             if ex.code:
                 return self._error(req, context, ex.code, ex.args[0])
