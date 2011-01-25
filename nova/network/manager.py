@@ -83,7 +83,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
+flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
