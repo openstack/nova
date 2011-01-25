@@ -1396,11 +1396,13 @@ def volume_get(context, volume_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=False).\
