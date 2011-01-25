@@ -21,7 +21,6 @@ import subprocess
 
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
-from sphinx.setup_command import BuildDoc
 
 from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
@@ -32,14 +31,6 @@ if os.path.isdir('.bzr'):
                                    stdout=subprocess.PIPE)
         vcsversion = vcs_cmd.communicate()[0]
         version_file.write(vcsversion)
-
-
-class local_BuildDoc(BuildDoc):
-    def run(self):
-        for builder in ['html', 'man']:
-            self.builder = builder
-            self.finalize_options()
-            BuildDoc.run(self)
 
 
 class local_sdist(sdist):
@@ -57,9 +48,22 @@ class local_sdist(sdist):
             with open("ChangeLog", "w") as changelog_file:
                 changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
+nova_cmdclass = {'sdist': local_sdist}
 
-nova_cmdclass = {'sdist': local_sdist,
-                 'build_sphinx': local_BuildDoc}
+
+try:
+    from sphinx.setup_command import BuildDoc
+    class local_BuildDoc(BuildDoc):
+        def run(self):
+            for builder in ['html', 'man']:
+                self.builder = builder
+                self.finalize_options()
+                BuildDoc.run(self)
+    nova_cmdclass['build_sphinx'] = local_BuildDoc
+
+except:
+    pass
+
 
 try:
     from babel.messages import frontend as babel
