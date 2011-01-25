@@ -131,9 +131,11 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
             elif failures >= FLAGS.lockout_attempts:
-                LOG.warn(_('Access key %s has had %d failed authentications'
-                           ' and will be locked out for %d minutes.'),
-                         access_key, failures, FLAGS.lockout_minutes)
+                lock_mins = FLAGS.lockout_minutes
+                msg = _('Access key %(access_key)s has had %(failures)d'
+                        ' failed authentications and will be locked out'
+                        ' for %(lock_mins)d minutes.') % locals()
+                LOG.warn(msg)
                 self.mc.set(failures_key, str(failures),
                             time=FLAGS.lockout_minutes * 60)
         return res
@@ -179,8 +181,10 @@ class Authenticate(wsgi.Middleware):
                                       project=project,
                                       remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
-        LOG.audit(_('Authenticated Request For %s:%s)'), user.name,
-                  project.name, context=req.environ['ec2.context'])
+        uname = user.name
+        pname = project.name
+        msg = _('Authenticated Request For %(uname)s:%(pname)s)') % locals()
+        LOG.audit(msg, context=req.environ['ec2.context'])
         return self.application
 
 
@@ -206,7 +210,7 @@ class Requestify(wsgi.Middleware):
 
         LOG.debug(_('action: %s'), action)
         for key, value in args.items():
-            LOG.debug(_('arg: %s\t\tval: %s'), key, value)
+            LOG.debug(_('arg: %(key)s\t\tval: %(value)s') % locals())
 
         # Success!
         api_request = apirequest.APIRequest(self.controller, action, args)
@@ -277,8 +281,8 @@ class Authorizer(wsgi.Middleware):
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
-            LOG.audit(_("Unauthorized request for controller=%s "
-                        "and action=%s"), controller, action, context=context)
+            LOG.audit(_('Unauthorized request for controller=%(controller)s '
+                        'and action=%(action)s') % locals(), context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):

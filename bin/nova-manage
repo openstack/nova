@@ -79,7 +79,9 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
+from nova import rpc
 from nova import utils
+from nova.api.ec2.cloud import ec2_id_to_id
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.db import migration
@@ -93,6 +95,16 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+
+
+def param2id(object_id):
+    """Helper function to convert various id types to internal id.
+    args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
+    """
+    if '-' in object_id:
+        return ec2_id_to_id(object_id)
+    else:
+        return int(object_id)
 
 
 class VpnCommands(object):
@@ -461,9 +473,12 @@ class NetworkCommands(object):
             fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
-                                    fixed_range, int(num_networks),
-                                    int(network_size), int(vlan_start),
-                                    int(vpn_start), fixed_range_v6)
+                                    cidr=fixed_range,
+                                    num_networks=int(num_networks),
+                                    network_size=int(network_size),
+                                    vlan_start=int(vlan_start),
+                                    vpn_start=int(vpn_start),
+                                    cidr_v6=fixed_range_v6)
 
 
 class ServiceCommands(object):
@@ -535,6 +550,46 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VolumeCommands(object):
+    """Methods for dealing with a cloud in an odd state"""
+
+    def delete(self, volume_id):
+        """Delete a volume, bypassing the check that it
+        must be available.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        host = volume['host']
+        if volume['status'] == 'in-use':
+            print "Volume is in-use."
+            print "Detach volume from instance and then try again."
+            return
+
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.volume_topic, host),
+                 {"method": "delete_volume",
+                  "args": {"volume_id": volume['id']}})
+
+    def reattach(self, volume_id):
+        """Re-attach a volume that has previously been attached
+        to an instance.  Typically called after a compute host
+        has been rebooted.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        if not volume['instance_id']:
+            print "volume is not attached to an instance"
+            return
+        instance = db.instance_get(ctxt, volume['instance_id'])
+        host = instance['host']
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"instance_id": instance['id'],
+                           "volume_id": volume['id'],
+                           "mountpoint": volume['mountpoint']}})
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -545,7 +600,8 @@ CATEGORIES = [
     ('network', NetworkCommands),
     ('service', ServiceCommands),
     ('log', LogCommands),
-    ('db', DbCommands)]
+    ('db', DbCommands),
+    ('volume', VolumeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
