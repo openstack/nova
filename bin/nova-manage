@@ -274,6 +274,7 @@ def _db_error(caught_exception):
             "nova-manage sync db before running this command.")
     exit(1)
 
+
 class UserCommands(object):
     """Class for managing users."""
 
