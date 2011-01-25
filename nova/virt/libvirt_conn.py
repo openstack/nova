@@ -1268,8 +1268,8 @@ class IptablesFirewallDriver(FirewallDriver):
             if(ip_version == 4):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
-                                                 (chain_name, dhcp_server)]
+                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
+                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
                 #Allow project network traffic
                 if (FLAGS.allow_project_net_traffic):
                     cidr = self._project_cidr_for_instance(instance)
@@ -1277,8 +1277,8 @@ class IptablesFirewallDriver(FirewallDriver):
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p icmpv6' %
-                                                 (chain_name, ra_server)]
+                our_rules += ['-A %s -s %s -p icmpv6 '
+                                '-j ACCEPT' % (chain_name, ra_server)]
                 #Allow project network traffic
                 if (FLAGS.allow_project_net_traffic):
                     cidrv6 = self._project_cidrv6_for_instance(instance)
