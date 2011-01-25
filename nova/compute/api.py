@@ -277,7 +277,8 @@ class API(base.Base):
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added to or removed from a security_group"""
 
-        hosts = [x['host'] for x in db.service_get_all_compute_sorted(context)]
+        hosts = [x['host'] for (x,idx)
+                           in db.service_get_all_compute_sorted(context)]
         for host in hosts:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
