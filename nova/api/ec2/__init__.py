@@ -344,7 +344,7 @@ class Executor(wsgi.Application):
                          '<Message>%s</Message></Error></Errors>'
                          '<RequestID>%s</RequestID></Response>' %
                          (utils.utf8(code), utils.utf8(message),
-			 utils.utf8(context.request_id)))
+                         utils.utf8(context.request_id)))
         return resp
 
 
