@@ -45,8 +45,9 @@ class Exchange(object):
         self._routes = {}
 
     def publish(self, message, routing_key=None):
-        LOG.debug(_('(%s) publish (key: %s) %s'),
-                  self.name, routing_key, message)
+        nm = self.name
+        LOG.debug(_('(%(nm)s) publish (key: %(routing_key)s)'
+                ' %(message)s') % locals())
         routing_key = routing_key.split('.')[0]
         if routing_key in self._routes:
             for f in self._routes[routing_key]:
@@ -92,8 +93,8 @@ class Backend(base.BaseBackend):
     def queue_bind(self, queue, exchange, routing_key, **kwargs):
         global EXCHANGES
         global QUEUES
-        LOG.debug(_('Binding %s to %s with key %s'),
-                      queue, exchange, routing_key)
+        LOG.debug(_('Binding %(queue)s to %(exchange)s with'
+                ' key %(routing_key)s') % locals())
         EXCHANGES[exchange].bind(QUEUES[queue].push, routing_key)
 
     def declare_consumer(self, queue, callback, *args, **kwargs):
@@ -117,7 +118,7 @@ class Backend(base.BaseBackend):
                           content_type=content_type,
                           content_encoding=content_encoding)
         message.result = True
-        LOG.debug(_('Getting from %s: %s'), queue, message)
+        LOG.debug(_('Getting from %(queue)s: %(message)s') % locals())
         return message
 
     def prepare_message(self, message_data, delivery_mode,

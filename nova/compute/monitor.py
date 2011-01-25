@@ -352,8 +352,9 @@ class Instance(object):
                 rd += rd_bytes
                 wr += wr_bytes
             except TypeError:
-                LOG.error(_('Cannot get blockstats for "%s" on "%s"'),
-                          disk, self.instance_id)
+                iid = self.instance_id
+                LOG.error(_('Cannot get blockstats for "%(disk)s"'
+                        ' on "%(iid)s"') % locals())
                 raise
 
         return '%d:%d' % (rd, wr)
@@ -374,8 +375,9 @@ class Instance(object):
                 rx += stats[0]
                 tx += stats[4]
             except TypeError:
-                LOG.error(_('Cannot get ifstats for "%s" on "%s"'),
-                          interface, self.instance_id)
+                iid = self.instance_id
+                LOG.error(_('Cannot get ifstats for "%(interface)s"'
+                        ' on "%(iid)s"') % locals())
                 raise
 
         return '%d:%d' % (rx, tx)
