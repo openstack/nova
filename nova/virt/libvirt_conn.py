@@ -149,13 +149,8 @@ class LibvirtConnection(object):
         self._wrapped_conn = None
         self.read_only = read_only
 
-        self.nwfilter = NWFilterFirewall(self._get_connection)
-
-        if not FLAGS.firewall_driver:
-            self.firewall_driver = self.nwfilter
-            self.nwfilter.handle_security_groups = True
-        else:
-            self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
+        fw_class = utils.import_class(FLAGS.firewall_driver)
+        self.firewall_driver = fw_class(get_connection=self._get_connection)
 
     def init_host(self):
         pass
@@ -386,7 +381,7 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        self.nwfilter.setup_basic_filtering(instance)
+        self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
@@ -882,6 +877,15 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
+    def setup_basic_filtering(self, instance):
+        """Create rules to block spoofing and allow dhcp.
+
+        This gets called when spawning an instance, before
+        :method:`prepare_instance_filter`.
+
+        """
+        raise NotImplementedError()
+
 
 class NWFilterFirewall(FirewallDriver):
     """
@@ -929,7 +933,7 @@ class NWFilterFirewall(FirewallDriver):
 
     """
 
-    def __init__(self, get_connection):
+    def __init__(self, get_connection, **kwargs):
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
@@ -1170,9 +1174,14 @@ class NWFilterFirewall(FirewallDriver):
 
 
 class IptablesFirewallDriver(FirewallDriver):
-    def __init__(self, execute=None):
+    def __init__(self, execute=None, **kwargs):
         self.execute = execute or utils.execute
         self.instances = {}
+        self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
+
+    def setup_basic_filtering(self, instance):
+        """Use NWFilter from libvirt for this."""
+        return self.nwfilter.setup_basic_filtering(instance)
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
