@@ -396,6 +396,7 @@ class FlatDHCPManager(FlatManager):
         """
         super(FlatDHCPManager, self).init_host()
         self.driver.metadata_forward()
+        self.driver.init_host()
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
