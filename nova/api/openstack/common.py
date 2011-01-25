@@ -54,6 +54,7 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
     except NotImplementedError:
         items = image_service.index(context)
     for image in items:
-        if abs(hash(image['id'])) == int(image_hash):
+        image_id = image['id']
+        if abs(hash(image_id)) == int(image_hash):
             return image_id
     raise exception.NotFound(image_hash)
