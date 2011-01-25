@@ -198,8 +198,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s leased to bad"
+                    " mac %(inst_addr)s vs %(mac)s") % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -218,8 +219,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s released from"
+                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
         if not fixed_ip_ref['leased']:
             LOG.warn(_("IP %s released that was not leased"), address,
                      context=context)
