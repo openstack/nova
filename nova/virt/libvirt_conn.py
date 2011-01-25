@@ -1270,7 +1270,7 @@ class IptablesFirewallDriver(FirewallDriver):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
                 our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
-                              '-j ACCEPT' % (chain_name, dhcp_server)]
+                              '-j ACCEPT ' % (chain_name, dhcp_server)]
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
