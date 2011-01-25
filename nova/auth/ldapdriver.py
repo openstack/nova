@@ -473,8 +473,8 @@ class LdapDriver(object):
             raise exception.NotFound(_("The group at dn %s doesn't exist") %
                                      group_dn)
         if self.__is_in_group(uid, group_dn):
-            raise exception.Duplicate(_("User %s is already a member of "
-                                        "the group %s") % (uid, group_dn))
+            raise exception.Duplicate(_("User %(uid)s is already a member of "
+                                        "the group %(group_dn)s") % locals())
         attr = [(self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))]
         self.conn.modify_s(group_dn, attr)
 
@@ -585,10 +585,11 @@ class LdapDriver(object):
         else:
             return None
 
-    @staticmethod
-    def __dn_to_uid(dn):
+    def __dn_to_uid(self, dn):
         """Convert user dn to uid"""
-        return dn.split(',')[0].split('=')[1]
+        query = '(objectclass=novaUser)'
+        user = self.__find_object(dn, query)
+        return user[FLAGS.ldap_user_id_attribute][0]
 
 
 class FakeLdapDriver(LdapDriver):
