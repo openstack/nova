@@ -113,7 +113,7 @@ class HyperVConnection(object):
         self._conn = wmi.WMI(moniker='//./root/virtualization')
         self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 
-    def init_host(self):
+    def init_host(self, host):
         #FIXME(chiradeep): implement this
         LOG.debug(_('In init host'))
         pass

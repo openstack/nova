@@ -157,8 +157,31 @@ class LibvirtConnection(object):
         else:
             self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
-    def init_host(self):
-        pass
+    def init_host(self, host):
+        # Adopt existing VM's running here
+        ctxt = context.get_admin_context()
+        for instance in db.instance_get_all_by_host(ctxt, host):
+            try:
+                LOG.debug(_('Checking state of %s'), instance['name'])
+                state = self.get_info(instance['name'])['state']
+            except exception.NotFound:
+                state = power_state.SHUTOFF
+
+            LOG.debug(_('Current state of %(name)s was %(state)s.'),
+                          {'name': instance['name'], 'state': state})
+            db.instance_set_state(ctxt, instance['id'], state)
+
+            if state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate # an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                db.instance_destroy(ctxt, instance['id'])
+
+            if state != power_state.RUNNING:
+                continue
+            self.firewall_driver.prepare_instance_filter(instance)
+            self.firewall_driver.apply_instance_filter(instance)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
