@@ -75,7 +75,7 @@ class SpoolSentry(object):
 
     def send_data(self, data):
         data = {'data': base64.b64encode(pickle.dumps(data).encode('zlib')),
-            'key': self.key}
+                'key': self.key}
         req = urllib2.Request(self.sentry_url)
         res = urllib2.urlopen(req, urllib.urlencode(data))
         if res.getcode() != 200:
