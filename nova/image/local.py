@@ -18,6 +18,7 @@
 import cPickle as pickle
 import os.path
 import random
+import tempfile
 
 from nova import exception
 from nova.image import service
@@ -30,11 +31,7 @@ class LocalImageService(service.BaseImageService):
     It assumes that image_ids are integers."""
 
     def __init__(self):
-        self._path = "/tmp/nova/images"
-        try:
-            os.makedirs(self._path)
-        except OSError:  # Exists
-            pass
+        self._path = tempfile.mkdtemp()
 
     def _path_to(self, image_id):
         return os.path.join(self._path, str(image_id))
