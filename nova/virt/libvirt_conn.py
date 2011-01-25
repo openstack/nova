@@ -1228,6 +1228,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
+        our_rules += ['-A OUTPUT -j nova-local']
 
         security_groups = {}
         # Add our chains
