@@ -1270,12 +1270,21 @@ class IptablesFirewallDriver(FirewallDriver):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
                 our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
-                              '-j ACCEPT ' % (chain_name, dhcp_server)]
+                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidr = self._project_cidr_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
                 our_rules += ['-A %s -s %s -p icmpv6 '
-                              '-j ACCEPT' % (chain_name, ra_server)]
+                                '-j ACCEPT' % (chain_name, ra_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidrv6 = self._project_cidrv6_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' %
+                                        (chain_name, cidrv6)]
 
             # If nothing matches, jump to the fallback chain
             our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
@@ -1370,3 +1379,13 @@ class IptablesFirewallDriver(FirewallDriver):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         return network['ra_server']
+
+    def _project_cidr_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr']
+
+    def _project_cidrv6_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr_v6']
