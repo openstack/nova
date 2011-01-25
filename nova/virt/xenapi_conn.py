@@ -141,7 +141,7 @@ class XenAPIConnection(object):
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
 
-    def init_host(self):
+    def init_host(self, host):
         #FIXME(armando): implement this
         #NOTE(armando): would we need a method
         #to call when shutting down the host?

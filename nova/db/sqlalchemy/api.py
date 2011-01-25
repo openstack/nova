@@ -724,6 +724,17 @@ def instance_get_all_by_user(context, user_id):
                    all()
 
 
+@require_admin_context
+def instance_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(host=host).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
 @require_context
 def instance_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
