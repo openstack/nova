@@ -510,7 +510,6 @@ class LibvirtConnection(object):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
-                os.chmod(base_dir, 0777)
             base = os.path.join(base_dir, fname)
             if not os.path.exists(base):
                 fn(target=base, *args, **kwargs)
@@ -541,7 +540,6 @@ class LibvirtConnection(object):
 
         # ensure directories exist and are writable
         utils.execute('mkdir -p %s' % basepath(suffix=''))
-        utils.execute('chmod 0777 %s' % basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
