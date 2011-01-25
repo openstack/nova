@@ -109,6 +109,14 @@ flags.DEFINE_string('target_port',
 flags.DEFINE_string('iqn_prefix',
                     'iqn.2010-10.org.openstack',
                     'IQN Prefix')
+# NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick, when we pull
+# support for it, we should remove this
+flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
+                  'Used to enable the remapping of VBD dev '
+                  '(Works around an issue in Ubuntu Maverick)')
+flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
+                    'Specify prefix to remap VBD dev to '
+                    '(ex. /dev/xvdb -> /dev/sdb)')
 
 
 def get_connection(_):
@@ -290,19 +298,14 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                LOG.info(_("Task [%s] %s status: success    %s") % (
-                    name,
-                    task,
-                    result))
+                LOG.info(_("Task [%(name)s] %(task)s status:"
+                        " success    %(result)s") % locals())
                 done.send(_parse_xmlrpc_value(result))
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                LOG.warn(_("Task [%s] %s status: %s    %s") % (
-                    name,
-                    task,
-                    status,
-                    error_info))
+                LOG.warn(_("Task [%(name)s] %(task)s status:"
+                        " %(status)s    %(error_info)s") % locals())
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:

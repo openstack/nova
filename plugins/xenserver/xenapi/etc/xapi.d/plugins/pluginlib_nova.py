@@ -19,6 +19,8 @@
 # that we need.
 #
 
+import gettext
+gettext.install('nova', unicode=1)
 import httplib
 import logging
 import logging.handlers
@@ -60,7 +62,7 @@ def ignore_failure(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except XenAPI.Failure, e:
-        logging.error('Ignoring XenAPI.Failure %s', e)
+        logging.error(_('Ignoring XenAPI.Failure %s'), e)
         return None
 
 
@@ -78,19 +80,25 @@ def validate_exists(args, key, default=None):
     """
     if key in args:
         if len(args[key]) == 0:
-            raise ArgumentError('Argument %r value %r is too short.' %
-                    (key, args[key]))
+            raise ArgumentError(_('Argument %(key)s value %(value)s is too '
+                                  'short.') %
+                                {'key': key,
+                                 'value': args[key]})
         if not ARGUMENT_PATTERN.match(args[key]):
-            raise ArgumentError('Argument %r value %r contains invalid '
-                    'characters.' % (key, args[key]))
+            raise ArgumentError(_('Argument %(key)s value %(value)s contains '
+                                  'invalid characters.') %
+                                  {'key': key,
+                                   'value': args[key]})
         if args[key][0] == '-':
-            raise ArgumentError('Argument %r value %r starts with a hyphen.'
-                    % (key, args[key]))
+            raise ArgumentError(_('Argument %(key)s value %(value)s starts '
+                                  'with a hyphen.') %
+                                {'key': key,
+                                 'value': args[key]})
         return args[key]
     elif default is not None:
         return default
     else:
-        raise ArgumentError('Argument %s is required.' % key)
+        raise ArgumentError(_('Argument %s is required.') % key)
 
 
 def validate_bool(args, key, default=None):
@@ -105,8 +113,10 @@ def validate_bool(args, key, default=None):
     elif value.lower() == 'false':
         return False
     else:
-        raise ArgumentError("Argument %s may not take value %r. "
-                "Valid values are ['true', 'false']." % (key, value))
+        raise ArgumentError(_("Argument %(key)s may not take value %(value)s. "
+                              "Valid values are ['true', 'false'].")
+                            % {'key': key,
+                               'value': value})
 
 
 def exists(args, key):
@@ -116,7 +126,7 @@ def exists(args, key):
     if key in args:
         return args[key]
     else:
-        raise ArgumentError('Argument %s is required.' % key)
+        raise ArgumentError(_('Argument %s is required.') % key)
 
 
 def optional(args, key):
@@ -149,8 +159,13 @@ def create_vdi(session, sr_ref, name_label, virtual_size, read_only):
           'other_config': {},
           'sm_config': {},
           'tags': []})
-    logging.debug('Created VDI %s (%s, %s, %s) on %s.', vdi_ref, name_label,
-                  virtual_size, read_only, sr_ref)
+    logging.debug(_('Created VDI %(vdi_ref)s (%(label)s, %(size)s, '
+                    '%(read_only)s) on %(sr_ref)s.') %
+                  {'vdi_ref': vdi_ref,
+                   'label': name_label,
+                   'size': virtual_size,
+                   'read_only': read_only,
+                   'sr_ref': sr_ref})
     return vdi_ref
 
 
@@ -169,19 +184,19 @@ def with_vdi_in_dom0(session, vdi, read_only, f):
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    logging.debug('Creating VBD for VDI %s ... ', vdi)
+    logging.debug(_('Creating VBD for VDI %s ... '), vdi)
     vbd = session.xenapi.VBD.create(vbd_rec)
-    logging.debug('Creating VBD for VDI %s done.', vdi)
+    logging.debug(_('Creating VBD for VDI %s done.'), vdi)
     try:
-        logging.debug('Plugging VBD %s ... ', vbd)
+        logging.debug(_('Plugging VBD %s ... '), vbd)
         session.xenapi.VBD.plug(vbd)
-        logging.debug('Plugging VBD %s done.', vbd)
+        logging.debug(_('Plugging VBD %s done.'), vbd)
         return f(session.xenapi.VBD.get_device(vbd))
     finally:
-        logging.debug('Destroying VBD for VDI %s ... ', vdi)
+        logging.debug(_('Destroying VBD for VDI %s ... '), vdi)
         vbd_unplug_with_retry(session, vbd)
         ignore_failure(session.xenapi.VBD.destroy, vbd)
-        logging.debug('Destroying VBD for VDI %s done.', vdi)
+        logging.debug(_('Destroying VBD for VDI %s done.'), vdi)
 
 
 def vbd_unplug_with_retry(session, vbd):
@@ -192,19 +207,20 @@ def vbd_unplug_with_retry(session, vbd):
     while True:
         try:
             session.xenapi.VBD.unplug(vbd)
-            logging.debug('VBD.unplug successful first time.')
+            logging.debug(_('VBD.unplug successful first time.'))
             return
         except XenAPI.Failure, e:
             if (len(e.details) > 0 and
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
-                logging.debug('VBD.unplug rejected: retrying...')
+                logging.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
-                logging.debug('VBD.unplug successful eventually.')
+                logging.debug(_('VBD.unplug successful eventually.'))
                 return
             else:
-                logging.error('Ignoring XenAPI.Failure in VBD.unplug: %s', e)
+                logging.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
+                              e)
                 return
 
 

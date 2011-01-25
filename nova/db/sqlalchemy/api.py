@@ -247,7 +247,8 @@ def service_get_by_args(context, host, binary):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound(_('No service for %s, %s') % (host, binary))
+        raise exception.NotFound(_('No service for %(host)s, %(binary)s')
+                % locals())
 
     return result
 
@@ -777,7 +778,7 @@ def instance_get_by_id(context, instance_id):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -785,6 +786,7 @@ def instance_get_by_id(context, instance_id):
         result = session.query(models.Instance).\
                          options(joinedload('security_groups')).\
                          options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -934,8 +936,8 @@ def key_pair_get(context, user_id, name, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound(_('no keypair for user %s, name %s') %
-                                 (user_id, name))
+        raise exception.NotFound(_('no keypair for user %(user_id)s,'
+                ' name %(name)s') % locals())
     return result
 
 
@@ -1536,8 +1538,8 @@ def security_group_get_by_name(context, project_id, group_name):
                         first()
     if not result:
         raise exception.NotFound(
-            _('No security group named %s for project: %s')
-             % (group_name, project_id))
+            _('No security group named %(group_name)s'
+            ' for project: %(project_id)s') % locals())
     return result
 
 
@@ -1921,8 +1923,8 @@ def console_pool_get(context, pool_id):
                      filter_by(id=pool_id).\
                      first()
     if not result:
-        raise exception.NotFound(_("No console pool with id %(pool_id)s") %
-                                 {'pool_id': pool_id})
+        raise exception.NotFound(_("No console pool with id %(pool_id)s")
+                % locals())
 
     return result
 
@@ -1938,12 +1940,9 @@ def console_pool_get_by_host_type(context, compute_host, host,
                    options(joinedload('consoles')).\
                    first()
     if not result:
-        raise exception.NotFound(_('No console pool of type %(type)s '
+        raise exception.NotFound(_('No console pool of type %(console_type)s '
                                    'for compute host %(compute_host)s '
-                                   'on proxy host %(host)s') %
-                                   {'type': console_type,
-                                    'compute_host': compute_host,
-                                    'host': host})
+                                   'on proxy host %(host)s') % locals())
     return result
 
 
@@ -1981,9 +1980,7 @@ def console_get_by_pool_instance(context, pool_id, instance_id):
                    first()
     if not result:
         raise exception.NotFound(_('No console for instance %(instance_id)s '
-                                 'in pool %(pool_id)s') %
-                                 {'instance_id': instance_id,
-                                  'pool_id': pool_id})
+                                 'in pool %(pool_id)s') % locals())
     return result
 
 
@@ -2004,9 +2001,7 @@ def console_get(context, console_id, instance_id=None):
         query = query.filter_by(instance_id=instance_id)
     result = query.options(joinedload('pool')).first()
     if not result:
-        idesc = (_("on instance %s") % instance_id)  if instance_id else ""
+        idesc = (_("on instance %s") % instance_id) if instance_id else ""
         raise exception.NotFound(_("No console with id %(console_id)s"
-                                   " %(instance)s") %
-                                  {'instance': idesc,
-                                  'console_id': console_id})
+                                   " %(idesc)s") % locals())
     return result

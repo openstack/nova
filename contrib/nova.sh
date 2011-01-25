@@ -87,6 +87,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
     sudo apt-get install -y python-daemon python-eventlet python-gflags python-ipy
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
+    sudo apt-get install -y python-paste python-pastedeploy 
 #For IPV6
     sudo apt-get install -y python-netaddr 
     sudo apt-get install -y radvd
