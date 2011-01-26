@@ -1310,8 +1310,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
                 if ra_server:
-                    our_rules += ['-A %s -s %s -p icmpv6' %
-                                        (chain_name, ra_server + "/128")]
+                    our_rules += ['-A %s -s %s -p icmpv6 -j ACCEPT' %
+                                  (chain_name, ra_server + "/128")]
                 #Allow project network traffic
                 if (FLAGS.allow_project_net_traffic):
                     cidrv6 = self._project_cidrv6_for_instance(instance)
