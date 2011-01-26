@@ -27,8 +27,8 @@ from nova.image import service
 class LocalImageService(service.BaseImageService):
 
     """Image service storing images to local disk.
-
-    It assumes that image_ids are integers."""
+    It assumes that image_ids are integers.
+    """
 
     def __init__(self):
         self._path = tempfile.mkdtemp()
@@ -53,41 +53,37 @@ class LocalImageService(service.BaseImageService):
             raise exception.NotFound
 
     def create(self, context, data):
-        """
-        Store the image data and return the new image id.
-        """
+        """Store the image data and return the new image id."""
         id = random.randint(0, 2 ** 31 - 1)
         data['id'] = id
         self.update(context, id, data)
         return id
 
     def update(self, context, image_id, data):
-        """
-        Replace the contents of the given image with the new data.
-        """
+        """Replace the contents of the given image with the new data."""
         try:
             pickle.dump(data, open(self._path_to(image_id), 'w'))
         except IOError:
             raise exception.NotFound
 
     def delete(self, context, image_id):
+        """Delete the given image.
+        Raises OSError if the image does not exist.
         """
-        Delete the given image.  Raises OSError if the image does not exist.
-        """
+
         try:
             os.unlink(self._path_to(image_id))
         except IOError:
             raise exception.NotFound
 
     def delete_all(self):
-        """
-        Clears out all images in local directory.
-        """
+        """Clears out all images in local directory."""
         for id in self._ids():
             os.unlink(self._path_to(id))
 
     def delete_imagedir(self):
+        """Deletes the local directory.
+        Raises OSError if directory is not empty.
         """
-        Deletes the local directory.  Raises OSError if directory is not empty.
-        """
+
         os.rmdir(self._path)
