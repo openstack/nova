@@ -62,7 +62,9 @@ class LocalImageService(service.BaseImageService):
         return id
 
     def update(self, context, image_id, data):
-        """Replace the contents of the given image with the new data."""
+        """
+        Replace the contents of the given image with the new data.
+        """
         try:
             pickle.dump(data, open(self._path_to(image_id), 'w'))
         except IOError:
@@ -79,7 +81,13 @@ class LocalImageService(service.BaseImageService):
 
     def delete_all(self):
         """
-        Clears out all images in local directory
+        Clears out all images in local directory.
         """
         for id in self._ids():
             os.unlink(self._path_to(id))
+
+    def delete_imagedir(self):
+        """
+        Deletes the local directory.  Raises OSError if directory is not empty.
+        """
+        os.rmdir(self._path)
