@@ -170,7 +170,7 @@ class Authenticate(wsgi.Middleware):
                     req.path)
         # Be explicit for what exceptions are 403, the rest bubble as 500
         except (exception.NotFound, exception.NotAuthorized) as ex:
-            LOG.audit(_("Authentication Failure: %s"), str(ex))
+            LOG.audit(_("Authentication Failure: %s"), ex.args[0])
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -314,17 +314,18 @@ class Executor(wsgi.Application):
         try:
             result = api_request.invoke(context)
         except exception.NotFound as ex:
-            LOG.info(_('NotFound raised: %s'), str(ex),  context=context)
-            return self._error(req, context, type(ex).__name__, str(ex))
+            LOG.info(_('NotFound raised: %s'), ex.args[0],  context=context)
+            return self._error(req, context, type(ex).__name__, ex.args[0])
         except exception.ApiError as ex:
-            LOG.exception(_('ApiError raised: %s'), str(ex), context=context)
+            LOG.exception(_('ApiError raised: %s'), ex.args[0],
+                          context=context)
             if ex.code:
-                return self._error(req, context, ex.code, str(ex))
+                return self._error(req, context, ex.code, ex.args[0])
             else:
-                return self._error(req, context, type(ex).__name__, str(ex))
+                return self._error(req, context, type(ex).__name__, ex.args[0])
         except Exception as ex:
             extra = {'environment': req.environ}
-            LOG.exception(_('Unexpected error raised: %s'), str(ex),
+            LOG.exception(_('Unexpected error raised: %s'), ex.args[0],
                           extra=extra, context=context)
             return self._error(req,
                                context,
@@ -347,7 +348,8 @@ class Executor(wsgi.Application):
                          '<Response><Errors><Error><Code>%s</Code>'
                          '<Message>%s</Message></Error></Errors>'
                          '<RequestID>%s</RequestID></Response>' %
-                         (code, message, context.request_id))
+                         (utils.utf8(code), utils.utf8(message),
+                         utils.utf8(context.request_id)))
         return resp
 
 
