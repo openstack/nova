@@ -256,7 +256,7 @@ class IptablesFirewallTestCase(test.TestCase):
       ':FORWARD ACCEPT [0:0]',
       ':OUTPUT ACCEPT [349256:75777230]',
       'COMMIT',
-      '# Completed on Tue Jan 18 23:47:56 2011'
+      '# Completed on Tue Jan 18 23:47:56 2011',
     ]
 
     def test_static_filters(self):

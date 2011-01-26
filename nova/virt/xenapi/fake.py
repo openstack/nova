@@ -69,7 +69,9 @@ LOG = logging.getLogger("nova.virt.xenapi.fake")
 
 
 def log_db_contents(msg=None):
-    LOG.debug(_("%s: _db_content => %s"), msg or "", pformat(_db_content))
+    text = msg or ""
+    content = pformat(_db_content)
+    LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
 
 
 def reset():
@@ -331,7 +333,8 @@ class SessionBase(object):
             if impl is not None:
 
                 def callit(*params):
-                    LOG.debug(_('Calling %s %s'), name, impl)
+                    localname = name
+                    LOG.debug(_('Calling %(localname)s %(impl)s') % locals())
                     self._check_session(params)
                     return impl(*params)
                 return callit

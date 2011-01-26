@@ -138,7 +138,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        LOG.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % obj.returncode)
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
