@@ -83,7 +83,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
+flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
@@ -395,6 +395,7 @@ class FlatDHCPManager(FlatManager):
         standalone service.
         """
         super(FlatDHCPManager, self).init_host()
+        self.driver.init_host()
         self.driver.metadata_forward()
 
     def setup_compute_network(self, context, instance_id):
@@ -460,8 +461,8 @@ class VlanManager(NetworkManager):
         standalone service.
         """
         super(VlanManager, self).init_host()
-        self.driver.metadata_forward()
         self.driver.init_host()
+        self.driver.metadata_forward()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""

@@ -157,8 +157,31 @@ class LibvirtConnection(object):
         else:
             self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
-    def init_host(self):
-        pass
+    def init_host(self, host):
+        # Adopt existing VM's running here
+        ctxt = context.get_admin_context()
+        for instance in db.instance_get_all_by_host(ctxt, host):
+            try:
+                LOG.debug(_('Checking state of %s'), instance['name'])
+                state = self.get_info(instance['name'])['state']
+            except exception.NotFound:
+                state = power_state.SHUTOFF
+
+            LOG.debug(_('Current state of %(name)s was %(state)s.'),
+                          {'name': instance['name'], 'state': state})
+            db.instance_set_state(ctxt, instance['id'], state)
+
+            if state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate # an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                db.instance_destroy(ctxt, instance['id'])
+
+            if state != power_state.RUNNING:
+                continue
+            self.firewall_driver.prepare_instance_filter(instance)
+            self.firewall_driver.apply_instance_filter(instance)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -1288,10 +1311,12 @@ class IptablesFirewallDriver(FirewallDriver):
         our_rules = ['-A nova-fallback -j DROP']
 
         our_chains += [':nova-local - [0:0]']
+        our_rules += ['-A OUTPUT -j nova-local']
 
         our_chains += [':nova-provider - [0:0]']
         our_rules += ['-A FORWARD -j nova-provider']
 
+        # Build all the provider-level drops, then jump to local
         rules = db.provider_fw_rule_get_all(ctxt)
         for rule in rules:
             logging.info('%r', rule)
@@ -1373,13 +1398,22 @@ class IptablesFirewallDriver(FirewallDriver):
             if(ip_version == 4):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
-                                                 (chain_name, dhcp_server)]
+                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
+                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidr = self._project_cidr_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p icmpv6' %
-                                                 (chain_name, ra_server)]
+                our_rules += ['-A %s -s %s -p icmpv6 '
+                                '-j ACCEPT' % (chain_name, ra_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidrv6 = self._project_cidrv6_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' %
+                                        (chain_name, cidrv6)]
 
             # If nothing matches, jump to the fallback chain
             our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
@@ -1477,3 +1511,13 @@ class IptablesFirewallDriver(FirewallDriver):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         return network['ra_server']
+
+    def _project_cidr_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr']
+
+    def _project_cidrv6_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr_v6']
