@@ -222,9 +222,9 @@ class IptablesFirewallTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
 
-        class Mock(object):
+        class FakeLibvirtConnection(object):
             pass
-        self.fake_libvirt_connection = Mock()
+        self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = libvirt_conn.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
 
