@@ -198,9 +198,9 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                  net_attrs['broadcast'],
                  net_attrs['netmask']))
         if(FLAGS.use_ipv6):
-            _execute("sudo ifconfig %s add %s up" % \
-                     (bridge,
-                      net_attrs['cidr_v6']))
+            _execute("sudo ip -f inet6 addr change %s dev %s" %
+                     (net_attrs['cidr_v6'], bridge))
+            _execute("sudo ifconfig %s up" % bridge)
     else:
         _execute("sudo ifconfig %s up" % bridge)
     if FLAGS.use_nova_chains:
