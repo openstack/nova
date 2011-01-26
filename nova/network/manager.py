@@ -395,6 +395,7 @@ class FlatDHCPManager(FlatManager):
         standalone service.
         """
         super(FlatDHCPManager, self).init_host()
+        self.driver.init_host()
         self.driver.metadata_forward()
 
     def setup_compute_network(self, context, instance_id):
@@ -460,8 +461,8 @@ class VlanManager(NetworkManager):
         standalone service.
         """
         super(VlanManager, self).init_host()
-        self.driver.metadata_forward()
         self.driver.init_host()
+        self.driver.metadata_forward()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""

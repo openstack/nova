@@ -118,7 +118,7 @@ class ComputeManager(manager.Manager):
         """Do any initialization that needs to be run if this is a
            standalone service.
         """
-        self.driver.init_host()
+        self.driver.init_host(host=self.host)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
