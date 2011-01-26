@@ -28,6 +28,7 @@ class LocalImageService(service.BaseImageService):
 
     """Image service storing images to local disk.
     It assumes that image_ids are integers.
+
     """
 
     def __init__(self):
@@ -69,8 +70,8 @@ class LocalImageService(service.BaseImageService):
     def delete(self, context, image_id):
         """Delete the given image.
         Raises OSError if the image does not exist.
-        """
 
+        """
         try:
             os.unlink(self._path_to(image_id))
         except IOError:
@@ -84,6 +85,6 @@ class LocalImageService(service.BaseImageService):
     def delete_imagedir(self):
         """Deletes the local directory.
         Raises OSError if directory is not empty.
-        """
 
+        """
         os.rmdir(self._path)
