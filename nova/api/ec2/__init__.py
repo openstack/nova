@@ -213,7 +213,8 @@ class Requestify(wsgi.Middleware):
             LOG.debug(_('arg: %(key)s\t\tval: %(value)s') % locals())
 
         # Success!
-        api_request = apirequest.APIRequest(self.controller, action, args)
+        api_request = apirequest.APIRequest(self.controller, action,
+                                            req.params['Version'], args)
         req.environ['ec2.request'] = api_request
         req.environ['ec2.action_args'] = args
         return self.application
