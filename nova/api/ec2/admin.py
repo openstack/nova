@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova import log as logging
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.api.ec2.admin')
@@ -62,6 +63,14 @@ def host_dict(host):
         return {}
 
 
+def instance_dict(name, inst):
+    return {'name': name,
+            'memory_mb': inst['memory_mb'],
+            'vcpus': inst['vcpus'],
+            'disk_gb': inst['local_gb'],
+            'flavor_id': inst['flavorid']}
+
+
 class AdminController(object):
     """
     API Controller for users, hosts, nodes, and workers.
@@ -69,6 +78,10 @@ class AdminController(object):
 
     def __str__(self):
         return 'AdminController'
+
+    def describe_instance_types(self, _context, **_kwargs):
+        return {'instanceTypeSet': [instance_dict(n, v) for n, v in
+                                    instance_types.INSTANCE_TYPES.iteritems()]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
@@ -111,19 +124,23 @@ class AdminController(object):
         """Add or remove a role for a user and project."""
         if operation == 'add':
             if project:
-                LOG.audit(_("Adding role %s to user %s for project %s"), role,
-                          user, project, context=context)
+                msg = _("Adding role %(role)s to user %(user)s"
+                        " for project %(project)s") % locals()
+                LOG.audit(msg, context=context)
             else:
-                LOG.audit(_("Adding sitewide role %s to user %s"), role, user,
-                          context=context)
+                msg = _("Adding sitewide role %(role)s to"
+                        " user %(user)s") % locals()
+                LOG.audit(msg, context=context)
             manager.AuthManager().add_role(user, role, project)
         elif operation == 'remove':
             if project:
-                LOG.audit(_("Removing role %s from user %s for project %s"),
-                          role, user, project, context=context)
+                msg = _("Removing role %(role)s from user %(user)s"
+                        " for project %(project)s") % locals()
+                LOG.audit(msg, context=context)
             else:
-                LOG.audit(_("Removing sitewide role %s from user %s"), role,
-                          user, context=context)
+                msg = _("Removing sitewide role %(role)s"
+                        " from user %(user)s") % locals()
+                LOG.audit(msg, context=context)
             manager.AuthManager().remove_role(user, role, project)
         else:
             raise exception.ApiError(_('operation must be add or remove'))
@@ -139,8 +156,9 @@ class AdminController(object):
             project = name
         project = manager.AuthManager().get_project(project)
         user = manager.AuthManager().get_user(name)
-        LOG.audit(_("Getting x509 for user: %s on project: %s"), name,
-                  project, context=context)
+        msg = _("Getting x509 for user: %(name)s"
+                " on project: %(project)s") % locals()
+        LOG.audit(msg, context=context)
         return user_dict(user, base64.b64encode(project.get_credentials(user)))
 
     def describe_project(self, context, name, **kwargs):
@@ -156,8 +174,9 @@ class AdminController(object):
     def register_project(self, context, name, manager_user, description=None,
                          member_users=None, **kwargs):
         """Creates a new project"""
-        LOG.audit(_("Create project %s managed by %s"), name, manager_user,
-                  context=context)
+        msg = _("Create project %(name)s managed by"
+                " %(manager_user)s") % locals()
+        LOG.audit(msg, context=context)
         return project_dict(
             manager.AuthManager().create_project(
                 name,
@@ -181,12 +200,13 @@ class AdminController(object):
                               **kwargs):
         """Add or remove a user from a project."""
         if operation == 'add':
-            LOG.audit(_("Adding user %s to project %s"), user, project,
-                      context=context)
+            msg = _("Adding user %(user)s to project %(project)s") % locals()
+            LOG.audit(msg, context=context)
             manager.AuthManager().add_to_project(user, project)
         elif operation == 'remove':
-            LOG.audit(_("Removing user %s from project %s"), user, project,
-                      context=context)
+            msg = _("Removing user %(user)s from"
+                    " project %(project)s") % locals()
+            LOG.audit(msg, context=context)
             manager.AuthManager().remove_from_project(user, project)
         else:
             raise exception.ApiError(_('operation must be add or remove'))

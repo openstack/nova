@@ -272,16 +272,22 @@ class AuthManager(object):
 
         project = self.get_project(project_id)
         if project == None:
-            LOG.audit(_("failed authorization: no project named %s (user=%s)"),
-                      project_id, user.name)
+            pjid = project_id
+            uname = user.name
+            LOG.audit(_("failed authorization: no project named %(pjid)s"
+                    " (user=%(uname)s)") % locals())
             raise exception.NotFound(_('No project called %s could be found')
                                      % project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
-            LOG.audit(_("Failed authorization: user %s not admin and not "
-                        "member of project %s"), user.name, project.name)
-            raise exception.NotFound(_('User %s is not a member of project %s')
-                                     % (user.id, project.id))
+            uname = user.name
+            uid = user.id
+            pjname = project.name
+            pjid = project.id
+            LOG.audit(_("Failed authorization: user %(uname)s not admin"
+                    " and not member of project %(pjname)s") % locals())
+            raise exception.NotFound(_('User %(uid)s is not a member of'
+                    ' project %(pjid)s') % locals())
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
@@ -408,14 +414,16 @@ class AuthManager(object):
             raise exception.NotFound(_("The %s role can not be found") % role)
         if project is not None and role in FLAGS.global_roles:
             raise exception.NotFound(_("The %s role is global only") % role)
+        uid = User.safe_id(user)
+        pid = Project.safe_id(project)
         if project:
-            LOG.audit(_("Adding role %s to user %s in project %s"), role,
-                      User.safe_id(user), Project.safe_id(project))
+            LOG.audit(_("Adding role %(role)s to user %(uid)s"
+                    " in project %(pid)s") % locals())
         else:
-            LOG.audit(_("Adding sitewide role %s to user %s"), role,
-                      User.safe_id(user))
+            LOG.audit(_("Adding sitewide role %(role)s to user %(uid)s")
+                    % locals())
         with self.driver() as drv:
-            drv.add_role(User.safe_id(user), role, Project.safe_id(project))
+            drv.add_role(uid, role, pid)
 
     def remove_role(self, user, role, project=None):
         """Removes role for user
@@ -434,14 +442,16 @@ class AuthManager(object):
         @type project: Project or project_id
         @param project: Project in which to remove local role.
         """
+        uid = User.safe_id(user)
+        pid = Project.safe_id(project)
         if project:
-            LOG.audit(_("Removing role %s from user %s on project %s"),
-                      role, User.safe_id(user), Project.safe_id(project))
+            LOG.audit(_("Removing role %(role)s from user %(uid)s"
+                    " on project %(pid)s") % locals())
         else:
-            LOG.audit(_("Removing sitewide role %s from user %s"), role,
-                      User.safe_id(user))
+            LOG.audit(_("Removing sitewide role %(role)s"
+                    " from user %(uid)s") % locals())
         with self.driver() as drv:
-            drv.remove_role(User.safe_id(user), role, Project.safe_id(project))
+            drv.remove_role(uid, role, pid)
 
     @staticmethod
     def get_roles(project_roles=True):
@@ -502,8 +512,8 @@ class AuthManager(object):
                                               description,
                                               member_users)
             if project_dict:
-                LOG.audit(_("Created project %s with manager %s"), name,
-                          manager_user)
+                LOG.audit(_("Created project %(name)s with"
+                        " manager %(manager_user)s") % locals())
                 project = Project(**project_dict)
                 return project
 
@@ -530,11 +540,12 @@ class AuthManager(object):
 
     def add_to_project(self, user, project):
         """Add user to project"""
-        LOG.audit(_("Adding user %s to project %s"), User.safe_id(user),
-                  Project.safe_id(project))
+        uid = User.safe_id(user)
+        pid = Project.safe_id(project)
+        LOG.audit(_("Adding user %(uid)s to project %(pid)s") % locals())
         with self.driver() as drv:
             return drv.add_to_project(User.safe_id(user),
-                                       Project.safe_id(project))
+                                      Project.safe_id(project))
 
     def is_project_manager(self, user, project):
         """Checks if user is project manager"""
@@ -550,11 +561,11 @@ class AuthManager(object):
 
     def remove_from_project(self, user, project):
         """Removes a user from a project"""
-        LOG.audit(_("Remove user %s from project %s"), User.safe_id(user),
-                  Project.safe_id(project))
+        uid = User.safe_id(user)
+        pid = Project.safe_id(project)
+        LOG.audit(_("Remove user %(uid)s from project %(pid)s") % locals())
         with self.driver() as drv:
-            return drv.remove_from_project(User.safe_id(user),
-                                            Project.safe_id(project))
+            return drv.remove_from_project(uid, pid)
 
     @staticmethod
     def get_project_vpn_data(project):
@@ -634,7 +645,10 @@ class AuthManager(object):
             user_dict = drv.create_user(name, access, secret, admin)
             if user_dict:
                 rv = User(**user_dict)
-                LOG.audit(_("Created user %s (admin: %r)"), rv.name, rv.admin)
+                rvname = rv.name
+                rvadmin = rv.admin
+                LOG.audit(_("Created user %(rvname)s"
+                        " (admin: %(rvadmin)r)") % locals())
                 return rv
 
     def delete_user(self, user):
@@ -656,7 +670,8 @@ class AuthManager(object):
         if secret_key:
             LOG.audit(_("Secret Key change for user %s"), uid)
         if admin is not None:
-            LOG.audit(_("Admin status set to %r for user %s"), admin, uid)
+            LOG.audit(_("Admin status set to %(admin)r"
+                    " for user %(uid)s") % locals())
         with self.driver() as drv:
             drv.modify_user(uid, access_key, secret_key, admin)
 

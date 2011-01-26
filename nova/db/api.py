@@ -71,7 +71,6 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
-
 ###################
 
 
@@ -349,6 +348,11 @@ def instance_get_all_by_user(context, user_id):
 def instance_get_all_by_project(context, project_id):
     """Get all instance belonging to a project."""
     return IMPL.instance_get_all_by_project(context, project_id)
+
+
+def instance_get_all_by_host(context, host):
+    """Get all instance belonging to a host."""
+    return IMPL.instance_get_all_by_host(context, host)
 
 
 def instance_get_all_by_reservation(context, reservation_id):

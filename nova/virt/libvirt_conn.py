@@ -157,8 +157,31 @@ class LibvirtConnection(object):
         else:
             self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
 
-    def init_host(self):
-        pass
+    def init_host(self, host):
+        # Adopt existing VM's running here
+        ctxt = context.get_admin_context()
+        for instance in db.instance_get_all_by_host(ctxt, host):
+            try:
+                LOG.debug(_('Checking state of %s'), instance['name'])
+                state = self.get_info(instance['name'])['state']
+            except exception.NotFound:
+                state = power_state.SHUTOFF
+
+            LOG.debug(_('Current state of %(name)s was %(state)s.'),
+                          {'name': instance['name'], 'state': state})
+            db.instance_set_state(ctxt, instance['id'], state)
+
+            if state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate # an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                db.instance_destroy(ctxt, instance['id'])
+
+            if state != power_state.RUNNING:
+                continue
+            self.firewall_driver.prepare_instance_filter(instance)
+            self.firewall_driver.apply_instance_filter(instance)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -236,8 +259,9 @@ class LibvirtConnection(object):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        LOG.info(_('instance %s: deleting instance files %s'),
-                 instance['name'], target)
+        instance_name = instance['name']
+        LOG.info(_('instance %(instance_name)s: deleting instance files'
+                ' %(target)s') % locals())
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -418,7 +442,7 @@ class LibvirtConnection(object):
         virsh_output = virsh_output[0].strip()
 
         if virsh_output.startswith('/dev/'):
-            LOG.info(_('cool, it\'s a device'))
+            LOG.info(_("cool, it's a device"))
             out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
                                      virsh_output, check_exit_code=False)
             return out
@@ -426,7 +450,7 @@ class LibvirtConnection(object):
             return ''
 
     def _append_to_file(self, data, fpath):
-        LOG.info(_('data: %r, fpath: %r'), data, fpath)
+        LOG.info(_('data: %(data)r, fpath: %(fpath)r') % locals())
         fp = open(fpath, 'a+')
         fp.write(data)
         return fpath
@@ -434,7 +458,7 @@ class LibvirtConnection(object):
     def _dump_file(self, fpath):
         fp = open(fpath, 'r+')
         contents = fp.read()
-        LOG.info(_('Contents of file %s: %r'), fpath, contents)
+        LOG.info(_('Contents of file %(fpath)s: %(contents)r') % locals())
         return contents
 
     @exception.wrap_exception
@@ -621,30 +645,28 @@ class LibvirtConnection(object):
                                   'dns': network_ref['dns'],
                                   'ra_server': ra_server}
         if key or net:
+            inst_name = inst['name']
+            img_id = inst.image_id
             if key:
-                LOG.info(_('instance %s: injecting key into image %s'),
-                    inst['name'], inst.image_id)
+                LOG.info(_('instance %(inst_name)s: injecting key into'
+                        ' image %(img_id)s') % locals())
             if net:
-                LOG.info(_('instance %s: injecting net into image %s'),
-                             inst['name'], inst.image_id)
+                LOG.info(_('instance %(inst_name)s: injecting net into'
+                        ' image %(img_id)s') % locals())
             try:
                 disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
-                LOG.warn(_('instance %s: ignoring error injecting data'
-                           ' into image %s (%s)'),
-                         inst['name'], inst.image_id, e)
+                LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
+                        ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo chown root %s' % basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
@@ -1229,6 +1251,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
+        our_rules += ['-A OUTPUT -j nova-local']
 
         security_groups = {}
         # Add our chains
@@ -1269,13 +1292,22 @@ class IptablesFirewallDriver(FirewallDriver):
             if(ip_version == 4):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
-                                                 (chain_name, dhcp_server)]
+                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
+                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidr = self._project_cidr_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p icmpv6' %
-                                                 (chain_name, ra_server)]
+                our_rules += ['-A %s -s %s -p icmpv6 '
+                                '-j ACCEPT' % (chain_name, ra_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidrv6 = self._project_cidrv6_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' %
+                                        (chain_name, cidrv6)]
 
             # If nothing matches, jump to the fallback chain
             our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
@@ -1362,11 +1394,21 @@ class IptablesFirewallDriver(FirewallDriver):
                                              instance['id'])
 
     def _dhcp_server_for_instance(self, instance):
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         return network['gateway']
 
     def _ra_server_for_instance(self, instance):
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         return network['ra_server']
+
+    def _project_cidr_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr']
+
+    def _project_cidrv6_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr_v6']
