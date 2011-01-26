@@ -208,22 +208,6 @@ class VMOps(object):
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
-    def start(self, instance):
-        """Start a VM instance"""
-        vm = self._get_vm_opaque_ref(instance)
-        task = self._session.call_xenapi("Async.VM.start", vm, False, False)
-        self._session.wait_for_task(task, instance.id)
-
-    def shutdown(self, instance):
-        """Shutdown a VM instance"""
-        vm = self._get_vm_opaque_ref(instance)
-        try:
-            task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
-            self._session.wait_for_task(task, instance.id)
-        except self.XenAPI.Failure:
-            task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
-            self._session.wait_for_task(task, instance.id)
-
     def reboot(self, instance):
         """Reboot VM instance"""
         vm = self._get_vm_opaque_ref(instance)
@@ -268,8 +252,13 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
+    def _start(self, instance, vm):
+        """Start an instance"""
+        task = self._session.call_xenapi("Async.VM.start", vm, False, False)
+        self._session.wait_for_task(task, instance.id)
+
     def _shutdown(self, instance, vm):
-        """Shutdown an instance """
+        """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
             LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
@@ -277,8 +266,12 @@ class VMOps(object):
             return
 
         try:
-            task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
-            self._session.wait_for_task(task, instance.id)
+            try:
+                task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
+                self._session.wait_for_task(task, instance.id)
+            except self.XenAPI.Failure:
+                task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
+                self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -368,9 +361,9 @@ class VMOps(object):
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-        target_vm = VMHelper.lookup(self._session, "instance-00000001")
+        target_vm = VMHelper.lookup(self._session, "instance-00000012")
 
-        self.shutdown(instance)
+        self._shutdown(instance, vm)
 
         vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
@@ -387,7 +380,7 @@ class VMOps(object):
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-        target_vm = VMHelper.lookup(self._session, "instance-00000001")
+        target_vm = VMHelper.lookup(self._session, "instance-00000012")
 
         vbds = self._session.get_xenapi().VM.get_VBDs(target_vm)
 
@@ -397,7 +390,7 @@ class VMOps(object):
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
-        self.start(instance)
+        self._start(instance, vm)
 
     def get_info(self, instance):
         """Return data about VM instance"""
