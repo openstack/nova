@@ -18,11 +18,14 @@
 Test suite for XenAPI
 """
 
+import os
+import re
 import stubout
 
 from nova import db
 from nova import context
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
@@ -35,6 +38,9 @@ from nova.virt.xenapi.vmops import SimpleDH
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
+from nova.tests import fake_utils
+
+LOG = logging.getLogger('nova.tests.test_xenapi')
 
 FLAGS = flags.FLAGS
 
@@ -166,6 +172,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_stream_disk(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
+        fake_utils.stub_out_utils_execute(self.stubs)
         self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
@@ -306,10 +313,84 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, 2, 3)
 
-    def test_spawn_netinject(self):
+    def test_spawn_netinject_file(self):
         FLAGS.xenapi_image_service = 'glance'
         db_fakes.stub_out_db_network_api(self.stubs, injected=True)
+
+        self._tee_executed = False
+
+        def _tee_handler(cmd, input, *ignore_args):
+            self.assertNotEqual(input, None)
+
+            config = [line.strip() for line in input.split("\n")]
+
+            # Find the start of eth0 configuration and check it
+            index = config.index('auto eth0')
+            self.assertEquals(config[index + 1:index + 8], [
+                'iface eth0 inet static',
+                'address 10.0.0.3',
+                'netmask 255.255.255.0',
+                'broadcast 10.0.0.255',
+                'gateway 10.0.0.1',
+                'dns-nameservers 10.0.0.2',
+                ''])
+
+            self._tee_executed = True
+
+            return '', ''
+
+        fake_utils.fake_execute_set_repliers([
+            # Capture the sudo tee .../etc/network/interfaces command
+            (r'(sudo\s+)?tee.*interfaces', _tee_handler),
+        ])
         self._test_spawn(1, 2, 3, check_injection=True)
+        self.assertTrue(self._tee_executed)
+
+    def test_spawn_netinject_xenstore(self):
+        FLAGS.xenapi_image_service = 'glance'
+        db_fakes.stub_out_db_network_api(self.stubs, injected=True)
+
+        self._tee_executed = False
+
+        def _mount_handler(cmd, *ignore_args):
+            # When mounting, create real files under the mountpoint to simulate
+            # files in the mounted filesystem
+
+            # RegExp extracts the path of the mountpoint
+            match = re.match(r'(sudo\s+)?mount[^"]*"[^"]*"\s+"([^"]*)"', cmd)
+            self._tmpdir = match.group(2)
+            LOG.debug(_('Creating files in %s to simulate guest agent' %
+                self._tmpdir))
+            os.makedirs(os.path.join(self._tmpdir, 'usr', 'sbin'))
+            # Touch the file using open
+            open(os.path.join(self._tmpdir, 'usr', 'sbin',
+                'xe-update-networking'), 'w').close()
+            return '', ''
+
+        def _umount_handler(cmd, *ignore_args):
+            # Umount would normall make files in the m,ounted filesystem
+            # disappear, so do that here
+            LOG.debug(_('Removing simulated guest agent files in %s' %
+                self._tmpdir))
+            os.remove(os.path.join(self._tmpdir, 'usr', 'sbin',
+                'xe-update-networking'))
+            os.rmdir(os.path.join(self._tmpdir, 'usr', 'sbin'))
+            os.rmdir(os.path.join(self._tmpdir, 'usr'))
+            return '', ''
+
+        def _tee_handler(cmd, input, *ignore_args):
+            self._tee_executed = True
+            return '', ''
+
+        fake_utils.fake_execute_set_repliers([
+            (r'(sudo\s+)?mount', _mount_handler),
+            (r'(sudo\s+)?umount', _umount_handler),
+            (r'(sudo\s+)?tee.*interfaces', _tee_handler)])
+        self._test_spawn(1, 2, 3, check_injection=True)
+
+        # tee must not run in this case, where an injection-capable
+        # guest agent is detected
+        self.assertFalse(self._tee_executed)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
