@@ -843,7 +843,7 @@ class CloudController(object):
         # Note: image_id is a list!
         images = self.image_service.index(context)
         if image_id:
-            images = filter(lambda x: x['id'] in image_id, images)
+            images = filter(lambda x: x['imageId'] in image_id, images)
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
