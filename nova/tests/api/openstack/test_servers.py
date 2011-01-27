@@ -76,7 +76,7 @@ class ServersTest(unittest.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get_by_id', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
