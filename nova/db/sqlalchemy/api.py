@@ -685,6 +685,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -698,7 +699,9 @@ def instance_get(context, instance_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound(_('No instance for id %s') % instance_id)
+        raise exception.InstanceNotFound(_('Instance %s not found')
+                                         % instance_id,
+                                         instance_id)
 
     return result
 
@@ -721,6 +724,17 @@ def instance_get_all_by_user(context, user_id):
                    options(joinedload('security_groups')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
+                   all()
+
+
+@require_admin_context
+def instance_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(host=host).\
+                   filter_by(deleted=can_read_deleted(context)).\
                    all()
 
 
@@ -768,33 +782,6 @@ def instance_get_project_vpn(context, project_id):
                    filter_by(image_id=FLAGS.vpn_image_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
-
-
-@require_context
-def instance_get_by_id(context, instance_id):
-    session = get_session()
-
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.network')).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('fixed_ip.network')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=False).\
-                         first()
-    if not result:
-        raise exception.NotFound(_('Instance %s not found') % (instance_id))
-
-    return result
 
 
 @require_context
@@ -1396,17 +1383,20 @@ def volume_get(context, volume_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound(_('No volume for id %s') % volume_id)
+        raise exception.VolumeNotFound(_('Volume %s not found') % volume_id,
+                                       volume_id)
 
     return result
 
@@ -1451,7 +1441,8 @@ def volume_get_instance(context, volume_id):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.NotFound(_('Volume %s not found') % ec2_id)
+        raise exception.VolumeNotFound(_('Volume %s not found') % volume_id,
+                                       volume_id)
 
     return result.instance
 

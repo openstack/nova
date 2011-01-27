@@ -42,6 +42,17 @@ You can also run with a category argument such as user to see a list of all comm
 
 These sections describe the available categories and arguments for nova-manage.
 
+Nova Db
+~~~~~~~
+
+``nova-manage db version``
+
+    Print the current database version.
+
+``nova-manage db sync``
+
+    Sync the database up to the most recent version. This is the standard way to create the db as well.
+
 Nova User
 ~~~~~~~~~
 
@@ -68,7 +79,7 @@ Nova User
 ``nova-manage user modify <accesskey> <secretkey> <admin?T/F>``
 
     Updates the indicated user keys, indicating with T or F if the user is an admin user. Leave any argument blank if you do not want to update it.
-	
+
 Nova Project
 ~~~~~~~~~~~~
 
@@ -79,7 +90,7 @@ Nova Project
 ``nova-manage project create <projectname>``
 
     Create a new nova project with the name <projectname> (you still need to do nova-manage project add <projectname> to add it to the database).
-	
+
 ``nova-manage project delete <projectname>``
 
     Delete a nova project with the name <projectname>.
@@ -87,7 +98,7 @@ Nova Project
 ``nova-manage project environment <projectname> <username>``
 
     Exports environment variables for the named project to a file named novarc.
-    
+
 ``nova-manage project list``
 
     Outputs a list of all the projects to the screen.
@@ -103,27 +114,27 @@ Nova Project
 ``nova-manage project zipfile``
 
     Compresses all related files for a created project into a zip file nova.zip.
-	
+
 Nova Role
 ~~~~~~~~~
 
-nova-manage role <action> [<argument>] 
+nova-manage role <action> [<argument>]
 ``nova-manage role add <username> <rolename> <(optional) projectname>``
 
-    Add a user to either a global or project-based role with the indicated <rolename> assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects. 
+    Add a user to either a global or project-based role with the indicated <rolename> assigned to the named user. Role names can be one of the following five roles: admin, itsec, projectmanager, netadmin, developer. If you add the project name as the last argument then the role is assigned just for that project, otherwise the user is assigned the named role for all projects.
 
 ``nova-manage role has <username> <projectname>``
     Checks the user or project and responds with True if the user has a global role with a particular project.
 
 ``nova-manage role remove <username> <rolename>``
-    Remove the indicated role from the user. 
+    Remove the indicated role from the user.
 
 Nova Shell
 ~~~~~~~~~~
 
 ``nova-manage shell bpython``
 
-    Starts a new bpython shell. 
+    Starts a new bpython shell.
 
 ``nova-manage shell ipython``
 
@@ -150,20 +161,20 @@ Nova VPN
 
 ``nova-manage vpn run <projectname>``
 
-    Starts the VPN for the named project.		
+    Starts the VPN for the named project.
 
 ``nova-manage vpn spawn``
 
     Runs all VPNs.
-	
+
 Nova Floating IPs
 ~~~~~~~~~~~~~~~~~
 
 ``nova-manage floating create <host> <ip_range>``
 
     Creates floating IP addresses for the named host by the given range.
-	floating delete <ip_range>	Deletes floating IP addresses in the range given.	
-	
+	floating delete <ip_range>	Deletes floating IP addresses in the range given.
+
 ``nova-manage floating list``
 
     Displays a list of all floating IP addresses.

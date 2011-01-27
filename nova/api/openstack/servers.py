@@ -124,17 +124,23 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_kernel_ramdisk_from_image(self, image_id):
-        mapping_filename = FLAGS.os_krm_mapping_file
+    def _get_kernel_ramdisk_from_image(self, req, image_id):
+        """
+        Machine images are associated with Kernels and Ramdisk images via
+        metadata stored in Glance as 'image_properties'
+        """
+        def lookup(param):
+            _image_id = image_id
+            try:
+                return image['properties'][param]
+            except KeyError:
+                raise exception.NotFound(
+                    _("%(param)s property not found for image %(_image_id)s") %
+                      locals())
 
-        with open(mapping_filename) as f:
-            mapping = json.load(f)
-            if image_id in mapping:
-                return mapping[image_id]
-
-        msg = _("No entry for image '%(image_id)s'"
-                " in mapping file '%(mapping_filename)s'") % locals()
-        raise exception.NotFound(msg)
+        image_id = str(image_id)
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+        return lookup('kernel_id'), lookup('ramdisk_id')
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -146,7 +152,8 @@ class Controller(wsgi.Controller):
             req.environ['nova.context'])[0]
         image_id = common.get_image_id_from_image_hash(self._image_service,
             req.environ['nova.context'], env['server']['imageId'])
-        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(image_id)
+        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
+            req, image_id)
         instances = self.compute_api.create(
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),

@@ -113,7 +113,7 @@ class HyperVConnection(object):
         self._conn = wmi.WMI(moniker='//./root/virtualization')
         self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 
-    def init_host(self):
+    def init_host(self, host):
         #FIXME(chiradeep): implement this
         LOG.debug(_('In init host'))
         pass
@@ -191,7 +191,7 @@ class HyperVConnection(object):
         vcpus = long(instance['vcpus'])
         procsetting.VirtualQuantity = vcpus
         procsetting.Reservation = vcpus
-        procsetting.Limit = vcpus
+        procsetting.Limit = 100000  # static assignment to 100%
 
         (job, ret_val) = vs_man_svc.ModifyVirtualSystemResources(
                 vm.path_(), [procsetting.GetText_(1)])

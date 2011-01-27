@@ -157,8 +157,9 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.audit(_("Starting %s node (version %s)"), topic,
-                      version.version_string_with_vcs())
+        vcs_string = version.version_string_with_vcs()
+        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)")
+                % locals())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
