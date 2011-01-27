@@ -678,8 +678,7 @@ class LibvirtConnection(object):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
-        if not ra_server:
-            ra_server = 'fd00::'
+
         if FLAGS.allow_project_net_traffic:
             if FLAGS.use_ipv6:
                 net, mask = _get_net_and_mask(network['cidr'])
@@ -718,11 +717,13 @@ class LibvirtConnection(object):
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
-                    'ra_server': ra_server,
                     'extra_params': extra_params,
                     'rescue': rescue,
                     'local': instance_type['local_gb'],
                     'driver_type': driver_type}
+
+        if ra_server:
+            xml_info['ra_server'] = ra_server + "/128"
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -905,6 +906,11 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
+    def _ra_server_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['ra_server']
+
 
 class NWFilterFirewall(FirewallDriver):
     """
@@ -956,6 +962,10 @@ class NWFilterFirewall(FirewallDriver):
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
 
     def _get_connection(self):
         return self._libvirt_get_connection()
@@ -1115,7 +1125,9 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            instance_secgroup_filter_children += ['nova-allow-ra-server']
+            ra_server = self._ra_server_for_instance(instance)
+            if ra_server:
+                instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
 
@@ -1141,10 +1153,6 @@ class NWFilterFirewall(FirewallDriver):
                                            instance_filter_children))
 
         return
-
-    def apply_instance_filter(self, instance):
-        """No-op. Everything is done in prepare_instance_filter"""
-        pass
 
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
@@ -1301,8 +1309,9 @@ class IptablesFirewallDriver(FirewallDriver):
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p icmpv6 '
-                                '-j ACCEPT' % (chain_name, ra_server)]
+                if ra_server:
+                    our_rules += ['-A %s -s %s -p icmpv6 -j ACCEPT' %
+                                  (chain_name, ra_server + "/128")]
                 #Allow project network traffic
                 if (FLAGS.allow_project_net_traffic):
                     cidrv6 = self._project_cidrv6_for_instance(instance)
