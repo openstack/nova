@@ -897,41 +897,42 @@ def instance_get_all_by_host(context, hostname):
 
 
 @require_context
-def _instance_get_sum_by_host_and_project(context, column, hostname, proj_id):
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     session = get_session()
-
     result = session.query(models.Instance).\
-                     filter_by(host=hostname).\
-                     filter_by(project_id=proj_id).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     value(column)
-    if not result:
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.vcpus))
+    if None == result:
         return 0
     return result
 
 
 @require_context
-def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context,
-                                                 'vcpus',
-                                                 hostname,
-                                                 proj_id)
-
-
-@require_context
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context,
-                                                 'memory_mb',
-                                                 hostname,
-                                                 proj_id)
-
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.memory_mb))
+    if None == result:
+        return 0
+    return result
 
 @require_context
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    return _instance_get_sum_by_host_and_project(context,
-                                                 'local_gb',
-                                                 hostname,
-                                                 proj_id)
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.local_gb))
+    if None == result:
+        return 0
+    return result
+
 
 
 @require_context

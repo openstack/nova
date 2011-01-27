@@ -20,6 +20,7 @@ Tests For Compute
 """
 
 import datetime
+import mox
 
 from nova import compute
 from nova import context
@@ -27,9 +28,12 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import rpc
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -219,3 +223,304 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_update_service_exception(self): 
+        """nova-compute updates Serivce table on DB like below.
+           nova.service.Serivce.start -> 
+               nova.compute.ComputeManager.update_service.
+           This testcase confirms if no record found on Service
+           table, exception can be raised.
+        """
+        host = 'foo'
+        binary = 'nova-compute'
+        dbmock = self.mox.CreateMock(db)
+        dbmock.service_get_by_args(mox.IgnoreArg(), 
+                                   mox.StrContains(host), 
+                                   mox.StrContains(binary)).\
+                                   AndRaise(exception.NotFound())
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        try: 
+            self.compute.update_service('dummy', host, binary)
+        except exception.Invalid, e:
+            msg = 'Cannot insert compute manager specific info'
+            c1 = ( 0 <= e.message.find(msg))
+            self.assertTrue(c1)
+        self.mox.ResetAll()
+
+    def test_update_service_success(self): 
+        """nova-compute updates Serivce table on DB like below.
+           nova.service.Serivce.start ->
+               nova.compute.ComputeManager.update_service.
+           In this method, vcpus/memory_mb/local_gb/hypervisor_type/
+           hypervisor_version/cpu_info should be changed.
+           Based on this specification, this testcase confirms 
+           if this method finishes successfully,
+           meaning self.db.service_update is called with dictinary
+
+           {'vcpu':aaa, 'memory_mb':bbb, 'local_gb':ccc, 
+            'hypervisor_type':ddd, 'hypervisor_version':eee, 
+            'cpu_info':fff}
+
+           Since each value of above dict can be obtained through
+           driver(different depends on environment), 
+           only dictionary keys are checked.
+        """
+
+        def dic_key_check(dic): 
+            validkey = ['vcpus', 'memory_mb', 'local_gb', 
+                        'hypervisor_type', 'hypervisor_version', 'cpu_info']
+            return (list(set(validkey)) == list(set(dic.keys())))
+
+        host = 'foo'
+        binary = 'nova-compute'
+        service_ref = {'id':1, 'binary':'nova-compute', 'topic':'compute'} 
+        dbmock = self.mox.CreateMock(db)
+        dbmock.service_get_by_args(mox.IgnoreArg(), 
+                                   mox.StrContains(host), 
+                                   mox.StrContains(binary)).\
+                                   AndReturn(service_ref)
+        dbmock.service_update(mox.IgnoreArg(), 
+                              service_ref['id'], 
+                              mox.Func(dic_key_check))
+
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        try: 
+            self.compute.update_service('dummy', host, binary)
+        except exception.Invalid, e:
+            msg = 'Cannot insert compute manager specific info'
+            c1 = ( 0 <= e.message.find(msg))
+            self.assertTrue(c1)
+        self.mox.ResetAll()
+
+    def _setup_other_managers(self):
+        self.volume_manager = utils.import_object(FLAGS.volume_manager)
+        self.network_manager = utils.import_object(FLAGS.network_manager)
+        self.compute_driver = utils.import_object(FLAGS.compute_driver)
+
+    def test_pre_live_migration_instance_has_no_fixed_ip(self): 
+        """
+           if instances that are intended to be migrated doesnt have fixed_ip
+           (not happens usually), pre_live_migration has to raise Exception.
+        """
+        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
+                      'hostname':'i-000000001'}
+        c = context.get_admin_context()
+        i_id = instance_ref['id']
+
+        dbmock = self.mox.CreateMock(db)
+        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        dbmock.instance_get_fixed_address(c, i_id).AndReturn(None)
+
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NotFound,
+                          self.compute.pre_live_migration,
+                          c, instance_ref['id'])
+        self.mox.ResetAll()
+
+    def test_pre_live_migration_instance_has_volume(self): 
+        """if any volumes are attached to the instances that are 
+           intended to be migrated, setup_compute_volume must be
+           called because aoe module should be inserted at destination
+           host. This testcase checks on it.
+        """
+        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
+                      'hostname':'i-000000001'}
+        c = context.get_admin_context()
+        i_id=instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        volmock = self.mox.CreateMock(self.volume_manager)
+        netmock = self.mox.CreateMock(self.network_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
+        for i in range(len(instance_ref['volumes'])):
+            vid = instance_ref['volumes'][i]['id']
+            volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
+        netmock.setup_compute_network(c, instance_ref['id'])
+        drivermock.ensure_filtering_rules_for_instance(instance_ref)
+                                     
+        self.compute.db = dbmock
+        self.compute.volume_manager = volmock
+        self.compute.network_manager = netmock
+        self.compute.driver = drivermock
+
+        self.mox.ReplayAll()
+        ret = self.compute.pre_live_migration(c, i_id)
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+        
+    def test_pre_live_migration_instance_has_no_volume(self): 
+        """if any volumes are not attached to the instances that are 
+           intended to be migrated, log message should be appears
+           because administrator can proove instance conditions before
+           live_migration if any trouble occurs.
+        """
+        instance_ref={'id':1, 'volumes':[], 'hostname':'i-20000001'}
+        c = context.get_admin_context()
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        netmock = self.mox.CreateMock(self.network_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+        
+        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
+        self.mox.StubOutWithMock(compute_manager.LOG, 'info')
+        compute_manager.LOG.info(_("%s has no volume."), instance_ref['hostname'])
+        netmock.setup_compute_network(c, i_id)
+        drivermock.ensure_filtering_rules_for_instance(instance_ref)
+                                     
+        self.compute.db = dbmock
+        self.compute.network_manager = netmock
+        self.compute.driver = drivermock
+
+        self.mox.ReplayAll()
+        ret = self.compute.pre_live_migration(c, i_id)
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+
+    def test_live_migration_instance_has_volume(self): 
+        """Any volumes are mounted by instances to be migrated are found,
+           vblade health must be checked before starting live-migration.
+           And that is checked by check_for_export().
+           This testcase confirms check_for_export() is called. 
+        """
+        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 'hostname':'i-00000001'}
+        c = context.get_admin_context()
+        dest='dummydest'
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, FLAGS.volume_topic,
+                 {"method": "check_for_export",
+                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
+                 {"method": "pre_live_migration",
+                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+
+        self.compute.db = dbmock
+        self.compute.driver = drivermock
+        self.mox.ReplayAll()
+        ret = self.compute.live_migration(c, i_id, dest)
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+
+    def test_live_migration_instance_has_volume_and_exception(self): 
+        """In addition to test_live_migration_instance_has_volume testcase, 
+           this testcase confirms if any exception raises from check_for_export().
+           Then, valid seaquence of this method should recovering instance/volumes
+           status(ex. instance['state_description'] is changed from 'migrating'
+           -> 'running', was changed by scheduler)
+        """
+        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
+                      'hostname':'i-000000001'}
+        dest='dummydest'
+        c = context.get_admin_context()
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, FLAGS.volume_topic,
+                 {"method": "check_for_export",
+                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
+        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
+        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
+                 {"method": "pre_live_migration",
+                  "args": {'instance_id': i_id}}).\
+                 InAnyOrder('g1').AndRaise(rpc.RemoteError('du', 'mm', 'y'))
+        self.mox.StubOutWithMock(compute_manager.LOG, 'error')
+        compute_manager.LOG.error('Pre live migration for %s failed at %s', 
+                                   instance_ref['hostname'], dest)
+        dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
+        for i in range(len(instance_ref['volumes'])):
+            vid = instance_ref['volumes'][i]['id']
+            dbmock.volume_update(c, vid, {'status': 'in-use'})
+
+        self.compute.db = dbmock
+        self.compute.driver = drivermock
+        self.mox.ReplayAll()
+        self.assertRaises(rpc.RemoteError, 
+                          self.compute.live_migration,
+                          c, i_id, dest)
+        self.mox.ResetAll()
+
+    def test_live_migration_instance_has_no_volume_and_exception(self): 
+        """Simpler than test_live_migration_instance_has_volume_and_exception"""
+
+        instance_ref={'id':1, 'volumes':[], 'hostname':'i-000000001'}
+        dest='dummydest'
+        c = context.get_admin_context()
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        self.mox.StubOutWithMock(rpc, 'call')
+        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
+        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
+        rpc.call(c, compute_topic,
+                 {"method": "pre_live_migration",
+                  "args": {'instance_id': i_id}}).\
+                 AndRaise(rpc.RemoteError('du', 'mm', 'y'))
+        self.mox.StubOutWithMock(compute_manager.LOG, 'error')
+        compute_manager.LOG.error('Pre live migration for %s failed at %s', 
+                                   instance_ref['hostname'], dest)
+        dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
+
+        self.compute.db = dbmock
+        self.compute.driver = drivermock
+        self.mox.ReplayAll()
+        self.assertRaises(rpc.RemoteError, 
+                          self.compute.live_migration,
+                          c, i_id, dest)
+        self.mox.ResetAll()
+
+    def test_live_migration_instance_has_volume(self): 
+        """Simpler version than test_live_migration_instance_has_volume."""
+        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
+                      'hostname':'i-000000001'}
+        c = context.get_admin_context()
+        dest='dummydest'
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        self.mox.StubOutWithMock(rpc, 'call')
+        rpc.call(c, FLAGS.volume_topic,
+                 {"method": "check_for_export",
+                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
+        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
+        rpc.call(c, compute_topic,
+                 {"method": "pre_live_migration",
+                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+        drivermock.live_migration(c, instance_ref, dest)
+
+        self.compute.db = dbmock
+        self.compute.driver = drivermock
+        self.mox.ReplayAll()
+        ret = self.compute.live_migration(c, i_id, dest)
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()

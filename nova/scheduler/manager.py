@@ -73,17 +73,13 @@ class SchedulerManager(manager.Manager):
     #                    Based on bear design summit discussion,
     #                    just put this here for bexar release.
     def show_host_resource(self, context, host, *args):
-        """ show the physical/usage resource given by hosts."""
+        """show the physical/usage resource given by hosts."""
 
-        services = db.service_get_all_by_host(context, host)
-        if len(services) == 0:
-            return {'ret': False, 'msg': 'No such Host'}
-
-        compute = [s for s in services if s['topic'] == 'compute']
-        if 0 == len(compute):
-            service_ref = services[0]
-        else:
-            service_ref = compute[0]
+        computes = db.service_get_all_compute_sorted(context)
+        computes = [s for s,v in computes if s['host'] == host]
+        if 0 == len(computes):
+            return {'ret': False, 'msg': 'No such Host or not compute node.'}
+        service_ref = computes[0]
 
         # Getting physical resource information
         h_resource = {'vcpus': service_ref['vcpus'],
@@ -92,13 +88,15 @@ class SchedulerManager(manager.Manager):
 
         # Getting usage resource information
         u_resource = {}
-        instances_ref = db.instance_get_all_by_host(context,
-                                                    service_ref['host'])
+        instances_refs = db.instance_get_all_by_host(context,
+                                                     service_ref['host'])
 
-        if 0 == len(instances_ref):
-            return {'ret': True, 'phy_resource': h_resource, 'usage': {}}
+        if 0 == len(instances_refs):
+            return {'ret': True,
+                    'phy_resource': h_resource,
+                    'usage': u_resource}
 
-        project_ids = [i['project_id'] for i in instances_ref]
+        project_ids = [i['project_id'] for i in instances_refs]
         project_ids = list(set(project_ids))
         for p_id in project_ids:
             vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,

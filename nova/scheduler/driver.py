@@ -69,11 +69,10 @@ class Scheduler(object):
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
     def schedule_live_migration(self, context, instance_id, dest):
-        """ live migration method """
+        """live migration method"""
 
         # Whether instance exists and running
         instance_ref = db.instance_get(context, instance_id)
-        ec2_id = instance_ref['hostname']
 
         # Checking instance.
         self._live_migration_src_check(context, instance_ref)
@@ -159,48 +158,45 @@ class Scheduler(object):
 
     def _live_migration_common_check(self, context, instance_ref, dest):
         """
-           Live migration check routine.
-           Below pre-checkings are followed by
-           http://wiki.libvirt.org/page/TodoPreMigrationChecks
+        Live migration check routine.
+        Below pre-checkings are followed by
+        http://wiki.libvirt.org/page/TodoPreMigrationChecks
 
         """
 
         # Checking dest exists.
         dservice_refs = db.service_get_all_by_host(context, dest)
         if len(dservice_refs) <= 0:
-            msg = _('%s does not exists.')
-            raise exception.Invalid(msg % dest)
+            raise exception.Invalid(_('%s does not exists.') % dest)
         dservice_ref = dservice_refs[0]
 
         # Checking original host( where instance was launched at) exists.
-        orighost = instance_ref['launched_on']
-        oservice_refs = db.service_get_all_by_host(context, orighost)
+        oservice_refs = db.service_get_all_by_host(context,
+                                                   instance_ref['launched_on'])
         if len(oservice_refs) <= 0:
             msg = _('%s(where instance was launched at) does not exists.')
-            raise exception.Invalid(msg % orighost)
+            raise exception.Invalid(msg % instance_ref['launched_on'])
         oservice_ref = oservice_refs[0]
 
         # Checking hypervisor is same.
-        otype = oservice_ref['hypervisor_type']
-        dtype = dservice_ref['hypervisor_type']
-        if otype != dtype:
+        if oservice_ref['hypervisor_type'] != dservice_ref['hypervisor_type']:
             msg = _('Different hypervisor type(%s->%s)')
-            raise exception.Invalid(msg % (otype, dtype))
+            raise exception.Invalid(msg % (oservice_ref['hypervisor_type'],
+                                           dservice_ref['hypervisor_type']))
 
         # Checkng hypervisor version.
-        oversion = oservice_ref['hypervisor_version']
-        dversion = dservice_ref['hypervisor_version']
-        if oversion > dversion:
+        if oservice_ref['hypervisor_version'] > \
+           dservice_ref['hypervisor_version']:
             msg = _('Older hypervisor version(%s->%s)')
-            raise exception.Invalid(msg % (oversion, dversion))
+            raise exception.Invalid(msg % (oservice_ref['hypervisor_version'],
+                                           dservice_ref['hypervisor_version']))
 
         # Checking cpuinfo.
-        cpu_info = oservice_ref['cpu_info']
         try:
             rpc.call(context,
                      db.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": 'compare_cpu',
-                      "args": {'cpu_info': cpu_info}})
+                      "args": {'cpu_info': oservice_ref['cpu_info']}})
 
         except rpc.RemoteError, e:
             msg = _(("""%s doesnt have compatibility to %s"""
@@ -211,7 +207,7 @@ class Scheduler(object):
             raise e
 
     def has_enough_resource(self, context, instance_ref, dest):
-        """ Check if destination host has enough resource for live migration"""
+        """Check if destination host has enough resource for live migration"""
 
         # Getting instance information
         ec2_id = instance_ref['hostname']
@@ -222,28 +218,27 @@ class Scheduler(object):
         # Gettin host information
         service_refs = db.service_get_all_by_host(context, dest)
         if len(service_refs) <= 0:
-            msg = _('%s does not exists.')
-            raise exception.Invalid(msg % dest)
+            raise exception.Invalid(_('%s does not exists.') % dest)
         service_ref = service_refs[0]
 
         total_cpu = int(service_ref['vcpus'])
         total_mem = int(service_ref['memory_mb'])
         total_hdd = int(service_ref['local_gb'])
 
-        instances_ref = db.instance_get_all_by_host(context, dest)
-        for i_ref in instances_ref:
+        instances_refs = db.instance_get_all_by_host(context, dest)
+        for i_ref in instances_refs:
             total_cpu -= int(i_ref['vcpus'])
             total_mem -= int(i_ref['memory_mb'])
             total_hdd -= int(i_ref['local_gb'])
 
         # Checking host has enough information
-        logging.debug('host(%s) remains vcpu:%s mem:%s hdd:%s,' %
+        logging.debug(_('host(%s) remains vcpu:%s mem:%s hdd:%s,') %
                       (dest, total_cpu, total_mem, total_hdd))
-        logging.debug('instance(%s) has vcpu:%s mem:%s hdd:%s,' %
+        logging.debug(_('instance(%s) has vcpu:%s mem:%s hdd:%s,') %
                       (ec2_id, vcpus, mem, hdd))
 
         if total_cpu <= vcpus or total_mem <= mem or total_hdd <= hdd:
-            msg = '%s doesnt have enough resource for %s' % (dest, ec2_id)
-            raise exception.NotEmpty(msg)
+            raise exception.NotEmpty(_('%s is not capable to migrate %s') %
+                                     (dest, ec2_id))
 
         logging.debug(_('%s has_enough_resource() for %s') % (dest, ec2_id))

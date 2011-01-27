@@ -861,18 +861,18 @@ class LibvirtConnection(object):
 
     def get_cpu_info(self):
         """ Get cpuinfo information """
-        xmlstr = self._conn.getCapabilities()
-        xml = libxml2.parseDoc(xmlstr)
+        xml = self._conn.getCapabilities()
+        xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//cpu')
         if len(nodes) != 1:
-            msg = 'Unexpected xml format. tag "cpu" must be 1, but %d.' \
-                    % len(nodes)
+            msg = 'Invalid xml. "<cpu>" must be 1, but %d.' % len(nodes)
             msg += '\n' + xml.serialize()
             raise exception.Invalid(_(msg))
 
-        arch = xml.xpathEval('//cpu/arch')[0].getContent()
-        model = xml.xpathEval('//cpu/model')[0].getContent()
-        vendor = xml.xpathEval('//cpu/vendor')[0].getContent()
+        cpu_info = dict()
+        cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
+        cpu_info['model'] = xml.xpathEval('//cpu/model')[0].getContent()
+        cpu_info['vendor'] = xml.xpathEval('//cpu/vendor')[0].getContent()
 
         topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
         topology = dict()
@@ -890,18 +890,19 @@ class LibvirtConnection(object):
         feature_nodes = xml.xpathEval('//cpu/feature')
         features = list()
         for nodes in feature_nodes:
-            feature_name = nodes.get_properties().getContent()
-            features.append(feature_name)
+            features.append(nodes.get_properties().getContent())
 
         template = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
                     """"topology":{"cores":"%s", "threads":"%s", """
                     """"sockets":"%s"}, "features":[%s]}""")
-        c = topology['cores']
-        s = topology['sockets']
-        t = topology['threads']
         f = ['"%s"' % x for x in features]
-        cpu_info = template % (arch, model, vendor, c, s, t, ', '.join(f))
-        return cpu_info
+        return template % (cpu_info['arch'],
+                           cpu_info['model'],
+                           cpu_info['vendor'],
+                           topology['cores'],
+                           topology['sockets'],
+                           topology['threads'],
+                           ', '.join(f))
 
     def block_stats(self, instance_name, disk):
         """
@@ -935,12 +936,12 @@ class LibvirtConnection(object):
 
     def compare_cpu(self, cpu_info):
         """
-           Check the host cpu is compatible to a cpu given by xml.
-           "xml" must be a part of libvirt.openReadonly().getCapabilities().
-           return values follows by virCPUCompareResult.
-           if 0 > return value, do live migration.
+        Check the host cpu is compatible to a cpu given by xml.
+        "xml" must be a part of libvirt.openReadonly().getCapabilities().
+        return values follows by virCPUCompareResult.
+        if 0 > return value, do live migration.
 
-           'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+        'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
         """
         msg = _('Checking cpu_info: instance was launched this cpu.\n: %s ')
         LOG.info(msg % cpu_info)
@@ -952,7 +953,7 @@ class LibvirtConnection(object):
         url = 'http://libvirt.org/html/libvirt-libvirt.html'
         url += '#virCPUCompareResult\n'
         msg = 'CPU does not have compativility.\n'
-        msg += 'result:%d \n'
+        msg += 'result:%s \n'
         msg += 'Refer to %s'
         msg = _(msg)
 
@@ -960,7 +961,7 @@ class LibvirtConnection(object):
         try:
             ret = self._conn.compareCPU(xml, 0)
         except libvirt.libvirtError, e:
-            LOG.error(msg % (ret, url))
+            LOG.error(msg % (e.message, url))
             raise e
 
         if ret <= 0:
@@ -969,24 +970,26 @@ class LibvirtConnection(object):
         return
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """ Setting up inevitable filtering rules on compute node,
-            and waiting for its completion.
-            To migrate an instance, filtering rules to hypervisors
-            and firewalls are inevitable on destination host.
-            ( Waiting only for filterling rules to hypervisor,
-            since filtering rules to firewall rules can be set faster).
+        """ 
+        Setting up inevitable filtering rules on compute node,
+        and waiting for its completion.
+        To migrate an instance, filtering rules to hypervisors
+        and firewalls are inevitable on destination host.
+        ( Waiting only for filterling rules to hypervisor,
+        since filtering rules to firewall rules can be set faster).
 
-            Concretely, the below method must be called.
-            - setup_basic_filtering (for nova-basic, etc.)
-            - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
+        Concretely, the below method must be called.
+        - setup_basic_filtering (for nova-basic, etc.)
+        - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
 
-            to_xml may have to be called since it defines PROJNET, PROJMASK.
-            but libvirt migrates those value through migrateToURI(),
-            so , no need to be called.
+        to_xml may have to be called since it defines PROJNET, PROJMASK.
+        but libvirt migrates those value through migrateToURI(),
+        so , no need to be called.
 
-            Don't use thread for this method since migration should
-            not be started when setting-up filtering rules operations
-            are not completed."""
+        Don't use thread for this method since migration should
+        not be started when setting-up filtering rules operations
+        are not completed.
+        """
 
         # Tf any instances never launch at destination host,
         # basic-filtering must be set here.
@@ -1009,40 +1012,44 @@ class LibvirtConnection(object):
                     raise exception.Error(msg % (ec2_id, instance_ref.name))
                 time.sleep(0.5)
 
-    def live_migration(self, context, instance_ref, dest):
+    def live_migration(self, ctxt, instance_ref, dest):
         """
-           Just spawning live_migration operation for
-           distributing high-load.
+        Just spawning live_migration operation for
+        distributing high-load.
         """
-        greenthread.spawn(self._live_migration, context, instance_ref, dest)
+        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest)
 
-    def _live_migration(self, context, instance_ref, dest):
+    def _live_migration(self, ctxt, instance_ref, dest):
         """ Do live migration."""
 
         # Do live migration.
         try:
-            duri = FLAGS.live_migration_uri % dest
-
             flaglist = FLAGS.live_migration_flag.split(',')
             flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
-            bandwidth = FLAGS.live_migration_bandwidth
-
             if self.read_only:
                 tmpconn = self._connect(self.libvirt_uri, False)
                 dom = tmpconn.lookupByName(instance_ref.name)
-                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
                 tmpconn.close()
             else:
                 dom = self._conn.lookupByName(instance_ref.name)
-                dom.migrateToURI(duri, logical_sum, None, bandwidth)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
 
         except Exception, e:
-            id = instance_ref['id']
-            db.instance_set_state(context, id, power_state.RUNNING, 'running')
+            db.instance_set_state(ctxt,
+                                  instance_ref['id'],
+                                  power_state.RUNNING,
+                                  'running')
             for v in instance_ref['volumes']:
-                db.volume_update(context,
+                db.volume_update(ctxt,
                                  v['id'],
                                  {'status': 'in-use'})
 
@@ -1052,20 +1059,20 @@ class LibvirtConnection(object):
         timer = utils.LoopingCall(f=None)
 
         def wait_for_live_migration():
-
+            """waiting for live migration completion"""
             try:
-                state = self.get_info(instance_ref.name)['state']
+                self.get_info(instance_ref.name)['state']
             except exception.NotFound:
                 timer.stop()
-                self._post_live_migration(context, instance_ref, dest)
+                self._post_live_migration(ctxt, instance_ref, dest)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
 
-    def _post_live_migration(self, context, instance_ref, dest):
+    def _post_live_migration(self, ctxt, instance_ref, dest):
         """
-           Post operations for live migration.
-           Mainly, database updating.
+        Post operations for live migration.
+        Mainly, database updating.
         """
         LOG.info('post livemigration operation is started..')
         # Detaching volumes.
@@ -1079,61 +1086,61 @@ class LibvirtConnection(object):
             'nova.virt.libvirt_conn.IptablesFirewallDriver':
             try:
                 self.firewall_driver.unfilter_instance(instance_ref)
-            except KeyError, e:
+            except KeyError:
                 pass
 
         # Database updating.
         ec2_id = instance_ref['hostname']
 
         instance_id = instance_ref['id']
-        fixed_ip = db.instance_get_fixed_address(context, instance_id)
+        fixed_ip = db.instance_get_fixed_address(ctxt, instance_id)
         # Not return if fixed_ip is not found, otherwise,
         # instance never be accessible..
         if None == fixed_ip:
             logging.warn('fixed_ip is not found for %s ' % ec2_id)
-        db.fixed_ip_update(context, fixed_ip, {'host': dest})
-        network_ref = db.fixed_ip_get_network(context, fixed_ip)
-        db.network_update(context, network_ref['id'], {'host': dest})
+        db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
+        network_ref = db.fixed_ip_get_network(ctxt, fixed_ip)
+        db.network_update(ctxt, network_ref['id'], {'host': dest})
 
         try:
             floating_ip \
-                = db.instance_get_floating_address(context, instance_id)
+                = db.instance_get_floating_address(ctxt, instance_id)
             # Not return if floating_ip is not found, otherwise,
             # instance never be accessible..
             if None == floating_ip:
-                logging.error('floating_ip is not found for %s ' % ec2_id)
+                LOG.info(_('floating_ip is not found for %s'), ec2_id)
             else:
-                floating_ip_ref = db.floating_ip_get_by_address(context,
+                floating_ip_ref = db.floating_ip_get_by_address(ctxt,
                                                                 floating_ip)
-                db.floating_ip_update(context,
+                db.floating_ip_update(ctxt,
                                       floating_ip_ref['address'],
                                       {'host': dest})
         except exception.NotFound:
-            logging.debug('%s doesnt have floating_ip.. ' % ec2_id)
+            LOG.info(_('floating_ip is not found for %s'), ec2_id)
         except:
-            msg = 'Live migration: Unexpected error:'
-            msg += '%s cannot inherit floating ip.. ' % ec2_id
-            logging.error(_(msg))
+            msg = ("""Live migration: Unexpected error:"""
+                   """%s cannot inherit floating ip..""")
+            LOG.error(_(msg), ec2_id)
 
         # Restore instance/volume state
-        db.instance_update(context,
+        db.instance_update(ctxt,
                            instance_id,
                            {'state_description': 'running',
                             'state': power_state.RUNNING,
                             'host': dest})
 
         for v in instance_ref['volumes']:
-            db.volume_update(context,
+            db.volume_update(ctxt,
                              v['id'],
                              {'status': 'in-use'})
 
-        logging.info(_('Live migrating %s to %s finishes successfully')
+        LOG.info(_('Live migrating %s to %s finishes successfully')
                      % (ec2_id, dest))
         msg = _(("""Known error: the below error is nomally occurs.\n"""
                  """Just check if iinstance is successfully migrated.\n"""
                  """libvir: QEMU error : Domain not found: no domain """
                  """with matching name.."""))
-        logging.info(msg)
+        LOG.info(msg)
 
 
 class FirewallDriver(object):

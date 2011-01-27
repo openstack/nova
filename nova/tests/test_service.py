@@ -30,6 +30,7 @@ from nova import rpc
 from nova import test
 from nova import service
 from nova import manager
+from nova.compute import manager as compute_manager
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
@@ -41,7 +42,20 @@ class FakeManager(manager.Manager):
     def test_method(self):
         return 'manager'
 
+# temporary variable to store host/binary/self.mox from each method to fake class.
+global_host = None
+global_binary = None
+global_mox = None
+class FakeComputeManager(compute_manager.ComputeManager):
+    """Fake computemanager manager for tests"""
+    
+    def __init__(self, compute_driver=None, *args, **kwargs):
+        global ghost, gbinary, gmox
+        self.update_service(mox.IgnoreArg(), mox.StrContains(ghost), mox.StrContains(gbinary))
+        gmox.ReplayAll()
+        super(FakeComputeManager, self).__init__(compute_driver, *args, **kwargs)
 
+   
 class ExtendedService(service.Service):
     def test_method(self):
         return 'service'
@@ -258,3 +272,48 @@ class ServiceTestCase(test.TestCase):
         serv.report_state()
 
         self.assert_(not serv.model_disconnected)
+
+    def test_compute_can_update_services(self): 
+        """
+        Test nova-compute successfully updated Service table on DB.
+        Doing so, self.manager.update_service must be called 
+        if 'self.binary == nova-compute', and this testcase checks on it.
+        """
+        host = 'foo'
+        binary = 'nova-compute'
+        topic = 'compute1'
+        service_create = {'host': host,
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0,
+                          'availability_zone': 'nova'}
+        service_ref = {'host': host,
+                          'binary': binary,
+                          'topic': topic,
+                          'report_count': 0,
+                          'availability_zone': 'nova',
+                          'id': 1}
+
+        service.db.service_get_by_args(mox.IgnoreArg(),
+                                      host,
+                                      binary).AndRaise(exception.NotFound())
+        service.db.service_create(mox.IgnoreArg(),
+                                  service_create).AndReturn(service_ref)
+        self.mox.StubOutWithMock(compute_manager.ComputeManager, 'update_service')
+
+
+        global ghost, gbinary, gmox
+        ghost = host
+        gbinary = binary
+        gmox = self.mox
+
+        serv = service.Service(host,
+                               binary,
+                               topic,
+                               'nova.tests.test_service.FakeComputeManager')
+        # ReplayAll has been executed FakeComputeManager.__init__()
+        #self.mox.ReplayAll()
+        serv.start()
+        serv.stop()
+
+

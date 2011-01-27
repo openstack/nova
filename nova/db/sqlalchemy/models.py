@@ -161,11 +161,11 @@ class Service(BASE, NovaBase):
 
     # The below items are compute node only.
     # -1 or None is inserted for other service.
-    vcpus = Column(Integer, nullable=False, default=-1)
-    memory_mb = Column(Integer, nullable=False, default=-1)
-    local_gb = Column(Integer, nullable=False, default=-1)
-    hypervisor_type = Column(String(128))
-    hypervisor_version = Column(Integer, nullable=False, default=-1)
+    vcpus = Column(Integer, nullable=True)
+    memory_mb = Column(Integer, nullable=True)
+    local_gb = Column(Integer, nullable=True)
+    hypervisor_type = Column(String(128), nullable=True)
+    hypervisor_version = Column(Integer, nullable=True)
     # Note(masumotok): Expected Strings example:
     #
     # '{"arch":"x86_64", "model":"Nehalem",
@@ -174,7 +174,7 @@ class Service(BASE, NovaBase):
     #
     # Points are "json translatable" and it must have all
     # dictionary keys above.
-    cpu_info = Column(String(512))
+    cpu_info = Column(Text(), nullable=True)
 
 
 class Certificate(BASE, NovaBase):

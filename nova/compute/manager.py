@@ -125,12 +125,12 @@ class ComputeManager(manager.Manager):
         """Insert compute node specific information to DB."""
 
         try:
-            service_ref = db.service_get_by_args(ctxt,
-                                                 host,
-                                                 binary)
+            service_ref = self.db.service_get_by_args(ctxt,
+                                                      host,
+                                                      binary)
         except exception.NotFound:
-            msg = _(("""Cannot insert compute manager specific info"""
-                      """Because no service record found."""))
+            msg = _(("""Cannot insert compute manager specific info,"""
+                      """ Because no service record found."""))
             raise exception.Invalid(msg)
 
         # Updating host information
@@ -141,14 +141,14 @@ class ComputeManager(manager.Manager):
         version = self.driver.get_hypervisor_version()
         cpu_info = self.driver.get_cpu_info()
 
-        db.service_update(ctxt,
-                          service_ref['id'],
-                          {'vcpus': vcpu,
-                           'memory_mb': memory_mb,
-                           'local_gb': local_gb,
-                           'hypervisor_type': hypervisor,
-                           'hypervisor_version': version,
-                           'cpu_info': cpu_info})
+        self.db.service_update(ctxt,
+                               service_ref['id'],
+                               {'vcpus': vcpu,
+                                'memory_mb': memory_mb,
+                                'local_gb': local_gb,
+                                'hypervisor_type': hypervisor,
+                                'hypervisor_version': version,
+                                'cpu_info': cpu_info})
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -596,22 +596,22 @@ class ComputeManager(manager.Manager):
         """ Check the host cpu is compatible to a cpu given by xml."""
         return self.driver.compare_cpu(cpu_info)
 
-    def pre_live_migration(self, context, instance_id, dest):
+    def pre_live_migration(self, context, instance_id):
         """Any preparation for live migration at dst host."""
 
         # Getting instance info
-        instance_ref = db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
         ec2_id = instance_ref['hostname']
 
         # Getting fixed ips
-        fixed_ip = db.instance_get_fixed_address(context, instance_id)
+        fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
             msg = _('%s(%s) doesnt have fixed_ip') % (instance_id, ec2_id)
             raise exception.NotFound(msg)
 
         # If any volume is mounted, prepare here.
         if len(instance_ref['volumes']) == 0:
-            logging.info(_("%s has no volume.") % ec2_id)
+            LOG.info(_("%s has no volume."), ec2_id)
         else:
             for v in instance_ref['volumes']:
                 self.volume_manager.setup_compute_volume(context, v['id'])
@@ -634,7 +634,7 @@ class ComputeManager(manager.Manager):
         """executes live migration."""
 
         # Get instance for error handling.
-        instance_ref = db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
         ec2_id = instance_ref['hostname']
 
         try:
@@ -647,27 +647,27 @@ class ComputeManager(manager.Manager):
                            "args": {'instance_id': instance_id}})
 
             # Asking dest host to preparing live migration.
-            compute_topic = db.queue_get_for(context,
-                                             FLAGS.compute_topic,
-                                             dest)
+            compute_topic = self.db.queue_get_for(context,
+                                                  FLAGS.compute_topic,
+                                                  dest)
             rpc.call(context,
-                        compute_topic,
-                        {"method": "pre_live_migration",
-                         "args": {'instance_id': instance_id,
-                                    'dest': dest}})
+                     compute_topic,
+                     {"method": "pre_live_migration",
+                      "args": {'instance_id': instance_id}})
 
         except Exception, e:
+            print e
             msg = _('Pre live migration for %s failed at %s')
-            logging.error(msg, ec2_id, dest)
-            db.instance_set_state(context,
-                                  instance_id,
-                                  power_state.RUNNING,
-                                  'running')
+            LOG.error(msg, ec2_id, dest)
+            self.db.instance_set_state(context,
+                                       instance_id,
+                                       power_state.RUNNING,
+                                       'running')
 
             for v in instance_ref['volumes']:
-                db.volume_update(context,
-                                 v['id'],
-                                 {'status': 'in-use'})
+                self.db.volume_update(context,
+                                      v['id'],
+                                      {'status': 'in-use'})
 
             # e should be raised. just calling "raise" may raise NotFound.
             raise e

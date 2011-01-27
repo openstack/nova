@@ -37,11 +37,13 @@ gettext.install('nova', unicode=1)
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova import utils
 
 logging.basicConfig()
 LOG = logging.getLogger('nova.api')
 LOG.setLevel(logging.DEBUG)
 
+utils.default_flagfile()
 FLAGS = flags.FLAGS
 
 API_ENDPOINTS = ['ec2', 'osapi']

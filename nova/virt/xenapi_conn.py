@@ -215,15 +215,15 @@ class XenAPIConnection(object):
 
     def get_vcpu_number(self):
         """This method is supported only libvirt.  """
-        return -1
+        return
 
     def get_memory_mb(self):
         """This method is supported only libvirt.."""
-        return -1
+        return
 
     def get_local_gb(self):
         """This method is supported only libvirt.."""
-        return -1
+        return
 
     def get_hypervisor_type(self):
         """This method is supported only libvirt.."""
@@ -231,12 +231,18 @@ class XenAPIConnection(object):
 
     def get_hypervisor_version(self):
         """This method is supported only libvirt.."""
-        return -1
+        return
 
     def compare_cpu(self, xml):
+        """This method is supported only libvirt.."""
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt.."""
         raise NotImplementedError('This method is supported only libvirt.')
 
     def live_migration(self, context, instance_ref, dest):
+        """This method is supported only libvirt.."""
         raise NotImplementedError('This method is supported only libvirt.')
 
 
