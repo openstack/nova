@@ -532,12 +532,8 @@ class CloudController(object):
             volumes = []
             for ec2_id in volume_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    volume = self.volume_api.get(context, internal_id)
-                    volumes.append(volume)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Volume %s not found")
-                                             % ec2_id)
+                volume = self.volume_api.get(context, internal_id)
+                volumes.append(volume)
         else:
             volumes = self.volume_api.get_all(context)
         volumes = [self._format_volume(context, v) for v in volumes]
@@ -668,12 +664,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    instance = self.compute_api.get(context, internal_id)
-                    instances.append(instance)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Instance %s not found")
-                                             % ec2_id)
+                instance = self.compute_api.get(context, internal_id)
+                instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:

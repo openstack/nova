@@ -33,6 +33,7 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
+from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
@@ -313,8 +314,20 @@ class Executor(wsgi.Application):
         result = None
         try:
             result = api_request.invoke(context)
+        except exception.InstanceNotFound as ex:
+            LOG.info(_('InstanceNotFound raised: %s'), ex.args[0],
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.instance_id)
+            message = _('Instance %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
+        except exception.VolumeNotFound as ex:
+            LOG.info(_('VolumeNotFound raised: %s'), ex.args[0],
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            message = _('Volume %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
-            LOG.info(_('NotFound raised: %s'), ex.args[0],  context=context)
+            LOG.info(_('NotFound raised: %s'), ex.args[0], context=context)
             return self._error(req, context, type(ex).__name__, ex.args[0])
         except exception.ApiError as ex:
             LOG.exception(_('ApiError raised: %s'), ex.args[0],
