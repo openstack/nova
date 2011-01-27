@@ -96,7 +96,7 @@ class XVPConsoleProxy(object):
         return os.urandom(length * 2).encode('base64')[:length]
 
     def _rebuild_xvp_conf(self, context):
-        logging.debug("Rebuilding xvp conf")
+        logging.debug(_("Rebuilding xvp conf"))
         pools = [pool for pool in
                  db.console_pool_get_all_by_host_type(context, self.host,
                                                        self.console_type)
@@ -113,12 +113,12 @@ class XVPConsoleProxy(object):
         self._xvp_restart()
 
     def _write_conf(self, config):
-        logging.debug('Re-wrote %s' % FLAGS.console_xvp_conf)
+        logging.debug(_('Re-wrote %s') % FLAGS.console_xvp_conf)
         with open(FLAGS.console_xvp_conf, 'w') as cfile:
             cfile.write(config)
 
     def _xvp_stop(self):
-        logging.debug("Stopping xvp")
+        logging.debug(_("Stopping xvp"))
         pid = self._xvp_pid()
         if not pid:
             return
@@ -131,19 +131,19 @@ class XVPConsoleProxy(object):
     def _xvp_start(self):
         if self._xvp_check_running():
             return
-        logging.debug("Starting xvp")
+        logging.debug(_("Starting xvp"))
         try:
             utils.execute('xvp -p %s -c %s -l %s' %
                           (FLAGS.console_xvp_pid,
                            FLAGS.console_xvp_conf,
                            FLAGS.console_xvp_log))
         except exception.ProcessExecutionError, err:
-            logging.error("Error starting xvp: %s" % err)
+            logging.error(_("Error starting xvp: %s") % err)
 
     def _xvp_restart(self):
-        logging.debug("Restarting xvp")
+        logging.debug(_("Restarting xvp"))
         if not self._xvp_check_running():
-            logging.debug("xvp not running...")
+            logging.debug(_("xvp not running..."))
             self._xvp_start()
         else:
             pid = self._xvp_pid()

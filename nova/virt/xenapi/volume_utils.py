@@ -71,7 +71,7 @@ class VolumeHelper(HelperBase):
                     session.get_xenapi_host(),
                     record,
                     '0', label, description, 'iscsi', '', False, {})
-                LOG.debug(_('Introduced %s as %s.'), label, sr_ref)
+                LOG.debug(_('Introduced %(label)s as %(sr_ref)s.') % locals())
                 return sr_ref
             except cls.XenAPI.Failure, exc:
                 LOG.exception(exc)
@@ -98,20 +98,20 @@ class VolumeHelper(HelperBase):
         try:
             pbds = session.get_xenapi().SR.get_PBDs(sr_ref)
         except cls.XenAPI.Failure, exc:
-            LOG.warn(_('Ignoring exception %s when getting PBDs for %s'),
-                     exc, sr_ref)
+            LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
+                    ' for %(sr_ref)s') % locals())
         for pbd in pbds:
             try:
                 session.get_xenapi().PBD.unplug(pbd)
             except cls.XenAPI.Failure, exc:
-                LOG.warn(_('Ignoring exception %s when unplugging PBD %s'),
-                         exc, pbd)
+                LOG.warn(_('Ignoring exception %(exc)s when unplugging'
+                        ' PBD %(pbd)s') % locals())
         try:
             session.get_xenapi().SR.forget(sr_ref)
             LOG.debug(_("Forgetting SR %s done."), sr_ref)
         except cls.XenAPI.Failure, exc:
-            LOG.warn(_('Ignoring exception %s when forgetting SR %s'), exc,
-                     sr_ref)
+            LOG.warn(_('Ignoring exception %(exc)s when forgetting'
+                    ' SR %(sr_ref)s') % locals())
 
     @classmethod
     def introduce_vdi(cls, session, sr_ref):
@@ -172,8 +172,8 @@ class VolumeHelper(HelperBase):
             (volume_id is None) or \
             (target_host is None) or \
             (target_iqn is None):
-            raise StorageError(_('Unable to obtain target information %s, %s')
-                               % (device_path, mountpoint))
+            raise StorageError(_('Unable to obtain target information'
+                    ' %(device_path)s, %(mountpoint)s') % locals())
         volume_info = {}
         volume_info['deviceNumber'] = device_number
         volume_info['volumeId'] = volume_id

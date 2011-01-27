@@ -36,6 +36,7 @@ gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
+from nova import version
 from nova import wsgi
 
 logging.basicConfig()
@@ -55,7 +56,7 @@ def run_app(paste_config_file):
         if config is None:
             LOG.debug(_("No paste configuration for app: %s"), api)
             continue
-        LOG.debug(_("App Config: %s\n%r"), api, config)
+        LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
         wsgi.paste_config_to_flags(config, {
             "verbose": FLAGS.verbose,
             "%s_host" % api: config.get('host', '0.0.0.0'),
@@ -79,6 +80,8 @@ def run_app(paste_config_file):
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
+    LOG.audit(_("Starting nova-api node (version %s)"),
+              version.version_string_with_vcs())
     conf = wsgi.paste_config_file('nova-api.conf')
     if conf:
         run_app(conf)
