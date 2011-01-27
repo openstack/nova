@@ -717,7 +717,7 @@ class CloudController(object):
                 security_group_names = []
                 if instance.get('security_groups'):
                     for security_group in instance['security_groups']:
-                        security_group_names.append(security_group.name)
+                        security_group_names.append(security_group['name'])
                 r['groupSet'] = self._convert_to_set(security_group_names,
                                                      'groupId')
                 r['instancesSet'] = []
