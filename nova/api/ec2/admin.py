@@ -237,9 +237,10 @@ class AdminController(object):
         return host_dict(db.host_get(name))
 
     def _provider_fw_rule_exists(self, context, rule):
+        # TODO(todd): we call this repeatedly, can we filter by protocol?
         for old_rule in db.provider_fw_rule_get_all(context):
+            dupe = True
             for key in ('cidr', 'from_port', 'to_port', 'protocol'):
-                dupe = True
                 if rule[key] != old_rule[key]:
                     dupe = False
             if dupe:

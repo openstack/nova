@@ -230,7 +230,8 @@ class InstanceType(object):
 
 
 class SimpleResponse(object):
-    def __init__(self):
+    def __init__(self, connection=None):
+        self.connection = connection
         self.status = None
         self.message = ''
 

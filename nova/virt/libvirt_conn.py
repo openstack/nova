@@ -1171,7 +1171,7 @@ class NWFilterFirewall(FirewallDriver):
         'nova-provider-rules' filter for each instance's firewall, and
         by changing that filter we update them all.
         """
-        xml = self.provider_fw_to_nwfilter_xml(self)
+        xml = self.provider_fw_to_nwfilter_xml()
         return self._define_filter(xml)
 
     def security_group_to_nwfilter_xml(self, security_group_id):
