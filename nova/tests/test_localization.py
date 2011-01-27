@@ -65,7 +65,7 @@ class LocalizationTestCase(test.TestCase):
                     inner = inner_all.replace("%%", "").replace("%(", "")
                     # Filter out the single '%' operators
                     inner = single_pat.sub("", inner)
-                    # Within the remaining content, count % 
+                    # Within the remaining content, count %
                     fmtCount = inner.count("%")
                     if fmtCount > 1:
                         inner_first = inner_all.splitlines()[0]
