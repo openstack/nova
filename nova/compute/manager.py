@@ -231,22 +231,25 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        if not FLAGS.stub_network:
-            address = self.db.instance_get_floating_address(context,
-                                                            instance_ref['id'])
-            if address:
-                LOG.debug(_("Disassociating address %s"), address,
+        fixed_ip = instance_ref.get('fixed_ip', None)
+        if not FLAGS.stub_network and fixed_ip:
+            floating_ips = fixed_ip.get('floating_ips') or []
+            for floating_ip in floating_ips:
+                address = floating_ip['address']
+                LOG.debug("Disassociating address %s", address,
                           context=context)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
+                network_topic = self.db.queue_get_for(context,
+                                                      FLAGS.network_topic,
+                                                      floating_ip['host'])
                 rpc.cast(context,
-                         self.get_network_topic(context),
+                         network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"floating_address": address}})
 
-            address = self.db.instance_get_fixed_address(context,
-                                                         instance_ref['id'])
+            address = fixed_ip['address']
             if address:
                 LOG.debug(_("Deallocating address %s"), address,
                           context=context)
@@ -256,7 +259,7 @@ class ComputeManager(manager.Manager):
                 self.network_manager.deallocate_fixed_ip(context.elevated(),
                                                          address)
 
-        volumes = instance_ref.get('volumes', []) or []
+        volumes = instance_ref.get('volumes') or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
