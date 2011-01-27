@@ -143,6 +143,7 @@ class LocalImageServiceTest(unittest.TestCase,
 
     def tearDown(self):
         self.service.delete_all()
+        self.service.delete_imagedir()
         self.stubs.UnsetAll()
 
 

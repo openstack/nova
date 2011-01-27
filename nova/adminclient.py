@@ -190,6 +190,45 @@ class HostInfo(object):
         setattr(self, name, value)
 
 
+class InstanceType(object):
+    """
+    Information about a Nova instance type, as parsed through SAX.
+
+    **Fields include**
+
+    * name
+    * vcpus
+    * disk_gb
+    * memory_mb
+    * flavor_id
+
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.name = None
+        self.vcpus = None
+        self.disk_gb = None
+        self.memory_mb = None
+        self.flavor_id = None
+
+    def __repr__(self):
+        return 'InstanceType:%s' % self.name
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        if name == "memoryMb":
+            self.memory_mb = str(value)
+        elif name == "flavorId":
+            self.flavor_id = str(value)
+        elif name == "diskGb":
+            self.disk_gb = str(value)
+        else:
+            setattr(self, name, str(value))
+
+
 class NovaAdminClient(object):
 
     def __init__(
@@ -373,3 +412,8 @@ class NovaAdminClient(object):
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
+
+    def get_instance_types(self):
+        """Grabs the list of all users."""
+        return self.apiconn.get_list('DescribeInstanceTypes', {},
+                                     [('item', InstanceType)])
