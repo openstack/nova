@@ -221,7 +221,12 @@ class IptablesFirewallTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
-        self.fw = libvirt_conn.IptablesFirewallDriver()
+
+        class FakeLibvirtConnection(object):
+            pass
+        self.fake_libvirt_connection = FakeLibvirtConnection()
+        self.fw = libvirt_conn.IptablesFirewallDriver(
+                      get_connection=lambda: self.fake_libvirt_connection)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
