@@ -1996,3 +1996,12 @@ def console_get(context, console_id, instance_id=None):
         raise exception.NotFound(_("No console with id %(console_id)s"
                                    " %(idesc)s") % locals())
     return result
+
+
+##################
+
+
+@require_admin_context
+def create_zone(context, zone):
+    session = get_session()
+    print "Creating Zone", zone

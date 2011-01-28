@@ -980,3 +980,11 @@ def console_get_all_by_instance(context, instance_id):
 def console_get(context, console_id, instance_id=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_id)
+
+
+####################
+
+
+def create_zone(context, name):
+    """Create a new Zone entry for this deployment."""
+    return IMPL.create_zone(context, name)
