@@ -134,7 +134,8 @@ class VMHelper(HelperBase):
                                    'pae': 'true', 'viridian': 'true'}
         LOG.debug(_('Created VM %s...'), instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
-        LOG.debug(_('Created VM %s as %s.'), instance.name, vm_ref)
+        instance_name = instance.name
+        LOG.debug(_('Created VM %(instance_name)s as %(vm_ref)s.') % locals())
         return vm_ref
 
     @classmethod
@@ -154,10 +155,11 @@ class VMHelper(HelperBase):
         vbd_rec['qos_algorithm_type'] = ''
         vbd_rec['qos_algorithm_params'] = {}
         vbd_rec['qos_supported_algorithms'] = []
-        LOG.debug(_('Creating VBD for VM %s, VDI %s ... '), vm_ref, vdi_ref)
+        LOG.debug(_('Creating VBD for VM %(vm_ref)s,'
+                ' VDI %(vdi_ref)s ... ') % locals())
         vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
-        LOG.debug(_('Created VBD %s for VM %s, VDI %s.'), vbd_ref, vm_ref,
-                      vdi_ref)
+        LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
+                ' VDI %(vdi_ref)s.') % locals())
         return vbd_ref
 
     @classmethod
@@ -209,11 +211,11 @@ class VMHelper(HelperBase):
         vif_rec['other_config'] = {}
         vif_rec['qos_algorithm_type'] = ''
         vif_rec['qos_algorithm_params'] = {}
-        LOG.debug(_('Creating VIF for VM %s, network %s.'), vm_ref,
-                  network_ref)
+        LOG.debug(_('Creating VIF for VM %(vm_ref)s,'
+                ' network %(network_ref)s.') % locals())
         vif_ref = session.call_xenapi('VIF.create', vif_rec)
-        LOG.debug(_('Created VIF %s for VM %s, network %s.'), vif_ref,
-                  vm_ref, network_ref)
+        LOG.debug(_('Created VIF %(vif_ref)s for VM %(vm_ref)s,'
+                ' network %(network_ref)s.') % locals())
         return vif_ref
 
     @classmethod
@@ -231,8 +233,9 @@ class VMHelper(HelperBase):
               'other_config': {},
               'sm_config': {},
               'tags': []})
-        LOG.debug(_('Created VDI %s (%s, %s, %s) on %s.'), vdi_ref,
-                  name_label, virtual_size, read_only, sr_ref)
+        LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
+                ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.')
+                % locals())
         return vdi_ref
 
     @classmethod
@@ -242,7 +245,8 @@ class VMHelper(HelperBase):
         """
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
-        LOG.debug(_("Snapshotting VM %s with label '%s'..."), vm_ref, label)
+        LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
+                % locals())
 
         vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
@@ -255,8 +259,8 @@ class VMHelper(HelperBase):
         template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
-        LOG.debug(_('Created snapshot %s from VM %s.'), template_vm_ref,
-                  vm_ref)
+        LOG.debug(_('Created snapshot %(template_vm_ref)s from'
+                ' VM %(vm_ref)s.') % locals())
 
         parent_uuid = wait_for_vhd_coalesce(
             session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
@@ -269,8 +273,8 @@ class VMHelper(HelperBase):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
-        logging.debug(_("Asking xapi to upload %s as ID %s"),
-                      vdi_uuids, image_id)
+        logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
+                " ID %(image_id)s") % locals())
 
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
@@ -310,7 +314,7 @@ class VMHelper(HelperBase):
         meta, image_file = c.get_image(image)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
-        LOG.debug(_("Size for image %s:%d"), image, virtual_size)
+        LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -344,7 +348,7 @@ class VMHelper(HelperBase):
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
                                  secret, type):
         url = images.image_url(image)
-        LOG.debug(_("Asking xapi to fetch %s as %s"), url, access)
+        LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
         args = {}
         args['src_url'] = url
@@ -499,7 +503,8 @@ def get_vhd_parent(session, vdi_rec):
         parent_uuid = vdi_rec['sm_config']['vhd-parent']
         parent_ref = session.get_xenapi().VDI.get_by_uuid(parent_uuid)
         parent_rec = session.get_xenapi().VDI.get_record(parent_ref)
-        LOG.debug(_("VHD %s has parent %s"), vdi_rec['uuid'], parent_ref)
+        vdi_uuid = vdi_rec['uuid']
+        LOG.debug(_("VHD %(vdi_uuid)s has parent %(parent_ref)s") % locals())
         return parent_ref, parent_rec
     else:
         return None
@@ -540,16 +545,17 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
     def _poll_vhds():
         attempts['counter'] += 1
         if attempts['counter'] > max_attempts:
-            msg = (_("VHD coalesce attempts exceeded (%d > %d), giving up...")
-                   % (attempts['counter'], max_attempts))
+            counter = attempts['counter']
+            msg = (_("VHD coalesce attempts exceeded (%(counter)d >"
+                    " %(max_attempts)d), giving up...") % locals())
             raise exception.Error(msg)
 
         scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
-            LOG.debug(_("Parent %s doesn't match original parent %s, "
-                         "waiting for coalesce..."), parent_uuid,
-                      original_parent_uuid)
+            LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
+                    " %(original_parent_uuid)s, waiting for coalesce...")
+                    % locals())
         else:
             # Breakout of the loop (normally) and return the parent_uuid
             raise utils.LoopingCallDone(parent_uuid)
@@ -567,8 +573,8 @@ def get_vdi_for_vm_safely(session, vm_ref):
     else:
         num_vdis = len(vdi_refs)
         if num_vdis != 1:
-            raise Exception(_("Unexpected number of VDIs (%s) found for "
-                               "VM %s") % (num_vdis, vm_ref))
+            raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+                    " for VM %(vm_ref)s") % locals())
 
     vdi_ref = vdi_refs[0]
     vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
@@ -634,7 +640,7 @@ def with_vdi_attached_here(session, vdi, read_only, f):
         session.get_xenapi().VBD.plug(vbd)
         LOG.debug(_('Plugging VBD %s done.'), vbd)
         orig_dev = session.get_xenapi().VBD.get_device(vbd)
-        LOG.debug(_('VBD %s plugged as %s'), vbd, orig_dev)
+        LOG.debug(_('VBD %(vbd)s plugged as %(orig_dev)s') % locals())
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
             LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
@@ -708,8 +714,8 @@ def _write_partition(virtual_size, dev):
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
-    LOG.debug(_('Writing partition table %d %d to %s...'),
-              primary_first, primary_last, dest)
+    LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
+            ' to %(dest)s...') % locals())
 
     def execute(cmd, process_input=None, check_exit_code=True):
         return utils.execute(cmd=cmd,

@@ -48,8 +48,8 @@ class VolumeOps(object):
             raise exception.NotFound(_('Instance %s not found')
                                       % instance_name)
         # NOTE: No Resource Pool concept so far
-        LOG.debug(_("Attach_volume: %s, %s, %s"),
-                  instance_name, device_path, mountpoint)
+        LOG.debug(_("Attach_volume: %(instance_name)s, %(device_path)s,"
+                " %(mountpoint)s") % locals())
         # Create the iSCSI SR, and the PDB through which hosts access SRs.
         # But first, retrieve target info, like Host, IQN, LUN and SCSIID
         vol_rec = VolumeHelper.parse_volume_info(device_path, mountpoint)
@@ -66,9 +66,8 @@ class VolumeOps(object):
         except StorageError, exc:
             LOG.exception(exc)
             VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-            raise Exception(_('Unable to create VDI on SR %s for instance %s')
-                            % (sr_ref,
-                            instance_name))
+            raise Exception(_('Unable to create VDI on SR %(sr_ref)s for'
+                    ' instance %(instance_name)s') % locals())
         else:
             try:
                 vbd_ref = VMHelper.create_vbd(self._session,
@@ -78,9 +77,8 @@ class VolumeOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
                 VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-                raise Exception(_('Unable to use SR %s for instance %s')
-                            % (sr_ref,
-                            instance_name))
+                raise Exception(_('Unable to use SR %(sr_ref)s for'
+                        ' instance %(instance_name)s') % locals())
             else:
                 try:
                     task = self._session.call_xenapi('Async.VBD.plug',
@@ -92,8 +90,8 @@ class VolumeOps(object):
                                                              sr_ref)
                     raise Exception(_('Unable to attach volume to instance %s')
                                     % instance_name)
-        LOG.info(_('Mountpoint %s attached to instance %s'),
-                 mountpoint, instance_name)
+        LOG.info(_('Mountpoint %(mountpoint)s attached to'
+                ' instance %(instance_name)s') % locals())
 
     def detach_volume(self, instance_name, mountpoint):
         """Detach volume storage to VM instance"""
@@ -103,7 +101,8 @@ class VolumeOps(object):
             raise exception.NotFound(_('Instance %s not found')
                                      % instance_name)
         # Detach VBD from VM
-        LOG.debug(_("Detach_volume: %s, %s"), instance_name, mountpoint)
+        LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s")
+                % locals())
         device_number = VolumeHelper.mountpoint_to_number(mountpoint)
         try:
             vbd_ref = VMHelper.find_vbd_by_number(self._session,
@@ -125,5 +124,5 @@ class VolumeOps(object):
                 LOG.exception(exc)
         # Forget SR
         VolumeHelper.destroy_iscsi_storage(self._session, sr_ref)
-        LOG.info(_('Mountpoint %s detached from instance %s'),
-                 mountpoint, instance_name)
+        LOG.info(_('Mountpoint %(mountpoint)s detached from'
+                ' instance %(instance_name)s') % locals())

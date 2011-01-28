@@ -33,8 +33,9 @@ class ProcessExecutionError(IOError):
             description = _("Unexpected error while running command.")
         if exit_code is None:
             exit_code = '-'
-        message = _("%s\nCommand: %s\nExit code: %s\nStdout: %r\nStderr: %r")\
-                % (description, cmd, exit_code, stdout, stderr)
+        message = _("%(description)s\nCommand: %(cmd)s\n"
+                "Exit code: %(exit_code)s\nStdout: %(stdout)r\n"
+                "Stderr: %(stderr)r") % locals()
         IOError.__init__(self, message)
 
 
@@ -45,7 +46,6 @@ class Error(Exception):
 
 
 class ApiError(Error):
-
     def __init__(self, message='Unknown', code='Unknown'):
         self.message = message
         self.code = code
@@ -54,6 +54,18 @@ class ApiError(Error):
 
 class NotFound(Error):
     pass
+
+
+class InstanceNotFound(NotFound):
+    def __init__(self, message, instance_id):
+        self.instance_id = instance_id
+        super(InstanceNotFound, self).__init__(message)
+
+
+class VolumeNotFound(NotFound):
+    def __init__(self, message, volume_id):
+        self.volume_id = volume_id
+        super(VolumeNotFound, self).__init__(message)
 
 
 class Duplicate(Error):
@@ -78,6 +90,24 @@ class InvalidInputException(Error):
 
 class TimeoutException(Error):
     pass
+
+
+class DBError(Error):
+    """Wraps an implementation specific exception"""
+    def __init__(self, inner_exception):
+        self.inner_exception = inner_exception
+        super(DBError, self).__init__(str(inner_exception))
+
+
+def wrap_db_error(f):
+    def _wrap(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception, e:
+            LOG.exception(_('DB exception wrapped'))
+            raise DBError(e)
+    return _wrap
+    _wrap.func_name = f.func_name
 
 
 def wrap_exception(f):

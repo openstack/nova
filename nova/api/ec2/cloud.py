@@ -529,11 +529,14 @@ class CloudController(object):
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
-            volume_id = [ec2_id_to_id(x) for x in volume_id]
-        volumes = self.volume_api.get_all(context)
-        # NOTE(vish): volume_id is an optional list of volume ids to filter by.
-        volumes = [self._format_volume(context, v) for v in volumes
-                   if volume_id is None or v['id'] in volume_id]
+            volumes = []
+            for ec2_id in volume_id:
+                internal_id = ec2_id_to_id(ec2_id)
+                volume = self.volume_api.get(context, internal_id)
+                volumes.append(volume)
+        else:
+            volumes = self.volume_api.get_all(context)
+        volumes = [self._format_volume(context, v) for v in volumes]
         return {'volumeSet': volumes}
 
     def _format_volume(self, context, volume):
@@ -601,8 +604,9 @@ class CloudController(object):
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
         volume_id = ec2_id_to_id(volume_id)
         instance_id = ec2_id_to_id(instance_id)
-        LOG.audit(_("Attach volume %s to instance %s at %s"), volume_id,
-                  instance_id, device, context=context)
+        msg = _("Attach volume %(volume_id)s to instance %(instance_id)s"
+                " at %(device)s") % locals()
+        LOG.audit(msg, context=context)
         self.compute_api.attach_volume(context,
                                        instance_id=instance_id,
                                        volume_id=volume_id,
@@ -657,8 +661,11 @@ class CloudController(object):
         reservations = {}
         # NOTE(vish): instance_id is an optional list of ids to filter by
         if instance_id:
-            instance_id = [ec2_id_to_id(x) for x in instance_id]
-            instances = [self.compute_api.get(context, x) for x in instance_id]
+            instances = []
+            for ec2_id in instance_id:
+                internal_id = ec2_id_to_id(ec2_id)
+                instance = self.compute_api.get(context, internal_id)
+                instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
@@ -707,7 +714,12 @@ class CloudController(object):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
                 r['ownerId'] = instance['project_id']
-                r['groupSet'] = self._convert_to_set([], 'groups')
+                security_group_names = []
+                if instance.get('security_groups'):
+                    for security_group in instance['security_groups']:
+                        security_group_names.append(security_group['name'])
+                r['groupSet'] = self._convert_to_set(security_group_names,
+                                                     'groupId')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
             reservations[instance['reservation_id']]['instancesSet'].append(i)
@@ -751,8 +763,8 @@ class CloudController(object):
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
-        LOG.audit(_("Associate address %s to instance %s"), public_ip,
-                  instance_id, context=context)
+        LOG.audit(_("Associate address %(public_ip)s to"
+                " instance %(instance_id)s") % locals(), context=context)
         instance_id = ec2_id_to_id(instance_id)
         self.compute_api.associate_floating_ip(context,
                                                instance_id=instance_id,
@@ -840,8 +852,9 @@ class CloudController(object):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
         image_id = self.image_service.register(context, image_location)
-        LOG.audit(_("Registered image %s with id %s"), image_location,
-                  image_id, context=context)
+        msg = _("Registered image %(image_location)s with"
+                " id %(image_id)s") % locals()
+        LOG.audit(msg, context=context)
         return {'imageId': image_id}
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):

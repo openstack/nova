@@ -33,6 +33,7 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
+from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
@@ -131,9 +132,11 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
             elif failures >= FLAGS.lockout_attempts:
-                LOG.warn(_('Access key %s has had %d failed authentications'
-                           ' and will be locked out for %d minutes.'),
-                         access_key, failures, FLAGS.lockout_minutes)
+                lock_mins = FLAGS.lockout_minutes
+                msg = _('Access key %(access_key)s has had %(failures)d'
+                        ' failed authentications and will be locked out'
+                        ' for %(lock_mins)d minutes.') % locals()
+                LOG.warn(msg)
                 self.mc.set(failures_key, str(failures),
                             time=FLAGS.lockout_minutes * 60)
         return res
@@ -168,7 +171,7 @@ class Authenticate(wsgi.Middleware):
                     req.path)
         # Be explicit for what exceptions are 403, the rest bubble as 500
         except (exception.NotFound, exception.NotAuthorized) as ex:
-            LOG.audit(_("Authentication Failure: %s"), str(ex))
+            LOG.audit(_("Authentication Failure: %s"), ex.args[0])
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -179,8 +182,10 @@ class Authenticate(wsgi.Middleware):
                                       project=project,
                                       remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
-        LOG.audit(_('Authenticated Request For %s:%s)'), user.name,
-                  project.name, context=req.environ['ec2.context'])
+        uname = user.name
+        pname = project.name
+        msg = _('Authenticated Request For %(uname)s:%(pname)s)') % locals()
+        LOG.audit(msg, context=req.environ['ec2.context'])
         return self.application
 
 
@@ -206,10 +211,11 @@ class Requestify(wsgi.Middleware):
 
         LOG.debug(_('action: %s'), action)
         for key, value in args.items():
-            LOG.debug(_('arg: %s\t\tval: %s'), key, value)
+            LOG.debug(_('arg: %(key)s\t\tval: %(value)s') % locals())
 
         # Success!
-        api_request = apirequest.APIRequest(self.controller, action, args)
+        api_request = apirequest.APIRequest(self.controller, action,
+                                            req.params['Version'], args)
         req.environ['ec2.request'] = api_request
         req.environ['ec2.action_args'] = args
         return self.application
@@ -277,8 +283,8 @@ class Authorizer(wsgi.Middleware):
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
-            LOG.audit(_("Unauthorized request for controller=%s "
-                        "and action=%s"), controller, action, context=context)
+            LOG.audit(_('Unauthorized request for controller=%(controller)s '
+                        'and action=%(action)s') % locals(), context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
@@ -309,18 +315,31 @@ class Executor(wsgi.Application):
         result = None
         try:
             result = api_request.invoke(context)
+        except exception.InstanceNotFound as ex:
+            LOG.info(_('InstanceNotFound raised: %s'), ex.args[0],
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.instance_id)
+            message = _('Instance %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
+        except exception.VolumeNotFound as ex:
+            LOG.info(_('VolumeNotFound raised: %s'), ex.args[0],
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            message = _('Volume %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
-            LOG.info(_('NotFound raised: %s'), str(ex),  context=context)
-            return self._error(req, context, type(ex).__name__, str(ex))
+            LOG.info(_('NotFound raised: %s'), ex.args[0], context=context)
+            return self._error(req, context, type(ex).__name__, ex.args[0])
         except exception.ApiError as ex:
-            LOG.exception(_('ApiError raised: %s'), str(ex), context=context)
+            LOG.exception(_('ApiError raised: %s'), ex.args[0],
+                          context=context)
             if ex.code:
-                return self._error(req, context, ex.code, str(ex))
+                return self._error(req, context, ex.code, ex.args[0])
             else:
-                return self._error(req, context, type(ex).__name__, str(ex))
+                return self._error(req, context, type(ex).__name__, ex.args[0])
         except Exception as ex:
             extra = {'environment': req.environ}
-            LOG.exception(_('Unexpected error raised: %s'), str(ex),
+            LOG.exception(_('Unexpected error raised: %s'), ex.args[0],
                           extra=extra, context=context)
             return self._error(req,
                                context,
@@ -343,7 +362,8 @@ class Executor(wsgi.Application):
                          '<Response><Errors><Error><Code>%s</Code>'
                          '<Message>%s</Message></Error></Errors>'
                          '<RequestID>%s</RequestID></Response>' %
-                         (code, message, context.request_id))
+                         (utils.utf8(code), utils.utf8(message),
+                         utils.utf8(context.request_id)))
         return resp
 
 

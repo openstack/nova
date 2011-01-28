@@ -37,7 +37,6 @@ terminating it.
 import datetime
 import random
 import string
-import logging
 import socket
 import functools
 
@@ -77,8 +76,8 @@ def checks_instance_lock(function):
 
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
                  context=context)
-        LOG.info(_("check_instance_lock: arguments: |%s| |%s| |%s|"),
-                 self, context, instance_id, context=context)
+        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
+                " |%(instance_id)s|") % locals(), context=context)
         locked = self.get_lock(context, instance_id)
         admin = context.is_admin
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
@@ -118,7 +117,7 @@ class ComputeManager(manager.Manager):
         """Do any initialization that needs to be run if this is a
            standalone service.
         """
-        self.driver.init_host()
+        self.driver.init_host(host=self.host)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -231,22 +230,25 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        if not FLAGS.stub_network:
-            address = self.db.instance_get_floating_address(context,
-                                                            instance_ref['id'])
-            if address:
-                LOG.debug(_("Disassociating address %s"), address,
+        fixed_ip = instance_ref.get('fixed_ip')
+        if not FLAGS.stub_network and fixed_ip:
+            floating_ips = fixed_ip.get('floating_ips') or []
+            for floating_ip in floating_ips:
+                address = floating_ip['address']
+                LOG.debug("Disassociating address %s", address,
                           context=context)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
+                network_topic = self.db.queue_get_for(context,
+                                                      FLAGS.network_topic,
+                                                      floating_ip['host'])
                 rpc.cast(context,
-                         self.get_network_topic(context),
+                         network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"floating_address": address}})
 
-            address = self.db.instance_get_fixed_address(context,
-                                                         instance_ref['id'])
+            address = fixed_ip['address']
             if address:
                 LOG.debug(_("Deallocating address %s"), address,
                           context=context)
@@ -256,7 +258,7 @@ class ComputeManager(manager.Manager):
                 self.network_manager.deallocate_fixed_ip(context.elevated(),
                                                          address)
 
-        volumes = instance_ref.get('volumes', []) or []
+        volumes = instance_ref.get('volumes') or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
@@ -278,11 +280,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
 
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to reboot a non-running '
-                     'instance: %s (state: %s excepted: %s)'),
-                     instance_id,
-                     instance_ref['state'],
-                     power_state.RUNNING,
+                     'instance: %(instance_id)s (state: %(state)s '
+                     'expected: %(running)s)') % locals(),
                      context=context)
 
         self.db.instance_set_state(context,
@@ -307,9 +309,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('instance %s: snapshotting'), instance_id,
                   context=context)
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
-                       'instance: %s (state: %s excepted: %s)'),
-                     instance_id, instance_ref['state'], power_state.RUNNING)
+                       'instance: %(instance_id)s (state: %(state)s '
+                       'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
 
@@ -530,8 +534,8 @@ class ComputeManager(manager.Manager):
         """Attach a volume to an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("instance %s: attaching volume %s to %s"), instance_id,
-                  volume_id, mountpoint, context=context)
+        LOG.audit(_("instance %(instance_id)s: attaching volume %(volume_id)s"
+                " to %(mountpoint)s") % locals(), context=context)
         dev_path = self.volume_manager.setup_compute_volume(context,
                                                             volume_id)
         try:
@@ -546,8 +550,8 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            LOG.exception(_("instance %s: attach failed %s, removing"),
-                          instance_id, mountpoint, context=context)
+            LOG.exception(_("instance %(instance_id)s: attach failed"
+                    " %(mountpoint)s, removing") % locals(), context=context)
             self.volume_manager.remove_compute_volume(context,
                                                       volume_id)
             raise exc
@@ -561,9 +565,9 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        LOG.audit(_("Detach volume %s from mountpoint %s on instance %s"),
-                  volume_id, volume_ref['mountpoint'], instance_id,
-                  context=context)
+        mp = volume_ref['mountpoint']
+        LOG.audit(_("Detach volume %(volume_id)s from mountpoint %(mp)s"
+                " on instance %(instance_id)s") % locals(), context=context)
         if instance_ref['name'] not in self.driver.list_instances():
             LOG.warn(_("Detaching volume from unknown instance %s"),
                      instance_id, context=context)

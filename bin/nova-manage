@@ -267,6 +267,14 @@ class RoleCommands(object):
         self.manager.remove_role(user, role, project)
 
 
+def _db_error(caught_exception):
+    print caught_exception
+    print _("The above error may show that the database has not "
+            "been created.\nPlease create a database using "
+            "nova-manage sync db before running this command.")
+    exit(1)
+
+
 class UserCommands(object):
     """Class for managing users."""
 
@@ -282,13 +290,19 @@ class UserCommands(object):
     def admin(self, name, access=None, secret=None):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, True)
+        try:
+            user = self.manager.create_user(name, access, secret, True)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, False)
+        try:
+            user = self.manager.create_user(name, access, secret, False)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def delete(self, name):
@@ -409,9 +423,14 @@ class ProjectCommands(object):
             with open(filename, 'w') as f:
                 f.write(zip_file)
         except db.api.NoMoreNetworks:
-            print ('No more networks available. If this is a new '
-                   'installation, you need\nto call something like this:\n\n'
-                   '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+            print _('No more networks available. If this is a new '
+                    'installation, you need\nto call something like this:\n\n'
+                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+        except exception.ProcessExecutionError, e:
+            print e
+            print _("The above error may show that the certificate db has not "
+                    "been created.\nPlease create a database by running a "
+                    "nova-api server on this host.")
 
 
 class FloatingIpCommands(object):
@@ -476,9 +495,9 @@ class NetworkCommands(object):
                                     cidr=fixed_range,
                                     num_networks=int(num_networks),
                                     network_size=int(network_size),
+                                    cidr_v6=fixed_range_v6,
                                     vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start),
-                                    cidr_v6=fixed_range_v6)
+                                    vpn_start=int(vpn_start))
 
 
 class ServiceCommands(object):

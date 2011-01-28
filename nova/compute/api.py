@@ -92,8 +92,9 @@ class API(base.Base):
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
-            LOG.warn(_("Quota exceeeded for %s, tried to run %s instances"),
-                     context.project_id, min_count)
+            pid = context.project_id
+            LOG.warn(_("Quota exceeeded for %(pid)s,"
+                    " tried to run %(min_count)s instances") % locals())
             raise quota.QuotaError(_("Instance quota exceeded. You can only "
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
@@ -183,8 +184,10 @@ class API(base.Base):
             instance = self.update(context, instance_id, **updates)
             instances.append(instance)
 
-            LOG.debug(_("Casting to scheduler for %s/%s's instance %s"),
-                          context.project_id, context.user_id, instance_id)
+            pid = context.project_id
+            uid = context.user_id
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " instance %(instance_id)s") % locals())
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
@@ -315,7 +318,7 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        rv = self.db.instance_get_by_id(context, instance_id)
+        rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
