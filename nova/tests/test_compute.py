@@ -115,9 +115,6 @@ class ComputeTestCase(test.TestCase):
                 security_group=['testgroup'])
         try:
             db.instance_destroy(self.context, ref[0]['id'])
-            instance = db.instance_get(context.get_admin_context(
-                                       read_deleted=True), ref[0]['id'])
-
             group = db.security_group_get(self.context, group['id'])
             self.assert_(len(group.instances) == 0)
         finally:
