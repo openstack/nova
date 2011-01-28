@@ -92,7 +92,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                       % err)
 
             try:
-                inject_data_into_fs(tmpdir, key, net, execute)
+                inject_data_into_fs(tmpdir, key, net, utils.execute)
             finally:
                 # unmount device
                 utils.execute('sudo umount %s' % mapped_device)
