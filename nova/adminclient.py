@@ -288,7 +288,7 @@ class NovaAdminClient(object):
         return self.apiconn.get_list('DescribeUsers', {}, [('item', UserInfo)])
 
     def get_user(self, name):
-        """ grab a single user by name """
+        """Grab a single user by name."""
         try:
             return self.apiconn.get_object('DescribeUser', {'Name': name}, UserInfo)
         except boto.exception.BotoServerError, e:
