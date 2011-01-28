@@ -215,8 +215,8 @@ def  get_my_linklocal(interface):
             raise exception.Error(_("Link Local address is not found.:%s")
                                   % if_str)
     except Exception as ex:
-        raise exception.Error(_("Couldn't get Link Local IP of %s :%s")
-                              % (interface, ex))
+        raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
+                " :%(ex)s") % locals())
 
 
 def to_global_ipv6(prefix, mac):
