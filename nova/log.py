@@ -31,6 +31,7 @@ import cStringIO
 import json
 import logging
 import logging.handlers
+import sys
 import traceback
 
 from nova import flags
@@ -191,6 +192,10 @@ class NovaLogger(logging.Logger):
             kwargs.pop('exc_info')
             self.error(message, **kwargs)
 
+def handle_exception(type, value, tb):
+    logging.root.critical(str(value), exc_info=(type, value, tb))
+
+sys.excepthook = handle_exception
 logging.setLoggerClass(NovaLogger)
 
 
