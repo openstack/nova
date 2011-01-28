@@ -672,6 +672,9 @@ def instance_destroy(context, instance_id):
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.delete(session=session)
+        session.execute('update security_group_instance_association'
+                        ' set deleted=1 where instance_id=:id',
+                        {'id': instance_id})
 
 
 @require_context
@@ -1582,6 +1585,9 @@ def security_group_destroy(context, security_group_id):
     with session.begin():
         # TODO(vish): do we have to use sql here?
         session.execute('update security_groups set deleted=1 where id=:id',
+                        {'id': security_group_id})
+        session.execute('update security_group_instance_association'
+                        ' set deleted=1 where security_group_id=:id',
                         {'id': security_group_id})
         session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
