@@ -37,7 +37,6 @@ terminating it.
 import datetime
 import random
 import string
-import logging
 import socket
 import functools
 
@@ -231,7 +230,7 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        fixed_ip = instance_ref.get('fixed_ip', None)
+        fixed_ip = instance_ref.get('fixed_ip')
         if not FLAGS.stub_network and fixed_ip:
             floating_ips = fixed_ip.get('floating_ips') or []
             for floating_ip in floating_ips:
