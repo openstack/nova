@@ -53,6 +53,7 @@ nova_cmdclass = {'sdist': local_sdist}
 
 try:
     from sphinx.setup_command import BuildDoc
+
     class local_BuildDoc(BuildDoc):
         def run(self):
             for builder in ['html', 'man']:
