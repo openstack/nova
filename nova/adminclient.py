@@ -290,7 +290,9 @@ class NovaAdminClient(object):
     def get_user(self, name):
         """Grab a single user by name."""
         try:
-            return self.apiconn.get_object('DescribeUser', {'Name': name}, UserInfo)
+            return self.apiconn.get_object('DescribeUser',
+                                           {'Name': name},
+                                           UserInfo)
         except boto.exception.BotoServerError, e:
             if e.status == 400 and e.error_code == 'NotFound':
                 return None
