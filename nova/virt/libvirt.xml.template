@@ -75,10 +75,12 @@
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
             <filterref filter="nova-instance-${name}">
                 <parameter name="IP" value="${ip_address}" />
-                <parameter name="DHCPSERVER" value="${dhcp_server}" />
-                <parameter name="RASERVER" value="${ra_server}" />
+                <parameter name="DHCPSERVER" value="${dhcp_server}" />           
 #if $getVar('extra_params', False)
                 ${extra_params}
+#end if
+#if $getVar('ra_server', False)
+                <parameter name="RASERVER" value="${ra_server}" />
 #end if
             </filterref>
         </interface>

@@ -138,6 +138,7 @@ class Controller(wsgi.Controller):
                     _("%(param)s property not found for image %(_image_id)s") %
                       locals())
 
+        image_id = str(image_id)
         image = self._image_service.show(req.environ['nova.context'], image_id)
         return lookup('kernel_id'), lookup('ramdisk_id')
 

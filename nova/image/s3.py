@@ -65,13 +65,11 @@ class S3ImageService(service.BaseImageService):
                                  'image_id': image_id}))
         return image_id
 
-    def _fix_image_id(images):
+    def _fix_image_id(self, images):
         """S3 has imageId but OpenStack wants id"""
         for image in images:
             if 'imageId' in image:
-                image_id = image['imageId']
-                del image['imageId']
-                image['id'] = image_id
+                image['id'] = image['imageId']
         return images
 
     def index(self, context):
@@ -79,7 +77,7 @@ class S3ImageService(service.BaseImageService):
         response = self._conn(context).make_request(
             method='GET',
             bucket='_images')
-        return _fix_image_id(json.loads(response.read()))
+        return self._fix_image_id(json.loads(response.read()))
 
     def show(self, context, image_id):
         """return a image object if the context has permissions"""

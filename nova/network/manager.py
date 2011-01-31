@@ -428,6 +428,10 @@ class FlatDHCPManager(FlatManager):
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
                                   network_ref)
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_id)
+            if(FLAGS.use_ipv6):
+                self.driver.update_ra(context, network_id)
 
 
 class VlanManager(NetworkManager):
@@ -497,7 +501,7 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        vlan_start, vpn_start, cidr_v6):
+                        cidr_v6, vlan_start, vpn_start):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)

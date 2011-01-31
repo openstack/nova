@@ -26,6 +26,7 @@ import logging
 import logging.handlers
 import re
 import time
+import XenAPI
 
 
 ##### Logging setup
