@@ -65,10 +65,15 @@ then
       if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
         # Install the virtualenv and run the test suite in it
         python tools/install_venv.py
-		wrapper=${with_venv}
+        wrapper=${with_venv}
       fi
     fi
   fi
 fi
 
-run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+if [ -z "$noseargs" ];
+then
+  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+else
+  run_tests
+fi
