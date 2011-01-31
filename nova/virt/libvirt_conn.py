@@ -1161,7 +1161,8 @@ class NWFilterFirewall(FirewallDriver):
 
         instance_filter_name = self._instance_filter_name(instance)
         instance_secgroup_filter_name = '%s-secgroup' % (instance_filter_name,)
-        instance_filter_children = [base_filter, instance_secgroup_filter_name]
+        instance_filter_children = [base_filter, 'nova-provider-rules',
+                                    instance_secgroup_filter_name]
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
@@ -1184,8 +1185,6 @@ class NWFilterFirewall(FirewallDriver):
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
                                                          security_group['id'])]
-
-        instance_filter_children += ['nova-provider-rules']
 
         self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
