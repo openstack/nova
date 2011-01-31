@@ -73,4 +73,3 @@ def upgrade(migrate_engine):
             logging.info(repr(table))
             logging.exception('Exception while creating table')
             raise
-

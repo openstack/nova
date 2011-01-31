@@ -46,12 +46,15 @@ def db_version():
         meta.reflect(bind=engine)
         try:
             for table in ('auth_tokens', 'export_devices', 'fixed_ips',
-                          'floating_ips', 'instances', 'iscsi_targets',
+                          'floating_ips', 'instances',
                           'key_pairs', 'networks', 'projects', 'quotas',
-                          'security_group_rules',
-                          'security_group_instance_association', 'services',
+                          'security_group_instance_association',
+                          'security_group_rules', 'security_groups',
+                          'services',
                           'users', 'user_project_association',
-                          'user_project_role_association', 'volumes'):
+                          'user_project_role_association',
+                          'user_role_association',
+                          'volumes'):
                 assert table in meta.tables
             return db_version_control(1)
         except AssertionError:

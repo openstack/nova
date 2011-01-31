@@ -277,7 +277,7 @@ class API(base.Base):
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added to or removed from a security_group"""
 
-        hosts = [x['host'] for (x,idx)
+        hosts = [x['host'] for (x, idx)
                            in db.service_get_all_compute_sorted(context)]
         for host in hosts:
             rpc.cast(context,
@@ -328,7 +328,7 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        rv = self.db.instance_get_by_id(context, instance_id)
+        rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,

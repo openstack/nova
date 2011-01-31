@@ -69,9 +69,10 @@ class TestCase(unittest.TestCase):
             network_manager.VlanManager().create_networks(ctxt,
                                                           FLAGS.fixed_range,
                                                           5, 16,
+                                                          FLAGS.fixed_range_v6,
                                                           FLAGS.vlan_start,
                                                           FLAGS.vpn_start,
-                                                          FLAGS.fixed_range_v6)
+                                                          )
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators

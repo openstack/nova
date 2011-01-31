@@ -479,6 +479,19 @@ class NWFilterTestCase(test.TestCase):
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
 
+        ip = '10.11.12.13'
+
+        network_ref = db.project_get_network(self.context,
+                                             'fake')
+
+        fixed_ip = {'address': ip,
+                    'network_id': network_ref['id']}
+
+        admin_ctxt = context.get_admin_context()
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': instance_ref['id']})
+
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s' % instance_ref['name']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']

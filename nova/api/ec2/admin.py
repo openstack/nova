@@ -251,7 +251,7 @@ class AdminController(object):
         """Add provider-level firewall rules to block incoming traffic."""
         LOG.audit(_("Blocking traffic to all projects incoming from %s"),
                   cidr, context=context)
-        cidr  = urllib.unquote(cidr).decode()
+        cidr = urllib.unquote(cidr).decode()
         # raise if invalid
         IPy.IP(cidr)
         rule = {'cidr': cidr}
