@@ -191,18 +191,19 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute("sudo brctl stp %s off" % bridge)
         if interface:
             _execute("sudo brctl addif %s %s" % (bridge, interface))
+        _execute("sudo ifconfig %s up" % bridge)
     if net_attrs:
-        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                (bridge,
-                 net_attrs['gateway'],
+        # NOTE(vish): use ip addr add so it doesn't overwrite
+        #             manual addresses on the bridge.
+        suffix = net_attrs['cidr'].rpartition('/')[0]
+        _execute("sudo ip addr add %s/%s brd %s dev %s" %
+                (net_attrs['gateway'],
+                 suffix,
                  net_attrs['broadcast'],
-                 net_attrs['netmask']))
+                 bridge))
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
-            _execute("sudo ifconfig %s up" % bridge)
-    else:
-        _execute("sudo ifconfig %s up" % bridge)
     if FLAGS.use_nova_chains:
         (out, err) = _execute("sudo iptables -N nova_forward",
                               check_exit_code=False)
