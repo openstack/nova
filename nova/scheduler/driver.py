@@ -33,6 +33,7 @@ from nova.compute import power_state
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('service_down_time', 60,
                      'maximum time since last checkin for up service')
+flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
 class NoValidHost(exception.Error):
@@ -163,6 +164,8 @@ class Scheduler(object):
         http://wiki.libvirt.org/page/TodoPreMigrationChecks
 
         """
+        # Checking shared storage connectivity
+        self.mounted_on_same_shared_storage(context, instance_ref, dest)
 
         # Checking dest exists.
         dservice_refs = db.service_get_all_by_host(context, dest)
@@ -207,38 +210,60 @@ class Scheduler(object):
             raise e
 
     def has_enough_resource(self, context, instance_ref, dest):
-        """Check if destination host has enough resource for live migration"""
+        """
+        Check if destination host has enough resource for live migration.
+        Currently, only memory checking has been done.
+        If storage migration(block migration, meaning live-migration
+        without any shared storage) will be available, local storage
+        checking is also necessary.
+        """
 
         # Getting instance information
         ec2_id = instance_ref['hostname']
-        vcpus = instance_ref['vcpus']
         mem = instance_ref['memory_mb']
-        hdd = instance_ref['local_gb']
 
-        # Gettin host information
+        # Getting host information
         service_refs = db.service_get_all_by_host(context, dest)
         if len(service_refs) <= 0:
             raise exception.Invalid(_('%s does not exists.') % dest)
         service_ref = service_refs[0]
 
-        total_cpu = int(service_ref['vcpus'])
-        total_mem = int(service_ref['memory_mb'])
-        total_hdd = int(service_ref['local_gb'])
+        mem_total = int(service_ref['memory_mb'])
+        mem_used = int(service_ref['memory_mb_used'])
+        mem_avail = mem_total - mem_used
+        mem_inst =  instance_ref['memory_mb']
+        if mem_avail <= mem_inst:
+            msg = _('%s is not capable to migrate %s(host:%s <= instance:%s)') 
+            raise exception.NotEmpty(msg % (dest, ec2_id, mem_avail, mem_inst))
 
-        instances_refs = db.instance_get_all_by_host(context, dest)
-        for i_ref in instances_refs:
-            total_cpu -= int(i_ref['vcpus'])
-            total_mem -= int(i_ref['memory_mb'])
-            total_hdd -= int(i_ref['local_gb'])
+    def mounted_on_same_shared_storage(self, context, instance_ref, dest):
+        """
+        Check if /nova-inst-dir/insntances is mounted same storage at
+        live-migration src and dest host.
+        """
+        src = instance_ref['host']
+        dst_t = db.queue_get_for(context, FLAGS.compute_topic, dest)
+        src_t = db.queue_get_for(context, FLAGS.compute_topic, src)
 
-        # Checking host has enough information
-        logging.debug(_('host(%s) remains vcpu:%s mem:%s hdd:%s,') %
-                      (dest, total_cpu, total_mem, total_hdd))
-        logging.debug(_('instance(%s) has vcpu:%s mem:%s hdd:%s,') %
-                      (ec2_id, vcpus, mem, hdd))
+        # create tmpfile at dest host
+        try:
+            filename = rpc.call(context, dst_t, {"method": 'mktmpfile'})
+        except rpc.RemoteError, e:
+            msg = _("Cannot create tmpfile at %s to confirm shared storage.")
+            logging.error(msg % FLAGS.instance_path)
+            raise e
 
-        if total_cpu <= vcpus or total_mem <= mem or total_hdd <= hdd:
-            raise exception.NotEmpty(_('%s is not capable to migrate %s') %
-                                     (dest, ec2_id))
+        # make sure existence at src host.
+        try:
+            rpc.call(context, src_t,
+                     {"method": 'exists', "args":{'path':filename}})
 
-        logging.debug(_('%s has_enough_resource() for %s') % (dest, ec2_id))
+        except (rpc.RemoteError, exception.NotFound), e:
+            msg = (_("""Cannot comfirm %s at %s to confirm shared storage."""
+                     """Check if %s is same shared storage"""))
+            logging.error(msg % FLAGS.instance_path)
+            raise e
+
+        # then remove.
+        rpc.call(context, dst_t,
+                 {"method": 'remove', "args":{'path':filename}})

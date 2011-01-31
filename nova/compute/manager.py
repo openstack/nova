@@ -134,9 +134,12 @@ class ComputeManager(manager.Manager):
             raise exception.Invalid(msg)
 
         # Updating host information
-        vcpu = self.driver.get_vcpu_number()
-        memory_mb = self.driver.get_memory_mb()
-        local_gb = self.driver.get_local_gb()
+        vcpu = self.driver.get_vcpu_total()
+        memory_mb = self.driver.get_memory_mb_total()
+        local_gb = self.driver.get_local_gb_total()
+        vcpu_u = self.driver.get_vcpu_used()
+        memory_mb_u = self.driver.get_memory_mb_used()
+        local_gb_u = self.driver.get_local_gb_used()
         hypervisor = self.driver.get_hypervisor_type()
         version = self.driver.get_hypervisor_version()
         cpu_info = self.driver.get_cpu_info()
@@ -146,9 +149,41 @@ class ComputeManager(manager.Manager):
                                {'vcpus': vcpu,
                                 'memory_mb': memory_mb,
                                 'local_gb': local_gb,
+                                'vcpus_used':vcpu_u,
+                                'memory_mb_used': memory_mb_u,
+                                'local_gb_used': local_gb_u,
                                 'hypervisor_type': hypervisor,
                                 'hypervisor_version': version,
                                 'cpu_info': cpu_info})
+
+    def update_available_resource(self, context):
+        """
+        update compute node specific info to DB.
+        Alghough this might be subset of update_service,
+        udpate_service() is used only nova-compute is lauched.
+        On the other hand, this method is used whenever administrators
+        request comes.
+        """
+        try:
+            service_ref = self.db.service_get_by_args(context,
+                                                      self.host,
+                                                      'nova-compute')
+        except exception.NotFound:
+            msg = _(("""Cannot update resource info."""
+                     """ Because no service record found."""))
+            raise exception.Invalid(msg)
+
+        # Updating host information
+        vcpu_u = self.driver.get_vcpu_used()
+        memory_mb_u = self.driver.get_memory_mb_used()
+        local_gb_u = self.driver.get_local_gb_used()
+
+        self.db.service_update(context,
+                               service_ref['id'],
+                               {'vcpus_used':vcpu_u,
+                                'memory_mb_used': memory_mb_u,
+                                'local_gb_used': local_gb_u})
+        return
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -595,6 +630,19 @@ class ComputeManager(manager.Manager):
     def compare_cpu(self, context, cpu_info):
         """ Check the host cpu is compatible to a cpu given by xml."""
         return self.driver.compare_cpu(cpu_info)
+
+    def mktmpfile(self, context):
+        """make tmpfile under FLAGS.instance_path."""
+        return utils.mktmpfile(FLAGS.instances_path)
+
+    def exists(self, context, path):
+        """Confirm existence of the tmpfile given by path."""
+        if not utils.exists(path): 
+            raise exception.NotFound(_('%s not found') % path)
+
+    def remove(self, context, path):
+        """remove the tmpfile given by path."""
+        return utils.remove(path)
 
     def pre_live_migration(self, context, instance_id):
         """Any preparation for live migration at dst host."""

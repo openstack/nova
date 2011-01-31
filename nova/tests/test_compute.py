@@ -268,7 +268,8 @@ class ComputeTestCase(test.TestCase):
         """
 
         def dic_key_check(dic): 
-            validkey = ['vcpus', 'memory_mb', 'local_gb', 
+            validkey = ['vcpus', 'memory_mb', 'local_gb',
+                        'vcpus_used', 'memory_mb_used', 'local_gb_used',
                         'hypervisor_type', 'hypervisor_version', 'cpu_info']
             return (list(set(validkey)) == list(set(dic.keys())))
 
@@ -286,13 +287,55 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
+        self.compute.update_service('dummy', host, binary)
+        self.mox.ResetAll()
+
+    def test_update_available_resource_exception(self): 
+        """a testcase of update_available_resource raises exception"""
+        host = 'foo'
+        binary = 'nova-compute'
+        ctxt = context.get_admin_context()
+        dbmock = self.mox.CreateMock(db)
+        dbmock.service_get_by_args(mox.IgnoreArg(), 
+                                   mox.StrContains(host), 
+                                   mox.StrContains(binary)).\
+                                   AndRaise(exception.NotFound())
+        self.compute.db = dbmock
+        self.compute.host = host
+        self.mox.ReplayAll()
         try: 
-            self.compute.update_service('dummy', host, binary)
+            self.compute.update_available_resource(ctxt)
         except exception.Invalid, e:
-            msg = 'Cannot insert compute manager specific info'
+            msg = 'Cannot update resource info.'
             c1 = ( 0 <= e.message.find(msg))
             self.assertTrue(c1)
-        self.mox.ResetAll()
+        self.mox.UnsetStubs()
+
+    def test_update_available_resource_success(self): 
+        """a testcase of update_available_resource finishes with no errors"""
+
+        def dic_key_check(dic): 
+            validkey = [ 'vcpus_avail', 'memory_mb_avail', 'local_gb_avail']
+            return (list(set(validkey)) == list(set(dic.keys())))
+
+        host = 'foo'
+        binary = 'nova-compute'
+        ctxt = context.get_admin_context()
+        service_ref = {'id':1, 'binary':'nova-compute', 'topic':'compute'} 
+        dbmock = self.mox.CreateMock(db)
+        dbmock.service_get_by_args(mox.IgnoreArg(), 
+                                   mox.StrContains(host), 
+                                   mox.StrContains(binary)).\
+                                   AndReturn(service_ref)
+        dbmock.service_update(mox.IgnoreArg(), 
+                              service_ref['id'], 
+                              mox.Func(dic_key_check))
+
+        self.compute.db = dbmock
+        self.compute.host = host
+        self.mox.ReplayAll()
+        self.compute.update_available_resource(ctxt)
+        self.mox.UnsetStubs()
 
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
@@ -444,7 +487,7 @@ class ComputeTestCase(test.TestCase):
         rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
                  {"method": "pre_live_migration",
                   "args": {'instance_id': i_id}}).\
-                 InAnyOrder('g1').AndRaise(rpc.RemoteError('du', 'mm', 'y'))
+                 InAnyOrder('g1').AndRaise(rpc.RemoteError('', '', ''))
         self.mox.StubOutWithMock(compute_manager.LOG, 'error')
         compute_manager.LOG.error('Pre live migration for %s failed at %s', 
                                    instance_ref['hostname'], dest)
@@ -480,7 +523,7 @@ class ComputeTestCase(test.TestCase):
         rpc.call(c, compute_topic,
                  {"method": "pre_live_migration",
                   "args": {'instance_id': i_id}}).\
-                 AndRaise(rpc.RemoteError('du', 'mm', 'y'))
+                 AndRaise(rpc.RemoteError('', '', ''))
         self.mox.StubOutWithMock(compute_manager.LOG, 'error')
         compute_manager.LOG.error('Pre live migration for %s failed at %s', 
                                    instance_ref['hostname'], dest)

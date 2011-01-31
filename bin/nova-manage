@@ -499,50 +499,6 @@ class InstanceCommands(object):
         print msg
 
 
-class HostCommands(object):
-    """Class for mangaging host(physical nodes)."""
-
-    def list(self):
-        """describe host list."""
-
-        # To supress msg: No handlers could be found for logger "amqplib"
-        logging.basicConfig()
-
-        service_refs = db.service_get_all(context.get_admin_context())
-        hosts = [h['host'] for h in service_refs]
-        hosts = list(set(hosts))
-        for host in hosts:
-            print host
-
-    def show(self, host):
-        """describe cpu/memory/hdd info for host."""
-
-        result = rpc.call(context.get_admin_context(),
-                     FLAGS.scheduler_topic,
-                     {"method": "show_host_resource",
-                      "args": {"host": host}})
-
-        # Checking result msg format is necessary, that will have done
-        # when this feture is included in API.
-        if type(result) != dict:
-            print 'Unexpected error occurs'
-        elif not result['ret']:
-            print '%s' % result['msg']
-        else:
-            cpu = result['phy_resource']['vcpus']
-            mem = result['phy_resource']['memory_mb']
-            hdd = result['phy_resource']['local_gb']
-
-            print 'HOST\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
-            print '%s\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
-            for p_id, val in result['usage'].items():
-                print '%s\t%s\t\t%s\t%s\t%s' % (host,
-                                             p_id,
-                                             val['vcpus'],
-                                             val['memory_mb'],
-                                             val['local_gb'])
-
-
 class ServiceCommands(object):
     """Enable and disable running services"""
 
@@ -587,6 +543,53 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
+    def describeresource(self, host):
+        """describe cpu/memory/hdd info for host."""
+
+        result = rpc.call(context.get_admin_context(),
+                     FLAGS.scheduler_topic,
+                     {"method": "show_host_resource",
+                      "args": {"host": host}})
+
+        # Checking result msg format is necessary, that will have done
+        # when this feture is included in API.
+        if type(result) != dict:
+            print 'Unexpected error occurs'
+        elif not result['ret']:
+            print '%s' % result['msg']
+        else:
+            cpu = result['phy_resource']['vcpus']
+            mem = result['phy_resource']['memory_mb']
+            hdd = result['phy_resource']['local_gb']
+            cpu_u = result['phy_resource']['vcpus_used']
+            mem_u = result['phy_resource']['memory_mb_used']
+            hdd_u = result['phy_resource']['local_gb_used']
+
+            print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
+            print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
+            print '%s(used)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            for p_id, val in result['usage'].items():
+                print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
+                                                  p_id,
+                                                  val['vcpus'],
+                                                  val['memory_mb'],
+                                                  val['local_gb'])
+
+    def updateresource(self, host):
+        """update available vcpu/memory/disk info for host."""
+
+        ctxt = context.get_admin_context()
+        service_refs = db.service_get_all_by_host(ctxt, host)
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s does not exists.') % host)
+
+        service_refs = [s for s in service_refs if s['topic'] == 'compute'] 
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s is not compute node.') % host)
+        
+        result = rpc.call(ctxt, db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                     {"method": "update_available_resource"})
+
 
 class LogCommands(object):
     def request(self, request_id, logfile='/var/log/nova.log'):
@@ -606,7 +609,6 @@ CATEGORIES = [
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('instance', InstanceCommands),
-    ('host', HostCommands),
     ('service', ServiceCommands),
     ('log', LogCommands)]
 

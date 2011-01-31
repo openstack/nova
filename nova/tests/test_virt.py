@@ -241,11 +241,11 @@ class LibvirtConnTestCase(test.TestCase):
             uri = conn.get_uri()
             self.assertEquals(uri, testuri)
 
-    def test_get_memory_mb(self):
+    def test_get_vcpu_total(self):
         """
-        Check if get_memory_mb returns memory value
+        Check if get_vcpu_total returns appropriate cpu value 
         Connection/OS/driver differenct does not matter for this method,
-        so everyone can execute for checking.
+        everyone can execute for checking.
         """
         try: 
             self._driver_dependent_test_setup()
@@ -254,8 +254,86 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(0 < conn.get_memory_mb())
+        self.assertTrue(0 < conn.get_vcpu_total())
         self.mox.UnsetStubs()
+
+
+    def test_get_memory_mb_total(self):
+        """Check if get_memory_mb returns appropriate memory value"""
+        try: 
+            self._driver_dependent_test_setup()
+        except: 
+            return 
+
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        self.assertTrue(0 < conn.get_memory_mb_total())
+        self.mox.UnsetStubs()
+
+    def test_get_local_gb_total(self):
+        """Check if get_local_gb_total returns appropriate disk value"""
+        # Note(masumotok): cannot test b/c FLAGS.instances_path is
+        #                  inevitable for this test.. 
+        #try:
+        #    self._driver_dependent_test_setup()
+        #except:
+        #    return
+        #
+        #self.mox.ReplayAll()
+        #conn = libvirt_conn.LibvirtConnection(False)
+        #self.assertTrue(0 < conn.get_local_gb_total())
+        #self.mox.UnsetStubs()
+        pass
+
+    def test_get_vcpu_used(self):
+        """Check if get_local_gb_total returns appropriate disk value"""
+        try:
+            self._driver_dependent_test_setup()
+        except:
+            return
+
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn', use_mock_anything=True)
+        libvirt_conn.LibvirtConnection._conn.listDomainsID().AndReturn([1,2])
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "vcpus", use_mock_anything=True)
+        vdmock.vcpus().AndReturn(['', [('dummycpu'), ('dummycpu')]])
+        vdmock.vcpus().AndReturn(['', [('dummycpu'), ('dummycpu')]])
+        libvirt_conn.LibvirtConnection._conn.lookupByID(mox.IgnoreArg()).\
+            AndReturn(vdmock)
+        libvirt_conn.LibvirtConnection._conn.lookupByID(mox.IgnoreArg()).\
+            AndReturn(vdmock)
+
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        self.assertTrue( conn.get_vcpu_used() == 4)
+        self.mox.UnsetStubs()
+
+    def test_get_memory_mb_used(self):
+        """Check if get_memory_mb returns appropriate memory value"""
+        try:
+            self._driver_dependent_test_setup()
+        except:
+            return
+
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        self.assertTrue(0 < conn.get_memory_mb_used())
+        self.mox.UnsetStubs()
+
+    def test_get_local_gb_used(self):
+        """Check if get_local_gb_total returns appropriate disk value"""
+        # Note(masumotok): cannot test b/c FLAGS.instances_path is
+        #                  inevitable for this test.. 
+        #try:
+        #    self._driver_dependent_test_setup()
+        #except:
+        #    return
+
+        #self.mox.ReplayAll()
+        #conn = libvirt_conn.LibvirtConnection(False)
+        #self.assertTrue(0 < conn.get_local_gb_used())
+        #self.mox.UnsetStubs()
+        pass
 
     def test_get_cpu_info_works_correctly(self):
         """

@@ -213,16 +213,28 @@ class XenAPIConnection(object):
         """This method is supported only libvirt.  """
         return
 
-    def get_vcpu_number(self):
+    def get_vcpu_total(self):
         """This method is supported only libvirt.  """
         return
 
-    def get_memory_mb(self):
-        """This method is supported only libvirt.."""
+    def get_memory_mb_total(self):
+        """This method is supported only libvirt.  """
         return
 
-    def get_local_gb(self):
-        """This method is supported only libvirt.."""
+    def get_local_gb_total(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_vcpu_used(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_memory_mb_used(self):
+        """This method is supported only libvirt.  """
+        return
+
+    def get_local_gb_used(self):
+        """This method is supported only libvirt.  """
         return
 
     def get_hypervisor_type(self):

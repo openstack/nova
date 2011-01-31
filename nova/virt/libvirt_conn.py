@@ -835,21 +835,44 @@ class LibvirtConnection(object):
 
         return interfaces
 
-    def get_vcpu_number(self):
+    def get_vcpu_total(self):
         """ Get vcpu number of physical computer.  """
-        return self._conn.getMaxVcpus(None)
+        return open('/proc/cpuinfo').read().count('processor')
 
-    def get_memory_mb(self):
-        """Get the memory size of physical computer ."""
+    def get_memory_mb_total(self):
+        """Get the total memory size(MB) of physical computer ."""
         meminfo = open('/proc/meminfo').read().split()
         idx = meminfo.index('MemTotal:')
         # transforming kb to mb.
         return int(meminfo[idx + 1]) / 1024
 
-    def get_local_gb(self):
-        """Get the hdd size of physical computer ."""
+    def get_local_gb_total(self):
+        """Get the total hdd size(GB) of physical computer ."""
         hddinfo = os.statvfs(FLAGS.instances_path)
-        return hddinfo.f_bsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+        return hddinfo.f_frsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
+    def get_vcpu_used(self):
+        """ Get vcpu available number of physical computer.  """
+        total = 0
+        for i in self._conn.listDomainsID():
+            dom = self._conn.lookupByID(i)
+            total += len(dom.vcpus()[1])
+        return total
+
+    def get_memory_mb_used(self):
+        """Get the free memory size(MB) of physical computer."""
+        m = open('/proc/meminfo').read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+        avail = (int(m[idx1+1]) + int(m[idx2+1]) + int(m[idx3+1])) / 1024
+        return  self.get_memory_mb_total() - avail
+
+    def get_local_gb_used(self):
+        """Get the free hdd size(GB) of physical computer ."""
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        avail = hddinfo.f_frsize * hddinfo.f_bavail / 1024 / 1024 / 1024
+        return self.get_local_gb_total() - avail
 
     def get_hypervisor_type(self):
         """ Get hypervisor type """

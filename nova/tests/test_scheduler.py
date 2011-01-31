@@ -41,6 +41,7 @@ from nova.db.sqlalchemy import models
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
 flags.DECLARE('stub_network', 'nova.compute.manager')
+flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
 class TestDriver(driver.Scheduler):
@@ -111,7 +112,8 @@ class SchedulerTestCase(test.TestCase):
         scheduler = manager.SchedulerManager()
         dest = 'dummydest'
         ctxt = context.get_admin_context()
-        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100}
+        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100, 
+             'vcpus_used':16, 'memory_mb_used':32, 'local_gb_used':10}
         service_ref = {'id':1, 'host':dest}
         service_ref.update(r0)
 
@@ -140,7 +142,8 @@ class SchedulerTestCase(test.TestCase):
         scheduler = manager.SchedulerManager()
         dest = 'dummydest'
         ctxt = context.get_admin_context()
-        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100}
+        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100, 
+             'vcpus_used':16, 'memory_mb_used':32, 'local_gb_used':10}
         r1 = {'vcpus':10, 'memory_mb':4, 'local_gb':20}
         r2 = {'vcpus':10, 'memory_mb':20, 'local_gb':30}
         service_ref = {'id':1, 'host':dest}
@@ -148,7 +151,7 @@ class SchedulerTestCase(test.TestCase):
         instance_ref2 = {'id':2, 'project_id':'p-01', 'host':'dummy'}
         instance_ref2.update(r1)
         instance_ref3 = {'id':3, 'project_id':'p-02', 'host':'dummy'}
-        instance_ref3.update(r1)
+        instance_ref3.update(r2)
 
         self.mox.StubOutWithMock(manager, 'db', use_mock_anything=True)
         manager.db.service_get_all_compute_sorted(mox.IgnoreArg()).\
@@ -175,6 +178,7 @@ class SchedulerTestCase(test.TestCase):
         c6 = result['usage']['p-02'] == r2
         self.assertTrue( c1 and c2 and c3 and c4 and c5 and c6)
         self.mox.UnsetStubs()
+
 
 class ZoneSchedulerTestCase(test.TestCase):
     """Test case for zone scheduler"""
@@ -495,7 +499,7 @@ class SimpleDriverTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-00000001', 'host':'dummy',
-                       'volumes':[{'id':1}, {'id':2}]}
+                 'volumes':[{'id':1}, {'id':2}]}
         dest = 'dummydest'
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
@@ -793,7 +797,10 @@ class SimpleDriverTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        driver_i = self.scheduler.driver
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([])
@@ -813,6 +820,7 @@ class SimpleDriverTestCase(test.TestCase):
         Original host(an instance launched on) does not exist.
         """
         dest = 'dummydest'
+        driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 'launched_on':'h1'}
@@ -821,6 +829,8 @@ class SimpleDriverTestCase(test.TestCase):
         service_ref.__setitem__('topic', 'compute')
         service_ref.__setitem__('host', i_ref['host'])
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
@@ -844,6 +854,7 @@ class SimpleDriverTestCase(test.TestCase):
         Original host and dest host has different hypervisor type.
         """
         dest = 'dummydest'
+        driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01',
@@ -856,6 +867,8 @@ class SimpleDriverTestCase(test.TestCase):
         service_ref2.__setitem__('id', 2)
         service_ref2.__setitem__('hypervisor_type', 'xen')
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
@@ -879,6 +892,7 @@ class SimpleDriverTestCase(test.TestCase):
         Original host and dest host has different hypervisor version.
         """
         dest = 'dummydest'
+        driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01',
@@ -891,6 +905,8 @@ class SimpleDriverTestCase(test.TestCase):
         service_ref2.__setitem__('id', 2)
         service_ref2.__setitem__('hypervisor_version', 12001)
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
@@ -914,6 +930,7 @@ class SimpleDriverTestCase(test.TestCase):
         Original host and dest host has different hypervisor version.
         """
         dest = 'dummydest'
+        driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01',
@@ -927,6 +944,8 @@ class SimpleDriverTestCase(test.TestCase):
         service_ref2.__setitem__('hypervisor_version', 12000)
         service_ref2.__setitem__('cpuinfo', '<cpu>info</cpu>')
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
@@ -956,6 +975,7 @@ class SimpleDriverTestCase(test.TestCase):
         The testcase make sure everything finished with no error.
         """
         dest = 'dummydest'
+        driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         i_ref = {'id':1, 'hostname':'i-01',
@@ -969,6 +989,8 @@ class SimpleDriverTestCase(test.TestCase):
         service_ref2.__setitem__('hypervisor_version', 12000)
         service_ref2.__setitem__('cpuinfo', '<cpu>info</cpu>')
 
+        self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
+        driver_i.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
@@ -988,36 +1010,6 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertTrue(ret == None)
         self.mox.UnsetStubs()
 
-    def test_has_enough_resource_lack_resource_vcpu(self):
-        """
-        A testcase of driver.has_enough_resource. 
-        Lack of vcpu.(boundary check)
-        """
-        dest = 'dummydest'
-        ctxt = context.get_admin_context()
-        topic = FLAGS.compute_topic
-        service_ref = {'id':1, 'vcpus':16, 'memory_mb':32, 'local_gb':100}
-        i_ref1    = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                    'vcpus':6, 'memory_mb':8, 'local_gb':10}
-        i_ref2 = {'id':2, 'hostname':'i-01', 'host':'dummy', 
-                    'vcpus':5, 'memory_mb':8, 'local_gb':10}
-        i_ref3 = {'id':3, 'hostname':'i-02', 'host':'dummy', 
-                    'vcpus':5, 'memory_mb':8, 'local_gb':10}
-
-        self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
-        driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
-                                           AndReturn([service_ref])
-        driver.db.instance_get_all_by_host(mox.IgnoreArg(), dest).\
-                      AndReturn([i_ref2, i_ref3])
-        
-        self.mox.ReplayAll()
-        try:
-            self.scheduler.driver.has_enough_resource(ctxt, i_ref1, dest)
-        except exception.NotEmpty, e:
-            msg = 'is not capable to migrate'
-            self.assertTrue(e.message.find(msg) >= 0)
-        self.mox.UnsetStubs()
-
     def test_has_enough_resource_lack_resource_memory(self):
         """
         A testcase of driver.has_enough_resource. 
@@ -1026,58 +1018,21 @@ class SimpleDriverTestCase(test.TestCase):
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        service_ref = {'id':1, 'vcpus':16, 'memory_mb':32, 'local_gb':100}
-        i_ref1 = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                     'vcpus':5, 'memory_mb':16, 'local_gb':10}
-        i_ref2 = {'id':2, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
-        i_ref3 = {'id':3, 'hostname':'i-02', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
+        service_ref = {'id':1,  'memory_mb':32, 'memory_mb_used':12, 'local_gb':100}
+        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 
+                     'vcpus':5, 'memory_mb':20, 'local_gb':10}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
-        driver.db.instance_get_all_by_host(mox.IgnoreArg(), dest).\
-                      AndReturn([i_ref2, i_ref3])
         
         self.mox.ReplayAll()
         try:
-            self.scheduler.driver.has_enough_resource(ctxt, i_ref1, dest)
+            self.scheduler.driver.has_enough_resource(ctxt, i_ref, dest)
         except exception.NotEmpty, e:
             msg = 'is not capable to migrate'
             self.assertTrue(e.message.find(msg) >= 0)
         self.mox.UnsetStubs()
-        self.mox.UnsetStubs()
-
-    def test_has_enough_resource_lack_resource_disk(self):
-        """
-        A testcase of driver.has_enough_resource. 
-        Lack of local_gb.(boundary check)
-        """
-        scheduler = manager.SchedulerManager()
-        dest = 'dummydest'
-        ctxt = context.get_admin_context()
-        topic = FLAGS.compute_topic
-        service_ref = {'id':1, 'vcpus':16, 'memory_mb':32, 'local_gb':100}
-        i_ref1 = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':80}
-        i_ref2 = {'id':2, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
-        i_ref3 = {'id':3, 'hostname':'i-02', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
-
-        self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
-        driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
-                                           AndReturn([service_ref])
-        driver.db.instance_get_all_by_host(mox.IgnoreArg(), dest).\
-                      AndReturn([i_ref2, i_ref3])
-        
-        self.mox.ReplayAll()
-        try:
-            self.scheduler.driver.has_enough_resource(ctxt, i_ref1, dest)
-        except exception.NotEmpty, e:
-            msg = 'is not capable to migrate'
-            self.assertTrue(e.message.find(msg) >= 0)
         self.mox.UnsetStubs()
 
     def test_has_enough_resource_works_correctly(self):
@@ -1088,21 +1043,101 @@ class SimpleDriverTestCase(test.TestCase):
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        service_ref = {'id':1, 'vcpus':16, 'memory_mb':32, 'local_gb':100}
-        i_ref1 = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
-        i_ref2 = {'id':2, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
-        i_ref3 = {'id':3, 'hostname':'i-02', 'host':'dummy', 
+        service_ref = {'id':1, 'memory_mb':120, 'memory_mb_used':32}
+        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 
                   'vcpus':5, 'memory_mb':8, 'local_gb':10}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
-        driver.db.instance_get_all_by_host(mox.IgnoreArg(), dest).\
-                      AndReturn([i_ref2, i_ref3])
         
         self.mox.ReplayAll()
-        ret = self.scheduler.driver.has_enough_resource(ctxt, i_ref1, dest)
+        ret = self.scheduler.driver.has_enough_resource(ctxt, i_ref, dest)
+        self.assertTrue(ret == None)
+        self.mox.UnsetStubs()
+
+    def test_mounted_on_same_shared_storage_cannot_make_tmpfile(self):
+        """
+        A testcase of driver.mounted_on_same_shared_storage
+        checks log message when dest host cannot make tmpfile.
+        """
+        dest = 'dummydest'
+        driver_i = self.scheduler.driver
+        ctxt = context.get_admin_context()
+        topic = FLAGS.compute_topic
+        fpath = '/test/20110127120000'
+        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+
+        self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+            {"method": 'mktmpfile'}).AndRaise(rpc.RemoteError('', '', ''))
+        self.mox.StubOutWithMock(driver.logging, 'error')
+        msg = _("Cannot create tmpfile at %s to confirm shared storage.")
+        driver.logging.error(msg % FLAGS.instances_path)
+
+        self.mox.ReplayAll()
+        self.assertRaises(rpc.RemoteError, 
+                          driver_i.mounted_on_same_shared_storage, 
+                          ctxt, i_ref, dest)
+        self.mox.UnsetStubs()
+
+    def test_mounted_on_same_shared_storage_cannot_comfirm_tmpfile(self):
+        """
+        A testcase of driver.mounted_on_same_shared_storage
+        checks log message when src host cannot comfirm tmpfile.
+        """
+        dest = 'dummydest'
+        driver_i = self.scheduler.driver
+        ctxt = context.get_admin_context()
+        topic = FLAGS.compute_topic
+        fpath = '/test/20110127120000'
+        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+
+        self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+            {"method": 'mktmpfile'}).AndReturn(fpath)
+        driver.rpc.call(mox.IgnoreArg(), 
+            db.queue_get_for(ctxt, FLAGS.compute_topic, i_ref['host']),
+            {"method": 'exists', "args":{'path':fpath}}).\
+            AndRaise(rpc.RemoteError('','',''))
+        self.mox.StubOutWithMock(driver.logging, 'error')
+        msg = _("Cannot create tmpfile at %s to confirm shared storage.")
+        driver.logging.error(msg % FLAGS.instances_path)
+
+        self.mox.ReplayAll()
+        self.assertRaises(rpc.RemoteError, 
+                          driver_i.mounted_on_same_shared_storage, 
+                          ctxt, i_ref, dest)
+        self.mox.UnsetStubs()
+
+
+    def test_mounted_on_same_shared_storage_works_correctly(self):
+        """
+        A testcase of driver.mounted_on_same_shared_storage
+        to make sure everything finished with no error.
+        """
+        dest = 'dummydest'
+        ctxt = context.get_admin_context()
+        topic = FLAGS.compute_topic
+        fpath = '/test/20110127120000'
+        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+
+        self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, dest),
+            {"method": 'mktmpfile'}).AndReturn(fpath)
+        driver.rpc.call(mox.IgnoreArg(), 
+            db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, i_ref['host']),
+            {"method": 'exists', "args":{'path':fpath}})
+        driver.rpc.call(mox.IgnoreArg(), 
+            db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, dest),
+            {"method": 'remove', "args":{'path':fpath}})
+
+        self.mox.ReplayAll()
+        ret = self.scheduler.driver.mounted_on_same_shared_storage(ctxt,
+                                                                   i_ref,
+                                                                   dest)
         self.assertTrue(ret == None)
         self.mox.UnsetStubs()

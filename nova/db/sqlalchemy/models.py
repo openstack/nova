@@ -164,7 +164,10 @@ class Service(BASE, NovaBase):
     vcpus = Column(Integer, nullable=True)
     memory_mb = Column(Integer, nullable=True)
     local_gb = Column(Integer, nullable=True)
-    hypervisor_type = Column(String(128), nullable=True)
+    vcpus_used = Column(Integer, nullable=True)
+    memory_mb_used = Column(Integer, nullable=True)
+    local_gb_used = Column(Integer, nullable=True)
+    hypervisor_type = Column(Text(), nullable=True)
     hypervisor_version = Column(Integer, nullable=True)
     # Note(masumotok): Expected Strings example:
     #

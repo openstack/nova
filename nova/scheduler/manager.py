@@ -84,7 +84,10 @@ class SchedulerManager(manager.Manager):
         # Getting physical resource information
         h_resource = {'vcpus': service_ref['vcpus'],
                      'memory_mb': service_ref['memory_mb'],
-                     'local_gb': service_ref['local_gb']}
+                     'local_gb': service_ref['local_gb'],
+                     'vcpus_used': service_ref['vcpus_used'],
+                     'memory_mb_used': service_ref['memory_mb_used'],
+                     'local_gb_used': service_ref['local_gb_used']}
 
         # Getting usage resource information
         u_resource = {}
@@ -108,8 +111,8 @@ class SchedulerManager(manager.Manager):
             hdd = db.instance_get_disk_sum_by_host_and_project(context,
                                                                host,
                                                                p_id)
-            u_resource[p_id] = {'vcpus': vcpus,
-                                'memory_mb': mem,
-                                'local_gb': hdd}
+            u_resource[p_id] = {'vcpus': int(vcpus),
+                                'memory_mb': int(mem),
+                                'local_gb': int(hdd)}
 
         return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}

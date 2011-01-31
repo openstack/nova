@@ -303,6 +303,24 @@ def str_dict_replace(s, mapping):
     return s
 
 
+def mktmpfile(dir):
+    """create tmpfile under dir, and return filename."""
+    filename = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    fpath = os.path.join(dir, filename)
+    open(fpath, 'a+').write(fpath+'\n')
+    return fpath
+
+
+def exists(filename):
+    """check file path existence."""
+    return os.path.exists(filename)
+
+
+def remove(filename):
+    """remove file."""
+    return os.remove(filename)
+
+
 class LazyPluggable(object):
     """A pluggable backend loaded lazily based on some value."""
 
