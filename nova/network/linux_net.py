@@ -195,7 +195,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
     if net_attrs:
         # NOTE(vish): use ip addr add so it doesn't overwrite
         #             manual addresses on the bridge.
-        suffix = net_attrs['cidr'].rpartition('/')[0]
+        suffix = net_attrs['cidr'].rpartition('/')[2]
         _execute("sudo ip addr add %s/%s brd %s dev %s" %
                 (net_attrs['gateway'],
                  suffix,
