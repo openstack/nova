@@ -52,7 +52,7 @@ class RequestContext(object):
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
-            timestampe = utils.utcnow()
+            timestamp = utils.utcnow()
         if isinstance(timestamp, str) or isinstance(timestamp, unicode):
             timestamp = utils.parse_isotime(timestamp)
         self.timestamp = timestamp
