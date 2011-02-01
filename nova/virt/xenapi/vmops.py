@@ -95,9 +95,10 @@ class VMOps(object):
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
         # write network info
-        network = db.network_get_by_instance(context.get_admin_context(),
+        admin_context = context.get_admin_context()
+        network = db.network_get_by_instance(admin_context,
                                              instance['id'])
-        for network in db.network_get_all():
+        for network in db.network_get_all(admin_context):
             mapping = {'label': network['label'],
                        'gateway': network['gateway'],
                        'mac': instance.mac_address,
