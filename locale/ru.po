@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-01-10 11:25-0800\n"
-"PO-Revision-Date: 2011-01-25 17:45+0000\n"
-"Last-Translator: Ilya Alekseyev <Unknown>\n"
+"PO-Revision-Date: 2011-01-31 06:53+0000\n"
+"Last-Translator: Andrey Olykainen <Unknown>\n"
 "Language-Team: Russian <ru@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-01-28 05:20+0000\n"
+"X-Launchpad-Export-Date: 2011-02-01 05:19+0000\n"
 "X-Generator: Launchpad (build 12177)\n"
 
 #: nova/crypto.py:46
@@ -31,7 +31,7 @@ msgstr ""
 
 #: nova/crypto.py:53
 msgid "Where we keep our keys"
-msgstr ""
+msgstr "Путь к ключам"
 
 #: nova/crypto.py:55
 msgid "Where we keep our root CA"
@@ -112,7 +112,7 @@ msgstr ""
 #: nova/fakerabbit.py:120
 #, python-format
 msgid "Getting from %s: %s"
-msgstr ""
+msgstr "Получение из %s: %s"
 
 #: nova/rpc.py:92
 #, python-format
@@ -174,7 +174,7 @@ msgstr "MSG_ID is %s"
 #: nova/rpc.py:356
 #, python-format
 msgid "response %s"
-msgstr ""
+msgstr "ответ %s"
 
 #: nova/rpc.py:365
 #, python-format
@@ -264,7 +264,7 @@ msgstr ""
 #: nova/utils.py:176
 #, python-format
 msgid "Running %s"
-msgstr ""
+msgstr "Выполняется %s"
 
 #: nova/utils.py:207
 #, python-format
@@ -291,16 +291,18 @@ msgid ""
 "Access key %s has had %d failed authentications and will be locked out for "
 "%d minutes."
 msgstr ""
+"Ключ доступа %s имеет %d неудачных попыток аутентификации и будет "
+"заблокирован на %d минут."
 
 #: nova/api/ec2/__init__.py:179 nova/objectstore/handler.py:140
 #, python-format
 msgid "Authentication Failure: %s"
-msgstr ""
+msgstr "Ошибка аутентификации: %s"
 
 #: nova/api/ec2/__init__.py:190
 #, python-format
 msgid "Authenticated Request For %s:%s)"
-msgstr ""
+msgstr "Запрос аутентификации для %s:%s)"
 
 #: nova/api/ec2/__init__.py:227
 #, python-format
@@ -547,7 +549,7 @@ msgstr ""
 #: nova/api/ec2/metadatarequesthandler.py:75
 #, python-format
 msgid "Failed to get metadata for ip: %s"
-msgstr ""
+msgstr "Ошибка получения метаданных для ip: %s"
 
 #: nova/api/openstack/__init__.py:70
 #, python-format
