@@ -316,7 +316,7 @@ class SecurityGroup(BASE, NovaBase):
         'SecurityGroup.deleted == False)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
-        # (anthony) the condition below shouldn't be necessary now that the 
+        # (anthony) the condition below shouldn't be necessary now that the
         # association is being marked as deleted.  However, removing this
         # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
