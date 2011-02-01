@@ -171,7 +171,7 @@ class Authenticate(wsgi.Middleware):
                     req.path)
         # Be explicit for what exceptions are 403, the rest bubble as 500
         except (exception.NotFound, exception.NotAuthorized) as ex:
-            LOG.audit(_("Authentication Failure: %s"), ex.args[0])
+            LOG.audit(_("Authentication Failure: %s"), unicode(ex))
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -316,30 +316,31 @@ class Executor(wsgi.Application):
         try:
             result = api_request.invoke(context)
         except exception.InstanceNotFound as ex:
-            LOG.info(_('InstanceNotFound raised: %s'), ex.args[0],
+            LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
                      context=context)
             ec2_id = cloud.id_to_ec2_id(ex.instance_id)
             message = _('Instance %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.VolumeNotFound as ex:
-            LOG.info(_('VolumeNotFound raised: %s'), ex.args[0],
+            LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
             ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
             message = _('Volume %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
-            LOG.info(_('NotFound raised: %s'), ex.args[0], context=context)
-            return self._error(req, context, type(ex).__name__, ex.args[0])
+            LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except exception.ApiError as ex:
-            LOG.exception(_('ApiError raised: %s'), ex.args[0],
+            LOG.exception(_('ApiError raised: %s'), unicode(ex),
                           context=context)
             if ex.code:
-                return self._error(req, context, ex.code, ex.args[0])
+                return self._error(req, context, ex.code, unicode(ex))
             else:
-                return self._error(req, context, type(ex).__name__, ex.args[0])
+                return self._error(req, context, type(ex).__name__,
+                                   unicode(ex))
         except Exception as ex:
             extra = {'environment': req.environ}
-            LOG.exception(_('Unexpected error raised: %s'), ex.args[0],
+            LOG.exception(_('Unexpected error raised: %s'), unicode(ex),
                           extra=extra, context=context)
             return self._error(req,
                                context,

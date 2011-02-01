@@ -396,6 +396,13 @@ class NovaAdminClient(object):
                   'MemberUsers': member_users}
         return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
 
+    def modify_project(self, projectname, manager_user=None, description=None):
+        """Modifies an existing project."""
+        params = {'Name': projectname,
+                  'ManagerUser': manager_user,
+                  'Description': description}
+        return self.apiconn.get_status('ModifyProject', params)
+
     def delete_project(self, projectname):
         """Permanently deletes the specified project."""
         return self.apiconn.get_object('DeregisterProject',
